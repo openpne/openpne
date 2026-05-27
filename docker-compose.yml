@@ -31,7 +31,7 @@ services:
     working_dir: /var/www/html
     command: sh /var/www/html/docker/vite-dev.sh
     ports:
-      - "${OPENPNE_VITE_PORT:-5173}:5173"
+      - "5173:5173"
     volumes:
       - .:/var/www/html
       - node_modules:/var/www/html/node_modules

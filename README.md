@@ -49,8 +49,10 @@ Notes:
   host install). After updating `composer.lock` or `package-lock.json`, run
   `docker compose down -v` so the volumes are reset and dependencies
   reinstall on the next `up`.
-- If port `8080` or `5173` is taken, set `OPENPNE_HTTP_PORT=18080` and/or
-  `OPENPNE_VITE_PORT=15173` before `docker compose up -d`.
+- If port `8080` is taken, set `OPENPNE_HTTP_PORT=18080` before
+  `docker compose up -d`. Port `5173` is fixed (Vite always binds it
+  inside the container and `public/hot` references that port, so a
+  host-side remap would not actually redirect the browser).
 
 ## License
 
