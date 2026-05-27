@@ -11,18 +11,28 @@ if [ ! -f vendor/autoload.php ]; then
     composer install --no-interaction --prefer-dist
 fi
 
-# .env is bind-mounted; create from .env.example on first run, otherwise leave it.
+# .env is bind-mounted; create from .env.example on first run, otherwise leave
+# it. Generate APP_KEY whenever it is unset (covers user-provided .env without
+# a key, not only the first-boot copy).
 if [ ! -f .env ]; then
     cp .env.example .env
+fi
+if ! grep -q '^APP_KEY=base64:' .env; then
     php artisan key:generate --ansi
 fi
 
-# Default DB driver is SQLite (per .env.example).
-if [ ! -f database/database.sqlite ]; then
-    touch database/database.sqlite
+# Default DB driver is SQLite (per .env.example). If the user overrides
+# DB_CONNECTION via docker-compose.override.yml or a custom .env, do not block
+# startup when migrations cannot reach the DB — they can fix .env and re-run.
+if grep -q '^DB_CONNECTION=sqlite' .env; then
+    if [ ! -f database/database.sqlite ]; then
+        touch database/database.sqlite
+    fi
+    php artisan migrate --force --ansi
+else
+    php artisan migrate --force --ansi \
+        || echo "WARN: 'php artisan migrate' failed — check DB_* in .env and DB reachability; starting the server anyway."
 fi
-
-php artisan migrate --force --ansi
 
 # Files created above land on the host bind mount owned by root (the container
 # user during init), which makes .env un-editable and database/database.sqlite

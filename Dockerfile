@@ -2,7 +2,7 @@ FROM php:8.5-fpm-bookworm
 
 # Use install-php-extensions to install Laravel-required extensions.
 ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
-RUN install-php-extensions intl bcmath zip gd pdo_mysql pdo_sqlite
+RUN install-php-extensions intl bcmath zip gd pdo_mysql pdo_sqlite opcache
 
 # composer
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
