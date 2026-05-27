@@ -51,6 +51,10 @@ Notes:
   reinstall on the next `up`.
 - If port `8080` or `5173` is taken, set `OPENPNE_HTTP_PORT=18080` and/or
   `OPENPNE_VITE_PORT=15173` before `docker compose up -d`.
+- When developing against a remote host (browser not on the same machine as
+  the containers), set `VITE_HMR_HOST=<reachable-hostname>` in `.env` so the
+  HMR WebSocket connects to a host the browser can reach. Leave it unset for
+  localhost-only access.
 
 ## License
 
