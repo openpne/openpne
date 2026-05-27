@@ -24,9 +24,16 @@ fi
 
 php artisan migrate --force --ansi
 
-# Ensure runtime dirs are writable by www-data; bind-mounted files keep host
-# ownership, so framework caches and the SQLite db (+ journal/WAL) need to be
-# writable for everyone.
+# Files created above land on the host bind mount owned by root (the container
+# user during init), which makes .env un-editable and database/database.sqlite
+# un-resettable from the host without sudo. Hand the two user-facing artifacts
+# back to whichever uid owns the bind mount root.
+owner="$(stat -c '%u:%g' /var/www/html)"
+chown "$owner" .env 2>/dev/null || true
+[ -f database/database.sqlite ] && chown "$owner" database/database.sqlite 2>/dev/null || true
+
+# Runtime caches, logs, and the SQLite DB are written by the www-data worker at
+# every request. Open write access for the worker (host ownership is preserved).
 chmod -R o+rwX storage bootstrap/cache database 2>/dev/null || true
 
 exec "$@"
