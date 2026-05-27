@@ -24,9 +24,13 @@ return new class extends Migration
             $table->timestamp('created_at')->nullable();
         });
 
+        // Laravel's database session handler writes the authenticated id to a
+        // hard-coded `user_id` column (DatabaseSessionHandler::addUserInformation),
+        // so this column keeps its framework name even though the authenticatable
+        // is a Member. There is no FK to the members table.
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->foreignId('member_id')->nullable()->index();
+            $table->foreignId('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->longText('payload');
