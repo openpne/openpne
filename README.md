@@ -42,7 +42,7 @@ Notes:
 - `vendor/` lives in a named volume (independent of any host install). After
   updating `composer.lock`, run `docker compose down -v` so the volume is
   reset and dependencies reinstall on the next `up`.
-- If port `8080` is taken, remap it in a personal `docker-compose.override.yml`.
+- If port `8080` is taken, set `OPENPNE_HTTP_PORT=18080 docker compose up -d`.
 
 ## License
 
