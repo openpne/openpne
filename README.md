@@ -27,6 +27,23 @@ php artisan test
 vendor/bin/pint --test    # lint check (drop --test to auto-format)
 ```
 
+## Docker
+
+```bash
+docker compose up -d      # http://localhost:8080
+```
+
+On first start the `app` container runs `composer install`, generates
+`APP_KEY`, and runs migrations. Source is bind-mounted so code changes are
+reflected without a rebuild. SQLite is used by default.
+
+Notes:
+
+- `vendor/` lives in a named volume (independent of any host install). After
+  updating `composer.lock`, run `docker compose down -v` so the volume is
+  reset and dependencies reinstall on the next `up`.
+- If port `8080` is taken, set `OPENPNE_HTTP_PORT=18080 docker compose up -d`.
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
