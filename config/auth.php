@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AdminUser;
 use App\Models\Member;
 
 return [
@@ -15,8 +16,10 @@ return [
     |
     */
 
+    // Guard names are singular (`member`, `admin`); provider and password-broker
+    // keys are plural (`members`, `admins`).
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        'guard' => env('AUTH_GUARD', 'member'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'members'),
     ],
 
@@ -38,9 +41,18 @@ return [
     */
 
     'guards' => [
-        'web' => [
+        'member' => [
             'driver' => 'session',
             'provider' => 'members',
+        ],
+
+        // Administrators authenticate through the Filament `/admin` panel against
+        // this separate guard. It shares the session driver but keeps its own
+        // login state under a guard-scoped session key, so a logged-in member is
+        // never treated as an administrator and vice versa.
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'admins',
         ],
     ],
 
@@ -65,6 +77,11 @@ return [
         'members' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', Member::class),
+        ],
+
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => env('AUTH_ADMIN_MODEL', AdminUser::class),
         ],
     ],
 
