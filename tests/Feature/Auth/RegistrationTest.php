@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -16,6 +17,7 @@ class RegistrationTest extends TestCase
         $response = $this->get('/register');
 
         $response->assertStatus(200);
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('auth/register'));
     }
 
     public function test_new_members_can_register(): void
