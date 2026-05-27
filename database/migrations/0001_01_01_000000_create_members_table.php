@@ -6,12 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('members', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
@@ -27,6 +24,10 @@ return new class extends Migration
             $table->timestamp('created_at')->nullable();
         });
 
+        // Laravel's database session handler writes the authenticated id to a
+        // hard-coded `user_id` column (DatabaseSessionHandler::addUserInformation),
+        // so this column keeps its framework name even though the authenticatable
+        // is a Member. There is no FK to the members table.
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();
@@ -37,12 +38,9 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('members');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
     }
