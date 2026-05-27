@@ -2,9 +2,11 @@
 #   docker compose up -d   →   http://localhost:8080
 #
 # - Source is bind-mounted so edits are reflected immediately.
-# - `vendor/` is a named volume so container-side composer install does not
-#   collide with host uid ownership.
+# - `vendor/` and `node_modules/` live in named volumes so container-side
+#   `composer install` / `npm ci` do not collide with host uid ownership.
 # - SQLite is used by default; opt in to MySQL via a separate compose file.
+# - `vite` runs the Vite dev server on :5173 for HMR; Laravel reads
+#   `public/hot` to redirect asset URLs to it. First startup runs `npm ci`.
 
 services:
   app:
@@ -24,5 +26,16 @@ services:
     depends_on:
       - app
 
+  vite:
+    image: node:22-bookworm-slim
+    working_dir: /var/www/html
+    command: sh /var/www/html/docker/vite-dev.sh
+    ports:
+      - "${OPENPNE_VITE_PORT:-5173}:5173"
+    volumes:
+      - .:/var/www/html
+      - node_modules:/var/www/html/node_modules
+
 volumes:
   vendor:
+  node_modules:
