@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -15,6 +16,7 @@ class AuthenticationTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('auth/login'));
     }
 
     public function test_members_can_authenticate_with_valid_credentials(): void
@@ -66,8 +68,12 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($member)->get('/dashboard');
 
         $response->assertStatus(200);
-        $response->assertSee($member->name);
-        $response->assertSee($member->email);
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('dashboard')
+            ->where('auth.user.id', $member->id)
+            ->where('auth.user.name', $member->name)
+            ->where('auth.user.email', $member->email)
+        );
     }
 
     public function test_root_redirects_to_login_for_guests(): void
