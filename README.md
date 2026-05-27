@@ -27,6 +27,16 @@ php artisan test
 vendor/bin/pint --test    # lint check (drop --test to auto-format)
 ```
 
+## Docker
+
+```bash
+docker compose up -d      # http://localhost:8080
+```
+
+First boot runs `composer install`, `key:generate`, and `migrate` automatically.
+Source is bind-mounted, so code changes are reflected without a rebuild.
+SQLite is used by default; opt in to MySQL with a separate compose file (TBD).
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
