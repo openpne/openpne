@@ -23,8 +23,7 @@ class AdminUser extends Authenticatable implements FilamentUser, HasName
     /** @use HasFactory<AdminUserFactory> */
     use HasFactory;
 
-    // Singular `admin_user`, matching the singular `member` table rather than
-    // Eloquent's pluralized default.
+    // Preserve OpenPNE 3's singular `admin_user` table name.
     protected $table = 'admin_user';
 
     /**
