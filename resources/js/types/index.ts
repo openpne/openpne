@@ -13,5 +13,6 @@ export interface PageProps {
         status: string | null;
         error: string | null;
     };
+    locale: string;
     [key: string]: unknown;
 }

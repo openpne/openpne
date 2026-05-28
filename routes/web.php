@@ -1,6 +1,8 @@
 <?php
 
 use App\Features\Friend\FriendController;
+use App\Http\Middleware\SetLocale;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -8,6 +10,15 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return Auth::check() ? redirect('/dashboard') : redirect('/login');
 });
+
+Route::post('/locale', function (Request $request) {
+    $locale = (string) $request->input('locale');
+    if (in_array($locale, SetLocale::SUPPORTED_LOCALES, strict: true)) {
+        $request->session()->put('locale', $locale);
+    }
+
+    return back();
+})->name('locale.switch');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
