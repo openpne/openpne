@@ -20,7 +20,9 @@ use Symfony\Component\Finder\Finder;
  * Omission policy: English-source codebase, so `key === English text`. Both `__()`
  * and `laravel-react-i18n` return the key verbatim when no entry is found, so
  * en.json entries that match the key are redundant and always optional. ja.json
- * has no optional entries — every referenced key needs a Japanese value.
+ * normally requires a Japanese value, with one exception: keys composed solely
+ * of `%name%` placeholders (e.g. `%Friend%`) round-trip through the term
+ * substitution layer regardless of locale, so a JSON entry adds no value.
  */
 class CheckTranslationsCommand extends Command
 {
@@ -84,19 +86,35 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * en.json is always optional (English-source key === text). ja.json never is.
+     * en.json is always optional (English-source key === text). ja.json is
+     * optional only for keys that are entirely composed of `%name%`
+     * placeholders, since those resolve via the term substitution layer.
      */
-    private function isOptionalForLanguage(string $lang): bool
+    private function isOptionalForLanguage(string $key, string $lang): bool
     {
-        return $lang === 'en';
+        if ($lang === 'en') {
+            return true;
+        }
+
+        if ($lang === 'ja') {
+            return $this->isPurePlaceholderKey($key);
+        }
+
+        return false;
+    }
+
+    private function isPurePlaceholderKey(string $key): bool
+    {
+        return preg_replace('/%[a-zA-Z_]+%|\s+/', '', $key) === '';
     }
 
     private function pruneIdentityEntries(string $base): int
     {
-        // Only en: ja entries are never optional (see isOptionalForLanguage).
-        // A key like "OK" with ja value "OK" is a legitimate Japanese translation,
-        // and pruning it would make `i18n:check` flag the next reference as missing.
-        foreach (['en'] as $lang) {
+        // en: every identity entry is redundant. ja: only pure-placeholder
+        // identity entries are redundant (the term layer resolves those at
+        // render time); regular ja entries that happen to match their key
+        // are legitimate Japanese translations and must be kept.
+        foreach (['ja', 'en'] as $lang) {
             $path = $base."/lang/{$lang}.json";
             if (! is_file($path)) {
                 continue;
@@ -110,10 +128,11 @@ class CheckTranslationsCommand extends Command
             $before = count($data);
             $kept = [];
             foreach ($data as $k => $v) {
-                if ($k === $v) {
+                $key = (string) $k;
+                if ($k === $v && $this->isOptionalForLanguage($key, $lang)) {
                     continue;
                 }
-                $kept[(string) $k] = $v;
+                $kept[$key] = $v;
             }
             ksort($kept, SORT_STRING);
             $json = json_encode($kept, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
@@ -235,7 +254,7 @@ class CheckTranslationsCommand extends Command
         $newMissingByLang = ['ja' => [], 'en' => []];
         foreach ($found as $key => $locations) {
             foreach (['ja', 'en'] as $lang) {
-                if ($this->isOptionalForLanguage($lang)) {
+                if ($this->isOptionalForLanguage($key, $lang)) {
                     continue;
                 }
                 if (! isset($defined[$lang][$key])) {
@@ -316,7 +335,7 @@ class CheckTranslationsCommand extends Command
         $missing = ['ja' => [], 'en' => []];
         foreach ($found as $key => $_) {
             foreach (['ja', 'en'] as $lang) {
-                if ($this->isOptionalForLanguage($lang)) {
+                if ($this->isOptionalForLanguage($key, $lang)) {
                     continue;
                 }
                 if (! isset($defined[$lang][$key])) {
