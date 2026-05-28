@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Block commits that introduce new translation gaps. Runs only when staged
+# files could affect i18n coverage (.tsx/.ts/.php/.blade.php). Bypass with
+# `git commit --no-verify` if absolutely necessary.
+#
+# Install:
+#   composer install-hooks
+
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(tsx|ts|php|blade\.php)$' || true)
+
+if [ -z "$staged" ]; then
+    exit 0
+fi
+
+if ! command -v php >/dev/null 2>&1; then
+    echo "[pre-commit] Skipping i18n:check — php not on PATH."
+    exit 0
+fi
+
+echo "[pre-commit] Running: php artisan i18n:check"
+php artisan i18n:check

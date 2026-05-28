@@ -1,6 +1,8 @@
 <?php
 
 use App\Features\Friend\FriendController;
+use App\Http\Middleware\SetLocale;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -8,6 +10,25 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return Auth::check() ? redirect('/dashboard') : redirect('/login');
 });
+
+Route::post('/locale', function (Request $request) {
+    $locale = (string) $request->input('locale');
+    if (in_array($locale, SetLocale::SUPPORTED_LOCALES, strict: true)) {
+        $request->session()->put('locale', $locale);
+    }
+
+    // For Inertia requests we force a hard navigation. The React provider reads
+    // `locale` only from `initialPage.props` at app boot, so following the 302
+    // via XHR would refresh shared props but leave the provider on the old
+    // locale. `Inertia::location()` makes the client do `window.location = url`
+    // which remounts the provider and picks up the new locale.
+    $target = url()->previous();
+    if ($request->header('X-Inertia')) {
+        return Inertia::location($target);
+    }
+
+    return redirect($target);
+})->name('locale.switch');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
