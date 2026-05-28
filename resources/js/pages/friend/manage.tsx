@@ -1,5 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { Pagination } from '@/components/pagination';
+import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { PaginatedFriends } from './types';
 
@@ -9,6 +10,7 @@ interface ManageProps extends PageProps {
 }
 
 export default function FriendManage() {
+    const t = useT();
     const { received, sent, flash } = usePage<ManageProps>().props;
 
     function accept(requesterId: number) {
@@ -19,19 +21,21 @@ export default function FriendManage() {
         router.post('/m/friend/reject', { requester_id: requesterId });
     }
 
+    const title = t('Pending friend requests');
+
     return (
         <>
-            <Head title="Pending friend requests" />
+            <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <h1 className="text-2xl font-semibold">Pending friend requests</h1>
+                <h1 className="text-2xl font-semibold">{title}</h1>
 
                 {flash.status && <p role="status">{flash.status}</p>}
                 {flash.error && <p role="alert">{flash.error}</p>}
 
                 <section className="space-y-2">
-                    <h2 className="text-lg font-semibold">Requests received</h2>
+                    <h2 className="text-lg font-semibold">{t('Requests received')}</h2>
                     {received.data.length === 0 ? (
-                        <p>No pending requests.</p>
+                        <p>{t('No pending requests.')}</p>
                     ) : (
                         <>
                             <ul className="space-y-2">
@@ -40,10 +44,10 @@ export default function FriendManage() {
                                         <span>{requester.name}</span>
                                         <div className="space-x-2">
                                             <button type="button" onClick={() => accept(requester.id)}>
-                                                Accept
+                                                {t('Accept')}
                                             </button>
                                             <button type="button" onClick={() => reject(requester.id)}>
-                                                Reject
+                                                {t('Reject')}
                                             </button>
                                         </div>
                                     </li>
@@ -55,9 +59,9 @@ export default function FriendManage() {
                 </section>
 
                 <section className="space-y-2">
-                    <h2 className="text-lg font-semibold">Requests sent</h2>
+                    <h2 className="text-lg font-semibold">{t('Requests sent')}</h2>
                     {sent.data.length === 0 ? (
-                        <p>No outgoing requests.</p>
+                        <p>{t('No outgoing requests.')}</p>
                     ) : (
                         <>
                             <ul className="space-y-2">

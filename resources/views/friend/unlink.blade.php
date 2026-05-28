@@ -1,17 +1,17 @@
 @extends('layouts.classic')
 
-@section('title', 'Unfriend')
+@section('title', __('Unfriend'))
 
 @section('content')
     <div class="dparts" id="friend_unlink">
-        <h2 class="partsHeading">Unfriend</h2>
+        <h2 class="partsHeading">{{ __('Unfriend') }}</h2>
         <div class="parts">
-            <p>Remove <strong>{{ $target->name }}</strong> from your friends?</p>
+            <p>{{ __('Remove :name from your friends?', ['name' => $target->name]) }}</p>
 
             <form method="POST" action="{{ route('friend.unlink.submit', $target) }}">
                 @csrf
-                <button type="submit">Unfriend</button>
-                <a href="{{ route('friend.list') }}">Cancel</a>
+                <button type="submit">{{ __('Unfriend') }}</button>
+                <a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a>
             </form>
         </div>
     </div>
