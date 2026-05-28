@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
+use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -56,6 +57,12 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                // SetLocale runs after StartSession so it can read session('locale').
+                // Required because the Filament panel does NOT inherit the `web` middleware
+                // group — the panel keeps its own stack and must register SetLocale here too,
+                // otherwise admin pages would always render in APP_LOCALE regardless of the
+                // user's session preference.
+                SetLocale::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
