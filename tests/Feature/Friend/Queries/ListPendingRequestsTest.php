@@ -43,6 +43,24 @@ class ListPendingRequestsTest extends TestCase
         $this->assertEqualsCanonicalizing([$bob->getKey(), $carol->getKey()], $ids);
     }
 
+    public function test_paginator_uses_custom_page_name(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        DB::table('friend_requests')->insert([
+            'requester_id' => $bob->getKey(),
+            'target_id' => $alice->getKey(),
+        ]);
+
+        $page = (new ListPendingRequests)(
+            $alice,
+            PendingRequestDirection::Received,
+            pageName: 'received_page',
+        );
+
+        $this->assertStringContainsString('received_page=', $page->url(2));
+    }
+
     public function test_sent_and_received_directions_do_not_bleed_into_each_other(): void
     {
         [$alice, $bob] = Member::factory()->count(2)->create()->all();

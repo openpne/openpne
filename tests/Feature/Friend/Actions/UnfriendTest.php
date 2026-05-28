@@ -51,4 +51,16 @@ class UnfriendTest extends TestCase
             $this->assertSame(FriendActionFailure::NotFriends, $e->reason);
         }
     }
+
+    public function test_rejects_self_unfriend(): void
+    {
+        $alice = Member::factory()->create();
+
+        try {
+            (new Unfriend)($alice, $alice);
+            $this->fail('expected FriendActionException');
+        } catch (FriendActionException $e) {
+            $this->assertSame(FriendActionFailure::NotFriends, $e->reason);
+        }
+    }
 }
