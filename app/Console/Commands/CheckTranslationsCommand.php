@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Services\TermService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use SplFileInfo;
 use Symfony\Component\Finder\Finder;
 
@@ -105,8 +107,58 @@ class CheckTranslationsCommand extends Command
 
     private function isPurePlaceholderKey(string $key): bool
     {
-        return preg_replace('/%[a-zA-Z_]+%|\s+/', '', $key) === '';
+        return self::isResolvableViaTermLayer($key, $this->termNames());
     }
+
+    /**
+     * True when the key consists only of `%name%` placeholders (plus
+     * whitespace) and every placeholder name resolves to a configured term.
+     * Validating against the term set is what catches typos like `%Firend%`
+     * — the runtime would leave those raw, and the exemption without a name
+     * check would silently classify them as "no translation needed".
+     *
+     * @param  list<string>  $knownTermNames
+     */
+    public static function isResolvableViaTermLayer(string $key, array $knownTermNames): bool
+    {
+        if (preg_replace('/%[a-zA-Z_]+%|\s+/', '', $key) !== '') {
+            return false;
+        }
+
+        preg_match_all('/%([a-zA-Z_]+)%/', $key, $matches);
+        if ($matches[1] === []) {
+            return false;
+        }
+
+        foreach ($matches[1] as $raw) {
+            $name = ctype_upper($raw[0]) ? lcfirst($raw) : $raw;
+            if (in_array($name, $knownTermNames, true)) {
+                continue;
+            }
+
+            $singular = Str::singular($name);
+            if ($singular !== $name && in_array($singular, $knownTermNames, true)) {
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function termNames(): array
+    {
+        return $this->termNames ??= array_keys(TermService::defaults('ja'));
+    }
+
+    /**
+     * @var list<string>|null
+     */
+    private ?array $termNames = null;
 
     private function pruneIdentityEntries(string $base): int
     {
