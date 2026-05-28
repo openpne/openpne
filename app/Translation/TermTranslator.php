@@ -32,4 +32,28 @@ class TermTranslator extends Translator
 
         return $translation;
     }
+
+    /**
+     * Mirror the parent's existence check using the raw `parent::get()` result.
+     * The framework's `has()` is `$this->get(...) !== $key` and would otherwise
+     * see a placeholder-substituted line and report a false positive for keys
+     * that have no JSON entry but happen to contain `%name%` tokens.
+     */
+    public function has($key, $locale = null, $fallback = true): bool
+    {
+        $handleMissingTranslationKeys = $this->handleMissingTranslationKeys;
+        $this->handleMissingTranslationKeys = false;
+
+        $line = parent::get($key, [], $locale, $fallback);
+
+        $this->handleMissingTranslationKeys = $handleMissingTranslationKeys;
+
+        $resolvedLocale = $locale ?: $this->locale;
+
+        if (! is_null($this->loaded['*']['*'][$resolvedLocale][$key] ?? null)) {
+            return true;
+        }
+
+        return $line !== $key;
+    }
 }

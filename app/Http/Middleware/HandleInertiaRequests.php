@@ -38,10 +38,11 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Pre-compute the four placeholder variants per term so the client only
-     * needs a flat key lookup: `%name%`, `%Name%`, `%names%`, `%Names%`.
-     * Japanese collapses to the same value for every variant because it has
-     * no case and no pluralisation.
+     * Expand each term into the case/plural placeholder variants the client
+     * looks up directly (`%name%`, `%Name%`, `%names%`, `%Names%`), so the
+     * frontend stays a flat dictionary read and irregular plurals are
+     * resolved here. Japanese collapses every variant to the same value
+     * because it has no case and no pluralisation.
      *
      * @return array<string, string>
      */

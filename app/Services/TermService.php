@@ -56,6 +56,10 @@ class TermService
      */
     public function getTerms(string $locale): array
     {
+        if (! self::isSupportedLocale($locale)) {
+            return [];
+        }
+
         return Cache::remember("terms.{$locale}", self::CACHE_TTL, function () use ($locale): array {
             $defaults = self::defaults($locale);
             $overrides = DB::table('term_overrides')
@@ -75,6 +79,13 @@ class TermService
      */
     public static function defaults(string $locale): array
     {
+        // The `$locale` segment is interpolated into a filesystem path. Restrict
+        // it to the explicit supported set so unrelated callers cannot reach
+        // arbitrary files through path-style values.
+        if (! self::isSupportedLocale($locale)) {
+            return [];
+        }
+
         $path = lang_path("{$locale}/terms.php");
         if (! is_file($path)) {
             return [];
@@ -84,6 +95,11 @@ class TermService
         $values = require $path;
 
         return $values;
+    }
+
+    private static function isSupportedLocale(string $locale): bool
+    {
+        return in_array($locale, SetLocale::SUPPORTED_LOCALES, true);
     }
 
     /**

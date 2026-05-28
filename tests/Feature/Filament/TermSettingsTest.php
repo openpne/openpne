@@ -86,6 +86,45 @@ class TermSettingsTest extends TestCase
         ]);
     }
 
+    public function test_whitespace_only_input_deletes_the_row(): void
+    {
+        DB::table('term_overrides')->insert([
+            'name' => 'friend',
+            'locale' => 'ja',
+            'value' => 'ともだち',
+        ]);
+
+        Livewire::test(TermSettings::class)
+            ->fillForm(['ja__friend' => '   '])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('term_overrides', [
+            'name' => 'friend',
+            'locale' => 'ja',
+        ]);
+    }
+
+    public function test_save_with_only_default_values_leaves_the_table_empty(): void
+    {
+        // Submitting the form unmodified (every field still showing the
+        // default value) must not seed the table with redundant rows.
+        Livewire::test(TermSettings::class)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame(0, DB::table('term_overrides')->count());
+    }
+
+    public function test_form_reflects_persisted_override_after_save(): void
+    {
+        Livewire::test(TermSettings::class)
+            ->fillForm(['ja__friend' => 'ともだち'])
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('data.ja__friend', 'ともだち');
+    }
+
     public function test_unrelated_overrides_are_not_touched_when_saving_others(): void
     {
         DB::table('term_overrides')->insert([

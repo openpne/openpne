@@ -47,4 +47,23 @@ class TermTranslatorTest extends TestCase
 
         $this->assertSame('Friend list', __('_test.term_line'));
     }
+
+    public function test_has_returns_false_for_unregistered_placeholder_key(): void
+    {
+        // Regression: `Translator::has()` is `get(...) !== $key`. Without the
+        // overridden `has()` the placeholder substitution would turn
+        // `%Friend%` into `フレンド`, making the existence check report a
+        // false positive and breaking `Lang::has` / `choice` semantics.
+        $this->assertFalse(Lang::has('%Friend%', 'ja'));
+    }
+
+    public function test_pure_placeholder_key_renders_via_substitution_when_unregistered(): void
+    {
+        // Counterpart to the above: `__()` still resolves `%Friend%` to the
+        // localized value even though `Lang::has` reports it as absent. The
+        // pure-placeholder exemption in `i18n:check` depends on this contract.
+        $this->app->setLocale('ja');
+
+        $this->assertSame('フレンド', __('%Friend%'));
+    }
 }
