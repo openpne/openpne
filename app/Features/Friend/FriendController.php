@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Features\Friend\Classic;
+namespace App\Features\Friend;
 
 use App\Features\Friend\Actions\AcceptFriendRequest;
 use App\Features\Friend\Actions\RejectFriendRequest;
@@ -12,6 +12,7 @@ use App\Features\Friend\Internal\BlockLookup;
 use App\Features\Friend\Queries\ListFriends;
 use App\Features\Friend\Queries\ListPendingRequests;
 use App\Features\Friend\Queries\PendingRequestDirection;
+use App\Features\Friend\Serializers\FriendSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Friend\AcceptRequest;
 use App\Http\Requests\Friend\LinkRequest;
@@ -20,35 +21,57 @@ use App\Models\Member;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class FriendController extends Controller
 {
-    public function list(Request $request, ListFriends $query): View
+    private const SURFACE_CLASSIC = 'classic';
+
+    private const SURFACE_MODERN = 'modern';
+
+    public function list(Request $request, ListFriends $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $owner = $request->has('id')
             ? Member::findOrFail((int) $request->query('id'))
             : $viewer;
+        $friends = $query($viewer, $owner);
 
-        return view('friend.list', [
-            'pageId' => 'page_friend_list',
-            'owner' => $owner,
-            'friends' => $query($viewer, $owner),
+        return $this->respondWith($request, [
+            self::SURFACE_CLASSIC => fn () => view('friend.list', [
+                'pageId' => 'page_friend_list',
+                'owner' => $owner,
+                'friends' => $friends,
+            ]),
+            self::SURFACE_MODERN => fn () => Inertia::render('friend/list', [
+                'owner' => FriendSerializer::member($owner),
+                'isOwner' => $viewer->is($owner),
+                'friends' => FriendSerializer::paginator($friends),
+            ]),
         ]);
     }
 
-    public function manage(ListPendingRequests $query): View
+    public function manage(Request $request, ListPendingRequests $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
+        $received = $query($viewer, PendingRequestDirection::Received, pageName: 'received_page');
+        $sent = $query($viewer, PendingRequestDirection::Sent, pageName: 'sent_page');
 
-        return view('friend.manage', [
-            'pageId' => 'page_friend_manage',
-            'received' => $query($viewer, PendingRequestDirection::Received, pageName: 'received_page'),
-            'sent' => $query($viewer, PendingRequestDirection::Sent, pageName: 'sent_page'),
+        return $this->respondWith($request, [
+            self::SURFACE_CLASSIC => fn () => view('friend.manage', [
+                'pageId' => 'page_friend_manage',
+                'received' => $received,
+                'sent' => $sent,
+            ]),
+            self::SURFACE_MODERN => fn () => Inertia::render('friend/manage', [
+                'received' => FriendSerializer::paginator($received),
+                'sent' => FriendSerializer::paginator($sent),
+            ]),
         ]);
     }
 
-    public function showLink(Request $request): View|RedirectResponse
+    public function showLink(Request $request): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewer();
         $target = Member::findOrFail((int) $request->query('id'));
@@ -63,9 +86,14 @@ class FriendController extends Controller
             return redirect()->route('friend.manage');
         }
 
-        return view('friend.link', [
-            'pageId' => 'page_friend_link',
-            'target' => $target,
+        return $this->respondWith($request, [
+            self::SURFACE_CLASSIC => fn () => view('friend.link', [
+                'pageId' => 'page_friend_link',
+                'target' => $target,
+            ]),
+            self::SURFACE_MODERN => fn () => Inertia::render('friend/link', [
+                'target' => FriendSerializer::member($target),
+            ]),
         ]);
     }
 
@@ -102,16 +130,21 @@ class FriendController extends Controller
         return redirect()->route('friend.manage')->with('status', 'Friend request rejected.');
     }
 
-    public function showUnlink(Member $member): View
+    public function showUnlink(Request $request, Member $member): View|InertiaResponse
     {
         $viewer = $this->viewer();
         if ($viewer->is($member) || ! $viewer->isFriendsWith($member)) {
             abort(404);
         }
 
-        return view('friend.unlink', [
-            'pageId' => 'page_friend_unlink',
-            'target' => $member,
+        return $this->respondWith($request, [
+            self::SURFACE_CLASSIC => fn () => view('friend.unlink', [
+                'pageId' => 'page_friend_unlink',
+                'target' => $member,
+            ]),
+            self::SURFACE_MODERN => fn () => Inertia::render('friend/unlink', [
+                'target' => FriendSerializer::member($member),
+            ]),
         ]);
     }
 
@@ -124,6 +157,36 @@ class FriendController extends Controller
         }
 
         return redirect()->route('friend.list')->with('status', 'Unfriended.');
+    }
+
+    /**
+     * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
+     */
+    private function respondWith(Request $request, array $responders): View|InertiaResponse
+    {
+        return $responders[$this->resolveSurface($request)]();
+    }
+
+    private function resolveSurface(Request $request): string
+    {
+        if ($request->route('surface') === self::SURFACE_MODERN) {
+            return self::SURFACE_MODERN;
+        }
+
+        if (config('features.friend.modern_status', 'native') !== 'native') {
+            return self::SURFACE_CLASSIC;
+        }
+
+        if (config('openpne.tenant_mode', 'mixed') === 'modern_only') {
+            return self::SURFACE_MODERN;
+        }
+
+        $override = $request->session()->get('migration_ui_override');
+        if (in_array($override, [self::SURFACE_CLASSIC, self::SURFACE_MODERN], true)) {
+            return $override;
+        }
+
+        return config('openpne.tenant_default_surface', self::SURFACE_CLASSIC);
     }
 
     private function viewer(): Member
