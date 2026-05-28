@@ -17,7 +17,17 @@ Route::post('/locale', function (Request $request) {
         $request->session()->put('locale', $locale);
     }
 
-    return back();
+    // For Inertia requests we force a hard navigation. The React provider reads
+    // `locale` only from `initialPage.props` at app boot, so following the 302
+    // via XHR would refresh shared props but leave the provider on the old
+    // locale. `Inertia::location()` makes the client do `window.location = url`
+    // which remounts the provider and picks up the new locale.
+    $target = url()->previous();
+    if ($request->header('X-Inertia')) {
+        return Inertia::location($target);
+    }
+
+    return redirect($target);
 })->name('locale.switch');
 
 Route::middleware('auth')->group(function () {

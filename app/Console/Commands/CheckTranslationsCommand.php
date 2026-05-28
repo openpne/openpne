@@ -93,7 +93,10 @@ class CheckTranslationsCommand extends Command
 
     private function pruneIdentityEntries(string $base): int
     {
-        foreach (['ja', 'en'] as $lang) {
+        // Only en: ja entries are never optional (see isOptionalForLanguage).
+        // A key like "OK" with ja value "OK" is a legitimate Japanese translation,
+        // and pruning it would make `i18n:check` flag the next reference as missing.
+        foreach (['en'] as $lang) {
             $path = $base."/lang/{$lang}.json";
             if (! is_file($path)) {
                 continue;

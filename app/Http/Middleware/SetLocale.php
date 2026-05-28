@@ -35,6 +35,16 @@ class SetLocale
             return $session;
         }
 
-        return $request->getPreferredLanguage(self::SUPPORTED_LOCALES);
+        // Accept-Language negotiation. Explicit membership check + fallback to the
+        // first supported locale because Symfony's getPreferredLanguage() can be
+        // shadowed by Request::create() test defaults (HTTP_ACCEPT_LANGUAGE
+        // 'en-us,en;q=0.5') and by unparseable headers — both would otherwise
+        // return 'en' even though we declare ja as the app default.
+        $preferred = $request->getPreferredLanguage(self::SUPPORTED_LOCALES);
+        if (in_array($preferred, self::SUPPORTED_LOCALES, strict: true)) {
+            return $preferred;
+        }
+
+        return self::SUPPORTED_LOCALES[0];
     }
 }
