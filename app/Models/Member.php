@@ -6,6 +6,7 @@ use Database\Factories\MemberFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -22,5 +23,56 @@ class Member extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * `friendships` is a bidirectional mirror: a friendship between A and B
+     * is two rows (A→B and B→A). This accessor only sees rows anchored on
+     * `$this`, so it relies on the mirror being maintained.
+     *
+     * @return BelongsToMany<Member, $this>
+     */
+    public function friendships(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'friendships', 'member_id', 'friend_id')
+            ->withPivot('created_at');
+    }
+
+    /** @return BelongsToMany<Member, $this> */
+    public function friendRequestsSent(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'friend_requests', 'requester_id', 'target_id')
+            ->withPivot('created_at');
+    }
+
+    /** @return BelongsToMany<Member, $this> */
+    public function friendRequestsReceived(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'friend_requests', 'target_id', 'requester_id')
+            ->withPivot('created_at');
+    }
+
+    /** @return BelongsToMany<Member, $this> */
+    public function blocksMade(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'member_blocks', 'blocker_id', 'blocked_id')
+            ->withPivot('created_at');
+    }
+
+    /** @return BelongsToMany<Member, $this> */
+    public function blocksReceived(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'member_blocks', 'blocked_id', 'blocker_id')
+            ->withPivot('created_at');
+    }
+
+    public function isFriendsWith(self $other): bool
+    {
+        return $this->friendships()->whereKey($other->getKey())->exists();
+    }
+
+    public function hasPendingRequestFrom(self $other): bool
+    {
+        return $this->friendRequestsReceived()->whereKey($other->getKey())->exists();
     }
 }
