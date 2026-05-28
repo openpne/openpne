@@ -9,5 +9,9 @@ export interface PageProps {
     auth: {
         user: AuthUser | null;
     };
+    flash: {
+        status: string | null;
+        error: string | null;
+    };
     [key: string]: unknown;
 }
