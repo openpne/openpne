@@ -14,5 +14,6 @@ export interface PageProps {
         error: string | null;
     };
     locale: string;
+    terms: Record<string, string>;
     [key: string]: unknown;
 }
