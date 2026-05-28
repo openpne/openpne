@@ -11,13 +11,14 @@ class FriendRequestLock
     {
         $aId = $a->getKey();
         $bId = $b->getKey();
+        [$lo, $hi] = $aId < $bId ? [$aId, $bId] : [$bId, $aId];
 
         DB::table('friend_requests')
-            ->where(function ($q) use ($aId, $bId) {
-                $q->where('requester_id', $aId)->where('target_id', $bId);
+            ->where(function ($q) use ($lo, $hi) {
+                $q->where('requester_id', $lo)->where('target_id', $hi);
             })
-            ->orWhere(function ($q) use ($aId, $bId) {
-                $q->where('requester_id', $bId)->where('target_id', $aId);
+            ->orWhere(function ($q) use ($lo, $hi) {
+                $q->where('requester_id', $hi)->where('target_id', $lo);
             })
             ->lockForUpdate()
             ->get();

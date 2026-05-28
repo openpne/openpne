@@ -3,9 +3,10 @@
 namespace App\Features\Friend\Events;
 
 use App\Models\Member;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 
-class FriendRequestAccepted
+class FriendRequestAccepted implements ShouldDispatchAfterCommit
 {
     use Dispatchable;
 

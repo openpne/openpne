@@ -52,6 +52,34 @@ class ListFriendsTest extends TestCase
         $this->assertSame(1, $page->total());
     }
 
+    public function test_returns_empty_when_owner_has_blocked_viewer(): void
+    {
+        [$alice, $bob, $carol] = Member::factory()->count(3)->create()->all();
+        $this->makeFriends($alice, $carol);
+        DB::table('member_blocks')->insert([
+            'blocker_id' => $alice->getKey(),
+            'blocked_id' => $bob->getKey(),
+        ]);
+
+        $page = (new ListFriends)($bob, $alice);
+
+        $this->assertSame(0, $page->total());
+    }
+
+    public function test_viewer_blocked_by_owner_does_not_affect_owner_self_view(): void
+    {
+        [$alice, $bob, $carol] = Member::factory()->count(3)->create()->all();
+        $this->makeFriends($alice, $carol);
+        DB::table('member_blocks')->insert([
+            'blocker_id' => $alice->getKey(),
+            'blocked_id' => $bob->getKey(),
+        ]);
+
+        $page = (new ListFriends)($alice, $alice);
+
+        $this->assertSame(1, $page->total());
+    }
+
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([

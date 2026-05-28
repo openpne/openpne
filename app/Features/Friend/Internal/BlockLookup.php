@@ -21,4 +21,12 @@ class BlockLookup
             })
             ->exists();
     }
+
+    public static function ownerBlocksViewer(Member $owner, Member $viewer): bool
+    {
+        return DB::table('member_blocks')
+            ->where('blocker_id', $owner->getKey())
+            ->where('blocked_id', $viewer->getKey())
+            ->exists();
+    }
 }
