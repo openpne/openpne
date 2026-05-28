@@ -26,10 +26,9 @@ class Member extends Authenticatable
     }
 
     /**
-     * Friends of this member. Stored as a bidirectional mirror in the
-     * `friendships` table: a friendship between A and B is two rows
-     * (A→B and B→A). Both rows are written and removed atomically by
-     * the Friend feature Action — relation accessors here are read-only.
+     * `friendships` is a bidirectional mirror: a friendship between A and B
+     * is two rows (A→B and B→A). This accessor only sees rows anchored on
+     * `$this`, so it relies on the mirror being maintained.
      *
      * @return BelongsToMany<Member, $this>
      */
@@ -39,44 +38,28 @@ class Member extends Authenticatable
             ->withPivot('created_at');
     }
 
-    /**
-     * Pending friend requests this member has sent.
-     *
-     * @return BelongsToMany<Member, $this>
-     */
+    /** @return BelongsToMany<Member, $this> */
     public function friendRequestsSent(): BelongsToMany
     {
         return $this->belongsToMany(self::class, 'friend_requests', 'requester_id', 'target_id')
             ->withPivot('created_at');
     }
 
-    /**
-     * Pending friend requests this member has received.
-     *
-     * @return BelongsToMany<Member, $this>
-     */
+    /** @return BelongsToMany<Member, $this> */
     public function friendRequestsReceived(): BelongsToMany
     {
         return $this->belongsToMany(self::class, 'friend_requests', 'target_id', 'requester_id')
             ->withPivot('created_at');
     }
 
-    /**
-     * Members this member has blocked.
-     *
-     * @return BelongsToMany<Member, $this>
-     */
+    /** @return BelongsToMany<Member, $this> */
     public function blocksMade(): BelongsToMany
     {
         return $this->belongsToMany(self::class, 'member_blocks', 'blocker_id', 'blocked_id')
             ->withPivot('created_at');
     }
 
-    /**
-     * Members who have blocked this member.
-     *
-     * @return BelongsToMany<Member, $this>
-     */
+    /** @return BelongsToMany<Member, $this> */
     public function blocksReceived(): BelongsToMany
     {
         return $this->belongsToMany(self::class, 'member_blocks', 'blocked_id', 'blocker_id')

@@ -7,11 +7,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/**
- * Read-only relation accessors and small query helpers on Member.
- * Mutation (befriend, request, accept, reject, block, unblock) is owned
- * by Feature Actions, not by these methods — see PR B/D.
- */
 class RelationAccessorsTest extends TestCase
 {
     use RefreshDatabase;
@@ -64,14 +59,6 @@ class RelationAccessorsTest extends TestCase
         $this->assertSame(1, $bob->blocksReceived()->count());
     }
 
-    /**
-     * Eager loading all five relation accessors should fire a fixed number
-     * of queries regardless of member count — one query per relation plus
-     * the initial member fetch. Touching the loaded relations afterwards
-     * must not issue additional queries; if a relation were silently
-     * converted to a lazy or constrained shape that bypasses the eager
-     * load, the after-touch step would surface it.
-     */
     public function test_relations_eager_load_without_n_plus_one(): void
     {
         $members = Member::factory()->count(5)->create();
@@ -98,7 +85,6 @@ class RelationAccessorsTest extends TestCase
         $queries = DB::connection()->getQueryLog();
 
         $this->assertCount(5, $loaded);
-        // 1 query to load members + 1 per eager-loaded relation = 6 total.
         $this->assertLessThanOrEqual(6, count($queries));
 
         DB::connection()->flushQueryLog();

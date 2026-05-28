@@ -15,14 +15,10 @@ return new class extends Migration
             $table->timestamp('created_at')->useCurrent();
 
             $table->primary(['member_id', 'friend_id']);
-            // Second FK column index for reverse lookup and cascade performance.
-            // MySQL/InnoDB auto-creates this; SQLite does not.
+            // SQLite does not auto-index FK columns; MySQL/InnoDB does.
             $table->index('friend_id');
         });
 
-        // Self-friendship is forbidden. Enforced at DB layer in addition to the
-        // Action guard, since seed scripts, admin tools, and future jobs may
-        // bypass the Action path.
         $this->addPairwiseDistinctConstraint('friendships', 'member_id', 'friend_id');
     }
 
