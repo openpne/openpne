@@ -11,6 +11,10 @@ class Unfriend
 {
     public function __invoke(Member $member, Member $other): void
     {
+        if ($member->is($other)) {
+            throw new FriendActionException(FriendActionFailure::NotFriends);
+        }
+
         DB::transaction(function () use ($member, $other) {
             $aId = $member->getKey();
             $bId = $other->getKey();
