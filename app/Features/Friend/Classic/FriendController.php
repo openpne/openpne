@@ -8,6 +8,7 @@ use App\Features\Friend\Actions\SendFriendRequest;
 use App\Features\Friend\Actions\Unfriend;
 use App\Features\Friend\Exceptions\FriendActionException;
 use App\Features\Friend\Exceptions\FriendActionFailure;
+use App\Features\Friend\Internal\BlockLookup;
 use App\Features\Friend\Queries\ListFriends;
 use App\Features\Friend\Queries\ListPendingRequests;
 use App\Features\Friend\Queries\PendingRequestDirection;
@@ -22,13 +23,17 @@ use Illuminate\View\View;
 
 class FriendController extends Controller
 {
-    public function list(ListFriends $query): View
+    public function list(Request $request, ListFriends $query): View
     {
         $viewer = $this->viewer();
+        $owner = $request->has('id')
+            ? Member::findOrFail((int) $request->query('id'))
+            : $viewer;
 
         return view('friend.list', [
             'pageId' => 'page_friend_list',
-            'friends' => $query($viewer, $viewer),
+            'owner' => $owner,
+            'friends' => $query($viewer, $owner),
         ]);
     }
 
@@ -38,14 +43,25 @@ class FriendController extends Controller
 
         return view('friend.manage', [
             'pageId' => 'page_friend_manage',
-            'received' => $query($viewer, PendingRequestDirection::Received),
-            'sent' => $query($viewer, PendingRequestDirection::Sent),
+            'received' => $query($viewer, PendingRequestDirection::Received, pageName: 'received_page'),
+            'sent' => $query($viewer, PendingRequestDirection::Sent, pageName: 'sent_page'),
         ]);
     }
 
-    public function showLink(Request $request): View
+    public function showLink(Request $request): View|RedirectResponse
     {
+        $viewer = $this->viewer();
         $target = Member::findOrFail((int) $request->query('id'));
+
+        if ($viewer->is($target) || BlockLookup::hasAnyBetween($viewer, $target)) {
+            abort(404);
+        }
+        if ($viewer->isFriendsWith($target)) {
+            return redirect()->route('friend.list');
+        }
+        if ($target->hasPendingRequestFrom($viewer)) {
+            return redirect()->route('friend.manage');
+        }
 
         return view('friend.link', [
             'pageId' => 'page_friend_link',
@@ -88,6 +104,11 @@ class FriendController extends Controller
 
     public function showUnlink(Member $member): View
     {
+        $viewer = $this->viewer();
+        if ($viewer->is($member) || ! $viewer->isFriendsWith($member)) {
+            abort(404);
+        }
+
         return view('friend.unlink', [
             'pageId' => 'page_friend_unlink',
             'target' => $member,

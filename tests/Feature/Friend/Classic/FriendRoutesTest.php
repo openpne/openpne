@@ -39,6 +39,44 @@ class FriendRoutesTest extends TestCase
         $response->assertSee('Bob');
     }
 
+    public function test_list_page_with_id_query_shows_other_owner_friends(): void
+    {
+        $alice = Member::factory()->create(['name' => 'Alice']);
+        $bob = Member::factory()->create(['name' => 'Bob']);
+        $carol = Member::factory()->create(['name' => 'Carol']);
+        $this->makeFriends($bob, $carol);
+
+        $response = $this->actingAs($alice)->get("/friend/list?id={$bob->getKey()}");
+
+        $response->assertOk();
+        $response->assertSee('Carol');
+        $response->assertSee("Bob's friends");
+    }
+
+    public function test_list_page_for_unknown_owner_returns_404(): void
+    {
+        $alice = Member::factory()->create();
+
+        $this->actingAs($alice)->get('/friend/list?id=999999')->assertNotFound();
+    }
+
+    public function test_list_page_for_owner_who_blocked_viewer_shows_no_friends(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create(['name' => 'Bob']);
+        $carol = Member::factory()->create(['name' => 'Carol']);
+        $this->makeFriends($bob, $carol);
+        DB::table('member_blocks')->insert([
+            'blocker_id' => $bob->getKey(),
+            'blocked_id' => $alice->getKey(),
+        ]);
+
+        $response = $this->actingAs($alice)->get("/friend/list?id={$bob->getKey()}");
+
+        $response->assertOk();
+        $response->assertDontSee('Carol');
+    }
+
     public function test_manage_page_renders_received_and_sent_requests(): void
     {
         $alice = Member::factory()->create();
@@ -76,6 +114,48 @@ class FriendRoutesTest extends TestCase
         $this->actingAs($alice)->get('/friend/link?id=999999')->assertNotFound();
     }
 
+    public function test_link_show_page_returns_404_for_self(): void
+    {
+        $alice = Member::factory()->create();
+
+        $this->actingAs($alice)->get("/friend/link?id={$alice->getKey()}")->assertNotFound();
+    }
+
+    public function test_link_show_page_returns_404_when_target_blocked_viewer(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        DB::table('member_blocks')->insert([
+            'blocker_id' => $bob->getKey(),
+            'blocked_id' => $alice->getKey(),
+        ]);
+
+        $this->actingAs($alice)->get("/friend/link?id={$bob->getKey()}")->assertNotFound();
+    }
+
+    public function test_link_show_page_redirects_to_list_when_already_friends(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        $this->makeFriends($alice, $bob);
+
+        $this->actingAs($alice)->get("/friend/link?id={$bob->getKey()}")
+            ->assertRedirect(route('friend.list'));
+    }
+
+    public function test_link_show_page_redirects_to_manage_when_request_already_pending(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        DB::table('friend_requests')->insert([
+            'requester_id' => $alice->getKey(),
+            'target_id' => $bob->getKey(),
+        ]);
+
+        $this->actingAs($alice)->get("/friend/link?id={$bob->getKey()}")
+            ->assertRedirect(route('friend.manage'));
+    }
+
     public function test_unlink_show_page_renders(): void
     {
         $alice = Member::factory()->create();
@@ -87,6 +167,21 @@ class FriendRoutesTest extends TestCase
         $response->assertOk();
         $response->assertSee('id="page_friend_unlink"', false);
         $response->assertSee('Bob');
+    }
+
+    public function test_unlink_show_page_returns_404_when_not_friends(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+
+        $this->actingAs($alice)->get("/friend/unlink/{$bob->getKey()}")->assertNotFound();
+    }
+
+    public function test_unlink_show_page_returns_404_for_self(): void
+    {
+        $alice = Member::factory()->create();
+
+        $this->actingAs($alice)->get("/friend/unlink/{$alice->getKey()}")->assertNotFound();
     }
 
     public function test_submitting_link_creates_a_pending_request_and_redirects_with_flash(): void
