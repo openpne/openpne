@@ -14,7 +14,7 @@ export default function FriendLink() {
     function submit() {
         setSubmitting(true);
         router.post(
-            '/friend/link',
+            '/m/friend/link',
             { target_id: target.id },
             { onFinish: () => setSubmitting(false) },
         );

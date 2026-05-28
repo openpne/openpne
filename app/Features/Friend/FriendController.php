@@ -102,10 +102,10 @@ class FriendController extends Controller
         try {
             $action($this->viewer(), $request->target());
         } catch (FriendActionException $e) {
-            return redirect()->route('friend.list')->with('error', $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit($request, 'friend.list', error: $this->messageFor($e->reason));
         }
 
-        return redirect()->route('friend.list')->with('status', 'Friend request sent.');
+        return $this->redirectAfterSubmit($request, 'friend.list', status: 'Friend request sent.');
     }
 
     public function submitAccept(AcceptRequest $request, AcceptFriendRequest $action): RedirectResponse
@@ -113,10 +113,10 @@ class FriendController extends Controller
         try {
             $action($this->viewer(), $request->requester());
         } catch (FriendActionException $e) {
-            return redirect()->route('friend.manage')->with('error', $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit($request, 'friend.manage', error: $this->messageFor($e->reason));
         }
 
-        return redirect()->route('friend.list')->with('status', 'Friend request accepted.');
+        return $this->redirectAfterSubmit($request, 'friend.list', status: 'Friend request accepted.');
     }
 
     public function submitReject(RejectRequest $request, RejectFriendRequest $action): RedirectResponse
@@ -124,10 +124,10 @@ class FriendController extends Controller
         try {
             $action($this->viewer(), $request->requester());
         } catch (FriendActionException $e) {
-            return redirect()->route('friend.manage')->with('error', $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit($request, 'friend.manage', error: $this->messageFor($e->reason));
         }
 
-        return redirect()->route('friend.manage')->with('status', 'Friend request rejected.');
+        return $this->redirectAfterSubmit($request, 'friend.manage', status: 'Friend request rejected.');
     }
 
     public function showUnlink(Request $request, Member $member): View|InertiaResponse
@@ -148,15 +148,32 @@ class FriendController extends Controller
         ]);
     }
 
-    public function submitUnlink(Member $member, Unfriend $action): RedirectResponse
+    public function submitUnlink(Request $request, Member $member, Unfriend $action): RedirectResponse
     {
         try {
             $action($this->viewer(), $member);
         } catch (FriendActionException $e) {
-            return redirect()->route('friend.list')->with('error', $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit($request, 'friend.list', error: $this->messageFor($e->reason));
         }
 
-        return redirect()->route('friend.list')->with('status', 'Unfriended.');
+        return $this->redirectAfterSubmit($request, 'friend.list', status: 'Unfriended.');
+    }
+
+    private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
+    {
+        $name = $request->route('surface') === self::SURFACE_MODERN
+            ? str_replace('friend.', 'friend.modern.', $canonicalName)
+            : $canonicalName;
+
+        $redirect = redirect()->route($name);
+        if ($status !== null) {
+            $redirect = $redirect->with('status', $status);
+        }
+        if ($error !== null) {
+            $redirect = $redirect->with('error', $error);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -169,12 +186,12 @@ class FriendController extends Controller
 
     private function resolveSurface(Request $request): string
     {
-        if ($request->route('surface') === self::SURFACE_MODERN) {
-            return self::SURFACE_MODERN;
-        }
-
         if (config('features.friend.modern_status', 'native') !== 'native') {
             return self::SURFACE_CLASSIC;
+        }
+
+        if ($request->route('surface') === self::SURFACE_MODERN) {
+            return self::SURFACE_MODERN;
         }
 
         if (config('openpne.tenant_mode', 'mixed') === 'modern_only') {

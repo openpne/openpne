@@ -137,6 +137,132 @@ class FriendRoutesTest extends TestCase
         $this->actingAs($alice)->get("/m/friend/unlink/{$bob->getKey()}")->assertNotFound();
     }
 
+    public function test_modern_link_post_redirects_to_modern_list(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+
+        $response = $this->actingAs($alice)
+            ->post('/m/friend/link', ['target_id' => $bob->getKey()]);
+
+        $response->assertRedirect(route('friend.modern.list'));
+        $response->assertSessionHas('status');
+        $this->assertDatabaseHas('friend_requests', [
+            'requester_id' => $alice->getKey(),
+            'target_id' => $bob->getKey(),
+        ]);
+    }
+
+    public function test_modern_link_post_redirects_to_modern_list_on_error(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        $this->makeFriends($alice, $bob);
+
+        $response = $this->actingAs($alice)
+            ->post('/m/friend/link', ['target_id' => $bob->getKey()]);
+
+        $response->assertRedirect(route('friend.modern.list'));
+        $response->assertSessionHas('error');
+    }
+
+    public function test_modern_accept_post_redirects_to_modern_list(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        DB::table('friend_requests')->insert([
+            'requester_id' => $bob->getKey(),
+            'target_id' => $alice->getKey(),
+        ]);
+
+        $response = $this->actingAs($alice)
+            ->post('/m/friend/accept', ['requester_id' => $bob->getKey()]);
+
+        $response->assertRedirect(route('friend.modern.list'));
+        $response->assertSessionHas('status');
+    }
+
+    public function test_modern_accept_post_redirects_to_modern_manage_on_error(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+
+        $response = $this->actingAs($alice)
+            ->post('/m/friend/accept', ['requester_id' => $bob->getKey()]);
+
+        $response->assertRedirect(route('friend.modern.manage'));
+        $response->assertSessionHas('error');
+    }
+
+    public function test_modern_reject_post_redirects_to_modern_manage(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        DB::table('friend_requests')->insert([
+            'requester_id' => $bob->getKey(),
+            'target_id' => $alice->getKey(),
+        ]);
+
+        $response = $this->actingAs($alice)
+            ->post('/m/friend/reject', ['requester_id' => $bob->getKey()]);
+
+        $response->assertRedirect(route('friend.modern.manage'));
+        $response->assertSessionHas('status');
+    }
+
+    public function test_modern_unlink_post_redirects_to_modern_list(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        $this->makeFriends($alice, $bob);
+
+        $response = $this->actingAs($alice)
+            ->post("/m/friend/unlink/{$bob->getKey()}");
+
+        $response->assertRedirect(route('friend.modern.list'));
+        $response->assertSessionHas('status');
+    }
+
+    public function test_modern_list_paginates_via_page_query(): void
+    {
+        $alice = Member::factory()->create();
+        for ($i = 0; $i < 25; $i++) {
+            $friend = Member::factory()->create();
+            $this->makeFriends($alice, $friend);
+        }
+
+        $response = $this->actingAs($alice)->get('/m/friend/list?page=2');
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('friend/list')
+            ->where('friends.meta.currentPage', 2)
+            ->where('friends.meta.lastPage', 2)
+            ->where('friends.meta.total', 25)
+        );
+    }
+
+    public function test_modern_manage_paginates_received_and_sent_independently(): void
+    {
+        $alice = Member::factory()->create();
+        for ($i = 0; $i < 25; $i++) {
+            $requester = Member::factory()->create();
+            DB::table('friend_requests')->insert([
+                'requester_id' => $requester->getKey(),
+                'target_id' => $alice->getKey(),
+            ]);
+        }
+
+        $response = $this->actingAs($alice)->get('/m/friend/manage?received_page=2');
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('friend/manage')
+            ->where('received.meta.currentPage', 2)
+            ->where('sent.meta.currentPage', 1)
+        );
+    }
+
     public function test_modern_submit_error_lands_on_modern_when_session_override_is_modern(): void
     {
         $alice = Member::factory()->create();
@@ -216,7 +342,7 @@ class FriendRoutesTest extends TestCase
         $response->assertInertia(fn (AssertableInertia $page) => $page->component('friend/list'));
     }
 
-    public function test_modern_route_returns_modern_even_when_feature_status_is_not_native(): void
+    public function test_modern_route_falls_back_to_classic_when_feature_status_is_not_native(): void
     {
         config(['features.friend.modern_status' => 'fallback']);
         $alice = Member::factory()->create();
@@ -224,7 +350,7 @@ class FriendRoutesTest extends TestCase
         $response = $this->actingAs($alice)->get('/m/friend/list');
 
         $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page->component('friend/list'));
+        $response->assertSee('id="page_friend_list"', false);
     }
 
     public function test_canonical_route_returns_classic_when_feature_status_is_not_native(): void

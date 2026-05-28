@@ -13,7 +13,7 @@ export default function FriendUnlink() {
 
     function submit() {
         setSubmitting(true);
-        router.post(`/friend/unlink/${target.id}`, {}, { onFinish: () => setSubmitting(false) });
+        router.post(`/m/friend/unlink/${target.id}`, {}, { onFinish: () => setSubmitting(false) });
     }
 
     return (

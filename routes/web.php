@@ -27,6 +27,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/list', 'list')->defaults('surface', 'modern')->name('friend.modern.list');
         Route::get('/manage', 'manage')->defaults('surface', 'modern')->name('friend.modern.manage');
         Route::get('/link', 'showLink')->defaults('surface', 'modern')->name('friend.modern.link.show');
+        Route::post('/link', 'submitLink')->defaults('surface', 'modern')->name('friend.modern.link');
+        Route::post('/accept', 'submitAccept')->defaults('surface', 'modern')->name('friend.modern.accept');
+        Route::post('/reject', 'submitReject')->defaults('surface', 'modern')->name('friend.modern.reject');
         Route::get('/unlink/{member}', 'showUnlink')->defaults('surface', 'modern')->name('friend.modern.unlink.show');
+        Route::post('/unlink/{member}', 'submitUnlink')->defaults('surface', 'modern')->name('friend.modern.unlink.submit');
     });
 });
