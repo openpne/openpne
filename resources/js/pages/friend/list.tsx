@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Pagination } from '@/components/pagination';
+import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { FriendMember, PaginatedFriends } from './types';
 
@@ -10,8 +11,9 @@ interface ListProps extends PageProps {
 }
 
 export default function FriendList() {
+    const t = useT();
     const { owner, isOwner, friends, flash } = usePage<ListProps>().props;
-    const title = isOwner ? 'Friends' : `${owner.name}'s friends`;
+    const title = isOwner ? t('Friends') : t(":name's friends", { name: owner.name });
 
     return (
         <>
@@ -23,7 +25,7 @@ export default function FriendList() {
                 {flash.error && <p role="alert">{flash.error}</p>}
 
                 {friends.data.length === 0 ? (
-                    <p>No friends to show.</p>
+                    <p>{t('No friends to show.')}</p>
                 ) : (
                     <>
                         <ul className="space-y-2">
@@ -35,7 +37,7 @@ export default function FriendList() {
                                             href={`/m/friend/unlink/${friend.id}`}
                                             className="text-sm text-muted-foreground hover:underline"
                                         >
-                                            Unfriend
+                                            {t('Unfriend')}
                                         </Link>
                                     )}
                                 </li>

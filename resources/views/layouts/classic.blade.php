@@ -11,8 +11,8 @@
         <div id="header">
             <h1 id="logo"><a href="{{ url('/') }}">{{ config('app.name') }}</a></h1>
             <ul id="globalNav">
-                <li><a href="{{ route('friend.list') }}">Friends</a></li>
-                <li><a href="{{ route('friend.manage') }}">Pending requests</a></li>
+                <li><a href="{{ route('friend.list') }}">{{ __('Friends') }}</a></li>
+                <li><a href="{{ route('friend.manage') }}">{{ __('Pending requests') }}</a></li>
             </ul>
         </div>
 

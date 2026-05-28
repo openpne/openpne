@@ -1,8 +1,10 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { AuthLayout } from '@/layouts/auth-layout';
+import { useT } from '@/lib/i18n';
 
 export default function Register() {
+    const t = useT();
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
@@ -17,14 +19,16 @@ export default function Register() {
         });
     }
 
+    const title = t('Create an account');
+
     return (
-        <AuthLayout title="Create an account">
-            <Head title="Create an account" />
+        <AuthLayout title={title}>
+            <Head title={title} />
 
             <form onSubmit={submit} className="space-y-4">
                 <div className="space-y-1">
                     <label htmlFor="name" className="block text-sm font-medium">
-                        Name
+                        {t('Name')}
                     </label>
                     <input
                         id="name"
@@ -42,7 +46,7 @@ export default function Register() {
 
                 <div className="space-y-1">
                     <label htmlFor="email" className="block text-sm font-medium">
-                        Email
+                        {t('Email')}
                     </label>
                     <input
                         id="email"
@@ -59,7 +63,7 @@ export default function Register() {
 
                 <div className="space-y-1">
                     <label htmlFor="password" className="block text-sm font-medium">
-                        Password
+                        {t('Password')}
                     </label>
                     <input
                         id="password"
@@ -76,7 +80,7 @@ export default function Register() {
 
                 <div className="space-y-1">
                     <label htmlFor="password_confirmation" className="block text-sm font-medium">
-                        Confirm password
+                        {t('Confirm password')}
                     </label>
                     <input
                         id="password_confirmation"
@@ -95,12 +99,12 @@ export default function Register() {
                     disabled={processing}
                     className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
                 >
-                    Create account
+                    {title}
                 </button>
 
                 <p className="text-center text-sm text-muted-foreground">
                     <Link href="/login" className="underline">
-                        Already have an account? Sign in
+                        {t('Already have an account? Sign in')}
                     </Link>
                 </p>
             </form>

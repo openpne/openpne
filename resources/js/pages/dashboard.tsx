@@ -1,7 +1,9 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
 export default function Dashboard() {
+    const t = useT();
     const { auth } = usePage<PageProps>().props;
     const user = auth.user;
 
@@ -15,17 +17,19 @@ export default function Dashboard() {
 
     return (
         <>
-            <Head title="Dashboard" />
+            <Head title={t('Dashboard')} />
             <div className="min-h-screen bg-background px-4 py-12">
                 <div className="mx-auto max-w-2xl space-y-6">
-                    <h1 className="text-2xl font-semibold">Hello, {user.name}</h1>
-                    <p className="text-muted-foreground">You are signed in as {user.email}.</p>
+                    <h1 className="text-2xl font-semibold">{t('Hello, :name', { name: user.name })}</h1>
+                    <p className="text-muted-foreground">
+                        {t('You are signed in as :email.', { email: user.email })}
+                    </p>
                     <button
                         type="button"
                         onClick={logout}
                         className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
                     >
-                        Sign out
+                        {t('Sign out')}
                     </button>
                 </div>
             </div>

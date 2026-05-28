@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { useT } from '@/lib/i18n';
 
 export interface PaginationMeta {
     currentPage: number;
@@ -13,6 +14,7 @@ interface PaginationProps {
 }
 
 export function Pagination({ meta, pageName = 'page' }: PaginationProps) {
+    const t = useT();
     const { url } = usePage();
     if (meta.lastPage <= 1) {
         return null;
@@ -25,27 +27,30 @@ export function Pagination({ meta, pageName = 'page' }: PaginationProps) {
         return `${path}?${params.toString()}`;
     };
 
+    const previous = t('Previous');
+    const next = t('Next');
+
     return (
-        <nav aria-label="Pagination" className="flex items-center gap-3 text-sm">
+        <nav aria-label={t('Pagination Navigation')} className="flex items-center gap-3 text-sm">
             {meta.currentPage > 1 ? (
                 <Link href={linkTo(meta.currentPage - 1)} preserveScroll>
-                    Previous
+                    {previous}
                 </Link>
             ) : (
                 <span aria-disabled="true" className="text-muted-foreground">
-                    Previous
+                    {previous}
                 </span>
             )}
             <span>
-                Page {meta.currentPage} of {meta.lastPage}
+                {t('Page :current of :last', { current: meta.currentPage, last: meta.lastPage })}
             </span>
             {meta.currentPage < meta.lastPage ? (
                 <Link href={linkTo(meta.currentPage + 1)} preserveScroll>
-                    Next
+                    {next}
                 </Link>
             ) : (
                 <span aria-disabled="true" className="text-muted-foreground">
-                    Next
+                    {next}
                 </span>
             )}
         </nav>
