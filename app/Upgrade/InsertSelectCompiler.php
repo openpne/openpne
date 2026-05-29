@@ -2,6 +2,8 @@
 
 namespace App\Upgrade;
 
+use LogicException;
+
 /**
  * Compiles an UpgradeStep into the `INSERT ... SELECT` the upgrade runs.
  *
@@ -19,6 +21,14 @@ final class InsertSelectCompiler
         ?string $sourceDatabase = null,
         ?string $targetDatabase = null,
     ): string {
+        if ($step->pendingTargets() !== []) {
+            throw new LogicException(sprintf(
+                '%s is not runnable: target columns %s have no source mapping yet.',
+                $step::class,
+                implode(', ', array_keys($step->pendingTargets())),
+            ));
+        }
+
         $columns = $step->columns();
 
         $targetColumns = implode(', ', array_map(

@@ -5,6 +5,8 @@ namespace Tests\Unit\Upgrade;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
+use App\Upgrade\Steps\MemberUpgrade;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 class InsertSelectCompilerTest extends TestCase
@@ -60,5 +62,13 @@ class InsertSelectCompilerTest extends TestCase
 
         $this->assertStringContainsString('FROM `member_relationship`', $sql);
         $this->assertStringContainsString('WHERE is_friend = 1', $sql);
+    }
+
+    public function test_step_with_pending_targets_is_not_compilable(): void
+    {
+        // A step whose required target columns have no source yet must not silently
+        // compile to an INSERT that omits them.
+        $this->expectException(LogicException::class);
+        (new InsertSelectCompiler)->compile(new MemberUpgrade);
     }
 }
