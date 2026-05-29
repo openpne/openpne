@@ -2,11 +2,11 @@
 
 namespace App\Features\Friend\Actions;
 
+use App\Features\Block\BlockLookup;
 use App\Features\Friend\Events\FriendRequestAccepted;
 use App\Features\Friend\Exceptions\FriendActionException;
 use App\Features\Friend\Exceptions\FriendActionFailure;
-use App\Features\Friend\Internal\BlockLookup;
-use App\Features\Friend\Internal\FriendRequestLock;
+use App\Features\Friend\FriendRequestLock;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
@@ -21,7 +21,7 @@ class AcceptFriendRequest
                 throw new FriendActionException(FriendActionFailure::RequestNotFound);
             }
 
-            if (BlockLookup::hasAnyBetween($accepter, $requester)) {
+            if (BlockLookup::hasAnyBlockBetween($accepter, $requester)) {
                 throw new FriendActionException(FriendActionFailure::Blocked);
             }
 

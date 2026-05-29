@@ -4,7 +4,7 @@ namespace App\Features\Friend\Actions;
 
 use App\Features\Friend\Exceptions\FriendActionException;
 use App\Features\Friend\Exceptions\FriendActionFailure;
-use App\Features\Friend\Internal\FriendRequestLock;
+use App\Features\Friend\FriendRequestLock;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 

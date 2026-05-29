@@ -2,7 +2,7 @@
 
 namespace App\Features\Friend\Queries;
 
-use App\Features\Friend\Internal\BlockLookup;
+use App\Features\Block\BlockLookup;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
