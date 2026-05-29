@@ -4,6 +4,7 @@ namespace Tests\Unit\Upgrade;
 
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Steps\DiaryUpgrade;
+use App\Upgrade\Steps\FriendshipUpgrade;
 use PHPUnit\Framework\TestCase;
 
 class InsertSelectCompilerTest extends TestCase
@@ -46,5 +47,18 @@ class InsertSelectCompilerTest extends TestCase
         );
 
         $this->assertStringContainsString('FROM `op3db`.`op3_diary`', $sql);
+    }
+
+    public function test_no_where_clause_without_a_filter(): void
+    {
+        $this->assertStringNotContainsString('WHERE', (new InsertSelectCompiler)->compile(new DiaryUpgrade));
+    }
+
+    public function test_filter_becomes_a_where_clause(): void
+    {
+        $sql = (new InsertSelectCompiler)->compile(new FriendshipUpgrade);
+
+        $this->assertStringContainsString('FROM `member_relationship`', $sql);
+        $this->assertStringContainsString('WHERE is_friend = 1', $sql);
     }
 }

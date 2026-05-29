@@ -52,7 +52,26 @@ abstract class UpgradeStep
         return [];
     }
 
-    /** @return list<string> distinct source columns read across all mappings */
+    /**
+     * Optional SQL boolean restricting which source rows are copied (the WHERE clause),
+     * e.g. when one source table feeds several target tables by a flag. null = all rows.
+     */
+    public function filter(): ?string
+    {
+        return null;
+    }
+
+    /**
+     * Source columns the filter reads, so they count as consumed in the audit.
+     *
+     * @return list<string>
+     */
+    public function filterColumns(): array
+    {
+        return [];
+    }
+
+    /** @return list<string> distinct source columns read across mappings and the filter */
     public function consumedSourceColumns(): array
     {
         $used = [];
@@ -60,6 +79,9 @@ abstract class UpgradeStep
             foreach ($column->uses as $name) {
                 $used[$name] = true;
             }
+        }
+        foreach ($this->filterColumns() as $name) {
+            $used[$name] = true;
         }
 
         return array_keys($used);
