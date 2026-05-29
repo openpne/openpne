@@ -7,4 +7,5 @@ return [
     'nickname' => 'nickname',
     'activity' => 'timeline',
     'post_activity' => 'tweet',
+    'diary' => 'diary',
 ];
