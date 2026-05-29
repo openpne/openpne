@@ -1,10 +1,15 @@
 <?php
 
-namespace App\Features\Friend\Internal;
+namespace App\Features\Friend;
 
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Pair lock over `friend_requests`, owned by Friend (the table owner) but
+ * consumed cross-feature: Block mutations touch the same pair, so they acquire
+ * this lock to stay compatible with friend-request concurrency.
+ */
 class FriendRequestLock
 {
     public static function acquire(Member $a, Member $b): void

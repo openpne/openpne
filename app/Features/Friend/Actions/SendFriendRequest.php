@@ -2,12 +2,12 @@
 
 namespace App\Features\Friend\Actions;
 
+use App\Features\Block\BlockLookup;
 use App\Features\Friend\Events\FriendRequestAccepted;
 use App\Features\Friend\Events\FriendRequested;
 use App\Features\Friend\Exceptions\FriendActionException;
 use App\Features\Friend\Exceptions\FriendActionFailure;
-use App\Features\Friend\Internal\BlockLookup;
-use App\Features\Friend\Internal\FriendRequestLock;
+use App\Features\Friend\FriendRequestLock;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
@@ -26,7 +26,7 @@ class SendFriendRequest
                 throw new FriendActionException(FriendActionFailure::AlreadyFriends);
             }
 
-            if (BlockLookup::hasAnyBetween($requester, $target)) {
+            if (BlockLookup::hasAnyBlockBetween($requester, $target)) {
                 throw new FriendActionException(FriendActionFailure::Blocked);
             }
 
