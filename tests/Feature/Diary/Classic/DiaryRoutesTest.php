@@ -222,6 +222,15 @@ class DiaryRoutesTest extends TestCase
         ])->assertNotFound();
     }
 
+    public function test_update_returns_404_for_non_owner_even_with_invalid_payload(): void
+    {
+        // Invalid payload must not leak diary existence via validation errors.
+        [$alice, $bob] = Member::factory()->count(2)->create()->all();
+        $diary = Diary::factory()->create(['member_id' => $bob->getKey()]);
+
+        $this->actingAs($alice)->post("/diary/update/{$diary->getKey()}")->assertNotFound();
+    }
+
     // delete --------------------------------------------------------------------
 
     public function test_delete_confirm_page_renders_with_body_id(): void
