@@ -34,7 +34,13 @@ final class InsertSelectCompiler
         $source = $this->qualifiedName($sourceDatabase, $sourcePrefix, $step->sourceTable());
         $target = $this->qualifiedName($targetDatabase, $targetPrefix, $step->targetTable());
 
-        return "INSERT INTO {$target} ({$targetColumns})\nSELECT {$selectList}\nFROM {$source}";
+        $sql = "INSERT INTO {$target} ({$targetColumns})\nSELECT {$selectList}\nFROM {$source}";
+
+        if ($step->filter() !== null) {
+            $sql .= "\nWHERE {$step->filter()}";
+        }
+
+        return $sql;
     }
 
     private function qualifiedName(?string $database, string $prefix, string $table): string
