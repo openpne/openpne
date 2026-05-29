@@ -173,6 +173,21 @@ class DiaryRoutesTest extends TestCase
         ])->assertSessionHasErrors('visibility');
     }
 
+    public function test_store_accepts_long_title_without_validation_error(): void
+    {
+        // OpenPNE 3 title is TEXT with no limit; validation must not cap it (no max:N).
+        $member = Member::factory()->create();
+
+        $response = $this->actingAs($member)->post('/diary/create', [
+            'title' => str_repeat('あ', 500),
+            'body' => 'Body',
+            'visibility' => '1',
+        ]);
+
+        $response->assertSessionDoesntHaveErrors('title');
+        $response->assertRedirect();
+    }
+
     // edit / update -------------------------------------------------------------
 
     public function test_edit_page_renders_with_body_id(): void

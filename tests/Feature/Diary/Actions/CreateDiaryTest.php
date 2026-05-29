@@ -38,4 +38,17 @@ class CreateDiaryTest extends TestCase
 
         $this->assertSame(Visibility::Friends, $diary->visibility);
     }
+
+    public function test_accepts_long_title_beyond_varchar_limit(): void
+    {
+        // OpenPNE 3 diary.title is TEXT with no validator limit; a >255-char title
+        // must round-trip (the column is TEXT, not VARCHAR(255)).
+        $author = Member::factory()->create();
+        $longTitle = str_repeat('あ', 500);
+        $data = new DiaryFormData($longTitle, 'Body', Visibility::Members);
+
+        $diary = (new CreateDiary)($author, $data);
+
+        $this->assertSame($longTitle, $diary->fresh()->title);
+    }
 }

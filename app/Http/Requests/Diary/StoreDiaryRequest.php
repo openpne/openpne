@@ -13,7 +13,9 @@ class StoreDiaryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['required', 'string', 'max:255'],
+            // No max length: OpenPNE 3 diary.title/body are TEXT with no validator limit.
+            // Capping here would lock out re-editing of long migrated content.
+            'title' => ['required', 'string'],
             'body' => ['required', 'string'],
             'visibility' => ['required', (new Enum(Visibility::class))->except([Visibility::Open])],
         ];
