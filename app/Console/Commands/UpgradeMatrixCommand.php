@@ -25,6 +25,13 @@ class UpgradeMatrixCommand extends Command
                 $this->line("| `{$target}` | {$from} |");
             }
 
+            if ($step->filter() !== null) {
+                // Without this the matrix reads as a full-table copy; the filter is what
+                // splits one source table across several targets.
+                $this->line('');
+                $this->line("Filter: `{$step->filter()}`");
+            }
+
             if ($step->gaps() !== []) {
                 $this->line('');
                 $this->line('Accepted gaps:');
