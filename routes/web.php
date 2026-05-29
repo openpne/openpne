@@ -1,5 +1,6 @@
 <?php
 
+use App\Features\Block\BlockController;
 use App\Features\Friend\FriendController;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Http\Request;
@@ -54,4 +55,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/unlink/{member}', 'showUnlink')->defaults('surface', 'modern')->name('friend.modern.unlink.show');
         Route::post('/unlink/{member}', 'submitUnlink')->defaults('surface', 'modern')->name('friend.modern.unlink.submit');
     });
+
+    Route::prefix('block')->controller(BlockController::class)->group(function () {
+        Route::get('/list', 'list')->name('block.list');
+        Route::get('/add', 'showAdd')->name('block.add.show');
+        Route::post('/add', 'submitAdd')->name('block.add');
+        Route::get('/remove/{member}', 'showRemove')->name('block.remove.show');
+        Route::post('/remove/{member}', 'submitRemove')->name('block.remove.submit');
+    });
+
+    // OpenPNE 3 compatibility: access block lived at /member/config?category=accessBlock.
+    // The member config module is not ported yet, so resolve just that category to the
+    // canonical Block list. 302 (not 301) because a future member config module will
+    // reclaim this URL. Folded into that module once it exists.
+    Route::get('/member/config', function (Request $request) {
+        abort_unless($request->query('category') === 'accessBlock', 404);
+
+        return redirect()->route('block.list');
+    })->name('member.config.access_block_compat');
 });

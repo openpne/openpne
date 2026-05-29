@@ -2,13 +2,13 @@
 
 namespace App\Features\Friend;
 
+use App\Features\Block\BlockLookup;
 use App\Features\Friend\Actions\AcceptFriendRequest;
 use App\Features\Friend\Actions\RejectFriendRequest;
 use App\Features\Friend\Actions\SendFriendRequest;
 use App\Features\Friend\Actions\Unfriend;
 use App\Features\Friend\Exceptions\FriendActionException;
 use App\Features\Friend\Exceptions\FriendActionFailure;
-use App\Features\Friend\Internal\BlockLookup;
 use App\Features\Friend\Queries\ListFriends;
 use App\Features\Friend\Queries\ListPendingRequests;
 use App\Features\Friend\Queries\PendingRequestDirection;
@@ -76,7 +76,7 @@ class FriendController extends Controller
         $viewer = $this->viewer();
         $target = Member::findOrFail((int) $request->query('id'));
 
-        if ($viewer->is($target) || BlockLookup::hasAnyBetween($viewer, $target)) {
+        if ($viewer->is($target) || BlockLookup::hasAnyBlockBetween($viewer, $target)) {
             abort(404);
         }
         if ($viewer->isFriendsWith($target)) {
