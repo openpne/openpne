@@ -45,12 +45,22 @@ class UpgradeMatrixAuditTest extends TestCase
     {
         $schema = SourceSchema::default();
 
+        // One source table may feed several steps (member_relationship → friendships /
+        // friend_requests / member_blocks), so coverage is checked across every step reading it.
+        $stepsBySource = [];
         foreach (StepRegistry::all() as $step) {
-            $accounted = array_merge($step->consumedSourceColumns(), array_keys($step->gaps()));
+            $stepsBySource[$step->sourceTable()][] = $step;
+        }
 
-            foreach ($schema->columns($step->sourceTable()) as $column) {
+        foreach ($stepsBySource as $sourceTable => $steps) {
+            $accounted = [];
+            foreach ($steps as $step) {
+                $accounted = array_merge($accounted, $step->consumedSourceColumns(), array_keys($step->gaps()));
+            }
+
+            foreach ($schema->columns($sourceTable) as $column) {
                 $this->assertContains($column, $accounted,
-                    "{$step->sourceTable()}.{$column} is neither mapped nor declared in gaps() (silent drop)");
+                    "{$sourceTable}.{$column} is neither mapped nor declared in gaps() by any step (silent drop)");
             }
         }
     }
