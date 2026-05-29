@@ -32,11 +32,15 @@ class UpgradeMatrixAuditTest extends TestCase
     public function test_no_target_column_is_left_unmapped(): void
     {
         foreach (StepRegistry::all() as $step) {
-            $accounted = array_merge(array_keys($step->columns()), $step->targetDefaults());
+            $accounted = array_merge(
+                array_keys($step->columns()),
+                $step->targetDefaults(),
+                array_keys($step->pendingTargets()),
+            );
 
             foreach (Schema::getColumnListing($step->targetTable()) as $column) {
                 $this->assertContains($column, $accounted,
-                    "{$step->targetTable()}.{$column} exists but no mapping or targetDefaults() covers it");
+                    "{$step->targetTable()}.{$column} exists but no mapping, targetDefaults() or pendingTargets() covers it");
             }
         }
     }

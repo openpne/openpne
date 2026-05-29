@@ -15,6 +15,9 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('Filter: `is_friend = 1`')
             ->expectsOutputToContain('Filter: `is_friend_pre = 1`')
             ->expectsOutputToContain('Filter: `is_access_block = 1`')
+            // Member's deferred credentials must stay visible in the matrix.
+            ->expectsOutputToContain('Pending targets:')
+            ->expectsOutputToContain('`password`')
             ->expectsOutputToContain('Accepted gaps:');
     }
 }
