@@ -8,10 +8,6 @@ use Illuminate\Http\Request;
  * Decides whether a canonical feature route renders the Classic or Modern
  * surface, and maps a canonical route name to its Modern sibling on redirect.
  * Shared by every feature controller that serves both surfaces (Friend, Block).
- *
- * Priority (highest first): feature modern status > explicit /m/* route default
- * > tenant mode > member migration UI override > tenant default. See
- * worklog classic-compatibility-contract §Canonical response selection.
  */
 class SurfaceResolver
 {
@@ -42,11 +38,9 @@ class SurfaceResolver
     }
 
     /**
-     * `friend.list` -> `friend.modern.list` when the request is on a Modern
-     * route, so a post-submit redirect lands on the same surface it came from.
-     * Requires the convention canonical `{feature}.{rest}` <-> Modern
-     * `{feature}.modern.{rest}`; every feature consuming the resolver must
-     * name its routes that way.
+     * On a Modern route, maps `friend.list` -> `friend.modern.list` so a
+     * post-submit redirect stays on the surface it came from. Consumers must
+     * name routes `{feature}.{rest}` <-> `{feature}.modern.{rest}`.
      */
     public static function redirectName(Request $request, string $canonicalName): string
     {
