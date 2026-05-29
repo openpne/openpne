@@ -18,6 +18,7 @@ use App\Http\Requests\Friend\AcceptRequest;
 use App\Http\Requests\Friend\LinkRequest;
 use App\Http\Requests\Friend\RejectRequest;
 use App\Models\Member;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -161,9 +162,7 @@ class FriendController extends Controller
 
     private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
     {
-        $name = $request->route('surface') === self::SURFACE_MODERN
-            ? str_replace('friend.', 'friend.modern.', $canonicalName)
-            : $canonicalName;
+        $name = SurfaceResolver::redirectName($request, $canonicalName);
 
         $redirect = redirect()->route($name);
         if ($status !== null) {
@@ -186,24 +185,7 @@ class FriendController extends Controller
 
     private function resolveSurface(Request $request): string
     {
-        if (config('features.friend.modern_status', 'native') !== 'native') {
-            return self::SURFACE_CLASSIC;
-        }
-
-        if ($request->route('surface') === self::SURFACE_MODERN) {
-            return self::SURFACE_MODERN;
-        }
-
-        if (config('openpne.tenant_mode', 'mixed') === 'modern_only') {
-            return self::SURFACE_MODERN;
-        }
-
-        $override = $request->session()->get('migration_ui_override');
-        if (in_array($override, [self::SURFACE_CLASSIC, self::SURFACE_MODERN], true)) {
-            return $override;
-        }
-
-        return config('openpne.tenant_default_surface', self::SURFACE_CLASSIC);
+        return SurfaceResolver::resolve($request, 'friend');
     }
 
     private function viewer(): Member

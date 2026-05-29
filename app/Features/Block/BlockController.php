@@ -7,24 +7,35 @@ use App\Features\Block\Actions\UnblockMember;
 use App\Features\Block\Exceptions\BlockActionException;
 use App\Features\Block\Exceptions\BlockActionFailure;
 use App\Features\Block\Queries\ListBlocks;
+use App\Features\Block\Serializers\BlockSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Block\BlockRequest;
 use App\Models\Member;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class BlockController extends Controller
 {
-    public function list(ListBlocks $query): View
+    public function list(Request $request, ListBlocks $query): View|InertiaResponse
     {
-        return view('block.list', [
-            'pageId' => 'page_block_list',
-            'blocks' => $query($this->viewer()),
+        $blocks = $query($this->viewer());
+
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('block.list', [
+                'pageId' => 'page_block_list',
+                'blocks' => $blocks,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('block/list', [
+                'blocks' => BlockSerializer::paginator($blocks),
+            ]),
         ]);
     }
 
-    public function showAdd(Request $request): View|RedirectResponse
+    public function showAdd(Request $request): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $target = Member::findOrFail((int) $request->query('id'));
@@ -33,9 +44,14 @@ class BlockController extends Controller
             abort(404);
         }
 
-        return view('block.add', [
-            'pageId' => 'page_block_add',
-            'target' => $target,
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('block.add', [
+                'pageId' => 'page_block_add',
+                'target' => $target,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('block/add', [
+                'target' => BlockSerializer::member($target),
+            ]),
         ]);
     }
 
@@ -44,33 +60,59 @@ class BlockController extends Controller
         try {
             $action($this->viewer(), $request->target());
         } catch (BlockActionException $e) {
-            return redirect()->route('block.list')->with('error', $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit($request, 'block.list', error: $this->messageFor($e->reason));
         }
 
-        return redirect()->route('block.list')->with('status', __('Member blocked.'));
+        return $this->redirectAfterSubmit($request, 'block.list', status: __('Member blocked.'));
     }
 
-    public function showRemove(Member $member): View
+    public function showRemove(Request $request, Member $member): View|InertiaResponse
     {
         if (! BlockLookup::ownerBlocksViewer($this->viewer(), $member)) {
             abort(404);
         }
 
-        return view('block.remove', [
-            'pageId' => 'page_block_remove',
-            'target' => $member,
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('block.remove', [
+                'pageId' => 'page_block_remove',
+                'target' => $member,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('block/remove', [
+                'target' => BlockSerializer::member($member),
+            ]),
         ]);
     }
 
-    public function submitRemove(Member $member, UnblockMember $action): RedirectResponse
+    public function submitRemove(Request $request, Member $member, UnblockMember $action): RedirectResponse
     {
         try {
             $action($this->viewer(), $member);
         } catch (BlockActionException $e) {
-            return redirect()->route('block.list')->with('error', $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit($request, 'block.list', error: $this->messageFor($e->reason));
         }
 
-        return redirect()->route('block.list')->with('status', __('Member unblocked.'));
+        return $this->redirectAfterSubmit($request, 'block.list', status: __('Member unblocked.'));
+    }
+
+    private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
+    {
+        $redirect = redirect()->route(SurfaceResolver::redirectName($request, $canonicalName));
+        if ($status !== null) {
+            $redirect = $redirect->with('status', $status);
+        }
+        if ($error !== null) {
+            $redirect = $redirect->with('error', $error);
+        }
+
+        return $redirect;
+    }
+
+    /**
+     * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
+     */
+    private function respondWith(Request $request, array $responders): View|InertiaResponse
+    {
+        return $responders[SurfaceResolver::resolve($request, 'block')]();
     }
 
     private function viewer(): Member

@@ -64,6 +64,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/remove/{member}', 'submitRemove')->name('block.remove.submit');
     });
 
+    Route::prefix('m/block')->controller(BlockController::class)->group(function () {
+        Route::get('/list', 'list')->defaults('surface', 'modern')->name('block.modern.list');
+        Route::get('/add', 'showAdd')->defaults('surface', 'modern')->name('block.modern.add.show');
+        Route::post('/add', 'submitAdd')->defaults('surface', 'modern')->name('block.modern.add');
+        Route::get('/remove/{member}', 'showRemove')->defaults('surface', 'modern')->name('block.modern.remove.show');
+        Route::post('/remove/{member}', 'submitRemove')->defaults('surface', 'modern')->name('block.modern.remove.submit');
+    });
+
     // OpenPNE 3 compatibility: access block lived at /member/config?category=accessBlock.
     // The member config module is not ported yet, so resolve just that category to the
     // canonical Block list. 302 (not 301) because a future member config module will
