@@ -1,6 +1,7 @@
 <?php
 
 use App\Features\Block\BlockController;
+use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Http\Request;
@@ -70,6 +71,29 @@ Route::middleware('auth')->group(function () {
         Route::post('/add', 'submitAdd')->defaults('surface', 'modern')->name('block.modern.add');
         Route::get('/remove/{member}', 'showRemove')->defaults('surface', 'modern')->name('block.modern.remove.show');
         Route::post('/remove/{member}', 'submitRemove')->defaults('surface', 'modern')->name('block.modern.remove.submit');
+    });
+
+    Route::prefix('diary')->controller(DiaryController::class)->group(function () {
+        // Literal-prefix routes must precede the {diary} wildcard.
+        Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->name('diary.list_member');
+        Route::get('/new', 'new')->name('diary.new');
+        Route::post('/create', 'store')->name('diary.store');
+        Route::get('/edit/{diary}', 'edit')->whereNumber('diary')->name('diary.edit');
+        Route::post('/update/{diary}', 'update')->whereNumber('diary')->name('diary.update');
+        Route::get('/deleteConfirm/{diary}', 'showDelete')->whereNumber('diary')->name('diary.delete.show');
+        Route::post('/delete/{diary}', 'delete')->whereNumber('diary')->name('diary.delete');
+        Route::get('/{diary}', 'show')->whereNumber('diary')->name('diary.show');
+    });
+
+    Route::prefix('m/diary')->controller(DiaryController::class)->group(function () {
+        Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->defaults('surface', 'modern')->name('diary.modern.list_member');
+        Route::get('/new', 'new')->defaults('surface', 'modern')->name('diary.modern.new');
+        Route::post('/create', 'store')->defaults('surface', 'modern')->name('diary.modern.store');
+        Route::get('/edit/{diary}', 'edit')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.edit');
+        Route::post('/update/{diary}', 'update')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.update');
+        Route::get('/deleteConfirm/{diary}', 'showDelete')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.delete.show');
+        Route::post('/delete/{diary}', 'delete')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.delete');
+        Route::get('/{diary}', 'show')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.show');
     });
 
     // OpenPNE 3 compatibility: access block lived at /member/config?category=accessBlock.
