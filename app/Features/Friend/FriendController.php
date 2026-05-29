@@ -105,7 +105,7 @@ class FriendController extends Controller
             return $this->redirectAfterSubmit($request, 'friend.list', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'friend.list', status: __('Friend request sent.'));
+        return $this->redirectAfterSubmit($request, 'friend.list', status: __('%Friend% request sent.'));
     }
 
     public function submitAccept(AcceptRequest $request, AcceptFriendRequest $action): RedirectResponse
@@ -116,7 +116,7 @@ class FriendController extends Controller
             return $this->redirectAfterSubmit($request, 'friend.manage', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'friend.list', status: __('Friend request accepted.'));
+        return $this->redirectAfterSubmit($request, 'friend.list', status: __('%Friend% request accepted.'));
     }
 
     public function submitReject(RejectRequest $request, RejectFriendRequest $action): RedirectResponse
@@ -127,7 +127,7 @@ class FriendController extends Controller
             return $this->redirectAfterSubmit($request, 'friend.manage', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'friend.manage', status: __('Friend request rejected.'));
+        return $this->redirectAfterSubmit($request, 'friend.manage', status: __('%Friend% request rejected.'));
     }
 
     public function showUnlink(Request $request, Member $member): View|InertiaResponse
@@ -156,7 +156,7 @@ class FriendController extends Controller
             return $this->redirectAfterSubmit($request, 'friend.list', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'friend.list', status: __('Unfriended.'));
+        return $this->redirectAfterSubmit($request, 'friend.list', status: __('%Friend% removed.'));
     }
 
     private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
@@ -217,12 +217,12 @@ class FriendController extends Controller
     private function messageFor(FriendActionFailure $reason): string
     {
         return match ($reason) {
-            FriendActionFailure::SelfFriendship => __('You cannot send a friend request to yourself.'),
-            FriendActionFailure::AlreadyFriends => __('You are already friends.'),
+            FriendActionFailure::SelfFriendship => __('You cannot send a %friend% request to yourself.'),
+            FriendActionFailure::AlreadyFriends => __('You are already %friends%.'),
             FriendActionFailure::DuplicateRequest => __('A pending request already exists.'),
             FriendActionFailure::Blocked => __('This member is unavailable.'),
-            FriendActionFailure::RequestNotFound => __('No pending friend request found.'),
-            FriendActionFailure::NotFriends => __('You are not friends with this member.'),
+            FriendActionFailure::RequestNotFound => __('No pending %friend% request found.'),
+            FriendActionFailure::NotFriends => __('You are not %friends% with this member.'),
         };
     }
 }

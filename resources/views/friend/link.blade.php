@@ -1,12 +1,12 @@
 @extends('layouts.classic')
 
-@section('title', __('Send a friend request'))
+@section('title', __('Send a %friend% request'))
 
 @section('content')
     <div class="dparts" id="friend_link">
-        <h2 class="partsHeading">{{ __('Send a friend request') }}</h2>
+        <h2 class="partsHeading">{{ __('Send a %friend% request') }}</h2>
         <div class="parts">
-            <p>{{ __('Send a friend request to :name?', ['name' => $target->name]) }}</p>
+            <p>{{ __('Send a %friend% request to :name?', ['name' => $target->name]) }}</p>
 
             <form method="POST" action="{{ route('friend.link') }}">
                 @csrf
