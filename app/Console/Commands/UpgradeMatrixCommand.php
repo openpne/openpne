@@ -32,6 +32,14 @@ class UpgradeMatrixCommand extends Command
                 $this->line("Filter: `{$step->filter()}`");
             }
 
+            if ($step->pendingTargets() !== []) {
+                $this->line('');
+                $this->line('Pending targets:');
+                foreach ($step->pendingTargets() as $name => $reason) {
+                    $this->line("- `{$name}` — {$reason}");
+                }
+            }
+
             if ($step->gaps() !== []) {
                 $this->line('');
                 $this->line('Accepted gaps:');

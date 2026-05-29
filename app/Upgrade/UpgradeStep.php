@@ -53,6 +53,19 @@ abstract class UpgradeStep
     }
 
     /**
+     * Target columns whose source mapping is deferred, with the reason. Distinct from
+     * targetDefaults() (no source, rely on the schema default): these need a source but
+     * it is not resolved yet, so the step is not runnable. The audit accepts them as
+     * accounted-for, and InsertSelectCompiler refuses to compile while any remain.
+     *
+     * @return array<string, string> target column => reason
+     */
+    public function pendingTargets(): array
+    {
+        return [];
+    }
+
+    /**
      * Optional SQL boolean restricting which source rows are copied (the WHERE clause),
      * e.g. when one source table feeds several target tables by a flag. null = all rows.
      */
