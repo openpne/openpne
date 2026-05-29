@@ -18,7 +18,7 @@ export default function FriendUnlink() {
         router.post(`/m/friend/unlink/${target.id}`, {}, { onFinish: () => setSubmitting(false) });
     }
 
-    const title = t('Unfriend');
+    const title = t('Remove %friend%');
 
     return (
         <>
@@ -28,7 +28,7 @@ export default function FriendUnlink() {
 
                 {flash.error && <p role="alert">{flash.error}</p>}
 
-                <p>{t('Remove :name from your friends?', { name: target.name })}</p>
+                <p>{t('Remove :name from your %friends%?', { name: target.name })}</p>
 
                 <div className="space-x-2">
                     <button type="button" onClick={submit} disabled={submitting}>

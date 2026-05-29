@@ -1,6 +1,6 @@
 @extends('layouts.classic')
 
-@php($title = $owner->is(auth()->user()) ? __('Friends') : __(":name's friends", ['name' => $owner->name]))
+@php($title = $owner->is(auth()->user()) ? __('%Friends%') : __(":name's %friends%", ['name' => $owner->name]))
 
 @section('title', $title)
 
@@ -9,14 +9,14 @@
         <h2 class="partsHeading">{{ $title }}</h2>
         <div class="parts">
             @if ($friends->isEmpty())
-                <p>{{ __('No friends to show.') }}</p>
+                <p>{{ __('No %friends% to show.') }}</p>
             @else
                 <ul class="friendList">
                     @foreach ($friends as $friend)
                         <li>
                             <span class="memberName">{{ $friend->name }}</span>
                             @if ($owner->is(auth()->user()))
-                                <a href="{{ route('friend.unlink.show', $friend) }}">{{ __('Unfriend') }}</a>
+                                <a href="{{ route('friend.unlink.show', $friend) }}">{{ __('Remove %friend%') }}</a>
                             @endif
                         </li>
                     @endforeach

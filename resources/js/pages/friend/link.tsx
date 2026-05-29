@@ -22,7 +22,7 @@ export default function FriendLink() {
         );
     }
 
-    const title = t('Send a friend request');
+    const title = t('Send a %friend% request');
 
     return (
         <>
@@ -32,7 +32,7 @@ export default function FriendLink() {
 
                 {flash.error && <p role="alert">{flash.error}</p>}
 
-                <p>{t('Send a friend request to :name?', { name: target.name })}</p>
+                <p>{t('Send a %friend% request to :name?', { name: target.name })}</p>
 
                 <div className="space-x-2">
                     <button type="button" onClick={submit} disabled={submitting}>

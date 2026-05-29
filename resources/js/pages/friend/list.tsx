@@ -13,7 +13,7 @@ interface ListProps extends PageProps {
 export default function FriendList() {
     const t = useT();
     const { owner, isOwner, friends, flash } = usePage<ListProps>().props;
-    const title = isOwner ? t('Friends') : t(":name's friends", { name: owner.name });
+    const title = isOwner ? t('%Friends%') : t(":name's %friends%", { name: owner.name });
 
     return (
         <>
@@ -25,7 +25,7 @@ export default function FriendList() {
                 {flash.error && <p role="alert">{flash.error}</p>}
 
                 {friends.data.length === 0 ? (
-                    <p>{t('No friends to show.')}</p>
+                    <p>{t('No %friends% to show.')}</p>
                 ) : (
                     <>
                         <ul className="space-y-2">
@@ -37,7 +37,7 @@ export default function FriendList() {
                                             href={`/m/friend/unlink/${friend.id}`}
                                             className="text-sm text-muted-foreground hover:underline"
                                         >
-                                            {t('Unfriend')}
+                                            {t('Remove %friend%')}
                                         </Link>
                                     )}
                                 </li>
