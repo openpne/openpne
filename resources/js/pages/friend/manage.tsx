@@ -21,7 +21,7 @@ export default function FriendManage() {
         router.post('/m/friend/reject', { requester_id: requesterId });
     }
 
-    const title = t('Pending friend requests');
+    const title = t('Pending %friend% requests');
 
     return (
         <>

@@ -1,6 +1,6 @@
 @extends('layouts.classic')
 
-@section('title', __('Pending friend requests'))
+@section('title', __('Pending %friend% requests'))
 
 @section('content')
     <div class="dparts" id="friend_manage_received">
