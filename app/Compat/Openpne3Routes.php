@@ -26,6 +26,21 @@ final class Openpne3Routes
         return $this->module($module)['routes'][$route][0] ?? null;
     }
 
+    /** The route's sf_method constraint: 'POST' or 'ANY' (unconstrained). */
+    public function method(string $module, string $route): ?string
+    {
+        return $this->module($module)['routes'][$route][1] ?? null;
+    }
+
+    /**
+     * Whether the route is reachable by GET, so its URL can be bookmarked / mailed / linked
+     * and carries a URL-preservation obligation. POST-only routes (form submits) are not.
+     */
+    public function isUrlCompatible(string $module, string $route): bool
+    {
+        return $this->method($module, $route) !== 'POST';
+    }
+
     /**
      * Whether the module disables OpenPNE 3's global deprecated fallback (/:module/:action/*).
      * When true, the named routes are the complete set of reachable URLs, so the coverage

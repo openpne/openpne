@@ -13,7 +13,12 @@ From a clean OpenPNE 3 install (OpenPNE 3 is Apache-2.0, so this inventory ships
 php symfony app:routes pc_frontend
 ```
 
-gives each route's name, HTTP methods, and URL pattern, recorded per module.
+gives each route's name, HTTP methods, and URL pattern, recorded per module as
+`[URL, method]`. `method` is the route's sf_method constraint in the OpenPNE 3 source:
+`POST` where it declares `sf_method => ['post']`, otherwise `ANY` (no constraint, so the
+route is GET-reachable). This drives URL-compatibility scope — only GET-reachable URLs are
+bookmarked / mailed / linked, so only they must be preserved; POST-only form-submit routes
+are still covered for completeness but sit outside the URL-compatibility contract.
 
 OpenPNE 3 also defines a global deprecated fallback `/:module/:action/*`
 (`opSymfonyDefaultRouteCollection`), so a module's actions are reachable by URL even

@@ -50,6 +50,25 @@ class RouteParityAuditTest extends TestCase
         }
     }
 
+    public function test_url_compatible_routes_stay_get_reachable(): void
+    {
+        // A GET-reachable OpenPNE 3 URL (bookmarked / mailed / linked) keeps its
+        // URL-preservation obligation only if the Laravel route it maps to also answers GET.
+        $inventory = Openpne3Routes::default();
+
+        foreach (RouteParityRegistry::all() as $parity) {
+            foreach ($parity->maps() as $map) {
+                if (! $inventory->isUrlCompatible($parity->module(), $map->op3Route)) {
+                    continue;
+                }
+
+                $route = Route::getRoutes()->getByName($map->laravelRoute);
+                $this->assertContains('GET', $route->methods(),
+                    "{$parity->module()}: `{$map->op3Route}` is URL-compatible but `{$map->laravelRoute}` does not serve GET");
+            }
+        }
+    }
+
     public function test_named_route_coverage_is_exhaustive(): void
     {
         // The coverage audit above iterates named routes only. That is exhaustive solely
