@@ -5,15 +5,6 @@ namespace App\Compat\Parities;
 use App\Compat\RouteMap;
 use App\Compat\RouteParity;
 
-/**
- * OpenPNE 3 `diary` module → OpenPNE 4 Diary Classic routes.
- *
- * The Classic adapter keeps the OpenPNE 3 URLs (/diary/new, /diary/create, /diary/edit/:id,
- * /diary/update/:id, /diary/deleteConfirm/:id, /diary/delete/:id, /diary/:id), so the
- * mapping is one-to-one by URL. The personal-archive route is the one consolidation: OpenPNE 3
- * has separate "mine" and "member" routes, which OpenPNE 4 serves from a single optional
- * parameter. Feeds, search, the calendar archive, and comments are not ported yet.
- */
 class DiaryRouteParity extends RouteParity
 {
     protected string $module = 'diary';

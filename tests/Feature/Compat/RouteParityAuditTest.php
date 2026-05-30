@@ -8,18 +8,17 @@ use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
- * Binds the route parities to reality: declared OpenPNE 4 routes must exist, every
- * OpenPNE 3 route must be mapped or gapped, and the declared OpenPNE 3 URLs must match
- * the route inventory.
+ * Binds the route parities to reality: declared Laravel routes must exist, every OpenPNE 3
+ * route must be mapped or gapped, and the declared OpenPNE 3 URLs must match the inventory.
  */
 class RouteParityAuditTest extends TestCase
 {
-    public function test_declared_openpne4_routes_exist(): void
+    public function test_declared_laravel_routes_exist(): void
     {
         foreach (RouteParityRegistry::all() as $parity) {
             foreach ($parity->maps() as $map) {
-                $this->assertNotNull(Route::getRoutes()->getByName($map->op4Route),
-                    "{$parity->module()}: route `{$map->op4Route}` is declared but not registered");
+                $this->assertNotNull(Route::getRoutes()->getByName($map->laravelRoute),
+                    "{$parity->module()}: route `{$map->laravelRoute}` is declared but not registered");
             }
         }
     }
