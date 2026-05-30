@@ -12,16 +12,16 @@ class DiaryRouteParity extends RouteParity
     public function maps(): array
     {
         return [
-            new RouteMap('diary_show', '/diary/:id', 'diary.show'),
-            new RouteMap('diary_list_mine', '/diary/listMember', 'diary.list_member'),
-            new RouteMap('diary_list_member', '/diary/listMember/:id', 'diary.list_member',
+            new RouteMap('diary_show', '/diary/:id', 'diary.show', 'GET'),
+            new RouteMap('diary_list_mine', '/diary/listMember', 'diary.list_member', 'GET'),
+            new RouteMap('diary_list_member', '/diary/listMember/:id', 'diary.list_member', 'GET',
                 note: 'Served by the same diary.list_member route (optional {member?}) as diary_list_mine.'),
-            new RouteMap('diary_new', '/diary/new', 'diary.new'),
-            new RouteMap('diary_create', '/diary/create', 'diary.store'),
-            new RouteMap('diary_edit', '/diary/edit/:id', 'diary.edit'),
-            new RouteMap('diary_update', '/diary/update/:id', 'diary.update'),
-            new RouteMap('diary_delete_confirm', '/diary/deleteConfirm/:id', 'diary.delete.show'),
-            new RouteMap('diary_delete', '/diary/delete/:id', 'diary.delete'),
+            new RouteMap('diary_new', '/diary/new', 'diary.new', 'GET'),
+            new RouteMap('diary_create', '/diary/create', 'diary.store', 'POST'),
+            new RouteMap('diary_edit', '/diary/edit/:id', 'diary.edit', 'GET'),
+            new RouteMap('diary_update', '/diary/update/:id', 'diary.update', 'POST'),
+            new RouteMap('diary_delete_confirm', '/diary/deleteConfirm/:id', 'diary.delete.show', 'GET'),
+            new RouteMap('diary_delete', '/diary/delete/:id', 'diary.delete', 'POST'),
         ];
     }
 

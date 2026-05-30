@@ -18,13 +18,13 @@ class RouteParityCommand extends Command
         foreach (RouteParityRegistry::all() as $parity) {
             $this->line("## `{$parity->module()}`");
             $this->line('');
-            $this->line('| OpenPNE 3 route | OpenPNE 3 URL | Laravel route | Laravel URL | note |');
-            $this->line('|---|---|---|---|---|');
+            $this->line('| OpenPNE 3 route | OpenPNE 3 URL | method | Laravel route | Laravel URL | note |');
+            $this->line('|---|---|---|---|---|---|');
 
             foreach ($parity->maps() as $map) {
                 $laravelUrl = Route::getRoutes()->getByName($map->laravelRoute)?->uri() ?? '(missing)';
                 $note = $map->note ?? '';
-                $this->line("| `{$map->op3Route}` | `{$map->op3Url}` | `{$map->laravelRoute}` | `/{$laravelUrl}` | {$note} |");
+                $this->line("| `{$map->op3Route}` | `{$map->op3Url}` | {$map->method} | `{$map->laravelRoute}` | `/{$laravelUrl}` | {$note} |");
             }
 
             if ($parity->gaps() !== []) {

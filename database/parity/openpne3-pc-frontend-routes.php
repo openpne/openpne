@@ -5,14 +5,11 @@
  * adapters map from. See database/parity/README.md for how to regenerate.
  *
  * Each module lists its named routes (name => [URL pattern, HTTP methods]) captured from
- * `php symfony app:routes pc_frontend`. `fallback` notes that /:module/:action also reaches
- * the module, so an un-named action is still accessible; the named routes are the baseline
- * the audit checks for coverage.
+ * `php symfony app:routes pc_frontend`. These are the baseline the audit checks for coverage.
  */
 
 return [
     'diary' => [
-        'fallback' => '/diary/*', // diary_nodefaults: any /diary/... reaches the diary module
         'routes' => [
             'diary_index' => ['/diary', 'ANY'],
             'diary_search' => ['/diary/search', 'ANY'],

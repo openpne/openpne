@@ -23,6 +23,19 @@ class RouteParityAuditTest extends TestCase
         }
     }
 
+    public function test_declared_methods_match_the_live_routes(): void
+    {
+        foreach (RouteParityRegistry::all() as $parity) {
+            foreach ($parity->maps() as $map) {
+                $route = Route::getRoutes()->getByName($map->laravelRoute);
+
+                $this->assertContains($map->method, $route->methods(),
+                    "{$parity->module()}: `{$map->laravelRoute}` is declared {$map->method} but serves "
+                    .implode('|', $route->methods()));
+            }
+        }
+    }
+
     public function test_every_openpne3_route_is_mapped_or_gapped(): void
     {
         $inventory = Openpne3Routes::default();

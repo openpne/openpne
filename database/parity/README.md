@@ -13,6 +13,4 @@ From a clean OpenPNE 3 install (OpenPNE 3 is Apache-2.0, so this inventory ships
 php symfony app:routes pc_frontend
 ```
 
-gives each route's name, HTTP methods, and URL pattern. A module's routes are explicit
-here; in addition the fallback `/:module/:action` reaches any action without a named
-route, recorded per module as `fallback`.
+gives each route's name, HTTP methods, and URL pattern, recorded per module.
