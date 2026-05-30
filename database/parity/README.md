@@ -14,3 +14,10 @@ php symfony app:routes pc_frontend
 ```
 
 gives each route's name, HTTP methods, and URL pattern, recorded per module.
+
+OpenPNE 3 also defines a global deprecated fallback `/:module/:action/*`
+(`opSymfonyDefaultRouteCollection`), so a module's actions are reachable by URL even
+without a named route. A module can disable it — opDiaryPlugin adds `diary_nodefaults`
+(`/diary/*` → `default/error`) — which makes the named routes the complete set of
+reachable URLs. Record that per module as `disables_global_fallback`; the audit relies on
+it to know the named-route coverage check is exhaustive.

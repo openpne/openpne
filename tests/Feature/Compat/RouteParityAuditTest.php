@@ -50,6 +50,20 @@ class RouteParityAuditTest extends TestCase
         }
     }
 
+    public function test_named_route_coverage_is_exhaustive(): void
+    {
+        // The coverage audit above iterates named routes only. That is exhaustive solely
+        // for modules that disable OpenPNE 3's global /:module/:action/* fallback; otherwise
+        // un-named actions stay reachable and would slip past coverage. Flag any parity whose
+        // module leaves the fallback on so its completeness is handled consciously.
+        $inventory = Openpne3Routes::default();
+
+        foreach (RouteParityRegistry::all() as $parity) {
+            $this->assertTrue($inventory->disablesGlobalFallback($parity->module()),
+                "{$parity->module()}: global fallback is on, so named-route coverage is not exhaustive");
+        }
+    }
+
     public function test_mapped_openpne3_urls_match_the_inventory(): void
     {
         $inventory = Openpne3Routes::default();

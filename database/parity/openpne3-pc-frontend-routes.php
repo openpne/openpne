@@ -4,12 +4,17 @@
  * OpenPNE 3 pc_frontend route inventory, by module — the route-parity SSoT the Classic
  * adapters map from. See database/parity/README.md for how to regenerate.
  *
- * Each module lists its named routes (name => [URL pattern, HTTP methods]) captured from
- * `php symfony app:routes pc_frontend`. These are the baseline the audit checks for coverage.
+ * Each module lists its named routes (name => [URL pattern, HTTP methods]) from
+ * `php symfony app:routes pc_frontend`. OpenPNE 3 also has a global deprecated fallback
+ * `/:module/:action/*` (opSymfonyDefaultRouteCollection), so by default any module action
+ * is reachable by URL even without a named route. `disables_global_fallback` records that a
+ * module turns this off — opDiaryPlugin adds diary_nodefaults (`/diary/*` → default/error),
+ * which makes the named routes the complete set of reachable diary URLs.
  */
 
 return [
     'diary' => [
+        'disables_global_fallback' => true,
         'routes' => [
             'diary_index' => ['/diary', 'ANY'],
             'diary_search' => ['/diary/search', 'ANY'],
