@@ -1,0 +1,52 @@
+<?php
+
+namespace Tests\Feature\Compat;
+
+use App\Compat\Openpne3Routes;
+use App\Compat\RouteParityRegistry;
+use Illuminate\Support\Facades\Route;
+use Tests\TestCase;
+
+/**
+ * Binds the route parities to reality: declared OpenPNE 4 routes must exist, every
+ * OpenPNE 3 route must be mapped or gapped, and the declared OpenPNE 3 URLs must match
+ * the route inventory.
+ */
+class RouteParityAuditTest extends TestCase
+{
+    public function test_declared_openpne4_routes_exist(): void
+    {
+        foreach (RouteParityRegistry::all() as $parity) {
+            foreach ($parity->maps() as $map) {
+                $this->assertNotNull(Route::getRoutes()->getByName($map->op4Route),
+                    "{$parity->module()}: route `{$map->op4Route}` is declared but not registered");
+            }
+        }
+    }
+
+    public function test_every_openpne3_route_is_mapped_or_gapped(): void
+    {
+        $inventory = Openpne3Routes::default();
+
+        foreach (RouteParityRegistry::all() as $parity) {
+            $accounted = array_merge($parity->mappedRoutes(), array_keys($parity->gaps()));
+
+            foreach ($inventory->routeNames($parity->module()) as $route) {
+                $this->assertContains($route, $accounted,
+                    "{$parity->module()}: route `{$route}` is neither mapped nor gapped (un-ported endpoint)");
+            }
+        }
+    }
+
+    public function test_mapped_openpne3_urls_match_the_inventory(): void
+    {
+        $inventory = Openpne3Routes::default();
+
+        foreach (RouteParityRegistry::all() as $parity) {
+            foreach ($parity->maps() as $map) {
+                $this->assertSame($inventory->url($parity->module(), $map->op3Route), $map->op3Url,
+                    "{$parity->module()}: route `{$map->op3Route}` declares {$map->op3Url} but the inventory differs");
+            }
+        }
+    }
+}
