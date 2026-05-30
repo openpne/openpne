@@ -20,4 +20,17 @@ final class RouteParityRegistry
     {
         return array_map(static fn (string $class): RouteParity => new $class, self::classes());
     }
+
+    /** The Classic `<body id>` for a Laravel route across all parities, or null if none derives one. */
+    public static function bodyId(string $laravelRoute): ?string
+    {
+        foreach (self::all() as $parity) {
+            $bodyId = $parity->bodyId($laravelRoute);
+            if ($bodyId !== null) {
+                return $bodyId;
+            }
+        }
+
+        return null;
+    }
 }

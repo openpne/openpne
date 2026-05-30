@@ -9,6 +9,11 @@ namespace App\Compat;
  * `method` is the HTTP method the Laravel route must serve. OpenPNE 3 routes mostly accept
  * ANY; narrowing to the concrete GET/POST the Classic adapter serves is intentional, so the
  * declared method is the contract the audit holds the live route to.
+ *
+ * `op3Action` is the OpenPNE 3 action this route renders. The Classic body id is derived from
+ * it as `page_{module}_{action}` — the same hook OpenPNE 3 emitted — keyed on the OpenPNE 3
+ * (module, action), not the Laravel route name. GET routes that render HTML carry it; POST
+ * form submits render no `<body>`, so they leave it null.
  */
 final class RouteMap
 {
@@ -18,5 +23,6 @@ final class RouteMap
         public readonly string $laravelRoute,
         public readonly string $method = 'GET',
         public readonly ?string $note = null,
+        public readonly ?string $op3Action = null,
     ) {}
 }

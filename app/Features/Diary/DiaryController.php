@@ -2,6 +2,7 @@
 
 namespace App\Features\Diary;
 
+use App\Compat\RouteParityRegistry;
 use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Actions\DeleteDiary;
 use App\Features\Diary\Actions\UpdateDiary;
@@ -31,7 +32,6 @@ class DiaryController extends Controller
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('diary.list', [
-                'pageId' => 'page_diary_list',
                 'owner' => $owner,
                 'diaries' => $diaries,
             ]),
@@ -50,7 +50,6 @@ class DiaryController extends Controller
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('diary.show', [
-                'pageId' => 'page_diary_show',
                 'diary' => $found,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/show', [
@@ -62,9 +61,7 @@ class DiaryController extends Controller
     public function new(Request $request): View|InertiaResponse
     {
         return $this->respondWith($request, [
-            SurfaceResolver::CLASSIC => fn () => view('diary.new', [
-                'pageId' => 'page_diary_new',
-            ]),
+            SurfaceResolver::CLASSIC => fn () => view('diary.new'),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/new'),
         ]);
     }
@@ -85,7 +82,6 @@ class DiaryController extends Controller
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('diary.edit', [
-                'pageId' => 'page_diary_edit',
                 'diary' => $diary,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/edit', [
@@ -114,7 +110,6 @@ class DiaryController extends Controller
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('diary.delete', [
-                'pageId' => 'page_diary_delete',
                 'diary' => $diary,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/delete', [
@@ -153,7 +148,15 @@ class DiaryController extends Controller
      */
     private function respondWith(Request $request, array $responders): View|InertiaResponse
     {
-        return $responders[SurfaceResolver::resolve($request, 'diary')]();
+        $response = $responders[SurfaceResolver::resolve($request, 'diary')]();
+
+        // Classic body id is the OpenPNE 3 page_{module}_{action} hook, derived from the
+        // route parity so it stays faithful to OpenPNE 3 (the controller holds no copy).
+        if ($response instanceof View) {
+            $response->with('pageId', RouteParityRegistry::bodyId($request->route()->getName()));
+        }
+
+        return $response;
     }
 
     private function viewer(): Member
