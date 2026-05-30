@@ -152,8 +152,11 @@ class DiaryController extends Controller
 
         // Classic body id is the OpenPNE 3 page_{module}_{action} hook, derived from the
         // route parity so it stays faithful to OpenPNE 3 (the controller holds no copy).
+        // Canonicalize first: a /m/* route that fell back to Classic carries the modern
+        // name (diary.modern.*), which the parity keys by canonical name.
         if ($response instanceof View) {
-            $response->with('pageId', RouteParityRegistry::bodyId($request->route()->getName()));
+            $name = SurfaceResolver::canonicalName($request->route()->getName());
+            $response->with('pageId', RouteParityRegistry::bodyId($name));
         }
 
         return $response;
