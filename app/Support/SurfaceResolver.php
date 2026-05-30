@@ -55,4 +55,15 @@ class SurfaceResolver
 
         return $feature.'.modern.'.substr($canonicalName, strlen($feature) + 1);
     }
+
+    /**
+     * Inverse of the modern-route convention: `friend.modern.list` -> `friend.list`.
+     * Canonical names (no `.modern.` infix) pass through unchanged. Lets a controller
+     * key parity/body-id lookups by canonical name even when a `/m/*` route ran and
+     * fell back to Classic.
+     */
+    public static function canonicalName(string $routeName): string
+    {
+        return str_replace('.modern.', '.', $routeName);
+    }
 }

@@ -37,4 +37,20 @@ abstract class RouteParity
     {
         return array_map(static fn (RouteMap $map): string => $map->op3Route, $this->maps());
     }
+
+    /**
+     * The Classic `<body id>` for a Laravel route, or null if it renders no `<body>`
+     * (POST form submits). Derived from the mapped OpenPNE 3 action as OpenPNE 3 emitted it:
+     * `page_{module}_{action}`.
+     */
+    public function bodyId(string $laravelRoute): ?string
+    {
+        foreach ($this->maps() as $map) {
+            if ($map->laravelRoute === $laravelRoute && $map->op3Action !== null) {
+                return "page_{$this->module}_{$map->op3Action}";
+            }
+        }
+
+        return null;
+    }
 }

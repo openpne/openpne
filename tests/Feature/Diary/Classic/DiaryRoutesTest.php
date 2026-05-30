@@ -35,7 +35,8 @@ class DiaryRoutesTest extends TestCase
         $response = $this->actingAs($member)->get('/diary/listMember');
 
         $response->assertOk();
-        $response->assertSee('id="page_diary_list"', false);
+        // OpenPNE 3 emits page_{module}_{action}; the action is listMember, not list.
+        $response->assertSee('id="page_diary_listMember"', false);
         $response->assertSee('My Entry');
     }
 
@@ -256,7 +257,8 @@ class DiaryRoutesTest extends TestCase
         $response = $this->actingAs($member)->get("/diary/deleteConfirm/{$diary->getKey()}");
 
         $response->assertOk();
-        $response->assertSee('id="page_diary_delete"', false);
+        // OpenPNE 3 action is deleteConfirm; the confirm page's body id follows it.
+        $response->assertSee('id="page_diary_deleteConfirm"', false);
     }
 
     public function test_delete_confirm_returns_404_for_non_owner(): void

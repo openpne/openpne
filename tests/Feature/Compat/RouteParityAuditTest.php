@@ -36,6 +36,22 @@ class RouteParityAuditTest extends TestCase
         }
     }
 
+    public function test_get_routes_declare_an_op3_action_for_body_id(): void
+    {
+        // The Classic body id is derived from op3Action; a GET route that renders HTML must
+        // declare one, or its page would silently lose its OpenPNE 3 page_{module}_{action} hook.
+        foreach (RouteParityRegistry::all() as $parity) {
+            foreach ($parity->maps() as $map) {
+                if ($map->method !== 'GET') {
+                    continue;
+                }
+
+                $this->assertNotNull($map->op3Action,
+                    "{$parity->module()}: GET `{$map->laravelRoute}` has no op3Action, so it derives no body id");
+            }
+        }
+    }
+
     public function test_every_openpne3_route_is_mapped_or_gapped(): void
     {
         $inventory = Openpne3Routes::default();

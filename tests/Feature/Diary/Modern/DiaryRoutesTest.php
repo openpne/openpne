@@ -28,6 +28,19 @@ class DiaryRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page->component('diary/list'));
     }
 
+    public function test_modern_status_fallback_renders_classic_with_op3_body_id(): void
+    {
+        // When diary is not native, a /m/* route falls back to Classic; the body id must
+        // still be the OpenPNE 3 hook derived from the canonical route, not empty.
+        config()->set('features.diary.modern_status', 'fallback');
+        $member = Member::factory()->create();
+
+        $response = $this->actingAs($member)->get('/m/diary/listMember');
+
+        $response->assertOk();
+        $response->assertSee('id="page_diary_listMember"', false);
+    }
+
     public function test_modern_new_renders_inertia_component(): void
     {
         $member = Member::factory()->create();
