@@ -19,6 +19,18 @@
  */
 
 return [
+    'friend' => [
+        // No friend_nodefaults route, so the global /:module/:action fallback stays on:
+        // un-named actions (e.g. /friend/link) remain reachable. obj_friend_unlink declares
+        // sf_method [get, post], so it is not POST-only — ANY (GET-reachable) here.
+        'disables_global_fallback' => false,
+        'routes' => [
+            'friend_list' => ['/friend/list', 'ANY'],
+            'friend_manage' => ['/friend/manage', 'ANY'],
+            'obj_friend_unlink' => ['/friend/unlink/:id', 'ANY'],
+            'friend_show_image' => ['/friend/showImage/:id', 'ANY'],
+        ],
+    ],
     'diary' => [
         'disables_global_fallback' => true,
         'routes' => [

@@ -2,6 +2,7 @@
 
 namespace App\Features\Friend;
 
+use App\Compat\RouteParityRegistry;
 use App\Features\Block\BlockLookup;
 use App\Features\Friend\Actions\AcceptFriendRequest;
 use App\Features\Friend\Actions\RejectFriendRequest;
@@ -41,7 +42,6 @@ class FriendController extends Controller
 
         return $this->respondWith($request, [
             self::SURFACE_CLASSIC => fn () => view('friend.list', [
-                'pageId' => 'page_friend_list',
                 'owner' => $owner,
                 'friends' => $friends,
             ]),
@@ -61,7 +61,6 @@ class FriendController extends Controller
 
         return $this->respondWith($request, [
             self::SURFACE_CLASSIC => fn () => view('friend.manage', [
-                'pageId' => 'page_friend_manage',
                 'received' => $received,
                 'sent' => $sent,
             ]),
@@ -89,7 +88,6 @@ class FriendController extends Controller
 
         return $this->respondWith($request, [
             self::SURFACE_CLASSIC => fn () => view('friend.link', [
-                'pageId' => 'page_friend_link',
                 'target' => $target,
             ]),
             self::SURFACE_MODERN => fn () => Inertia::render('friend/link', [
@@ -140,7 +138,6 @@ class FriendController extends Controller
 
         return $this->respondWith($request, [
             self::SURFACE_CLASSIC => fn () => view('friend.unlink', [
-                'pageId' => 'page_friend_unlink',
                 'target' => $member,
             ]),
             self::SURFACE_MODERN => fn () => Inertia::render('friend/unlink', [
@@ -180,12 +177,17 @@ class FriendController extends Controller
      */
     private function respondWith(Request $request, array $responders): View|InertiaResponse
     {
-        return $responders[$this->resolveSurface($request)]();
-    }
+        $response = $responders[SurfaceResolver::resolve($request, 'friend')]();
 
-    private function resolveSurface(Request $request): string
-    {
-        return SurfaceResolver::resolve($request, 'friend');
+        // Classic body id is the OpenPNE 3 page_{module}_{action} hook, derived from the route
+        // parity. Canonicalize first so a /m/* route that fell back to Classic (carrying the
+        // modern name) still resolves to the canonical parity key.
+        if ($response instanceof View) {
+            $name = SurfaceResolver::canonicalName($request->route()->getName());
+            $response->with('pageId', RouteParityRegistry::bodyId($name));
+        }
+
+        return $response;
     }
 
     private function viewer(): Member

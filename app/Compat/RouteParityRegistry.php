@@ -3,6 +3,7 @@
 namespace App\Compat;
 
 use App\Compat\Parities\DiaryRouteParity;
+use App\Compat\Parities\FriendRouteParity;
 
 /** The route parities. Adding a feature's Classic adapter = adding its parity here. */
 final class RouteParityRegistry
@@ -12,6 +13,7 @@ final class RouteParityRegistry
     {
         return [
             DiaryRouteParity::class,
+            FriendRouteParity::class,
         ];
     }
 

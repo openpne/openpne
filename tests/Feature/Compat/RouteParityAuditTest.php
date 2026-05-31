@@ -69,33 +69,43 @@ class RouteParityAuditTest extends TestCase
     public function test_url_compatible_routes_stay_get_reachable(): void
     {
         // A GET-reachable OpenPNE 3 URL (bookmarked / mailed / linked) keeps its
-        // URL-preservation obligation only if the Laravel route it maps to also answers GET.
+        // URL-preservation obligation: at least one Laravel route it maps to must answer GET.
+        // Grouped per OpenPNE 3 route, because one route may split into a GET confirm + POST
+        // submit (obj_friend_unlink). Maps with no named OpenPNE 3 route are out of scope.
         $inventory = Openpne3Routes::default();
 
         foreach (RouteParityRegistry::all() as $parity) {
+            $getReachable = [];
             foreach ($parity->maps() as $map) {
-                if (! $inventory->isUrlCompatible($parity->module(), $map->op3Route)) {
+                if ($map->op3Route === null
+                    || ! $inventory->isUrlCompatible($parity->module(), $map->op3Route)) {
                     continue;
                 }
 
-                $route = Route::getRoutes()->getByName($map->laravelRoute);
-                $this->assertContains('GET', $route->methods(),
-                    "{$parity->module()}: `{$map->op3Route}` is URL-compatible but `{$map->laravelRoute}` does not serve GET");
+                $servesGet = in_array('GET', Route::getRoutes()->getByName($map->laravelRoute)->methods(), true);
+                $getReachable[$map->op3Route] = ($getReachable[$map->op3Route] ?? false) || $servesGet;
+            }
+
+            foreach ($getReachable as $op3Route => $hasGet) {
+                $this->assertTrue($hasGet,
+                    "{$parity->module()}: `{$op3Route}` is URL-compatible but no mapped Laravel route serves GET");
             }
         }
     }
 
-    public function test_named_route_coverage_is_exhaustive(): void
+    public function test_fallback_acknowledgement_matches_the_inventory(): void
     {
-        // The coverage audit above iterates named routes only. That is exhaustive solely
-        // for modules that disable OpenPNE 3's global /:module/:action/* fallback; otherwise
-        // un-named actions stay reachable and would slip past coverage. Flag any parity whose
-        // module leaves the fallback on so its completeness is handled consciously.
+        // The coverage audit above iterates named routes only, so it is exhaustive solely for a
+        // module that disables OpenPNE 3's global /:module/:action/* fallback. A module that
+        // keeps the fallback on has un-named reachable actions, so its parity must consciously
+        // acknowledge non-exhaustive coverage rather than let the gap pass silently.
         $inventory = Openpne3Routes::default();
 
         foreach (RouteParityRegistry::all() as $parity) {
-            $this->assertTrue($inventory->disablesGlobalFallback($parity->module()),
-                "{$parity->module()}: global fallback is on, so named-route coverage is not exhaustive");
+            $this->assertSame(
+                ! $inventory->disablesGlobalFallback($parity->module()),
+                $parity->acknowledgesGlobalFallback(),
+                "{$parity->module()}: acknowledgesGlobalFallback() must match the inventory's fallback state");
         }
     }
 
@@ -105,6 +115,10 @@ class RouteParityAuditTest extends TestCase
 
         foreach (RouteParityRegistry::all() as $parity) {
             foreach ($parity->maps() as $map) {
+                if ($map->op3Route === null) {
+                    continue; // no named OpenPNE 3 route (fallback-reached or OpenPNE 4-native)
+                }
+
                 $this->assertSame($inventory->url($parity->module(), $map->op3Route), $map->op3Url,
                     "{$parity->module()}: route `{$map->op3Route}` declares {$map->op3Url} but the inventory differs");
             }
