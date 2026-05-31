@@ -32,10 +32,23 @@ abstract class RouteParity
         return [];
     }
 
-    /** @return list<string> OpenPNE 3 route names covered by maps() */
+    /** @return list<string> named OpenPNE 3 route names covered by maps() (fallback-only / native maps excluded) */
     public function mappedRoutes(): array
     {
-        return array_map(static fn (RouteMap $map): string => $map->op3Route, $this->maps());
+        return array_values(array_filter(
+            array_map(static fn (RouteMap $map): ?string => $map->op3Route, $this->maps()),
+        ));
+    }
+
+    /**
+     * Whether the module leaves OpenPNE 3's global /:module/:action fallback on, so its named
+     * routes are not the complete set of reachable URLs. Returning true consciously accepts
+     * non-exhaustive named-route coverage: the compatibility-relevant routes are mapped and
+     * fallback-only actions are handled per route.
+     */
+    public function acknowledgesGlobalFallback(): bool
+    {
+        return false;
     }
 
     /**

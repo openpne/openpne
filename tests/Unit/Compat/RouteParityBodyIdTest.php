@@ -3,6 +3,7 @@
 namespace Tests\Unit\Compat;
 
 use App\Compat\Parities\DiaryRouteParity;
+use App\Compat\Parities\FriendRouteParity;
 use App\Support\SurfaceResolver;
 use PHPUnit\Framework\TestCase;
 
@@ -34,6 +35,23 @@ class RouteParityBodyIdTest extends TestCase
     public function test_unknown_route_has_no_body_id(): void
     {
         $this->assertNull((new DiaryRouteParity)->bodyId('diary.nonexistent'));
+    }
+
+    public function test_derives_friend_body_ids_including_the_fallback_only_link_route(): void
+    {
+        $parity = new FriendRouteParity;
+
+        $this->assertSame('page_friend_list', $parity->bodyId('friend.list'));
+        $this->assertSame('page_friend_manage', $parity->bodyId('friend.manage'));
+        $this->assertSame('page_friend_unlink', $parity->bodyId('friend.unlink.show'));
+        // friend.link.show has no named OpenPNE 3 route (fallback-reached) but still carries
+        // the action, so its body id stays page_friend_link.
+        $this->assertSame('page_friend_link', $parity->bodyId('friend.link.show'));
+    }
+
+    public function test_friend_post_submits_have_no_body_id(): void
+    {
+        $this->assertNull((new FriendRouteParity)->bodyId('friend.unlink.submit'));
     }
 
     public function test_modern_route_name_resolves_via_canonical_form(): void
