@@ -46,6 +46,14 @@ class RouteParityCommand extends Command
                 }
             }
 
+            if ($parity->compatRedirects() !== []) {
+                $this->line('');
+                $this->line('Compatibility redirects:');
+                foreach ($parity->compatRedirects() as $legacyUrl => $canonicalRoute) {
+                    $this->line("- `{$legacyUrl}` → `{$canonicalRoute}`");
+                }
+            }
+
             $this->line('');
         }
 

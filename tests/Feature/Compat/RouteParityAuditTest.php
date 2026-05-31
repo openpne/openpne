@@ -57,11 +57,16 @@ class RouteParityAuditTest extends TestCase
         $inventory = Openpne3Routes::default();
 
         foreach (RouteParityRegistry::all() as $parity) {
+            $module = $parity->openpne3Module();
+            if ($module === null) {
+                continue; // OpenPNE 4-native feature: no inventory module to cover
+            }
+
             $accounted = array_merge($parity->mappedRoutes(), array_keys($parity->gaps()));
 
-            foreach ($inventory->routeNames($parity->module()) as $route) {
+            foreach ($inventory->routeNames($module) as $route) {
                 $this->assertContains($route, $accounted,
-                    "{$parity->module()}: route `{$route}` is neither mapped nor gapped (un-ported endpoint)");
+                    "{$module}: route `{$route}` is neither mapped nor gapped (un-ported endpoint)");
             }
         }
     }
@@ -98,14 +103,23 @@ class RouteParityAuditTest extends TestCase
         // The coverage audit above iterates named routes only, so it is exhaustive solely for a
         // module that disables OpenPNE 3's global /:module/:action/* fallback. A module that
         // keeps the fallback on has un-named reachable actions, so its parity must consciously
-        // acknowledge non-exhaustive coverage rather than let the gap pass silently.
+        // acknowledge non-exhaustive coverage rather than let the gap pass silently. A native
+        // feature with no OpenPNE 3 module has no fallback to acknowledge.
         $inventory = Openpne3Routes::default();
 
         foreach (RouteParityRegistry::all() as $parity) {
+            $module = $parity->openpne3Module();
+            if ($module === null) {
+                $this->assertFalse($parity->acknowledgesGlobalFallback(),
+                    "{$parity->module()}: has no OpenPNE 3 module, so it cannot acknowledge a global fallback");
+
+                continue;
+            }
+
             $this->assertSame(
-                ! $inventory->disablesGlobalFallback($parity->module()),
+                ! $inventory->disablesGlobalFallback($module),
                 $parity->acknowledgesGlobalFallback(),
-                "{$parity->module()}: acknowledgesGlobalFallback() must match the inventory's fallback state");
+                "{$module}: acknowledgesGlobalFallback() must match the inventory's fallback state");
         }
     }
 
@@ -121,6 +135,18 @@ class RouteParityAuditTest extends TestCase
 
                 $this->assertSame($inventory->url($parity->module(), $map->op3Route), $map->op3Url,
                     "{$parity->module()}: route `{$map->op3Route}` declares {$map->op3Url} but the inventory differs");
+            }
+        }
+    }
+
+    public function test_compat_redirect_targets_are_registered_routes(): void
+    {
+        // A legacy OpenPNE 3 URL preserved by redirect must point at a real canonical route,
+        // so the URL-compatibility contract for a moved URL cannot rot silently.
+        foreach (RouteParityRegistry::all() as $parity) {
+            foreach ($parity->compatRedirects() as $legacyUrl => $canonicalRoute) {
+                $this->assertNotNull(Route::getRoutes()->getByName($canonicalRoute),
+                    "{$parity->module()}: compat redirect `{$legacyUrl}` targets `{$canonicalRoute}`, which is not registered");
             }
         }
     }
