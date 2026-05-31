@@ -2,6 +2,7 @@
 
 namespace App\Compat;
 
+use App\Compat\Parities\BlockRouteParity;
 use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\Parities\FriendRouteParity;
 
@@ -14,6 +15,7 @@ final class RouteParityRegistry
         return [
             DiaryRouteParity::class,
             FriendRouteParity::class,
+            BlockRouteParity::class,
         ];
     }
 

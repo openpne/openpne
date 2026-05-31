@@ -19,6 +19,16 @@ abstract class RouteParity
         return $this->module;
     }
 
+    /**
+     * The OpenPNE 3 module this parity binds to in the route inventory, or null when there is
+     * no OpenPNE 3 counterpart (an OpenPNE 4-native feature like Block, whose OpenPNE 3 origin
+     * was a member-config category, not a module). Inventory-bound audits skip a null module.
+     */
+    public function openpne3Module(): ?string
+    {
+        return $this->module;
+    }
+
     /** @return list<RouteMap> */
     abstract public function maps(): array;
 
@@ -28,6 +38,19 @@ abstract class RouteParity
      * @return array<string, string> OpenPNE 3 route name => reason
      */
     public function gaps(): array
+    {
+        return [];
+    }
+
+    /**
+     * OpenPNE 3 URLs preserved by a redirect to a canonical Laravel route rather than served
+     * in place — the URL-compatibility contract for a URL whose OpenPNE 4 canonical moved
+     * (e.g. /member/config?category=accessBlock -> block.list). Records the canonical↔legacy
+     * relation the contract requires; the audit checks the target route exists.
+     *
+     * @return array<string, string> legacy OpenPNE 3 URL => canonical Laravel route name
+     */
+    public function compatRedirects(): array
     {
         return [];
     }

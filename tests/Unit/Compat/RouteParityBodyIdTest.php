@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Compat;
 
+use App\Compat\Parities\BlockRouteParity;
 use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\Parities\FriendRouteParity;
 use App\Support\SurfaceResolver;
@@ -52,6 +53,20 @@ class RouteParityBodyIdTest extends TestCase
     public function test_friend_post_submits_have_no_body_id(): void
     {
         $this->assertNull((new FriendRouteParity)->bodyId('friend.unlink.submit'));
+    }
+
+    public function test_derives_block_body_ids_for_the_native_feature(): void
+    {
+        // Block has no OpenPNE 3 module; the body id is still page_{module}_{action} keyed on
+        // the OpenPNE 4 action, the hook a theme would target on the new Classic page.
+        $parity = new BlockRouteParity;
+
+        $this->assertSame('page_block_list', $parity->bodyId('block.list'));
+        $this->assertSame('page_block_add', $parity->bodyId('block.add.show'));
+        $this->assertSame('page_block_remove', $parity->bodyId('block.remove.show'));
+        // Form submits render no <body>.
+        $this->assertNull($parity->bodyId('block.add'));
+        $this->assertNull($parity->bodyId('block.remove.submit'));
     }
 
     public function test_modern_route_name_resolves_via_canonical_form(): void
