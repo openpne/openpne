@@ -30,4 +30,10 @@ class BlockRouteParity extends RouteParity
             new RouteMap(null, null, 'block.remove.submit', 'POST'),
         ];
     }
+
+    public function compatRedirects(): array
+    {
+        // Access block's OpenPNE 3 URL; redirected (not served) to the new canonical Block list.
+        return ['/member/config?category=accessBlock' => 'block.list'];
+    }
 }

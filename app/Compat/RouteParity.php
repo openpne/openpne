@@ -42,6 +42,19 @@ abstract class RouteParity
         return [];
     }
 
+    /**
+     * OpenPNE 3 URLs preserved by a redirect to a canonical Laravel route rather than served
+     * in place — the URL-compatibility contract for a URL whose OpenPNE 4 canonical moved
+     * (e.g. /member/config?category=accessBlock -> block.list). Records the canonical↔legacy
+     * relation the contract requires; the audit checks the target route exists.
+     *
+     * @return array<string, string> legacy OpenPNE 3 URL => canonical Laravel route name
+     */
+    public function compatRedirects(): array
+    {
+        return [];
+    }
+
     /** @return list<string> named OpenPNE 3 route names covered by maps() (fallback-only / native maps excluded) */
     public function mappedRoutes(): array
     {

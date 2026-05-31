@@ -138,4 +138,16 @@ class RouteParityAuditTest extends TestCase
             }
         }
     }
+
+    public function test_compat_redirect_targets_are_registered_routes(): void
+    {
+        // A legacy OpenPNE 3 URL preserved by redirect must point at a real canonical route,
+        // so the URL-compatibility contract for a moved URL cannot rot silently.
+        foreach (RouteParityRegistry::all() as $parity) {
+            foreach ($parity->compatRedirects() as $legacyUrl => $canonicalRoute) {
+                $this->assertNotNull(Route::getRoutes()->getByName($canonicalRoute),
+                    "{$parity->module()}: compat redirect `{$legacyUrl}` targets `{$canonicalRoute}`, which is not registered");
+            }
+        }
+    }
 }
