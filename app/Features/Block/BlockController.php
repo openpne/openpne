@@ -2,6 +2,7 @@
 
 namespace App\Features\Block;
 
+use App\Compat\RouteParityRegistry;
 use App\Features\Block\Actions\BlockMember;
 use App\Features\Block\Actions\UnblockMember;
 use App\Features\Block\Exceptions\BlockActionException;
@@ -26,7 +27,6 @@ class BlockController extends Controller
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('block.list', [
-                'pageId' => 'page_block_list',
                 'blocks' => $blocks,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('block/list', [
@@ -46,7 +46,6 @@ class BlockController extends Controller
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('block.add', [
-                'pageId' => 'page_block_add',
                 'target' => $target,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('block/add', [
@@ -74,7 +73,6 @@ class BlockController extends Controller
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('block.remove', [
-                'pageId' => 'page_block_remove',
                 'target' => $member,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('block/remove', [
@@ -112,7 +110,17 @@ class BlockController extends Controller
      */
     private function respondWith(Request $request, array $responders): View|InertiaResponse
     {
-        return $responders[SurfaceResolver::resolve($request, 'block')]();
+        $response = $responders[SurfaceResolver::resolve($request, 'block')]();
+
+        // Classic body id is the OpenPNE 3 page_{module}_{action} hook, derived from the route
+        // parity. Canonicalize first so a /m/* route that fell back to Classic (carrying the
+        // modern name) still resolves to the canonical parity key.
+        if ($response instanceof View) {
+            $name = SurfaceResolver::canonicalName($request->route()->getName());
+            $response->with('pageId', RouteParityRegistry::bodyId($name));
+        }
+
+        return $response;
     }
 
     private function viewer(): Member

@@ -19,6 +19,16 @@ abstract class RouteParity
         return $this->module;
     }
 
+    /**
+     * The OpenPNE 3 module this parity binds to in the route inventory, or null when there is
+     * no OpenPNE 3 counterpart (an OpenPNE 4-native feature like Block, whose OpenPNE 3 origin
+     * was a member-config category, not a module). Inventory-bound audits skip a null module.
+     */
+    public function openpne3Module(): ?string
+    {
+        return $this->module;
+    }
+
     /** @return list<RouteMap> */
     abstract public function maps(): array;
 
