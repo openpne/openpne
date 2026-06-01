@@ -51,7 +51,7 @@ class ImageCache
 
     private function generate(File $file, ImageTransform $transform, string $format): string
     {
-        $image = $this->manager->read($this->original($file));
+        $image = $this->manager->decode($this->original($file));
 
         if ($transform->square) {
             // Centre-crop to fill the target box exactly (OpenPNE 3 square behaviour).
@@ -61,7 +61,7 @@ class ImageCache
             $image->scaleDown($transform->width, $transform->height);
         }
 
-        return $image->encodeByExtension($format, quality: (int) config('openpne.images.quality'))->toString();
+        return $image->encodeUsingFileExtension($format, quality: (int) config('openpne.images.quality'))->toString();
     }
 
     private function original(File $file): string

@@ -32,7 +32,7 @@ return [
     */
 
     'images' => [
-        'driver' => env('OPENPNE_IMAGE_DRIVER', 'gd'), // gd | imagick
+        'driver' => env('OPENPNE_IMAGE_DRIVER', 'gd'), // gd (default) | imagick | vips
         'cache_disk' => env('OPENPNE_IMAGE_CACHE_DISK', 'image_cache'),
         'quality' => (int) env('OPENPNE_IMAGE_QUALITY', 85),
         'allowed_sizes' => ['48x48', '76x76', '120x120', '180x180', '240x320', '320x320', '600x600'],
