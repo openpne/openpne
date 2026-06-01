@@ -28,4 +28,20 @@ final class StepRegistry
     {
         return array_map(static fn (string $class): UpgradeStep => new $class, self::classes());
     }
+
+    /**
+     * OpenPNE 3 source tables that already have an OpenPNE 4 successor table but no
+     * upgrade step yet, each with the reason. Recorded so the un-migrated data shows
+     * up in the matrix instead of being an invisible omission (the per-step audit
+     * only sees source tables a step reads).
+     *
+     * @return array<string, string> source table => reason
+     */
+    public static function deferredSourceTables(): array
+    {
+        return [
+            'file' => 'OpenPNE 3 file metadata. The upgrade maps file ownership onto the related_entity columns, which needs the OpenPNE 4 tables that own files (avatars, attachments) to exist first; no step yet.',
+            'file_bin' => 'OpenPNE 3 file bytes. Migrated by a metadata-only FK rewire onto `files` (the file_bin schema is frozen for exactly that), not a BLOB copy; pending the `file` step.',
+        ];
+    }
 }
