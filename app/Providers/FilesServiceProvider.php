@@ -8,6 +8,7 @@ use App\Files\FileStorage;
 use App\Models\File;
 use App\Observers\FileObserver;
 use Illuminate\Support\ServiceProvider;
+use Intervention\Image\ImageManager;
 
 class FilesServiceProvider extends ServiceProvider
 {
@@ -23,6 +24,12 @@ class FilesServiceProvider extends ServiceProvider
             return $disk === 'blob'
                 ? new DbBlobFileStorage
                 : new DiskFileStorage($disk);
+        });
+
+        $this->app->singleton(ImageManager::class, function (): ImageManager {
+            return config('openpne.images.driver') === 'imagick'
+                ? ImageManager::imagick()
+                : ImageManager::gd();
         });
     }
 
