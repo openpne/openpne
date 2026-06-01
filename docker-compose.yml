@@ -29,7 +29,8 @@ services:
   vite:
     image: node:22-bookworm-slim
     working_dir: /var/www/html
-    command: sh /var/www/html/docker/vite-dev.sh
+    entrypoint: ["sh", "/var/www/html/docker/vite-dev.sh"]
+    command: ["npm", "run", "dev"]
     ports:
       - "5173:5173"
     volumes:

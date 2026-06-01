@@ -49,6 +49,9 @@ Notes:
   host install). After updating `composer.lock` or `package-lock.json`, run
   `docker compose down -v` so the volumes are reset and dependencies
   reinstall on the next `up`.
+- To rebuild frontend assets through Docker, run
+  `docker compose run --rm vite npm run build`. The `vite` entrypoint returns
+  `public/build` ownership to the host bind-mount owner after the build.
 - If port `8080` is taken, set `OPENPNE_HTTP_PORT=18080` before
   `docker compose up -d`. Port `5173` is fixed (Vite always binds it
   inside the container and `public/hot` references that port, so a
