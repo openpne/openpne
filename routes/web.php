@@ -129,9 +129,11 @@ Route::middleware('auth')->group(function () {
         ->where([
             'format' => 'jpg|png|gif|webp',
             'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',
-            // Allow the `_`/`-` that migrated OpenPNE 3 file names carry (e.g. m_42_..._jpg);
-            // new names are Str::random alnum. `.` stays out — it separates name from ext.
-            'name' => '[A-Za-z0-9_-]+',
+            // OpenPNE 3 file names allow [\w._-] (its route used ^[\w\d_\.\-]+$), e.g.
+            // m_42_..._jpg or a literal test1.jpg; new names are Str::random alnum. `.`
+            // is allowed too — the greedy match still binds the trailing `.{ext}`, and
+            // the File-name lookup (plus Flysystem's traversal guard) gates what is served.
+            'name' => '[A-Za-z0-9_.-]+',
             'ext' => 'jpg|png|gif|webp',
         ])
         ->name('image.show');
