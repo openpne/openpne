@@ -85,6 +85,19 @@ class AvatarTest extends TestCase
         $this->assertSame(1, DB::table('file_bin')->where('file_id', $old->getKey())->count());
     }
 
+    public function test_deleting_a_member_purges_their_avatar_file_and_bytes(): void
+    {
+        $member = Member::factory()->create();
+        app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 10, 10));
+        $file = $member->fresh()->primaryImage->file;
+
+        $member->delete();
+
+        $this->assertNull(File::find($file->getKey()));
+        $this->assertSame(0, DB::table('file_bin')->where('file_id', $file->getKey())->count());
+        $this->assertSame(0, DB::table('member_images')->where('member_id', $member->getKey())->count());
+    }
+
     public function test_the_edit_page_carries_the_classic_body_id(): void
     {
         $this->actingAs(Member::factory()->create())

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\File;
 use App\Models\Member;
+use App\Observers\MemberObserver;
 use App\Policies\FilePolicy;
 use App\Services\TermService;
 use App\Translation\TermTranslator;
@@ -45,5 +46,7 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         Gate::policy(File::class, FilePolicy::class);
+
+        Member::observe(MemberObserver::class);
     }
 }
