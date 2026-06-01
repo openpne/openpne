@@ -60,6 +60,15 @@ return [
             'report' => false,
         ],
 
+        // Generated image thumbnails (App\Files\ImageCache). Private: the bytes are
+        // served through the policy-gated app route, never a direct disk URL.
+        'image_cache' => [
+            'driver' => 'local',
+            'root' => storage_path('app/image-cache'),
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

@@ -42,4 +42,28 @@ class File extends Model
     {
         return route('file.show', ['file' => $this->name]);
     }
+
+    /** The image format token (jpg/png/gif/webp) from the MIME type, or null if not a supported image. */
+    public function imageFormat(): ?string
+    {
+        return match ($this->type) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+            default => null,
+        };
+    }
+
+    /**
+     * URL of a thumbnail variant, in the OpenPNE 3-compatible /cache/img form. The size
+     * must be whitelisted (config openpne.images.allowed_sizes) to resolve.
+     */
+    public function thumbnailUrl(int $width, int $height, bool $square = false): string
+    {
+        $format = $this->imageFormat() ?? 'jpg';
+        $geometry = "w{$width}_h{$height}".($square ? '_sq' : '');
+
+        return route('image.show', ['format' => $format, 'geometry' => $geometry, 'name' => $this->name, 'ext' => $format]);
+    }
 }

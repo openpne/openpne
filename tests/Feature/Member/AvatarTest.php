@@ -24,6 +24,17 @@ class AvatarTest extends TestCase
             ->assertSee('name="image"', escape: false);
     }
 
+    public function test_the_edit_page_shows_the_avatar_thumbnail(): void
+    {
+        $member = Member::factory()->create();
+        app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 100, 100));
+        $file = $member->fresh()->primaryImage->file;
+
+        $this->actingAs($member)
+            ->get(route('member.avatar.edit'))
+            ->assertSee($file->thumbnailUrl(120, 120, square: true), escape: false);
+    }
+
     public function test_upload_stores_a_member_owned_file_and_links_it(): void
     {
         $member = Member::factory()->create();
@@ -129,6 +140,19 @@ class AvatarTest extends TestCase
 
         $this->actingAs($member)
             ->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->createWithContent('x.svg', '<svg></svg>')])
+            ->assertSessionHasErrors('image');
+
+        $this->assertSame(0, $member->images()->count());
+    }
+
+    public function test_an_image_with_excessive_dimensions_is_rejected(): void
+    {
+        // Decompression-bomb guard: a small file with huge pixel dimensions is rejected.
+        config(['openpne.images.max_upload_dimension' => 100]);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)
+            ->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->image('big.png', 200, 200)])
             ->assertSessionHasErrors('image');
 
         $this->assertSame(0, $member->images()->count());
