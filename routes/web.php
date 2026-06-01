@@ -5,6 +5,7 @@ use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
 use App\Features\Member\MemberAvatarController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\ImageController;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -121,4 +122,19 @@ Route::middleware('auth')->group(function () {
     // fetch through FilePolicy, so disk backends stream through the app too (never a
     // bare disk URL).
     Route::get('/file/{file:name}', [FileController::class, 'show'])->name('file.show');
+
+    // OpenPNE 3-compatible thumbnail delivery. Same FilePolicy gate as the original;
+    // the size must be whitelisted (ImageTransform), so arbitrary sizes 404.
+    Route::get('/cache/img/{format}/{geometry}/{name}.{ext}', [ImageController::class, 'show'])
+        ->where([
+            'format' => 'jpg|png|gif|webp',
+            'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',
+            // OpenPNE 3 file names allow [\w._-] (its route used ^[\w\d_\.\-]+$), e.g.
+            // m_42_..._jpg or a literal test1.jpg; new names are Str::random alnum. `.`
+            // is allowed too — the greedy match still binds the trailing `.{ext}`, and
+            // the File-name lookup (plus Flysystem's traversal guard) gates what is served.
+            'name' => '[A-Za-z0-9_.-]+',
+            'ext' => 'jpg|png|gif|webp',
+        ])
+        ->name('image.show');
 });

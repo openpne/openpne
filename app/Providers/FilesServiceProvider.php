@@ -8,6 +8,8 @@ use App\Files\FileStorage;
 use App\Models\File;
 use App\Observers\FileObserver;
 use Illuminate\Support\ServiceProvider;
+use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\ImageManager;
 
 class FilesServiceProvider extends ServiceProvider
 {
@@ -23,6 +25,19 @@ class FilesServiceProvider extends ServiceProvider
             return $disk === 'blob'
                 ? new DbBlobFileStorage
                 : new DiskFileStorage($disk);
+        });
+
+        $this->app->singleton(ImageManager::class, function (): ImageManager {
+            // gd (default) and imagick ship with intervention/image; vips additionally
+            // needs the intervention/image-driver-vips package + the libvips system
+            // library, and resolves with a clear error here if that is missing.
+            $driver = match (config('openpne.images.driver')) {
+                'imagick' => Driver::class,
+                'vips' => \Intervention\Image\Drivers\Vips\Driver::class,
+                default => \Intervention\Image\Drivers\Gd\Driver::class,
+            };
+
+            return ImageManager::usingDriver($driver);
         });
     }
 

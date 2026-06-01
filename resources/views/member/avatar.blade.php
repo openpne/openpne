@@ -7,7 +7,7 @@
         <h2 class="partsHeading">{{ __('Profile image') }}</h2>
         <div class="parts">
             @if ($avatar)
-                <p><img src="{{ $avatar->url() }}" alt="{{ __('Profile image') }}"></p>
+                <p><img src="{{ $avatar->thumbnailUrl(120, 120, square: true) }}" alt="{{ __('Profile image') }}"></p>
             @else
                 <p>{{ __('No profile image set.') }}</p>
             @endif
