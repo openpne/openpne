@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\File;
 
+use App\Files\FileStorage;
 use App\Files\FileUploader;
 use App\Files\ImageTransform;
 use App\Models\File;
@@ -106,6 +107,28 @@ class ImageDeliveryTest extends TestCase
 
         $file->delete();
         Storage::disk('image_cache')->assertMissing($key);
+    }
+
+    public function test_a_migrated_openpne3_style_underscore_name_is_served(): void
+    {
+        // Migrated OpenPNE 3 files keep their original name verbatim, which carries
+        // underscores (e.g. m_42_abcdef_jpg). The route must accept them.
+        $owner = Member::factory()->create();
+        $file = File::factory()->create([
+            'name' => 'm_42_abcdef_jpg',
+            'type' => 'image/jpeg',
+            'related_entity_type' => 'member',
+            'related_entity_id' => $owner->getKey(),
+        ]);
+        $upload = UploadedFile::fake()->image('a.jpg', 240, 120);
+        $bytes = (string) file_get_contents($upload->getRealPath());
+        $stream = fopen('php://temp', 'r+b');
+        fwrite($stream, $bytes);
+        rewind($stream);
+        app(FileStorage::class)->writeStream($file, $stream);
+        fclose($stream);
+
+        $this->actingAs($owner)->get($file->thumbnailUrl(120, 120, square: true))->assertOk();
     }
 
     private function avatar(Member $owner, int $width = 240, int $height = 120): File

@@ -129,7 +129,9 @@ Route::middleware('auth')->group(function () {
         ->where([
             'format' => 'jpg|png|gif|webp',
             'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',
-            'name' => '[A-Za-z0-9]+',
+            // Allow the `_`/`-` that migrated OpenPNE 3 file names carry (e.g. m_42_..._jpg);
+            // new names are Str::random alnum. `.` stays out — it separates name from ext.
+            'name' => '[A-Za-z0-9_-]+',
             'ext' => 'jpg|png|gif|webp',
         ])
         ->name('image.show');
