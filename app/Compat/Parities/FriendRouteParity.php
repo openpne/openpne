@@ -28,7 +28,7 @@ class FriendRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            'friend_show_image' => 'Avatar image is served via the File substrate, not ported here.',
+            'friend_show_image' => 'OpenPNE 3 friend/showImage is the member photo page; the image bytes are served by FileController, but the photo page itself is not ported.',
         ];
     }
 
