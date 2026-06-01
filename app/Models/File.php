@@ -32,4 +32,14 @@ class File extends Model
             'byte_size' => 'integer',
         ];
     }
+
+    /**
+     * The app route that serves this file's bytes, keyed by the opaque `name` token.
+     * Always an in-app URL (never a direct disk URL) so FileController + FilePolicy
+     * gate every fetch.
+     */
+    public function url(): string
+    {
+        return route('file.show', ['file' => $this->name]);
+    }
 }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -81,5 +82,21 @@ class Member extends Authenticatable
     public function diaries(): HasMany
     {
         return $this->hasMany(Diary::class, 'member_id');
+    }
+
+    /** @return HasMany<MemberImage, $this> */
+    public function images(): HasMany
+    {
+        return $this->hasMany(MemberImage::class, 'member_id');
+    }
+
+    /**
+     * The avatar shown for this member, or null. A single primary image is kept today.
+     *
+     * @return HasOne<MemberImage, $this>
+     */
+    public function primaryImage(): HasOne
+    {
+        return $this->hasOne(MemberImage::class, 'member_id')->where('is_primary', true);
     }
 }
