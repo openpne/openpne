@@ -1,5 +1,6 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
+    "name": "openpne",
     "private": true,
     "type": "module",
     "scripts": {
@@ -29,5 +30,10 @@
         "react": "^19.2.6",
         "react-dom": "^19.2.6",
         "tailwind-merge": "^3.6.0"
+    },
+    "overrides": {
+        "laravel-react-i18n": {
+            "react": "$react"
+        }
     }
 }
