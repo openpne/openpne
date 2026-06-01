@@ -21,7 +21,10 @@ class DiskFileStorage implements FileStorage
 
     public function writeStream(File $file, $stream): void
     {
-        if (Storage::disk($this->disk)->writeStream($file->name, $stream) === false) {
+        // Pin private visibility. Delivery always streams through the app controller
+        // (never a bare disk URL), but an object must still not be world-readable if a
+        // disk or route is later misconfigured.
+        if (Storage::disk($this->disk)->writeStream($file->name, $stream, ['visibility' => 'private']) === false) {
             throw new RuntimeException("Unable to write file [{$file->name}] to disk [{$this->disk}].");
         }
     }

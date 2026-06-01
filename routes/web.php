@@ -3,6 +3,8 @@
 use App\Features\Block\BlockController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
+use App\Features\Member\MemberAvatarController;
+use App\Http\Controllers\FileController;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -105,4 +107,18 @@ Route::middleware('auth')->group(function () {
 
         return redirect()->route('block.list');
     })->name('member.config.access_block_compat');
+
+    Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {
+        Route::get('/avatar', 'edit')->name('member.avatar.edit');
+        Route::post('/avatar', 'update')->name('member.avatar.update');
+    });
+
+    // OpenPNE 3 served the avatar editor at /member/image/config; preserve the URL.
+    Route::get('/member/image/config', fn () => redirect()->route('member.avatar.edit'))
+        ->name('member.image.config_compat');
+
+    // File byte delivery, bound by the opaque `name` token. FileController gates every
+    // fetch through FilePolicy, so disk backends stream through the app too (never a
+    // bare disk URL).
+    Route::get('/file/{file:name}', [FileController::class, 'show'])->name('file.show');
 });
