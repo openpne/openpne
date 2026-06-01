@@ -82,4 +82,18 @@ class UpgradeMatrixAuditTest extends TestCase
             }
         }
     }
+
+    public function test_deferred_source_tables_exist_in_the_fixture(): void
+    {
+        // Well-formedness of the deferred-table declaration: each named table must be a
+        // real OpenPNE 3 source table (catches typos). Whether every source table is
+        // either stepped or deferred is a separate, fixture-wide coverage audit.
+        $schema = SourceSchema::default();
+
+        foreach (StepRegistry::deferredSourceTables() as $table => $reason) {
+            $this->assertNotEmpty($schema->columns($table),
+                "deferred source table `{$table}` is declared but absent from the source schema fixture");
+            $this->assertNotEmpty($reason, "deferred source table `{$table}` must carry a reason");
+        }
+    }
 }

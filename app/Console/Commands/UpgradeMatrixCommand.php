@@ -51,6 +51,16 @@ class UpgradeMatrixCommand extends Command
             $this->line('');
         }
 
+        if (StepRegistry::deferredSourceTables() !== []) {
+            $this->line('## Deferred source tables');
+            $this->line('');
+            $this->line('OpenPNE 3 source tables with an OpenPNE 4 successor but no upgrade step yet:');
+            foreach (StepRegistry::deferredSourceTables() as $table => $reason) {
+                $this->line("- `{$table}` — {$reason}");
+            }
+            $this->line('');
+        }
+
         return self::SUCCESS;
     }
 }

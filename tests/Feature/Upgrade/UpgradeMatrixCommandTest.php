@@ -18,6 +18,9 @@ class UpgradeMatrixCommandTest extends TestCase
             // Member's deferred credentials must stay visible in the matrix.
             ->expectsOutputToContain('Pending targets:')
             ->expectsOutputToContain('`password`')
-            ->expectsOutputToContain('Accepted gaps:');
+            ->expectsOutputToContain('Accepted gaps:')
+            // Source tables with a successor but no step yet must stay visible too.
+            ->expectsOutputToContain('Deferred source tables')
+            ->expectsOutputToContain('`file_bin`');
     }
 }
