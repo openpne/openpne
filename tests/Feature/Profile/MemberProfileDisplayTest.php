@@ -22,10 +22,11 @@ class MemberProfileDisplayTest extends TestCase
 
     public function test_preset_select_renders_the_localised_choice_label(): void
     {
-        $value = $this->valueFor(['name' => 'op_preset_sex', 'form_type' => 'select'], ['value' => 'M']);
+        // OpenPNE 3 stores the choice value (Man), not M.
+        $value = $this->valueFor(['name' => 'op_preset_sex', 'form_type' => 'select'], ['value' => 'Man']);
 
         $this->assertSame('男性', $value->displayValue('ja_JP'));
-        $this->assertSame('Male', $value->displayValue('en'));
+        $this->assertSame('Man', $value->displayValue('en'));
     }
 
     public function test_custom_select_renders_the_option_label(): void

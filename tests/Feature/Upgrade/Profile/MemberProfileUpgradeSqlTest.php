@@ -72,11 +72,24 @@ class MemberProfileUpgradeSqlTest extends TestCase
     public function test_preset_select_keeps_value_key(): void
     {
         $this->seedProfile(2, 'op_preset_sex', 'select');
-        $this->seedMemberProfile(200, 2, ['value' => 'M', 'public_flag' => 2, 'tree_key' => 200, 'lft' => 1]);
+        // OpenPNE 3 stores the choice value (Man), not M.
+        $this->seedMemberProfile(200, 2, ['value' => 'Man', 'public_flag' => 2, 'tree_key' => 200, 'lft' => 1]);
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('member_profiles', ['id' => 200, 'value' => 'M', 'visibility' => 2]); // friend → Friends
+        $this->assertDatabaseHas('member_profiles', ['id' => 200, 'value' => 'Man', 'visibility' => 2]); // friend → Friends
+    }
+
+    public function test_text_form_type_value_is_copied_and_folded_to_input(): void
+    {
+        // OpenPNE 3 presets (postal_code/telephone_number) use form_type 'text'.
+        $this->seedProfile(12, 'op_preset_postal_code', 'text');
+        $this->seedMemberProfile(1200, 12, ['value' => '123-4567', 'public_flag' => 1, 'tree_key' => 1200, 'lft' => 1]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1200, 'value' => '123-4567']);
+        $this->assertSame('input', DB::table('profiles')->where('id', 12)->value('form_type'));
     }
 
     public function test_custom_select_keeps_option_id(): void

@@ -37,7 +37,9 @@ class ProfileUpgrade extends UpgradeStep
                 ),
                 uses: ['default_public_flag'],
             ),
-            'form_type' => Column::source('form_type'),
+            // OpenPNE 3 presets use form_type 'text' for single-line input while custom
+            // fields use 'input'; fold them into one 'input' so OpenPNE 4 has a single type.
+            'form_type' => Column::expr("CASE WHEN `form_type` = 'text' THEN 'input' ELSE `form_type` END", uses: ['form_type']),
             'value_type' => Column::source('value_type'),
             'is_disp_regist' => Column::source('is_disp_regist'),
             'is_disp_config' => Column::source('is_disp_config'),

@@ -5,8 +5,9 @@
  *
  * - キーは preset 識別子。`op_preset_<key>` という profiles.name で登録される。
  * - caption_key は __() で翻訳される文字列(lang/ja.json に対応訳を置く)。
- * - choices は select/radio 用(key=保存値、value=表示翻訳キー)。preset の選択肢は
- *   この catalog から出し、profile_options テーブルは使わない。
+ * - choices は select/radio 用(key=保存値、value=表示翻訳キー)。OpenPNE 3 は選択肢の
+ *   「値」側を member_profile.value に保存する(sex なら Female / Man)ので key にそれを置く。
+ *   preset の選択肢はこの catalog から出し、profile_options テーブルは使わない。
  * - region_select は OpenPNE の getRawPresetName() 互換: region_JP / region_US 等は
  *   同じ name=op_preset_region で value_type が JP / US に切り替わる(UNIQUE 制約のため
  *   同時に 1 つだけ登録可)。
@@ -26,8 +27,8 @@ return [
         'is_edit_public_flag' => true,
         'default_public_flag' => 0,
         'choices' => [
-            'F' => 'Female',
-            'M' => 'Male',
+            'Female' => 'Female',
+            'Man' => 'Man',
         ],
     ],
 

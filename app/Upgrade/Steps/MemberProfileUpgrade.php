@@ -35,8 +35,13 @@ class MemberProfileUpgrade extends UpgradeStep
 
     protected string $target = 'member_profiles';
 
-    /** Single-value form types whose root row maps 1:1 (preset date included). */
-    private const SINGLE_VALUE_TYPES = "'input', 'textarea', 'select', 'radio', 'country_select', 'region_select'";
+    /**
+     * Single-value form types whose root row maps 1:1 (preset date included). `text` is
+     * OpenPNE 3's preset single-line type (postal_code/telephone_number); `input` is the
+     * custom-field equivalent — ProfileUpgrade folds `text` into `input`, but the source
+     * still carries both, so both are matched here.
+     */
+    private const SINGLE_VALUE_TYPES = "'input', 'text', 'textarea', 'select', 'radio', 'country_select', 'region_select'";
 
     public function columns(): array
     {

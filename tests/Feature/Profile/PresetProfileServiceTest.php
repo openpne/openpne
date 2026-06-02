@@ -30,13 +30,14 @@ class PresetProfileServiceTest extends TestCase
     {
         $choices = $this->service->choicesFor($this->profile('op_preset_sex', 'select'), 'ja');
 
+        // OpenPNE 3 stores the choice value (Female/Man), not the F/M key.
         $this->assertSame([
-            ['id' => 'F', 'caption' => '女性'],
-            ['id' => 'M', 'caption' => '男性'],
+            ['id' => 'Female', 'caption' => '女性'],
+            ['id' => 'Man', 'caption' => '男性'],
         ], $choices);
 
         $en = $this->service->choicesFor($this->profile('op_preset_sex', 'select'), 'en');
-        $this->assertSame('Male', $en[1]['caption']);
+        $this->assertSame('Man', $en[1]['caption']);
     }
 
     public function test_region_variants_collapse_to_the_shared_name(): void
