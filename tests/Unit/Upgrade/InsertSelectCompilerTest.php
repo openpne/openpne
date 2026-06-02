@@ -2,10 +2,11 @@
 
 namespace Tests\Unit\Upgrade;
 
+use App\Upgrade\Column;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
-use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\UpgradeStep;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
@@ -68,7 +69,24 @@ class InsertSelectCompilerTest extends TestCase
     {
         // A step whose required target columns have no source yet must not silently
         // compile to an INSERT that omits them.
+        $step = new class extends UpgradeStep
+        {
+            protected string $source = 'legacy';
+
+            protected string $target = 'modern';
+
+            public function columns(): array
+            {
+                return ['id' => Column::source('id')];
+            }
+
+            public function pendingTargets(): array
+            {
+                return ['secret' => 'no source resolved yet'];
+            }
+        };
+
         $this->expectException(LogicException::class);
-        (new InsertSelectCompiler)->compile(new MemberUpgrade);
+        (new InsertSelectCompiler)->compile($step);
     }
 }
