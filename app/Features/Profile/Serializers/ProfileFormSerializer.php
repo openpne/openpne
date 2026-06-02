@@ -20,8 +20,17 @@ class ProfileFormSerializer
     {
         return [
             'name' => $memberName,
-            'fields' => $fields->map(fn (EditableField $field): array => self::field($field, $lang))->values()->all(),
+            'fields' => self::fields($fields, $lang),
         ];
+    }
+
+    /**
+     * @param  Collection<int, EditableField>  $fields
+     * @return list<array<string, mixed>>
+     */
+    public static function fields(Collection $fields, string $lang): array
+    {
+        return $fields->map(fn (EditableField $field): array => self::field($field, $lang))->values()->all();
     }
 
     /** @return array<string, mixed> */

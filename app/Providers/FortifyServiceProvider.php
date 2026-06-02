@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Actions\Fortify\AuthenticateMember;
 use App\Actions\Fortify\CreateNewMember;
 use App\Actions\Fortify\ResetMemberPassword;
+use App\Features\Profile\Queries\RegistrationFields;
+use App\Features\Profile\Serializers\ProfileFormSerializer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -30,7 +32,12 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetMemberPassword::class);
 
         Fortify::loginView(fn () => Inertia::render('auth/login'));
-        Fortify::registerView(fn () => Inertia::render('auth/register'));
+        Fortify::registerView(fn () => Inertia::render('auth/register', [
+            'profileFields' => ProfileFormSerializer::fields(
+                app(RegistrationFields::class)(),
+                app()->getLocale() === 'ja' ? 'ja_JP' : 'en',
+            ),
+        ]));
         Fortify::requestPasswordResetLinkView(fn () => Inertia::render('auth/forgot-password'));
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
             'email' => $request->string('email')->value(),
