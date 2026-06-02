@@ -54,7 +54,11 @@ class ProfileOptionsRelationManager extends RelationManager
         $editable = $this->optionsAreEditable();
 
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with('translations'))
+            // When the field is no longer a custom option type, hide any leftover option rows so
+            // the "not applicable" message shows cleanly. The rows stay in the table (the member
+            // side ignores them for non-option types) and reappear if it becomes a custom option
+            // field again.
+            ->modifyQueryUsing(fn ($query) => $editable ? $query->with('translations') : $query->whereRaw('1 = 0'))
             ->columns([
                 TextColumn::make('caption_ja')
                     ->label(__('Label (Japanese)'))

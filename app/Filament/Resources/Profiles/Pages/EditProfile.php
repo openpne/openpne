@@ -17,6 +17,16 @@ class EditProfile extends EditRecord
         ];
     }
 
+    /**
+     * Reload the edit page after save so the options relation manager re-mounts with the saved
+     * form_type. As a separate Livewire component it would otherwise keep the pre-save form_type
+     * (e.g. after switching a field to select, options stay uneditable until a manual reload).
+     */
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('edit', ['record' => $this->getRecord()]);
+    }
+
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $this->record->loadMissing('translations');

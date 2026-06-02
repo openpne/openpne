@@ -209,4 +209,19 @@ class ProfileResourceTest extends TestCase
             ->assertSuccessful()
             ->assertTableActionDoesNotExist('create');
     }
+
+    public function test_stale_options_are_hidden_when_the_field_is_not_an_option_type(): void
+    {
+        $profile = Profile::factory()->create(['form_type' => 'input']); // left over from a former select
+        $option = ProfileOption::factory()->create(['profile_id' => $profile->getKey()]);
+        $option->setLabel('ja_JP', '残り');
+
+        Livewire::test(ProfileOptionsRelationManager::class, [
+            'ownerRecord' => $profile,
+            'pageClass' => EditProfile::class,
+        ])
+            ->assertSuccessful()
+            ->assertCanNotSeeTableRecords([$option])
+            ->assertTableActionDoesNotExist('create');
+    }
 }
