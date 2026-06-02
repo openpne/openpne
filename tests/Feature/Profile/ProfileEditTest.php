@@ -283,6 +283,26 @@ class ProfileEditTest extends TestCase
             );
     }
 
+    public function test_date_field_enforces_the_admin_configured_min_and_max(): void
+    {
+        $member = Member::factory()->create();
+        $profile = Profile::factory()->create([
+            'name' => 'event_date', 'form_type' => 'date', 'value_min' => '2000-01-01', 'value_max' => '2020-12-31',
+        ]);
+
+        foreach (['1999-12-31', '2021-01-01'] as $outOfRange) {
+            $this->actingAs($member)->post('/member/edit/profile', [
+                'name' => $member->name,
+                'profile' => [$profile->getKey() => $outOfRange],
+            ])->assertSessionHasErrors("profile.{$profile->getKey()}");
+        }
+
+        $this->actingAs($member)->post('/member/edit/profile', [
+            'name' => $member->name,
+            'profile' => [$profile->getKey() => '2010-06-15'],
+        ])->assertSessionHasNoErrors();
+    }
+
     /** @param array<int, string|list<string>> $values */
     private function save(Member $member, array $values): void
     {

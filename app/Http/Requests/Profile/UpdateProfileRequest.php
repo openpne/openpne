@@ -100,6 +100,13 @@ class UpdateProfileRequest extends FormRequest
                 break;
             case 'date':
                 $rules[] = 'date';
+                // Enforce the admin-configured bounds (OpenPNE 3 set these on the date widget).
+                if ($profile->value_min !== null && $profile->value_min !== '') {
+                    $rules[] = 'after_or_equal:'.$profile->value_min;
+                }
+                if ($profile->value_max !== null && $profile->value_max !== '') {
+                    $rules[] = 'before_or_equal:'.$profile->value_max;
+                }
                 break;
             case 'country_select':
                 $rules[] = Rule::in(array_keys(app(CountryListService::class)->getOptions()));
