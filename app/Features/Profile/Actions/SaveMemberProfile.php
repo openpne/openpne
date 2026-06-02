@@ -7,6 +7,7 @@ use App\Models\Member;
 use App\Models\Profile;
 use App\Services\PresetProfileService;
 use App\Support\Visibility;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -32,11 +33,22 @@ class SaveMemberProfile
     {
         DB::transaction(function () use ($member, $data): void {
             $member->update(['name' => $data->name]);
-
-            foreach (Profile::query()->where('is_disp_config', true)->get() as $profile) {
-                $this->saveField($member, $profile, $data);
-            }
+            $this->saveFields($member, Profile::query()->where('is_disp_config', true)->get(), $data);
         });
+    }
+
+    /**
+     * Replace the member's stored values for the given profile fields from the submission. Shared
+     * by profile-edit (is_disp_config) and registration (is_disp_regist); the caller chooses the
+     * field set and is responsible for the surrounding transaction.
+     *
+     * @param  Collection<int, Profile>  $profiles
+     */
+    public function saveFields(Member $member, Collection $profiles, ProfileFormData $data): void
+    {
+        foreach ($profiles as $profile) {
+            $this->saveField($member, $profile, $data);
+        }
     }
 
     private function saveField(Member $member, Profile $profile, ProfileFormData $data): void

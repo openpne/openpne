@@ -3,15 +3,11 @@
 namespace App\Http\Requests\Profile;
 
 use App\Features\Profile\Data\ProfileFormData;
+use App\Features\Profile\ProfileFieldRules;
 use App\Models\Member;
 use App\Models\Profile;
-use App\Services\CountryListService;
-use App\Services\PresetProfileService;
-use App\Services\RegionListService;
-use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
  * Validates a profile-edit submission. Rules are built per field from its form_type:
@@ -69,113 +65,22 @@ class UpdateProfileRequest extends FormRequest
     /** @return array<string, array<int, mixed>> */
     private function rulesForProfile(Profile $profile): array
     {
-        $id = $profile->getKey();
-        $key = "profile.{$id}";
-        $rules = [];
+        $rules = app(ProfileFieldRules::class);
 
-        if ($profile->form_type === 'checkbox') {
-            $rules[$key] = [$profile->is_required ? 'required' : 'nullable', 'array'];
-            $rules["{$key}.*"] = [Rule::in($profile->options->pluck('id')->all())];
-        } else {
-            $rules[$key] = $this->valueRules($profile);
-        }
-
-        if ($profile->is_edit_public_flag) {
-            $allowed = array_map(fn (Visibility $v): int => $v->value, $profile->visibilityOptions());
-            $rules["visibility.{$id}"] = ['nullable', Rule::in($allowed)];
-        }
-
-        return $rules;
-    }
-
-    /** @return array<int, mixed> */
-    private function valueRules(Profile $profile): array
-    {
-        $rules = [$profile->is_required ? 'required' : 'nullable'];
-
-        switch ($profile->form_type) {
-            case 'select':
-            case 'radio':
-                $rules[] = Rule::in($this->choiceIds($profile));
-                break;
-            case 'date':
-                $rules[] = 'date';
-                // Enforce the admin-configured bounds (OpenPNE 3 set these on the date widget).
-                if ($profile->value_min !== null && $profile->value_min !== '') {
-                    $rules[] = 'after_or_equal:'.$profile->value_min;
-                }
-                if ($profile->value_max !== null && $profile->value_max !== '') {
-                    $rules[] = 'before_or_equal:'.$profile->value_max;
-                }
-                break;
-            case 'country_select':
-                $rules[] = Rule::in(array_keys(app(CountryListService::class)->getOptions()));
-                break;
-            case 'region_select':
-                $rules[] = Rule::in(app(RegionListService::class)->flattenOptions($profile->value_type));
-                break;
-            default: // input / textarea
-                $rules[] = 'string';
-                if ($profile->value_regexp) {
-                    $rules[] = 'regex:'.$this->normalizeRegex($profile->value_regexp);
-                }
-                if ($profile->value_min !== null && $profile->value_min !== '') {
-                    $rules[] = 'min:'.(int) $profile->value_min;
-                }
-                if ($profile->value_max !== null && $profile->value_max !== '') {
-                    $rules[] = 'max:'.(int) $profile->value_max;
-                }
-                if ($this->isUniqueText($profile)) {
-                    // OpenPNE 3 (opValidatorProfile) rejects a value already held by another
-                    // member for a unique input/textarea field; ignore the member's own rows.
-                    $rules[] = Rule::unique('member_profiles', 'value')->where(
-                        fn ($query) => $query
-                            ->where('profile_id', $profile->getKey())
-                            ->where('member_id', '!=', $this->user()->getKey()),
-                    );
-                }
-                break;
-        }
-
-        return $rules;
+        return $rules->forValue($profile, $this->user()->getKey()) + $rules->visibilityRule($profile);
     }
 
     /** @return array<string, string> */
     public function messages(): array
     {
+        $rules = app(ProfileFieldRules::class);
         $messages = [];
         foreach ($this->editableProfiles() as $profile) {
-            if ($this->isUniqueText($profile)) {
+            if ($rules->isUniqueText($profile)) {
                 $messages["profile.{$profile->getKey()}.unique"] = __('This value is already in use.');
             }
         }
 
         return $messages;
-    }
-
-    private function isUniqueText(Profile $profile): bool
-    {
-        return $profile->is_unique && in_array($profile->form_type, ['input', 'textarea'], true);
-    }
-
-    /** @return list<string> */
-    private function choiceIds(Profile $profile): array
-    {
-        $presets = app(PresetProfileService::class);
-
-        if ($presets->usesValueColumnForChoice($profile)) {
-            return array_map(fn (array $c): string => $c['id'], $presets->choicesFor($profile));
-        }
-
-        return $profile->options->pluck('id')->map(fn ($id): string => (string) $id)->all();
-    }
-
-    private function normalizeRegex(string $pattern): string
-    {
-        if ($pattern !== '' && $pattern[0] !== '/' && $pattern[0] !== '#') {
-            return '/'.$pattern.'/';
-        }
-
-        return $pattern;
     }
 }
