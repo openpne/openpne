@@ -106,7 +106,10 @@ class RegionListService
     {
         $key = 'regions.'.$name;
 
-        return Lang::has($key, $localeCode) ? (string) trans($key, [], $localeCode) : $name;
+        // Check the exact locale only (no fallback): the English source string is the intended
+        // fallback, so an untranslated key must not resolve to APP_FALLBACK_LOCALE's translation
+        // (e.g. an English label coming back as Japanese when ja is the fallback locale).
+        return Lang::has($key, $localeCode, fallback: false) ? (string) trans($key, [], $localeCode) : $name;
     }
 
     private function normalizeLocale(string $locale): string
