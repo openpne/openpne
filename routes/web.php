@@ -4,6 +4,7 @@ use App\Features\Block\BlockController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
 use App\Features\Member\MemberAvatarController;
+use App\Features\Profile\ProfileController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
 use App\Http\Middleware\SetLocale;
@@ -117,6 +118,22 @@ Route::middleware('auth')->group(function () {
     // OpenPNE 3 served the avatar editor at /member/image/config; preserve the URL.
     Route::get('/member/image/config', fn () => redirect()->route('member.avatar.edit'))
         ->name('member.image.config_compat');
+
+    // OpenPNE 3 profile-page aliases (routing.yml member_profile_mine / member_profile_raw):
+    // /member/profile is the viewer's own profile, /member/profile/id/:id another member's.
+    // Both redirect to the canonical /member/{id}.
+    Route::get('/member/profile', fn (Request $request) => redirect()->route('member.profile.show', ['member' => $request->user()->getKey()]))
+        ->name('member.profile.mine_compat');
+    Route::get('/member/profile/id/{member}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
+        ->whereNumber('member')->name('member.profile.raw_compat');
+
+    // Member profile page. whereNumber keeps the literal /member/* routes above from
+    // matching the {member} wildcard. Login-required for now (guest web-public profiles
+    // are a follow-up); per-value visibility + block are enforced in ShowProfile.
+    Route::get('/member/{member}', [ProfileController::class, 'show'])
+        ->whereNumber('member')->name('member.profile.show');
+    Route::get('/m/member/{member}', [ProfileController::class, 'show'])
+        ->whereNumber('member')->defaults('surface', 'modern')->name('member.profile.modern.show');
 
     // File byte delivery, bound by the opaque `name` token. FileController gates every
     // fetch through FilePolicy, so disk backends stream through the app too (never a
