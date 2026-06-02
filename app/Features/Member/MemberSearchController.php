@@ -18,7 +18,8 @@ class MemberSearchController extends Controller
     public function search(Request $request, SearchMembers $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
-        $name = (string) $request->query('name', '');
+        $nameParam = $request->query('name', '');
+        $name = is_string($nameParam) ? $nameParam : '';
         $profileFilters = $this->arrayParam($request, 'profile');
         $dateRanges = $this->arrayParam($request, 'date');
 

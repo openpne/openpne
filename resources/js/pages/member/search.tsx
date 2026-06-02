@@ -62,7 +62,7 @@ export default function MemberSearch() {
                         <ul className="divide-y divide-border">
                             {members.data.map((member) => (
                                 <li key={member.id} className="py-2">
-                                    <Link href={`/member/${member.id}`} className="flex items-center gap-3">
+                                    <Link href={`/m/member/${member.id}`} className="flex items-center gap-3">
                                         {member.avatarUrl && (
                                             <img src={member.avatarUrl} alt={member.name} className="size-10 rounded object-cover" />
                                         )}
