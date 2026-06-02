@@ -17,6 +17,10 @@ return new class extends Migration
             $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
+            // Whether this member's profile page is reachable, on the App\Support\Visibility
+            // scale: Open = web-public (guests may view it), otherwise login-required. Default
+            // Members keeps profiles SNS-internal until the member opts into web-public.
+            $table->unsignedTinyInteger('profile_visibility')->default(1); // Visibility::Members
             $table->rememberToken();
             $table->timestamps();
         });

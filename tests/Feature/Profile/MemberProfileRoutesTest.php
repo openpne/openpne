@@ -63,11 +63,37 @@ class MemberProfileRoutesTest extends TestCase
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")->assertNotFound();
     }
 
-    public function test_guest_is_redirected_to_login(): void
+    public function test_guest_on_a_non_web_public_profile_is_redirected_to_login(): void
     {
-        $owner = Member::factory()->create();
+        $owner = Member::factory()->create(); // default profile_visibility = Members
 
         $this->get("/member/{$owner->getKey()}")->assertRedirect('/login');
+    }
+
+    public function test_guest_can_view_a_web_public_profile(): void
+    {
+        $owner = Member::factory()->create(['name' => 'Public Owner', 'profile_visibility' => Visibility::Open]);
+        $this->webField($owner, 'public-value');
+
+        $this->get("/member/{$owner->getKey()}")->assertOk()->assertSee('public-value');
+    }
+
+    public function test_guest_does_not_see_non_web_public_fields_on_a_web_public_profile(): void
+    {
+        $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
+        $this->webField($owner, 'shown');
+        $this->fieldFor($owner, Visibility::Members, 'hidden-value');
+
+        $this->get("/member/{$owner->getKey()}")->assertOk()->assertSee('shown')->assertDontSee('hidden-value');
+    }
+
+    private function webField(Member $owner, string $value): void
+    {
+        $profile = Profile::factory()->create(['is_edit_public_flag' => true, 'is_public_web' => true]);
+        MemberProfile::factory()->create([
+            'member_id' => $owner->getKey(), 'profile_id' => $profile->getKey(),
+            'value' => $value, 'visibility' => Visibility::Open,
+        ]);
     }
 
     public function test_legacy_profile_aliases_redirect_to_the_canonical_url(): void

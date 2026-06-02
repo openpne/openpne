@@ -17,17 +17,22 @@ use Illuminate\Support\Collection;
  * field default when the field is not per-value editable / has no value flag) is compared
  * to the viewer's clearance via the shared monotonic Visibility scale. Fields whose
  * rendered value is empty are skipped, like OpenPNE 3's _profileListBox.
+ *
+ * A guest (null viewer) has Open clearance and additionally only sees fields flagged
+ * is_public_web — the page-level "is this profile guest-reachable" gate is the controller's
+ * (it redirects to login otherwise).
  */
 class ShowProfile
 {
     /** @return Collection<int, ProfileFieldValue>|null */
-    public function __invoke(Member $viewer, Member $owner, string $lang): ?Collection
+    public function __invoke(?Member $viewer, Member $owner, string $lang): ?Collection
     {
-        if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
+        if ($viewer !== null && ! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
             return null;
         }
 
-        $clearance = Visibility::clearanceFor($viewer, $owner);
+        $isGuest = $viewer === null;
+        $clearance = $isGuest ? Visibility::Open : Visibility::clearanceFor($viewer, $owner);
 
         return $owner->memberProfiles()
             ->with(['profile.translations', 'option.translations'])
@@ -35,6 +40,7 @@ class ShowProfile
             ->groupBy('profile_id')
             ->map(fn (Collection $rows): ProfileFieldValue => new ProfileFieldValue($rows->first()->profile, $rows))
             ->filter(fn (ProfileFieldValue $field): bool => $this->effectiveVisibility($field)->value <= $clearance->value)
+            ->filter(fn (ProfileFieldValue $field): bool => ! $isGuest || $field->profile->is_public_web)
             ->filter(fn (ProfileFieldValue $field): bool => $field->display($lang) !== '')
             ->sortBy(fn (ProfileFieldValue $field): int => $field->profile->sort_order ?? PHP_INT_MAX)
             ->values();

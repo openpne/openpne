@@ -98,10 +98,32 @@ class ShowProfileTest extends TestCase
         $this->assertSame($filled->getKey(), $result->first()->profile->getKey());
     }
 
+    public function test_guest_sees_only_web_public_open_values(): void
+    {
+        $owner = Member::factory()->create();
+        $this->valueFor($owner, Visibility::Open, isPublicWeb: true, value: 'public-bio');   // shown
+        $this->valueFor($owner, Visibility::Open, isPublicWeb: false, value: 'x');            // Open but not web-public
+        $this->valueFor($owner, Visibility::Members, isPublicWeb: true, value: 'y');          // above guest clearance
+
+        $result = (new ShowProfile)(null, $owner, 'ja_JP');
+
+        $this->assertCount(1, $result);
+        $this->assertSame('public-bio', $result->first()->display('ja_JP'));
+    }
+
     /** @return Collection<int, ProfileFieldValue>|null */
     private function show(Member $viewer, Member $owner): ?Collection
     {
         return (new ShowProfile)($viewer, $owner, 'ja_JP');
+    }
+
+    private function valueFor(Member $owner, Visibility $visibility, bool $isPublicWeb, string $value): void
+    {
+        $profile = Profile::factory()->create(['is_edit_public_flag' => true, 'is_public_web' => $isPublicWeb]);
+        MemberProfile::factory()->create([
+            'member_id' => $owner->getKey(), 'profile_id' => $profile->getKey(),
+            'value' => $value, 'visibility' => $visibility,
+        ]);
     }
 
     private function seedAllLevels(Member $owner): void
