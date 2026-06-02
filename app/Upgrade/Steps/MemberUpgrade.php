@@ -19,8 +19,11 @@ use App\Upgrade\UpgradeStep;
  *  - password: the bare 32-char MD5. INSERT...SELECT bypasses Eloquent, so the model's
  *    `hashed` cast does not fire and the legacy hash lands verbatim, to be rehashed to
  *    bcrypt on the member's first login.
- *  - profile_visibility: member_config[profile_page_public_flag] mapped onto Visibility
- *    (web=4→Open i.e. guest-viewable, friend=2→Friends, private=3→Private, SNS=1/unset→Members).
+ *  - profile_visibility: the SNS-wide sns_config[is_allow_config_public_flag_profile_page]
+ *    when truthy (it overrides the per-member flag in OpenPNE 3's MemberTable::appendRules,
+ *    so a stale member_config must not over-expose), else member_config[profile_page_public_flag],
+ *    mapped onto Visibility (web=4→Open i.e. guest-viewable, friend=2→Friends, private=3→Private,
+ *    SNS=1/unset→Members).
  *
  * The subqueries name `member_config` unqualified, so (unlike the FROM table) they are not
  * rewritten for a source prefix or a separate source database — acceptable for the fleet
@@ -76,12 +79,25 @@ class MemberUpgrade extends UpgradeStep
         return "(SELECT `value` FROM `member_config` WHERE `member_id` = `member`.`id` AND `name` = '{$name}' LIMIT 1)";
     }
 
-    /** OpenPNE 3 profile_page_public_flag (public_flag string) → Visibility; unset → Members. */
+    private function snsConfigValue(string $name): string
+    {
+        return "(SELECT `value` FROM `sns_config` WHERE `name` = '{$name}' LIMIT 1)";
+    }
+
+    /**
+     * Effective profile-page public flag → Visibility. The SNS-wide
+     * is_allow_config_public_flag_profile_page overrides the per-member flag when truthy
+     * (OpenPNE 3 MemberTable::appendRules); only when empty/0 does the member's own flag apply.
+     */
     private function profileVisibilityExpr(): string
     {
+        $global = $this->snsConfigValue('is_allow_config_public_flag_profile_page');
+        $member = $this->memberConfigValue('profile_page_public_flag');
+        $effective = "CASE WHEN {$global} IS NOT NULL AND {$global} NOT IN ('', '0') THEN {$global} ELSE {$member} END";
+
         return sprintf(
-            "CASE %s WHEN '4' THEN %d WHEN '2' THEN %d WHEN '3' THEN %d ELSE %d END",
-            $this->memberConfigValue('profile_page_public_flag'),
+            "CASE (%s) WHEN '4' THEN %d WHEN '2' THEN %d WHEN '3' THEN %d ELSE %d END",
+            $effective,
             Visibility::Open->value,
             Visibility::Friends->value,
             Visibility::Private->value,

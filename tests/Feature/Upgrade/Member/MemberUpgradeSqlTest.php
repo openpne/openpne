@@ -38,6 +38,7 @@ class MemberUpgradeSqlTest extends TestCase
     protected function tearDown(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
+            DB::statement('DROP TABLE IF EXISTS `sns_config`');
             DB::statement('DROP TABLE IF EXISTS `member_config`');
             DB::statement('DROP TABLE IF EXISTS `member`');
         }
@@ -134,6 +135,29 @@ class MemberUpgradeSqlTest extends TestCase
         $this->assertSame(1, (int) DB::table('members')->where('id', 12)->value('profile_visibility'));
     }
 
+    public function test_sns_global_profile_visibility_overrides_a_stale_member_flag(): void
+    {
+        // OpenPNE 3 prefers the SNS-wide setting; a stale member_config=4 must NOT leak the
+        // page to guests when the SNS-wide value is non-web.
+        $this->seedSnsConfig('is_allow_config_public_flag_profile_page', '1'); // truthy, non-web
+        $this->seedMember(13, 'Stale');
+        $this->seedConfig(13, 'profile_page_public_flag', '4');
+
+        $this->runUpgrade();
+
+        $this->assertSame(1, (int) DB::table('members')->where('id', 13)->value('profile_visibility')); // Members, not Open
+    }
+
+    public function test_sns_global_web_public_applies_to_a_member_without_a_flag(): void
+    {
+        $this->seedSnsConfig('is_allow_config_public_flag_profile_page', '4'); // SNS-wide web-public
+        $this->seedMember(14, 'NoFlag');
+
+        $this->runUpgrade();
+
+        $this->assertSame(0, (int) DB::table('members')->where('id', 14)->value('profile_visibility')); // Open
+    }
+
     public function test_no_member_row_is_dropped(): void
     {
         $this->seedMember(7, 'Grace');
@@ -149,10 +173,17 @@ class MemberUpgradeSqlTest extends TestCase
     private function createSourceTables(): void
     {
         // The real OpenPNE 3 DDL, minus FKs so the two tables stand alone in this test.
+        DB::statement('DROP TABLE IF EXISTS `sns_config`');
         DB::statement('DROP TABLE IF EXISTS `member_config`');
         DB::statement('DROP TABLE IF EXISTS `member`');
         DB::statement(SourceSchema::default()->createStatement('member', withoutForeignKeys: true));
         DB::statement(SourceSchema::default()->createStatement('member_config', withoutForeignKeys: true));
+        DB::statement(SourceSchema::default()->createStatement('sns_config', withoutForeignKeys: true));
+    }
+
+    private function seedSnsConfig(string $name, string $value): void
+    {
+        DB::table('sns_config')->insert(['name' => $name, 'value' => $value]);
     }
 
     private function runUpgrade(): void
