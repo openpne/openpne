@@ -4,6 +4,7 @@ use App\Features\Block\BlockController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
 use App\Features\Member\MemberAvatarController;
+use App\Features\Member\MemberSearchController;
 use App\Features\Profile\ProfileController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
@@ -135,6 +136,12 @@ Route::middleware('auth')->group(function () {
     // viewer's own profile — login-required (it needs the viewer), redirects to /member/{id}.
     Route::get('/member/profile', fn (Request $request) => redirect()->route('member.profile.show', ['member' => $request->user()->getKey()]))
         ->name('member.profile.mine_compat');
+
+    // OpenPNE 3 member/search (/member/search): search members by profile fields. Login-required
+    // (members only); per-value visibility + block are enforced in SearchMembers.
+    Route::get('/member/search', [MemberSearchController::class, 'search'])->name('member.search');
+    Route::get('/m/member/search', [MemberSearchController::class, 'search'])
+        ->defaults('surface', 'modern')->name('member.modern.search');
 
     // OpenPNE 3 member/editProfile (/member/edit/profile): the member edits their own profile
     // fields + per-value visibility. GET renders, POST saves — same URL as OpenPNE 3.

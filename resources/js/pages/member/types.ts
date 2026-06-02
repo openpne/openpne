@@ -40,3 +40,25 @@ export interface ProfileForm {
     name: string;
     fields: ProfileFormField[];
 }
+
+export interface SearchFormField {
+    id: number;
+    name: string;
+    caption: string;
+    formType: ProfileFormType;
+    options: ProfileChoice[];
+    countries: Array<{ value: string; label: string }> | null;
+    regions: RegionGroup[] | null;
+}
+
+export interface MemberRow {
+    id: number;
+    name: string;
+    avatarUrl: string | null;
+}
+
+export interface SearchCriteria {
+    name: string;
+    profile: Record<string, string | string[]>;
+    date: Record<string, { from?: string; to?: string }>;
+}
