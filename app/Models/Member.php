@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Visibility;
 use Database\Factories\MemberFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -24,6 +25,7 @@ class Member extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'profile_visibility' => Visibility::class,
         ];
     }
 

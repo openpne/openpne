@@ -8,6 +8,8 @@ use App\Features\Profile\Serializers\ProfileSerializer;
 use App\Http\Controllers\Controller;
 use App\Models\Member;
 use App\Support\SurfaceResolver;
+use App\Support\Visibility;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Inertia\Inertia;
@@ -15,14 +17,21 @@ use Inertia\Response as InertiaResponse;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request, Member $member, ShowProfile $query): View|InertiaResponse
+    public function show(Request $request, Member $member, ShowProfile $query): View|InertiaResponse|RedirectResponse
     {
-        $viewer = $this->viewer();
+        /** @var Member|null $viewer */
+        $viewer = $request->user();
+
+        // A guest can only reach a web-public profile; otherwise send them to log in.
+        if ($viewer === null && $member->profile_visibility !== Visibility::Open) {
+            return redirect()->guest(route('login'));
+        }
+
         $lang = $this->translationLang();
         $fields = $query($viewer, $member, $lang);
         abort_if($fields === null, 404); // owner blocks the viewer
 
-        $isSelf = $viewer->is($member);
+        $isSelf = $viewer?->is($member) ?? false;
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('member.show', [
@@ -56,13 +65,5 @@ class ProfileController extends Controller
         }
 
         return $response;
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

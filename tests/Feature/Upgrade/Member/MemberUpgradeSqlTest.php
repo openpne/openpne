@@ -118,6 +118,22 @@ class MemberUpgradeSqlTest extends TestCase
         $this->runUpgrade();
     }
 
+    public function test_maps_profile_page_public_flag_to_profile_visibility(): void
+    {
+        // member_config[profile_page_public_flag] (OpenPNE 3 public_flag) → Visibility.
+        $this->seedMember(10, 'WebPublic');
+        $this->seedConfig(10, 'profile_page_public_flag', '4'); // web → Open(0)
+        $this->seedMember(11, 'FriendsOnly');
+        $this->seedConfig(11, 'profile_page_public_flag', '2'); // friend → Friends(2)
+        $this->seedMember(12, 'NoFlag');                        // unset → Members(1)
+
+        $this->runUpgrade();
+
+        $this->assertSame(0, (int) DB::table('members')->where('id', 10)->value('profile_visibility'));
+        $this->assertSame(2, (int) DB::table('members')->where('id', 11)->value('profile_visibility'));
+        $this->assertSame(1, (int) DB::table('members')->where('id', 12)->value('profile_visibility'));
+    }
+
     public function test_no_member_row_is_dropped(): void
     {
         $this->seedMember(7, 'Grace');
