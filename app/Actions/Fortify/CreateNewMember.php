@@ -39,8 +39,9 @@ class CreateNewMember implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ];
         foreach ($profiles as $profile) {
-            // No member to exclude from a unique field's check — it does not exist yet.
-            $rules += $this->fieldRules->forValue($profile);
+            // No member to exclude from a unique field's check — it does not exist yet. A
+            // member-editable field also accepts a per-value visibility (OpenPNE 3 registers it).
+            $rules += $this->fieldRules->forValue($profile) + $this->fieldRules->visibilityRule($profile);
         }
 
         $validated = Validator::make($input, $rules)->validate();
@@ -52,12 +53,15 @@ class CreateNewMember implements CreatesNewUsers
                 'password' => Hash::make($validated['password']),
             ]);
 
-            // Only is_disp_regist fields are saved (saveFields ignores other keys), and per-value
-            // visibility follows each field default during registration.
+            // Only is_disp_regist fields are saved (saveFields ignores other keys). A submitted
+            // visibility is kept for member-editable fields; otherwise it follows the field default.
             $this->saveProfile->saveFields($member, $profiles, new ProfileFormData(
                 name: $validated['name'],
                 values: $validated['profile'] ?? [],
-                visibilities: [],
+                visibilities: array_map(
+                    fn ($v): ?int => $v === null ? null : (int) $v,
+                    $validated['visibility'] ?? [],
+                ),
             ));
 
             return $member;

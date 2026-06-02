@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Models\ProfileOption;
+use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
@@ -70,13 +71,60 @@ class RegistrationTest extends TestCase
 
     public function test_new_member_can_register_with_a_profile_value(): void
     {
-        $profile = Profile::factory()->create(['form_type' => 'input', 'is_disp_regist' => true]);
+        $profile = Profile::factory()->create(['form_type' => 'input', 'is_edit_public_flag' => false, 'is_disp_regist' => true]);
 
         $this->register(['profile' => [$profile->getKey() => 'I love hiking']])->assertRedirect('/dashboard');
 
         $row = $this->storedRow($profile);
         $this->assertSame('I love hiking', $row->value);
-        $this->assertNull($row->visibility); // no per-value flag at registration → follows the field default
+        $this->assertNull($row->visibility); // not member-editable → follows the field default
+    }
+
+    public function test_member_can_choose_a_non_default_visibility_at_registration(): void
+    {
+        // The field defaults to Members, but the member picks Private while registering.
+        $profile = Profile::factory()->create([
+            'form_type' => 'input',
+            'is_edit_public_flag' => true,
+            'default_visibility' => Visibility::Members,
+            'is_disp_regist' => true,
+        ]);
+
+        $this->register([
+            'profile' => [$profile->getKey() => 'secret hobby'],
+            'visibility' => [$profile->getKey() => Visibility::Private->value],
+        ])->assertRedirect('/dashboard');
+
+        $this->assertSame(Visibility::Private, $this->storedRow($profile)->visibility);
+    }
+
+    public function test_a_visibility_outside_the_fields_allowed_range_is_rejected(): void
+    {
+        // Not web-public → Open is not an offered choice, so it must not be accepted.
+        $profile = Profile::factory()->create([
+            'form_type' => 'input',
+            'is_edit_public_flag' => true,
+            'is_public_web' => false,
+            'is_disp_regist' => true,
+        ]);
+
+        $this->from('/register')->register([
+            'profile' => [$profile->getKey() => 'value'],
+            'visibility' => [$profile->getKey() => Visibility::Open->value],
+        ])->assertRedirect('/register')->assertSessionHasErrors("visibility.{$profile->getKey()}");
+        $this->assertGuest();
+    }
+
+    public function test_a_posted_visibility_for_a_non_editable_field_is_ignored(): void
+    {
+        $profile = Profile::factory()->create(['form_type' => 'input', 'is_edit_public_flag' => false, 'is_disp_regist' => true]);
+
+        $this->register([
+            'profile' => [$profile->getKey() => 'value'],
+            'visibility' => [$profile->getKey() => Visibility::Private->value],
+        ])->assertRedirect('/dashboard');
+
+        $this->assertNull($this->storedRow($profile)->visibility); // crafted visibility ignored
     }
 
     public function test_preset_select_value_is_stored_in_the_value_column(): void

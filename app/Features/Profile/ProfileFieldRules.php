@@ -6,6 +6,7 @@ use App\Models\Profile;
 use App\Services\CountryListService;
 use App\Services\PresetProfileService;
 use App\Services\RegionListService;
+use App\Support\Visibility;
 use Illuminate\Validation\Rule;
 
 /**
@@ -36,6 +37,23 @@ class ProfileFieldRules
         }
 
         return [$key => $this->valueRules($profile, $ignoreMemberId)];
+    }
+
+    /**
+     * The per-value visibility rule for a member-editable field, restricted to the field's offered
+     * choices (Open only when web-public). Empty when the field's flag is not member-editable.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public function visibilityRule(Profile $profile): array
+    {
+        if (! $profile->is_edit_public_flag) {
+            return [];
+        }
+
+        $allowed = array_map(fn (Visibility $v): int => $v->value, $profile->visibilityOptions());
+
+        return ["visibility.{$profile->getKey()}" => ['nullable', Rule::in($allowed)]];
     }
 
     /** A unique input/textarea rejects a value another member already holds (OpenPNE 3 opValidatorProfile). */

@@ -6,10 +6,8 @@ use App\Features\Profile\Data\ProfileFormData;
 use App\Features\Profile\ProfileFieldRules;
 use App\Models\Member;
 use App\Models\Profile;
-use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
  * Validates a profile-edit submission. Rules are built per field from its form_type:
@@ -67,14 +65,9 @@ class UpdateProfileRequest extends FormRequest
     /** @return array<string, array<int, mixed>> */
     private function rulesForProfile(Profile $profile): array
     {
-        $rules = app(ProfileFieldRules::class)->forValue($profile, $this->user()->getKey());
+        $rules = app(ProfileFieldRules::class);
 
-        if ($profile->is_edit_public_flag) {
-            $allowed = array_map(fn (Visibility $v): int => $v->value, $profile->visibilityOptions());
-            $rules["visibility.{$profile->getKey()}"] = ['nullable', Rule::in($allowed)];
-        }
-
-        return $rules;
+        return $rules->forValue($profile, $this->user()->getKey()) + $rules->visibilityRule($profile);
     }
 
     /** @return array<string, string> */
