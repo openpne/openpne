@@ -25,7 +25,10 @@
             @endif
 
             @if ($isSelf)
-                <p><a href="{{ route('member.avatar.edit') }}">{{ __('Profile image') }}</a></p>
+                <p>
+                    <a href="{{ route('member.profile.edit') }}">{{ __('Edit Profile') }}</a>
+                    <a href="{{ route('member.avatar.edit') }}">{{ __('Profile image') }}</a>
+                </p>
             @endif
         </div>
     </div>
