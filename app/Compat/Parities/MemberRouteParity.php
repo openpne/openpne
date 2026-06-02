@@ -30,6 +30,9 @@ class MemberRouteParity extends RouteParity
             new RouteMap(null, null, 'member.avatar.update', 'POST'),
             // OpenPNE 3 member/profile (/member/{id}); page_member_profile body id.
             new RouteMap(null, null, 'member.profile.show', 'GET', op3Action: 'profile'),
+            // OpenPNE 3 member/editProfile (/member/edit/profile); page_member_editProfile.
+            new RouteMap(null, null, 'member.profile.edit', 'GET', op3Action: 'editProfile'),
+            new RouteMap(null, null, 'member.profile.update', 'POST'),
         ];
     }
 

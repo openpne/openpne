@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Services\CountryListService;
 use App\Services\PresetProfileService;
+use App\Services\RegionListService;
 use App\Support\Visibility;
 use Database\Factories\MemberProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -74,6 +76,18 @@ class MemberProfile extends Model
 
         if ($profile->form_type === 'date') {
             return $this->value_datetime?->format('Y-m-d') ?? (string) $this->value;
+        }
+
+        if ($profile->form_type === 'country_select') {
+            return $this->value !== null && $this->value !== ''
+                ? app(CountryListService::class)->getName((string) $this->value, $lang)
+                : '';
+        }
+
+        if ($profile->form_type === 'region_select') {
+            return $this->value !== null && $this->value !== ''
+                ? app(RegionListService::class)->label((string) $this->value, $lang)
+                : '';
         }
 
         return (string) $this->value;

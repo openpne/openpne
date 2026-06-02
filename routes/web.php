@@ -136,6 +136,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/member/profile', fn (Request $request) => redirect()->route('member.profile.show', ['member' => $request->user()->getKey()]))
         ->name('member.profile.mine_compat');
 
+    // OpenPNE 3 member/editProfile (/member/edit/profile): the member edits their own profile
+    // fields + per-value visibility. GET renders, POST saves — same URL as OpenPNE 3.
+    Route::get('/member/edit/profile', [ProfileController::class, 'edit'])->name('member.profile.edit');
+    Route::post('/member/edit/profile', [ProfileController::class, 'update'])->name('member.profile.update');
+    Route::get('/m/member/edit/profile', [ProfileController::class, 'edit'])
+        ->defaults('surface', 'modern')->name('member.profile.modern.edit');
+    Route::post('/m/member/edit/profile', [ProfileController::class, 'update'])
+        ->defaults('surface', 'modern')->name('member.profile.modern.update');
+
     // File byte delivery, bound by the opaque `name` token. FileController gates every
     // fetch through FilePolicy, so disk backends stream through the app too (never a
     // bare disk URL).

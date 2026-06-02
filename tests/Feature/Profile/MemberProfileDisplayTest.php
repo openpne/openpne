@@ -53,6 +53,25 @@ class MemberProfileDisplayTest extends TestCase
         $this->assertSame('1990-01-02', $value->displayValue('ja_JP'));
     }
 
+    public function test_country_value_renders_the_localised_country_name(): void
+    {
+        $value = $this->valueFor(['name' => 'op_preset_country', 'form_type' => 'country_select'], ['value' => 'JP']);
+
+        $this->assertSame('日本', $value->displayValue('ja_JP'));
+        $this->assertSame('Japan', $value->displayValue('en'));
+    }
+
+    public function test_region_value_renders_the_localised_region_name(): void
+    {
+        $value = $this->valueFor(
+            ['name' => 'op_preset_region', 'form_type' => 'region_select', 'value_type' => 'JP'],
+            ['value' => 'Tokyo'],
+        );
+
+        $this->assertSame('東京都', $value->displayValue('ja_JP'));
+        $this->assertSame('Tokyo', $value->displayValue('en'));
+    }
+
     /** @param array<string, mixed> $profileAttrs @param array<string, mixed> $valueAttrs */
     private function valueFor(array $profileAttrs, array $valueAttrs): MemberProfile
     {

@@ -3,9 +3,13 @@
 namespace App\Features\Profile;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Profile\Actions\SaveMemberProfile;
+use App\Features\Profile\Queries\EditProfileFields;
 use App\Features\Profile\Queries\ShowProfile;
+use App\Features\Profile\Serializers\ProfileFormSerializer;
 use App\Features\Profile\Serializers\ProfileSerializer;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Models\Member;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
@@ -46,10 +50,45 @@ class ProfileController extends Controller
         ]);
     }
 
+    public function edit(Request $request, EditProfileFields $query): View|InertiaResponse
+    {
+        $viewer = $this->viewer();
+        $lang = $this->translationLang();
+        $fields = $query($viewer);
+
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('member.edit-profile', [
+                'member' => $viewer,
+                'fields' => $fields,
+                'lang' => $lang,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('member/edit-profile', [
+                'form' => ProfileFormSerializer::form($viewer->name, $fields, $lang),
+            ]),
+        ]);
+    }
+
+    public function update(UpdateProfileRequest $request, SaveMemberProfile $action): RedirectResponse
+    {
+        $action($this->viewer(), $request->toData());
+
+        return redirect()
+            ->route(SurfaceResolver::redirectName($request, 'member.profile.edit'))
+            ->with('status', __('Profile updated.'));
+    }
+
     /** Translation lang code (OpenPNE/Doctrine I18n) for the current locale. */
     private function translationLang(): string
     {
         return app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
+    }
+
+    private function viewer(): Member
+    {
+        $viewer = auth()->user();
+        assert($viewer instanceof Member);
+
+        return $viewer;
     }
 
     /**

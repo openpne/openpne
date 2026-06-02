@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -21,7 +21,7 @@ interface ShowProps extends PageProps {
 export default function MemberShow() {
     const t = useT();
     const { profile } = usePage<ShowProps>().props;
-    const { owner, fields } = profile;
+    const { owner, fields, isSelf } = profile;
 
     return (
         <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
@@ -32,6 +32,11 @@ export default function MemberShow() {
                     <img src={owner.avatarUrl} alt={owner.name} className="size-20 rounded-md object-cover" />
                 )}
                 <h1 className="text-xl font-semibold text-foreground">{owner.name}</h1>
+                {isSelf && (
+                    <Link href="/m/member/edit/profile" className="text-sm text-blue-600">
+                        {t('Edit Profile')}
+                    </Link>
+                )}
             </div>
 
             {fields.length === 0 ? (

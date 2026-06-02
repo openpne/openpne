@@ -59,12 +59,54 @@ class Profile extends Model
     }
 
     /**
+     * The per-value visibility choices offered when editing this field, when is_edit_public_flag
+     * is set. Open (guest-visible) is offered only for a web-public field, matching OpenPNE 3's
+     * profile editor which hid "Public to Web" unless the field allowed it.
+     *
+     * @return list<Visibility>
+     */
+    public function visibilityOptions(): array
+    {
+        $options = [Visibility::Members, Visibility::Friends, Visibility::Private];
+
+        if ($this->is_public_web) {
+            array_unshift($options, Visibility::Open);
+        }
+
+        return $options;
+    }
+
+    /**
      * OpenPNE 3 Profile::isMultipleSelect(): a custom date (year/month/day) or a checkbox.
      * Preset date (birthday) is a single value.
      */
     public function isMultipleSelect(): bool
     {
         return ($this->form_type === 'date' && ! $this->isPreset()) || $this->form_type === 'checkbox';
+    }
+
+    /**
+     * Selectable choices for a select/radio/checkbox field as [['id' => ..., 'caption' => ...]].
+     * A preset takes catalog choices (the key is stored in member_profiles.value); a custom field
+     * uses its profile_options (the option id is stored). Empty for non-option fields.
+     *
+     * @return list<array{id: string, caption: string}>
+     */
+    public function choices(string $lang = 'ja_JP'): array
+    {
+        if (! in_array($this->form_type, ['select', 'radio', 'checkbox'], true)) {
+            return [];
+        }
+
+        $presets = app(PresetProfileService::class);
+        if ($presets->usesValueColumnForChoice($this)) {
+            return $presets->choicesFor($this, $lang === 'ja_JP' ? 'ja' : 'en');
+        }
+
+        return $this->options->map(fn (ProfileOption $option): array => [
+            'id' => (string) $option->getKey(),
+            'caption' => $option->getLabel($lang),
+        ])->all();
     }
 
     public function getCaption(string $lang = 'ja_JP'): string
