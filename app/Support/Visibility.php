@@ -69,4 +69,15 @@ enum Visibility: int
             self::Private => 'private',
         };
     }
+
+    /** Human-readable label key, translated via __()/t() on either surface. */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Open => 'Public to Web',
+            self::Members => 'All members',
+            self::Friends => '%Friends% only',
+            self::Private => 'Private',
+        };
+    }
 }
