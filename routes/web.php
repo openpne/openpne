@@ -36,6 +36,18 @@ Route::post('/locale', function (Request $request) {
     return redirect($target);
 })->name('locale.switch');
 
+// Member profile page — public so a web-public profile is reachable by a guest. A guest on a
+// non-web-public profile is redirected to login by ProfileController; per-value visibility, the
+// is_public_web gate, and owner→viewer block are enforced in ShowProfile. whereNumber keeps the
+// literal /member/* routes (avatar, config, profile) from matching the {member} wildcard.
+Route::get('/member/{member}', [ProfileController::class, 'show'])
+    ->whereNumber('member')->name('member.profile.show');
+Route::get('/m/member/{member}', [ProfileController::class, 'show'])
+    ->whereNumber('member')->defaults('surface', 'modern')->name('member.profile.modern.show');
+// OpenPNE 3 member_profile_raw alias (/member/profile/id/:id) → canonical /member/{id}.
+Route::get('/member/profile/id/{member}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
+    ->whereNumber('member')->name('member.profile.raw_compat');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
 
@@ -119,21 +131,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/member/image/config', fn () => redirect()->route('member.avatar.edit'))
         ->name('member.image.config_compat');
 
-    // OpenPNE 3 profile-page aliases (routing.yml member_profile_mine / member_profile_raw):
-    // /member/profile is the viewer's own profile, /member/profile/id/:id another member's.
-    // Both redirect to the canonical /member/{id}.
+    // OpenPNE 3 own-profile alias (routing.yml member_profile_mine): /member/profile is the
+    // viewer's own profile — login-required (it needs the viewer), redirects to /member/{id}.
     Route::get('/member/profile', fn (Request $request) => redirect()->route('member.profile.show', ['member' => $request->user()->getKey()]))
         ->name('member.profile.mine_compat');
-    Route::get('/member/profile/id/{member}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
-        ->whereNumber('member')->name('member.profile.raw_compat');
-
-    // Member profile page. whereNumber keeps the literal /member/* routes above from
-    // matching the {member} wildcard. Login-required for now (guest web-public profiles
-    // are a follow-up); per-value visibility + block are enforced in ShowProfile.
-    Route::get('/member/{member}', [ProfileController::class, 'show'])
-        ->whereNumber('member')->name('member.profile.show');
-    Route::get('/m/member/{member}', [ProfileController::class, 'show'])
-        ->whereNumber('member')->defaults('surface', 'modern')->name('member.profile.modern.show');
 
     // File byte delivery, bound by the opaque `name` token. FileController gates every
     // fetch through FilePolicy, so disk backends stream through the app too (never a
