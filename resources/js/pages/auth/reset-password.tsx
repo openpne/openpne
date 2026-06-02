@@ -1,28 +1,34 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 
-export default function Login() {
+interface ResetPasswordProps {
+    email: string;
+    token: string;
+}
+
+export default function ResetPassword({ email, token }: ResetPasswordProps) {
     const t = useT();
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
+        token,
+        email,
         password: '',
-        remember: false,
+        password_confirmation: '',
     });
 
     function submit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        post('/login', {
-            onFinish: () => reset('password'),
+        post('/reset-password', {
+            onFinish: () => reset('password', 'password_confirmation'),
         });
     }
 
-    const signIn = t('Sign in');
+    const title = t('Reset your password');
 
     return (
-        <AuthLayout title={signIn}>
-            <Head title={signIn} />
+        <AuthLayout title={title}>
+            <Head title={title} />
 
             <form onSubmit={submit} className="space-y-4">
                 <div className="space-y-1">
@@ -34,11 +40,10 @@ export default function Login() {
                         type="email"
                         name="email"
                         autoComplete="email"
-                        autoFocus
-                        required
+                        readOnly
                         value={data.email}
                         onChange={(e) => setData('email', e.target.value)}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground focus:outline-none"
                     />
                     {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
@@ -51,7 +56,8 @@ export default function Login() {
                         id="password"
                         type="password"
                         name="password"
-                        autoComplete="current-password"
+                        autoComplete="new-password"
+                        autoFocus
                         required
                         value={data.password}
                         onChange={(e) => setData('password', e.target.value)}
@@ -60,21 +66,20 @@ export default function Login() {
                     {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
 
-                <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 text-sm">
-                        <input
-                            type="checkbox"
-                            name="remember"
-                            checked={data.remember}
-                            onChange={(e) => setData('remember', e.target.checked)}
-                            className="size-4 rounded border-input"
-                        />
-                        {t('Remember me')}
+                <div className="space-y-1">
+                    <label htmlFor="password_confirmation" className="block text-sm font-medium">
+                        {t('Confirm password')}
                     </label>
-
-                    <Link href="/forgot-password" className="text-sm text-muted-foreground underline">
-                        {t('Forgot your password?')}
-                    </Link>
+                    <input
+                        id="password_confirmation"
+                        type="password"
+                        name="password_confirmation"
+                        autoComplete="new-password"
+                        required
+                        value={data.password_confirmation}
+                        onChange={(e) => setData('password_confirmation', e.target.value)}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
                 </div>
 
                 <button
@@ -82,14 +87,8 @@ export default function Login() {
                     disabled={processing}
                     className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
                 >
-                    {signIn}
+                    {t('Reset Password')}
                 </button>
-
-                <p className="text-center text-sm text-muted-foreground">
-                    <Link href="/register" className="underline">
-                        {t('Create an account')}
-                    </Link>
-                </p>
             </form>
         </AuthLayout>
     );
