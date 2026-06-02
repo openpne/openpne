@@ -12,6 +12,8 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
+        $this->call(PresetProfileSeeder::class);
+
         Member::factory()->create([
             'name' => 'Test Member',
             'email' => 'test@example.com',

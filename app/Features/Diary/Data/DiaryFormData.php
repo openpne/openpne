@@ -2,7 +2,7 @@
 
 namespace App\Features\Diary\Data;
 
-use App\Features\Diary\Visibility;
+use App\Support\Visibility;
 
 final readonly class DiaryFormData
 {

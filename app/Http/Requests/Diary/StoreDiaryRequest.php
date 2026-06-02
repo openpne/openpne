@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Diary;
 
 use App\Features\Diary\Data\DiaryFormData;
-use App\Features\Diary\Visibility;
+use App\Support\Visibility;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
