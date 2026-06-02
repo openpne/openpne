@@ -235,6 +235,54 @@ class ProfileEditTest extends TestCase
         ])->assertSessionHasErrors("visibility.{$profile->getKey()}");
     }
 
+    public function test_unique_field_rejects_a_value_held_by_another_member(): void
+    {
+        $member = Member::factory()->create();
+        $other = Member::factory()->create();
+        $profile = Profile::factory()->create(['form_type' => 'input', 'is_unique' => true]);
+        MemberProfile::factory()->create([
+            'member_id' => $other->getKey(), 'profile_id' => $profile->getKey(), 'value' => 'taken',
+        ]);
+
+        $this->actingAs($member)->post('/member/edit/profile', [
+            'name' => $member->name,
+            'profile' => [$profile->getKey() => 'taken'],
+        ])->assertSessionHasErrors("profile.{$profile->getKey()}");
+    }
+
+    public function test_unique_field_lets_a_member_resave_their_own_value(): void
+    {
+        $member = Member::factory()->create();
+        $profile = Profile::factory()->create(['form_type' => 'input', 'is_unique' => true]);
+        MemberProfile::factory()->create([
+            'member_id' => $member->getKey(), 'profile_id' => $profile->getKey(), 'value' => 'mine',
+        ]);
+
+        $this->actingAs($member)->post('/member/edit/profile', [
+            'name' => $member->name,
+            'profile' => [$profile->getKey() => 'mine'],
+        ])->assertSessionHasNoErrors();
+    }
+
+    public function test_stale_open_visibility_on_a_non_web_field_is_normalised_to_members(): void
+    {
+        // is_public_web was turned off after the value was set web-public, leaving a stored Open
+        // that the form can no longer offer; it must surface as Members, not an out-of-range value.
+        $member = Member::factory()->create();
+        $profile = Profile::factory()->create([
+            'form_type' => 'input', 'is_edit_public_flag' => true, 'is_public_web' => false,
+        ]);
+        MemberProfile::factory()->create([
+            'member_id' => $member->getKey(), 'profile_id' => $profile->getKey(),
+            'value' => 'x', 'visibility' => Visibility::Open,
+        ]);
+
+        $this->actingAs($member)->get('/m/member/edit/profile')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('form.fields.0.visibility', Visibility::Members->value)
+            );
+    }
+
     /** @param array<int, string|list<string>> $values */
     private function save(Member $member, array $values): void
     {

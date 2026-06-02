@@ -118,10 +118,37 @@ class UpdateProfileRequest extends FormRequest
                 if ($profile->value_max !== null && $profile->value_max !== '') {
                     $rules[] = 'max:'.(int) $profile->value_max;
                 }
+                if ($this->isUniqueText($profile)) {
+                    // OpenPNE 3 (opValidatorProfile) rejects a value already held by another
+                    // member for a unique input/textarea field; ignore the member's own rows.
+                    $rules[] = Rule::unique('member_profiles', 'value')->where(
+                        fn ($query) => $query
+                            ->where('profile_id', $profile->getKey())
+                            ->where('member_id', '!=', $this->user()->getKey()),
+                    );
+                }
                 break;
         }
 
         return $rules;
+    }
+
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        $messages = [];
+        foreach ($this->editableProfiles() as $profile) {
+            if ($this->isUniqueText($profile)) {
+                $messages["profile.{$profile->getKey()}.unique"] = __('This value is already in use.');
+            }
+        }
+
+        return $messages;
+    }
+
+    private function isUniqueText(Profile $profile): bool
+    {
+        return $profile->is_unique && in_array($profile->form_type, ['input', 'textarea'], true);
     }
 
     /** @return list<string> */

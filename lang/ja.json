@@ -301,6 +301,7 @@
     "This member is not blocked.": "このメンバーはブロックされていません。",
     "This member is unavailable.": "このメンバーは利用できません。",
     "This password reset link will expire in :count minutes.": "このパスワード再設定リンクの有効期限は:count分です。",
+    "This value is already in use.": "この値はすでに使われています。",
     "Title": "タイトル",
     "Toggle navigation": "ナビゲーション切替",
     "Too Early": "リクエスト間隔が早すぎる",

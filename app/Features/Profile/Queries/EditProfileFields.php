@@ -59,10 +59,19 @@ class EditProfileFields
         };
     }
 
-    /** @param Collection<int, MemberProfile>|null $rows */
+    /**
+     * @param  Collection<int, MemberProfile>|null  $rows
+     *
+     * Clamp to an offered choice: a stored Open on a field whose is_public_web was later
+     * turned off is no longer selectable (visibilityOptions drops Open), so it would make the
+     * form post an out-of-range value. Open only differs from Members by guest visibility,
+     * which is_public_web already gates, so collapsing it to Members preserves behaviour.
+     */
     private function currentVisibility(Profile $profile, ?Collection $rows): Visibility
     {
-        return $rows?->first()?->visibility ?? $profile->default_visibility;
+        $resolved = $rows?->first()?->visibility ?? $profile->default_visibility;
+
+        return in_array($resolved, $profile->visibilityOptions(), true) ? $resolved : Visibility::Members;
     }
 
     /** A custom select/radio stores the chosen option id; a preset stores the choice key in value. */
