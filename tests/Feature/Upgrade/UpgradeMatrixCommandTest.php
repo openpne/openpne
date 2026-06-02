@@ -15,9 +15,11 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('Filter: `is_friend = 1`')
             ->expectsOutputToContain('Filter: `is_friend_pre = 1`')
             ->expectsOutputToContain('Filter: `is_access_block = 1`')
-            // Member's deferred credentials must stay visible in the matrix.
-            ->expectsOutputToContain('Pending targets:')
-            ->expectsOutputToContain('`password`')
+            // Member credentials are now sourced from member_config (one unique token per line:
+            // expectsOutputToContain matches each line to a single expectation, so overlapping
+            // substrings on the same row would starve each other).
+            ->expectsOutputToContain("'pc_address'") // email row's member_config subquery
+            ->expectsOutputToContain('`password`')   // password is a mapped column, not pending
             ->expectsOutputToContain('Accepted gaps:')
             // Source tables with a successor but no step yet must stay visible too.
             ->expectsOutputToContain('Deferred source tables')
