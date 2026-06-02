@@ -144,7 +144,8 @@ return [
 
     'features' => [
         Features::registration(),
-        // reset/update password, profile update, email verification, 2FA, passkeys は
+        Features::resetPasswords(),
+        // update password, profile update, email verification, 2FA, passkeys は
         // 後続 PR で必要になった時に Features::*() を再有効化する
     ],
 
