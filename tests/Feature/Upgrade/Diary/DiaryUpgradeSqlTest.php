@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Upgrade\Diary;
 
-use App\Features\Diary\Visibility;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Visibility;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryUpgrade;

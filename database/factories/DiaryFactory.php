@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Features\Diary\Visibility;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

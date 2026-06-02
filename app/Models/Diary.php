@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Features\Diary\Visibility;
+use App\Support\Visibility;
 use Database\Factories\DiaryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

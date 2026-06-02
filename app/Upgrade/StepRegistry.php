@@ -6,7 +6,12 @@ use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
+use App\Upgrade\Steps\MemberProfileUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\Steps\ProfileOptionTranslationUpgrade;
+use App\Upgrade\Steps\ProfileOptionUpgrade;
+use App\Upgrade\Steps\ProfileTranslationUpgrade;
+use App\Upgrade\Steps\ProfileUpgrade;
 
 /** The upgrade steps in run order. Adding a feature = adding its step here. */
 final class StepRegistry
@@ -20,6 +25,13 @@ final class StepRegistry
             FriendRequestUpgrade::class,
             MemberBlockUpgrade::class,
             DiaryUpgrade::class,
+            // Profile definitions before member values (FK order: a member_profile row
+            // references profiles and profile_options).
+            ProfileUpgrade::class,
+            ProfileOptionUpgrade::class,
+            ProfileTranslationUpgrade::class,
+            ProfileOptionTranslationUpgrade::class,
+            MemberProfileUpgrade::class,
         ];
     }
 

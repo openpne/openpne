@@ -4,8 +4,8 @@ namespace Tests\Feature\Diary\Actions;
 
 use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Data\DiaryFormData;
-use App\Features\Diary\Visibility;
 use App\Models\Member;
+use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

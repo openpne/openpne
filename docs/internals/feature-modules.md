@@ -21,8 +21,10 @@ effect are never re-implemented per surface. The building blocks are:
 A feature also owns its domain exceptions (`Exceptions/`), its events
 (`Events/`), and any feature-specific primitive it exposes — e.g.
 [`Block/BlockLookup`](../../app/Features/Block/BlockLookup.php),
-[`Diary/Visibility`](../../app/Features/Diary/Visibility.php),
-[`Friend/FriendRequestLock`](../../app/Features/Friend/FriendRequestLock.php).
+[`Friend/FriendRequestLock`](../../app/Features/Friend/FriendRequestLock.php). A primitive
+shared across features instead lives outside any one feature, e.g.
+[`Support/Visibility`](../../app/Support/Visibility.php) (content visibility for diaries and
+profiles).
 
 This directory layout is conventional, not enforced (there is no PHP interface a
 feature implements, and no architecture test). The **boundaries** below are the
@@ -176,7 +178,7 @@ invariant.
 |-------|----------------------|---------|
 | Actions | mutation, transaction, side effects, cleanup | [`tests/Feature/Friend/Actions/`](../../tests/Feature/Friend/Actions) |
 | Queries | visibility, filtering, ordering, pagination | [`tests/Feature/Diary/Queries/ListDiariesTest.php`](../../tests/Feature/Diary/Queries/ListDiariesTest.php) |
-| Feature primitives | ordering / direction invariants | [`tests/Unit/Diary/VisibilityOrderingTest.php`](../../tests/Unit/Diary/VisibilityOrderingTest.php) |
+| Feature primitives | ordering / direction invariants | [`tests/Unit/Support/VisibilityTest.php`](../../tests/Unit/Support/VisibilityTest.php) |
 | Listeners | notification dispatched on the event | [`tests/Feature/Friend/Listeners/`](../../tests/Feature/Friend/Listeners) |
 | Classic adapter | route compatibility, redirects, key HTML hooks | [`tests/Feature/Diary/Classic/DiaryRoutesTest.php`](../../tests/Feature/Diary/Classic/DiaryRoutesTest.php) |
 

@@ -3,9 +3,9 @@
 namespace Tests\Feature\Diary\Queries;
 
 use App\Features\Diary\Queries\ShowDiary;
-use App\Features\Diary\Visibility;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
