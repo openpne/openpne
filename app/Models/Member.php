@@ -90,6 +90,12 @@ class Member extends Authenticatable
         return $this->hasMany(MemberImage::class, 'member_id');
     }
 
+    /** @return HasMany<MemberProfile, $this> */
+    public function memberProfiles(): HasMany
+    {
+        return $this->hasMany(MemberProfile::class, 'member_id');
+    }
+
     /**
      * The avatar shown for this member, or null. A single primary image is kept today.
      *
