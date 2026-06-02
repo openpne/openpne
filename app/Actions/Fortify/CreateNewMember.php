@@ -2,7 +2,13 @@
 
 namespace App\Actions\Fortify;
 
+use App\Features\Profile\Actions\SaveMemberProfile;
+use App\Features\Profile\Data\ProfileFormData;
+use App\Features\Profile\ProfileFieldRules;
 use App\Models\Member;
+use App\Models\Profile;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -13,29 +19,58 @@ class CreateNewMember implements CreatesNewUsers
 {
     use PasswordValidationRules;
 
+    public function __construct(
+        private ProfileFieldRules $fieldRules,
+        private SaveMemberProfile $saveProfile,
+    ) {}
+
     /**
-     * @param  array<string, string>  $input
+     * @param  array<string, mixed>  $input
      *
      * @throws ValidationException
      */
     public function create(array $input): Member
     {
-        Validator::make($input, [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique(Member::class),
-            ],
-            'password' => $this->passwordRules(),
-        ])->validate();
+        $profiles = $this->registrationProfiles();
 
-        return Member::create([
-            'name' => $input['name'],
-            'email' => $input['email'],
-            'password' => Hash::make($input['password']),
-        ]);
+        $rules = [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique(Member::class)],
+            'password' => $this->passwordRules(),
+        ];
+        foreach ($profiles as $profile) {
+            // No member to exclude from a unique field's check — it does not exist yet.
+            $rules += $this->fieldRules->forValue($profile);
+        }
+
+        $validated = Validator::make($input, $rules)->validate();
+
+        return DB::transaction(function () use ($validated, $profiles): Member {
+            $member = Member::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+            ]);
+
+            // Only is_disp_regist fields are saved (saveFields ignores other keys), and per-value
+            // visibility follows each field default during registration.
+            $this->saveProfile->saveFields($member, $profiles, new ProfileFormData(
+                name: $validated['name'],
+                values: $validated['profile'] ?? [],
+                visibilities: [],
+            ));
+
+            return $member;
+        });
+    }
+
+    /** @return Collection<int, Profile> */
+    private function registrationProfiles(): Collection
+    {
+        return Profile::query()
+            ->with('options')
+            ->where('is_disp_regist', true)
+            ->orderBy('sort_order')
+            ->get();
     }
 }
