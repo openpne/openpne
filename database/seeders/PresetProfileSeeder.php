@@ -8,12 +8,14 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Registers the standard OpenPNE preset profile fields on a fresh install (idempotent).
+ * Seeds OpenPNE 4's default member-profile field set on a fresh install (idempotent).
  *
- * Not run by `composer setup` (which only migrates), so an upgrade-target install stays
- * empty and ProfileUpgrade brings the site's own preset rows instead. Region variants are
- * left out — an operator picks one in the admin (they share the unique `op_preset_region`
- * name). default_public_flag is normalised to 1-4 (OpenPNE's catalog value is 0).
+ * This is OpenPNE 4's default set, not a replica of any one OpenPNE 3 install's initial
+ * fixture: an upgraded site keeps its own fields (ProfileUpgrade brings them, and this
+ * seeder is not run by `composer setup`, which only migrates). Country-specific region
+ * fields are left to the operator to add in the admin — they share the unique
+ * `op_preset_region` name, so only one variant (e.g. region_JP) can exist, and which one
+ * is a per-site choice. default_public_flag is normalised to 1-4 (the catalog value is 0).
  */
 class PresetProfileSeeder extends Seeder
 {

@@ -121,6 +121,37 @@ class MemberProfileUpgradeSqlTest extends TestCase
         $this->assertSame(1, MemberProfile::where('profile_id', 5)->count());
     }
 
+    public function test_custom_date_with_incomplete_children_is_null(): void
+    {
+        // Only year + month present (no day): OpenPNE 3 returns null, so we must not store a
+        // malformed "2021-03".
+        $this->seedProfile(9, 'custom_date2', 'date');
+        $this->seedMemberProfile(900, 9, ['value' => '', 'tree_key' => 900, 'lft' => 1]);
+        $this->seedMemberProfile(901, 9, ['value' => '2021', 'tree_key' => 900, 'lft' => 2]);
+        $this->seedMemberProfile(902, 9, ['value' => '3', 'tree_key' => 900, 'lft' => 3]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 900, 'value' => null]);
+    }
+
+    public function test_undefined_datetime_sentinel_becomes_null(): void
+    {
+        $original = DB::selectOne('SELECT @@SESSION.sql_mode AS mode')->mode;
+        DB::statement("SET SESSION sql_mode = ''"); // allow the zero-date sentinel into the source row
+
+        try {
+            $this->seedProfile(10, 'op_preset_birthday', 'date');
+            $this->seedMemberProfile(1000, 10, ['value' => '', 'value_datetime' => '0000-00-00 00:00:00', 'public_flag' => 1, 'tree_key' => 1000, 'lft' => 1]);
+
+            $this->runUpgrade();
+
+            $this->assertNull(DB::table('member_profiles')->where('id', 1000)->value('value_datetime'));
+        } finally {
+            DB::statement("SET SESSION sql_mode = '{$original}'");
+        }
+    }
+
     public function test_preset_date_is_single_value(): void
     {
         $this->seedProfile(6, 'op_preset_birthday', 'date');

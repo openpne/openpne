@@ -47,7 +47,7 @@ class MemberProfileUpgrade extends UpgradeStep
                 sprintf('CASE WHEN %s THEN %s ELSE `value` END', $this->isCustomDateRoot(), $this->composedDate()),
                 uses: ['value', 'tree_key', 'lft', 'id', 'profile_id'],
             ),
-            'value_datetime' => Column::source('value_datetime'),
+            'value_datetime' => Column::expr($this->normalizedDatetime(), uses: ['value_datetime']),
             // OpenPNE 3 public-flag scale; 0/invalid → NULL (fall back to the field default).
             // A multi-select stores the flag only on the root, so a child inherits it.
             'public_flag' => Column::expr(
@@ -120,15 +120,30 @@ class MemberProfileUpgrade extends UpgradeStep
         );
     }
 
-    /** Y-m-d composed from the date field's year/month/day child rows (ordered by lft). */
+    /**
+     * Y-m-d composed from the date field's year/month/day child rows (ordered by lft).
+     * Like OpenPNE 3's getValue(), only a complete date (all three parts present and
+     * non-zero) is emitted; anything else is NULL rather than a malformed `2020-03` / `0`.
+     */
     private function composedDate(): string
     {
-        return sprintf(
-            "CONCAT_WS('-', %s, LPAD(%s, 2, '0'), LPAD(%s, 2, '0'))",
-            $this->dateChild(0),
-            $this->dateChild(1),
-            $this->dateChild(2),
-        );
+        $y = $this->dateChild(0);
+        $m = $this->dateChild(1);
+        $d = $this->dateChild(2);
+
+        return "CASE WHEN {$y} > 0 AND {$m} > 0 AND {$d} > 0"
+            ." THEN CONCAT_WS('-', {$y}, LPAD({$m}, 2, '0'), LPAD({$d}, 2, '0'))"
+            .' ELSE NULL END';
+    }
+
+    /**
+     * OpenPNE 3 stores empty datetimes as the 0001-01-01 / 0000-00-00 sentinels
+     * (opDoctrineRecord); map both to NULL. Matched by YEAR (0 or 1) rather than a datetime
+     * literal, because comparing against '0000-00-00 00:00:00' throws under strict mode.
+     */
+    private function normalizedDatetime(): string
+    {
+        return 'CASE WHEN `value_datetime` IS NOT NULL AND YEAR(`value_datetime`) <= 1 THEN NULL ELSE `value_datetime` END';
     }
 
     private function dateChild(int $offset): string
