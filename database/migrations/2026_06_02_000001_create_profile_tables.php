@@ -23,9 +23,9 @@ return new class extends Migration
             $table->boolean('is_required')->default(false);
             $table->boolean('is_unique')->default(false);
             $table->boolean('is_edit_public_flag')->default(false);
-            // Visibility fallback when a value has no per-value flag. Always 1-4
-            // (1=SNS, 2=Friends, 3=Private, 4=Web); OpenPNE 3's stray 0 is normalised away.
-            $table->unsignedTinyInteger('default_public_flag')->default(1);
+            // Visibility fallback when a value has no per-value visibility. App\Support\Visibility
+            // scale (0=Open..3=Private); the upgrade maps OpenPNE 3's public_flag onto it.
+            $table->unsignedTinyInteger('default_visibility')->default(1); // Visibility::Members
             $table->string('form_type', 32);
             $table->string('value_type', 32)->default('');
             $table->boolean('is_disp_regist')->default(false);

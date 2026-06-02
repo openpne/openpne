@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Profile;
+use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +18,7 @@ class ProfileFactory extends Factory
             'is_required' => false,
             'is_unique' => false,
             'is_edit_public_flag' => true,
-            'default_public_flag' => Profile::PUBLIC_FLAG_SNS,
+            'default_visibility' => Visibility::Members,
             'form_type' => 'input',
             'value_type' => 'string',
             'is_disp_regist' => true,

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\PresetProfileService;
+use App\Support\Visibility;
 use Database\Factories\MemberProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,10 +13,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * One member's value for one profile field. A single-value field is one row; a checkbox is
  * one row per chosen option (each with profile_option_id); a custom date is one row holding
- * the composed Y-m-d. Per-value visibility is `public_flag` (null = fall back to the field's
- * default). See ProfileUpgrade/MemberProfileUpgrade for how OpenPNE 3 rows are flattened.
+ * the composed Y-m-d. Per-value `visibility` (App\Support\Visibility) is null when it should
+ * fall back to the field default. See MemberProfileUpgrade for how OpenPNE 3 rows are flattened.
  */
-#[Fillable(['member_id', 'profile_id', 'profile_option_id', 'value', 'value_datetime', 'public_flag'])]
+#[Fillable(['member_id', 'profile_id', 'profile_option_id', 'value', 'value_datetime', 'visibility'])]
 class MemberProfile extends Model
 {
     /** @use HasFactory<MemberProfileFactory> */
@@ -25,7 +26,7 @@ class MemberProfile extends Model
     {
         return [
             'value_datetime' => 'datetime',
-            'public_flag' => 'integer',
+            'visibility' => Visibility::class,
         ];
     }
 

@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Schema;
  * select/radio store the choice key in `value` (profile_option_id null); custom
  * select/radio/checkbox use profile_option_id.
  *
- * `public_flag` is the per-value visibility (1=SNS..4=Web); null falls back to the
- * field's profiles.default_public_flag (see the upgrade's effective-flag resolution).
+ * `visibility` is the per-value visibility (App\Support\Visibility scale, 0=Open..3=Private);
+ * null falls back to the field's profiles.default_visibility (resolved in the read layer).
  */
 return new class extends Migration
 {
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->foreignId('profile_option_id')->nullable()->constrained('profile_options')->cascadeOnDelete();
             $table->text('value')->nullable();
             $table->dateTime('value_datetime')->nullable();
-            $table->unsignedTinyInteger('public_flag')->nullable();
+            $table->unsignedTinyInteger('visibility')->nullable();
             $table->timestamps();
 
             // SQLite does not auto-index FK columns; MySQL/InnoDB does.

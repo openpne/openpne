@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
+use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,7 +21,7 @@ class MemberProfileFactory extends Factory
             'profile_option_id' => null,
             'value' => fake()->word(),
             'value_datetime' => null,
-            'public_flag' => Profile::PUBLIC_FLAG_SNS,
+            'visibility' => Visibility::Members,
         ];
     }
 }

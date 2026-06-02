@@ -126,14 +126,6 @@ class PresetProfileService
         return ['name' => self::PREFIX.$key, 'value_type' => $valueType];
     }
 
-    /** Normalise OpenPNE's default_public_flag (0/invalid) to a valid 1-4 value (0 → SNS). */
-    public static function normalizeDefaultPublicFlag(int|string|null $flag): int
-    {
-        $flag = (int) $flag;
-
-        return in_array($flag, [1, 2, 3, 4], true) ? $flag : Profile::PUBLIC_FLAG_SNS;
-    }
-
     private function rawPresetName(Profile $profile): string
     {
         $name = substr($profile->name, strlen(self::PREFIX));

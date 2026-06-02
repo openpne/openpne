@@ -16,7 +16,8 @@ use Tests\TestCase;
 /**
  * Runs the compiled profile INSERT...SELECTs against the real OpenPNE 3 DDL, exercising the
  * nested-set flattening: single-value rows, checkbox children (root dropped, flag
- * inherited), custom-date composition, and the public_flag 0 → NULL normalisation.
+ * inherited), custom-date composition, and the public_flag → Visibility mapping. Source
+ * rows carry OpenPNE 3's public_flag; the target stores App\Support\Visibility values.
  *
  * MySQL only — the correlated/self subqueries (CONCAT_WS/LPAD/OFFSET) and source DDL are
  * MySQL features. Profiles/options are upgraded first so the member_profiles FKs resolve.
@@ -64,7 +65,7 @@ class MemberProfileUpgradeSqlTest extends TestCase
         $this->runUpgrade();
 
         $this->assertDatabaseHas('member_profiles', [
-            'id' => 100, 'profile_id' => 1, 'value' => 'hello', 'profile_option_id' => null, 'public_flag' => 1,
+            'id' => 100, 'profile_id' => 1, 'value' => 'hello', 'profile_option_id' => null, 'visibility' => 1, // SNS → Members
         ]);
     }
 
@@ -75,7 +76,7 @@ class MemberProfileUpgradeSqlTest extends TestCase
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('member_profiles', ['id' => 200, 'value' => 'M', 'public_flag' => 2]);
+        $this->assertDatabaseHas('member_profiles', ['id' => 200, 'value' => 'M', 'visibility' => 2]); // friend → Friends
     }
 
     public function test_custom_select_keeps_option_id(): void
@@ -102,8 +103,8 @@ class MemberProfileUpgradeSqlTest extends TestCase
         $this->runUpgrade();
 
         $this->assertDatabaseMissing('member_profiles', ['id' => 400]); // structural root dropped
-        $this->assertDatabaseHas('member_profiles', ['id' => 401, 'profile_option_id' => 60, 'public_flag' => 2]);
-        $this->assertDatabaseHas('member_profiles', ['id' => 402, 'profile_option_id' => 61, 'public_flag' => 2]);
+        $this->assertDatabaseHas('member_profiles', ['id' => 401, 'profile_option_id' => 60, 'visibility' => 2]); // friend → Friends, inherited from root
+        $this->assertDatabaseHas('member_profiles', ['id' => 402, 'profile_option_id' => 61, 'visibility' => 2]);
     }
 
     public function test_custom_date_is_composed_from_children(): void
@@ -159,7 +160,17 @@ class MemberProfileUpgradeSqlTest extends TestCase
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('member_profiles', ['id' => 600, 'value' => '1990-01-02', 'public_flag' => 3]);
+        $this->assertDatabaseHas('member_profiles', ['id' => 600, 'value' => '1990-01-02', 'visibility' => 3]); // private → Private
+    }
+
+    public function test_web_public_flag_maps_to_open(): void
+    {
+        $this->seedProfile(11, 'custom_web', 'input');
+        $this->seedMemberProfile(1100, 11, ['value' => 'x', 'public_flag' => 4, 'tree_key' => 1100, 'lft' => 1]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1100, 'visibility' => 0]); // web → Open
     }
 
     public function test_invalid_public_flag_zero_becomes_null(): void
@@ -169,20 +180,21 @@ class MemberProfileUpgradeSqlTest extends TestCase
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('member_profiles', ['id' => 700, 'public_flag' => null]);
+        $this->assertDatabaseHas('member_profiles', ['id' => 700, 'visibility' => null]);
     }
 
-    public function test_profile_default_public_flag_zero_is_normalized(): void
+    public function test_profile_default_public_flag_maps_to_default_visibility(): void
     {
-        // OpenPNE 3's preset form seeds default_public_flag = 0, which is not a valid 1-4 flag.
+        // OpenPNE 3's preset form seeds default_public_flag = 0 (invalid) → Members(1); web=4 → Open(0).
         DB::table('profile')->insert([
-            'id' => 8, 'name' => 'op_preset_sex', 'form_type' => 'select', 'value_type' => 'string',
-            'default_public_flag' => 0, 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00',
+            ['id' => 8, 'name' => 'op_preset_sex', 'form_type' => 'select', 'value_type' => 'string', 'default_public_flag' => 0, 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00'],
+            ['id' => 81, 'name' => 'custom_web2', 'form_type' => 'input', 'value_type' => 'string', 'default_public_flag' => 4, 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00'],
         ]);
 
         DB::statement((new InsertSelectCompiler)->compile(new ProfileUpgrade));
 
-        $this->assertSame(1, (int) DB::table('profiles')->where('id', 8)->value('default_public_flag'));
+        $this->assertSame(1, (int) DB::table('profiles')->where('id', 8)->value('default_visibility'));
+        $this->assertSame(0, (int) DB::table('profiles')->where('id', 81)->value('default_visibility'));
     }
 
     private function runUpgrade(): void

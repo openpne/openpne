@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\PresetProfileService;
+use App\Support\Visibility;
 use Database\Factories\ProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,20 +17,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * fall back to the config/preset_profile.php caption via __(). `op_preset_*` fields source
  * their choices from the catalog, custom fields from `profile_options`.
  */
-#[Fillable(['name', 'is_required', 'is_unique', 'is_edit_public_flag', 'default_public_flag', 'form_type', 'value_type', 'is_disp_regist', 'is_disp_config', 'is_disp_search', 'is_public_web', 'value_regexp', 'value_min', 'value_max', 'sort_order'])]
+#[Fillable(['name', 'is_required', 'is_unique', 'is_edit_public_flag', 'default_visibility', 'form_type', 'value_type', 'is_disp_regist', 'is_disp_config', 'is_disp_search', 'is_public_web', 'value_regexp', 'value_min', 'value_max', 'sort_order'])]
 class Profile extends Model
 {
     /** @use HasFactory<ProfileFactory> */
     use HasFactory;
-
-    /** OpenPNE 3 ProfileTable public-flag values (ascending openness). */
-    public const PUBLIC_FLAG_SNS = 1;
-
-    public const PUBLIC_FLAG_FRIEND = 2;
-
-    public const PUBLIC_FLAG_PRIVATE = 3;
-
-    public const PUBLIC_FLAG_WEB = 4;
 
     /** Translation lang code (OpenPNE/Doctrine I18n) for each app locale. */
     private const TRANSLATION_LANG = ['ja' => 'ja_JP', 'en' => 'en'];
@@ -40,7 +32,7 @@ class Profile extends Model
             'is_required' => 'boolean',
             'is_unique' => 'boolean',
             'is_edit_public_flag' => 'boolean',
-            'default_public_flag' => 'integer',
+            'default_visibility' => Visibility::class,
             'is_disp_regist' => 'boolean',
             'is_disp_config' => 'boolean',
             'is_disp_search' => 'boolean',

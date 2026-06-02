@@ -6,9 +6,9 @@ use App\Features\Diary\Actions\UpdateDiary;
 use App\Features\Diary\Data\DiaryFormData;
 use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Exceptions\DiaryActionFailure;
-use App\Features\Diary\Visibility;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

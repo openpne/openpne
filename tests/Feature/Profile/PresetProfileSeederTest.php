@@ -24,12 +24,12 @@ class PresetProfileSeederTest extends TestCase
         $this->assertDatabaseMissing('profiles', ['name' => 'op_preset_region']);
     }
 
-    public function test_every_seeded_profile_has_a_valid_default_public_flag(): void
+    public function test_every_seeded_profile_has_a_valid_default_visibility(): void
     {
         $this->seed(PresetProfileSeeder::class);
 
-        // OpenPNE's catalog default is 0; the seeder must normalise it to a real 1-4 flag.
-        $this->assertSame(0, Profile::whereNotIn('default_public_flag', [1, 2, 3, 4])->count());
+        // OpenPNE's catalog default is 0; the seeder maps it onto the Visibility scale (0-3).
+        $this->assertSame(0, Profile::whereNotIn('default_visibility', [0, 1, 2, 3])->count());
         $this->assertGreaterThan(0, Profile::count());
     }
 

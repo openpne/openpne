@@ -2,6 +2,7 @@
 
 namespace App\Upgrade\Steps;
 
+use App\Support\Visibility;
 use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
@@ -18,10 +19,11 @@ use App\Upgrade\UpgradeStep;
  *  - custom (non-preset) date: keep one row (the root) and compose its value from the
  *    year/month/day child rows (ordered by lft); drop the children.
  *
- * public_flag is copied on the OpenPNE 3 scale (1=SNS, 2=Friends, 3=Private, 4=Web), with
- * an invalid 0 normalised to NULL ("use the field default"). Effective resolution
- * (is_edit_public_flag, NULL → profiles.default_public_flag) happens in the read/visibility
- * layer, matching OpenPNE 3's read-time resolution rather than baking it into stored data.
+ * visibility maps OpenPNE 3's public_flag onto App\Support\Visibility (web=4→Open,
+ * SNS=1→Members, friend=2→Friends, private=3→Private); an invalid 0 / NULL becomes NULL
+ * ("use the field default"). Effective resolution (is_edit_public_flag, NULL →
+ * profiles.default_visibility) happens in the read layer — like OpenPNE 3's read-time
+ * resolution — rather than baking it into stored data.
  *
  * The profile/self correlated subqueries name `profile`/`member_profile` unqualified, so
  * (like MemberUpgrade's member_config subqueries) they are not rewritten for a source
@@ -48,10 +50,17 @@ class MemberProfileUpgrade extends UpgradeStep
                 uses: ['value', 'tree_key', 'lft', 'id', 'profile_id'],
             ),
             'value_datetime' => Column::expr($this->normalizedDatetime(), uses: ['value_datetime']),
-            // OpenPNE 3 public-flag scale; 0/invalid → NULL (fall back to the field default).
-            // A multi-select stores the flag only on the root, so a child inherits it.
-            'public_flag' => Column::expr(
-                sprintf('CASE WHEN (%1$s) IN (1, 2, 3, 4) THEN (%1$s) ELSE NULL END', $this->rawPublicFlag()),
+            // OpenPNE 3 public_flag → Visibility; 0/invalid → NULL (fall back to the field
+            // default). A multi-select stores the flag only on the root, so a child inherits it.
+            'visibility' => Column::expr(
+                sprintf(
+                    'CASE (%1$s) WHEN 4 THEN %2$d WHEN 1 THEN %3$d WHEN 2 THEN %4$d WHEN 3 THEN %5$d ELSE NULL END',
+                    $this->rawPublicFlag(),
+                    Visibility::Open->value,
+                    Visibility::Members->value,
+                    Visibility::Friends->value,
+                    Visibility::Private->value,
+                ),
                 uses: ['public_flag', 'tree_key', 'id'],
             ),
             'created_at' => Column::source('created_at'),

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Profile;
 use App\Services\PresetProfileService;
+use App\Support\Visibility;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +16,8 @@ use Illuminate\Support\Facades\DB;
  * seeder is not run by `composer setup`, which only migrates). Country-specific region
  * fields are left to the operator to add in the admin — they share the unique
  * `op_preset_region` name, so only one variant (e.g. region_JP) can exist, and which one
- * is a per-site choice. default_public_flag is normalised to 1-4 (the catalog value is 0).
+ * is a per-site choice. The catalog's OpenPNE 3 public_flag (0 for presets) maps to a
+ * Visibility for default_visibility.
  */
 class PresetProfileSeeder extends Seeder
 {
@@ -43,7 +45,7 @@ class PresetProfileSeeder extends Seeder
                 'is_required' => $def['is_required'] ?? false,
                 'is_unique' => false,
                 'is_edit_public_flag' => $def['is_edit_public_flag'] ?? true,
-                'default_public_flag' => PresetProfileService::normalizeDefaultPublicFlag($def['default_public_flag'] ?? 0),
+                'default_visibility' => Visibility::fromOpenPne3PublicFlag($def['default_public_flag'] ?? 0),
                 'form_type' => $def['form_type'],
                 'value_type' => $def['value_type'] ?? 'string',
                 'is_disp_regist' => $def['is_disp_regist'] ?? false,

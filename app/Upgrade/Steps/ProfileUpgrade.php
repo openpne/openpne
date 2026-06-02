@@ -2,7 +2,7 @@
 
 namespace App\Upgrade\Steps;
 
-use App\Models\Profile;
+use App\Support\Visibility;
 use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
@@ -10,8 +10,8 @@ use App\Upgrade\UpgradeStep;
  * OpenPNE 3 `profile` → OpenPNE 4 `profiles` (profile field definitions).
  *
  * id is preserved (profile_options, member_profiles, and the translation tables reference
- * it). default_public_flag is normalised to 1-4: OpenPNE 3's preset form seeds 0, which is
- * not a valid public-flag, so it would break the visibility fallback.
+ * it). OpenPNE 3's public_flag scale maps to App\Support\Visibility for default_visibility
+ * (web=4→Open, friend=2→Friends, private=3→Private, SNS=1 and the invalid 0 default→Members).
  */
 class ProfileUpgrade extends UpgradeStep
 {
@@ -27,8 +27,14 @@ class ProfileUpgrade extends UpgradeStep
             'is_required' => Column::source('is_required'),
             'is_unique' => Column::source('is_unique'),
             'is_edit_public_flag' => Column::source('is_edit_public_flag'),
-            'default_public_flag' => Column::expr(
-                sprintf('CASE WHEN `default_public_flag` IN (1, 2, 3, 4) THEN `default_public_flag` ELSE %d END', Profile::PUBLIC_FLAG_SNS),
+            'default_visibility' => Column::expr(
+                sprintf(
+                    'CASE `default_public_flag` WHEN 4 THEN %d WHEN 2 THEN %d WHEN 3 THEN %d ELSE %d END',
+                    Visibility::Open->value,
+                    Visibility::Friends->value,
+                    Visibility::Private->value,
+                    Visibility::Members->value,
+                ),
                 uses: ['default_public_flag'],
             ),
             'form_type' => Column::source('form_type'),

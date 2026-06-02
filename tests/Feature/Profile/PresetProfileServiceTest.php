@@ -19,14 +19,6 @@ class PresetProfileServiceTest extends TestCase
         $this->service = app(PresetProfileService::class);
     }
 
-    public function test_normalizes_invalid_default_public_flag_to_sns(): void
-    {
-        $this->assertSame(1, PresetProfileService::normalizeDefaultPublicFlag(0));
-        $this->assertSame(1, PresetProfileService::normalizeDefaultPublicFlag(null));
-        $this->assertSame(1, PresetProfileService::normalizeDefaultPublicFlag(9));
-        $this->assertSame(3, PresetProfileService::normalizeDefaultPublicFlag(3));
-    }
-
     public function test_uses_value_column_only_for_preset_choice_fields(): void
     {
         $this->assertTrue($this->service->usesValueColumnForChoice($this->profile('op_preset_sex', 'select')));

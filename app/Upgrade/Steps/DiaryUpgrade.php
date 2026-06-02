@@ -2,7 +2,7 @@
 
 namespace App\Upgrade\Steps;
 
-use App\Features\Diary\Visibility;
+use App\Support\Visibility;
 use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 

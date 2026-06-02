@@ -3,9 +3,9 @@
 namespace App\Features\Diary\Queries;
 
 use App\Features\Block\BlockLookup;
-use App\Features\Diary\Visibility;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Visibility;
 
 class ShowDiary
 {
