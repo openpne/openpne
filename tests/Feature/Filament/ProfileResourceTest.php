@@ -10,6 +10,7 @@ use App\Filament\Resources\Profiles\Pages\ListProfiles;
 use App\Filament\Resources\Profiles\RelationManagers\ProfileOptionsRelationManager;
 use App\Models\AdminUser;
 use App\Models\Profile;
+use App\Models\ProfileOption;
 use App\Support\Visibility;
 use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
@@ -150,6 +151,51 @@ class ProfileResourceTest extends TestCase
         $this->assertNotNull($option);
         $this->assertSame('赤', $option->getLabel('ja_JP'));
         $this->assertSame('Red', $option->getLabel('en'));
+    }
+
+    public function test_custom_name_rejects_the_preset_prefix_and_invalid_formats(): void
+    {
+        foreach (['op_preset_hack', '123', '日本語'] as $bad) {
+            Livewire::test(CreateProfile::class)
+                ->fillForm([
+                    '_creation_mode' => 'custom',
+                    'name' => $bad,
+                    'form_type' => 'input',
+                    'caption_ja' => 'x',
+                    'caption_en' => 'x',
+                ])
+                ->call('create')
+                ->assertHasFormErrors(['name']);
+        }
+
+        Livewire::test(CreateProfile::class)
+            ->fillForm([
+                '_creation_mode' => 'custom',
+                'name' => 'fav_color',
+                'form_type' => 'input',
+                'caption_ja' => 'x',
+                'caption_en' => 'x',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+    }
+
+    public function test_clearing_an_option_english_label_removes_the_translation(): void
+    {
+        $profile = Profile::factory()->create(['form_type' => 'select']);
+        $option = ProfileOption::factory()->create(['profile_id' => $profile->getKey()]);
+        $option->setLabel('ja_JP', '赤');
+        $option->setLabel('en', 'Red');
+
+        Livewire::test(ProfileOptionsRelationManager::class, [
+            'ownerRecord' => $profile,
+            'pageClass' => EditProfile::class,
+        ])
+            ->callTableAction('edit', $option, data: ['caption_ja' => '赤', 'caption_en' => ''])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame('赤', $option->fresh()->getLabel('ja_JP'));
+        $this->assertSame('', $option->fresh()->getLabel('en'));
     }
 
     public function test_options_are_not_editable_for_a_preset_choice_field(): void

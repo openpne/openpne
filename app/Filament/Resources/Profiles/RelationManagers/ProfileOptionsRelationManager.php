@@ -94,8 +94,12 @@ class ProfileOptionsRelationManager extends RelationManager
         if (($data['caption_ja'] ?? '') !== '') {
             $record->setLabel('ja_JP', $data['caption_ja']);
         }
+
+        // English is optional; a blank value must remove any existing row, not leave a stale label.
         if (($data['caption_en'] ?? '') !== '') {
             $record->setLabel('en', $data['caption_en']);
+        } else {
+            $record->translations()->where('lang', 'en')->delete();
         }
     }
 

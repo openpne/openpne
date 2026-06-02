@@ -347,6 +347,7 @@
     "The :attribute must be at least :length characters and contain at least one uppercase character.": ":attributeは:length文字以上で、大文字を１文字以上含めなければいけません。",
     "The :attribute must be at least :length characters.": ":attributeは:length文字以上でなければいけません。",
     "The :attribute must be greater than or equal to the minimum value.": ":attribute は最小値以上である必要があります。",
+    "The field name cannot start with \"op_preset_\".": "項目名の先頭に「op_preset_」は使えません。",
     "The given data was invalid.": "指定されたデータは無効でした。",
     "The member ID is the number at the end of the member page URL.": "メンバーID はメンバーページ URL 末尾の数字です。",
     "The provided password does not match your current password.": "パスワードが現在のパスワードと一致しません。",

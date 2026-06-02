@@ -105,6 +105,17 @@ class ProfileForm
                             ->required()
                             ->maxLength(64)
                             ->unique(table: 'profiles', column: 'name', ignoreRecord: true)
+                            // OpenPNE 3 ProfileForm: a custom name is a word with at least one
+                            // letter, and "op_preset_" is reserved for presets (it drives
+                            // Profile::isPreset()). A preset's own name is locked, so skip it there.
+                            ->rules(fn (string $operation, ?Model $record): array => self::isPresetEdit($operation, $record) ? [] : [
+                                'regex:/^\w*[a-z]\w*$/i',
+                                function (string $attribute, mixed $value, callable $fail): void {
+                                    if (str_starts_with((string) $value, 'op_preset_')) {
+                                        $fail(__('The field name cannot start with "op_preset_".'));
+                                    }
+                                },
+                            ])
                             ->readOnly(fn (string $operation, ?Model $record): bool => self::isPresetEdit($operation, $record))
                             ->helperText(fn (string $operation, ?Model $record): ?string => self::presetHelperText($operation, $record)),
 
