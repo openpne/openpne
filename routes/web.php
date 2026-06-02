@@ -119,6 +119,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/member/image/config', fn () => redirect()->route('member.avatar.edit'))
         ->name('member.image.config_compat');
 
+    // OpenPNE 3 profile-page aliases (routing.yml member_profile_mine / member_profile_raw):
+    // /member/profile is the viewer's own profile, /member/profile/id/:id another member's.
+    // Both redirect to the canonical /member/{id}.
+    Route::get('/member/profile', fn (Request $request) => redirect()->route('member.profile.show', ['member' => $request->user()->getKey()]))
+        ->name('member.profile.mine_compat');
+    Route::get('/member/profile/id/{member}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
+        ->whereNumber('member')->name('member.profile.raw_compat');
+
     // Member profile page. whereNumber keeps the literal /member/* routes above from
     // matching the {member} wildcard. Login-required for now (guest web-public profiles
     // are a follow-up); per-value visibility + block are enforced in ShowProfile.

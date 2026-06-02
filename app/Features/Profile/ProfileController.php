@@ -18,10 +18,10 @@ class ProfileController extends Controller
     public function show(Request $request, Member $member, ShowProfile $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
-        $fields = $query($viewer, $member);
+        $lang = $this->translationLang();
+        $fields = $query($viewer, $member, $lang);
         abort_if($fields === null, 404); // owner blocks the viewer
 
-        $lang = $this->translationLang();
         $isSelf = $viewer->is($member);
 
         return $this->respondWith($request, [

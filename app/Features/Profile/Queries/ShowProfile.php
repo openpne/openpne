@@ -15,12 +15,13 @@ use Illuminate\Support\Collection;
  * Returns null when the owner blocks the viewer (the whole page is then a 404), matching
  * Diary's owner→viewer block. Each field's effective visibility (per-value flag, or the
  * field default when the field is not per-value editable / has no value flag) is compared
- * to the viewer's clearance via the shared monotonic Visibility scale.
+ * to the viewer's clearance via the shared monotonic Visibility scale. Fields whose
+ * rendered value is empty are skipped, like OpenPNE 3's _profileListBox.
  */
 class ShowProfile
 {
     /** @return Collection<int, ProfileFieldValue>|null */
-    public function __invoke(Member $viewer, Member $owner): ?Collection
+    public function __invoke(Member $viewer, Member $owner, string $lang): ?Collection
     {
         if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
             return null;
@@ -34,6 +35,7 @@ class ShowProfile
             ->groupBy('profile_id')
             ->map(fn (Collection $rows): ProfileFieldValue => new ProfileFieldValue($rows->first()->profile, $rows))
             ->filter(fn (ProfileFieldValue $field): bool => $this->effectiveVisibility($field)->value <= $clearance->value)
+            ->filter(fn (ProfileFieldValue $field): bool => $field->display($lang) !== '')
             ->sortBy(fn (ProfileFieldValue $field): int => $field->profile->sort_order ?? PHP_INT_MAX)
             ->values();
     }

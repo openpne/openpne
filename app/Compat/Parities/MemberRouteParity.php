@@ -35,6 +35,11 @@ class MemberRouteParity extends RouteParity
 
     public function compatRedirects(): array
     {
-        return ['/member/image/config' => 'member.avatar.edit'];
+        return [
+            '/member/image/config' => 'member.avatar.edit',
+            // OpenPNE 3 profile-page aliases redirect to the canonical /member/{id}.
+            '/member/profile' => 'member.profile.show',
+            '/member/profile/id/:id' => 'member.profile.show',
+        ];
     }
 }

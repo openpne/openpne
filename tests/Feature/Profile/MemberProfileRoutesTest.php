@@ -70,6 +70,16 @@ class MemberProfileRoutesTest extends TestCase
         $this->get("/member/{$owner->getKey()}")->assertRedirect('/login');
     }
 
+    public function test_legacy_profile_aliases_redirect_to_the_canonical_url(): void
+    {
+        $viewer = Member::factory()->create();
+        $other = Member::factory()->create();
+
+        // /member/profile = the viewer's own profile; /member/profile/id/{id} = another member's.
+        $this->actingAs($viewer)->get('/member/profile')->assertRedirect("/member/{$viewer->getKey()}");
+        $this->actingAs($viewer)->get("/member/profile/id/{$other->getKey()}")->assertRedirect("/member/{$other->getKey()}");
+    }
+
     private function fieldFor(Member $owner, Visibility $visibility, string $value): void
     {
         $profile = Profile::factory()->create(['is_edit_public_flag' => true]);
