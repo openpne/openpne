@@ -11,9 +11,12 @@ return new class extends Migration
         Schema::create('members', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
+            // Nullable so a member upgraded from OpenPNE 3 without a usable address/credential
+            // is kept as a login-impossible row. Unique still admits many NULLs (NULLs are
+            // distinct) on both MySQL and SQLite.
+            $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
+            $table->string('password')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
