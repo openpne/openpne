@@ -60,16 +60,22 @@ export default function Login() {
                     {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
 
-                <label className="flex items-center gap-2 text-sm">
-                    <input
-                        type="checkbox"
-                        name="remember"
-                        checked={data.remember}
-                        onChange={(e) => setData('remember', e.target.checked)}
-                        className="size-4 rounded border-input"
-                    />
-                    {t('Remember me')}
-                </label>
+                <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            name="remember"
+                            checked={data.remember}
+                            onChange={(e) => setData('remember', e.target.checked)}
+                            className="size-4 rounded border-input"
+                        />
+                        {t('Remember me')}
+                    </label>
+
+                    <Link href="/forgot-password" className="text-sm text-muted-foreground underline">
+                        {t('Forgot your password?')}
+                    </Link>
+                </div>
 
                 <button
                     type="submit"
