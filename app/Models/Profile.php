@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A member-profile field definition (OpenPNE 3 `profile`).
@@ -129,6 +130,15 @@ class Profile extends Model
     public function getInfo(string $lang = 'ja_JP'): ?string
     {
         return $this->translations->firstWhere('lang', $lang)?->info;
+    }
+
+    /** Upsert this field's localised caption (and optional info) for a translation lang. */
+    public function setTranslation(string $lang, string $caption, ?string $info = null): void
+    {
+        DB::table('profile_translations')->updateOrInsert(
+            ['id' => $this->getKey(), 'lang' => $lang],
+            ['caption' => $caption, 'info' => ($info === null || $info === '') ? null : $info],
+        );
     }
 
     private static function appLocale(string $translationLang): string
