@@ -17,6 +17,7 @@ class RouteParityBodyIdTest extends TestCase
 
         // page_{module}_{action} keyed on the OpenPNE 3 action, not the Laravel route name.
         $this->assertSame('page_diary_show', $parity->bodyId('diary.show'));
+        $this->assertSame('page_diary_search', $parity->bodyId('diary.search'));
         $this->assertSame('page_diary_list', $parity->bodyId('diary.list'));
         $this->assertSame('page_diary_listFriend', $parity->bodyId('diary.list_friend'));
         $this->assertSame('page_diary_new', $parity->bodyId('diary.new'));

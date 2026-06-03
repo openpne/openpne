@@ -13,6 +13,7 @@ class DiaryRouteParity extends RouteParity
     {
         return [
             new RouteMap('diary_show', '/diary/:id', 'diary.show', 'GET', op3Action: 'show'),
+            new RouteMap('diary_search', '/diary/search', 'diary.search', 'GET', op3Action: 'search'),
             new RouteMap('diary_list', '/diary/list', 'diary.list', 'GET', op3Action: 'list'),
             new RouteMap('diary_list_friend', '/diary/listFriend', 'diary.list_friend', 'GET', op3Action: 'listFriend'),
             new RouteMap('diary_list_mine', '/diary/listMember', 'diary.list_member', 'GET', op3Action: 'listMember'),
@@ -42,7 +43,6 @@ class DiaryRouteParity extends RouteParity
     {
         return [
             'diary_index' => 'Diary top (/diary) is not ported.',
-            'diary_search' => 'Diary search is not ported.',
             // Comment create/delete are ported (above) on both surfaces. Still deferred within
             // comments: image attachments, notifications, unread tracking, thread pagination, and
             // this history feed.

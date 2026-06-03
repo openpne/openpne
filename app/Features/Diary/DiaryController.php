@@ -10,6 +10,7 @@ use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Queries\ListDiaries;
 use App\Features\Diary\Queries\ListFriendDiaries;
 use App\Features\Diary\Queries\ListRecentDiaries;
+use App\Features\Diary\Queries\SearchDiaries;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Http\Controllers\Controller;
@@ -105,6 +106,30 @@ class DiaryController extends Controller
                 'diaries' => DiarySerializer::paginator($diaries),
             ]),
         ]);
+    }
+
+    public function search(Request $request, SearchDiaries $query): View|InertiaResponse
+    {
+        $keywordParam = $request->query('keyword', '');
+        $keyword = is_string($keywordParam) ? $keywordParam : '';
+        $hasKeyword = SearchDiaries::terms($keyword) !== [];
+        $diaries = $query($this->viewer(), $keyword);
+
+        // OpenPNE 3 forwarded an empty search to the list action: same recent results, but the
+        // list body id and "Recently Posted" heading. The search form stays either way (OpenPNE
+        // 3's list template carries it too).
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('diary.search', [
+                'keyword' => $keyword,
+                'hasKeyword' => $hasKeyword,
+                'diaries' => $diaries,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('diary/search', [
+                'keyword' => $keyword,
+                'hasKeyword' => $hasKeyword,
+                'diaries' => DiarySerializer::paginator($diaries),
+            ]),
+        ], bodyIdRoute: $hasKeyword ? null : 'diary.list');
     }
 
     public function show(Request $request, int $diary, ShowDiary $query): View|InertiaResponse
@@ -216,8 +241,11 @@ class DiaryController extends Controller
 
     /**
      * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
+     * @param  string|null  $bodyIdRoute  Derive the Classic body id from this canonical route name
+     *                                    instead of the current one (e.g. empty search renders the
+     *                                    list page id). Still parity-derived, so no literal copy.
      */
-    private function respondWith(Request $request, array $responders): View|InertiaResponse
+    private function respondWith(Request $request, array $responders, ?string $bodyIdRoute = null): View|InertiaResponse
     {
         $response = $responders[SurfaceResolver::resolve($request, 'diary')]();
 
@@ -226,7 +254,7 @@ class DiaryController extends Controller
         // Canonicalize first: a /m/* route that fell back to Classic carries the modern
         // name (diary.modern.*), which the parity keys by canonical name.
         if ($response instanceof View) {
-            $name = SurfaceResolver::canonicalName($request->route()->getName());
+            $name = SurfaceResolver::canonicalName($bodyIdRoute ?? $request->route()->getName());
             $response->with('pageId', RouteParityRegistry::bodyId($name));
         }
 
