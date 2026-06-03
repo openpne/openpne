@@ -75,7 +75,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('comment image upload', L::Three, S::Deferred, 'formDiaryComment isMultipart + DiaryCommentImageForm x3', 'OpenPNE 3 embeds up to 3 photo fields; image delivery not built'),
                 // Diary record.
                 new ScreenElement('owner edit entry', L::One, S::Ported, "operation form url_for('diary_edit')"),
-                new ScreenElement('visibility label', L::Two, S::Missing, '$diary->getPublicFlagLabel()', 'small, no dependency'),
+                new ScreenElement('visibility label', L::Two, S::Ported, '$diary->getPublicFlagLabel()'),
                 new ScreenElement('previous / next diary links', L::Two, S::Missing, '$diary->getPrevious/getNext($myMemberId)', 'needs an owner-scoped adjacent-diary query'),
                 new ScreenElement("link to the member's diary list", L::Two, S::Missing, 'lineLinkToDiaryMemberList', 'small, no dependency'),
                 new ScreenElement('diary body auto-link + decoration', L::Two, S::Partial, 'op_url_cmd(op_decoration(nl2br(body)))', 'body shown raw; decoration/auto-link helpers not ported'),

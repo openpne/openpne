@@ -4,7 +4,11 @@
 
 @section('content')
     <div class="dparts" id="diary_show">
-        <div class="partsHeading"><h3>{{ $diary->title }}</h3></div>
+        <div class="partsHeading">
+            <h3>{{ $diary->title }}</h3>
+            {{-- OpenPNE 3 showSuccess.php: the diary's effective audience, in the .public hook. --}}
+            <p class="public">({{ __($diary->visibility->label()) }})</p>
+        </div>
         <div class="parts">
             <p class="diaryMeta">
                 {{ $diary->member->name }} &mdash; {{ $diary->created_at->format('Y-m-d H:i') }}
