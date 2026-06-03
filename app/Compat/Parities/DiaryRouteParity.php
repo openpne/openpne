@@ -41,9 +41,9 @@ class DiaryRouteParity extends RouteParity
             'diary_list_friend' => 'Friend diary feed is not ported.',
             'diary_list_member_year_month' => 'Calendar archive (year/month) is not ported.',
             'diary_list_member_year_month_day' => 'Calendar archive (year/month/day) is not ported.',
-            // Comment create/delete are ported (above). Still deferred within comments: image
-            // attachments, notifications, unread tracking, thread pagination, the Modern surface,
-            // and this history feed.
+            // Comment create/delete are ported (above) on both surfaces. Still deferred within
+            // comments: image attachments, notifications, unread tracking, thread pagination, and
+            // this history feed.
             'diary_comment_history' => 'Comment history feed is not ported.',
         ];
     }
