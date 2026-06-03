@@ -36,8 +36,6 @@ class ScreenParityCommand extends Command
             }
         }
 
-        $this->line('Status: ✅ ported · ⚠️ partial · 🚫 deferred (waiting on another feature) · ❌ missing');
-
         return self::SUCCESS;
     }
 
@@ -58,7 +56,7 @@ class ScreenParityCommand extends Command
 
         foreach ($elements as $element) {
             $note = $element->note ?? '';
-            $this->line("| {$element->status->icon()} | {$element->name} | {$element->level->value} | `{$element->op3Source}` | {$note} |");
+            $this->line("| {$element->status->display()} | {$element->name} | {$element->level->value} | `{$element->op3Source}` | {$note} |");
         }
 
         $this->line('');
@@ -89,7 +87,7 @@ class ScreenParityCommand extends Command
         }
 
         return implode(' · ', array_map(
-            static fn (ScreenStatus $status): string => $status->icon().' '.$counts[$status->value],
+            static fn (ScreenStatus $status): string => $status->display().' '.$counts[$status->value],
             ScreenStatus::cases(),
         ));
     }
