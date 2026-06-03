@@ -36,11 +36,7 @@ class DiaryUpgrade extends UpgradeStep
     {
         return [
             'has_images' => 'Denormalized flag for the diary image tables; this step migrates the diary record only.',
-            'diary_comment' => 'Diary comments — a separate table, outside this step.',
-            'diary_comment_image' => 'Comment image attachments — outside this step.',
             'diary_image' => 'Diary image attachments — outside this step (image delivery is not built).',
-            'diary_comment_unread' => 'Per-member comment unread state — outside this step.',
-            'diary_comment_update' => 'Comment update tracking — outside this step.',
         ];
     }
 
