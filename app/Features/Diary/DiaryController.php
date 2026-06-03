@@ -19,6 +19,7 @@ use App\Http\Requests\Diary\UpdateDiaryRequest;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\SurfaceResolver;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -78,58 +79,63 @@ class DiaryController extends Controller
 
     public function list(Request $request, ListRecentDiaries $query): View|InertiaResponse
     {
-        $diaries = $query($this->viewer());
-
-        return $this->respondWith($request, [
-            SurfaceResolver::CLASSIC => fn () => view('diary.feed', [
-                'scope' => 'all',
-                'diaries' => $diaries,
-            ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('diary/feed', [
-                'scope' => 'all',
-                'diaries' => DiarySerializer::paginator($diaries),
-            ]),
-        ]);
+        return $this->feed($request, 'recent', $query($this->viewer()));
     }
 
     public function listFriend(Request $request, ListFriendDiaries $query): View|InertiaResponse
     {
-        $diaries = $query($this->viewer());
-
-        return $this->respondWith($request, [
-            SurfaceResolver::CLASSIC => fn () => view('diary.feed', [
-                'scope' => 'friends',
-                'diaries' => $diaries,
-            ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('diary/feed', [
-                'scope' => 'friends',
-                'diaries' => DiarySerializer::paginator($diaries),
-            ]),
-        ]);
+        return $this->feed($request, 'friends', $query($this->viewer()));
     }
 
-    public function search(Request $request, SearchDiaries $query): View|InertiaResponse
+    public function search(Request $request, SearchDiaries $query, ListRecentDiaries $recent): View|InertiaResponse
     {
         $keywordParam = $request->query('keyword', '');
         $keyword = is_string($keywordParam) ? $keywordParam : '';
-        $hasKeyword = SearchDiaries::terms($keyword) !== [];
-        $diaries = $query($this->viewer(), $keyword);
 
-        // OpenPNE 3 forwarded an empty search to the list action: same recent results, but the
-        // list body id and "Recently Posted" heading. The search form stays either way (OpenPNE
-        // 3's list template carries it too).
+        // OpenPNE 3 forwards an empty search to the list action — identical results, body id, and
+        // pager URL (@diary_list). Delegate so /diary/search renders exactly what /diary/list does,
+        // including pager links that point back at the list rather than at /diary/search.
+        if (SearchDiaries::terms($keyword) === []) {
+            return $this->feed(
+                $request,
+                'recent',
+                $recent($this->viewer())->withPath(route('diary.list')),
+                bodyIdRoute: 'diary.list',
+            );
+        }
+
+        return $this->feed(
+            $request,
+            'search',
+            $query($this->viewer(), $keyword),
+            keyword: $keyword,
+            hasKeyword: true,
+        );
+    }
+
+    /**
+     * OpenPNE 3 listSuccess.php: the all-member feed and search share one template carrying the
+     * search form; the friend feed drops it. The variant drives the heading and the form.
+     *
+     * @param  'recent'|'friends'|'search'  $variant
+     * @param  LengthAwarePaginator<int, Diary>  $diaries
+     */
+    private function feed(Request $request, string $variant, LengthAwarePaginator $diaries, string $keyword = '', bool $hasKeyword = false, ?string $bodyIdRoute = null): View|InertiaResponse
+    {
         return $this->respondWith($request, [
-            SurfaceResolver::CLASSIC => fn () => view('diary.search', [
+            SurfaceResolver::CLASSIC => fn () => view('diary.feed', [
+                'variant' => $variant,
                 'keyword' => $keyword,
                 'hasKeyword' => $hasKeyword,
                 'diaries' => $diaries,
             ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('diary/search', [
+            SurfaceResolver::MODERN => fn () => Inertia::render('diary/feed', [
+                'variant' => $variant,
                 'keyword' => $keyword,
                 'hasKeyword' => $hasKeyword,
                 'diaries' => DiarySerializer::paginator($diaries),
             ]),
-        ], bodyIdRoute: $hasKeyword ? null : 'diary.list');
+        ], bodyIdRoute: $bodyIdRoute);
     }
 
     public function show(Request $request, int $diary, ShowDiary $query): View|InertiaResponse
