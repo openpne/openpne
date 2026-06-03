@@ -19,6 +19,31 @@
  */
 
 return [
+    'member' => [
+        // No member_nodefaults route, so the global /:module/:action fallback stays on:
+        // un-named member actions remain URL-reachable. Only the profile / avatar / search /
+        // edit slices are ported; the rest (home, auth, config, invite, withdrawal) are gapped.
+        // Every route is sf_method-unconstrained or [get] — none is POST-only — so all are ANY.
+        'disables_global_fallback' => false,
+        'routes' => [
+            'homepage' => ['/', 'ANY'],
+            'member_index' => ['/member', 'ANY'],
+            'obj_member_profile' => ['/member/:id', 'ANY'],
+            'member_profile' => ['/member/:id', 'ANY'],
+            'member_profile_mine' => ['/member/profile', 'ANY'],
+            'member_profile_raw' => ['/member/profile/id/:id/*', 'ANY'],
+            'member_config_image' => ['/member/image/config', 'ANY'],
+            'member_search' => ['/member/search', 'ANY'],
+            'member_editProfile' => ['/member/edit/profile', 'ANY'],
+            'login' => ['/member/login/*', 'ANY'],
+            'member_logout' => ['/logout', 'ANY'],
+            'member_delete' => ['/leave', 'ANY'],
+            'member_invite' => ['/invite', 'ANY'],
+            'member_config' => ['/member/config', 'ANY'],
+            'member_config_jsonapi' => ['/member/config/jsonapi', 'ANY'],
+            'global_changeLanguage' => ['/language', 'ANY'],
+        ],
+    ],
     'friend' => [
         // No friend_nodefaults route, so the global /:module/:action fallback stays on:
         // un-named actions (e.g. /friend/link) remain reachable. obj_friend_unlink declares
