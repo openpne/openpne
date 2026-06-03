@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="block_add">
-        <h2 class="partsHeading">{{ __('Block a member') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Block a member') }}</h3></div>
         <div class="parts">
             <form method="GET" action="{{ route('block.add.show') }}">
                 <label for="block_member_id">{{ __('Member ID') }}</label>
@@ -16,7 +16,7 @@
     </div>
 
     <div class="dparts" id="block_list">
-        <h2 class="partsHeading">{{ __('Blocked members') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Blocked members') }}</h3></div>
         <div class="parts">
             @if ($blocks->isEmpty())
                 <p>{{ __('No blocked members.') }}</p>

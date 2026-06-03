@@ -65,6 +65,22 @@ Modern does **not** inherit any of these. It uses its own theme primitives and
 Inertia props. Pulling `LayoutA`–`LayoutE` or `dparts` into Modern erodes the
 reason Modern exists.
 
+### Default skin
+
+The Classic shell ([`layouts/classic.blade.php`](../../resources/views/layouts/classic.blade.php))
+reproduces the base OpenPNE 3 `pc_frontend` layout DOM (`#Body > #Container > #Header /
+#Contents / #Footer`, `div#globalNav > ul > li`, `#localNav`, `#Layout{A..E} > #Center`, and the
+`alertBox` flash). The OpenPNE 3 default skin (`opSkinBasicPlugin`) is vendored verbatim and
+served statically from [`public/opSkinBasicPlugin/`](../../public/opSkinBasicPlugin) through a
+plain `<link>`; the `$classicSkinCss` view variable is the seam a later theme / `customizing.css`
+resolver swaps. `@vite` is not used for Classic.
+
+Carried gaps in this slice: the shell renders single-column `LayoutC`, while OpenPNE 3
+`member/home` / `member/profile` are `layoutA` — deferred until the `#Left` sidemenu/gadget
+slots land (Level 2). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
+broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching, admin custom
+CSS, and gadget layout are not ported.
+
 ## JavaScript compatibility
 
 Legacy OpenPNE 3 JavaScript is Classic-only and ported only where a real

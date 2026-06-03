@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="diary_new">
-        <h2 class="partsHeading">{{ __('Write a %diary%') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Write a %diary%') }}</h3></div>
         <div class="parts">
             <form method="POST" action="{{ route('diary.store') }}">
                 @csrf

@@ -6,7 +6,7 @@
 
 @section('content')
     <div class="dparts" id="friend_list">
-        <h2 class="partsHeading">{{ $title }}</h2>
+        <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="parts">
             @if ($friends->isEmpty())
                 <p>{{ __('No %friends% to show.') }}</p>
