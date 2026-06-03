@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="block_remove">
-        <h2 class="partsHeading">{{ __('Unblock') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Unblock') }}</h3></div>
         <div class="parts">
             <p>{{ __('Unblock :name?', ['name' => $target->name]) }}</p>
             <form method="POST" action="{{ route('block.remove.submit', $target) }}">

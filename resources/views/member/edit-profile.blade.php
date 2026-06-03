@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="member_editProfile">
-        <h2 class="partsHeading">{{ __('Edit Profile') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Edit Profile') }}</h3></div>
         <div class="parts">
             <form method="POST" action="{{ route('member.profile.update') }}">
                 @csrf

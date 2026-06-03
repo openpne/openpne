@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="member_search">
-        <h2 class="partsHeading">{{ __('Member search') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Member search') }}</h3></div>
         <div class="parts">
             <form method="GET" action="{{ route('member.search') }}">
                 <div>

@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="friend_manage_received">
-        <h2 class="partsHeading">{{ __('Requests received') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Requests received') }}</h3></div>
         <div class="parts">
             @if ($received->isEmpty())
                 <p>{{ __('No pending requests.') }}</p>
@@ -33,7 +33,7 @@
     </div>
 
     <div class="dparts" id="friend_manage_sent">
-        <h2 class="partsHeading">{{ __('Requests sent') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Requests sent') }}</h3></div>
         <div class="parts">
             @if ($sent->isEmpty())
                 <p>{{ __('No outgoing requests.') }}</p>

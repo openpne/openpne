@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="friend_unlink">
-        <h2 class="partsHeading">{{ __('Remove %friend%') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Remove %friend%') }}</h3></div>
         <div class="parts">
             <p>{{ __('Remove :name from your %friends%?', ['name' => $target->name]) }}</p>
 

@@ -6,7 +6,7 @@
 
 @section('content')
     <div class="dparts" id="diary_list">
-        <h2 class="partsHeading">{{ $title }}</h2>
+        <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="parts">
             @if ($diaries->isEmpty())
                 <p>{{ __('No %diary% entries to show.') }}</p>

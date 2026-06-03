@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="block_add">
-        <h2 class="partsHeading">{{ __('Block') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Block') }}</h3></div>
         <div class="parts">
             <p>{{ __('Block :name?', ['name' => $target->name]) }}</p>
             <form method="POST" action="{{ route('block.add') }}">

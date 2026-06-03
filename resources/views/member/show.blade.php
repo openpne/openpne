@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="member_profile">
-        <h2 class="partsHeading">{{ $owner->name }}</h2>
+        <div class="partsHeading"><h3>{{ $owner->name }}</h3></div>
         <div class="parts">
             @php($avatar = $owner->primaryImage?->file)
             @if ($avatar)
