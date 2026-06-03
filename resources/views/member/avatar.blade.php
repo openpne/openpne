@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="member_avatar">
-        <h2 class="partsHeading">{{ __('Profile image') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Profile image') }}</h3></div>
         <div class="parts">
             @if ($avatar)
                 <p><img src="{{ $avatar->thumbnailUrl(120, 120, square: true) }}" alt="{{ __('Profile image') }}"></p>

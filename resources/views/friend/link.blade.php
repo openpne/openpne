@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="dparts" id="friend_link">
-        <h2 class="partsHeading">{{ __('Send a %friend% request') }}</h2>
+        <div class="partsHeading"><h3>{{ __('Send a %friend% request') }}</h3></div>
         <div class="parts">
             <p>{{ __('Send a %friend% request to :name?', ['name' => $target->name]) }}</p>
 
