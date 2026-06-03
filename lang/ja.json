@@ -1,4 +1,5 @@
 {
+    "%Diaries% of %My_friends%": "%My_friends%の%Diaries%",
     "%Diary% deleted.": "%Diary%を削除しました。",
     "%Diary% posted.": "%Diary%を投稿しました。",
     "%Diary% updated.": "%Diary%を更新しました。",
@@ -269,6 +270,7 @@
     "Public to Web": "全体に公開",
     "Railgun Error": "レールガンエラー",
     "Range Not Satisfiable": "範囲外のレンジ",
+    "Recently Posted %Diaries%": "最近投稿された%Diaries%",
     "Record": "記録",
     "Regards,": "よろしくお願いします,",
     "Regexp": "正規表現",

@@ -13,6 +13,8 @@ class DiaryRouteParity extends RouteParity
     {
         return [
             new RouteMap('diary_show', '/diary/:id', 'diary.show', 'GET', op3Action: 'show'),
+            new RouteMap('diary_list', '/diary/list', 'diary.list', 'GET', op3Action: 'list'),
+            new RouteMap('diary_list_friend', '/diary/listFriend', 'diary.list_friend', 'GET', op3Action: 'listFriend'),
             new RouteMap('diary_list_mine', '/diary/listMember', 'diary.list_member', 'GET', op3Action: 'listMember'),
             new RouteMap('diary_list_member', '/diary/listMember/:id', 'diary.list_member', 'GET',
                 note: 'Served by the same diary.list_member route (optional {member?}) as diary_list_mine.',
@@ -37,8 +39,6 @@ class DiaryRouteParity extends RouteParity
         return [
             'diary_index' => 'Diary top (/diary) is not ported.',
             'diary_search' => 'Diary search is not ported.',
-            'diary_list' => 'All-member diary feed is not ported.',
-            'diary_list_friend' => 'Friend diary feed is not ported.',
             'diary_list_member_year_month' => 'Calendar archive (year/month) is not ported.',
             'diary_list_member_year_month_day' => 'Calendar archive (year/month/day) is not ported.',
             // Comment create/delete are ported (above) on both surfaces. Still deferred within

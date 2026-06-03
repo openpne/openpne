@@ -3,6 +3,7 @@
 namespace App\Features\Block;
 
 use App\Models\Member;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -35,5 +36,23 @@ class BlockLookup
             ->where('blocker_id', $owner->getKey())
             ->where('blocked_id', $viewer->getKey())
             ->exists();
+    }
+
+    /**
+     * Set form of ownerBlocksViewer() for multi-owner feeds: drop rows whose owner blocks
+     * the viewer, so a feed never lists a diary whose show page would 404 for this viewer.
+     *
+     * @param  string  $ownerColumn  qualified owner-id column on the query's table (e.g. `diaries.member_id`)
+     */
+    public static function excludeOwnersBlockingViewer(Builder $query, Member $viewer, string $ownerColumn): void
+    {
+        $viewerId = $viewer->getKey();
+
+        $query->whereNotExists(function (Builder $sub) use ($viewerId, $ownerColumn) {
+            $sub->select(DB::raw(1))
+                ->from('member_blocks')
+                ->whereColumn('member_blocks.blocker_id', $ownerColumn)
+                ->where('member_blocks.blocked_id', $viewerId);
+        });
     }
 }
