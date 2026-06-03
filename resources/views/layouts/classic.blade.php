@@ -41,8 +41,20 @@
 
         <div id="Contents">
             <div id="ContentsContainer">
-                {{-- localNav is populated in a later slice; the empty hook keeps the CSS anchor. --}}
-                <div id="localNav"></div>
+                {{-- localNav is OpenPNE 3's secondary nav bar (admin Navigation data, secure
+                     pages only). The admin-configurable data and the friend/community contexts
+                     are deferred; this renders the shipped `default` set. --}}
+                <div id="localNav">
+                    @auth
+                        <ul class="default">
+                            <li id="default_home"><a href="{{ url('/') }}">{{ __('Home') }}</a></li>
+                            <li id="default_friend"><a href="{{ route('friend.list') }}">{{ __('My Friends') }}</a></li>
+                            <li id="default_diary"><a href="{{ route('diary.list_member') }}">{{ __('%Diary%') }}</a></li>
+                            <li id="default_profile"><a href="{{ route('member.profile.mine_compat') }}">{{ __('My profile') }}</a></li>
+                            <li id="default_editProfile"><a href="{{ route('member.profile.edit') }}">{{ __('Edit Profile') }}</a></li>
+                        </ul>
+                    @endauth
+                </div>
 
                 <div id="Layout{{ $layout ?? 'C' }}" class="Layout">
                     {{-- OpenPNE 3 alertBox markup so the ported skin styles flash messages. --}}
@@ -65,7 +77,14 @@
         </div><!-- Contents -->
 
         <div id="Footer">
-            <div id="FooterContainer"></div>
+            <div id="FooterContainer">
+                {{-- Trusted admin/operator HTML (OpenPNE 3 SnsConfig footer). $classicFooterHtml
+                     is the seam a future admin resolver injects; config is the default. --}}
+                @php($footerHtml = $classicFooterHtml ?? config('openpne.classic.footer_html'))
+                @if ($footerHtml)
+                    <p>{!! $footerHtml !!}</p>
+                @endif
+            </div>
         </div><!-- Footer -->
     </div><!-- Container -->
 </div><!-- Body -->

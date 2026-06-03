@@ -85,11 +85,21 @@ Classic forms use the OpenPNE 3 `.form` two-column `<table>` (`<th>` label / `<t
 `.input` / `.publicFlag` float for a profile field's per-value visibility. Single-action
 confirmations and the avatar upload stay free-form (no field table).
 
+`#localNav` is OpenPNE 3's secondary nav bar (`#localNav ul.{type} > li`). OpenPNE 3 drives it
+from an admin-editable `Navigation` table and a per-module/per-context type (`default` / `friend` /
+`community`), shown on secure pages only. Until that data source and the friend/community contexts
+exist, the shell renders the shipped `default` set on authenticated pages and leaves the `#localNav`
+hook empty for guests. The `#Footer` bar renders `openpne.classic.footer_html` (a trusted-HTML seam
+for the future admin SnsConfig footer; `$classicFooterHtml` overrides it per request).
+
 Carried gaps in this slice: the shell renders single-column `LayoutC`, while OpenPNE 3
 `member/home` / `member/profile` are `layoutA` — deferred until the `#Left` sidemenu/gadget
 slots land (Level 2). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching, admin custom
-CSS, and gadget layout are not ported.
+CSS, and gadget layout are not ported. `#localNav` carries only the shipped `default` set, not the
+admin `Navigation` data or the `friend` / `community` type contexts, and its `li` ids are not the
+OpenPNE 3 `{type}_{op_url_to_id(uri)}` strings (Level 2). The footer omits the privacy-policy /
+terms links until those routes exist.
 
 ## JavaScript compatibility
 
