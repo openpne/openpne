@@ -2,6 +2,7 @@
 
 namespace App\Upgrade;
 
+use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
@@ -25,6 +26,8 @@ final class StepRegistry
             FriendRequestUpgrade::class,
             MemberBlockUpgrade::class,
             DiaryUpgrade::class,
+            // diary_comments.diary_id references diaries.id, so comments run after diaries.
+            DiaryCommentUpgrade::class,
             // Profile definitions before member values (FK order: a member_profile row
             // references profiles and profile_options).
             ProfileUpgrade::class,
