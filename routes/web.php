@@ -98,6 +98,8 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('diary')->controller(DiaryController::class)->group(function () {
         // Literal-prefix routes must precede the {diary} wildcard.
+        Route::get('/list', 'list')->name('diary.list');
+        Route::get('/listFriend', 'listFriend')->name('diary.list_friend');
         Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->name('diary.list_member');
         Route::get('/new', 'new')->name('diary.new');
         Route::post('/create', 'store')->name('diary.store');
@@ -117,6 +119,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('m/diary')->controller(DiaryController::class)->group(function () {
+        Route::get('/list', 'list')->defaults('surface', 'modern')->name('diary.modern.list');
+        Route::get('/listFriend', 'listFriend')->defaults('surface', 'modern')->name('diary.modern.list_friend');
         Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->defaults('surface', 'modern')->name('diary.modern.list_member');
         Route::get('/new', 'new')->defaults('surface', 'modern')->name('diary.modern.new');
         Route::post('/create', 'store')->defaults('surface', 'modern')->name('diary.modern.store');
