@@ -83,7 +83,9 @@ abstract class RouteParity
     {
         foreach ($this->maps() as $map) {
             if ($map->laravelRoute === $laravelRoute && $map->op3Action !== null) {
-                return "page_{$this->module}_{$map->op3Action}";
+                $module = $map->op3Module ?? $this->module;
+
+                return "page_{$module}_{$map->op3Action}";
             }
         }
 
