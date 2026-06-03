@@ -8,8 +8,9 @@ use Illuminate\Support\Collection;
 
 /**
  * The profile fields shown on the registration form (is_disp_regist, ordered by sort order), each
- * with an empty initial value and the field default visibility. Registration collects values
- * only; per-value visibility follows the field default and is changed later via profile edit.
+ * seeded with an empty value and the field default visibility. The default visibility is the
+ * initial selection; a member-editable field (is_edit_public_flag) lets the registrant change it,
+ * validated and persisted by CreateNewMember like the edit form.
  */
 class RegistrationFields
 {
