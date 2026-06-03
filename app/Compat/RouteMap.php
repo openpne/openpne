@@ -18,6 +18,11 @@ namespace App\Compat;
  * it as `page_{module}_{action}` — the same hook OpenPNE 3 emitted — keyed on the OpenPNE 3
  * (module, action), not the Laravel route name. GET routes that render HTML carry it; POST
  * form submits render no `<body>`, so they leave it null.
+ *
+ * `op3Module` overrides the body-id module for a route whose OpenPNE 3 action lives in a
+ * different module than the parity's inventory module — e.g. the diaryComment routes are
+ * inventoried under the `diary` plugin but render `page_diaryComment_*`. Null = the parity's
+ * own module.
  */
 final class RouteMap
 {
@@ -28,5 +33,6 @@ final class RouteMap
         public readonly string $method = 'GET',
         public readonly ?string $note = null,
         public readonly ?string $op3Action = null,
+        public readonly ?string $op3Module = null,
     ) {}
 }

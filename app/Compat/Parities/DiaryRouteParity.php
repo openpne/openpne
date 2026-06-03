@@ -23,6 +23,12 @@ class DiaryRouteParity extends RouteParity
             new RouteMap('diary_update', '/diary/update/:id', 'diary.update', 'POST'),
             new RouteMap('diary_delete_confirm', '/diary/deleteConfirm/:id', 'diary.delete.show', 'GET', op3Action: 'deleteConfirm'),
             new RouteMap('diary_delete', '/diary/delete/:id', 'diary.delete', 'POST'),
+
+            // diaryComment module: rendered under page_diaryComment_* (op3Module override).
+            new RouteMap('diary_comment_create', '/diary/:id/comment/create', 'diary.comment.store', 'POST'),
+            new RouteMap('diary_comment_delete_confirm', '/diary/comment/deleteConfirm/:id', 'diary.comment.delete.show', 'GET',
+                op3Action: 'deleteConfirm', op3Module: 'diaryComment'),
+            new RouteMap('diary_comment_delete', '/diary/comment/delete/:id', 'diary.comment.delete', 'POST'),
         ];
     }
 
@@ -35,10 +41,10 @@ class DiaryRouteParity extends RouteParity
             'diary_list_friend' => 'Friend diary feed is not ported.',
             'diary_list_member_year_month' => 'Calendar archive (year/month) is not ported.',
             'diary_list_member_year_month_day' => 'Calendar archive (year/month/day) is not ported.',
-            'diary_comment_history' => 'Comment history is not ported.',
-            'diary_comment_create' => 'Diary comments are not ported.',
-            'diary_comment_delete_confirm' => 'Diary comments are not ported.',
-            'diary_comment_delete' => 'Diary comments are not ported.',
+            // Comment create/delete are ported (above). Still deferred within comments: image
+            // attachments, notifications, unread tracking, thread pagination, the Modern surface,
+            // and this history feed.
+            'diary_comment_history' => 'Comment history feed is not ported.',
         ];
     }
 }

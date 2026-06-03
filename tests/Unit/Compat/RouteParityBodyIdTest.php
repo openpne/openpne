@@ -22,6 +22,9 @@ class RouteParityBodyIdTest extends TestCase
         // The two values OpenPNE 4 previously hand-wrote wrong.
         $this->assertSame('page_diary_listMember', $parity->bodyId('diary.list_member'));
         $this->assertSame('page_diary_deleteConfirm', $parity->bodyId('diary.delete.show'));
+        // The comment confirm page renders in the diaryComment module (op3Module override),
+        // not diary, so its body id must say diaryComment.
+        $this->assertSame('page_diaryComment_deleteConfirm', $parity->bodyId('diary.comment.delete.show'));
     }
 
     public function test_post_routes_have_no_body_id(): void
@@ -32,6 +35,8 @@ class RouteParityBodyIdTest extends TestCase
         $this->assertNull($parity->bodyId('diary.store'));
         $this->assertNull($parity->bodyId('diary.update'));
         $this->assertNull($parity->bodyId('diary.delete'));
+        $this->assertNull($parity->bodyId('diary.comment.store'));
+        $this->assertNull($parity->bodyId('diary.comment.delete'));
     }
 
     public function test_unknown_route_has_no_body_id(): void
