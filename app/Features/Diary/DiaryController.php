@@ -8,6 +8,8 @@ use App\Features\Diary\Actions\DeleteDiary;
 use App\Features\Diary\Actions\UpdateDiary;
 use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Queries\ListDiaries;
+use App\Features\Diary\Queries\ListFriendDiaries;
+use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Http\Controllers\Controller;
@@ -38,6 +40,38 @@ class DiaryController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/list', [
                 'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
                 'isOwner' => $viewer->is($owner),
+                'diaries' => DiarySerializer::paginator($diaries),
+            ]),
+        ]);
+    }
+
+    public function list(Request $request, ListRecentDiaries $query): View|InertiaResponse
+    {
+        $diaries = $query($this->viewer());
+
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('diary.feed', [
+                'scope' => 'all',
+                'diaries' => $diaries,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('diary/feed', [
+                'scope' => 'all',
+                'diaries' => DiarySerializer::paginator($diaries),
+            ]),
+        ]);
+    }
+
+    public function listFriend(Request $request, ListFriendDiaries $query): View|InertiaResponse
+    {
+        $diaries = $query($this->viewer());
+
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('diary.feed', [
+                'scope' => 'friends',
+                'diaries' => $diaries,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('diary/feed', [
+                'scope' => 'friends',
                 'diaries' => DiarySerializer::paginator($diaries),
             ]),
         ]);
