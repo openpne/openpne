@@ -17,6 +17,15 @@ export interface DiaryDetail extends DiarySummary {
     body: string;
 }
 
+export interface DiaryComment {
+    id: number;
+    number: number;
+    body: string;
+    author: DiaryAuthor | null; // null once the author has withdrawn
+    createdAt: string;
+    deletable: boolean; // viewer-specific, computed server-side
+}
+
 export interface PaginatedDiaries {
     data: DiarySummary[];
     meta: {

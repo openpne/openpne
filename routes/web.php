@@ -127,6 +127,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/{diary}', 'show')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.show');
     });
 
+    Route::controller(DiaryCommentController::class)->group(function () {
+        Route::post('/m/diary/{diary}/comment/create', 'store')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.comment.store');
+        Route::get('/m/diary/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete.show');
+        Route::post('/m/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete');
+    });
+
     // OpenPNE 3 compatibility: access block lived at /member/config?category=accessBlock.
     // The member config module is not ported yet, so resolve just that category to the
     // canonical Block list. 302 (not 301) because a future member config module will

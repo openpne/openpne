@@ -3,7 +3,10 @@
 namespace App\Features\Diary\Serializers;
 
 use App\Models\Diary;
+use App\Models\DiaryComment;
+use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 /**
  * Modern surface shapes for Diary feature. visibility is always a string slug
@@ -44,6 +47,36 @@ class DiarySerializer
             ],
             'createdAt' => $diary->created_at->toIso8601String(),
         ];
+    }
+
+    /**
+     * `author` is null for a withdrawn member; `deletable` is the viewer-specific delete
+     * permission, computed server-side so the client never re-derives authorization.
+     *
+     * @return array{id: int, number: int, body: string, author: array{id: int, name: string}|null, createdAt: string, deletable: bool}
+     */
+    public static function comment(DiaryComment $comment, Member $viewer): array
+    {
+        return [
+            'id' => $comment->getKey(),
+            'number' => $comment->number,
+            'body' => $comment->body,
+            'author' => $comment->member ? [
+                'id' => $comment->member->getKey(),
+                'name' => $comment->member->name,
+            ] : null,
+            'createdAt' => $comment->created_at->toIso8601String(),
+            'deletable' => $comment->isDeletableBy($viewer),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, DiaryComment>  $comments
+     * @return list<array>
+     */
+    public static function comments(Collection $comments, Member $viewer): array
+    {
+        return $comments->map(fn (DiaryComment $comment): array => self::comment($comment, $viewer))->all();
     }
 
     /**

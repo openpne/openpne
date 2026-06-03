@@ -45,19 +45,22 @@ class DiaryController extends Controller
 
     public function show(Request $request, int $diary, ShowDiary $query): View|InertiaResponse
     {
-        $found = $query($this->viewer(), $diary);
+        $viewer = $this->viewer();
+        $found = $query($viewer, $diary);
         abort_if($found === null, 404);
 
-        return $this->respondWith($request, [
-            SurfaceResolver::CLASSIC => function () use ($found) {
-                $comments = $found->comments()->with('member')->orderBy('number')->get();
-                // Share the already-loaded diary so isDeletableBy() needs no per-comment query.
-                $comments->each->setRelation('diary', $found);
+        $comments = $found->comments()->with('member')->orderBy('number')->get();
+        // Share the already-loaded diary so isDeletableBy() needs no per-comment query.
+        $comments->each->setRelation('diary', $found);
 
-                return view('diary.show', ['diary' => $found, 'comments' => $comments]);
-            },
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('diary.show', [
+                'diary' => $found,
+                'comments' => $comments,
+            ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/show', [
                 'diary' => DiarySerializer::detail($found),
+                'comments' => DiarySerializer::comments($comments, $viewer),
             ]),
         ]);
     }
