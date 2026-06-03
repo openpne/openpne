@@ -9,9 +9,13 @@
             <p>{{ __('Unblock :name?', ['name' => $target->name]) }}</p>
             <form method="POST" action="{{ route('block.remove.submit', $target) }}">
                 @csrf
-                <button type="submit">{{ __('Unblock') }}</button>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><button type="submit" class="input_submit">{{ __('Unblock') }}</button></li>
+                        <li><a href="{{ route('block.list') }}">{{ __('Cancel') }}</a></li>
+                    </ul>
+                </div>
             </form>
-            <a href="{{ route('block.list') }}">{{ __('Cancel') }}</a>
         </div>
     </div>
 @endsection

@@ -9,8 +9,12 @@
             <p>{{ __('Delete ":title"?', ['title' => $diary->title]) }}</p>
             <form method="POST" action="{{ route('diary.delete', $diary) }}">
                 @csrf
-                <button type="submit">{{ __('Delete') }}</button>
-                <a href="{{ route('diary.show', $diary) }}">{{ __('Cancel') }}</a>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><button type="submit" class="input_submit">{{ __('Delete') }}</button></li>
+                        <li><a href="{{ route('diary.show', $diary) }}">{{ __('Cancel') }}</a></li>
+                    </ul>
+                </div>
             </form>
         </div>
     </div>

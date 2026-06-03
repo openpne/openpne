@@ -10,7 +10,7 @@
                 @csrf
                 <div>
                     <label for="diary_title">{{ __('Title') }}</label>
-                    <input type="text" id="diary_title" name="title" value="{{ old('title', $diary->title) }}" required>
+                    <input type="text" class="input_text" id="diary_title" name="title" value="{{ old('title', $diary->title) }}" required>
                     @error('title')<p class="error">{{ $message }}</p>@enderror
                 </div>
                 <div>
@@ -27,7 +27,11 @@
                     </select>
                     @error('visibility')<p class="error">{{ $message }}</p>@enderror
                 </div>
-                <button type="submit">{{ __('Save') }}</button>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><button type="submit" class="input_submit">{{ __('Save') }}</button></li>
+                    </ul>
+                </div>
             </form>
         </div>
     </div>

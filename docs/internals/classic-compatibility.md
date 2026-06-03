@@ -82,9 +82,10 @@ resolver swaps. `@vite` is not used for Classic.
 
 Carried gaps in this slice: the shell renders single-column `LayoutC`, while OpenPNE 3
 `member/home` / `member/profile` are `layoutA` — deferred until the `#Left` sidemenu/gadget
-slots land (Level 2). The content views' form controls are still bare `<input>` / `<button>`,
-so the skin's `.form` / `.input_text` / `.input_submit` / `.button` styling does not apply yet
-(Level 2, follow-up). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
+slots land (Level 2). Classic form controls carry the OpenPNE 3 `input_text` / `input_file` /
+`input_submit` classes and the `operation` button area, but fields use a stacked label/field
+layout rather than the OpenPNE 3 `.form` two-column table, so `.form .publicFlag` floating is
+inactive (Level 2, follow-up). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching, admin custom
 CSS, and gadget layout are not ported.
 

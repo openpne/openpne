@@ -11,8 +11,12 @@
             <form method="POST" action="{{ route('friend.link') }}">
                 @csrf
                 <input type="hidden" name="target_id" value="{{ $target->getKey() }}">
-                <button type="submit">{{ __('Send request') }}</button>
-                <a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><button type="submit" class="input_submit">{{ __('Send request') }}</button></li>
+                        <li><a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a></li>
+                    </ul>
+                </div>
             </form>
         </div>
     </div>

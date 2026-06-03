@@ -10,8 +10,12 @@
 
             <form method="POST" action="{{ route('friend.unlink.submit', $target) }}">
                 @csrf
-                <button type="submit">{{ __('Remove %friend%') }}</button>
-                <a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><button type="submit" class="input_submit">{{ __('Remove %friend%') }}</button></li>
+                        <li><a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a></li>
+                    </ul>
+                </div>
             </form>
         </div>
     </div>

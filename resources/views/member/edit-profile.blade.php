@@ -11,7 +11,7 @@
 
                 <div>
                     <label for="member_name">{{ __('%nickname%') }}</label>
-                    <input type="text" id="member_name" name="name" value="{{ old('name', $member->name) }}" maxlength="255" required>
+                    <input type="text" class="input_text" id="member_name" name="name" value="{{ old('name', $member->name) }}" maxlength="255" required>
                     @error('name')<p class="error">{{ $message }}</p>@enderror
                 </div>
 
@@ -54,7 +54,7 @@
                                 @break
 
                             @case('date')
-                                <input type="date" id="{{ $fieldId }}" name="profile[{{ $id }}]" value="{{ $current }}">
+                                <input type="date" class="input_text" id="{{ $fieldId }}" name="profile[{{ $id }}]" value="{{ $current }}">
                                 @break
 
                             @case('country_select')
@@ -87,7 +87,7 @@
                                 @break
 
                             @default
-                                <input type="text" id="{{ $fieldId }}" name="profile[{{ $id }}]" value="{{ $current }}">
+                                <input type="text" class="input_text" id="{{ $fieldId }}" name="profile[{{ $id }}]" value="{{ $current }}">
                         @endswitch
 
                         @error($valueKey)<p class="error">{{ $message }}</p>@enderror
@@ -109,7 +109,11 @@
                     </div>
                 @endforeach
 
-                <button type="submit">{{ __('Update') }}</button>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><button type="submit" class="input_submit">{{ __('Update') }}</button></li>
+                    </ul>
+                </div>
             </form>
         </div>
     </div>

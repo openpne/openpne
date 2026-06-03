@@ -10,9 +10,13 @@
             <form method="POST" action="{{ route('block.add') }}">
                 @csrf
                 <input type="hidden" name="target_id" value="{{ $target->getKey() }}">
-                <button type="submit">{{ __('Block') }}</button>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><button type="submit" class="input_submit">{{ __('Block') }}</button></li>
+                        <li><a href="{{ route('block.list') }}">{{ __('Cancel') }}</a></li>
+                    </ul>
+                </div>
             </form>
-            <a href="{{ route('block.list') }}">{{ __('Cancel') }}</a>
         </div>
     </div>
 @endsection
