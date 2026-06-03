@@ -45,9 +45,11 @@ Route::get('/member/{member}', [ProfileController::class, 'show'])
     ->whereNumber('member')->name('member.profile.show');
 Route::get('/m/member/{member}', [ProfileController::class, 'show'])
     ->whereNumber('member')->defaults('surface', 'modern')->name('member.profile.modern.show');
-// OpenPNE 3 member_profile_raw alias (/member/profile/id/:id) → canonical /member/{id}.
-Route::get('/member/profile/id/{member}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
-    ->whereNumber('member')->name('member.profile.raw_compat');
+// OpenPNE 3 member_profile_raw alias (/member/profile/id/:id/*) → canonical /member/{id}.
+// OpenPNE 3's trailing splat matched extra path segments; capture and ignore them so the
+// whole legacy URL space redirects instead of 404ing past the id.
+Route::get('/member/profile/id/{member}/{tail?}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
+    ->whereNumber('member')->where('tail', '.*')->name('member.profile.raw_compat');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');

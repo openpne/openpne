@@ -15,8 +15,9 @@ use App\Compat\RouteParity;
  * named-route coverage is non-exhaustive — acknowledged below.
  *
  * op3Action carries the OpenPNE 3 page hook so the Classic body id stays faithful
- * (page_member_{action}); the moved profile / avatar URLs are preserved by the *_compat
- * redirects declared in routes/web.php, mapped here so they stay accounted in the inventory.
+ * (page_member_{action}). A moved URL is kept reachable by a routes/web.php redirect: mapped
+ * to that redirect route when its target needs the request (own-profile / raw alias), or
+ * recorded as a compatRedirect when the move is static (the avatar editor).
  */
 class MemberRouteParity extends RouteParity
 {
@@ -32,11 +33,11 @@ class MemberRouteParity extends RouteParity
             // Own-profile aliases preserved by redirect to the canonical /member/{id}.
             new RouteMap('member_profile_mine', '/member/profile', 'member.profile.mine_compat', 'GET', op3Action: 'profile'),
             new RouteMap('member_profile_raw', '/member/profile/id/:id/*', 'member.profile.raw_compat', 'GET', op3Action: 'profile'),
-            // Avatar editor — the canonical moved to /member/avatar; the OpenPNE 3 URL is
-            // preserved by member.image.config_compat, and the upload POSTs to member.avatar.update.
-            new RouteMap('member_config_image', '/member/image/config', 'member.image.config_compat', 'GET', op3Action: 'configImage'),
-            new RouteMap(null, null, 'member.avatar.edit', 'GET', op3Action: 'configImage'),
-            new RouteMap(null, null, 'member.avatar.update', 'POST'),
+            // Avatar editor — OpenPNE 3's member_config_image (one ANY route) served the form on
+            // GET and the upload on POST; OpenPNE 4 splits them at the new /member/avatar. The
+            // legacy /member/image/config URL is preserved by a static redirect (compatRedirects).
+            new RouteMap('member_config_image', '/member/image/config', 'member.avatar.edit', 'GET', op3Action: 'configImage'),
+            new RouteMap('member_config_image', '/member/image/config', 'member.avatar.update', 'POST'),
             // Member search.
             new RouteMap('member_search', '/member/search', 'member.search', 'GET', op3Action: 'search'),
             // Profile editor — one OpenPNE 3 route (ANY) splits into a GET form + POST submit.
@@ -58,6 +59,12 @@ class MemberRouteParity extends RouteParity
             'member_config_jsonapi' => 'The legacy config JSON API (/member/config/jsonapi) is not ported.',
             'global_changeLanguage' => 'Locale switching is POST /locale (locale.switch), not the OpenPNE 3 GET /language URL.',
         ];
+    }
+
+    public function compatRedirects(): array
+    {
+        // The avatar editor's OpenPNE 3 URL; redirected (not served) to the new canonical editor.
+        return ['/member/image/config' => 'member.avatar.edit'];
     }
 
     public function acknowledgesGlobalFallback(): bool

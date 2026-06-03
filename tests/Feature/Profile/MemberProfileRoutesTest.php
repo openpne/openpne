@@ -104,6 +104,8 @@ class MemberProfileRoutesTest extends TestCase
         // /member/profile = the viewer's own profile; /member/profile/id/{id} = another member's.
         $this->actingAs($viewer)->get('/member/profile')->assertRedirect("/member/{$viewer->getKey()}");
         $this->actingAs($viewer)->get("/member/profile/id/{$other->getKey()}")->assertRedirect("/member/{$other->getKey()}");
+        // OpenPNE 3's raw alias had a trailing splat; extra path segments still redirect, not 404.
+        $this->actingAs($viewer)->get("/member/profile/id/{$other->getKey()}/extra")->assertRedirect("/member/{$other->getKey()}");
     }
 
     private function fieldFor(Member $owner, Visibility $visibility, string $value): void
