@@ -1,10 +1,28 @@
 @extends('layouts.classic')
 
-@php($title = $scope === 'friends' ? __('%Diaries% of %My_friends%') : __('Recently Posted %Diaries%'))
+@php
+    $searchable = $variant !== 'friends';
+    $title = match (true) {
+        $variant === 'friends' => __('%Diaries% of %My_friends%'),
+        $variant === 'search' && $hasKeyword => __('Search Results'),
+        default => __('Recently Posted %Diaries%'),
+    };
+@endphp
 
 @section('title', $title)
 
 @section('content')
+    @if ($searchable)
+        <div id="diarySearchFormLine" class="parts searchFormLine">
+            <form method="GET" action="{{ route('diary.search') }}">
+                <p class="form">
+                    <input id="keyword" type="text" class="input_text" name="keyword" size="30" value="{{ $keyword }}">
+                    <input type="submit" class="input_submit" value="{{ __('Search') }}">
+                </p>
+            </form>
+        </div>
+    @endif
+
     <div class="dparts" id="diary_feed">
         <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="parts">

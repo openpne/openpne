@@ -76,6 +76,19 @@ class DiaryFeedRoutesTest extends TestCase
         $response->assertOk();
         $response->assertSee('id="page_diary_listFriend"', false);
         $response->assertSee('Friend entry');
+        // OpenPNE 3's friend feed (listFriendSuccess.php) carries no search form.
+        $response->assertDontSee('name="keyword"', false);
+    }
+
+    public function test_all_member_feed_carries_the_search_form(): void
+    {
+        $viewer = Member::factory()->create();
+
+        // OpenPNE 3's all-member list (listSuccess.php) renders the search form inline.
+        $this->actingAs($viewer)->get('/diary/list')
+            ->assertOk()
+            ->assertSee('name="keyword"', false)
+            ->assertSee(route('diary.search'), false);
     }
 
     public function test_empty_feed_shows_placeholder(): void
