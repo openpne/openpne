@@ -25,7 +25,8 @@ class DiarySearchRoutesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('id="page_diary_search"', false);
-        $response->assertSee('id="diary_search"', false);
+        // Search shares the feed template (OpenPNE 3's listSuccess.php serves both).
+        $response->assertSee('id="diary_feed"', false);
         $response->assertSee('name="keyword"', false);
         $response->assertSee('Search Results');
     }
@@ -64,5 +65,18 @@ class DiarySearchRoutesTest extends TestCase
         $response->assertSee('id="page_diary_list"', false);
         $response->assertSee('Recently Posted');
         $response->assertSee('name="keyword"', false);
+    }
+
+    public function test_empty_search_pages_through_the_list_url(): void
+    {
+        $viewer = Member::factory()->create();
+        Diary::factory()->count(25)->create(['visibility' => Visibility::Members]);
+
+        $response = $this->actingAs($viewer)->get('/diary/search');
+
+        $response->assertOk();
+        // OpenPNE 3's forward-to-list pager targets @diary_list, not /diary/search.
+        $response->assertSee('/diary/list?page=2');
+        $response->assertDontSee('/diary/search?page=2');
     }
 }

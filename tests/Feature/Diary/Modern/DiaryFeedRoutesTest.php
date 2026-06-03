@@ -19,7 +19,7 @@ class DiaryFeedRoutesTest extends TestCase
         $this->get('/m/diary/listFriend')->assertRedirect('/login');
     }
 
-    public function test_recent_feed_renders_inertia_with_all_scope(): void
+    public function test_recent_feed_renders_inertia_with_recent_variant(): void
     {
         $viewer = Member::factory()->create();
         $author = Member::factory()->create(['name' => 'Author']);
@@ -32,14 +32,14 @@ class DiaryFeedRoutesTest extends TestCase
         $this->actingAs($viewer)->get('/m/diary/list')
             ->assertInertia(fn ($page) => $page
                 ->component('diary/feed')
-                ->where('scope', 'all')
+                ->where('variant', 'recent')
                 ->has('diaries.data', 1)
                 ->where('diaries.data.0.title', 'Hello world')
                 ->where('diaries.data.0.author.name', 'Author')
             );
     }
 
-    public function test_friend_feed_renders_inertia_with_friends_scope(): void
+    public function test_friend_feed_renders_inertia_with_friends_variant(): void
     {
         $viewer = Member::factory()->create();
         $friend = Member::factory()->create();
@@ -56,7 +56,7 @@ class DiaryFeedRoutesTest extends TestCase
         $this->actingAs($viewer)->get('/m/diary/listFriend')
             ->assertInertia(fn ($page) => $page
                 ->component('diary/feed')
-                ->where('scope', 'friends')
+                ->where('variant', 'friends')
                 ->has('diaries.data', 1)
                 ->where('diaries.data.0.title', 'Friend entry')
             );
