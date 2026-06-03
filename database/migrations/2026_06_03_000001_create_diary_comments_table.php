@@ -22,10 +22,11 @@ return new class extends Migration
             $table->text('body');
             $table->timestamps();
 
-            // Unique per diary: the sequence has no duplicates — a DB-level backstop behind the
-            // row-locked max+1 in CreateComment. Doubles as the thread query index
-            // (WHERE diary_id=? ORDER BY number).
-            $table->unique(['diary_id', 'number']);
+            // Non-unique, matching OpenPNE 3's diary_id_number index: its `number` is a racy
+            // max+1, so legacy data can carry duplicate (diary_id, number) and must import
+            // losslessly. New comments are serialized by the diary-row lock in CreateComment.
+            // Drives the thread query: WHERE diary_id=? ORDER BY number.
+            $table->index(['diary_id', 'number']);
         });
     }
 
