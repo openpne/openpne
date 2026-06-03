@@ -111,7 +111,7 @@
 
                 <div class="operation">
                     <ul class="moreInfo button">
-                        <li><button type="submit" class="input_submit">{{ __('Update') }}</button></li>
+                        <li><input type="submit" class="input_submit" value="{{ __('Update') }}"></li>
                     </ul>
                 </div>
             </form>

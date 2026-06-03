@@ -12,7 +12,7 @@
                 @csrf
                 <div class="operation">
                     <ul class="moreInfo button">
-                        <li><button type="submit" class="input_submit">{{ __('Remove %friend%') }}</button></li>
+                        <li><input type="submit" class="input_submit" value="{{ __('Remove %friend%') }}"></li>
                         <li><a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a></li>
                     </ul>
                 </div>

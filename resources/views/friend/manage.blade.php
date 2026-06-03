@@ -16,12 +16,12 @@
                             <form method="POST" action="{{ route('friend.accept') }}" class="inline">
                                 @csrf
                                 <input type="hidden" name="requester_id" value="{{ $requester->getKey() }}">
-                                <button type="submit" class="input_submit">{{ __('Accept') }}</button>
+                                <input type="submit" class="input_submit" value="{{ __('Accept') }}">
                             </form>
                             <form method="POST" action="{{ route('friend.reject') }}" class="inline">
                                 @csrf
                                 <input type="hidden" name="requester_id" value="{{ $requester->getKey() }}">
-                                <button type="submit" class="input_submit">{{ __('Reject') }}</button>
+                                <input type="submit" class="input_submit" value="{{ __('Reject') }}">
                             </form>
                         </li>
                     @endforeach

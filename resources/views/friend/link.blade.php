@@ -13,7 +13,7 @@
                 <input type="hidden" name="target_id" value="{{ $target->getKey() }}">
                 <div class="operation">
                     <ul class="moreInfo button">
-                        <li><button type="submit" class="input_submit">{{ __('Send request') }}</button></li>
+                        <li><input type="submit" class="input_submit" value="{{ __('Send request') }}"></li>
                         <li><a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a></li>
                     </ul>
                 </div>

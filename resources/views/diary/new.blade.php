@@ -29,7 +29,7 @@
                 </div>
                 <div class="operation">
                     <ul class="moreInfo button">
-                        <li><button type="submit" class="input_submit">{{ __('Post') }}</button></li>
+                        <li><input type="submit" class="input_submit" value="{{ __('Post') }}"></li>
                     </ul>
                 </div>
             </form>

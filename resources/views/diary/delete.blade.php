@@ -11,7 +11,7 @@
                 @csrf
                 <div class="operation">
                     <ul class="moreInfo button">
-                        <li><button type="submit" class="input_submit">{{ __('Delete') }}</button></li>
+                        <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>
                         <li><a href="{{ route('diary.show', $diary) }}">{{ __('Cancel') }}</a></li>
                     </ul>
                 </div>

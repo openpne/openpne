@@ -81,7 +81,7 @@
 
                 <div class="operation">
                     <ul class="moreInfo button">
-                        <li><button type="submit" class="input_submit">{{ __('Search') }}</button></li>
+                        <li><input type="submit" class="input_submit" value="{{ __('Search') }}"></li>
                     </ul>
                 </div>
             </form>
