@@ -87,21 +87,29 @@ class DiaryController extends Controller
         return $this->feed($request, 'friends', $query($this->viewer()));
     }
 
-    public function search(Request $request, SearchDiaries $query): View|InertiaResponse
+    public function search(Request $request, SearchDiaries $query, ListRecentDiaries $recent): View|InertiaResponse
     {
         $keywordParam = $request->query('keyword', '');
         $keyword = is_string($keywordParam) ? $keywordParam : '';
-        $hasKeyword = SearchDiaries::terms($keyword) !== [];
 
-        // OpenPNE 3 forwarded an empty search to the list action: same recent results, but the
-        // list body id and "Recently Posted" heading. The search form stays either way.
+        // OpenPNE 3 forwards an empty search to the list action — identical results, body id, and
+        // pager URL (@diary_list). Delegate so /diary/search renders exactly what /diary/list does,
+        // including pager links that point back at the list rather than at /diary/search.
+        if (SearchDiaries::terms($keyword) === []) {
+            return $this->feed(
+                $request,
+                'recent',
+                $recent($this->viewer())->withPath(route('diary.list')),
+                bodyIdRoute: 'diary.list',
+            );
+        }
+
         return $this->feed(
             $request,
             'search',
             $query($this->viewer(), $keyword),
             keyword: $keyword,
-            hasKeyword: $hasKeyword,
-            bodyIdRoute: $hasKeyword ? null : 'diary.list',
+            hasKeyword: true,
         );
     }
 
