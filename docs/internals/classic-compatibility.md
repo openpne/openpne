@@ -80,12 +80,14 @@ served statically from [`public/opSkinBasicPlugin/`](../../public/opSkinBasicPlu
 plain `<link>`; the `$classicSkinCss` view variable is the seam a later theme / `customizing.css`
 resolver swaps. `@vite` is not used for Classic.
 
+Classic forms use the OpenPNE 3 `.form` two-column `<table>` (`<th>` label / `<td>` field), the
+`input_text` / `input_file` / `input_submit` classes, the `operation` button area, and the
+`.input` / `.publicFlag` float for a profile field's per-value visibility. Single-action
+confirmations and the avatar upload stay free-form (no field table).
+
 Carried gaps in this slice: the shell renders single-column `LayoutC`, while OpenPNE 3
 `member/home` / `member/profile` are `layoutA` — deferred until the `#Left` sidemenu/gadget
-slots land (Level 2). Classic form controls carry the OpenPNE 3 `input_text` / `input_file` /
-`input_submit` classes and the `operation` button area, but fields use a stacked label/field
-layout rather than the OpenPNE 3 `.form` two-column table, so `.form .publicFlag` floating is
-inactive (Level 2, follow-up). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
+slots land (Level 2). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching, admin custom
 CSS, and gadget layout are not ported.
 
