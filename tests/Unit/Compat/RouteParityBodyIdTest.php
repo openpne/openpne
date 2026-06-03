@@ -5,6 +5,7 @@ namespace Tests\Unit\Compat;
 use App\Compat\Parities\BlockRouteParity;
 use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\Parities\FriendRouteParity;
+use App\Compat\Parities\MemberRouteParity;
 use App\Support\SurfaceResolver;
 use PHPUnit\Framework\TestCase;
 
@@ -67,6 +68,21 @@ class RouteParityBodyIdTest extends TestCase
         // Form submits render no <body>.
         $this->assertNull($parity->bodyId('block.add'));
         $this->assertNull($parity->bodyId('block.remove.submit'));
+    }
+
+    public function test_derives_member_body_ids_keyed_on_the_openpne3_action(): void
+    {
+        // The canonical Laravel routes keep the OpenPNE 3 action, so the body id stays
+        // page_member_{action} even where the URL moved (avatar editor, edit profile).
+        $parity = new MemberRouteParity;
+
+        $this->assertSame('page_member_profile', $parity->bodyId('member.profile.show'));
+        $this->assertSame('page_member_configImage', $parity->bodyId('member.avatar.edit'));
+        $this->assertSame('page_member_search', $parity->bodyId('member.search'));
+        $this->assertSame('page_member_editProfile', $parity->bodyId('member.profile.edit'));
+        // Form submits render no <body>.
+        $this->assertNull($parity->bodyId('member.avatar.update'));
+        $this->assertNull($parity->bodyId('member.profile.update'));
     }
 
     public function test_modern_route_name_resolves_via_canonical_form(): void
