@@ -83,6 +83,30 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('LayoutB + calendar sidemenu', L::Two, S::Missing, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'layout-cross-cutting: Classic layout has no op_sidemenu slot yet'),
                 new ScreenElement('diary images', L::Three, S::Deferred, '$diary->getDiaryImagesJoinFile()', 'image delivery not built (FileStorage)'),
             ],
+            // newSuccess.php + _form.php (PluginDiaryForm) → diary/new.blade.php
+            'new' => [
+                new ScreenElement('title input', L::Two, S::Ported, 'sfWidgetFormInput title'),
+                new ScreenElement('visibility choice (members/friends/private)', L::One, S::Ported, 'public_flag sfWidgetFormChoice'),
+                // OpenPNE 3's public_flag radio includes web-public by default; the form omits it,
+                // so a member cannot post a web-public diary even though show renders one correctly.
+                new ScreenElement('web-public (Open) visibility option', L::Two, S::Missing, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'OpenPNE 3 offers it by default (SNS config op_diary_plugin_use_open_diary); the form omits Visibility::Open'),
+                new ScreenElement('remembered default visibility', L::Three, S::Missing, 'MemberConfigDiaryForm::PUBLIC_FLAG default', 'OpenPNE 4 hardcodes the members default'),
+                new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea; OpenPNE 3 rich-text widget not ported'),
+                new ScreenElement('image upload (x3)', L::Three, S::Deferred, 'app_diary_is_upload_images + DiaryImageForm', 'image delivery not built (FileStorage)'),
+                new ScreenElement('post button', L::Two, S::Ported, 'op_include_form diaryForm button'),
+                new ScreenElement('LayoutB + sidemenu', L::Two, S::Missing, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'layout-cross-cutting: Classic layout has no op_sidemenu slot yet'),
+            ],
+            // editSuccess.php + _form.php (shared with new) → diary/edit.blade.php
+            'edit' => [
+                new ScreenElement('title input', L::Two, S::Ported, 'sfWidgetFormInput title'),
+                new ScreenElement('visibility choice (members/friends/private)', L::One, S::Ported, 'public_flag sfWidgetFormChoice'),
+                new ScreenElement('web-public (Open) visibility option', L::Two, S::Missing, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'shared diary form; the form omits Visibility::Open'),
+                new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea; OpenPNE 3 rich-text widget not ported'),
+                new ScreenElement('existing image edit / delete', L::Three, S::Deferred, '_formEditImage / DiaryImageForm', 'image delivery not built (FileStorage)'),
+                new ScreenElement('save button', L::Two, S::Ported, 'op_include_form diaryForm button'),
+                new ScreenElement('delete-diary box', L::Three, S::Missing, "formDiaryDelete url_for('diary_delete_confirm')", 'OpenPNE 4 places the delete entry on the show page instead'),
+                new ScreenElement('LayoutB + sidemenu', L::Two, S::Missing, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'layout-cross-cutting: Classic layout has no op_sidemenu slot yet'),
+            ],
             // listSuccess.php (all-member feed; the search variant shares it) → diary/feed.blade.php
             'list' => [
                 new ScreenElement('keyword search form', L::Two, S::Ported, "url_for('@diary_search')"),
