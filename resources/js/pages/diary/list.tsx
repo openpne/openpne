@@ -8,18 +8,22 @@ interface ListProps extends PageProps {
     owner: DiaryAuthor;
     isOwner: boolean;
     diaries: PaginatedDiaries;
+    period?: string; // calendar-archive label (e.g. "2026-03"), absent on the full archive
 }
 
 export default function DiaryList() {
     const t = useT();
-    const { owner, isOwner, diaries, flash } = usePage<ListProps>().props;
+    const { owner, isOwner, diaries, period, flash } = usePage<ListProps>().props;
     const title = isOwner ? t('%Diary%') : t(":name's %diary%", { name: owner.name });
 
     return (
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{title}</h1>
+                <h1 className="text-2xl font-semibold">
+                    {title}
+                    {period && <span className="ml-2 text-base font-normal text-muted-foreground">{period}</span>}
+                </h1>
 
                 {flash.status && <p role="status">{flash.status}</p>}
                 {flash.error && <p role="alert">{flash.error}</p>}

@@ -23,6 +23,8 @@ class RouteParityBodyIdTest extends TestCase
         $this->assertSame('page_diary_edit', $parity->bodyId('diary.edit'));
         // The two values OpenPNE 4 previously hand-wrote wrong.
         $this->assertSame('page_diary_listMember', $parity->bodyId('diary.list_member'));
+        // The calendar archive is the same listMember action, so it keeps that body id.
+        $this->assertSame('page_diary_listMember', $parity->bodyId('diary.list_member.archive'));
         $this->assertSame('page_diary_deleteConfirm', $parity->bodyId('diary.delete.show'));
         // The comment confirm page renders in the diaryComment module (op3Module override),
         // not diary, so its body id must say diaryComment.

@@ -101,6 +101,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/list', 'list')->name('diary.list');
         Route::get('/listFriend', 'listFriend')->name('diary.list_friend');
         Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->name('diary.list_member');
+        // Calendar archive: same listMember view narrowed to a month or day.
+        Route::get('/listMember/{member}/{year}/{month}/{day?}', 'listMemberArchive')
+            ->where(['member' => '[0-9]+', 'year' => '[12][0-9]{3}', 'month' => '0?[1-9]|1[0-2]', 'day' => '0?[1-9]|[12][0-9]|3[01]'])
+            ->name('diary.list_member.archive');
         Route::get('/new', 'new')->name('diary.new');
         Route::post('/create', 'store')->name('diary.store');
         Route::get('/edit/{diary}', 'edit')->whereNumber('diary')->name('diary.edit');
@@ -122,6 +126,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/list', 'list')->defaults('surface', 'modern')->name('diary.modern.list');
         Route::get('/listFriend', 'listFriend')->defaults('surface', 'modern')->name('diary.modern.list_friend');
         Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->defaults('surface', 'modern')->name('diary.modern.list_member');
+        Route::get('/listMember/{member}/{year}/{month}/{day?}', 'listMemberArchive')
+            ->where(['member' => '[0-9]+', 'year' => '[12][0-9]{3}', 'month' => '0?[1-9]|1[0-2]', 'day' => '0?[1-9]|[12][0-9]|3[01]'])
+            ->defaults('surface', 'modern')->name('diary.modern.list_member.archive');
         Route::get('/new', 'new')->defaults('surface', 'modern')->name('diary.modern.new');
         Route::post('/create', 'store')->defaults('surface', 'modern')->name('diary.modern.store');
         Route::get('/edit/{diary}', 'edit')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.edit');

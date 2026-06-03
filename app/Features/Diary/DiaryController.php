@@ -45,6 +45,36 @@ class DiaryController extends Controller
         ]);
     }
 
+    public function listMemberArchive(Request $request, ListDiaries $query, Member $member): View|InertiaResponse
+    {
+        // Read the date off the route by name: a positional scalar would collide with the
+        // `surface` default on the /m/* route. Segments are digit-constrained by the route.
+        $day = $request->route('day');
+        $period = ArchivePeriod::fromYearMonthDay(
+            (int) $request->route('year'),
+            (int) $request->route('month'),
+            $day !== null ? (int) $day : null,
+        );
+        abort_if($period === null, 404);
+
+        $viewer = $this->viewer();
+        $diaries = $query($viewer, $member, period: $period);
+
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('diary.list', [
+                'owner' => $member,
+                'diaries' => $diaries,
+                'period' => $period->label,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('diary/list', [
+                'owner' => ['id' => $member->getKey(), 'name' => $member->name],
+                'isOwner' => $viewer->is($member),
+                'diaries' => DiarySerializer::paginator($diaries),
+                'period' => $period->label,
+            ]),
+        ]);
+    }
+
     public function list(Request $request, ListRecentDiaries $query): View|InertiaResponse
     {
         $diaries = $query($this->viewer());

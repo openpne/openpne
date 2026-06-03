@@ -1,12 +1,13 @@
 @extends('layouts.classic')
 
 @php($title = $owner->is(auth()->user()) ? __('%Diary%') : __(":name's %diary%", ['name' => $owner->name]))
+@php($period = $period ?? null)
 
 @section('title', $title)
 
 @section('content')
     <div class="dparts" id="diary_list">
-        <div class="partsHeading"><h3>{{ $title }}</h3></div>
+        <div class="partsHeading"><h3>{{ $title }}@if ($period) <span class="archivePeriod">{{ $period }}</span>@endif</h3></div>
         <div class="parts">
             @if ($diaries->isEmpty())
                 <p>{{ __('No %diary% entries to show.') }}</p>
