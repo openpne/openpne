@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Diary\Queries;
 
+use App\Features\Diary\ArchivePeriod;
 use App\Features\Diary\Queries\ListDiaries;
 use App\Models\Diary;
 use App\Models\Member;
@@ -130,6 +131,44 @@ class ListDiariesTest extends TestCase
 
         $this->assertSame(20, $result->perPage());
         $this->assertSame(25, $result->total());
+    }
+
+    // Calendar archive (date filter) --------------------------------------------
+
+    public function test_month_period_filters_to_that_month(): void
+    {
+        $owner = Member::factory()->create();
+        $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-03-10 09:00:00');
+        $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-02-28 09:00:00');
+        $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-04-01 00:00:00');
+
+        $result = (new ListDiaries)($owner, $owner, period: ArchivePeriod::fromYearMonthDay(2026, 3));
+
+        // Only the March entry: the half-open range excludes the 2026-04-01 00:00 boundary.
+        $this->assertSame(1, $result->total());
+    }
+
+    public function test_day_period_filters_to_that_day(): void
+    {
+        $owner = Member::factory()->create();
+        $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-03-15 23:59:59');
+        $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-03-16 00:00:00');
+
+        $result = (new ListDiaries)($owner, $owner, period: ArchivePeriod::fromYearMonthDay(2026, 3, 15));
+
+        $this->assertSame(1, $result->total());
+    }
+
+    public function test_visibility_still_applies_within_a_period(): void
+    {
+        [$owner, $other] = Member::factory()->count(2)->create()->all();
+        $this->createDiaryFor($owner, Visibility::Private, createdAt: '2026-03-10 09:00:00');
+        $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-03-11 09:00:00');
+
+        $result = (new ListDiaries)($other, $owner, period: ArchivePeriod::fromYearMonthDay(2026, 3));
+
+        // A non-friend sees only the Members entry, even inside the archived month.
+        $this->assertSame(1, $result->total());
     }
 
     // Helpers -------------------------------------------------------------------

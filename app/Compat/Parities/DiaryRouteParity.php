@@ -19,6 +19,10 @@ class DiaryRouteParity extends RouteParity
             new RouteMap('diary_list_member', '/diary/listMember/:id', 'diary.list_member', 'GET',
                 note: 'Served by the same diary.list_member route (optional {member?}) as diary_list_mine.',
                 op3Action: 'listMember'),
+            // Calendar archive: same listMember action narrowed to a month/day window. The
+            // clickable calendar-navigation widget is a deferred Level 2 enhancement.
+            new RouteMap('diary_list_member_year_month', '/diary/listMember/:id/:year/:month', 'diary.list_member.archive', 'GET', op3Action: 'listMember'),
+            new RouteMap('diary_list_member_year_month_day', '/diary/listMember/:id/:year/:month/:day', 'diary.list_member.archive', 'GET', op3Action: 'listMember'),
             new RouteMap('diary_new', '/diary/new', 'diary.new', 'GET', op3Action: 'new'),
             new RouteMap('diary_create', '/diary/create', 'diary.store', 'POST'),
             new RouteMap('diary_edit', '/diary/edit/:id', 'diary.edit', 'GET', op3Action: 'edit'),
@@ -39,8 +43,6 @@ class DiaryRouteParity extends RouteParity
         return [
             'diary_index' => 'Diary top (/diary) is not ported.',
             'diary_search' => 'Diary search is not ported.',
-            'diary_list_member_year_month' => 'Calendar archive (year/month) is not ported.',
-            'diary_list_member_year_month_day' => 'Calendar archive (year/month/day) is not ported.',
             // Comment create/delete are ported (above) on both surfaces. Still deferred within
             // comments: image attachments, notifications, unread tracking, thread pagination, and
             // this history feed.
