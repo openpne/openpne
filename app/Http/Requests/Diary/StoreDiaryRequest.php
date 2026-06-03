@@ -3,9 +3,9 @@
 namespace App\Http\Requests\Diary;
 
 use App\Features\Diary\Data\DiaryFormData;
+use App\Features\Diary\DiaryVisibility;
 use App\Support\Visibility;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Enum;
 
 class StoreDiaryRequest extends FormRequest
 {
@@ -17,7 +17,7 @@ class StoreDiaryRequest extends FormRequest
             // Capping here would lock out re-editing of long migrated content.
             'title' => ['required', 'string'],
             'body' => ['required', 'string'],
-            'visibility' => ['required', (new Enum(Visibility::class))->except([Visibility::Open])],
+            'visibility' => ['required', DiaryVisibility::rule()],
         ];
     }
 

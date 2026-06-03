@@ -163,7 +163,9 @@ class DiaryController extends Controller
     public function new(Request $request): View|InertiaResponse
     {
         return $this->respondWith($request, [
-            SurfaceResolver::CLASSIC => fn () => view('diary.new'),
+            SurfaceResolver::CLASSIC => fn () => view('diary.new', [
+                'visibilityOptions' => DiaryVisibility::options(),
+            ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/new'),
         ]);
     }
@@ -185,6 +187,7 @@ class DiaryController extends Controller
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('diary.edit', [
                 'diary' => $diary,
+                'visibilityOptions' => DiaryVisibility::options(),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/edit', [
                 'diary' => DiarySerializer::detail($diary),
