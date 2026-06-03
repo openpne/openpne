@@ -32,6 +32,14 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect('/'); // surface-aware root landing
     }
 
+    public function test_authenticated_members_visiting_login_are_redirected_through_the_root(): void
+    {
+        // Not straight to /dashboard (the framework default), so the landing stays surface-aware.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/login')->assertRedirect('/');
+    }
+
     public function test_members_cannot_authenticate_with_invalid_password(): void
     {
         $member = Member::factory()->create();
