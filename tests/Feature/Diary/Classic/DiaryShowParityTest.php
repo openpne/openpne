@@ -56,6 +56,27 @@ class DiaryShowParityTest extends TestCase
             ->assertDontSee('class="attention"', false);
     }
 
+    public function test_renders_the_visibility_label_in_the_public_hook(): void
+    {
+        $owner = Member::factory()->create();
+        $members = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
+
+        $this->actingAs($owner)->get("/diary/{$members->getKey()}")
+            ->assertOk()
+            ->assertSee('class="public"', false) // OpenPNE 3 .public hook
+            ->assertSee('All members');          // Visibility::Members->label()
+    }
+
+    public function test_visibility_label_reflects_a_web_public_diary(): void
+    {
+        $owner = Member::factory()->create();
+        $open = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Open]);
+
+        $this->actingAs($owner)->get("/diary/{$open->getKey()}")
+            ->assertOk()
+            ->assertSee('Public to Web'); // Visibility::Open->label()
+    }
+
     public function test_renders_the_ported_owner_edit_entry(): void
     {
         $owner = Member::factory()->create();
