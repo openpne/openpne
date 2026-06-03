@@ -11,6 +11,7 @@ class RouteParityCommandTest extends TestCase
         $this->artisan('openpne:route-parity')
             ->assertSuccessful()
             ->expectsOutputToContain('`diary.show`')
+            ->expectsOutputToContain('`home` | `/`') // root renders as /, not //
             ->expectsOutputToContain('Not ported:')
             ->expectsOutputToContain('diary_search');
     }

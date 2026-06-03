@@ -29,12 +29,13 @@ class RouteParityCommand extends Command
             $this->line('|---|---|---|---|---|---|---|');
 
             foreach ($parity->maps() as $map) {
-                $laravelUrl = Route::getRoutes()->getByName($map->laravelRoute)?->uri() ?? '(missing)';
+                $uri = Route::getRoutes()->getByName($map->laravelRoute)?->uri();
+                $laravelUrl = $uri === null ? '(missing)' : '/'.ltrim($uri, '/'); // root uri() is '/', avoid '//'
                 $scope = $this->scope($inventory, $module, $map->op3Route);
                 $op3Route = $map->op3Route === null ? '—' : "`{$map->op3Route}`";
                 $op3Url = $map->op3Url === null ? '—' : "`{$map->op3Url}`";
                 $note = $map->note ?? '';
-                $this->line("| {$scope} | {$op3Route} | {$op3Url} | {$map->method} | `{$map->laravelRoute}` | `/{$laravelUrl}` | {$note} |");
+                $this->line("| {$scope} | {$op3Route} | {$op3Url} | {$map->method} | `{$map->laravelRoute}` | `{$laravelUrl}` | {$note} |");
             }
 
             if ($parity->gaps() !== []) {

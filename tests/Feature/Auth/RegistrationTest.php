@@ -30,7 +30,7 @@ class RegistrationTest extends TestCase
         $response = $this->register();
 
         $this->assertAuthenticated();
-        $response->assertRedirect('/dashboard');
+        $response->assertRedirect('/');
 
         $member = Member::where('email', 'test@example.com')->first();
         $this->assertNotNull($member);
@@ -73,7 +73,7 @@ class RegistrationTest extends TestCase
     {
         $profile = Profile::factory()->create(['form_type' => 'input', 'is_edit_public_flag' => false, 'is_disp_regist' => true]);
 
-        $this->register(['profile' => [$profile->getKey() => 'I love hiking']])->assertRedirect('/dashboard');
+        $this->register(['profile' => [$profile->getKey() => 'I love hiking']])->assertRedirect('/');
 
         $row = $this->storedRow($profile);
         $this->assertSame('I love hiking', $row->value);
@@ -93,7 +93,7 @@ class RegistrationTest extends TestCase
         $this->register([
             'profile' => [$profile->getKey() => 'secret hobby'],
             'visibility' => [$profile->getKey() => Visibility::Private->value],
-        ])->assertRedirect('/dashboard');
+        ])->assertRedirect('/');
 
         $this->assertSame(Visibility::Private, $this->storedRow($profile)->visibility);
     }
@@ -122,7 +122,7 @@ class RegistrationTest extends TestCase
         $this->register([
             'profile' => [$profile->getKey() => 'value'],
             'visibility' => [$profile->getKey() => Visibility::Private->value],
-        ])->assertRedirect('/dashboard');
+        ])->assertRedirect('/');
 
         $this->assertNull($this->storedRow($profile)->visibility); // crafted visibility ignored
     }
@@ -131,7 +131,7 @@ class RegistrationTest extends TestCase
     {
         $sex = Profile::factory()->preset('sex')->create(['form_type' => 'select', 'is_disp_regist' => true]);
 
-        $this->register(['profile' => [$sex->getKey() => 'Female']])->assertRedirect('/dashboard');
+        $this->register(['profile' => [$sex->getKey() => 'Female']])->assertRedirect('/');
 
         $row = $this->storedRow($sex);
         $this->assertSame('Female', $row->value);
@@ -143,7 +143,7 @@ class RegistrationTest extends TestCase
         $profile = Profile::factory()->create(['form_type' => 'select', 'is_disp_regist' => true]);
         $option = ProfileOption::factory()->create(['profile_id' => $profile->getKey()]);
 
-        $this->register(['profile' => [$profile->getKey() => (string) $option->getKey()]])->assertRedirect('/dashboard');
+        $this->register(['profile' => [$profile->getKey() => (string) $option->getKey()]])->assertRedirect('/');
 
         $this->assertSame($option->getKey(), $this->storedRow($profile)->profile_option_id);
     }
@@ -156,7 +156,7 @@ class RegistrationTest extends TestCase
         ProfileOption::factory()->create(['profile_id' => $profile->getKey()]); // offered but not chosen
 
         $this->register(['profile' => [$profile->getKey() => [(string) $a->getKey(), (string) $b->getKey()]]])
-            ->assertRedirect('/dashboard');
+            ->assertRedirect('/');
 
         $member = Member::where('email', 'test@example.com')->firstOrFail();
         $optionIds = MemberProfile::where('member_id', $member->getKey())
@@ -179,7 +179,7 @@ class RegistrationTest extends TestCase
     {
         $profile = Profile::factory()->create(['form_type' => 'input', 'is_disp_regist' => false]);
 
-        $this->register(['profile' => [$profile->getKey() => 'crafted']])->assertRedirect('/dashboard');
+        $this->register(['profile' => [$profile->getKey() => 'crafted']])->assertRedirect('/');
 
         $member = Member::where('email', 'test@example.com')->firstOrFail();
         $this->assertDatabaseMissing('member_profiles', [

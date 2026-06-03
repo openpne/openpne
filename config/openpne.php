@@ -42,4 +42,20 @@ return [
         'max_upload_dimension' => (int) env('OPENPNE_IMAGE_MAX_DIMENSION', 5000),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Surface (Classic / Modern) selection
+    |--------------------------------------------------------------------------
+    |
+    | Read by App\Support\SurfaceResolver. 'tenant_mode' = 'modern_only' forces
+    | every canonical route to Modern; 'mixed' (the default) serves Classic on a
+    | canonical route and Modern under /m/*. 'tenant_default_surface' picks which
+    | a canonical route renders in 'mixed' mode, and which surface the root (/)
+    | landing uses. See docs/internals/classic-compatibility.md.
+    |
+    */
+
+    'tenant_mode' => env('OPENPNE_TENANT_MODE', 'mixed'), // mixed | modern_only
+    'tenant_default_surface' => env('OPENPNE_TENANT_DEFAULT_SURFACE', 'classic'), // classic | modern
+
 ];

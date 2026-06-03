@@ -24,7 +24,7 @@ class LegacyPasswordRehashTest extends TestCase
         $response = $this->post('/login', ['email' => 'legacy@example.com', 'password' => 'secret']);
 
         $this->assertAuthenticatedAs($member);
-        $response->assertRedirect('/dashboard');
+        $response->assertRedirect('/');
 
         $stored = $this->storedPassword($member);
         $this->assertTrue(Str::startsWith($stored, '$2y$'), 'password should be bcrypt after login');
