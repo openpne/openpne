@@ -29,7 +29,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticatedAs($member);
-        $response->assertRedirect('/dashboard');
+        $response->assertRedirect('/'); // surface-aware root landing
     }
 
     public function test_members_cannot_authenticate_with_invalid_password(): void
@@ -81,10 +81,12 @@ class AuthenticationTest extends TestCase
         $this->get('/')->assertRedirect('/login');
     }
 
-    public function test_root_redirects_to_dashboard_for_authenticated_members(): void
+    public function test_root_renders_the_classic_home_for_authenticated_members_by_default(): void
     {
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/')->assertRedirect('/dashboard');
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertSee('id="page_member_home"', false);
     }
 }

@@ -3,6 +3,7 @@
 use App\Features\Block\BlockController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
+use App\Features\Home\HomeController;
 use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Profile\ProfileController;
@@ -10,13 +11,15 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Auth::check() ? redirect('/dashboard') : redirect('/login');
-});
+// Canonical OpenPNE 3 homepage (member/home). Resolves by surface: a Classic-default install
+// renders the Classic home, a Modern-default one redirects to the Inertia dashboard.
+Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// OpenPNE 3 member_index alias (/member) for the same member/home portal.
+Route::get('/member', fn () => redirect('/'))->name('member.index_compat');
 
 Route::post('/locale', function (Request $request) {
     $locale = (string) $request->input('locale');
