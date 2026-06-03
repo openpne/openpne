@@ -142,7 +142,7 @@ class ListDiariesTest extends TestCase
         $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-02-28 09:00:00');
         $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-04-01 00:00:00');
 
-        $result = (new ListDiaries)($owner, $owner, ArchivePeriod::fromYearMonthDay(2026, 3));
+        $result = (new ListDiaries)($owner, $owner, period: ArchivePeriod::fromYearMonthDay(2026, 3));
 
         // Only the March entry: the half-open range excludes the 2026-04-01 00:00 boundary.
         $this->assertSame(1, $result->total());
@@ -154,7 +154,7 @@ class ListDiariesTest extends TestCase
         $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-03-15 23:59:59');
         $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-03-16 00:00:00');
 
-        $result = (new ListDiaries)($owner, $owner, ArchivePeriod::fromYearMonthDay(2026, 3, 15));
+        $result = (new ListDiaries)($owner, $owner, period: ArchivePeriod::fromYearMonthDay(2026, 3, 15));
 
         $this->assertSame(1, $result->total());
     }
@@ -165,7 +165,7 @@ class ListDiariesTest extends TestCase
         $this->createDiaryFor($owner, Visibility::Private, createdAt: '2026-03-10 09:00:00');
         $this->createDiaryFor($owner, Visibility::Members, createdAt: '2026-03-11 09:00:00');
 
-        $result = (new ListDiaries)($other, $owner, ArchivePeriod::fromYearMonthDay(2026, 3));
+        $result = (new ListDiaries)($other, $owner, period: ArchivePeriod::fromYearMonthDay(2026, 3));
 
         // A non-friend sees only the Members entry, even inside the archived month.
         $this->assertSame(1, $result->total());

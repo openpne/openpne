@@ -12,12 +12,13 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class ListDiaries
 {
     /**
-     * A member's diary archive under the viewer's clearance. With $period set, narrowed to a
+     * A member's diary archive under the viewer's clearance. Pass `period:` to narrow to a
      * calendar month/day — the OpenPNE 3 calendar archive, which is the same listMember view.
+     * `$period` follows `$perPage` so the original positional signature stays compatible.
      *
      * @return LengthAwarePaginator<int, Diary>
      */
-    public function __invoke(Member $viewer, Member $owner, ?ArchivePeriod $period = null, int $perPage = 20): LengthAwarePaginator
+    public function __invoke(Member $viewer, Member $owner, int $perPage = 20, ?ArchivePeriod $period = null): LengthAwarePaginator
     {
         $query = $owner->diaries()->with('member');
 

@@ -58,7 +58,7 @@ class DiaryController extends Controller
         abort_if($period === null, 404);
 
         $viewer = $this->viewer();
-        $diaries = $query($viewer, $member, $period);
+        $diaries = $query($viewer, $member, period: $period);
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('diary.list', [
