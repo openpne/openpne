@@ -39,11 +39,12 @@ class SearchDiaries
 
     /**
      * Split a raw keyword into terms the way OpenPNE 3 did: treat a full-width space as a
-     * separator, then split on whitespace and drop empties.
+     * separator, then split on whitespace and drop empties. An empty result is OpenPNE 3's
+     * `forwardUnless($keywords, 'diary', 'list')` condition — the caller renders the list.
      *
      * @return list<string>
      */
-    private static function terms(string $keyword): array
+    public static function terms(string $keyword): array
     {
         $normalized = str_replace('　', ' ', $keyword);
 

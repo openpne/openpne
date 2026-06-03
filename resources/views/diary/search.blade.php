@@ -17,7 +17,7 @@
     </div>
 
     <div class="dparts" id="diary_search_result">
-        <div class="partsHeading"><h3>{{ __('Results') }}</h3></div>
+        <div class="partsHeading"><h3>{{ $hasKeyword ? __('Search Results') : __('Recently Posted %Diaries%') }}</h3></div>
         <div class="parts">
             @if ($diaries->isEmpty())
                 <p>{{ __('No %diary% entries to show.') }}</p>

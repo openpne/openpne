@@ -31,6 +31,7 @@ class DiarySearchRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('diary/search')
                 ->where('keyword', 'laravel')
+                ->where('hasKeyword', true)
                 ->has('diaries.data', 1)
                 ->where('diaries.data.0.title', 'Laravel tips')
             );

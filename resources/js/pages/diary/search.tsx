@@ -6,12 +6,13 @@ import type { PaginatedDiaries } from './types';
 
 interface SearchProps extends PageProps {
     keyword: string;
+    hasKeyword: boolean;
     diaries: PaginatedDiaries;
 }
 
 export default function DiarySearch() {
     const t = useT();
-    const { keyword, diaries } = usePage<SearchProps>().props;
+    const { keyword, hasKeyword, diaries } = usePage<SearchProps>().props;
     const form = useForm({ keyword });
 
     const submit = (e: React.FormEvent) => {
@@ -42,7 +43,7 @@ export default function DiarySearch() {
                 </form>
 
                 <section className="space-y-2">
-                    <h2 className="text-lg font-semibold">{t('Results')}</h2>
+                    <h2 className="text-lg font-semibold">{hasKeyword ? t('Search Results') : t('Recently Posted %Diaries%')}</h2>
                     {diaries.data.length === 0 ? (
                         <p>{t('No %diary% entries to show.')}</p>
                     ) : (
