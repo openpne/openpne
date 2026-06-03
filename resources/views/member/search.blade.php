@@ -9,7 +9,7 @@
             <form method="GET" action="{{ route('member.search') }}">
                 <div>
                     <label for="search_name">{{ __('%nickname%') }}</label>
-                    <input type="text" id="search_name" name="name" value="{{ $name }}">
+                    <input type="text" class="input_text" id="search_name" name="name" value="{{ $name }}">
                 </div>
 
                 @foreach ($profiles as $profile)
@@ -39,9 +39,9 @@
                                 @break
 
                             @case('date')
-                                <input type="date" name="date[{{ $id }}][from]" value="{{ $range['from'] ?? '' }}">
+                                <input type="date" class="input_text" name="date[{{ $id }}][from]" value="{{ $range['from'] ?? '' }}">
                                 <span>–</span>
-                                <input type="date" name="date[{{ $id }}][to]" value="{{ $range['to'] ?? '' }}">
+                                <input type="date" class="input_text" name="date[{{ $id }}][to]" value="{{ $range['to'] ?? '' }}">
                                 @break
 
                             @case('country_select')
@@ -74,12 +74,16 @@
                                 @break
 
                             @default
-                                <input type="text" name="profile[{{ $id }}]" value="{{ is_array($current) ? '' : $current }}">
+                                <input type="text" class="input_text" name="profile[{{ $id }}]" value="{{ is_array($current) ? '' : $current }}">
                         @endswitch
                     </div>
                 @endforeach
 
-                <button type="submit">{{ __('Search') }}</button>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><input type="submit" class="input_submit" value="{{ __('Search') }}"></li>
+                    </ul>
+                </div>
             </form>
 
             <h3>{{ __('Results') }}</h3>

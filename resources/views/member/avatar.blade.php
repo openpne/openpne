@@ -13,8 +13,12 @@
             @endif
             <form method="POST" action="{{ route('member.avatar.update') }}" enctype="multipart/form-data">
                 @csrf
-                <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp" required>
-                <button type="submit">{{ __('Upload') }}</button>
+                <input type="file" class="input_file" name="image" accept="image/jpeg,image/png,image/gif,image/webp" required>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><input type="submit" class="input_submit" value="{{ __('Upload') }}"></li>
+                    </ul>
+                </div>
             </form>
         </div>
     </div>

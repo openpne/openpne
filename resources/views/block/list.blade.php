@@ -8,8 +8,8 @@
         <div class="parts">
             <form method="GET" action="{{ route('block.add.show') }}">
                 <label for="block_member_id">{{ __('Member ID') }}</label>
-                <input type="number" name="id" id="block_member_id" min="1" required>
-                <button type="submit">{{ __('Block') }}</button>
+                <input type="number" class="input_text" name="id" id="block_member_id" min="1" required>
+                <input type="submit" class="input_submit" value="{{ __('Block') }}">
             </form>
             <p class="help">{{ __('The member ID is the number at the end of the member page URL.') }}</p>
         </div>
