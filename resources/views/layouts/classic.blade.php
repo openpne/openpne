@@ -48,9 +48,9 @@
                     @auth
                         <ul class="default">
                             <li id="default_home"><a href="{{ url('/') }}">{{ __('Home') }}</a></li>
-                            <li id="default_friend"><a href="{{ route('friend.list') }}">{{ __('My Friends') }}</a></li>
+                            <li id="default_friend"><a href="{{ route('friend.list') }}">{{ __('%My_friends%') }}</a></li>
                             <li id="default_diary"><a href="{{ route('diary.list_member') }}">{{ __('%Diary%') }}</a></li>
-                            <li id="default_profile"><a href="{{ route('member.profile.mine_compat') }}">{{ __('My profile') }}</a></li>
+                            <li id="default_profile"><a href="{{ route('member.profile.mine_compat') }}">{{ __('Profile') }}</a></li>
                             <li id="default_editProfile"><a href="{{ route('member.profile.edit') }}">{{ __('Edit Profile') }}</a></li>
                         </ul>
                     @endauth

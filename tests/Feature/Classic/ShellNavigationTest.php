@@ -27,7 +27,8 @@ class ShellNavigationTest extends TestCase
             ->assertSee('id="default_friend"', false)
             ->assertSee('id="default_diary"', false)
             ->assertSee('id="default_profile"', false)
-            ->assertSee('id="default_editProfile"', false);
+            ->assertSee('id="default_editProfile"', false)
+            ->assertDontSee('%My_friends%', false); // term layer resolved the caption
     }
 
     public function test_guest_on_a_classic_page_does_not_see_the_local_nav(): void
