@@ -19,8 +19,8 @@ class ScreenParityCommandTest extends TestCase
             // substrings on a line starve each other: the Coverage line also carries the word
             // "partial" (a count), so it must be claimed before the bare-word `partial` check.
             ->expectsOutputToContain('Coverage:')
-            // The status word must print: Symfony Console strips the warning sign from ⚠️, so a
-            // bare icon would render Partial unreadable. Lock the word so that cannot regress.
+            // Each status prints its word beside the icon (self-documenting, no legend); lock it
+            // so a partial row stays labelled even if a glyph renders poorly.
             ->expectsOutputToContain('partial');
     }
 }

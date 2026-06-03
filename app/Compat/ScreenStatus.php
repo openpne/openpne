@@ -14,17 +14,15 @@ enum ScreenStatus: string
     {
         return match ($this) {
             self::Ported => '✅',
-            self::Partial => '⚠️',
+            // 🟡, not ⚠️: the warning sign is text-presentation and Symfony Console strips its
+            // base char on output, leaving a bare selector. The other glyphs render as emoji.
+            self::Partial => '🟡',
             self::Missing => '❌',
             self::Deferred => '🚫',
         };
     }
 
-    /**
-     * Icon plus its word. The label is not decoration: Symfony Console strips the warning sign
-     * from ⚠️ on output, so the icon alone would render Partial as an unreadable bare selector —
-     * the word keeps every status legible regardless of glyph survival.
-     */
+    /** Icon plus its word, so each status row is self-documenting and needs no legend. */
     public function display(): string
     {
         return $this->icon().' '.$this->value;
