@@ -58,4 +58,20 @@ return [
     'tenant_mode' => env('OPENPNE_TENANT_MODE', 'mixed'), // mixed | modern_only
     'tenant_default_surface' => env('OPENPNE_TENANT_DEFAULT_SURFACE', 'classic'), // classic | modern
 
+    /*
+    |--------------------------------------------------------------------------
+    | Classic shell
+    |--------------------------------------------------------------------------
+    |
+    | 'footer_html' is the Classic footer bar content. OpenPNE 3 made this
+    | admin-configurable (SnsConfig footer_before/after); this env seam stands in
+    | until that admin surface lands. It is trusted operator HTML, rendered raw
+    | in the footer, so an operator can rebrand without touching the shell.
+    |
+    */
+
+    'classic' => [
+        'footer_html' => env('OPENPNE_CLASSIC_FOOTER_HTML', 'Powered by <a href="https://www.openpne.jp/" target="_blank" rel="noopener">OpenPNE</a>'),
+    ],
+
 ];
