@@ -1,6 +1,7 @@
 <?php
 
 use App\Features\Block\BlockController;
+use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
 use App\Features\Home\HomeController;
@@ -105,6 +106,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/deleteConfirm/{diary}', 'showDelete')->whereNumber('diary')->name('diary.delete.show');
         Route::post('/delete/{diary}', 'delete')->whereNumber('diary')->name('diary.delete');
         Route::get('/{diary}', 'show')->whereNumber('diary')->name('diary.show');
+    });
+
+    // OpenPNE 3 diaryComment module. create keys off the diary id; deleteConfirm/delete key
+    // off the comment id (literal /diary/comment/* never collides with diary.show's numeric id).
+    Route::controller(DiaryCommentController::class)->group(function () {
+        Route::post('/diary/{diary}/comment/create', 'store')->whereNumber('diary')->name('diary.comment.store');
+        Route::get('/diary/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('diary.comment.delete.show');
+        Route::post('/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('diary.comment.delete');
     });
 
     Route::prefix('m/diary')->controller(DiaryController::class)->group(function () {
