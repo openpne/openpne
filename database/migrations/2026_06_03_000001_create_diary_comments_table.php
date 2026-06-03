@@ -22,8 +22,10 @@ return new class extends Migration
             $table->text('body');
             $table->timestamps();
 
-            // Drives the per-diary thread query: WHERE diary_id=? ORDER BY number.
-            $table->index(['diary_id', 'number']);
+            // Unique per diary: the sequence has no duplicates — a DB-level backstop behind the
+            // row-locked max+1 in CreateComment. Doubles as the thread query index
+            // (WHERE diary_id=? ORDER BY number).
+            $table->unique(['diary_id', 'number']);
         });
     }
 
