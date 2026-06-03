@@ -10,6 +10,7 @@ use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Queries\ListDiaries;
 use App\Features\Diary\Queries\ListFriendDiaries;
 use App\Features\Diary\Queries\ListRecentDiaries;
+use App\Features\Diary\Queries\SearchDiaries;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Http\Controllers\Controller;
@@ -102,6 +103,24 @@ class DiaryController extends Controller
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/feed', [
                 'scope' => 'friends',
+                'diaries' => DiarySerializer::paginator($diaries),
+            ]),
+        ]);
+    }
+
+    public function search(Request $request, SearchDiaries $query): View|InertiaResponse
+    {
+        $keywordParam = $request->query('keyword', '');
+        $keyword = is_string($keywordParam) ? $keywordParam : '';
+        $diaries = $query($this->viewer(), $keyword);
+
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('diary.search', [
+                'keyword' => $keyword,
+                'diaries' => $diaries,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('diary/search', [
+                'keyword' => $keyword,
                 'diaries' => DiarySerializer::paginator($diaries),
             ]),
         ]);
