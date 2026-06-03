@@ -8,7 +8,7 @@ use App\Compat\RouteParity;
 /**
  * The OpenPNE 3 `member` module is the member hub — profile, avatar, search, auth, config,
  * invite, withdrawal — ported feature by feature. This parity owns the whole module: the
- * profile / avatar / search / edit slices are mapped, and the actions still living in
+ * home / profile / avatar / search / edit slices are mapped, and the actions still living in
  * OpenPNE 3 (or moved to another feature, like Fortify auth) are gapped, so an un-ported
  * member URL surfaces instead of being silently dropped. Actions move from gap to map as
  * their feature lands. The module keeps OpenPNE 3's global /:module/:action fallback on, so
@@ -26,6 +26,10 @@ class MemberRouteParity extends RouteParity
     public function maps(): array
     {
         return [
+            // Portal home — OpenPNE 3 member/home at the canonical root (/), with /member as its
+            // alias (member_index). Both resolve by surface; the Classic home keeps page_member_home.
+            new RouteMap('homepage', '/', 'home', 'GET', op3Action: 'home'),
+            new RouteMap('member_index', '/member', 'member.index_compat', 'GET', op3Action: 'home'),
             // Profile page — OpenPNE 4 /member/{id} preserves the OpenPNE 3 URL in place.
             // OpenPNE 3 kept a second /member/:id route "for BC" (member_profile); same page.
             new RouteMap('obj_member_profile', '/member/:id', 'member.profile.show', 'GET', op3Action: 'profile'),
@@ -49,8 +53,6 @@ class MemberRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            'homepage' => 'OpenPNE 3 member/home is the logged-in portal at /; OpenPNE 4 serves a separate dashboard, so the portal home is not ported.',
-            'member_index' => 'OpenPNE 3 member/home alias at /member; the same un-ported portal home as homepage.',
             'login' => 'Login is served by Fortify at /login, not the OpenPNE 3 /member/login URL.',
             'member_logout' => 'Logout is served by Fortify at POST /logout (OpenPNE 3 also allowed GET).',
             'member_delete' => 'Member withdrawal (/leave) is not ported.',

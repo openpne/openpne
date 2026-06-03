@@ -76,6 +76,9 @@ class RouteParityBodyIdTest extends TestCase
         // page_member_{action} even where the URL moved (avatar editor, edit profile).
         $parity = new MemberRouteParity;
 
+        // The portal home (/) and its /member alias both carry the OpenPNE 3 member/home action.
+        $this->assertSame('page_member_home', $parity->bodyId('home'));
+        $this->assertSame('page_member_home', $parity->bodyId('member.index_compat'));
         $this->assertSame('page_member_profile', $parity->bodyId('member.profile.show'));
         $this->assertSame('page_member_configImage', $parity->bodyId('member.avatar.edit'));
         $this->assertSame('page_member_search', $parity->bodyId('member.search'));

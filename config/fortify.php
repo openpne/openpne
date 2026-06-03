@@ -73,7 +73,9 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    // Post-auth target for login / registration. The root resolves Classic-vs-Modern by
+    // surface (App\Features\Home\HomeController), so both land surface-aware.
+    'home' => '/',
 
     /*
     |--------------------------------------------------------------------------

@@ -17,6 +17,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
             SetLocale::class,
             HandleInertiaRequests::class,
         ]);
+
+        // An already-authenticated member on /login or /register goes through the root so the
+        // landing stays surface-aware; the framework default would pick the Modern /dashboard.
+        $middleware->redirectUsersTo(fn () => route('home'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
