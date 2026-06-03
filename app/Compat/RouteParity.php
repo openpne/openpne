@@ -33,6 +33,20 @@ abstract class RouteParity
     abstract public function maps(): array;
 
     /**
+     * Per-screen surface-element inventory: the third parity axis (intra-screen content),
+     * keyed by the OpenPNE 3 action whose template defines the screen. route parity says the
+     * URL resolves; this says how much of that screen's content the Classic adapter renders.
+     * Empty for a module not inventoried yet. The action must be one this parity maps(), so the
+     * command can resolve its Laravel route and body id.
+     *
+     * @return array<string, list<ScreenElement>> op3Action => surface elements
+     */
+    public function screens(): array
+    {
+        return [];
+    }
+
+    /**
      * OpenPNE 3 routes intentionally not ported, with the reason.
      *
      * @return array<string, string> OpenPNE 3 route name => reason
