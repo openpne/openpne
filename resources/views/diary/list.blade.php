@@ -2,11 +2,13 @@
 
 @php($title = $owner->is(auth()->user()) ? __('%Diary%') : __(":name's %diary%", ['name' => $owner->name]))
 @php($period = $period ?? null)
+@php($archiveStart = $archiveStart ?? null)
 
 @section('title', $title)
 
 @section('sidemenu')
-    <x-diary.sidemenu :member="$owner" />
+    {{-- Calendar focuses the archived month; the plain listMember view defaults to today. --}}
+    <x-diary.sidemenu :member="$owner" :year="$archiveStart?->year" :month="$archiveStart?->month" />
 @endsection
 
 @section('content')

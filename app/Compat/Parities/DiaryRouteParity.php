@@ -24,7 +24,7 @@ class DiaryRouteParity extends RouteParity
                 note: 'Served by the same diary.list_member route (optional {member?}) as diary_list_mine.',
                 op3Action: 'listMember'),
             // Calendar archive: same listMember action narrowed to a month/day window. The
-            // clickable calendar-navigation widget is a deferred Level 2 enhancement.
+            // clickable calendar-navigation widget lives in the sidemenu (x-diary.sidemenu).
             new RouteMap('diary_list_member_year_month', '/diary/listMember/:id/:year/:month', 'diary.list_member.archive', 'GET', op3Action: 'listMember'),
             new RouteMap('diary_list_member_year_month_day', '/diary/listMember/:id/:year/:month/:day', 'diary.list_member.archive', 'GET', op3Action: 'listMember'),
             new RouteMap('diary_new', '/diary/new', 'diary.new', 'GET', op3Action: 'new'),
@@ -81,7 +81,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('diary body auto-link + decoration', L::Two, S::Partial, 'op_url_cmd(op_decoration(nl2br(body)))', 'body shown raw; decoration/auto-link helpers not ported'),
                 new ScreenElement('Japanese datetime format', L::Three, S::Partial, "op_format_date(created_at, 'XDateTimeJaBr')", 'currently Y-m-d H:i'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; member avatar deferred (FileStorage)'),
-                new ScreenElement('calendar archive sidemenu', L::Two, S::Missing, '_sidemenu.php Calendar_Month_Weekdays', 'month grid + prev/next month + day-archive links pending'),
+                new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + prev/next month + day-archive links (MemberDiaryDays)'),
                 new ScreenElement('diary images', L::Three, S::Deferred, '$diary->getDiaryImagesJoinFile()', 'image delivery not built (FileStorage)'),
             ],
             // newSuccess.php + _form.php (PluginDiaryForm) → diary/new.blade.php
@@ -94,7 +94,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('image upload (x3)', L::Three, S::Deferred, 'app_diary_is_upload_images + DiaryImageForm', 'image delivery not built (FileStorage)'),
                 new ScreenElement('post button', L::Two, S::Ported, 'op_include_form diaryForm button'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; member avatar deferred (FileStorage)'),
-                new ScreenElement('calendar archive sidemenu', L::Two, S::Missing, '_sidemenu.php Calendar_Month_Weekdays', 'month grid + prev/next month + day-archive links pending'),
+                new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + prev/next month + day-archive links (MemberDiaryDays)'),
             ],
             // editSuccess.php + _form.php (shared with new) → diary/edit.blade.php
             'edit' => [
@@ -106,7 +106,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('save button', L::Two, S::Ported, 'op_include_form diaryForm button'),
                 new ScreenElement('delete-diary box', L::Three, S::Missing, "formDiaryDelete url_for('diary_delete_confirm')", 'OpenPNE 4 places the delete entry on the show page instead'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; member avatar deferred (FileStorage)'),
-                new ScreenElement('calendar archive sidemenu', L::Two, S::Missing, '_sidemenu.php Calendar_Month_Weekdays', 'month grid + prev/next month + day-archive links pending'),
+                new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + prev/next month + day-archive links (MemberDiaryDays)'),
             ],
             // listSuccess.php (all-member feed; the search variant shares it) → diary/feed.blade.php
             'list' => [
@@ -134,7 +134,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('archive period heading', L::Two, S::Ported, '$title .= op_format_date(...XCalendarMonth)'),
                 new ScreenElement('per-entry title + comment count', L::Two, S::Partial, 'op_diary_link_to_show', 'comment count not shown'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; member avatar deferred (FileStorage)'),
-                new ScreenElement('calendar archive sidemenu', L::Two, S::Missing, '_sidemenu.php Calendar_Month_Weekdays', 'layout-cross-cutting: clickable month/day calendar archive nav'),
+                new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + clickable month/day archive nav (MemberDiaryDays)'),
             ],
         ];
     }

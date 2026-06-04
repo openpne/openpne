@@ -68,6 +68,7 @@ class DiaryController extends Controller
                 'owner' => $member,
                 'diaries' => $diaries,
                 'period' => $period->label,
+                'archiveStart' => $period->start,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/list', [
                 'owner' => ['id' => $member->getKey(), 'name' => $member->name],
