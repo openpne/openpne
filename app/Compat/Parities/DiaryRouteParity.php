@@ -67,7 +67,7 @@ class DiaryRouteParity extends RouteParity
                 // its OpenPNE 3 behaviours are split out below so they stay visible as gaps.
                 new ScreenElement('comment thread (author, number, delete)', L::One, S::Ported, 'include_component diaryComment/list'),
                 new ScreenElement('comment thread pagination + order toggle', L::Two, S::Ported, 'diaryComment/_list pager (size, ASC/DESC, older/newer)', 'DiaryCommentThread: reversible pager, sizes 20/100, older/newer + latest/oldest toggle'),
-                new ScreenElement('comment body auto-link', L::Three, S::Partial, 'op_url_cmd(nl2br($comment->body))', 'comment body shown raw; auto-link/nl2br not ported'),
+                new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->body))', 'x-user-text (BodyText); comments carry no op_decoration in OpenPNE 3'),
                 new ScreenElement('comment images', L::Three, S::Deferred, '$comment->getDiaryCommentImagesJoinFile()', 'image delivery not built (FileStorage)'),
                 // Comment post form. Text posting + the web-public notice are faithful; the OpenPNE 3
                 // form is multipart and embeds photo fields, which is a separate deferred element.
@@ -78,7 +78,8 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('visibility label', L::Two, S::Ported, '$diary->getPublicFlagLabel()'),
                 new ScreenElement('previous / next diary links', L::Two, S::Ported, '$diary->getPrevious/getNext($myMemberId)', 'AdjacentDiaries: author timeline, adjacent by id, viewer-scoped'),
                 new ScreenElement("link to the member's diary list", L::Two, S::Ported, 'lineLinkToDiaryMemberList'),
-                new ScreenElement('diary body auto-link + decoration', L::Two, S::Partial, 'op_url_cmd(op_decoration(nl2br(body)))', 'body shown raw; decoration/auto-link helpers not ported'),
+                new ScreenElement('diary body line breaks + auto-link', L::Two, S::Ported, 'op_url_cmd(nl2br(body))', 'x-user-text (BodyText)'),
+                new ScreenElement('diary body decoration (rich text)', L::Three, S::Partial, 'op_decoration(body)', 'pairs with the rich-text editor (Partial); plain-text bodies carry no decoration markup'),
                 new ScreenElement('Japanese datetime format', L::Three, S::Partial, "op_format_date(created_at, 'XDateTimeJaBr')", 'currently Y-m-d H:i'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; member avatar deferred (FileStorage)'),
                 new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + prev/next month + day-archive links (MemberDiaryDays)'),
