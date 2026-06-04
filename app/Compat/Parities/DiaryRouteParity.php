@@ -76,7 +76,7 @@ class DiaryRouteParity extends RouteParity
                 // Diary record.
                 new ScreenElement('owner edit entry', L::One, S::Ported, "operation form url_for('diary_edit')"),
                 new ScreenElement('visibility label', L::Two, S::Ported, '$diary->getPublicFlagLabel()'),
-                new ScreenElement('previous / next diary links', L::Two, S::Missing, '$diary->getPrevious/getNext($myMemberId)', 'needs an owner-scoped adjacent-diary query'),
+                new ScreenElement('previous / next diary links', L::Two, S::Ported, '$diary->getPrevious/getNext($myMemberId)', 'AdjacentDiaries: author timeline, adjacent by id, viewer-scoped'),
                 new ScreenElement("link to the member's diary list", L::Two, S::Ported, 'lineLinkToDiaryMemberList'),
                 new ScreenElement('diary body auto-link + decoration', L::Two, S::Partial, 'op_url_cmd(op_decoration(nl2br(body)))', 'body shown raw; decoration/auto-link helpers not ported'),
                 new ScreenElement('Japanese datetime format', L::Three, S::Partial, "op_format_date(created_at, 'XDateTimeJaBr')", 'currently Y-m-d H:i'),

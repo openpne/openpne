@@ -10,6 +10,17 @@
             <p class="public">({{ __($diary->visibility->label()) }})</p>
         </div>
         <div class="parts">
+            {{-- OpenPNE 3 showSuccess.php: links to the author's adjacent diaries the viewer may see. --}}
+            @if ($previousDiary || $nextDiary)
+                <div class="block prevNextLinkLine">
+                    @if ($previousDiary)
+                        <p class="prev"><a href="{{ route('diary.show', $previousDiary) }}">{{ __('Previous Diary') }}</a></p>
+                    @endif
+                    @if ($nextDiary)
+                        <p class="next"><a href="{{ route('diary.show', $nextDiary) }}">{{ __('Next Diary') }}</a></p>
+                    @endif
+                </div>
+            @endif
             <p class="diaryMeta">
                 {{ $diary->member->name }} &mdash; {{ $diary->created_at->format('Y-m-d H:i') }}
             </p>
