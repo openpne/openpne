@@ -74,7 +74,7 @@
 
                 @foreach ($thread->comments as $comment)
                     <dl>
-                        <dt>{{ $comment->created_at->format('Y-m-d H:i') }}</dt>
+                        <dt>{{ \App\Support\LocalizedDate::dateTime($comment->created_at) }}</dt>
                         <dd>
                             <div class="title">
                                 <p class="heading">

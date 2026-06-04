@@ -68,6 +68,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('comment thread (author, number, delete)', L::One, S::Ported, 'include_component diaryComment/list'),
                 new ScreenElement('comment thread pagination + order toggle', L::Two, S::Ported, 'diaryComment/_list pager (size, ASC/DESC, older/newer)', 'DiaryCommentThread: reversible pager, sizes 20/100, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->body))', 'x-user-text (BodyText); comments carry no op_decoration in OpenPNE 3'),
+                new ScreenElement('comment datetime', L::Three, S::Ported, "op_format_date(comment->created_at, 'XDateTimeJaBr')", 'LocalizedDate; inline single-line'),
                 new ScreenElement('comment images', L::Three, S::Deferred, '$comment->getDiaryCommentImagesJoinFile()', 'image delivery not built (FileStorage)'),
                 // Comment post form. Text posting + the web-public notice are faithful; the OpenPNE 3
                 // form is multipart and embeds photo fields, which is a separate deferred element.

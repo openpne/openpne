@@ -3,6 +3,7 @@
 namespace Tests\Feature\Diary\Classic;
 
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\Member;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,5 +30,21 @@ class DiaryDateFormatTest extends TestCase
             ->get("/diary/{$diary->getKey()}")
             ->assertOk()
             ->assertSee('2026年06月04日 13:44');
+    }
+
+    public function test_show_renders_the_japanese_comment_datetime(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+        DiaryComment::factory()->for($diary)->create([
+            'number' => 1,
+            'created_at' => CarbonImmutable::create(2026, 6, 4, 9, 5),
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['locale' => 'ja'])
+            ->get("/diary/{$diary->getKey()}")
+            ->assertOk()
+            ->assertSee('2026年06月04日 09:05');
     }
 }
