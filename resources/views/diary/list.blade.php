@@ -5,6 +5,10 @@
 
 @section('title', $title)
 
+@section('sidemenu')
+    <x-diary.sidemenu :member="$owner" />
+@endsection
+
 @section('content')
     <div class="dparts" id="diary_list">
         <div class="partsHeading"><h3>{{ $title }}@if ($period) <span class="archivePeriod">{{ $period }}</span>@endif</h3></div>

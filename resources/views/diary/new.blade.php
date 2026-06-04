@@ -2,6 +2,10 @@
 
 @section('title', __('Write a %diary%'))
 
+@section('sidemenu')
+    <x-diary.sidemenu :member="auth()->user()" />
+@endsection
+
 @section('content')
     <div class="dparts form" id="diary_new">
         <div class="partsHeading"><h3>{{ __('Write a %diary%') }}</h3></div>

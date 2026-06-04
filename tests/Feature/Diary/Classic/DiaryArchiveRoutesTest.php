@@ -35,7 +35,9 @@ class DiaryArchiveRoutesTest extends TestCase
         // The archive is the same listMember action, so the OpenPNE 3 body id is unchanged.
         $response->assertSee('id="page_diary_listMember"', false);
         $response->assertSee('March entry');
-        $response->assertDontSee('April entry');
+        // Scope to the main-list row: the sidemenu recent box is not period-scoped, so it
+        // renders the out-of-period entry too (as `April entry (0)`, never `April entry</a>`).
+        $response->assertDontSee('April entry</a>', false);
         $response->assertSee('2026-03');
     }
 
@@ -55,7 +57,8 @@ class DiaryArchiveRoutesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('On the day');
-        $response->assertDontSee('Next day');
+        // Main-list row only; the sidemenu recent box (not period-scoped) shows `Next day (0)`.
+        $response->assertDontSee('Next day</a>', false);
         $response->assertSee('2026-03-15');
     }
 

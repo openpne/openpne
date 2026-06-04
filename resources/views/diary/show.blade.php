@@ -2,6 +2,10 @@
 
 @section('title', $diary->title)
 
+@section('sidemenu')
+    <x-diary.sidemenu :member="$diary->member" />
+@endsection
+
 @section('content')
     <div class="dparts" id="diary_show">
         <div class="partsHeading">
