@@ -146,25 +146,32 @@ class DiaryController extends Controller
         $found = $query($viewer, $diary);
         abort_if($found === null, 404);
 
-        $comments = $found->comments()->with('member')->orderBy('number')->get();
-        // Share the already-loaded diary so isDeletableBy() needs no per-comment query.
-        $comments->each->setRelation('diary', $found);
-
         return $this->respondWith($request, [
-            SurfaceResolver::CLASSIC => function () use ($found, $comments, $viewer, $adjacent) {
+            SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer, $adjacent) {
                 ['previous' => $previous, 'next' => $next] = $adjacent($viewer, $found);
+
+                $thread = DiaryCommentThread::paginate(
+                    $found, $request->query('size'), $request->query('order'), $request->query('page'),
+                );
+                // Share the already-loaded diary so isDeletableBy() needs no per-comment query.
+                $thread->comments->each->setRelation('diary', $found);
 
                 return view('diary.show', [
                     'diary' => $found,
-                    'comments' => $comments,
+                    'thread' => $thread,
                     'previousDiary' => $previous,
                     'nextDiary' => $next,
                 ]);
             },
-            SurfaceResolver::MODERN => fn () => Inertia::render('diary/show', [
-                'diary' => DiarySerializer::detail($found),
-                'comments' => DiarySerializer::comments($comments, $viewer),
-            ]),
+            SurfaceResolver::MODERN => function () use ($found, $viewer) {
+                $comments = $found->comments()->with('member')->orderBy('number')->get();
+                $comments->each->setRelation('diary', $found);
+
+                return Inertia::render('diary/show', [
+                    'diary' => DiarySerializer::detail($found),
+                    'comments' => DiarySerializer::comments($comments, $viewer),
+                ]);
+            },
         ]);
     }
 
