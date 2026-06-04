@@ -74,4 +74,21 @@ return [
         'footer_html' => env('OPENPNE_CLASSIC_FOOTER_HTML', 'Powered by <a href="https://www.openpne.jp/" target="_blank" rel="noopener">OpenPNE</a>'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Diary
+    |--------------------------------------------------------------------------
+    |
+    | 'allow_web_public' gates the "Public to Web" diary audience, matching
+    | OpenPNE 3's op_diary_plugin_use_open_diary (admin-configurable, default on).
+    | When false the option is removed from the diary form and rejected on submit,
+    | so a site that disabled anonymous-visible diaries in OpenPNE 3 keeps that
+    | ability. This env seam stands in until that admin surface lands.
+    |
+    */
+
+    'diary' => [
+        'allow_web_public' => (bool) env('OPENPNE_DIARY_ALLOW_WEB_PUBLIC', true),
+    ],
+
 ];
