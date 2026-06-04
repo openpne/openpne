@@ -56,7 +56,10 @@
                     @endauth
                 </div>
 
-                <div id="Layout{{ $layout ?? 'C' }}" class="Layout">
+                {{-- A screen that defines a `sidemenu` section opts into OpenPNE 3's two-column
+                     LayoutB (Left + Center); others stay single-column LayoutC. --}}
+                @php($layout = $layout ?? (\Illuminate\Support\Facades\View::hasSection('sidemenu') ? 'B' : 'C'))
+                <div id="Layout{{ $layout }}" class="Layout">
                     {{-- OpenPNE 3 alertBox markup so the ported skin styles flash messages. --}}
                     @if (session('error'))
                         <div class="alertBox">
@@ -67,6 +70,12 @@
                         <div class="alertBox">
                             <table><tr><th></th><td role="status">{{ session('status') }}</td></tr></table>
                         </div>
+                    @endif
+
+                    @hasSection('sidemenu')
+                        <div id="Left">
+                            @yield('sidemenu')
+                        </div><!-- Left -->
                     @endif
 
                     <div id="Center">
