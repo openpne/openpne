@@ -78,4 +78,9 @@
             </form>
         </div>
     </div>
+
+    {{-- OpenPNE 3 showSuccess.php: lineLinkToDiaryMemberList — back to the author's diary list. --}}
+    <div class="line" id="lineLinkToDiaryMemberList">
+        <a href="{{ route('diary.list_member', $diary->member) }}">{{ __(":name's %diary%", ['name' => $diary->member->name]) }}</a>
+    </div>
 @endsection

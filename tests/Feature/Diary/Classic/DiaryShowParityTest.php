@@ -77,6 +77,17 @@ class DiaryShowParityTest extends TestCase
             ->assertSee('Public to Web'); // Visibility::Open->label()
     }
 
+    public function test_renders_the_link_to_the_authors_diary_list(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+
+        $this->actingAs($owner)->get("/diary/{$diary->getKey()}")
+            ->assertOk()
+            ->assertSee('id="lineLinkToDiaryMemberList"', false) // OpenPNE 3 .line hook
+            ->assertSee("/diary/listMember/{$owner->getKey()}", false);
+    }
+
     public function test_renders_the_ported_owner_edit_entry(): void
     {
         $owner = Member::factory()->create();
