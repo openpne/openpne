@@ -26,7 +26,7 @@
                 </div>
             @endif
             <p class="diaryMeta">
-                {{ $diary->member->name }} &mdash; {{ $diary->created_at->format('Y-m-d H:i') }}
+                {{ $diary->member->name }} &mdash; {{ \App\Support\LocalizedDate::dateTime($diary->created_at) }}
             </p>
             <div class="diaryBody"><x-user-text :value="$diary->body" /></div>
 
