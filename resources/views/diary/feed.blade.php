@@ -36,6 +36,10 @@
                             <a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a>
                             <span class="diaryAuthor">{{ $entry->member->name }}</span>
                             <span class="diaryDate">{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</span>
+                            {{-- OpenPNE 3 listSuccess shows a body excerpt; listFriendSuccess (friends) does not. --}}
+                            @if ($variant !== 'friends')
+                                <p class="summary">{{ \App\Support\BodyText::excerpt($entry->body) }}</p>
+                            @endif
                         </li>
                     @endforeach
                 </ul>
