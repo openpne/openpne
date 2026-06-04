@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PreferenceKey;
 use App\Support\Visibility;
 use Database\Factories\MemberFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -96,6 +97,41 @@ class Member extends Authenticatable
     public function memberProfiles(): HasMany
     {
         return $this->hasMany(MemberProfile::class, 'member_id');
+    }
+
+    /** @return HasMany<MemberPreference, $this> */
+    public function preferences(): HasMany
+    {
+        return $this->hasMany(MemberPreference::class, 'member_id');
+    }
+
+    /**
+     * The member's typed value for $key, or the key default when unset. Reads the loaded
+     * `preferences` relation (lazy-loaded once and cached), so repeated calls share one query.
+     */
+    public function preference(PreferenceKey $key): Visibility
+    {
+        return $key->decode($this->preferences->firstWhere('key', $key->value)?->value);
+    }
+
+    /**
+     * Store an explicit value for $key (even one equal to the default). Returning to
+     * default-following is resetPreference(), not setPreference($default).
+     */
+    public function setPreference(PreferenceKey $key, Visibility $value): void
+    {
+        $this->preferences()->updateOrCreate(
+            ['key' => $key->value],
+            ['value' => $key->encode($value)],
+        );
+        $this->unsetRelation('preferences');
+    }
+
+    /** Drop any stored value for $key so reads fall back to the key default. */
+    public function resetPreference(PreferenceKey $key): void
+    {
+        $this->preferences()->where('key', $key->value)->delete();
+        $this->unsetRelation('preferences');
     }
 
     /**

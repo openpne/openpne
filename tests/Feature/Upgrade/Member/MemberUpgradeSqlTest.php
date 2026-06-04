@@ -158,6 +158,37 @@ class MemberUpgradeSqlTest extends TestCase
         $this->assertSame(0, (int) DB::table('members')->where('id', 14)->value('profile_visibility')); // Open
     }
 
+    public function test_maps_language_to_a_supported_locale_slug(): void
+    {
+        $this->seedMember(20, 'Ja');
+        $this->seedConfig(20, 'language', 'ja_JP');
+        $this->seedMember(21, 'En');
+        $this->seedConfig(21, 'language', 'en_US');
+        $this->seedMember(22, 'Unknown');
+        $this->seedConfig(22, 'language', 'fr_FR'); // unsupported → NULL (request-time chain decides)
+        $this->seedMember(23, 'None');              // no language config → NULL
+
+        $this->runUpgrade();
+
+        $this->assertSame('ja', DB::table('members')->where('id', 20)->value('locale'));
+        $this->assertSame('en', DB::table('members')->where('id', 21)->value('locale'));
+        $this->assertNull(DB::table('members')->where('id', 22)->value('locale'));
+        $this->assertNull(DB::table('members')->where('id', 23)->value('locale'));
+    }
+
+    public function test_latest_member_config_value_wins_for_a_duplicate(): void
+    {
+        // member_config has no (member_id, name) unique; the most recent row must win rather
+        // than resolving by storage order.
+        $this->seedMember(30, 'Dup');
+        $this->seedConfigWithId(100, 30, 'pc_address', 'old@example.com');
+        $this->seedConfigWithId(200, 30, 'pc_address', 'new@example.com');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('members', ['id' => 30, 'email' => 'new@example.com']);
+    }
+
     public function test_no_member_row_is_dropped(): void
     {
         $this->seedMember(7, 'Grace');
@@ -206,6 +237,19 @@ class MemberUpgradeSqlTest extends TestCase
     private function seedConfig(int $memberId, string $name, string $value): void
     {
         DB::table('member_config')->insert([
+            'member_id' => $memberId,
+            'name' => $name,
+            'value' => $value,
+            'name_value_hash' => md5($name.$value),
+            'created_at' => '2018-03-04 12:34:56',
+            'updated_at' => '2019-06-07 01:02:03',
+        ]);
+    }
+
+    private function seedConfigWithId(int $id, int $memberId, string $name, string $value): void
+    {
+        DB::table('member_config')->insert([
+            'id' => $id,
             'member_id' => $memberId,
             'name' => $name,
             'value' => $value,

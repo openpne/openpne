@@ -24,10 +24,14 @@ use App\Upgrade\UpgradeStep;
  *    so a stale member_config must not over-expose), else member_config[profile_page_public_flag],
  *    mapped onto Visibility (web=4→Open i.e. guest-viewable, friend=2→Friends, private=3→Private,
  *    SNS=1/unset→Members).
+ *  - locale: member_config[language] (e.g. ja_JP) folded to a SUPPORTED_LOCALES slug, NULL for
+ *    an unrecognised value (falls back to the session/Accept-Language chain at request time).
  *
  * The subqueries name `member_config` unqualified, so (unlike the FROM table) they are not
  * rewritten for a source prefix or a separate source database — acceptable for the fleet
- * (empty prefix, same database); see StepRegistry for the wider table-coverage gap.
+ * (empty prefix, same database); see StepRegistry for the wider table-coverage gap. They use the
+ * latest row per name (member_config has no (member_id, name) unique), so a duplicate resolves
+ * deterministically rather than by storage order.
  */
 class MemberUpgrade extends UpgradeStep
 {
@@ -41,8 +45,9 @@ class MemberUpgrade extends UpgradeStep
             'id' => Column::source('id'),
             'name' => Column::source('name'),
             'email' => Column::expr($this->memberConfigCoalesce('pc_address', 'mobile_address'), uses: ['id']),
-            'password' => Column::expr($this->memberConfigValue('password'), uses: ['id']),
+            'password' => Column::expr($this->memberConfigValueLatest('password'), uses: ['id']),
             'profile_visibility' => Column::expr($this->profileVisibilityExpr(), uses: ['id']),
+            'locale' => Column::expr($this->localeExpr(), uses: ['id']),
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
         ];
@@ -67,16 +72,28 @@ class MemberUpgrade extends UpgradeStep
     private function memberConfigCoalesce(string ...$names): string
     {
         $parts = array_map(
-            fn (string $name): string => "NULLIF({$this->memberConfigValue($name)}, '')",
+            fn (string $name): string => "NULLIF({$this->memberConfigValueLatest($name)}, '')",
             $names,
         );
 
         return 'COALESCE('.implode(', ', $parts).')';
     }
 
-    private function memberConfigValue(string $name): string
+    /** The latest `member_config` value for a name (no (member_id, name) unique exists), else NULL. */
+    private function memberConfigValueLatest(string $name): string
     {
-        return "(SELECT `value` FROM `member_config` WHERE `member_id` = `member`.`id` AND `name` = '{$name}' LIMIT 1)";
+        return "(SELECT `value` FROM `member_config` WHERE `member_id` = `member`.`id` AND `name` = '{$name}' ORDER BY `id` DESC LIMIT 1)";
+    }
+
+    /**
+     * member_config[language] (e.g. ja_JP, en_US) → a SUPPORTED_LOCALES slug, or NULL for an
+     * unrecognised value so the request-time chain (session/Accept-Language) decides instead.
+     */
+    private function localeExpr(): string
+    {
+        $lang = $this->memberConfigValueLatest('language');
+
+        return "CASE WHEN {$lang} LIKE 'ja%' THEN 'ja' WHEN {$lang} LIKE 'en%' THEN 'en' ELSE NULL END";
     }
 
     private function snsConfigValue(string $name): string
@@ -92,7 +109,7 @@ class MemberUpgrade extends UpgradeStep
     private function profileVisibilityExpr(): string
     {
         $global = $this->snsConfigValue('is_allow_config_public_flag_profile_page');
-        $member = $this->memberConfigValue('profile_page_public_flag');
+        $member = $this->memberConfigValueLatest('profile_page_public_flag');
         $effective = "CASE WHEN {$global} IS NOT NULL AND {$global} NOT IN ('', '0') THEN {$global} ELSE {$member} END";
 
         return sprintf(
