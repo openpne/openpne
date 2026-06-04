@@ -88,6 +88,30 @@ class DiaryShowParityTest extends TestCase
             ->assertSee("/diary/listMember/{$owner->getKey()}", false);
     }
 
+    public function test_renders_prev_next_links_to_the_authors_adjacent_diaries(): void
+    {
+        $owner = Member::factory()->create();
+        $older = Diary::factory()->create(['member_id' => $owner->getKey()]);
+        $current = Diary::factory()->create(['member_id' => $owner->getKey()]);
+        $newer = Diary::factory()->create(['member_id' => $owner->getKey()]);
+
+        $this->actingAs($owner)->get("/diary/{$current->getKey()}")
+            ->assertOk()
+            ->assertSee('class="block prevNextLinkLine"', false) // OpenPNE 3 markup hook
+            ->assertSee('<p class="prev"><a href="'.route('diary.show', $older).'"', false)
+            ->assertSee('<p class="next"><a href="'.route('diary.show', $newer).'"', false);
+    }
+
+    public function test_omits_the_prev_next_block_for_a_lone_diary(): void
+    {
+        $owner = Member::factory()->create();
+        $only = Diary::factory()->create(['member_id' => $owner->getKey()]);
+
+        $this->actingAs($owner)->get("/diary/{$only->getKey()}")
+            ->assertOk()
+            ->assertDontSee('prevNextLinkLine', false);
+    }
+
     public function test_renders_the_ported_owner_edit_entry(): void
     {
         $owner = Member::factory()->create();
