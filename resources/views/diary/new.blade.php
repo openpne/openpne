@@ -27,9 +27,10 @@
                         <th><label for="diary_visibility">{{ __('Visibility') }}</label></th>
                         <td>
                             <select id="diary_visibility" name="visibility">
-                                <option value="1" {{ old('visibility', '1') == '1' ? 'selected' : '' }}>{{ __('All members') }}</option>
-                                <option value="2" {{ old('visibility') == '2' ? 'selected' : '' }}>{{ __('%Friends% only') }}</option>
-                                <option value="3" {{ old('visibility') == '3' ? 'selected' : '' }}>{{ __('Private') }}</option>
+                                {{-- Members stays the default even when web-public is enabled. --}}
+                                @foreach ($visibilityOptions as $option)
+                                    <option value="{{ $option->value }}" @selected(old('visibility', \App\Support\Visibility::Members->value) == $option->value)>{{ __($option->label()) }}</option>
+                                @endforeach
                             </select>
                             @error('visibility')<p class="error">{{ $message }}</p>@enderror
                         </td>

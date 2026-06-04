@@ -9,10 +9,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Locks the Ported elements of the diary new/edit form that screen-parity tracks, and pins the
- * web-public gap: OpenPNE 3's visibility radio includes "All Users on the Web", but the form
- * offers only members/friends/private. When that gap is closed, the absence assertion fails and
- * prompts flipping the inventory element from missing to ported.
+ * Locks the Ported elements of the diary new/edit form that screen-parity tracks, including the
+ * web-public audience and its openpne.diary.allow_web_public gate (OpenPNE 3 lets a site disable
+ * web-public diaries; that capability must survive).
  */
 class DiaryFormParityTest extends TestCase
 {
@@ -29,13 +28,23 @@ class DiaryFormParityTest extends TestCase
             ->assertSee('Private');                 // Visibility::Private
     }
 
-    public function test_new_form_does_not_yet_offer_the_web_public_option(): void
+    public function test_new_form_offers_web_public_when_the_gate_is_enabled(): void
     {
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/diary/new')
             ->assertOk()
-            ->assertDontSee('Public to Web'); // Visibility::Open->label() — the tracked gap
+            ->assertSee('Public to Web'); // Visibility::Open->label(), default-on gate
+    }
+
+    public function test_new_form_hides_web_public_when_the_gate_is_disabled(): void
+    {
+        config(['openpne.diary.allow_web_public' => false]);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/diary/new')
+            ->assertOk()
+            ->assertDontSee('Public to Web');
     }
 
     public function test_edit_form_preselects_the_diary_visibility(): void

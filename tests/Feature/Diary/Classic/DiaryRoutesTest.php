@@ -163,8 +163,25 @@ class DiaryRoutesTest extends TestCase
         $this->actingAs($member)->post('/diary/create')->assertSessionHasErrors(['title', 'body', 'visibility']);
     }
 
-    public function test_store_rejects_open_visibility(): void
+    public function test_store_accepts_web_public_visibility_by_default(): void
     {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/diary/create', [
+            'title' => 'Title',
+            'body' => 'Body',
+            'visibility' => '0',
+        ])->assertSessionDoesntHaveErrors('visibility')->assertRedirect();
+
+        $this->assertDatabaseHas('diaries', [
+            'member_id' => $member->getKey(),
+            'visibility' => Visibility::Open->value,
+        ]);
+    }
+
+    public function test_store_rejects_web_public_when_the_gate_is_disabled(): void
+    {
+        config(['openpne.diary.allow_web_public' => false]);
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/diary/create', [
