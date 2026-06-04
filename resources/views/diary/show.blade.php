@@ -3,7 +3,7 @@
 @section('title', $diary->title)
 
 @section('sidemenu')
-    <x-diary.sidemenu :member="$diary->member" />
+    <x-diary.sidemenu :member="$diary->member" :year="$diary->created_at->year" :month="$diary->created_at->month" />
 @endsection
 
 @section('content')
