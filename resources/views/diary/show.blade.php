@@ -39,11 +39,40 @@
         </div>
     </div>
 
-    @if ($comments->isNotEmpty())
+    @if ($thread->total > 0)
         <div class="dparts commentList" id="diary_comment_list">
             <div class="partsHeading"><h3>{{ __('Comments') }}</h3></div>
             <div class="parts">
-                @foreach ($comments as $comment)
+                {{-- OpenPNE 3 diaryComment/_list.php: page-size switch + order toggle. --}}
+                @if ($thread->offersSizeSwitch())
+                    <div class="pagerRelative">
+                        @foreach ($thread->otherSizes() as $n)
+                            <a href="{{ $thread->link(1, $n, $thread->ascending) }}">{{ __('View :count per page', ['count' => $n]) }}</a>
+                        @endforeach
+                        @if ($thread->hasPages())
+                            @if ($thread->ascending)
+                                <a href="{{ $thread->link(1, $thread->size, false) }}">{{ __('View Latest') }}</a>
+                            @else
+                                <a href="{{ $thread->link(1, $thread->size, true) }}">{{ __('View Oldest First') }}</a>
+                            @endif
+                        @endif
+                    </div>
+                @endif
+
+                {{-- Older/Newer follow comment age, so they read the same in either order. --}}
+                @if ($thread->hasPages())
+                    <div class="pagerRelative">
+                        @if ($thread->hasOlder())
+                            <p class="prev"><a href="{{ $thread->link($thread->olderPage(), $thread->size, $thread->ascending) }}">{{ __('Older') }}</a></p>
+                        @endif
+                        <p class="number">{{ __('No. :first - :last', ['first' => $thread->firstNumber(), 'last' => $thread->lastNumber()]) }}</p>
+                        @if ($thread->hasNewer())
+                            <p class="next"><a href="{{ $thread->link($thread->newerPage(), $thread->size, $thread->ascending) }}">{{ __('Newer') }}</a></p>
+                        @endif
+                    </div>
+                @endif
+
+                @foreach ($thread->comments as $comment)
                     <dl>
                         <dt>{{ $comment->created_at->format('Y-m-d H:i') }}</dt>
                         <dd>
