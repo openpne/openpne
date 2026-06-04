@@ -86,4 +86,25 @@ class BodyTextTest extends TestCase
     {
         $this->assertSame('', (string) BodyText::render(null));
     }
+
+    public function test_excerpt_collapses_newlines_to_spaces(): void
+    {
+        $this->assertSame('a b c', BodyText::excerpt("a\nb\r\nc"));
+    }
+
+    public function test_excerpt_truncates_to_display_width_108_without_an_ellipsis(): void
+    {
+        $this->assertSame(str_repeat('a', 108), BodyText::excerpt(str_repeat('a', 200)));
+    }
+
+    public function test_excerpt_counts_full_width_characters_as_two(): void
+    {
+        // 60 full-width characters span display width 120; the excerpt keeps 54 (width 108).
+        $this->assertSame(str_repeat('あ', 54), BodyText::excerpt(str_repeat('あ', 60)));
+    }
+
+    public function test_excerpt_of_null_is_empty(): void
+    {
+        $this->assertSame('', BodyText::excerpt(null));
+    }
 }
