@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 class DiarySerializer
 {
     /**
-     * @return array{id: int, title: string, visibility: string, author: array{id: int, name: string}, createdAt: string}
+     * @return array{id: int, title: string, visibility: string, commentCount: int, author: array{id: int, name: string}, createdAt: string}
      */
     public static function summary(Diary $diary): array
     {
@@ -23,6 +23,7 @@ class DiarySerializer
             'id' => $diary->getKey(),
             'title' => $diary->title,
             'visibility' => $diary->visibility->slug(),
+            'commentCount' => $diary->comments_count ?? 0,
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,

@@ -21,7 +21,8 @@
                 <ul class="diaryList">
                     @foreach ($diaries as $entry)
                         <li>
-                            <a href="{{ route('diary.show', $entry) }}">{{ $entry->title }}</a>
+                            {{-- OpenPNE 3 op_diary_get_title_and_count: title followed by the comment count. --}}
+                            <a href="{{ route('diary.show', $entry) }}">{{ $entry->title }} ({{ $entry->comments_count }})</a>
                             <span class="diaryDate">{{ $entry->created_at->format('Y-m-d') }}</span>
                             @if ($owner->is(auth()->user()))
                                 <a href="{{ route('diary.edit', $entry) }}">{{ __('Edit') }}</a>

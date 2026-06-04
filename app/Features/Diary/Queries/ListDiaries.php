@@ -20,7 +20,7 @@ class ListDiaries
      */
     public function __invoke(Member $viewer, Member $owner, int $perPage = 20, ?ArchivePeriod $period = null): LengthAwarePaginator
     {
-        $query = $owner->diaries()->with('member');
+        $query = $owner->diaries()->with('member')->withCount('comments');
 
         if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
             $query->whereRaw('1 = 0');

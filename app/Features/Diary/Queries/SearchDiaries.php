@@ -24,7 +24,7 @@ class SearchDiaries
     /** @return LengthAwarePaginator<int, Diary> */
     public function __invoke(Member $viewer, string $keyword, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
-        $query = Diary::with('member')->where('visibility', '<=', Visibility::Members->value);
+        $query = Diary::with('member')->withCount('comments')->where('visibility', '<=', Visibility::Members->value);
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'diaries.member_id');
 
