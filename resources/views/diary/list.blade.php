@@ -23,7 +23,7 @@
                         <li>
                             {{-- OpenPNE 3 op_diary_get_title_and_count: truncated title + comment count. --}}
                             <a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a>
-                            <span class="diaryDate">{{ $entry->created_at->format('Y-m-d') }}</span>
+                            <span class="diaryDate">{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</span>
                             @if ($owner->is(auth()->user()))
                                 <a href="{{ route('diary.edit', $entry) }}">{{ __('Edit') }}</a>
                                 <a href="{{ route('diary.delete.show', $entry) }}">{{ __('Delete') }}</a>
