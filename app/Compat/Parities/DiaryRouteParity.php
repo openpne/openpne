@@ -66,7 +66,7 @@ class DiaryRouteParity extends RouteParity
                 // Comment thread (diaryComment/list component). The list renders, but several of
                 // its OpenPNE 3 behaviours are split out below so they stay visible as gaps.
                 new ScreenElement('comment thread (author, number, delete)', L::One, S::Ported, 'include_component diaryComment/list'),
-                new ScreenElement('comment thread pagination + order toggle', L::Two, S::Missing, 'diaryComment/_list pager (size, ASC/DESC, older/newer)', 'all comments shown unpaginated; OpenPNE 3 pages with a size and latest/oldest toggle'),
+                new ScreenElement('comment thread pagination + order toggle', L::Two, S::Ported, 'diaryComment/_list pager (size, ASC/DESC, older/newer)', 'DiaryCommentThread: reversible pager, sizes 20/100, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment body auto-link', L::Three, S::Partial, 'op_url_cmd(nl2br($comment->body))', 'comment body shown raw; auto-link/nl2br not ported'),
                 new ScreenElement('comment images', L::Three, S::Deferred, '$comment->getDiaryCommentImagesJoinFile()', 'image delivery not built (FileStorage)'),
                 // Comment post form. Text posting + the web-public notice are faithful; the OpenPNE 3
