@@ -7,6 +7,7 @@ use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Actions\DeleteDiary;
 use App\Features\Diary\Actions\UpdateDiary;
 use App\Features\Diary\Exceptions\DiaryActionException;
+use App\Features\Diary\Queries\AdjacentDiaries;
 use App\Features\Diary\Queries\ListDiaries;
 use App\Features\Diary\Queries\ListFriendDiaries;
 use App\Features\Diary\Queries\ListRecentDiaries;
@@ -138,7 +139,7 @@ class DiaryController extends Controller
         ], bodyIdRoute: $bodyIdRoute);
     }
 
-    public function show(Request $request, int $diary, ShowDiary $query): View|InertiaResponse
+    public function show(Request $request, int $diary, ShowDiary $query, AdjacentDiaries $adjacent): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $found = $query($viewer, $diary);
@@ -149,10 +150,16 @@ class DiaryController extends Controller
         $comments->each->setRelation('diary', $found);
 
         return $this->respondWith($request, [
-            SurfaceResolver::CLASSIC => fn () => view('diary.show', [
-                'diary' => $found,
-                'comments' => $comments,
-            ]),
+            SurfaceResolver::CLASSIC => function () use ($found, $comments, $viewer, $adjacent) {
+                ['previous' => $previous, 'next' => $next] = $adjacent($viewer, $found);
+
+                return view('diary.show', [
+                    'diary' => $found,
+                    'comments' => $comments,
+                    'previousDiary' => $previous,
+                    'nextDiary' => $next,
+                ]);
+            },
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/show', [
                 'diary' => DiarySerializer::detail($found),
                 'comments' => DiarySerializer::comments($comments, $viewer),
