@@ -86,4 +86,46 @@ class BodyTextTest extends TestCase
     {
         $this->assertSame('', (string) BodyText::render(null));
     }
+
+    public function test_excerpt_collapses_newlines_to_spaces(): void
+    {
+        $this->assertSame('a b c', BodyText::excerpt("a\nb\r\nc"));
+    }
+
+    public function test_excerpt_truncates_to_display_width_108_without_an_ellipsis(): void
+    {
+        $this->assertSame(str_repeat('a', 108), BodyText::excerpt(str_repeat('a', 200)));
+    }
+
+    public function test_excerpt_counts_full_width_characters_as_two(): void
+    {
+        // 60 full-width characters span display width 120; the excerpt keeps 54 (width 108).
+        $this->assertSame(str_repeat('あ', 54), BodyText::excerpt(str_repeat('あ', 60)));
+    }
+
+    public function test_excerpt_of_null_is_empty(): void
+    {
+        $this->assertSame('', BodyText::excerpt(null));
+    }
+
+    public function test_excerpt_strips_decoration_tags(): void
+    {
+        $this->assertSame('Bold and plain', BodyText::excerpt('<op:b>Bold</op:b> and plain'));
+    }
+
+    public function test_excerpt_strips_entity_encoded_decoration_tags(): void
+    {
+        $this->assertSame('Bold', BodyText::excerpt('&lt;op:b&gt;Bold&lt;/op:b&gt;'));
+    }
+
+    public function test_excerpt_strips_decoration_tags_with_attributes(): void
+    {
+        $this->assertSame('Hi', BodyText::excerpt('<op:color color="red">Hi</op:color>'));
+    }
+
+    public function test_excerpt_leaves_non_decoration_tags_for_blade_to_escape(): void
+    {
+        // Only op:* tags are decoration; a literal <b> is kept and escaped at output time.
+        $this->assertSame('<b>keep</b>', BodyText::excerpt('<b>keep</b>'));
+    }
 }
