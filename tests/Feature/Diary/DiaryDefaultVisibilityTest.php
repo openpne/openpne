@@ -50,4 +50,20 @@ class DiaryDefaultVisibilityTest extends TestCase
                 ->component('diary/new')
                 ->where('defaultVisibility', '2'));
     }
+
+    public function test_new_form_renders_open_so_it_is_not_a_hidden_choice(): void
+    {
+        // With web-public enabled and an Open default, Modern must both pre-select '0' AND
+        // render the Open option — never submit Open from a select that does not show it.
+        config(['openpne.diary.allow_web_public' => true]);
+        $member = Member::factory()->create();
+        $member->setPreference(PreferenceKey::DiaryDefaultVisibility, Visibility::Open);
+
+        $this->actingAs($member, 'member')
+            ->get('/m/diary/new')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('diary/new')
+                ->where('defaultVisibility', '0')
+                ->where('visibilityOptions.0.value', '0')); // Open leads the list
+    }
 }

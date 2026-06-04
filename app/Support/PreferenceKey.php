@@ -46,7 +46,9 @@ enum PreferenceKey: string
     /** Decode the stored string `value` to the typed value; an absent/invalid value is the default. */
     public function decode(?string $value): Visibility
     {
-        if ($value === null) {
+        // ctype_digit guards against PHP's fail-open `(int) 'foo' === 0 === Open`: a non-digit
+        // (corrupted row, '') must fall back to the default, never to the least-restrictive value.
+        if ($value === null || ! ctype_digit($value)) {
             return $this->default();
         }
 
@@ -78,9 +80,11 @@ enum PreferenceKey: string
             return $value;
         }
 
-        $visibility = Visibility::tryFrom((int) $value);
+        // Reject non-digit strings rather than letting `(int) 'foo' === 0` slip through as Open.
+        $int = is_string($value) ? (ctype_digit($value) ? (int) $value : null) : $value;
+        $visibility = $int === null ? null : Visibility::tryFrom($int);
         if ($visibility === null) {
-            throw new InvalidArgumentException("Invalid value for preference {$this->value}: {$value}");
+            throw new InvalidArgumentException("Invalid value for preference {$this->value}: ".var_export($value, true));
         }
 
         return $visibility;

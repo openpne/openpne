@@ -29,6 +29,17 @@ class PreferenceKeyTest extends TestCase
     public function test_decode_reads_a_stored_value(): void
     {
         $this->assertSame(Visibility::Friends, PreferenceKey::DiaryDefaultVisibility->decode('2'));
+        // A real stored '0' is the explicit Open choice and round-trips.
+        $this->assertSame(Visibility::Open, PreferenceKey::DiaryDefaultVisibility->decode('0'));
+    }
+
+    public function test_decode_rejects_non_digit_values_without_failing_open(): void
+    {
+        // (int) '' and (int) 'foo' are 0 in PHP = Visibility::Open; a corrupted value must use
+        // the key default, never the least-restrictive audience.
+        $this->assertSame(Visibility::Members, PreferenceKey::DiaryDefaultVisibility->decode(''));
+        $this->assertSame(Visibility::Members, PreferenceKey::DiaryDefaultVisibility->decode('foo'));
+        $this->assertSame(Visibility::Private, PreferenceKey::AgeVisibility->decode('bar'));
     }
 
     public function test_encode_decode_round_trips_every_visibility(): void
@@ -50,5 +61,11 @@ class PreferenceKeyTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         PreferenceKey::DiaryDefaultVisibility->coerce(99);
+    }
+
+    public function test_coerce_rejects_a_non_digit_string(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        PreferenceKey::DiaryDefaultVisibility->coerce('foo');
     }
 }

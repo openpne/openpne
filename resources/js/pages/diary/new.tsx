@@ -2,7 +2,15 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
-export default function DiaryNew({ defaultVisibility }: { defaultVisibility: string }) {
+type VisibilityOption = { value: string; label: string };
+
+export default function DiaryNew({
+    defaultVisibility,
+    visibilityOptions,
+}: {
+    defaultVisibility: string;
+    visibilityOptions: VisibilityOption[];
+}) {
     const t = useT();
     const { flash } = usePage<PageProps>().props;
     const { data, setData, post, errors, processing } = useForm({
@@ -55,9 +63,11 @@ export default function DiaryNew({ defaultVisibility }: { defaultVisibility: str
                             value={data.visibility}
                             onChange={(e) => setData('visibility', e.target.value)}
                         >
-                            <option value="1">{t('All members')}</option>
-                            <option value="2">{t('%Friends% only')}</option>
-                            <option value="3">{t('Private')}</option>
+                            {visibilityOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {t(option.label)}
+                                </option>
+                            ))}
                         </select>
                         {errors.visibility && <p role="alert">{errors.visibility}</p>}
                     </div>
