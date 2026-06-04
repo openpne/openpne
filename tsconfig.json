@@ -17,9 +17,8 @@
         "skipLibCheck": true,
         "allowImportingTsExtensions": false,
         "noEmit": true,
-        "baseUrl": ".",
         "paths": {
-            "@/*": ["resources/js/*"]
+            "@/*": ["./resources/js/*"]
         },
         "types": ["vite/client", "node"]
     },
