@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 class DiarySerializer
 {
     /**
-     * @return array{id: int, title: string, visibility: string, author: array{id: int, name: string}, createdAt: string}
+     * @return array{id: int, title: string, visibility: string, commentCount: int, author: array{id: int, name: string}, createdAt: string}
      */
     public static function summary(Diary $diary): array
     {
@@ -23,6 +23,9 @@ class DiarySerializer
             'id' => $diary->getKey(),
             'title' => $diary->title,
             'visibility' => $diary->visibility->slug(),
+            // List/feed callers eager-load the count; a single route-bound diary lazy-loads it here
+            // so the count is never silently zero.
+            'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
