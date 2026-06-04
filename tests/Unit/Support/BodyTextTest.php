@@ -107,4 +107,25 @@ class BodyTextTest extends TestCase
     {
         $this->assertSame('', BodyText::excerpt(null));
     }
+
+    public function test_excerpt_strips_decoration_tags(): void
+    {
+        $this->assertSame('Bold and plain', BodyText::excerpt('<op:b>Bold</op:b> and plain'));
+    }
+
+    public function test_excerpt_strips_entity_encoded_decoration_tags(): void
+    {
+        $this->assertSame('Bold', BodyText::excerpt('&lt;op:b&gt;Bold&lt;/op:b&gt;'));
+    }
+
+    public function test_excerpt_strips_decoration_tags_with_attributes(): void
+    {
+        $this->assertSame('Hi', BodyText::excerpt('<op:color color="red">Hi</op:color>'));
+    }
+
+    public function test_excerpt_leaves_non_decoration_tags_for_blade_to_escape(): void
+    {
+        // Only op:* tags are decoration; a literal <b> is kept and escaped at output time.
+        $this->assertSame('<b>keep</b>', BodyText::excerpt('<b>keep</b>'));
+    }
 }

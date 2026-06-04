@@ -26,6 +26,9 @@ final class BodyText
     /** op_truncate(body, 36, '', 3): up to three rows of display width 36 in the OpenPNE 3 table cell. */
     private const EXCERPT_WIDTH = 108;
 
+    /** OpenPNE 3 op_decoration is_strip: removes <op:*> rich-text tags in both raw and entity-encoded form. */
+    private const DECORATION_TAG = '/(?:&lt;|<)(\/?)(op:\w+)(?:\s+((?:(?!&lt;|<).)*))?(?:&gt;|>)/i';
+
     public static function render(?string $text): HtmlString
     {
         $segments = preg_split(self::URL, (string) $text, -1, PREG_SPLIT_DELIM_CAPTURE);
@@ -41,14 +44,16 @@ final class BodyText
 
     /**
      * A plain-text feed excerpt, porting OpenPNE 3's op_truncate(op_decoration(body, true), 36, '', 3):
-     * newlines collapse to spaces and the text is cut to display width 108 with no ellipsis. The
-     * OpenPNE 3 table cell wrapped it into three rows of 36; the Classic feed shows a single line.
-     * op_decoration runs with is_strip, which on the plain-text bodies we store is a no-op. Blade
-     * escapes the returned string.
+     * op_decoration's is_strip removes <op:*> rich-text tags (kept in migrated legacy bodies), newlines
+     * collapse to spaces, and the text is cut to display width 108 with no ellipsis. The OpenPNE 3 table
+     * cell wrapped it into three rows of 36; the Classic feed shows a single line. Blade escapes the
+     * returned string. (The show page renders the full body, which carries the un-ported decoration as a
+     * separate Partial; here the tags are only stripped, exactly as OpenPNE 3's excerpt does.)
      */
     public static function excerpt(?string $text): string
     {
-        $singleLine = strtr((string) $text, ["\r\n" => ' ', "\r" => ' ', "\n" => ' ']);
+        $stripped = preg_replace(self::DECORATION_TAG, '', (string) $text) ?? (string) $text;
+        $singleLine = strtr($stripped, ["\r\n" => ' ', "\r" => ' ', "\n" => ' ']);
 
         return mb_strimwidth($singleLine, 0, self::EXCERPT_WIDTH, '');
     }

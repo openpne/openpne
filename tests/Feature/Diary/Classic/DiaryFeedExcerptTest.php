@@ -46,6 +46,21 @@ class DiaryFeedExcerptTest extends TestCase
             ->assertDontSee('<script>alert(1)</script>', false);
     }
 
+    public function test_recent_feed_excerpt_strips_decoration_tags(): void
+    {
+        $member = Member::factory()->create();
+        Diary::factory()->create([
+            'member_id' => $member->getKey(),
+            'visibility' => Visibility::Members,
+            'body' => '<op:b>Bold</op:b> and plain',
+        ]);
+
+        $this->actingAs($member)->get('/diary/list')
+            ->assertOk()
+            ->assertSee('Bold and plain')
+            ->assertDontSee('op:b', false);
+    }
+
     public function test_friend_feed_omits_the_body_excerpt(): void
     {
         [$viewer, $friend] = Member::factory()->count(2)->create()->all();
