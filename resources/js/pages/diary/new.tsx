@@ -2,13 +2,13 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
-export default function DiaryNew() {
+export default function DiaryNew({ defaultVisibility }: { defaultVisibility: string }) {
     const t = useT();
     const { flash } = usePage<PageProps>().props;
     const { data, setData, post, errors, processing } = useForm({
         title: '',
         body: '',
-        visibility: '1',
+        visibility: defaultVisibility,
     });
 
     return (

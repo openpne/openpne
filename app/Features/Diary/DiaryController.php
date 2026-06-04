@@ -177,11 +177,16 @@ class DiaryController extends Controller
 
     public function new(Request $request): View|InertiaResponse
     {
+        $default = DiaryVisibility::defaultFor($this->viewer());
+
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('diary.new', [
                 'visibilityOptions' => DiaryVisibility::options(),
+                'defaultVisibility' => $default,
             ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('diary/new'),
+            SurfaceResolver::MODERN => fn () => Inertia::render('diary/new', [
+                'defaultVisibility' => (string) $default->value,
+            ]),
         ]);
     }
 

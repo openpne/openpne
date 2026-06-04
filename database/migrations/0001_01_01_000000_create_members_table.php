@@ -21,6 +21,11 @@ return new class extends Migration
             // scale: Open = web-public (guests may view it), otherwise login-required. Default
             // Members keeps profiles SNS-internal until the member opts into web-public.
             $table->unsignedTinyInteger('profile_visibility')->default(1); // Visibility::Members
+            // Member-facing UI language (one of SetLocale::SUPPORTED_LOCALES) or null to fall
+            // back to the session/Accept-Language chain. A typed column, not a member_preferences
+            // row, because it is read in middleware on every member-facing request and is an
+            // identity-ish attribute (cf. email/password) rather than a feature preference.
+            $table->string('locale')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

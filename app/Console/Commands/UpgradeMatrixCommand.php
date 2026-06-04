@@ -61,6 +61,16 @@ class UpgradeMatrixCommand extends Command
             $this->line('');
         }
 
+        // member_config is a KV table; the per-step column audit cannot show which names are
+        // migrated vs dropped, so list that per-name coverage explicitly.
+        $this->line('## `member_config` name coverage');
+        $this->line('');
+        $this->line('Per-name disposition of OpenPNE 3 `member_config`. A name not listed is an unrecognised custom config the upgrade does not migrate.');
+        foreach (StepRegistry::memberConfigDispositions() as $name => $disposition) {
+            $this->line("- `{$name}` — {$disposition}");
+        }
+        $this->line('');
+
         return self::SUCCESS;
     }
 }
