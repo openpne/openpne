@@ -28,7 +28,7 @@
             <p class="diaryMeta">
                 {{ $diary->member->name }} &mdash; {{ $diary->created_at->format('Y-m-d H:i') }}
             </p>
-            <div class="diaryBody">{{ $diary->body }}</div>
+            <div class="diaryBody"><x-user-text :value="$diary->body" /></div>
 
             @if ($diary->member->is(auth()->user()))
                 <p>
@@ -89,7 +89,7 @@
                                     @endif
                                 </p>
                             </div>
-                            <div class="body"><p class="text">{{ $comment->body }}</p></div>
+                            <div class="body"><p class="text"><x-user-text :value="$comment->body" /></p></div>
                         </dd>
                     </dl>
                 @endforeach
