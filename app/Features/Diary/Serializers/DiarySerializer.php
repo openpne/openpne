@@ -23,7 +23,9 @@ class DiarySerializer
             'id' => $diary->getKey(),
             'title' => $diary->title,
             'visibility' => $diary->visibility->slug(),
-            'commentCount' => $diary->comments_count ?? 0,
+            // List/feed callers eager-load the count; a single route-bound diary lazy-loads it here
+            // so the count is never silently zero.
+            'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
