@@ -11,6 +11,7 @@ use App\Features\Profile\ProfileController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
 use App\Http\Middleware\SetLocale;
+use App\Models\Member;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -26,6 +27,13 @@ Route::post('/locale', function (Request $request) {
     $locale = (string) $request->input('locale');
     if (in_array($locale, SetLocale::SUPPORTED_LOCALES, strict: true)) {
         $request->session()->put('locale', $locale);
+        // Persist for an authenticated member so the choice is durable across sessions and
+        // outranks the session toggle on the next request (SetLocale step 1). Keeps the column
+        // and session in sync so they never disagree for a logged-in member.
+        $member = $request->user('member');
+        if ($member instanceof Member) {
+            $member->forceFill(['locale' => $locale])->save();
+        }
     }
 
     // For Inertia requests we force a hard navigation. The React provider reads

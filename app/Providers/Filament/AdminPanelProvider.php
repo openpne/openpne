@@ -61,8 +61,9 @@ class AdminPanelProvider extends PanelProvider
                 // Required because the Filament panel does NOT inherit the `web` middleware
                 // group — the panel keeps its own stack and must register SetLocale here too,
                 // otherwise admin pages would always render in APP_LOCALE regardless of the
-                // user's session preference.
-                SetLocale::class,
+                // user's session preference. `:session` scope keeps it admin-correct: an admin
+                // page must not pick up a co-logged-in member's persisted members.locale.
+                SetLocale::class.':session',
             ])
             ->authMiddleware([
                 Authenticate::class,

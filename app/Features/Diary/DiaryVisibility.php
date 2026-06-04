@@ -2,6 +2,8 @@
 
 namespace App\Features\Diary;
 
+use App\Models\Member;
+use App\Support\PreferenceKey;
 use App\Support\Visibility;
 use Illuminate\Validation\Rules\Enum;
 
@@ -23,6 +25,18 @@ final class DiaryVisibility
         $webPublic = self::allowsWebPublic() ? [Visibility::Open] : [];
 
         return [...$webPublic, Visibility::Members, Visibility::Friends, Visibility::Private];
+    }
+
+    /**
+     * The audience to pre-select on the new-diary form for $member: their stored
+     * DiaryDefaultVisibility (OpenPNE 3's per-member default), clamped to the currently
+     * selectable audiences so a stored Open never pre-selects once web-public is turned off.
+     */
+    public static function defaultFor(Member $member): Visibility
+    {
+        $preferred = $member->preference(PreferenceKey::DiaryDefaultVisibility);
+
+        return in_array($preferred, self::options(), true) ? $preferred : Visibility::Members;
     }
 
     /** Validation rule restricting visibility to the selectable audiences. */

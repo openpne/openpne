@@ -31,9 +31,9 @@
                         <th><label for="diary_visibility">{{ __('Visibility') }}</label></th>
                         <td>
                             <select id="diary_visibility" name="visibility">
-                                {{-- Members stays the default even when web-public is enabled. --}}
+                                {{-- Pre-selects the member's stored default (clamped to the selectable audiences). --}}
                                 @foreach ($visibilityOptions as $option)
-                                    <option value="{{ $option->value }}" @selected(old('visibility', \App\Support\Visibility::Members->value) == $option->value)>{{ __($option->label()) }}</option>
+                                    <option value="{{ $option->value }}" @selected(old('visibility', $defaultVisibility->value) == $option->value)>{{ __($option->label()) }}</option>
                                 @endforeach
                             </select>
                             @error('visibility')<p class="error">{{ $message }}</p>@enderror
