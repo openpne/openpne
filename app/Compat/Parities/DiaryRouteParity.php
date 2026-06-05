@@ -118,7 +118,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('empty-state message', L::Three, S::Ported, 'op_include_box diaryList'),
                 new ScreenElement('title + comment count', L::Two, S::Ported, 'op_diary_get_title_and_count', 'DiaryTitle: title truncated to display width 36 + "(N)"'),
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "op_format_date(created_at, 'XDateTimeJa')", 'LocalizedDate'),
-                new ScreenElement('author thumbnail', L::Two, S::Missing, 'image_tag_sf_image(Member->getImageFilename)', 'avatar delivery'),
+                new ScreenElement('author thumbnail', L::Two, S::Ported, 'image_tag_sf_image(Member->getImageFilename, 76x76)', 'Member->avatar 76×76 square linking to the entry; rendered only when set (OpenPNE 4 has no default-avatar placeholder)'),
                 new ScreenElement('body excerpt', L::Two, S::Ported, 'op_truncate(op_decoration(body, true), 36, ..., 3)', 'BodyText::excerpt; single-line width 108 (OpenPNE 3 wraps to 3×36); <op:*> decoration tags stripped'),
                 new ScreenElement('has-images icon', L::Three, S::Missing, 'op_diary_image_icon', 'image delivery not built'),
             ],

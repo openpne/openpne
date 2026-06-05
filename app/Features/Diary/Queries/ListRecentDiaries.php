@@ -22,7 +22,7 @@ class ListRecentDiaries
     /** @return LengthAwarePaginator<int, Diary> */
     public function __invoke(Member $viewer, int $perPage = 20): LengthAwarePaginator
     {
-        $query = Diary::with('member')->withCount('comments')
+        $query = Diary::with('member.avatar.file')->withCount('comments')
             ->where('visibility', '<=', Visibility::Members->value);
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'diaries.member_id');
