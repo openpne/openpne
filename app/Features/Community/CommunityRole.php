@@ -24,6 +24,20 @@ enum CommunityRole: int
         return $this === self::Admin || $this === self::SubAdmin;
     }
 
+    /**
+     * The OpenPNE 3 community_member_position name this role maps from, or null for a plain
+     * member (which had no position row). Used by the upgrade CASE so the mapping is driven by
+     * this enum rather than a coincidental match with slug().
+     */
+    public function op3PositionName(): ?string
+    {
+        return match ($this) {
+            self::Admin => 'admin',
+            self::SubAdmin => 'sub_admin',
+            self::Member => null,
+        };
+    }
+
     /** String slug for serialization. Never pass the raw int to the frontend. */
     public function slug(): string
     {

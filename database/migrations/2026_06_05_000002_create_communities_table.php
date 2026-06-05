@@ -1,6 +1,5 @@
 <?php
 
-use App\Features\Community\JoinPolicy;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -22,8 +21,9 @@ return new class extends Migration
             $table->string('name', 64)->unique();
             $table->text('description')->nullable();
             // Join policy: Open=1 (immediate) / Approval=2 (admin approves). Default Open matches
-            // the OpenPNE 3 community_config register_policy default ("open").
-            $table->unsignedTinyInteger('register_policy')->default(JoinPolicy::Open->value);
+            // the OpenPNE 3 community_config register_policy default ("open"). Frozen literal (not
+            // JoinPolicy::Open->value) so a later enum change cannot drift this migration's default.
+            $table->unsignedTinyInteger('register_policy')->default(1); // JoinPolicy::Open
             $table->foreignId('community_category_id')->nullable()->constrained('community_categories')->nullOnDelete();
             // Successor of OpenPNE 3's single community_member_position 'admin_confirm' row: the
             // pending target of an admin transfer. Written only by the (deferred) transfer handshake.

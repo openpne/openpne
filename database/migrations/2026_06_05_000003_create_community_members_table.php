@@ -1,6 +1,5 @@
 <?php
 
-use App\Features\Community\CommunityRole;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -19,8 +18,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('community_id')->constrained('communities')->cascadeOnDelete();
             $table->foreignId('member_id')->constrained('members')->cascadeOnDelete();
-            // Member=1 < SubAdmin=2 < Admin=3 (ascending privilege).
-            $table->unsignedTinyInteger('role')->default(CommunityRole::Member->value);
+            // Member=1 < SubAdmin=2 < Admin=3 (ascending privilege). Frozen literal (not
+            // CommunityRole::Member->value) so a later enum change cannot drift this default.
+            $table->unsignedTinyInteger('role')->default(1); // CommunityRole::Member
             // A pending member awaiting admin approval (Approval policy).
             $table->boolean('is_pre')->default(false);
             $table->timestamps();

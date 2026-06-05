@@ -22,10 +22,6 @@ class CommunityCategoriesTable
                     ->label(__('Name'))
                     ->searchable(),
 
-                TextColumn::make('parent.name')
-                    ->label(__('Parent'))
-                    ->toggleable(),
-
                 IconColumn::make('is_allow_member_community')
                     ->label(__('Member-creatable'))
                     ->boolean(),
