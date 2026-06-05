@@ -21,8 +21,24 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain("'pc_address'") // email row's member_config subquery
             ->expectsOutputToContain('`password`')   // password is a mapped column, not pending
             ->expectsOutputToContain('Accepted gaps:')
-            // Source tables with a successor but no step yet must stay visible too.
-            ->expectsOutputToContain('Deferred source tables')
+            // Source tables not driven by a standalone step (deferred or flattened) must stay visible too.
+            ->expectsOutputToContain('Deferred / flattened source tables')
             ->expectsOutputToContain('`file_bin`');
+    }
+
+    public function test_renders_community_config_coverage(): void
+    {
+        // community_config is read by subquery (not a step), so its per-name coverage and the
+        // is_pre split that decomposes community_member must be visible in the matrix.
+        $this->artisan('openpne:upgrade-matrix')
+            ->assertSuccessful()
+            ->expectsOutputToContain('`community_config` name coverage')
+            ->expectsOutputToContain('Filter: `is_pre = 0`')
+            ->expectsOutputToContain('Filter: `is_pre = 1`')
+            ->expectsOutputToContain('`register_policy`')
+            // Stock topic-plugin config names stay accounted-for, not flagged as custom configs.
+            ->expectsOutputToContain('`public_flag`')
+            ->expectsOutputToContain('`topic_authority`')
+            ->expectsOutputToContain('`community_member_position`');
     }
 }

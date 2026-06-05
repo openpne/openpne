@@ -52,9 +52,9 @@ class UpgradeMatrixCommand extends Command
         }
 
         if (StepRegistry::deferredSourceTables() !== []) {
-            $this->line('## Deferred source tables');
+            $this->line('## Deferred / flattened source tables');
             $this->line('');
-            $this->line('OpenPNE 3 source tables with an OpenPNE 4 successor but no upgrade step yet:');
+            $this->line('OpenPNE 3 source tables not driven by a standalone step — either deferred (a successor table exists but no step yet) or flattened into another table via subquery:');
             foreach (StepRegistry::deferredSourceTables() as $table => $reason) {
                 $this->line("- `{$table}` — {$reason}");
             }
@@ -67,6 +67,16 @@ class UpgradeMatrixCommand extends Command
         $this->line('');
         $this->line('Per-name disposition of OpenPNE 3 `member_config`. A name not listed is an unrecognised custom config the upgrade does not migrate.');
         foreach (StepRegistry::memberConfigDispositions() as $name => $disposition) {
+            $this->line("- `{$name}` — {$disposition}");
+        }
+        $this->line('');
+
+        // community_config is the same shape: a KV table read by subquery, so its per-name coverage
+        // is listed rather than derived from a step.
+        $this->line('## `community_config` name coverage');
+        $this->line('');
+        $this->line('Per-name disposition of OpenPNE 3 `community_config`. A name not listed is an unrecognised custom config the upgrade does not migrate.');
+        foreach (StepRegistry::communityConfigDispositions() as $name => $disposition) {
             $this->line("- `{$name}` — {$disposition}");
         }
         $this->line('');
