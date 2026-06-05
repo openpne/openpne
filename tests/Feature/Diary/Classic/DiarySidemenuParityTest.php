@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Diary\Classic;
 
+use App\Features\Member\Actions\SetAvatar;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Visibility;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 /**
@@ -34,6 +36,19 @@ class DiarySidemenuParityTest extends TestCase
         $response->assertSee('Recently Posted');                                        // recent box heading
         $response->assertSee('href="'.route('diary.show', $recent).'"', false);         // recent entry link
         $response->assertSee('Sidemenu Recent Entry (0)');                              // title + comment count
+    }
+
+    public function test_sidemenu_renders_the_author_avatar_thumbnail(): void
+    {
+        $owner = Member::factory()->create();
+        app(SetAvatar::class)($owner, UploadedFile::fake()->image('me.png', 100, 100));
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+        $file = $owner->fresh()->avatar->file;
+
+        $this->actingAs($owner)->get("/diary/{$diary->getKey()}")
+            ->assertOk()
+            ->assertSee('class="parts memberImageBox"', false)
+            ->assertSee($file->thumbnailUrl(120, 120, square: true), false); // author avatar in the box
     }
 
     public function test_listmember_opts_into_the_sidemenu(): void

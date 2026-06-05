@@ -14,9 +14,9 @@ use Illuminate\View\View;
 
 /**
  * OpenPNE 3 diary sidemenu (get_component('diary','sidemenu')) for the Classic LayoutB Left
- * column: the author's identity, a month calendar linking days that have diaries to the day
- * archive, and the author's recent diaries. All scoped to the current viewer (a guest reaching
- * a web-public page sees only web-public entries). The avatar waits on FileStorage.
+ * column: the author's identity (avatar, when set, linked to their profile), a month calendar
+ * linking days that have diaries to the day archive, and the author's recent diaries. All scoped
+ * to the current viewer (a guest reaching a web-public page sees only web-public entries).
  *
  * `year`/`month` focus the calendar (OpenPNE 3 passes the diary's or archive's month); without
  * them it shows the current month, as OpenPNE 3 does on the new/edit forms.
