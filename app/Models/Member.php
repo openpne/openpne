@@ -87,12 +87,6 @@ class Member extends Authenticatable
         return $this->hasMany(Diary::class, 'member_id');
     }
 
-    /** @return HasMany<MemberImage, $this> */
-    public function images(): HasMany
-    {
-        return $this->hasMany(MemberImage::class, 'member_id');
-    }
-
     /** @return HasMany<MemberProfile, $this> */
     public function memberProfiles(): HasMany
     {
@@ -135,12 +129,13 @@ class Member extends Authenticatable
     }
 
     /**
-     * The avatar shown for this member, or null. A single primary image is kept today.
+     * The member's profile image (avatar), or null. One per member, enforced by the
+     * member_images.member_id unique key.
      *
      * @return HasOne<MemberImage, $this>
      */
-    public function primaryImage(): HasOne
+    public function avatar(): HasOne
     {
-        return $this->hasOne(MemberImage::class, 'member_id')->where('is_primary', true);
+        return $this->hasOne(MemberImage::class, 'member_id');
     }
 }

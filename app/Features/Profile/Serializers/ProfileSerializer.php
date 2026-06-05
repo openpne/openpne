@@ -19,7 +19,7 @@ class ProfileSerializer
             'owner' => [
                 'id' => $owner->getKey(),
                 'name' => $owner->name,
-                'avatarUrl' => $owner->primaryImage?->file?->thumbnailUrl(120, 120, square: true),
+                'avatarUrl' => $owner->avatar?->file?->thumbnailUrl(120, 120, square: true),
             ],
             'isSelf' => $isSelf,
             'fields' => $fields->map(fn (ProfileFieldValue $field): array => [

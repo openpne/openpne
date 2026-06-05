@@ -57,7 +57,7 @@ class SearchMembers
      */
     public function __invoke(Member $viewer, string $name, array $profileFilters, array $dateRanges, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
-        $query = Member::query()->with('primaryImage.file');
+        $query = Member::query()->with('avatar.file');
 
         if (trim($name) !== '') {
             $query->where('name', 'like', '%'.trim($name).'%');

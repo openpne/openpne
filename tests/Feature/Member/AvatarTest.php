@@ -21,18 +21,23 @@ class AvatarTest extends TestCase
         $this->actingAs(Member::factory()->create())
             ->get(route('member.avatar.edit'))
             ->assertOk()
-            ->assertSee('name="image"', escape: false);
+            ->assertSee('name="image"', escape: false)
+            // No avatar yet: no remove form (DELETE shares the /member/avatar URL with the
+            // upload POST, so the @method('DELETE') field is what distinguishes it).
+            ->assertDontSee('value="DELETE"', escape: false);
     }
 
     public function test_the_edit_page_shows_the_avatar_thumbnail(): void
     {
         $member = Member::factory()->create();
         app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 100, 100));
-        $file = $member->fresh()->primaryImage->file;
+        $file = $member->fresh()->avatar->file;
 
         $this->actingAs($member)
             ->get(route('member.avatar.edit'))
-            ->assertSee($file->thumbnailUrl(120, 120, square: true), escape: false);
+            ->assertSee($file->thumbnailUrl(120, 120, square: true), escape: false)
+            // With an avatar set, the remove form (a DELETE to /member/avatar) is offered.
+            ->assertSee('value="DELETE"', escape: false);
     }
 
     public function test_upload_stores_a_member_owned_file_and_links_it(): void
@@ -43,7 +48,7 @@ class AvatarTest extends TestCase
             ->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->image('me.png', 20, 20)])
             ->assertRedirect(route('member.avatar.edit'));
 
-        $file = $member->fresh()->primaryImage?->file;
+        $file = $member->fresh()->avatar?->file;
         $this->assertNotNull($file);
         $this->assertSame('member', $file->related_entity_type);
         $this->assertSame($member->getKey(), $file->related_entity_id);
@@ -56,13 +61,13 @@ class AvatarTest extends TestCase
         $member = Member::factory()->create();
         $this->actingAs($member)->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->image('one.png', 10, 10)]);
 
-        $old = $member->fresh()->primaryImage->file;
+        $old = $member->fresh()->avatar->file;
 
         $this->actingAs($member)->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->image('two.png', 10, 10)]);
 
         // Exactly one image remains, and it is the new one.
-        $this->assertSame(1, $member->fresh()->images()->count());
-        $new = $member->fresh()->primaryImage->file;
+        $this->assertSame(1, $member->fresh()->avatar()->count());
+        $new = $member->fresh()->avatar->file;
         $this->assertNotSame($old->getKey(), $new->getKey());
 
         // The old File row and its bytes are gone.
@@ -74,7 +79,7 @@ class AvatarTest extends TestCase
     {
         $member = Member::factory()->create();
         app(SetAvatar::class)($member, UploadedFile::fake()->image('old.png', 10, 10));
-        $old = $member->fresh()->primaryImage->file;
+        $old = $member->fresh()->avatar->file;
 
         // The next byte write fails mid-replace (e.g. a disk error). The previous
         // avatar — row and bytes — must survive.
@@ -91,8 +96,8 @@ class AvatarTest extends TestCase
         }
 
         $member = $member->fresh();
-        $this->assertSame(1, $member->images()->count());
-        $this->assertTrue($member->primaryImage->file->is($old));
+        $this->assertSame(1, $member->avatar()->count());
+        $this->assertTrue($member->avatar->file->is($old));
         $this->assertSame(1, DB::table('file_bin')->where('file_id', $old->getKey())->count());
     }
 
@@ -100,13 +105,44 @@ class AvatarTest extends TestCase
     {
         $member = Member::factory()->create();
         app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 10, 10));
-        $file = $member->fresh()->primaryImage->file;
+        $file = $member->fresh()->avatar->file;
 
         $member->delete();
 
         $this->assertNull(File::find($file->getKey()));
         $this->assertSame(0, DB::table('file_bin')->where('file_id', $file->getKey())->count());
         $this->assertSame(0, DB::table('member_images')->where('member_id', $member->getKey())->count());
+    }
+
+    public function test_removing_an_avatar_clears_it_and_purges_its_bytes(): void
+    {
+        $member = Member::factory()->create();
+        app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 10, 10));
+        $file = $member->fresh()->avatar->file;
+
+        $this->actingAs($member)
+            ->delete(route('member.avatar.destroy'))
+            ->assertRedirect(route('member.avatar.edit'));
+
+        $this->assertSame(0, $member->fresh()->avatar()->count());
+        $this->assertNull(File::find($file->getKey()));
+        $this->assertSame(0, DB::table('file_bin')->where('file_id', $file->getKey())->count());
+    }
+
+    public function test_removing_when_there_is_no_avatar_is_a_no_op(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)
+            ->delete(route('member.avatar.destroy'))
+            ->assertRedirect(route('member.avatar.edit'));
+
+        $this->assertSame(0, $member->fresh()->avatar()->count());
+    }
+
+    public function test_removing_an_avatar_requires_authentication(): void
+    {
+        $this->delete(route('member.avatar.destroy'))->assertRedirect('/login');
     }
 
     public function test_the_edit_page_carries_the_classic_body_id(): void
@@ -131,7 +167,7 @@ class AvatarTest extends TestCase
             ->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->create('notes.txt', 10, 'text/plain')])
             ->assertSessionHasErrors('image');
 
-        $this->assertSame(0, $member->images()->count());
+        $this->assertSame(0, $member->avatar()->count());
     }
 
     public function test_an_svg_upload_is_rejected(): void
@@ -142,7 +178,7 @@ class AvatarTest extends TestCase
             ->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->createWithContent('x.svg', '<svg></svg>')])
             ->assertSessionHasErrors('image');
 
-        $this->assertSame(0, $member->images()->count());
+        $this->assertSame(0, $member->avatar()->count());
     }
 
     public function test_an_image_with_excessive_dimensions_is_rejected(): void
@@ -155,7 +191,7 @@ class AvatarTest extends TestCase
             ->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->image('big.png', 200, 200)])
             ->assertSessionHasErrors('image');
 
-        $this->assertSame(0, $member->images()->count());
+        $this->assertSame(0, $member->avatar()->count());
     }
 
     public function test_an_oversized_image_is_rejected(): void
@@ -166,6 +202,6 @@ class AvatarTest extends TestCase
             ->post(route('member.avatar.update'), ['image' => UploadedFile::fake()->image('huge.png')->size(6000)])
             ->assertSessionHasErrors('image');
 
-        $this->assertSame(0, $member->images()->count());
+        $this->assertSame(0, $member->avatar()->count());
     }
 }

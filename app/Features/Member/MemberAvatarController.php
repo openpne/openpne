@@ -3,6 +3,7 @@
 namespace App\Features\Member;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Member\Actions\RemoveAvatar;
 use App\Features\Member\Actions\SetAvatar;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\AvatarRequest;
@@ -20,7 +21,7 @@ class MemberAvatarController extends Controller
     {
         // Classic body id is the OpenPNE 3 page_member_configImage hook (MemberRouteParity).
         return view('member.avatar', [
-            'avatar' => $this->viewer()->primaryImage?->file,
+            'avatar' => $this->viewer()->avatar?->file,
         ])->with('pageId', RouteParityRegistry::bodyId('member.avatar.edit'));
     }
 
@@ -29,6 +30,13 @@ class MemberAvatarController extends Controller
         $action($this->viewer(), $request->file('image'));
 
         return redirect()->route('member.avatar.edit')->with('status', __('Profile image updated.'));
+    }
+
+    public function destroy(RemoveAvatar $action): RedirectResponse
+    {
+        $action($this->viewer());
+
+        return redirect()->route('member.avatar.edit')->with('status', __('Profile image removed.'));
     }
 
     private function viewer(): Member

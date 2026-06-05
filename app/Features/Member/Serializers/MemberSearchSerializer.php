@@ -52,7 +52,7 @@ class MemberSearchSerializer
         return [
             'id' => $member->getKey(),
             'name' => $member->name,
-            'avatarUrl' => $member->primaryImage?->file?->thumbnailUrl(76, 76, square: true),
+            'avatarUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
         ];
     }
 

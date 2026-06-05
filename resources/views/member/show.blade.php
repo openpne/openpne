@@ -6,7 +6,7 @@
     <div class="dparts" id="member_profile">
         <div class="partsHeading"><h3>{{ $owner->name }}</h3></div>
         <div class="parts">
-            @php($avatar = $owner->primaryImage?->file)
+            @php($avatar = $owner->avatar?->file)
             @if ($avatar)
                 <p><img src="{{ $avatar->thumbnailUrl(120, 120, square: true) }}" alt="{{ $owner->name }}"></p>
             @endif

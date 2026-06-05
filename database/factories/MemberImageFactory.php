@@ -22,7 +22,6 @@ class MemberImageFactory extends Factory
         return [
             'member_id' => Member::factory(),
             'file_id' => File::factory(),
-            'is_primary' => true,
         ];
     }
 }

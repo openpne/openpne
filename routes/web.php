@@ -167,6 +167,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {
         Route::get('/avatar', 'edit')->name('member.avatar.edit');
         Route::post('/avatar', 'update')->name('member.avatar.update');
+        Route::delete('/avatar', 'destroy')->name('member.avatar.destroy');
     });
 
     // OpenPNE 3 served the avatar editor at /member/image/config; preserve the URL.
