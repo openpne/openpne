@@ -100,7 +100,7 @@
             @else
                 <ul class="memberList">
                     @foreach ($members as $member)
-                        @php($avatar = $member->primaryImage?->file)
+                        @php($avatar = $member->avatar?->file)
                         <li>
                             <a href="{{ route('member.profile.show', $member) }}">
                                 @if ($avatar)
