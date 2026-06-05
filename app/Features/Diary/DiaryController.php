@@ -33,7 +33,7 @@ class DiaryController extends Controller
     public function listMember(Request $request, ListDiaries $query, ?Member $member = null): View|InertiaResponse
     {
         $viewer = $this->viewer();
-        $owner = $member ?? $viewer;
+        $owner = $this->memberSubject($member);
         $diaries = $query($viewer, $owner);
 
         return $this->respondWith($request, [
@@ -62,6 +62,7 @@ class DiaryController extends Controller
         abort_if($period === null, 404);
 
         $viewer = $this->viewer();
+        $member = $this->memberSubject($member);
         $diaries = $query($viewer, $member, period: $period);
 
         return $this->respondWith($request, [
