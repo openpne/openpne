@@ -22,6 +22,11 @@ class CommunityMemberFactory extends Factory
         ];
     }
 
+    public function member(): static
+    {
+        return $this->state(['role' => CommunityRole::Member]);
+    }
+
     public function admin(): static
     {
         return $this->state(['role' => CommunityRole::Admin]);
