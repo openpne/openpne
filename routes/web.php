@@ -1,6 +1,7 @@
 <?php
 
 use App\Features\Block\BlockController;
+use App\Features\Community\CommunityController;
 use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
@@ -213,4 +214,29 @@ Route::middleware('auth')->group(function () {
             'ext' => 'jpg|png|gif|webp',
         ])
         ->name('image.show');
+
+    // Community core (Classic only; Modern is none in Phase A — no /m/community/*). The literal
+    // routes precede the /{community} wildcard, and {community} is digit-constrained, so a
+    // literal like /community/search can never be captured as a community id.
+    Route::prefix('community')->controller(CommunityController::class)->group(function () {
+        Route::get('/search', 'search')->name('community.search');
+        Route::get('/joinList', 'listMine')->name('community.list_mine');
+        // Single endpoint for new+edit and create+update (?id= switches), as in OpenPNE 3.
+        Route::get('/edit', 'edit')->name('community.edit');
+        Route::post('/edit', 'save')->name('community.save');
+        // join / quit: GET confirm, POST submit (community id via ?id=).
+        Route::get('/join', 'showJoin')->name('community.join.show');
+        Route::post('/join', 'join')->name('community.join');
+        Route::get('/quit', 'showQuit')->name('community.quit.show');
+        Route::post('/quit', 'quit')->name('community.quit');
+        // Member roster + pending-member approval.
+        Route::get('/member/list', 'members')->name('community.members');
+        Route::get('/member/pending', 'pendingMembers')->name('community.members.pending');
+        Route::post('/member/approve', 'approve')->name('community.members.approve');
+        Route::post('/member/decline', 'decline')->name('community.members.decline');
+        // delete: GET confirm, POST submit (community id in the path, as in OpenPNE 3).
+        Route::get('/delete/{community}', 'showDelete')->whereNumber('community')->name('community.delete.show');
+        Route::post('/delete/{community}', 'delete')->whereNumber('community')->name('community.delete');
+        Route::get('/{community}', 'show')->whereNumber('community')->name('community.show');
+    });
 });

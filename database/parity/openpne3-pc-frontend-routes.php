@@ -80,4 +80,22 @@ return [
             'diary_comment_delete' => ['/diary/comment/delete/:id', 'POST'],
         ],
     ],
+    'community' => [
+        // No community_nodefaults route, so the global /:module/:action fallback stays on:
+        // the mobile smt* actions, deleteImage, and memberManage remain URL-reachable un-named.
+        // Every community route is sf_method-unconstrained, so all are ANY (GET-reachable).
+        'disables_global_fallback' => false,
+        'routes' => [
+            'community_joinlist' => ['/community/joinList', 'ANY'],
+            'community_search' => ['/community/search', 'ANY'],
+            'community_edit' => ['/community/edit', 'ANY'],
+            'community_delete' => ['/community/delete/:id', 'ANY'],
+            'community_deleteImage' => ['/community/deleteImage', 'ANY'],
+            'community_memberList' => ['/community/member/list', 'ANY'],
+            'community_memberManage' => ['/community/member/manage/:id', 'ANY'],
+            'community_join' => ['/community/join', 'ANY'],
+            'community_quit' => ['/community/quit', 'ANY'],
+            'community_home' => ['/community/:id', 'ANY'],
+        ],
+    ],
 ];
