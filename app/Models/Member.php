@@ -93,6 +93,12 @@ class Member extends Authenticatable
         return $this->hasMany(MemberProfile::class, 'member_id');
     }
 
+    /** @return HasMany<CommunityMember, $this> */
+    public function communityMemberships(): HasMany
+    {
+        return $this->hasMany(CommunityMember::class, 'member_id');
+    }
+
     /** @return HasMany<MemberPreference, $this> */
     public function preferences(): HasMany
     {
