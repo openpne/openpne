@@ -147,6 +147,9 @@ class DiaryController extends Controller
         $viewer = $this->viewer();
         $found = $query($viewer, $diary);
         abort_if($found === null, 404);
+        // ShowDiary already gated the block (null → 404 above); record the author for the
+        // Classic friend localNav when viewing someone else's diary.
+        $this->markLocalNavSubject($found->member);
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer, $adjacent) {
