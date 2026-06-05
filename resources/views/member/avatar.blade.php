@@ -20,6 +20,17 @@
                     </ul>
                 </div>
             </form>
+            @if ($avatar)
+                <form method="POST" action="{{ route('member.avatar.destroy') }}">
+                    @csrf
+                    @method('DELETE')
+                    <div class="operation">
+                        <ul class="moreInfo button">
+                            <li><input type="submit" class="input_submit" value="{{ __('Remove') }}"></li>
+                        </ul>
+                    </div>
+                </form>
+            @endif
         </div>
     </div>
 @endsection

@@ -60,6 +60,7 @@ final class StepRegistry
         return [
             'file' => 'OpenPNE 3 file metadata. The upgrade maps file ownership onto the related_entity columns, which needs the OpenPNE 4 tables that own files (avatars, attachments) to exist first; no step yet.',
             'file_bin' => 'OpenPNE 3 file bytes. Migrated by a metadata-only FK rewire onto `files` (the file_bin schema is frozen for exactly that), not a BLOB copy; pending the `file` step.',
+            'member_image' => 'OpenPNE 3 member profile images (up to three, one primary). OpenPNE 4 is a single avatar (member_images.member_id is unique), so the upgrade keeps one row per member — the primary (is_primary DESC, then id) — and drops the rest; pending the `file` step it depends on.',
         ];
     }
 
