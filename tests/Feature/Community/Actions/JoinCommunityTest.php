@@ -7,6 +7,7 @@ use App\Features\Community\CommunityRole;
 use App\Features\Community\Events\CommunityJoined;
 use App\Features\Community\Events\CommunityJoinRequested;
 use App\Features\Community\Exceptions\CommunityActionFailure;
+use App\Features\Community\JoinPolicy;
 use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\Member;
@@ -69,6 +70,20 @@ class JoinCommunityTest extends TestCase
         (new JoinCommunity)($member, $community);
 
         $this->assertFailsWith(CommunityActionFailure::AlreadyRequested, fn () => (new JoinCommunity)($member, $community));
+        $this->assertDatabaseCount('community_join_requests', 1);
+    }
+
+    public function test_a_pending_applicant_cannot_open_join_after_the_policy_flips(): void
+    {
+        $community = Community::factory()->approval()->create();
+        $member = Member::factory()->create();
+        (new JoinCommunity)($member, $community);
+
+        // Admin opens the community while the request is still pending.
+        $community->update(['register_policy' => JoinPolicy::Open]);
+
+        $this->assertFailsWith(CommunityActionFailure::AlreadyRequested, fn () => (new JoinCommunity)($member, $community));
+        $this->assertDatabaseCount('community_members', 0);
         $this->assertDatabaseCount('community_join_requests', 1);
     }
 }

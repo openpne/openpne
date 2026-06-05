@@ -21,11 +21,15 @@ class JoinCommunity
             throw new CommunityActionException(CommunityActionFailure::AlreadyMember);
         }
 
-        if ($community->register_policy === JoinPolicy::Approval) {
-            if (CommunityMembership::isPending($community, $member)) {
-                throw new CommunityActionException(CommunityActionFailure::AlreadyRequested);
-            }
+        // A pending applicant is already in the join flow, independent of the current policy.
+        // Guarding here (not only in the Approval branch) keeps a member from holding both a
+        // confirmed membership and a stale request if the policy flips Approval→Open between
+        // applying and re-joining — the request must be approved or declined first.
+        if (CommunityMembership::isPending($community, $member)) {
+            throw new CommunityActionException(CommunityActionFailure::AlreadyRequested);
+        }
 
+        if ($community->register_policy === JoinPolicy::Approval) {
             DB::transaction(function () use ($member, $community) {
                 DB::table('community_join_requests')->insert([
                     'community_id' => $community->getKey(),
