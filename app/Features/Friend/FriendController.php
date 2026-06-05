@@ -35,9 +35,9 @@ class FriendController extends Controller
     public function list(Request $request, ListFriends $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
-        $owner = $request->has('id')
+        $owner = $this->memberSubject($request->has('id')
             ? Member::findOrFail((int) $request->query('id'))
-            : $viewer;
+            : null);
         $friends = $query($viewer, $owner);
 
         return $this->respondWith($request, [

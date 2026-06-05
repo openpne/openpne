@@ -70,7 +70,7 @@ class DiaryRoutesTest extends TestCase
         $response->assertDontSee('Secret');
     }
 
-    public function test_list_member_empty_when_owner_blocks_viewer(): void
+    public function test_list_member_returns_404_when_owner_blocks_viewer(): void
     {
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
         Diary::factory()->create(['member_id' => $bob->getKey(), 'title' => 'Bob Entry']);
@@ -79,10 +79,19 @@ class DiaryRoutesTest extends TestCase
             'blocked_id' => $alice->getKey(),
         ]);
 
-        $response = $this->actingAs($alice)->get("/diary/listMember/{$bob->getKey()}");
+        // The whole page is denied (MemberPolicy::access), not rendered empty.
+        $this->actingAs($alice)->get("/diary/listMember/{$bob->getKey()}")->assertNotFound();
+    }
 
-        $response->assertOk();
-        $response->assertDontSee('Bob Entry');
+    public function test_list_member_archive_returns_404_when_owner_blocks_viewer(): void
+    {
+        [$alice, $bob] = Member::factory()->count(2)->create()->all();
+        DB::table('member_blocks')->insert([
+            'blocker_id' => $bob->getKey(),
+            'blocked_id' => $alice->getKey(),
+        ]);
+
+        $this->actingAs($alice)->get("/diary/listMember/{$bob->getKey()}/2026/6")->assertNotFound();
     }
 
     public function test_list_member_returns_404_for_unknown_owner(): void
