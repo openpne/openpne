@@ -7,8 +7,8 @@
         <div class="partsHeading"><h3>{{ __('Search %communities%') }}</h3></div>
         <div class="parts">
             <form method="GET" action="{{ route('community.search') }}" class="searchForm">
-                <input type="text" name="keyword" value="{{ $keyword }}" placeholder="{{ __('Keyword') }}">
-                <select name="category">
+                <input type="text" name="community[name]" value="{{ $keyword }}" placeholder="{{ __('Keyword') }}">
+                <select name="community[community_category_id]">
                     <option value="">{{ __('All categories') }}</option>
                     @foreach ($categories as $category)
                         <option value="{{ $category->getKey() }}" @selected($categoryId === $category->getKey())>{{ $category->name }}</option>

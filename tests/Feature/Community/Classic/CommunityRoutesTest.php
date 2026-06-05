@@ -5,6 +5,7 @@ namespace Tests\Feature\Community\Classic;
 use App\Features\Community\CommunityRole;
 use App\Features\Community\Events\CommunityJoinRequested;
 use App\Models\Community;
+use App\Models\CommunityCategory;
 use App\Models\CommunityMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -53,11 +54,68 @@ class CommunityRoutesTest extends TestCase
         Community::factory()->create(['name' => 'Tokyo Runners']);
         Community::factory()->create(['name' => 'Osaka Cooks']);
 
-        $response = $this->actingAs($member)->get('/community/search?keyword=Runners');
+        // OpenPNE 3 query shape: community[name]=...
+        $response = $this->actingAs($member)->get('/community/search?'.http_build_query(['community' => ['name' => 'Runners']]));
 
         $response->assertOk();
         $response->assertSee('Tokyo Runners');
         $response->assertDontSee('Osaka Cooks');
+    }
+
+    public function test_search_accepts_the_openpne3_search_query_alias(): void
+    {
+        $member = Member::factory()->create();
+        Community::factory()->create(['name' => 'Tokyo Runners']);
+        Community::factory()->create(['name' => 'Osaka Cooks']);
+
+        $response = $this->actingAs($member)->get('/community/search?search_query=Runners');
+
+        $response->assertOk();
+        $response->assertSee('Tokyo Runners');
+        $response->assertDontSee('Osaka Cooks');
+    }
+
+    public function test_search_spans_admin_only_categories(): void
+    {
+        $member = Member::factory()->create();
+        $adminOnly = CommunityCategory::factory()->adminOnly()->create(['name' => 'Staff']);
+        $community = Community::factory()->create(['name' => 'Staff Club', 'community_category_id' => $adminOnly->getKey()]);
+
+        // The filter lists every category (not just member-creatable) and finds communities in it.
+        $response = $this->actingAs($member)->get('/community/search?'.http_build_query([
+            'community' => ['community_category_id' => $adminOnly->getKey()],
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Staff'); // category present in the filter select
+        $response->assertSee('Staff Club');
+    }
+
+    public function test_editing_keeps_an_admin_only_category(): void
+    {
+        $adminOnly = CommunityCategory::factory()->adminOnly()->create(['name' => 'Staff']);
+        $community = Community::factory()->create(['community_category_id' => $adminOnly->getKey()]);
+        $admin = $this->memberWithRole($community, CommunityRole::Admin);
+
+        // The current admin-only category is offered in the edit form.
+        $this->actingAs($admin)->get(route('community.edit', ['id' => $community->getKey()]))
+            ->assertOk()
+            ->assertSee('Staff');
+
+        // Saving with the same category keeps it (not nulled, not rejected).
+        $response = $this->actingAs($admin)->post('/community/edit?'.http_build_query(['id' => $community->getKey()]), [
+            'name' => $community->name,
+            'description' => 'updated',
+            'register_policy' => $community->register_policy->value,
+            'community_category_id' => $adminOnly->getKey(),
+        ]);
+
+        $response->assertRedirect(route('community.show', $community));
+        $this->assertDatabaseHas('communities', [
+            'id' => $community->getKey(),
+            'community_category_id' => $adminOnly->getKey(),
+            'description' => 'updated',
+        ]);
     }
 
     public function test_join_list_shows_another_members_communities(): void

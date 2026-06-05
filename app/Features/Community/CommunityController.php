@@ -50,13 +50,25 @@ class CommunityController extends Controller
 
     public function search(Request $request, SearchCommunities $query): View
     {
-        $keyword = $this->stringQuery($request, 'keyword');
-        $categoryId = $request->filled('category') ? $request->integer('category') : null;
+        // OpenPNE 3 query shape: community[name] / community[community_category_id], with a
+        // search_query alias for the name (preserved so a bookmarked OpenPNE 3 search URL works).
+        $params = $request->query('community');
+        $params = is_array($params) ? $params : [];
+
+        $keyword = $this->stringValue($params['name'] ?? null);
+        if ($keyword === '' && $request->filled('search_query')) {
+            $keyword = $this->stringValue($request->query('search_query'));
+        }
+
+        $categoryRaw = $params['community_category_id'] ?? null;
+        $categoryId = is_numeric($categoryRaw) ? (int) $categoryRaw : null;
 
         return $this->classic('community.search', [
             'keyword' => $keyword,
             'categoryId' => $categoryId,
-            'categories' => $this->selectableCategories(),
+            // Search spans every category (OpenPNE 3 CommunityFormFilter), not just the
+            // member-creatable set the create form offers.
+            'categories' => $this->allCategories(),
             'communities' => $query($keyword, $categoryId),
         ]);
     }
@@ -88,11 +100,12 @@ class CommunityController extends Controller
         $community = $request->filled('id') ? Community::findOrFail($request->integer('id')) : null;
         if ($community !== null) {
             abort_unless(Gate::allows('update', $community), 404);
+            $community->loadMissing('category');
         }
 
         return $this->classic('community.edit', [
             'community' => $community,
-            'categories' => $this->selectableCategories(),
+            'categories' => $this->editableCategories($community),
             'policies' => JoinPolicy::cases(),
         ]);
     }
@@ -233,7 +246,7 @@ class CommunityController extends Controller
         return Community::findOrFail($request->integer('id'));
     }
 
-    /** Categories an ordinary member may create in — the OpenPNE 3 create-form / search filter set. */
+    /** Categories an ordinary member may create in — the OpenPNE 3 create-form set. */
     private function selectableCategories()
     {
         return CommunityCategory::query()
@@ -243,10 +256,34 @@ class CommunityController extends Controller
             ->get();
     }
 
-    private function stringQuery(Request $request, string $key): string
+    /** Every category, for the search filter (OpenPNE 3 CommunityFormFilter::getAllChildren()). */
+    private function allCategories()
     {
-        $value = $request->query($key, '');
+        return CommunityCategory::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+    }
 
+    /**
+     * The edit form's category options: the member-creatable set plus the community's current
+     * category if it is not in it, so an admin editing a community in an admin-only category can
+     * keep it instead of having it silently dropped (OpenPNE 3 CommunityForm).
+     */
+    private function editableCategories(?Community $community)
+    {
+        $categories = $this->selectableCategories();
+        $current = $community?->category;
+
+        if ($current !== null && ! $categories->contains(fn (CommunityCategory $c): bool => $c->is($current))) {
+            $categories = $categories->push($current)->sortBy('sort_order')->sortBy('name')->values();
+        }
+
+        return $categories;
+    }
+
+    private function stringValue(mixed $value): string
+    {
         return is_string($value) ? $value : '';
     }
 

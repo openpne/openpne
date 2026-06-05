@@ -68,6 +68,24 @@ class UpdateDeleteCommunityTest extends TestCase
         $this->assertFailsWith(CommunityActionFailure::CategoryNotAllowed, fn () => (new UpdateCommunity)($admin, $community, $this->data($category->getKey())));
     }
 
+    public function test_update_keeps_an_admin_only_category_already_set(): void
+    {
+        // A community sitting in an admin-only category may stay there: only switching to a
+        // non-member-creatable category is refused (OpenPNE 3 checkCreatable).
+        $category = CommunityCategory::factory()->adminOnly()->create();
+        $community = Community::factory()->create(['community_category_id' => $category->getKey()]);
+        $admin = Member::factory()->create();
+        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+
+        (new UpdateCommunity)($admin, $community, $this->data($category->getKey()));
+
+        $this->assertDatabaseHas('communities', [
+            'id' => $community->getKey(),
+            'community_category_id' => $category->getKey(),
+            'name' => 'Renamed',
+        ]);
+    }
+
     public function test_admin_can_delete_and_memberships_cascade(): void
     {
         $community = Community::factory()->create();
