@@ -6,6 +6,7 @@ use App\Models\File;
 use App\Models\Member;
 use App\Observers\MemberObserver;
 use App\Policies\FilePolicy;
+use App\Policies\MemberPolicy;
 use App\Services\TermService;
 use App\Translation\TermTranslator;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -46,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         Gate::policy(File::class, FilePolicy::class);
+        Gate::policy(Member::class, MemberPolicy::class);
 
         Member::observe(MemberObserver::class);
     }

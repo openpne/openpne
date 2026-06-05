@@ -31,9 +31,11 @@ class ProfileController extends Controller
             return redirect()->guest(route('login'));
         }
 
+        $this->memberSubject($member); // 404 when the owner has blocked the viewer
+
         $lang = $this->translationLang();
         $fields = $query($viewer, $member, $lang);
-        abort_if($fields === null, 404); // owner blocks the viewer
+        abort_if($fields === null, 404); // defense in depth: ShowProfile also nulls on block
 
         $isSelf = $viewer?->is($member) ?? false;
 

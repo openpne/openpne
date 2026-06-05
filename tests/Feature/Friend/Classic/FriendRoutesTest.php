@@ -60,7 +60,7 @@ class FriendRoutesTest extends TestCase
         $this->actingAs($alice)->get('/friend/list?id=999999')->assertNotFound();
     }
 
-    public function test_list_page_for_owner_who_blocked_viewer_shows_no_friends(): void
+    public function test_list_page_for_owner_who_blocked_viewer_returns_404(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create(['name' => 'Bob']);
@@ -71,10 +71,8 @@ class FriendRoutesTest extends TestCase
             'blocked_id' => $alice->getKey(),
         ]);
 
-        $response = $this->actingAs($alice)->get("/friend/list?id={$bob->getKey()}");
-
-        $response->assertOk();
-        $response->assertDontSee('Carol');
+        // The whole page is denied (MemberPolicy::access), not rendered empty.
+        $this->actingAs($alice)->get("/friend/list?id={$bob->getKey()}")->assertNotFound();
     }
 
     public function test_manage_page_renders_received_and_sent_requests(): void
