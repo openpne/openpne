@@ -10,6 +10,7 @@ use App\Models\CommunityMember;
 use App\Models\Member;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class CommunityModelTest extends TestCase
@@ -23,7 +24,22 @@ class CommunityModelTest extends TestCase
 
         $this->assertSame(JoinPolicy::Approval, $community->refresh()->register_policy);
         $this->assertSame(CommunityRole::Admin, $member->refresh()->role);
-        $this->assertFalse($member->is_pre);
+    }
+
+    public function test_pending_join_requests_live_in_their_own_table(): void
+    {
+        $community = Community::factory()->approval()->create();
+        $applicant = Member::factory()->create();
+        DB::table('community_join_requests')->insert([
+            'community_id' => $community->getKey(),
+            'member_id' => $applicant->getKey(),
+        ]);
+
+        // An applicant is reachable as a pending applicant, never as a confirmed member.
+        $this->assertTrue($community->applicants->first()->is($applicant));
+        $this->assertSame(0, $community->members()->count());
+        $this->assertTrue($applicant->communityJoinRequests->first()->is($community));
+        $this->assertCount(0, $applicant->communityMemberships);
     }
 
     public function test_relations_resolve(): void

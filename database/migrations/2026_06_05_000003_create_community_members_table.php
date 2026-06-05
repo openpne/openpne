@@ -5,10 +5,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Community memberships (successor of the OpenPNE 3 `community_member` table).
+ * Confirmed community memberships (successor of the OpenPNE 3 `community_member` table's
+ * is_pre=0 rows). Pending join requests live in their own community_join_requests table, so a
+ * read of this table is a confirmed member with no extra filter — mirroring the
+ * friendships / friend_requests split and keeping the unsafe (pending) set out of reach.
  *
  * OpenPNE 3's separate community_member_position rows are flattened onto the `role` column.
- * `is_pre` (pending approval) stays a distinct boolean: a pending member has is_pre=1, role=Member.
  */
 return new class extends Migration
 {
@@ -21,8 +23,6 @@ return new class extends Migration
             // Member=1 < SubAdmin=2 < Admin=3 (ascending privilege). Frozen literal (not
             // CommunityRole::Member->value) so a later enum change cannot drift this default.
             $table->unsignedTinyInteger('role')->default(1); // CommunityRole::Member
-            // A pending member awaiting admin approval (Approval policy).
-            $table->boolean('is_pre')->default(false);
             $table->timestamps();
 
             // One membership per (community, member): OpenPNE 3 enforced this in app code; here it

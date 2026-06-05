@@ -19,7 +19,6 @@ class CommunityMemberFactory extends Factory
             'community_id' => Community::factory(),
             'member_id' => Member::factory(),
             'role' => CommunityRole::Member,
-            'is_pre' => false,
         ];
     }
 
@@ -31,10 +30,5 @@ class CommunityMemberFactory extends Factory
     public function subAdmin(): static
     {
         return $this->state(['role' => CommunityRole::SubAdmin]);
-    }
-
-    public function pending(): static
-    {
-        return $this->state(['is_pre' => true]);
     }
 }

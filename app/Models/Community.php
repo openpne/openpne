@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['name', 'description', 'register_policy', 'community_category_id', 'file_id'])]
@@ -23,10 +24,27 @@ class Community extends Model
         ];
     }
 
-    /** @return HasMany<CommunityMember, $this> */
+    /**
+     * Confirmed members only. Pending applicants live in community_join_requests
+     * (see applicants()), so this relation never includes them.
+     *
+     * @return HasMany<CommunityMember, $this>
+     */
     public function members(): HasMany
     {
         return $this->hasMany(CommunityMember::class);
+    }
+
+    /**
+     * Members with a pending join request (Approval policy), via the community_join_requests
+     * pivot. Distinct from members(): an applicant is not yet a member.
+     *
+     * @return BelongsToMany<Member, $this>
+     */
+    public function applicants(): BelongsToMany
+    {
+        return $this->belongsToMany(Member::class, 'community_join_requests', 'community_id', 'member_id')
+            ->withPivot('created_at');
     }
 
     /** @return BelongsTo<CommunityCategory, $this> */

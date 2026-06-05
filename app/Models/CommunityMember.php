@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['community_id', 'member_id', 'role', 'is_pre'])]
+#[Fillable(['community_id', 'member_id', 'role'])]
 class CommunityMember extends Model
 {
     /** @use HasFactory<CommunityMemberFactory> */
@@ -19,7 +19,6 @@ class CommunityMember extends Model
     {
         return [
             'role' => CommunityRole::class,
-            'is_pre' => 'boolean',
         ];
     }
 
