@@ -79,6 +79,7 @@ class FriendController extends Controller
         if ($viewer->is($target) || BlockLookup::hasAnyBlockBetween($viewer, $target)) {
             abort(404);
         }
+        $this->markLocalNavSubject($target); // OpenPNE 3 friend module: the target's friend localNav
         if ($viewer->isFriendsWith($target)) {
             return redirect()->route('friend.list');
         }
@@ -135,6 +136,7 @@ class FriendController extends Controller
         if ($viewer->is($member) || ! $viewer->isFriendsWith($member)) {
             abort(404);
         }
+        $this->markLocalNavSubject($member); // OpenPNE 3 friend module: the target's friend localNav
 
         return $this->respondWith($request, [
             self::SURFACE_CLASSIC => fn () => view('friend.unlink', [

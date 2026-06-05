@@ -8,6 +8,7 @@ use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -52,6 +53,29 @@ class ClassicLocalNavTest extends TestCase
                 ->assertSee(route('diary.list_member', $other), false)
                 ->assertSee(route('friend.list', ['id' => $other->getKey()]), false);
         }
+    }
+
+    public function test_friend_action_pages_render_the_friend_localnav(): void
+    {
+        // OpenPNE 3 friend module default_nav=friend: the link / unlink pages (target ≠ viewer)
+        // render the friend nav, not the default set.
+        $viewer = Member::factory()->create();
+        $stranger = Member::factory()->create(); // not yet a friend → link page
+        $friend = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+        ]);
+
+        $this->actingAs($viewer)->get("/friend/link?id={$stranger->getKey()}")
+            ->assertOk()
+            ->assertSee('<ul class="friend">', false)
+            ->assertSee(route('member.profile.show', $stranger), false);
+
+        $this->actingAs($viewer)->get("/friend/unlink/{$friend->getKey()}")
+            ->assertOk()
+            ->assertSee('<ul class="friend">', false)
+            ->assertSee(route('member.profile.show', $friend), false);
     }
 
     public function test_a_guest_on_a_web_public_profile_sees_no_localnav(): void
