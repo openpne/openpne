@@ -25,4 +25,17 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('Deferred source tables')
             ->expectsOutputToContain('`file_bin`');
     }
+
+    public function test_renders_community_config_coverage(): void
+    {
+        // community_config is read by subquery (not a step), so its per-name coverage and the
+        // is_pre split that decomposes community_member must be visible in the matrix.
+        $this->artisan('openpne:upgrade-matrix')
+            ->assertSuccessful()
+            ->expectsOutputToContain('`community_config` name coverage')
+            ->expectsOutputToContain('Filter: `is_pre = 0`')
+            ->expectsOutputToContain('Filter: `is_pre = 1`')
+            ->expectsOutputToContain('`register_policy`')
+            ->expectsOutputToContain('`community_member_position`');
+    }
 }

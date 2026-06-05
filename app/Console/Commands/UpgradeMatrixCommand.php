@@ -71,6 +71,16 @@ class UpgradeMatrixCommand extends Command
         }
         $this->line('');
 
+        // community_config is the same shape: a KV table read by subquery, so its per-name coverage
+        // is listed rather than derived from a step.
+        $this->line('## `community_config` name coverage');
+        $this->line('');
+        $this->line('Per-name disposition of OpenPNE 3 `community_config`. A name not listed is an unrecognised custom config the upgrade does not migrate.');
+        foreach (StepRegistry::communityConfigDispositions() as $name => $disposition) {
+            $this->line("- `{$name}` — {$disposition}");
+        }
+        $this->line('');
+
         return self::SUCCESS;
     }
 }

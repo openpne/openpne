@@ -2,6 +2,10 @@
 
 namespace App\Upgrade;
 
+use App\Upgrade\Steps\CommunityCategoryUpgrade;
+use App\Upgrade\Steps\CommunityJoinRequestUpgrade;
+use App\Upgrade\Steps\CommunityMemberUpgrade;
+use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
@@ -38,6 +42,12 @@ final class StepRegistry
             ProfileTranslationUpgrade::class,
             ProfileOptionTranslationUpgrade::class,
             MemberProfileUpgrade::class,
+            // FK order: communities reference community_categories; community_members and
+            // community_join_requests reference communities (and members, already migrated).
+            CommunityCategoryUpgrade::class,
+            CommunityUpgrade::class,
+            CommunityMemberUpgrade::class,
+            CommunityJoinRequestUpgrade::class,
         ];
     }
 
@@ -61,6 +71,7 @@ final class StepRegistry
             'file' => 'OpenPNE 3 file metadata. The upgrade maps file ownership onto the related_entity columns, which needs the OpenPNE 4 tables that own files (avatars, attachments) to exist first; no step yet.',
             'file_bin' => 'OpenPNE 3 file bytes. Migrated by a metadata-only FK rewire onto `files` (the file_bin schema is frozen for exactly that), not a BLOB copy; pending the `file` step.',
             'member_image' => 'OpenPNE 3 member profile images (up to three, one primary). OpenPNE 4 is a single avatar (member_images.member_id is unique), so the upgrade keeps one row per member — the primary (is_primary DESC, then id) — and drops the rest; pending the `file` step it depends on.',
+            'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped (Phase A is approval-only).',
         ];
     }
 
@@ -106,6 +117,29 @@ final class StepRegistry
             'pc_address_token' => 'Dropped: pending email-change confirmation token.',
             'mobile_address_pre' => 'Dropped: mobile frontend not in scope.',
             'mobile_address_token' => 'Dropped: mobile frontend not in scope.',
+        ];
+    }
+
+    /**
+     * Disposition of each known OpenPNE 3 `community_config` name. Like member_config, this is a KV
+     * table read by subquery (CommunityUpgrade), not a source→target step, so the per-step column
+     * audit cannot show which names migrate; this is that per-name coverage. A name absent from this
+     * map is an unrecognised custom/plugin config the upgrade does not migrate.
+     *
+     * @return array<string, string> community_config name => where it goes / why it is dropped
+     */
+    public static function communityConfigDispositions(): array
+    {
+        return [
+            // Flattened onto typed communities columns.
+            'register_policy' => 'communities.register_policy (open→Open, close→Approval; missing→Open), CommunityUpgrade.',
+            'description' => 'communities.description, CommunityUpgrade.',
+            // Owned by a later feature.
+            'is_send_pc_joinCommunity_mail' => 'Per-community join-notification opt-in — lands with the notification feature.',
+            'is_send_mobile_joinCommunity_mail' => 'Mobile join-notification opt-in — the mobile frontend is out of scope.',
+            'topic_authority' => 'Who may post topics — lands with the topic board (Phase B).',
+            // Intentionally deferred / dropped: no Phase A consumer.
+            'is_default' => 'Deferred: default community (auto-join every member) is an admin feature for a later slice.',
         ];
     }
 }
