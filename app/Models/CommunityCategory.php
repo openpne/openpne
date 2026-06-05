@@ -22,6 +22,20 @@ class CommunityCategory extends Model
         ];
     }
 
+    /**
+     * Whether an ordinary member may create a community in category $id. Null = no category
+     * (always allowed); a missing or admin-only category is rejected. OpenPNE 3 hid non-allowed
+     * categories from members and refused them on save.
+     */
+    public static function memberCreatable(?int $id): bool
+    {
+        if ($id === null) {
+            return true;
+        }
+
+        return (bool) static::query()->whereKey($id)->value('is_allow_member_community');
+    }
+
     /** @return HasMany<Community, $this> */
     public function communities(): HasMany
     {
