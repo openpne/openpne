@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Diary\Classic;
 
+use App\Features\Member\Actions\SetAvatar;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -78,6 +80,58 @@ class DiaryFeedRoutesTest extends TestCase
         $response->assertSee('Friend entry');
         // OpenPNE 3's friend feed (listFriendSuccess.php) carries no search form.
         $response->assertDontSee('name="keyword"', false);
+    }
+
+    public function test_recent_feed_renders_the_author_avatar_thumbnail(): void
+    {
+        $viewer = Member::factory()->create();
+        $author = Member::factory()->create(['name' => 'Author']);
+        app(SetAvatar::class)($author, UploadedFile::fake()->image('a.png', 100, 100));
+        Diary::factory()->create([
+            'member_id' => $author->getKey(),
+            'visibility' => Visibility::Members,
+        ]);
+        $file = $author->fresh()->avatar->file;
+
+        // OpenPNE 3 listSuccess shows a 76×76 author photo linking to the entry.
+        $this->actingAs($viewer)->get('/diary/list')
+            ->assertOk()
+            ->assertSee($file->thumbnailUrl(76, 76, square: true), false);
+    }
+
+    public function test_recent_feed_renders_no_thumbnail_when_the_author_has_no_avatar(): void
+    {
+        $viewer = Member::factory()->create();
+        $author = Member::factory()->create();
+        Diary::factory()->create([
+            'member_id' => $author->getKey(),
+            'visibility' => Visibility::Members,
+        ]);
+
+        // No default-avatar placeholder: the photo link is absent when the author has no avatar.
+        $this->actingAs($viewer)->get('/diary/list')
+            ->assertOk()
+            ->assertDontSee('class="photo"', false);
+    }
+
+    public function test_friend_feed_omits_the_author_thumbnail(): void
+    {
+        // OpenPNE 3 listFriendSuccess.php has no author photo, unlike the all-member list.
+        $viewer = Member::factory()->create();
+        $friend = Member::factory()->create();
+        app(SetAvatar::class)($friend, UploadedFile::fake()->image('f.png', 100, 100));
+        DB::table('friendships')->insert([
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+        ]);
+        Diary::factory()->create([
+            'member_id' => $friend->getKey(),
+            'visibility' => Visibility::Friends,
+        ]);
+
+        $this->actingAs($viewer)->get('/diary/listFriend')
+            ->assertOk()
+            ->assertDontSee('class="photo"', false);
     }
 
     public function test_all_member_feed_carries_the_search_form(): void
