@@ -93,6 +93,24 @@ class Member extends Authenticatable
         return $this->hasMany(MemberProfile::class, 'member_id');
     }
 
+    /** @return HasMany<CommunityMember, $this> */
+    public function communityMemberships(): HasMany
+    {
+        return $this->hasMany(CommunityMember::class, 'member_id');
+    }
+
+    /**
+     * Communities this member has a pending join request to, via the community_join_requests
+     * pivot (confirmed memberships are communityMemberships()).
+     *
+     * @return BelongsToMany<Community, $this>
+     */
+    public function communityJoinRequests(): BelongsToMany
+    {
+        return $this->belongsToMany(Community::class, 'community_join_requests', 'member_id', 'community_id')
+            ->withPivot('created_at');
+    }
+
     /** @return HasMany<MemberPreference, $this> */
     public function preferences(): HasMany
     {
