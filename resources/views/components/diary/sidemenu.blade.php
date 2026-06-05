@@ -1,6 +1,11 @@
-{{-- OpenPNE 3 diary _sidemenu.php Left column. memberImageBox's avatar (p.photo) waits on
-     FileStorage, so the name carries the profile link. --}}
+{{-- OpenPNE 3 diary _sidemenu.php Left column (memberImageBox): the author's avatar linked to
+     their profile, then their name. The name keeps the link so the profile stays reachable when
+     the author has no avatar. --}}
 <div class="parts memberImageBox">
+    @php($avatar = $member->avatar?->file)
+    @if ($avatar)
+        <p class="photo"><a href="{{ route('member.profile.show', $member) }}"><img src="{{ $avatar->thumbnailUrl(120, 120, square: true) }}" alt="{{ $member->name }}"></a></p>
+    @endif
     <p class="text"><a href="{{ route('member.profile.show', $member) }}">{{ $member->name }}</a></p>
 </div>
 
