@@ -58,10 +58,11 @@ final class StepRegistry
     }
 
     /**
-     * OpenPNE 3 source tables that already have an OpenPNE 4 successor table but no
-     * upgrade step yet, each with the reason. Recorded so the un-migrated data shows
-     * up in the matrix instead of being an invisible omission (the per-step audit
-     * only sees source tables a step reads).
+     * OpenPNE 3 source tables not driven by a standalone source→target step, each with the
+     * reason — either deferred (a successor table exists but no step yet) or flattened into
+     * another table via correlated subquery (no successor table of its own). Recorded so the
+     * data shows up in the matrix instead of being an invisible omission (the per-step audit
+     * only sees source tables a step reads as its FROM table).
      *
      * @return array<string, string> source table => reason
      */
@@ -137,6 +138,7 @@ final class StepRegistry
             // Owned by a later feature.
             'is_send_pc_joinCommunity_mail' => 'Per-community join-notification opt-in — lands with the notification feature.',
             'is_send_mobile_joinCommunity_mail' => 'Mobile join-notification opt-in — the mobile frontend is out of scope.',
+            'public_flag' => 'Who may read topics (public | members-only) — lands with the topic board (Phase B).',
             'topic_authority' => 'Who may post topics — lands with the topic board (Phase B).',
             // Intentionally deferred / dropped: no Phase A consumer.
             'is_default' => 'Deferred: default community (auto-join every member) is an admin feature for a later slice.',

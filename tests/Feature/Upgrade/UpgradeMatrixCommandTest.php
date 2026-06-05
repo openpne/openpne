@@ -21,8 +21,8 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain("'pc_address'") // email row's member_config subquery
             ->expectsOutputToContain('`password`')   // password is a mapped column, not pending
             ->expectsOutputToContain('Accepted gaps:')
-            // Source tables with a successor but no step yet must stay visible too.
-            ->expectsOutputToContain('Deferred source tables')
+            // Source tables not driven by a standalone step (deferred or flattened) must stay visible too.
+            ->expectsOutputToContain('Deferred / flattened source tables')
             ->expectsOutputToContain('`file_bin`');
     }
 
@@ -36,6 +36,9 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('Filter: `is_pre = 0`')
             ->expectsOutputToContain('Filter: `is_pre = 1`')
             ->expectsOutputToContain('`register_policy`')
+            // Stock topic-plugin config names stay accounted-for, not flagged as custom configs.
+            ->expectsOutputToContain('`public_flag`')
+            ->expectsOutputToContain('`topic_authority`')
             ->expectsOutputToContain('`community_member_position`');
     }
 }
