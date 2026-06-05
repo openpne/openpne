@@ -19,7 +19,22 @@ abstract class Controller
         $subject ??= auth()->user();
         abort_if($subject === null, 404);
         Gate::authorize('access', $subject);
+        $this->markLocalNavSubject($subject);
 
         return $subject;
+    }
+
+    /**
+     * Record the member a page is about so the Classic localNav renders OpenPNE 3's `friend`
+     * context (the subject's id-scoped Home/Diary/Friends) instead of the viewer's `default`
+     * nav. Only a member other than the viewer is recorded — a self page keeps the default nav,
+     * matching OpenPNE 3 (sf_nav_type stays `default` when the subject id equals the viewer's).
+     */
+    protected function markLocalNavSubject(Member $subject): void
+    {
+        $viewer = auth()->user();
+        if ($viewer !== null && ! $viewer->is($subject)) {
+            request()->attributes->set('localNavSubject', $subject);
+        }
     }
 }

@@ -42,18 +42,10 @@
         <div id="Contents">
             <div id="ContentsContainer">
                 {{-- localNav is OpenPNE 3's secondary nav bar (admin Navigation data, secure
-                     pages only). The admin-configurable data and the friend/community contexts
-                     are deferred; this renders the shipped `default` set. --}}
+                     pages only): the `default` set on own pages, the `friend` set when viewing
+                     another member. See layouts.partials.local-nav. --}}
                 <div id="localNav">
-                    @auth
-                        <ul class="default">
-                            <li id="default_home"><a href="{{ url('/') }}">{{ __('Home') }}</a></li>
-                            <li id="default_friend"><a href="{{ route('friend.list') }}">{{ __('%My_friends%') }}</a></li>
-                            <li id="default_diary"><a href="{{ route('diary.list_member') }}">{{ __('%Diary%') }}</a></li>
-                            <li id="default_profile"><a href="{{ route('member.profile.mine_compat') }}">{{ __('Profile') }}</a></li>
-                            <li id="default_editProfile"><a href="{{ route('member.profile.edit') }}">{{ __('Edit Profile') }}</a></li>
-                        </ul>
-                    @endauth
+                    @include('layouts.partials.local-nav')
                 </div>
 
                 {{-- A screen that defines a `sidemenu` section opts into OpenPNE 3's two-column
