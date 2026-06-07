@@ -24,4 +24,16 @@ class UpdateTopicRequest extends StoreTopicRequest
 
         return true;
     }
+
+    /**
+     * Editing is text-only for now — image management on edit is a follow-up. Overriding the create
+     * rules avoids validating an images[] field the edit form never submits (and the controller
+     * never reads).
+     *
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return $this->textRules();
+    }
 }

@@ -2,6 +2,9 @@
 
 namespace App\Policies;
 
+use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Models\CommunityTopic;
+use App\Models\CommunityTopicComment;
 use App\Models\File;
 use App\Models\Member;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +28,10 @@ class FilePolicy extends BasePolicy
             // A member's image (avatar) is visible to any signed-in member the owner
             // has not blocked. ownerBlocksViewer is one-way (BasePolicy).
             $owner instanceof Member => $viewer !== null && ! $this->ownerBlocksViewer($owner, $viewer),
+            // A topic/comment image inherits the board's read access: visible exactly to
+            // whoever may read the topic it hangs on (members-only boards hide it).
+            $owner instanceof CommunityTopic => $viewer !== null && CommunityTopicAccess::canViewTopic($owner, $viewer),
+            $owner instanceof CommunityTopicComment => $viewer !== null && $owner->topic !== null && CommunityTopicAccess::canViewTopic($owner->topic, $viewer),
             default => false,
         };
     }

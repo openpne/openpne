@@ -39,4 +39,10 @@ class CommunityTopic extends Model
     {
         return $this->hasMany(CommunityTopicComment::class);
     }
+
+    /** @return HasMany<CommunityTopicImage, $this> Attached images, in slot (number) order. */
+    public function images(): HasMany
+    {
+        return $this->hasMany(CommunityTopicImage::class, 'post_id')->orderBy('number');
+    }
 }

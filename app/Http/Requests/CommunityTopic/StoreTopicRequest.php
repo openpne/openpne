@@ -43,8 +43,18 @@ class StoreTopicRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        return [...$this->textRules(), ...TopicImageRules::rules()];
+    }
+
+    /**
+     * The text fields, shared with editing (UpdateTopicRequest). No max length: OpenPNE 3
+     * community_topic name/body are TEXT with no validator limit.
+     *
+     * @return array<string, mixed>
+     */
+    protected function textRules(): array
+    {
         return [
-            // No max length: OpenPNE 3 community_topic name/body are TEXT with no validator limit.
             'name' => ['required', 'string'],
             'body' => ['required', 'string'],
         ];
