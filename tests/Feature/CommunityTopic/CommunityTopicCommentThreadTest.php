@@ -53,6 +53,23 @@ class CommunityTopicCommentThreadTest extends TestCase
         $this->assertSame(2, $thread->newerPage());
     }
 
+    public function test_ordering_follows_id_not_the_racy_number_label(): void
+    {
+        // Migrated data can carry numbers out of order; OpenPNE 3 pages by id (insertion order).
+        $topic = CommunityTopic::factory()->create();
+        foreach ([99, 1, 50] as $number) {
+            CommunityTopicComment::factory()->create([
+                'community_topic_id' => $topic->getKey(),
+                'number' => $number,
+            ]);
+        }
+
+        $thread = CommunityTopicCommentThread::paginate($topic, order: 'asc');
+
+        // Insertion (id) order, not the numeric labels sorted.
+        $this->assertSame([99, 1, 50], $thread->comments->pluck('number')->all());
+    }
+
     public function test_a_short_thread_has_no_pages(): void
     {
         $topic = $this->topicWithComments(3);

@@ -8,9 +8,13 @@ use Illuminate\Support\Collection;
 
 /**
  * OpenPNE 3 communityTopicComment list pager (sfReversibleDoctrinePager): comments page by their
- * `number` at a fixed size, with a reversible order. The default (DESC) fetches the newest page
- * first but always lists a page oldest-first; `order=asc` walks from the first comment.
- * "Older"/"Newer" follow comment age, not page index.
+ * `id` at a fixed size, with a reversible order. The default (DESC) fetches the newest page first
+ * but always lists a page oldest-first; `order=asc` walks from the first comment. "Older"/"Newer"
+ * follow comment age, not page index.
+ *
+ * Ordering is by `id` (OpenPNE 3 setSqlOrderColumn('id')), not `number`: `number` is a racy max+1
+ * label that migrated data may carry out of order or duplicated, so paging by it would drift the
+ * page boundaries from OpenPNE 3. `id` is the monotonic insertion order.
  *
  * Unlike the diary thread (DiaryCommentThread), the topic comment list has no size switch — OpenPNE
  * 3 fixes it at 20.
@@ -39,7 +43,7 @@ final class CommunityTopicCommentThread
         $page = max(1, min((int) ($page ?: 1), $lastPage));
 
         $comments = $topic->comments()->with('member')
-            ->orderBy('number', $ascending ? 'asc' : 'desc')
+            ->orderBy('id', $ascending ? 'asc' : 'desc')
             ->forPage($page, self::SIZE)
             ->get();
 
