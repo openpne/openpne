@@ -76,6 +76,7 @@ class CommunityTopicController extends Controller
     public function edit(Request $request, CommunityTopic $topic): View
     {
         abort_unless(Gate::allows('update', $topic), 404);
+        $topic->load('images.file');
 
         return $this->classic('community-topic.edit', ['topic' => $topic]);
     }
@@ -83,7 +84,7 @@ class CommunityTopicController extends Controller
     public function update(UpdateTopicRequest $request, CommunityTopic $topic, UpdateTopic $action): RedirectResponse
     {
         try {
-            $action($this->viewer(), $topic, $request->toData());
+            $action($this->viewer(), $topic, $request->toData(), $request->file('images', []), $request->input('remove_images', []));
         } catch (CommunityTopicActionException) {
             abort(404);
         }
