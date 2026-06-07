@@ -2,15 +2,31 @@
 
 namespace App\Http\Requests\CommunityTopic;
 
+use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\CommunityTopic\Data\CommunityTopicFormData;
+use App\Models\Community;
+use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Create/update a topic. Whether the actor may post (or edit) is enforced in the
- * controller/action via CommunityTopicAccess.
+ * Create a topic. Posting authority is gated in authorize() — before validation runs — so an
+ * unauthorized member's invalid payload gets the same 404 as a valid one and never leaks the
+ * board's posting policy (the board's "every refusal is 404" contract).
  */
 class StoreTopicRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        $community = $this->route('community');
+        $viewer = $this->user();
+        if (! $community instanceof Community || ! $viewer instanceof Member
+            || ! CommunityTopicAccess::canPostTopic($community, $viewer)) {
+            abort(404);
+        }
+
+        return true;
+    }
+
     /**
      * OpenPNE 3 right-trims string fields (opValidatorString rtrim) before validating, so a
      * whitespace-only name or body is rejected as empty rather than stored blank.

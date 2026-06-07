@@ -8,4 +8,5 @@ return [
     'activity' => 'タイムライン',
     'post_activity' => 'つぶやく',
     'diary' => '日記',
+    'topic' => 'トピック',
 ];

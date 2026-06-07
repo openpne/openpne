@@ -3,6 +3,7 @@
 namespace Tests\Unit\Compat;
 
 use App\Compat\Parities\BlockRouteParity;
+use App\Compat\Parities\CommunityTopicRouteParity;
 use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\Parities\FriendRouteParity;
 use App\Compat\Parities\MemberRouteParity;
@@ -78,6 +79,25 @@ class RouteParityBodyIdTest extends TestCase
         // Form submits render no <body>.
         $this->assertNull($parity->bodyId('block.add'));
         $this->assertNull($parity->bodyId('block.remove.submit'));
+    }
+
+    public function test_derives_community_topic_body_ids_including_the_comment_module_override(): void
+    {
+        $parity = new CommunityTopicRouteParity;
+
+        $this->assertSame('page_communityTopic_listCommunity', $parity->bodyId('communityTopic.index'));
+        $this->assertSame('page_communityTopic_show', $parity->bodyId('communityTopic.show'));
+        $this->assertSame('page_communityTopic_new', $parity->bodyId('communityTopic.new'));
+        $this->assertSame('page_communityTopic_edit', $parity->bodyId('communityTopic.edit'));
+        $this->assertSame('page_communityTopic_deleteConfirm', $parity->bodyId('communityTopic.delete.show'));
+        // The comment confirm page renders in the communityTopicComment module (op3Module override).
+        $this->assertSame('page_communityTopicComment_deleteConfirm', $parity->bodyId('communityTopic.comment.delete.show'));
+        // Form submits render no <body>.
+        $this->assertNull($parity->bodyId('communityTopic.store'));
+        $this->assertNull($parity->bodyId('communityTopic.update'));
+        $this->assertNull($parity->bodyId('communityTopic.delete'));
+        $this->assertNull($parity->bodyId('communityTopic.comment.store'));
+        $this->assertNull($parity->bodyId('communityTopic.comment.delete'));
     }
 
     public function test_derives_member_body_ids_keyed_on_the_openpne3_action(): void

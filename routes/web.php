@@ -2,6 +2,8 @@
 
 use App\Features\Block\BlockController;
 use App\Features\Community\CommunityController;
+use App\Features\CommunityTopic\CommunityTopicCommentController;
+use App\Features\CommunityTopic\CommunityTopicController;
 use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
@@ -238,5 +240,28 @@ Route::middleware('auth')->group(function () {
         Route::get('/delete/{community}', 'showDelete')->whereNumber('community')->name('community.delete.show');
         Route::post('/delete/{community}', 'delete')->whereNumber('community')->name('community.delete');
         Route::get('/{community}', 'show')->whereNumber('community')->name('community.show');
+    });
+
+    // Community topic board (Classic only; Modern is none). Literal-prefix routes precede the
+    // /{topic} wildcard, and every id is digit-constrained, so a literal like /communityTopic/new
+    // can never be captured as a topic id. listCommunity/new/create take a community id; the rest
+    // take a topic id.
+    Route::prefix('communityTopic')->controller(CommunityTopicController::class)->group(function () {
+        Route::get('/listCommunity/{community}', 'index')->whereNumber('community')->name('communityTopic.index');
+        Route::get('/new/{community}', 'new')->whereNumber('community')->name('communityTopic.new');
+        Route::post('/create/{community}', 'store')->whereNumber('community')->name('communityTopic.store');
+        Route::get('/edit/{topic}', 'edit')->whereNumber('topic')->name('communityTopic.edit');
+        Route::post('/update/{topic}', 'update')->whereNumber('topic')->name('communityTopic.update');
+        Route::get('/deleteConfirm/{topic}', 'showDelete')->whereNumber('topic')->name('communityTopic.delete.show');
+        Route::post('/delete/{topic}', 'delete')->whereNumber('topic')->name('communityTopic.delete');
+        Route::get('/{topic}', 'show')->whereNumber('topic')->name('communityTopic.show');
+    });
+
+    // communityTopicComment module. create keys off the topic id; deleteConfirm/delete key off the
+    // comment id (literal /communityTopic/comment/* never collides with the numeric topic show).
+    Route::controller(CommunityTopicCommentController::class)->group(function () {
+        Route::post('/communityTopic/{topic}/comment/create', 'store')->whereNumber('topic')->name('communityTopic.comment.store');
+        Route::get('/communityTopic/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityTopic.comment.delete.show');
+        Route::post('/communityTopic/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityTopic.comment.delete');
     });
 });

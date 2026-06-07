@@ -17,6 +17,8 @@ use App\Features\Community\Queries\ListMemberCommunities;
 use App\Features\Community\Queries\ListPendingMembers;
 use App\Features\Community\Queries\SearchCommunities;
 use App\Features\Community\Queries\ShowCommunity;
+use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Features\CommunityTopic\Queries\RecentCommunityTopics;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\CommunityRequest;
 use App\Models\Community;
@@ -34,17 +36,23 @@ use Illuminate\View\View;
  */
 class CommunityController extends Controller
 {
-    public function show(Request $request, int $community, ShowCommunity $query): View
+    public function show(Request $request, int $community, ShowCommunity $query, RecentCommunityTopics $recentTopics): View
     {
         $found = $query($community);
         abort_if($found === null, 404);
         $found->loadMissing('category');
         $viewer = $this->viewer();
 
+        // The recent-topics box (OpenPNE 3 community home) only shows when the viewer may read the
+        // board; the "post" link only when they may post.
+        $canViewBoard = CommunityTopicAccess::canViewBoard($found, $viewer);
+
         return $this->classic('community.show', [
             'community' => $found,
             'role' => CommunityMembership::roleOf($found, $viewer),
             'isPending' => CommunityMembership::isPending($found, $viewer),
+            'recentTopics' => $canViewBoard ? $recentTopics($found) : null,
+            'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
         ]);
     }
 
