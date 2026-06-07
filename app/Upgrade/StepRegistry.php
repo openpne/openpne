@@ -135,11 +135,11 @@ final class StepRegistry
             // Flattened onto typed communities columns.
             'register_policy' => 'communities.register_policy (open→Open, close→Approval; missing→Open), CommunityUpgrade.',
             'description' => 'communities.description, CommunityUpgrade.',
+            'public_flag' => 'communities.topic_read_access (public→Everyone, auth_commu_member→MembersOnly; missing→Everyone), CommunityUpgrade.',
+            'topic_authority' => 'communities.topic_post_authority (public→Members, admin_only→AdminsOnly; missing→Members), CommunityUpgrade.',
             // Owned by a later feature.
             'is_send_pc_joinCommunity_mail' => 'Per-community join-notification opt-in — lands with the notification feature.',
             'is_send_mobile_joinCommunity_mail' => 'Mobile join-notification opt-in — the mobile frontend is out of scope.',
-            'public_flag' => 'Who may read topics (public | members-only) — lands with the topic board (Phase B).',
-            'topic_authority' => 'Who may post topics — lands with the topic board (Phase B).',
             // Intentionally deferred / dropped: no Phase A consumer.
             'is_default' => 'Deferred: default community (auto-join every member) is an admin feature for a later slice.',
         ];

@@ -3,6 +3,8 @@
 namespace App\Upgrade\Steps;
 
 use App\Features\Community\JoinPolicy;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
@@ -16,6 +18,9 @@ use App\Upgrade\UpgradeStep;
  *  - register_policy: community_config[register_policy] ('open' | 'close') → JoinPolicy. The CASE
  *    reads the runtime enum so it cannot drift; a missing/empty/unknown value falls to Open, which
  *    is OpenPNE 3's own config default ("open").
+ *  - topic_read_access / topic_post_authority: community_config[public_flag] / [topic_authority]
+ *    → TopicReadAccess / TopicPostAuthority (the topic board's read/post gates), the same
+ *    KV→typed-column flatten, defaulting to the OpenPNE 3 config default ("public").
  *  - description: community_config[description], or NULL when absent.
  *  - pending_admin_member_id: the single community_member_position[name=admin_confirm] member (the
  *    pending target of an admin transfer); NULL when none. The transfer handshake itself is deferred.
@@ -44,6 +49,8 @@ class CommunityUpgrade extends UpgradeStep
             'name' => Column::source('name'),
             'description' => Column::expr($this->configValueLatest('description'), uses: ['id']),
             'register_policy' => Column::expr($this->registerPolicyExpr(), uses: ['id']),
+            'topic_read_access' => Column::expr($this->topicReadAccessExpr(), uses: ['id']),
+            'topic_post_authority' => Column::expr($this->topicPostAuthorityExpr(), uses: ['id']),
             'community_category_id' => Column::expr($this->categoryIdExpr(), uses: ['community_category_id']),
             'pending_admin_member_id' => Column::expr($this->pendingAdminExpr(), uses: ['id']),
             'created_at' => Column::source('created_at'),
@@ -83,6 +90,38 @@ class CommunityUpgrade extends UpgradeStep
             JoinPolicy::Approval->value,
             JoinPolicy::Open->value,
             JoinPolicy::Open->value,
+        );
+    }
+
+    /**
+     * community_config[public_flag] → TopicReadAccess. 'auth_commu_member' = members-only;
+     * 'public'/missing/empty/unknown = everyone (OpenPNE 3's config default). Runtime enum so it
+     * cannot drift.
+     */
+    private function topicReadAccessExpr(): string
+    {
+        return sprintf(
+            "CASE %s WHEN 'auth_commu_member' THEN %d WHEN 'public' THEN %d ELSE %d END",
+            $this->configValueLatest('public_flag'),
+            TopicReadAccess::MembersOnly->value,
+            TopicReadAccess::Everyone->value,
+            TopicReadAccess::Everyone->value,
+        );
+    }
+
+    /**
+     * community_config[topic_authority] → TopicPostAuthority. 'admin_only' = admins-only;
+     * 'public'/missing/empty/unknown = members (OpenPNE 3's config default). Runtime enum so it
+     * cannot drift.
+     */
+    private function topicPostAuthorityExpr(): string
+    {
+        return sprintf(
+            "CASE %s WHEN 'admin_only' THEN %d WHEN 'public' THEN %d ELSE %d END",
+            $this->configValueLatest('topic_authority'),
+            TopicPostAuthority::AdminsOnly->value,
+            TopicPostAuthority::Members->value,
+            TopicPostAuthority::Members->value,
         );
     }
 

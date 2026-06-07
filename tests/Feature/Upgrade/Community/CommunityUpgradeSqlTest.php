@@ -4,6 +4,8 @@ namespace Tests\Feature\Upgrade\Community;
 
 use App\Features\Community\CommunityRole;
 use App\Features\Community\JoinPolicy;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
@@ -74,6 +76,9 @@ class CommunityUpgradeSqlTest extends TestCase
         $this->seedCommunity(100, 'Tokyo Runners', categoryId: 2, createdAt: '2017-08-09 10:11:12');
         $this->seedConfig(100, 'register_policy', 'close');
         $this->seedConfig(100, 'description', 'We run on weekends.');
+        // Topic board config: members-only read, admin-only posting.
+        $this->seedConfig(100, 'public_flag', 'auth_commu_member');
+        $this->seedConfig(100, 'topic_authority', 'admin_only');
         // Community 101: no config (→ Open default), and points at the dropped root → category nulled.
         $this->seedCommunity(101, 'Osaka Cooks', categoryId: 1);
 
@@ -104,15 +109,20 @@ class CommunityUpgradeSqlTest extends TestCase
             'name' => 'Tokyo Runners',
             'description' => 'We run on weekends.',
             'register_policy' => JoinPolicy::Approval->value,
+            'topic_read_access' => TopicReadAccess::MembersOnly->value,
+            'topic_post_authority' => TopicPostAuthority::AdminsOnly->value,
             'community_category_id' => 2,
             'pending_admin_member_id' => $member->id,
             'file_id' => null,
             'created_at' => '2017-08-09 10:11:12',
         ]);
-        // Missing register_policy → Open; reference to the dropped root → null category.
+        // Missing register_policy → Open and missing topic config → the open defaults; reference to
+        // the dropped root → null category.
         $this->assertDatabaseHas('communities', [
             'id' => 101,
             'register_policy' => JoinPolicy::Open->value,
+            'topic_read_access' => TopicReadAccess::Everyone->value,
+            'topic_post_authority' => TopicPostAuthority::Members->value,
             'description' => null,
             'community_category_id' => null,
             'pending_admin_member_id' => null,

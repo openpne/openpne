@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Features\Community\JoinPolicy;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use Database\Factories\CommunityFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'description', 'register_policy', 'community_category_id', 'file_id'])]
+#[Fillable(['name', 'description', 'register_policy', 'topic_read_access', 'topic_post_authority', 'community_category_id', 'file_id'])]
 class Community extends Model
 {
     /** @use HasFactory<CommunityFactory> */
@@ -21,6 +23,8 @@ class Community extends Model
     {
         return [
             'register_policy' => JoinPolicy::class,
+            'topic_read_access' => TopicReadAccess::class,
+            'topic_post_authority' => TopicPostAuthority::class,
         ];
     }
 
@@ -45,6 +49,12 @@ class Community extends Model
     {
         return $this->belongsToMany(Member::class, 'community_join_requests', 'community_id', 'member_id')
             ->withPivot('created_at');
+    }
+
+    /** @return HasMany<CommunityTopic, $this> */
+    public function topics(): HasMany
+    {
+        return $this->hasMany(CommunityTopic::class);
     }
 
     /** @return BelongsTo<CommunityCategory, $this> */
