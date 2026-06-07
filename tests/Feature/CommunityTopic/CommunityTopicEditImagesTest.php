@@ -6,6 +6,7 @@ use App\Features\Community\CommunityRole;
 use App\Features\CommunityTopic\Actions\CreateTopic;
 use App\Features\CommunityTopic\Actions\UpdateTopic;
 use App\Features\CommunityTopic\Data\CommunityTopicFormData;
+use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Models\Community;
@@ -139,6 +140,37 @@ class CommunityTopicEditImagesTest extends TestCase
 
         $this->assertSame('Topic', $topic->fresh()->name); // validation failed before the edit applied
         $this->assertSame(3, $topic->images()->count());
+    }
+
+    public function test_duplicate_remove_ids_cannot_bypass_the_image_cap(): void
+    {
+        $community = Community::factory()->create();
+        $author = $this->joined($community);
+        $topic = $this->topicWith($community, $author, [$this->fake('1.png'), $this->fake('2.png'), $this->fake('3.png')]);
+        $first = $topic->images()->where('number', 1)->first();
+
+        // A crafted remove_images=[id, id] must not count one image's removal twice (kept would read
+        // as 1, letting 2 new images through to 3) — the cap check dedupes, so this stays over cap.
+        $this->actingAs($author)->post(route('communityTopic.update', $topic), [
+            'name' => $topic->name,
+            'body' => $topic->body,
+            'remove_images' => [$first->id, $first->id],
+            'images' => [$this->fake('a.png'), $this->fake('b.png')],
+        ])->assertSessionHasErrors('images');
+
+        $this->assertSame(3, $topic->images()->count());
+    }
+
+    public function test_the_action_refuses_more_new_images_than_free_slots(): void
+    {
+        $community = Community::factory()->create();
+        $author = $this->joined($community);
+        $topic = $this->topicWith($community, $author, [$this->fake('a.png'), $this->fake('b.png')]); // slots 1,2; one free
+
+        // Backstop against a lost concurrency race: more uploads than free slots fails cleanly
+        // instead of indexing past the free-slot list.
+        $this->expectException(CommunityTopicActionException::class);
+        app(UpdateTopic::class)($author, $topic, $this->form(), [$this->fake('c.png'), $this->fake('d.png')], []);
     }
 
     public function test_a_remove_id_from_another_topic_is_ignored(): void

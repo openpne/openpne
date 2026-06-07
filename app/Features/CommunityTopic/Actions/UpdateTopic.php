@@ -31,6 +31,11 @@ class UpdateTopic
         }
 
         $removedFiles = $this->images->compensating(function (callable $store) use ($topic, $data, $newImages, $removeImageIds): array {
+            // Serialize concurrent edits of this topic: the free-slot read below and the inserts must
+            // not interleave with another edit, or both could claim the same slot (number is not
+            // unique) or push past the image cap. Same row-lock discipline as CreateTopicComment.
+            CommunityTopic::whereKey($topic->getKey())->lockForUpdate()->first();
+
             // OpenPNE 3 bumps topic_updated_at only when the name or body actually changes. The save
             // bumps updated_at too (the board ordering key), so an edited topic rises on the board.
             $contentChanged = $topic->name !== $data->name || $topic->body !== $data->body;
@@ -43,12 +48,18 @@ class UpdateTopic
 
             // Drop the selected images (this topic's only — an id from another topic is ignored).
             // Keep their Files to purge after commit; here only the link row is removed.
-            $removed = $topic->images()->whereKey($removeImageIds)->with('file')->get();
+            $removed = $topic->images()->whereKey(array_unique($removeImageIds))->with('file')->get();
             $topic->images()->whereKey($removed->modelKeys())->delete();
 
-            // Add the new uploads into the lowest free slots; validation guarantees they fit.
+            // Add the new uploads into the lowest free slots. Recheck the count under the lock: the
+            // request validated against the pre-lock state, so a concurrent edit (or a crafted
+            // payload that slipped the cross-field check) could leave too few slots — fail cleanly
+            // rather than index past $free.
             $used = $topic->images()->pluck('number')->all();
             $free = array_values(array_diff(range(1, CommunityTopicImages::MAX_IMAGES), $used));
+            if (count($newImages) > count($free)) {
+                throw new CommunityTopicActionException(CommunityTopicActionFailure::TooManyImages);
+            }
             foreach (array_values($newImages) as $index => $upload) {
                 $file = $store($upload, 'communityTopic', (int) $topic->getKey());
                 $topic->images()->create(['file_id' => $file->getKey(), 'number' => $free[$index]]);

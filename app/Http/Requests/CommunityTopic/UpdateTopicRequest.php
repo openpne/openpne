@@ -53,7 +53,9 @@ class UpdateTopicRequest extends StoreTopicRequest
             }
 
             $currentIds = $topic->images()->pluck('id')->all();
-            $removing = array_intersect(array_map('intval', (array) $this->input('remove_images', [])), $currentIds);
+            // array_unique first: a crafted remove_images=[id, id] must not count one image twice
+            // and so undercount what is kept, slipping the cap.
+            $removing = array_unique(array_intersect(array_map('intval', (array) $this->input('remove_images', [])), $currentIds));
             $kept = count($currentIds) - count($removing);
 
             if ($kept + count($this->file('images', [])) > CommunityTopicImages::MAX_IMAGES) {
