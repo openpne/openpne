@@ -5,6 +5,8 @@ namespace App\Upgrade;
 use App\Upgrade\Steps\CommunityCategoryUpgrade;
 use App\Upgrade\Steps\CommunityJoinRequestUpgrade;
 use App\Upgrade\Steps\CommunityMemberUpgrade;
+use App\Upgrade\Steps\CommunityTopicCommentUpgrade;
+use App\Upgrade\Steps\CommunityTopicUpgrade;
 use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
@@ -48,6 +50,9 @@ final class StepRegistry
             CommunityUpgrade::class,
             CommunityMemberUpgrade::class,
             CommunityJoinRequestUpgrade::class,
+            // community_topics reference communities; their comments reference the topics.
+            CommunityTopicUpgrade::class,
+            CommunityTopicCommentUpgrade::class,
         ];
     }
 
@@ -72,6 +77,8 @@ final class StepRegistry
             'file' => 'OpenPNE 3 file metadata. The upgrade maps file ownership onto the related_entity columns, which needs the OpenPNE 4 tables that own files (avatars, attachments) to exist first; no step yet.',
             'file_bin' => 'OpenPNE 3 file bytes. Migrated by a metadata-only FK rewire onto `files` (the file_bin schema is frozen for exactly that), not a BLOB copy; pending the `file` step.',
             'member_image' => 'OpenPNE 3 member profile images (up to three, one primary). OpenPNE 4 is a single avatar (member_images.member_id is unique), so the upgrade keeps one row per member — the primary (is_primary DESC, then id) — and drops the rest; pending the `file` step it depends on.',
+            'community_topic_image' => 'OpenPNE 3 topic image attachments (up to three per topic, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
+            'community_topic_comment_image' => 'OpenPNE 3 topic-comment image attachments (up to three per comment, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
             'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped (Phase A is approval-only).',
         ];
     }
