@@ -81,11 +81,11 @@ class TopicActionsTest extends TestCase
         ]);
 
         // No-op edit (same content) does not touch the timestamps.
-        (new UpdateTopic)($author, $topic->fresh(), new CommunityTopicFormData($topic->name, $topic->body));
+        app(UpdateTopic::class)($author, $topic->fresh(), new CommunityTopicFormData($topic->name, $topic->body));
         $this->assertTrue($topic->fresh()->updated_at->lessThan(now()->subHour()));
 
         // A real edit bumps both updated_at (board key) and topic_updated_at.
-        (new UpdateTopic)($author, $topic->fresh(), new CommunityTopicFormData('Edited', $topic->body));
+        app(UpdateTopic::class)($author, $topic->fresh(), new CommunityTopicFormData('Edited', $topic->body));
         $fresh = $topic->fresh();
         $this->assertSame('Edited', $fresh->name);
         $this->assertTrue($fresh->updated_at->greaterThan(now()->subMinute()));
@@ -100,7 +100,7 @@ class TopicActionsTest extends TestCase
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
 
         $this->assertFails(
-            fn () => (new UpdateTopic)($other, $topic, new CommunityTopicFormData('Hijack', 'No.')),
+            fn () => app(UpdateTopic::class)($other, $topic, new CommunityTopicFormData('Hijack', 'No.')),
             CommunityTopicActionFailure::CannotEdit,
         );
     }

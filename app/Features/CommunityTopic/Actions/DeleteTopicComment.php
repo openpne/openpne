@@ -24,7 +24,7 @@ class DeleteTopicComment
         $comment->delete();
 
         foreach ($files as $file) {
-            $file->delete(); // FileObserver purges the bytes
+            $file->delete(); // deleting the File purges its bytes
         }
     }
 }

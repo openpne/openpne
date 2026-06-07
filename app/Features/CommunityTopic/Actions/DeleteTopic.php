@@ -19,13 +19,13 @@ class DeleteTopic
 
         // Collect every owned image File (the topic's and its comments') before the row is gone:
         // the FK cascade drops the *_image link rows but never the File bytes, which a disk backend
-        // deletes irreversibly. Purge them after the topic is deleted (post-commit), like SetAvatar.
+        // deletes irreversibly. Purge them after the topic is deleted (post-commit).
         $files = $this->ownedImageFiles($topic);
 
         $topic->delete(); // FK cascade removes comments and all *_image link rows
 
         foreach ($files as $file) {
-            $file->delete(); // FileObserver purges the bytes
+            $file->delete(); // deleting the File purges its bytes
         }
     }
 

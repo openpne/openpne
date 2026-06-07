@@ -8,4 +8,5 @@ enum CommunityTopicActionFailure: string
     case CannotEdit = 'cannot_edit';
     case CannotComment = 'cannot_comment';
     case CannotDeleteComment = 'cannot_delete_comment';
+    case TooManyImages = 'too_many_images';
 }
