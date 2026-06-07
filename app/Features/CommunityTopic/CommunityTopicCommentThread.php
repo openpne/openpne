@@ -16,8 +16,7 @@ use Illuminate\Support\Collection;
  * label that migrated data may carry out of order or duplicated, so paging by it would drift the
  * page boundaries from OpenPNE 3. `id` is the monotonic insertion order.
  *
- * Unlike the diary thread (DiaryCommentThread), the topic comment list has no size switch — OpenPNE
- * 3 fixes it at 20.
+ * The list has no size switch: OpenPNE 3 fixes it at 20.
  */
 final class CommunityTopicCommentThread
 {

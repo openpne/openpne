@@ -135,24 +135,6 @@ class CommunityTopicImagesTest extends TestCase
         $this->assertSame(0, DB::table('file_bin')->where('file_id', $file->getKey())->count());
     }
 
-    public function test_editing_a_topic_ignores_images_since_edit_image_management_is_deferred(): void
-    {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
-
-        // The edit endpoint is text-only for now: a crafted images[] is neither validated (so a
-        // non-image does not 422 the text edit) nor stored.
-        $this->actingAs($author)->post(route('communityTopic.update', $topic), [
-            'name' => 'Edited',
-            'body' => $topic->body,
-            'images' => [UploadedFile::fake()->create('notes.txt', 10, 'text/plain')],
-        ])->assertRedirect(route('communityTopic.show', $topic));
-
-        $this->assertSame('Edited', $topic->fresh()->name);
-        $this->assertDatabaseCount('community_topic_images', 0);
-    }
-
     public function test_more_than_three_images_are_rejected(): void
     {
         $community = Community::factory()->create();

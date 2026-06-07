@@ -3,7 +3,7 @@
 <tr>
     <th>{{ __('Images') }}</th>
     <td>
-        @for ($i = 0; $i < \App\Http\Requests\CommunityTopic\TopicImageRules::MAX_IMAGES; $i++)
+        @for ($i = 0; $i < \App\Features\CommunityTopic\CommunityTopicImages::MAX_IMAGES; $i++)
             <p><input type="file" name="images[]" accept="image/jpeg,image/png,image/gif,image/webp"></p>
         @endfor
         @php($imageError = collect($errors->messages())->keys()->first(fn ($key) => str_starts_with($key, 'images')))
