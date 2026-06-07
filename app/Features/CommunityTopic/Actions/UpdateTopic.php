@@ -19,7 +19,7 @@ class UpdateTopic
      * Edit a topic's text and, OpenPNE 3-style, manage its image slots: remove the images in
      * $removeImageIds and add $newImages into the freed slots (1..MAX). Image bytes are
      * rollback-safe — new uploads are compensated if the transaction fails, and removed images'
-     * bytes (irreversible on a disk backend) are purged only after commit, like SetAvatar.
+     * bytes (irreversible on a disk backend) are purged only after commit.
      *
      * @param  array<int, UploadedFile>  $newImages  images to add, into the lowest free slots
      * @param  array<int, int|string>  $removeImageIds  ids of this topic's images to remove
@@ -33,7 +33,7 @@ class UpdateTopic
         $removedFiles = $this->images->compensating(function (callable $store) use ($topic, $data, $newImages, $removeImageIds): array {
             // Serialize concurrent edits of this topic: the free-slot read below and the inserts must
             // not interleave with another edit, or both could claim the same slot (number is not
-            // unique) or push past the image cap. Same row-lock discipline as CreateTopicComment.
+            // unique) or push past the image cap.
             CommunityTopic::whereKey($topic->getKey())->lockForUpdate()->first();
 
             // OpenPNE 3 bumps topic_updated_at only when the name or body actually changes. The save
@@ -69,7 +69,7 @@ class UpdateTopic
         });
 
         foreach ($removedFiles as $file) {
-            $file->delete(); // FileObserver purges the bytes
+            $file->delete(); // deleting the File purges its bytes
         }
 
         return $topic;

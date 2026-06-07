@@ -12,16 +12,12 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * Stores topic/comment image bytes with rollback-safe compensation.
+ * Stores topic/comment image bytes so they roll back with the surrounding DB transaction.
  *
- * Multi-image-per-post is the first of its kind here (avatars are single, diaries have none), and
- * the storage seam is not transactional: FileUploader writes the bytes immediately, so when the
- * surrounding transaction rolls back, the File rows vanish but a disk backend's bytes would be
- * orphaned. FileUploader only compensates its own single inner failure, not a later failure in the
- * outer transaction (another image, the *_image insert, or the post's own save). So compensating()
- * tracks every File written through it and deletes their bytes best-effort if the transaction
- * fails. The residual race (commit itself fails after a successful disk write) is left to the
- * periodic orphan-file GC, as in FileUploader.
+ * A disk backend's byte write is not part of the transaction, so on rollback the File rows vanish
+ * but the bytes would be orphaned — and FileUploader only undoes its own inner failure, not a later
+ * one in the outer transaction. So compensating() tracks every File it stores and deletes their
+ * bytes best-effort if the transaction fails.
  */
 class CommunityTopicImages
 {
