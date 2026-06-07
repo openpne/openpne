@@ -42,6 +42,7 @@ class StoreTopicCommentRequest extends FormRequest
         return [
             // No max length: OpenPNE 3 comment body is TEXT with no validator limit.
             'body' => ['required', 'string'],
+            ...TopicImageRules::rules(),
         ];
     }
 }

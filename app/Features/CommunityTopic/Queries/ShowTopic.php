@@ -12,6 +12,6 @@ class ShowTopic
      */
     public function __invoke(int $topicId): ?CommunityTopic
     {
-        return CommunityTopic::query()->with(['member', 'community'])->find($topicId);
+        return CommunityTopic::query()->with(['member', 'community', 'images.file'])->find($topicId);
     }
 }

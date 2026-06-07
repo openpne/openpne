@@ -47,6 +47,7 @@ class StoreTopicRequest extends FormRequest
             // No max length: OpenPNE 3 community_topic name/body are TEXT with no validator limit.
             'name' => ['required', 'string'],
             'body' => ['required', 'string'],
+            ...TopicImageRules::rules(),
         ];
     }
 

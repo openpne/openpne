@@ -65,7 +65,7 @@ class CommunityTopicController extends Controller
     public function store(StoreTopicRequest $request, Community $community, CreateTopic $action): RedirectResponse
     {
         try {
-            $topic = $action($this->viewer(), $community, $request->toData());
+            $topic = $action($this->viewer(), $community, $request->toData(), $request->file('images', []));
         } catch (CommunityTopicActionException) {
             abort(404);
         }

@@ -15,6 +15,7 @@
                 &mdash; {{ \App\Support\LocalizedDate::dateTime($topic->created_at) }}
             </p>
             <div class="topicBody"><x-user-text :value="$topic->body" /></div>
+            @include('community-topic._images', ['images' => $topic->images])
 
             @if ($canEdit)
                 <p>
@@ -67,6 +68,7 @@
                                 </p>
                             </div>
                             <div class="body"><p class="text"><x-user-text :value="$comment->body" /></p></div>
+                            @include('community-topic._images', ['images' => $comment->images])
                         </dd>
                     </dl>
                 @endforeach
@@ -78,7 +80,7 @@
         <div class="dparts form" id="communityTopic_comment_form">
             <div class="partsHeading"><h3>{{ __('Post a comment') }}</h3></div>
             <div class="parts">
-                <form method="POST" action="{{ route('communityTopic.comment.store', $topic) }}">
+                <form method="POST" action="{{ route('communityTopic.comment.store', $topic) }}" enctype="multipart/form-data">
                     @csrf
                     <table>
                         <tr>
@@ -88,6 +90,7 @@
                                 @error('body')<p class="error">{{ $message }}</p>@enderror
                             </td>
                         </tr>
+                        @include('community-topic._image_fields')
                     </table>
                     <div class="operation">
                         <ul class="moreInfo button">
