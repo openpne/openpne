@@ -11,6 +11,7 @@ use App\Features\CommunityTopic\Queries\ListCommunityTopics;
 use App\Features\CommunityTopic\Queries\ShowTopic;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommunityTopic\StoreTopicRequest;
+use App\Http\Requests\CommunityTopic\UpdateTopicRequest;
 use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\Member;
@@ -79,7 +80,7 @@ class CommunityTopicController extends Controller
         return $this->classic('community-topic.edit', ['topic' => $topic]);
     }
 
-    public function update(StoreTopicRequest $request, CommunityTopic $topic, UpdateTopic $action): RedirectResponse
+    public function update(UpdateTopicRequest $request, CommunityTopic $topic, UpdateTopic $action): RedirectResponse
     {
         try {
             $action($this->viewer(), $topic, $request->toData());

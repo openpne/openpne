@@ -136,6 +136,18 @@ class CommunityTopicRoutesTest extends TestCase
         $this->assertSame($community->getKey(), $topic->community_id);
     }
 
+    public function test_an_unauthorized_poster_gets_404_even_with_an_invalid_payload(): void
+    {
+        // Posting authority is gated before validation, so a non-member's empty payload returns the
+        // same 404 as a valid one rather than leaking the board through a validation error.
+        $community = Community::factory()->create();
+        $stranger = Member::factory()->create();
+
+        $this->actingAs($stranger)->post(route('communityTopic.store', $community), ['name' => '', 'body' => ''])
+            ->assertNotFound();
+        $this->assertDatabaseCount('community_topics', 0);
+    }
+
     public function test_editing_a_topic_is_limited_to_its_author_and_admins(): void
     {
         $community = Community::factory()->create();
@@ -154,6 +166,19 @@ class CommunityTopicRoutesTest extends TestCase
         ]);
         $response->assertRedirect(route('communityTopic.show', $topic));
         $this->assertSame('Edited title', $topic->fresh()->name);
+    }
+
+    public function test_a_non_editor_gets_404_on_update_even_with_an_invalid_payload(): void
+    {
+        $community = Community::factory()->create();
+        $author = $this->joined($community);
+        $other = $this->joined($community);
+        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+
+        // Edit authority is gated before validation; a non-editor's empty payload 404s like a valid one.
+        $this->actingAs($other)->post(route('communityTopic.update', $topic), ['name' => '', 'body' => ''])
+            ->assertNotFound();
+        $this->assertSame($topic->name, $topic->fresh()->name);
     }
 
     public function test_deleting_a_topic_is_limited_to_author_and_admins_and_returns_to_the_community(): void

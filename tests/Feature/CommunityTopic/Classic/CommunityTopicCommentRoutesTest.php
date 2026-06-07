@@ -64,6 +64,26 @@ class CommunityTopicCommentRoutesTest extends TestCase
         $this->assertDatabaseCount('community_topic_comments', 0);
     }
 
+    public function test_a_non_member_gets_404_even_with_an_invalid_comment(): void
+    {
+        // Membership is gated before validation, so a non-member's empty body 404s rather than
+        // returning a "body required" error that would confirm the topic is commentable.
+        $topic = CommunityTopic::factory()->create();
+        $stranger = Member::factory()->create();
+
+        $this->actingAs($stranger)->post(route('communityTopic.comment.store', $topic), ['body' => ''])
+            ->assertNotFound();
+        $this->assertDatabaseCount('community_topic_comments', 0);
+    }
+
+    public function test_commenting_on_a_missing_topic_returns_404_even_with_an_invalid_body(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/communityTopic/999999/comment/create', ['body' => ''])
+            ->assertNotFound();
+    }
+
     public function test_a_comment_is_deletable_by_its_author_with_the_comment_body_id(): void
     {
         $community = Community::factory()->create();
