@@ -41,4 +41,16 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('`topic_authority`')
             ->expectsOutputToContain('`community_member_position`');
     }
+
+    public function test_renders_community_topic_steps_and_deferred_images(): void
+    {
+        // The topic board steps must appear (no silent drop) and the image tables they do not
+        // migrate must stay visible in the deferred section, not vanish.
+        $this->artisan('openpne:upgrade-matrix')
+            ->assertSuccessful()
+            ->expectsOutputToContain('`community_topic` → `community_topics`')
+            ->expectsOutputToContain('`community_topic_comment` → `community_topic_comments`')
+            ->expectsOutputToContain('`community_topic_image`')
+            ->expectsOutputToContain('`community_topic_comment_image`');
+    }
 }
