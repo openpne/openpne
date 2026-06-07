@@ -37,4 +37,34 @@
             </div>
         </div>
     </div>
+
+    {{-- OpenPNE 3 community home: the recent-topics box links into the board. Shown only when the
+         viewer may read the board (a members-only board is hidden from non-members). --}}
+    @isset($recentTopics)
+        <div class="dparts" id="community_recentTopics">
+            <div class="partsHeading"><h3>{{ __('Recent %topics%') }}</h3></div>
+            <div class="parts">
+                @if ($recentTopics->isEmpty())
+                    <p>{{ __('No %topics% to show.') }}</p>
+                @else
+                    <ul class="topicList">
+                        @foreach ($recentTopics as $topic)
+                            <li>
+                                <a href="{{ route('communityTopic.show', $topic) }}">{{ $topic->name }} ({{ $topic->comments_count }})</a>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><a href="{{ route('communityTopic.index', $community) }}">{{ __('See all %topics%') }}</a></li>
+                        @if ($canPostTopic)
+                            <li><a href="{{ route('communityTopic.new', $community) }}">{{ __('Post a new %topic%') }}</a></li>
+                        @endif
+                    </ul>
+                </div>
+            </div>
+        </div>
+    @endisset
 @endsection

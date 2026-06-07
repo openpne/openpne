@@ -98,4 +98,29 @@ return [
             'community_home' => ['/community/:id', 'ANY'],
         ],
     ],
+    'communityTopic' => [
+        // opCommunityTopicPlugin adds communityTopic_nodefaults (/communityTopic/* →
+        // default/error), so the global /:module/:action fallback is off: the named routes are the
+        // complete reachable set. The comment routes are inventoried here (they belong to the topic
+        // plugin) though they render under the communityTopicComment module.
+        'disables_global_fallback' => true,
+        'routes' => [
+            'communityTopic_list_community' => ['/communityTopic/listCommunity/:id', 'ANY'],
+            'communityTopic_show' => ['/communityTopic/:id', 'ANY'],
+            'communityTopic_new' => ['/communityTopic/new/:id', 'ANY'],
+            'communityTopic_create' => ['/communityTopic/create/:id', 'POST'],
+            'communityTopic_edit' => ['/communityTopic/edit/:id', 'ANY'],
+            'communityTopic_update' => ['/communityTopic/update/:id', 'POST'],
+            'communityTopic_delete_confirm' => ['/communityTopic/deleteConfirm/:id', 'ANY'],
+            'communityTopic_delete' => ['/communityTopic/delete/:id', 'POST'],
+            'communityTopic_comment_create' => ['/communityTopic/:id/comment/create', 'POST'],
+            'communityTopic_comment_delete_confirm' => ['/communityTopic/comment/deleteConfirm/:id', 'ANY'],
+            'communityTopic_comment_delete' => ['/communityTopic/comment/delete/:id', 'POST'],
+            'communityTopic_recently_topic_list' => ['/communityTopic/recentlyTopicList', 'ANY'],
+            'communityTopic_search' => ['/communityTopic/search/:id', 'ANY'],
+            'communityTopic_search_all' => ['/communityTopic/search', 'ANY'],
+            'communityTopic_search_form' => ['/communityTopic/searchForm', 'ANY'],
+            'config_community_topic_notification_mail' => ['/config/communityTopicNotificationMail/:id', 'POST'],
+        ],
+    ],
 ];
