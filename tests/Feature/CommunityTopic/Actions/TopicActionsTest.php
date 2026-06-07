@@ -52,7 +52,7 @@ class TopicActionsTest extends TestCase
         $community = Community::factory()->create();
         $author = $this->joined($community, CommunityRole::Member);
 
-        $topic = (new CreateTopic)($author, $community, new CommunityTopicFormData('Welcome', 'Say hi here.'));
+        $topic = app(CreateTopic::class)($author, $community, new CommunityTopicFormData('Welcome', 'Say hi here.'));
 
         $this->assertSame($community->getKey(), $topic->community_id);
         $this->assertSame($author->getKey(), $topic->member_id);
@@ -65,7 +65,7 @@ class TopicActionsTest extends TestCase
         $member = $this->joined($community, CommunityRole::Member);
 
         $this->assertFails(
-            fn () => (new CreateTopic)($member, $community, new CommunityTopicFormData('No', 'Nope.')),
+            fn () => app(CreateTopic::class)($member, $community, new CommunityTopicFormData('No', 'Nope.')),
             CommunityTopicActionFailure::CannotPost,
         );
     }
@@ -125,9 +125,9 @@ class TopicActionsTest extends TestCase
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
         DB::table('community_topics')->where('id', $topic->getKey())->update(['updated_at' => now()->subDay()]);
 
-        $first = (new CreateTopicComment)($author, $topic, 'one');
-        $second = (new CreateTopicComment)($author, $topic, 'two');
-        $third = (new CreateTopicComment)($author, $topic, 'three');
+        $first = app(CreateTopicComment::class)($author, $topic, 'one');
+        $second = app(CreateTopicComment::class)($author, $topic, 'two');
+        $third = app(CreateTopicComment::class)($author, $topic, 'three');
 
         $this->assertSame([1, 2, 3], [$first->number, $second->number, $third->number]);
         // A new comment lifts the topic on the board.
@@ -143,7 +143,7 @@ class TopicActionsTest extends TestCase
         $stranger = Member::factory()->create();
 
         $this->assertFails(
-            fn () => (new CreateTopicComment)($stranger, $topic, 'intruding'),
+            fn () => app(CreateTopicComment::class)($stranger, $topic, 'intruding'),
             CommunityTopicActionFailure::CannotComment,
         );
     }

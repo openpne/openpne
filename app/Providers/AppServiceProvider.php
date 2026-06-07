@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\CommunityTopic;
+use App\Models\CommunityTopicComment;
 use App\Models\File;
 use App\Models\Member;
 use App\Observers\MemberObserver;
@@ -44,6 +46,8 @@ class AppServiceProvider extends ServiceProvider
         // FilePolicy resolves the owning entity through this map.
         Relation::morphMap([
             'member' => Member::class,
+            'communityTopic' => CommunityTopic::class,
+            'communityTopicComment' => CommunityTopicComment::class,
         ]);
 
         Gate::policy(File::class, FilePolicy::class);

@@ -27,7 +27,7 @@ class CommunityTopicCommentController extends Controller
         $found = CommunityTopic::findOrFail($topic);
 
         try {
-            $action($this->viewer(), $found, $request->validated('body'));
+            $action($this->viewer(), $found, $request->validated('body'), $request->file('images', []));
         } catch (CommunityTopicActionException) {
             abort(404);
         }
