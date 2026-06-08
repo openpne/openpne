@@ -76,13 +76,14 @@ class RegistrationRequestTest extends TestCase
     {
         Notification::fake();
         Member::factory()->create(['email' => 'taken@example.com']);
-        $this->armForm();
 
-        // A mixed-case new address is stored lowercased.
+        // A mixed-case new address is stored lowercased (the timing stamp is one-shot, so arm per submit).
+        $this->armForm();
         $this->post('/register', ['email' => 'Newcomer@Example.com'])->assertRedirect(route('register.sent'));
         $this->assertDatabaseHas('registration_tokens', ['email' => 'newcomer@example.com']);
 
         // A mixed-case existing address still matches the member and is ignored.
+        $this->armForm();
         $this->post('/register', ['email' => 'TAKEN@example.com'])->assertRedirect(route('register.sent'));
         $this->assertDatabaseMissing('registration_tokens', ['email' => 'taken@example.com']);
     }
@@ -103,10 +104,12 @@ class RegistrationRequestTest extends TestCase
 
     public function test_only_one_live_token_is_kept_per_email(): void
     {
+        // Both submits must reach issuance (the timing stamp is one-shot), so arm before each.
         Notification::fake();
-        $this->armForm();
 
+        $this->armForm();
         $this->post('/register', ['email' => 'newcomer@example.com']);
+        $this->armForm();
         $this->post('/register', ['email' => 'newcomer@example.com']);
 
         $this->assertSame(1, RegistrationToken::where('email', 'newcomer@example.com')->count());

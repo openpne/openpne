@@ -9,8 +9,9 @@ use Illuminate\Http\Request;
  * shows the neutral "check your mail" screen, so a bot gets no signal it was caught (the same shape
  * as the enumeration-safe no-op for a known address):
  *  - a honeypot field a real person never sees and never fills;
- *  - a minimum fill time: the form-open instant is stamped in the session on GET, so a submit that
- *    arrives implausibly fast, or with no prior GET at all, is a script rather than a person.
+ *  - a minimum fill time: the form-open instant is stamped in the session on GET and consumed on the
+ *    POST (one-shot), so a submit that arrives implausibly fast, or with no fresh form render of its
+ *    own, is a script rather than a person.
  * This is the floor that works without JavaScript; ALTCHA is the stronger JS-based layer on top.
  */
 class SpamTrap
@@ -30,7 +31,7 @@ class SpamTrap
             return false;
         }
 
-        $openedAt = $request->session()->get(self::SESSION_KEY);
+        $openedAt = $request->session()->pull(self::SESSION_KEY);
 
         return is_numeric($openedAt)
             && (now()->timestamp - (int) $openedAt) >= (int) config('openpne.registration.min_form_seconds');
