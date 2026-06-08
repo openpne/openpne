@@ -3,6 +3,7 @@
 namespace App\Actions\Fortify;
 
 use App\Models\Member;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -26,13 +27,20 @@ class ResetMemberPassword implements ResetsUserPasswords
             'password' => $this->passwordRules(),
         ])->validate();
 
-        // Rotate the remember-me token too: a reset is the response to a possible compromise, so any
-        // "remember me" cookie still held on another device must stop authenticating. Active server
-        // sessions are dropped by the auth.session middleware on their next request (the stored
-        // password hash no longer matches).
+        // A reset answers a possible compromise, so every other authenticated foothold for this member
+        // must drop. Rotate remember_token (invalidates "remember me" cookies on all devices) and, on
+        // the database session driver, delete the member's server-side sessions outright. For other
+        // drivers the auth.session middleware is the best-effort fallback (it drops a session on its
+        // next protected request once the stored password hash no longer matches).
         $member->forceFill([
             'password' => Hash::make($input['password']),
             'remember_token' => Str::random(60),
         ])->save();
+
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table', 'sessions'))
+                ->where('user_id', $member->getAuthIdentifier())
+                ->delete();
+        }
     }
 }

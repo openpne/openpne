@@ -7,10 +7,11 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
 /**
- * The Laravel/Fortify password-reset mail, but queued. A synchronous SMTP send for known addresses
- * only would make the forgot-password endpoint measurably slower for registered addresses — a timing
- * oracle that survives the neutral response message. Queuing collapses that signal to a cheap job
- * dispatch on both paths. Locale is captured at request time because the mail renders on the queue.
+ * The Laravel/Fortify password-reset mail, but queued: a synchronous SMTP send happens only for a
+ * known address, making forgot-password measurably slower for registered ones — a timing oracle that
+ * survives the neutral response message. Queuing removes that dominant (SMTP) signal and relies on a
+ * non-sync queue in production; a small residual token/job DB write on the known path remains. Locale
+ * is captured at request time because the mail renders on the queue.
  */
 class ResetPasswordNotification extends ResetPassword implements ShouldQueue
 {

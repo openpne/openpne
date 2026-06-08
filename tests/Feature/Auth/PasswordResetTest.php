@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Actions\Fortify\ResetMemberPassword;
 use App\Models\Member;
 use App\Notifications\Auth\ResetPasswordNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -135,6 +137,29 @@ class PasswordResetTest extends TestCase
         $this->assertTrue(Hash::check('new-secret-password', $fresh->password));
         // The remember-me token is rotated, so a "remember me" cookie on another device stops working.
         $this->assertNotSame('old-remember-token', $fresh->remember_token);
+    }
+
+    public function test_reset_purges_the_members_database_sessions(): void
+    {
+        // On the database session driver the reset deletes the member's server-side sessions outright,
+        // so another device's logged-in session cannot survive (auth.session is only the fallback).
+        config()->set('session.driver', 'database');
+        $member = Member::factory()->create();
+        DB::table('sessions')->insert([
+            'id' => 'other-device-session',
+            'user_id' => $member->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'agent',
+            'payload' => 'x',
+            'last_activity' => 1700000000,
+        ]);
+
+        app(ResetMemberPassword::class)->reset($member, [
+            'password' => 'new-secret-password',
+            'password_confirmation' => 'new-secret-password',
+        ]);
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
     }
 
     public function test_reset_is_rejected_with_an_invalid_token(): void
