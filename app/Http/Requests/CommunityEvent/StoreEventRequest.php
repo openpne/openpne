@@ -4,6 +4,7 @@ namespace App\Http\Requests\CommunityEvent;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityEvent\Data\CommunityEventFormData;
+use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Community;
 use App\Models\Member;
 use Illuminate\Contracts\Validation\Validator;
@@ -63,6 +64,7 @@ class StoreEventRequest extends FormRequest
             // whole day, so a time component would shift the join window.
             'application_deadline' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
             'capacity' => ['nullable', 'integer', 'min:0'],
+            ...PostImageRules::rules(),
         ];
     }
 

@@ -37,14 +37,15 @@ class CommunityEventCommentController extends Controller
         $found = CommunityEvent::findOrFail($event);
         $viewer = $this->viewer();
         $body = $request->validated('body');
+        $images = $request->file('images', []);
 
         // OpenPNE 3 toggles the roster unless the "comment only" button (name=comment) was pressed.
         $commentOnly = $request->filled('comment');
 
         try {
-            $joined = DB::transaction(function () use ($commentOnly, $toggle, $comment, $viewer, $found, $body): ?bool {
+            $joined = DB::transaction(function () use ($commentOnly, $toggle, $comment, $viewer, $found, $body, $images): ?bool {
                 $joined = $commentOnly ? null : $toggle($viewer, $found);
-                $comment($viewer, $found, $body);
+                $comment($viewer, $found, $body, $images);
 
                 return $joined;
             });

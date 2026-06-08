@@ -3,10 +3,10 @@
 namespace App\Features\CommunityTopic\Actions;
 
 use App\Features\CommunityTopic\CommunityTopicAccess;
-use App\Features\CommunityTopic\CommunityTopicImages;
 use App\Features\CommunityTopic\Data\CommunityTopicFormData;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionFailure;
+use App\Files\PostImages;
 use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\Member;
@@ -14,7 +14,7 @@ use Illuminate\Http\UploadedFile;
 
 class CreateTopic
 {
-    public function __construct(private readonly CommunityTopicImages $images) {}
+    public function __construct(private readonly PostImages $images) {}
 
     /**
      * @param  array<int, UploadedFile>  $images  attached images (slot 1..N), at most the upload cap

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\CommunityEvent;
+use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\File;
@@ -48,6 +50,8 @@ class AppServiceProvider extends ServiceProvider
             'member' => Member::class,
             'communityTopic' => CommunityTopic::class,
             'communityTopicComment' => CommunityTopicComment::class,
+            'communityEvent' => CommunityEvent::class,
+            'communityEventComment' => CommunityEventComment::class,
         ]);
 
         Gate::policy(File::class, FilePolicy::class);

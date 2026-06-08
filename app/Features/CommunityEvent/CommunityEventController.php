@@ -72,7 +72,7 @@ class CommunityEventController extends Controller
     public function store(StoreEventRequest $request, Community $community, CreateEvent $action): RedirectResponse
     {
         try {
-            $event = $action($this->viewer(), $community, $request->toData());
+            $event = $action($this->viewer(), $community, $request->toData(), $request->file('images', []));
         } catch (CommunityEventActionException) {
             abort(404);
         }
@@ -83,6 +83,7 @@ class CommunityEventController extends Controller
     public function edit(Request $request, CommunityEvent $event): View
     {
         abort_unless(Gate::allows('update', $event), 404);
+        $event->load('images.file');
 
         return $this->classic('community-event.edit', ['event' => $event]);
     }
@@ -90,7 +91,7 @@ class CommunityEventController extends Controller
     public function update(UpdateEventRequest $request, CommunityEvent $event, UpdateEvent $action): RedirectResponse
     {
         try {
-            $action($this->viewer(), $event, $request->toData());
+            $action($this->viewer(), $event, $request->toData(), $request->file('images', []), $request->input('remove_images', []));
         } catch (CommunityEventActionException) {
             abort(404);
         }

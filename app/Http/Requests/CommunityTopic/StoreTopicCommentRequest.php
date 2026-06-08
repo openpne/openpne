@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CommunityTopic;
 
 use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\CommunityTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
@@ -42,7 +43,7 @@ class StoreTopicCommentRequest extends FormRequest
         return [
             // No max length: OpenPNE 3 comment body is TEXT with no validator limit.
             'body' => ['required', 'string'],
-            ...TopicImageRules::rules(),
+            ...PostImageRules::rules(),
         ];
     }
 }
