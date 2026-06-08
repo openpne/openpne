@@ -3,6 +3,7 @@
 namespace App\Compat;
 
 use App\Compat\Parities\BlockRouteParity;
+use App\Compat\Parities\CommunityEventRouteParity;
 use App\Compat\Parities\CommunityRouteParity;
 use App\Compat\Parities\CommunityTopicRouteParity;
 use App\Compat\Parities\DiaryRouteParity;
@@ -22,6 +23,7 @@ final class RouteParityRegistry
             MemberRouteParity::class,
             CommunityRouteParity::class,
             CommunityTopicRouteParity::class,
+            CommunityEventRouteParity::class,
         ];
     }
 

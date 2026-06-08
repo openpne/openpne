@@ -67,4 +67,35 @@
             </div>
         </div>
     @endisset
+
+    {{-- OpenPNE 3 community home: the recent-events box links into the event board, shown only when
+         the viewer may read the board (events share the topic read gate). --}}
+    @isset($recentEvents)
+        <div class="dparts" id="community_recentEvents">
+            <div class="partsHeading"><h3>{{ __('Recent events') }}</h3></div>
+            <div class="parts">
+                @if ($recentEvents->isEmpty())
+                    <p>{{ __('No events to show.') }}</p>
+                @else
+                    <ul class="topicList">
+                        @foreach ($recentEvents as $event)
+                            <li>
+                                <a href="{{ route('communityEvent.show', $event) }}">{{ $event->name }} ({{ $event->comments_count }})</a>
+                                <span class="eventOpenDate">{{ \App\Support\LocalizedDate::date($event->open_date) }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><a href="{{ route('communityEvent.index', $community) }}">{{ __('See all events') }}</a></li>
+                        @if ($canPostEvent)
+                            <li><a href="{{ route('communityEvent.new', $community) }}">{{ __('Post a new event') }}</a></li>
+                        @endif
+                    </ul>
+                </div>
+            </div>
+        </div>
+    @endisset
 @endsection

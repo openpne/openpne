@@ -22,4 +22,14 @@ final class LocalizedDate
 
         return $date->locale(App::getLocale())->isoFormat('LLL');
     }
+
+    /** op_format_date XDateJa ('D' preset): "2026年06月04日" for ja, a localized date otherwise. */
+    public static function date(CarbonInterface $date): string
+    {
+        if (App::getLocale() === 'ja') {
+            return $date->format('Y年m月d日');
+        }
+
+        return $date->locale(App::getLocale())->isoFormat('LL');
+    }
 }
