@@ -2,6 +2,7 @@
 
 namespace App\Compat;
 
+use App\Compat\Parities\AuthRouteParity;
 use App\Compat\Parities\BlockRouteParity;
 use App\Compat\Parities\CommunityEventRouteParity;
 use App\Compat\Parities\CommunityRouteParity;
@@ -24,6 +25,7 @@ final class RouteParityRegistry
             CommunityRouteParity::class,
             CommunityTopicRouteParity::class,
             CommunityEventRouteParity::class,
+            AuthRouteParity::class,
         ];
     }
 

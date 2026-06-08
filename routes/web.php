@@ -74,6 +74,14 @@ Route::get('/member/profile/id/{member}/{tail?}', fn (int $member) => redirect()
 Route::get('/member/login/{tail?}', fn () => redirect()->route('login'))
     ->where('tail', '.*')->name('member.login_compat');
 
+// OpenPNE 3 password recovery lived under the opAuthMailAddress plugin. Fortify owns the canonical
+// /forgot-password and /reset-password/{token}; the OpenPNE 3 token scheme (id + token) cannot be
+// honored by Fortify (email + path token), so both legacy entry points restart at the request form.
+Route::get('/opAuthMailAddress/passwordRecovery', fn () => redirect()->route('password.request'))
+    ->name('auth.password_recovery_compat');
+Route::get('/opAuthMailAddress/passwordRecoveryComplete', fn () => redirect()->route('password.request'))
+    ->name('auth.password_recovery_complete_compat');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
 
