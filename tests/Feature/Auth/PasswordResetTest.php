@@ -15,15 +15,37 @@ class PasswordResetTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_forgot_password_screen_can_be_rendered(): void
+    public function test_forgot_password_screen_renders_the_classic_surface_by_default(): void
     {
+        $this->get('/forgot-password')
+            ->assertStatus(200)
+            ->assertSee('id="page_opAuthMailAddress_passwordRecovery"', false)
+            ->assertSee('insecure_page', false)
+            ->assertSee('name="email"', false);
+    }
+
+    public function test_forgot_password_screen_renders_the_modern_surface_when_selected(): void
+    {
+        config()->set('openpne.tenant_default_surface', 'modern');
+
         $this->get('/forgot-password')
             ->assertStatus(200)
             ->assertInertia(fn (AssertableInertia $page) => $page->component('auth/forgot-password'));
     }
 
-    public function test_reset_password_screen_receives_the_token_and_email(): void
+    public function test_reset_password_screen_renders_the_classic_surface_with_token_and_email(): void
     {
+        $this->get('/reset-password/the-token?email=member@example.com')
+            ->assertStatus(200)
+            ->assertSee('id="page_opAuthMailAddress_passwordRecoveryComplete"', false)
+            ->assertSee('value="the-token"', false)
+            ->assertSee('value="member@example.com"', false);
+    }
+
+    public function test_reset_password_screen_renders_the_modern_surface_when_selected(): void
+    {
+        config()->set('openpne.tenant_default_surface', 'modern');
+
         $this->get('/reset-password/the-token?email=member@example.com')
             ->assertStatus(200)
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -31,6 +53,12 @@ class PasswordResetTest extends TestCase
                 ->where('token', 'the-token')
                 ->where('email', 'member@example.com')
             );
+    }
+
+    public function test_openpne3_password_recovery_urls_redirect_to_the_request_form(): void
+    {
+        $this->get('/opAuthMailAddress/passwordRecovery')->assertRedirect('/forgot-password');
+        $this->get('/opAuthMailAddress/passwordRecoveryComplete')->assertRedirect('/forgot-password');
     }
 
     public function test_reset_link_is_sent_to_a_known_member(): void
