@@ -3,6 +3,9 @@
 namespace App\Upgrade;
 
 use App\Upgrade\Steps\CommunityCategoryUpgrade;
+use App\Upgrade\Steps\CommunityEventCommentUpgrade;
+use App\Upgrade\Steps\CommunityEventMemberUpgrade;
+use App\Upgrade\Steps\CommunityEventUpgrade;
 use App\Upgrade\Steps\CommunityJoinRequestUpgrade;
 use App\Upgrade\Steps\CommunityMemberUpgrade;
 use App\Upgrade\Steps\CommunityTopicCommentUpgrade;
@@ -53,6 +56,10 @@ final class StepRegistry
             // community_topics reference communities; their comments reference the topics.
             CommunityTopicUpgrade::class,
             CommunityTopicCommentUpgrade::class,
+            // community_events reference communities; their comments and RSVP pivot reference the events.
+            CommunityEventUpgrade::class,
+            CommunityEventCommentUpgrade::class,
+            CommunityEventMemberUpgrade::class,
         ];
     }
 
@@ -79,6 +86,8 @@ final class StepRegistry
             'member_image' => 'OpenPNE 3 member profile images (up to three, one primary). OpenPNE 4 is a single avatar (member_images.member_id is unique), so the upgrade keeps one row per member — the primary (is_primary DESC, then id) — and drops the rest; pending the `file` step it depends on.',
             'community_topic_image' => 'OpenPNE 3 topic image attachments (up to three per topic, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
             'community_topic_comment_image' => 'OpenPNE 3 topic-comment image attachments (up to three per comment, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
+            'community_event_image' => 'OpenPNE 3 event image attachments (up to three per event, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
+            'community_event_comment_image' => 'OpenPNE 3 event-comment image attachments (up to three per comment, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
             'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped (Phase A is approval-only).',
         ];
     }
@@ -142,8 +151,8 @@ final class StepRegistry
             // Flattened onto typed communities columns.
             'register_policy' => 'communities.register_policy (open→Open, close→Approval; missing→Open), CommunityUpgrade.',
             'description' => 'communities.description, CommunityUpgrade.',
-            'public_flag' => 'communities.topic_read_access (public→Everyone, auth_commu_member→MembersOnly; missing→Everyone), CommunityUpgrade.',
-            'topic_authority' => 'communities.topic_post_authority (public→Members, admin_only→AdminsOnly; missing→Members), CommunityUpgrade.',
+            'public_flag' => 'communities.topic_read_access (public→Everyone, auth_commu_member→MembersOnly; missing→Everyone), CommunityUpgrade. Shared read gate for both the topic board and events (OpenPNE 3 reads the same config for both).',
+            'topic_authority' => 'communities.topic_post_authority (public→Members, admin_only→AdminsOnly; missing→Members), CommunityUpgrade. Shared post gate for both the topic board and events.',
             // Owned by a later feature.
             'is_send_pc_joinCommunity_mail' => 'Per-community join-notification opt-in — lands with the notification feature.',
             'is_send_mobile_joinCommunity_mail' => 'Mobile join-notification opt-in — the mobile frontend is out of scope.',
