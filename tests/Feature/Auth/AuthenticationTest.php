@@ -11,12 +11,32 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_screen_can_be_rendered(): void
+    public function test_login_screen_renders_the_classic_surface_by_default(): void
     {
+        // tenant_default_surface is 'classic', so a guest gets the OpenPNE 3 Blade shell with the
+        // page_member_login body id and the pre-login insecure_page class.
         $response = $this->get('/login');
 
         $response->assertStatus(200);
-        $response->assertInertia(fn (AssertableInertia $page) => $page->component('auth/login'));
+        $response->assertSee('id="page_member_login"', false);
+        $response->assertSee('insecure_page', false);
+        $response->assertSee('name="email"', false);
+    }
+
+    public function test_login_screen_renders_the_modern_surface_when_selected(): void
+    {
+        config()->set('openpne.tenant_default_surface', 'modern');
+
+        $this->get('/login')
+            ->assertStatus(200)
+            ->assertInertia(fn (AssertableInertia $page) => $page->component('auth/login'));
+    }
+
+    public function test_openpne3_login_url_redirects_to_the_canonical_login(): void
+    {
+        // OpenPNE 3 served login at /member/login/*; the legacy URL stays reachable.
+        $this->get('/member/login')->assertRedirect('/login');
+        $this->get('/member/login/foo/bar')->assertRedirect('/login');
     }
 
     public function test_members_can_authenticate_with_valid_credentials(): void

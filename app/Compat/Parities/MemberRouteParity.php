@@ -2,8 +2,11 @@
 
 namespace App\Compat\Parities;
 
+use App\Compat\CompatLevel as L;
 use App\Compat\RouteMap;
 use App\Compat\RouteParity;
+use App\Compat\ScreenElement;
+use App\Compat\ScreenStatus as S;
 
 /**
  * The OpenPNE 3 `member` module is the member hub — profile, avatar, search, auth, config,
@@ -47,13 +50,15 @@ class MemberRouteParity extends RouteParity
             // Profile editor — one OpenPNE 3 route (ANY) splits into a GET form + POST submit.
             new RouteMap('member_editProfile', '/member/edit/profile', 'member.profile.edit', 'GET', op3Action: 'editProfile'),
             new RouteMap('member_editProfile', '/member/edit/profile', 'member.profile.update', 'POST'),
+            // Login — Fortify owns /login; the OpenPNE 3 /member/login/* URL is preserved by a static
+            // redirect (compatRedirects), and the Classic body id stays page_member_login.
+            new RouteMap('login', '/member/login/*', 'login', 'GET', op3Action: 'login'),
         ];
     }
 
     public function gaps(): array
     {
         return [
-            'login' => 'Login is served by Fortify at /login, not the OpenPNE 3 /member/login URL.',
             'member_logout' => 'Logout is served by Fortify at POST /logout (OpenPNE 3 also allowed GET).',
             'member_delete' => 'Member withdrawal (/leave) is not ported.',
             'member_invite' => 'Member invitation (/invite) is not ported.',
@@ -65,8 +70,31 @@ class MemberRouteParity extends RouteParity
 
     public function compatRedirects(): array
     {
-        // The avatar editor's OpenPNE 3 URL; redirected (not served) to the new canonical editor.
-        return ['/member/image/config' => 'member.avatar.edit'];
+        return [
+            // The avatar editor's OpenPNE 3 URL; redirected (not served) to the new canonical editor.
+            '/member/image/config' => 'member.avatar.edit',
+            // OpenPNE 3 login lived at /member/login/*; redirected to Fortify's canonical /login.
+            '/member/login' => 'login',
+        ];
+    }
+
+    /**
+     * Surface elements per OpenPNE 3 member template. Only the login screen is inventoried here;
+     * the form is reproduced in resources/views/auth/login.blade.php (rendered by Fortify's
+     * surface-aware loginView). Levels follow docs/internals/classic-compatibility.md.
+     */
+    public function screens(): array
+    {
+        return [
+            // member/login → _partsLogin.php (.loginForm) → resources/views/auth/login.blade.php
+            'login' => [
+                new ScreenElement('mail address + password inputs', L::One, S::Ported, 'opAuthLoginFormMailAddress (mail_address, password)', 'field names not preserved (email/password, Level 3)'),
+                new ScreenElement('login button', L::Two, S::Ported, '_partsLogin input_submit'),
+                new ScreenElement('password reminder link', L::One, S::Ported, 'link_to help_login_error_action', 'links to /forgot-password (password.request)'),
+                new ScreenElement('self-registration link', L::Two, S::Ported, 'link_to self_invite_action', 'shown unconditionally; OpenPNE 3 gated it on invite_mode==2 + enable_registration (config gate deferred)'),
+                new ScreenElement('login gadget zones (top/side/contents/bottom)', L::Three, S::Missing, 'op_login_gadget_list', 'gadget layout not ported; single-column LayoutC form only'),
+            ],
+        ];
     }
 
     public function acknowledgesGlobalFallback(): bool
