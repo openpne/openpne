@@ -31,6 +31,11 @@ class AuthRouteParity extends RouteParity
             // Password reset — Fortify serves /forgot-password and /reset-password/{token}.
             new RouteMap(null, null, 'password.request', 'GET', op3Action: 'passwordRecovery', op3Module: 'opAuthMailAddress'),
             new RouteMap(null, null, 'password.reset', 'GET', op3Action: 'passwordRecoveryComplete', op3Module: 'opAuthMailAddress'),
+
+            // Registration email-entry — OpenPNE 3 opAuthMailAddress/requestRegisterURL rendered both
+            // the input form and the "sent" success under one page id, so both routes share it.
+            new RouteMap(null, null, 'register', 'GET', op3Action: 'requestRegisterURL', op3Module: 'opAuthMailAddress'),
+            new RouteMap(null, null, 'register.sent', 'GET', op3Action: 'requestRegisterURL', op3Module: 'opAuthMailAddress'),
         ];
     }
 
@@ -60,6 +65,13 @@ class AuthRouteParity extends RouteParity
                 new ScreenElement('new password + confirmation inputs', L::One, S::Ported, 'opAuthMailAddressPasswordChangeForm'),
                 new ScreenElement('explanatory body text', L::Three, S::Ported, "op_include_form body 'Please input your new password.'"),
                 new ScreenElement('submit button', L::Two, S::Ported, 'op_include_form passowrdResetForm'),
+            ],
+            // requestRegisterURLInput.php + requestRegisterURLSuccess.php → register-email / register-sent
+            'requestRegisterURL' => [
+                new ScreenElement('mail address input', L::One, S::Ported, 'opRequestRegisterURLForm', 'field name not preserved (email, Level 3)'),
+                new ScreenElement('submit button', L::Two, S::Ported, 'op_include_form requestRegisterURL'),
+                new ScreenElement('"invitation sent" confirmation screen', L::Two, S::Ported, 'requestRegisterURLSuccess.php', 'register.sent; enumeration-safe (shown whether or not the address is a member)'),
+                new ScreenElement('CAPTCHA', L::Three, S::Missing, 'is_use_captcha', 'OpenPNE 3 optional CAPTCHA on the entry form not ported'),
             ],
         ];
     }

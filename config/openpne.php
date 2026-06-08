@@ -91,4 +91,19 @@ return [
         'allow_web_public' => (bool) env('OPENPNE_DIARY_ALLOW_WEB_PUBLIC', true),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registration
+    |--------------------------------------------------------------------------
+    |
+    | 'token_ttl_minutes' is how long an emailed registration link stays valid
+    | (OpenPNE 3's default registration-URL lifetime was 24h). Expiry is derived
+    | from registration_tokens.created_at against this value.
+    |
+    */
+
+    'registration' => [
+        'token_ttl_minutes' => (int) env('OPENPNE_REGISTRATION_TOKEN_TTL_MINUTES', 1440),
+    ],
+
 ];

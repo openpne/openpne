@@ -1,5 +1,6 @@
 <?php
 
+use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
 use App\Features\Community\CommunityController;
 use App\Features\CommunityEvent\CommunityEventCommentController;
@@ -81,6 +82,15 @@ Route::get('/opAuthMailAddress/passwordRecovery', fn () => redirect()->route('pa
     ->name('auth.password_recovery_compat');
 Route::get('/opAuthMailAddress/passwordRecoveryComplete', fn () => redirect()->route('password.request'))
     ->name('auth.password_recovery_complete_compat');
+
+// Multi-stage registration (OpenPNE 3 email-confirmation flow), replacing Fortify's single-stage
+// /register. Guest-only. The email-entry half is here; the token-gated form + completion
+// (GET/POST /register/{token}) land in the next PR.
+Route::middleware('guest')->controller(RegistrationController::class)->group(function () {
+    Route::get('/register', 'requestForm')->name('register');
+    Route::post('/register', 'request')->middleware('throttle:register-email')->name('register.request');
+    Route::get('/register/sent', 'sent')->name('register.sent');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
