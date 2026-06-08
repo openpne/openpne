@@ -55,11 +55,16 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($throttleKey);
         });
 
-        // Caps both per-email mail-bombing and per-IP enumeration sweeps on the registration entry.
+        // Two limits, whichever trips first: per-(email,ip) caps re-sends to one address; per-ip caps
+        // using the endpoint to mail many *different* addresses (a registration-mail relay) — the
+        // per-email key alone gives each address its own bucket, so it cannot bound that.
         RateLimiter::for('register-email', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower((string) $request->input('email')).'|'.$request->ip());
+            $email = Str::transliterate(Str::lower((string) $request->input('email')));
 
-            return Limit::perMinute(5)->by($throttleKey);
+            return [
+                Limit::perMinute(5)->by($email.'|'.$request->ip()),
+                Limit::perMinute(10)->by('register-ip|'.$request->ip()),
+            ];
         });
     }
 

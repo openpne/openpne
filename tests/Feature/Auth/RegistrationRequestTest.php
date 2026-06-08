@@ -76,6 +76,19 @@ class RegistrationRequestTest extends TestCase
         $this->assertDatabaseMissing('registration_tokens', ['email' => 'taken@example.com']);
     }
 
+    public function test_an_existing_member_with_a_mixed_case_address_still_matches(): void
+    {
+        // The no-op must not depend on the stored casing: an upgraded member can be verbatim
+        // mixed-case, and a case-sensitive store would otherwise miss it and leak a token + mail.
+        Notification::fake();
+        Member::factory()->create(['email' => 'Taken@Example.com']);
+
+        $this->post('/register', ['email' => 'taken@example.com'])->assertRedirect(route('register.sent'));
+
+        $this->assertDatabaseCount('registration_tokens', 0);
+        Notification::assertNothingSent();
+    }
+
     public function test_only_one_live_token_is_kept_per_email(): void
     {
         Notification::fake();
@@ -107,5 +120,18 @@ class RegistrationRequestTest extends TestCase
         }
 
         $this->post('/register', ['email' => 'flood@example.com'])->assertStatus(429);
+    }
+
+    public function test_a_single_ip_is_capped_across_distinct_addresses(): void
+    {
+        // The per-email limit gives each address its own bucket; a separate per-IP limit stops one
+        // client mailing the link to many different addresses (a registration-mail relay).
+        Notification::fake();
+
+        for ($i = 0; $i < 10; $i++) {
+            $this->post('/register', ['email' => "user{$i}@example.com"])->assertRedirect(route('register.sent'));
+        }
+
+        $this->post('/register', ['email' => 'user10@example.com'])->assertStatus(429);
     }
 }
