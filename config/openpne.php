@@ -106,4 +106,22 @@ return [
         'token_ttl_minutes' => (int) env('OPENPNE_REGISTRATION_TOKEN_TTL_MINUTES', 1440),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Transport security
+    |--------------------------------------------------------------------------
+    |
+    | 'force_https' makes the app generate https:// URLs and mark the session
+    | cookie Secure, regardless of how the request reached PHP. It defaults on in
+    | production so a deployment behind a TLS-terminating proxy never emits http
+    | links or non-secure cookies; a dev/HTTP environment can opt out. Trusting
+    | that proxy's forwarded headers is configured separately (TRUSTED_PROXIES,
+    | see bootstrap/app.php and docs/internals/runtime.md).
+    |
+    */
+
+    'security' => [
+        'force_https' => (bool) env('OPENPNE_FORCE_HTTPS', env('APP_ENV') === 'production'),
+    ],
+
 ];
