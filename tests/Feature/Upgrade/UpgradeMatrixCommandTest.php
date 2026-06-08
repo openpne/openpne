@@ -53,4 +53,17 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('`community_topic_image`')
             ->expectsOutputToContain('`community_topic_comment_image`');
     }
+
+    public function test_renders_community_event_steps_and_deferred_images(): void
+    {
+        // The event board, comment and RSVP-pivot steps must appear (no silent drop) and the event
+        // image tables they do not migrate must stay visible in the deferred section.
+        $this->artisan('openpne:upgrade-matrix')
+            ->assertSuccessful()
+            ->expectsOutputToContain('`community_event` → `community_events`')
+            ->expectsOutputToContain('`community_event_comment` → `community_event_comments`')
+            ->expectsOutputToContain('`community_event_member` → `community_event_members`')
+            ->expectsOutputToContain('`community_event_image`')
+            ->expectsOutputToContain('`community_event_comment_image`');
+    }
 }
