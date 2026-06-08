@@ -25,15 +25,12 @@ class IssueRegistrationToken
             return;
         }
 
-        // One live token per email: drop any prior request before minting a fresh one.
-        RegistrationToken::where('email', $email)->delete();
-
+        // One row per email (the column is unique): a re-request refreshes the token in place.
         $raw = Str::random(40);
-        RegistrationToken::create([
-            'email' => $email,
-            'token' => hash('sha256', $raw),
-            'created_at' => now(),
-        ]);
+        RegistrationToken::updateOrCreate(
+            ['email' => $email],
+            ['token' => hash('sha256', $raw), 'created_at' => now()],
+        );
 
         Notification::route('mail', $email)->notify(
             new RegistrationLinkNotification($raw, app()->getLocale()),
