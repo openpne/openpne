@@ -22,9 +22,9 @@ return new class extends Migration
             // MySQL TEXT, with no validator length limit; TEXT so migrated content is not truncated.
             $table->text('name');
             $table->text('body');
-            // "Last edited" timestamp OpenPNE 3 bumps on a name/body edit and on a new comment. The
-            // board orders by updated_at (see index); this feeds the sidebar / API "latest events"
-            // widgets (not ported). Carried for upgrade fidelity. Nullable until the first bump.
+            // "Last edited" timestamp OpenPNE 3 bumps on a name/body edit and on a new comment,
+            // feeding its "latest events" sidebar/API widgets. (The board itself orders by
+            // updated_at — see index.) Nullable until the first bump.
             $table->dateTime('event_updated_at')->nullable();
             // Event day. OpenPNE 3 stores a date (the form widget is date-only); the time-of-day is
             // the free-text open_date_comment beside it.
