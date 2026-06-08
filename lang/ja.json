@@ -422,6 +422,7 @@
     "The :attribute must be at least :length characters.": ":attributeは:length文字以上でなければいけません。",
     "The :attribute must be greater than or equal to the minimum value.": ":attribute は最小値以上である必要があります。",
     "The admin must transfer the role before leaving.": "管理者は退会する前に管理者権限を譲渡する必要があります。",
+    "The application deadline must be on or before the open date.": "申し込み締め切りは開催日以前に設定してください。",
     "The comment was deleted.": "コメントを削除しました。",
     "The field name cannot start with \"op_preset_\".": "項目名の先頭に「op_preset_」は使えません。",
     "The given data was invalid.": "指定されたデータは無効でした。",
