@@ -68,6 +68,12 @@ Route::get('/m/member/{member}', [ProfileController::class, 'show'])
 Route::get('/member/profile/id/{member}/{tail?}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
     ->whereNumber('member')->where('tail', '.*')->name('member.profile.raw_compat');
 
+// OpenPNE 3 served login at /member/login/*; login moved to Fortify's /login. Preserve the legacy
+// URL with a redirect (guest-reachable, so outside the auth group). The {member} route above is
+// whereNumber, so /member/login never matches it regardless of order.
+Route::get('/member/login/{tail?}', fn () => redirect()->route('login'))
+    ->where('tail', '.*')->name('member.login_compat');
+
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
 
