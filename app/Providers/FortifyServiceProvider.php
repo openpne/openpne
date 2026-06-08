@@ -6,8 +6,6 @@ use App\Actions\Fortify\AuthenticateMember;
 use App\Actions\Fortify\CreateNewMember;
 use App\Actions\Fortify\ResetMemberPassword;
 use App\Compat\RouteParityRegistry;
-use App\Features\Profile\Queries\RegistrationFields;
-use App\Features\Profile\Serializers\ProfileFormSerializer;
 use App\Support\SurfaceResolver;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -40,12 +38,6 @@ class FortifyServiceProvider extends ServiceProvider
             $request, 'login', 'auth.login',
             fn () => Inertia::render('auth/login'),
         ));
-        Fortify::registerView(fn () => Inertia::render('auth/register', [
-            'profileFields' => ProfileFormSerializer::fields(
-                app(RegistrationFields::class)(),
-                app()->getLocale() === 'ja' ? 'ja_JP' : 'en',
-            ),
-        ]));
         Fortify::requestPasswordResetLinkView(fn (Request $request) => $this->screen(
             $request, 'password.request', 'auth.forgot-password',
             fn () => Inertia::render('auth/forgot-password'),
@@ -59,6 +51,13 @@ class FortifyServiceProvider extends ServiceProvider
 
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+
+            return Limit::perMinute(5)->by($throttleKey);
+        });
+
+        // Caps both per-email mail-bombing and per-IP enumeration sweeps on the registration entry.
+        RateLimiter::for('register-email', function (Request $request) {
+            $throttleKey = Str::transliterate(Str::lower((string) $request->input('email')).'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
         });
