@@ -145,7 +145,8 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Registration is owned by App\Features\Auth\RegistrationController (OpenPNE 3's multi-stage
+        // email-confirmation flow), not Fortify's single-stage /register.
         Features::resetPasswords(),
         // update password, profile update, email verification, 2FA, passkeys は
         // 後続 PR で必要になった時に Features::*() を再有効化する
