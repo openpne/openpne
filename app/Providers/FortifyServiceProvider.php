@@ -46,11 +46,16 @@ class FortifyServiceProvider extends ServiceProvider
                 app()->getLocale() === 'ja' ? 'ja_JP' : 'en',
             ),
         ]));
-        Fortify::requestPasswordResetLinkView(fn () => Inertia::render('auth/forgot-password'));
-        Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
-            'email' => $request->string('email')->value(),
-            'token' => $request->route('token'),
-        ]));
+        Fortify::requestPasswordResetLinkView(fn (Request $request) => $this->screen(
+            $request, 'password.request', 'auth.forgot-password',
+            fn () => Inertia::render('auth/forgot-password'),
+        ));
+        Fortify::resetPasswordView(function (Request $request) {
+            $props = ['email' => $request->string('email')->value(), 'token' => $request->route('token')];
+
+            return $this->screen($request, 'password.reset', 'auth.reset-password',
+                fn () => Inertia::render('auth/reset-password', $props), $props);
+        });
 
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
