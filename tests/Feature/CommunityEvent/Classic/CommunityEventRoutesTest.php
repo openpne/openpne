@@ -116,6 +116,20 @@ class CommunityEventRoutesTest extends TestCase
         $response->assertSee('30');
     }
 
+    public function test_show_autolinks_a_url_in_the_area(): void
+    {
+        // OpenPNE 3 runs the area through op_url_cmd, so an online-meeting URL becomes a link.
+        $community = Community::factory()->create();
+        $event = CommunityEvent::factory()->create([
+            'community_id' => $community->getKey(),
+            'area' => 'Online: https://example.com/room',
+        ]);
+
+        $this->actingAs($this->joined($community))->get(route('communityEvent.show', $event))
+            ->assertOk()
+            ->assertSee('href="https://example.com/room"', false);
+    }
+
     public function test_show_for_unknown_event_returns_404(): void
     {
         $this->actingAs(Member::factory()->create())->get('/communityEvent/999999')->assertNotFound();

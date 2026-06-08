@@ -28,7 +28,8 @@
                 </tr>
                 <tr>
                     <th>{{ __('Area') }}</th>
-                    <td>{{ $event->area }}</td>
+                    {{-- OpenPNE 3 runs the area through op_url_cmd, so a bare venue/online-meeting URL autolinks. --}}
+                    <td><x-user-text :value="$event->area" /></td>
                 </tr>
                 <tr>
                     <th>{{ __('Application deadline') }}</th>
