@@ -5,14 +5,19 @@ namespace App\Providers;
 use App\Actions\Fortify\AuthenticateMember;
 use App\Actions\Fortify\CreateNewMember;
 use App\Actions\Fortify\ResetMemberPassword;
+use App\Compat\RouteParityRegistry;
 use App\Features\Profile\Queries\RegistrationFields;
 use App\Features\Profile\Serializers\ProfileFormSerializer;
+use App\Support\SurfaceResolver;
+use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -31,7 +36,10 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::resetUserPasswordsUsing(ResetMemberPassword::class);
 
-        Fortify::loginView(fn () => Inertia::render('auth/login'));
+        Fortify::loginView(fn (Request $request) => $this->screen(
+            $request, 'login', 'auth.login',
+            fn () => Inertia::render('auth/login'),
+        ));
         Fortify::registerView(fn () => Inertia::render('auth/register', [
             'profileFields' => ProfileFormSerializer::fields(
                 app(RegistrationFields::class)(),
@@ -49,5 +57,22 @@ class FortifyServiceProvider extends ServiceProvider
 
             return Limit::perMinute(5)->by($throttleKey);
         });
+    }
+
+    /**
+     * Surface seam for Fortify's view callbacks: Classic returns the OpenPNE 3 Blade shell with the
+     * route-parity body id and the pre-login `insecure_page` class; Modern returns the Inertia page.
+     * `$bodyIdRoute` is the parity's Laravel route name, passed explicitly so the body id is keyed on
+     * the contract, not on Fortify's view-callback request.
+     */
+    private function screen(Request $request, string $bodyIdRoute, string $classicView, Closure $modern, array $data = []): View|InertiaResponse
+    {
+        if (SurfaceResolver::resolve($request, 'auth') === SurfaceResolver::CLASSIC) {
+            return view($classicView, $data)
+                ->with('pageId', RouteParityRegistry::bodyId($bodyIdRoute))
+                ->with('pageClass', 'insecure_page');
+        }
+
+        return $modern();
     }
 }
