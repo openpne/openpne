@@ -15,6 +15,7 @@ use App\Services\TermService;
 use App\Translation\TermTranslator;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Translation\Translator;
 
@@ -44,6 +45,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (config('openpne.security.force_https')) {
+            // Commit URL generation + the session cookie to HTTPS even when PHP sees a plain-HTTP
+            // request (e.g. behind a TLS-terminating proxy), so links and cookies are never downgraded.
+            URL::forceScheme('https');
+            config(['session.secure' => true]);
+        }
+
         // Stable morph alias so a file's owner is stored as `member`, not the FQCN;
         // FilePolicy resolves the owning entity through this map.
         Relation::morphMap([
