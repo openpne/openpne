@@ -1,4 +1,4 @@
-{{-- Up to MAX_IMAGES file inputs for attaching images to a topic or comment. The enclosing
+{{-- Up to MAX_IMAGES file inputs for attaching images to an event or comment. The enclosing
      <form> must carry enctype="multipart/form-data". --}}
 <tr>
     <th>{{ __('Images') }}</th>

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CommunityEvent;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
+use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\CommunityEvent;
 use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
@@ -43,6 +44,7 @@ class StoreEventCommentRequest extends FormRequest
         return [
             // No max length: OpenPNE 3 comment body is TEXT with no validator limit.
             'body' => ['required', 'string'],
+            ...PostImageRules::rules(),
         ];
     }
 }

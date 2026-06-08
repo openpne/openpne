@@ -12,4 +12,5 @@ enum CommunityEventActionFailure: string
     case EventClosed = 'event_closed';
     case EventExpired = 'event_expired';
     case EventAtCapacity = 'event_at_capacity';
+    case TooManyImages = 'too_many_images';
 }

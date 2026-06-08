@@ -41,7 +41,7 @@ final class CommunityEventCommentThread
         $lastPage = max(1, (int) ceil($total / self::SIZE));
         $page = max(1, min((int) ($page ?: 1), $lastPage));
 
-        $comments = $event->comments()->with(['member'])
+        $comments = $event->comments()->with(['member', 'images.file'])
             ->orderBy('id', $ascending ? 'asc' : 'desc')
             ->forPage($page, self::SIZE)
             ->get();

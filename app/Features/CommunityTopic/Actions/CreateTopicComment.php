@@ -3,9 +3,9 @@
 namespace App\Features\CommunityTopic\Actions;
 
 use App\Features\CommunityTopic\CommunityTopicAccess;
-use App\Features\CommunityTopic\CommunityTopicImages;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionFailure;
+use App\Files\PostImages;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Member;
@@ -13,7 +13,7 @@ use Illuminate\Http\UploadedFile;
 
 class CreateTopicComment
 {
-    public function __construct(private readonly CommunityTopicImages $images) {}
+    public function __construct(private readonly PostImages $images) {}
 
     /**
      * Append a comment to a topic the author may comment on. `number` is the per-topic sequence;

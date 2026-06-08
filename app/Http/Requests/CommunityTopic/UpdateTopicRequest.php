@@ -3,7 +3,8 @@
 namespace App\Http\Requests\CommunityTopic;
 
 use App\Features\CommunityTopic\CommunityTopicAccess;
-use App\Features\CommunityTopic\CommunityTopicImages;
+use App\Files\PostImages;
+use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\CommunityTopic;
 use App\Models\Member;
 use Illuminate\Contracts\Validation\Validator;
@@ -33,7 +34,7 @@ class UpdateTopicRequest extends StoreTopicRequest
     {
         return [
             ...$this->textRules(),
-            ...TopicImageRules::rules(),
+            ...PostImageRules::rules(),
             'remove_images' => ['array'],
             'remove_images.*' => ['integer'],
         ];
@@ -58,8 +59,8 @@ class UpdateTopicRequest extends StoreTopicRequest
             $removing = array_unique(array_intersect(array_map('intval', (array) $this->input('remove_images', [])), $currentIds));
             $kept = count($currentIds) - count($removing);
 
-            if ($kept + count($this->file('images', [])) > CommunityTopicImages::MAX_IMAGES) {
-                $validator->errors()->add('images', __('A topic can have at most :max images.', ['max' => CommunityTopicImages::MAX_IMAGES]));
+            if ($kept + count($this->file('images', [])) > PostImages::MAX_IMAGES) {
+                $validator->errors()->add('images', __('A topic can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
             }
         });
     }

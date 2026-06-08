@@ -51,6 +51,7 @@
             </table>
 
             <div class="eventBody">
+                @include('community-event._images', ['images' => $event->images])
                 <x-user-text :value="$event->body" />
             </div>
 
@@ -105,6 +106,7 @@
                                 </p>
                             </div>
                             <div class="body">
+                                @include('community-event._images', ['images' => $comment->images])
                                 <p class="text"><x-user-text :value="$comment->body" /></p>
                             </div>
                         </dd>
@@ -128,6 +130,7 @@
                                 @error('body')<p class="error">{{ $message }}</p>@enderror
                             </td>
                         </tr>
+                        @include('community-event._image_fields')
                     </table>
                     <div class="operation">
                         <ul class="moreInfo button">
