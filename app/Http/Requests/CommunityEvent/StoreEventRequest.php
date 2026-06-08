@@ -39,7 +39,14 @@ class StoreEventRequest extends FormRequest
                 $this->merge([$field => rtrim($this->input($field))]);
             }
         }
-        $this->merge(['open_date_comment' => rtrim((string) $this->input('open_date_comment', ''))]);
+        // Coerce a missing comment to '' (OpenPNE 3 stores empty, not null). A non-string (e.g. an
+        // array) is left untouched so the string rule rejects it rather than being cast to "Array".
+        $comment = $this->input('open_date_comment');
+        if ($comment === null) {
+            $this->merge(['open_date_comment' => '']);
+        } elseif (is_string($comment)) {
+            $this->merge(['open_date_comment' => rtrim($comment)]);
+        }
     }
 
     /** @return array<string, mixed> */
@@ -52,7 +59,9 @@ class StoreEventRequest extends FormRequest
             'area' => ['required', 'string'],
             'open_date' => $this->openDateRules(),
             'open_date_comment' => ['string'],
-            'application_deadline' => ['nullable', 'date', 'after_or_equal:today'],
+            // Date-only (no time): OpenPNE 3's form is a date widget, and isClosed/isExpired add a
+            // whole day, so a time component would shift the join window.
+            'application_deadline' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
             'capacity' => ['nullable', 'integer', 'min:0'],
         ];
     }
@@ -60,7 +69,7 @@ class StoreEventRequest extends FormRequest
     /** On create, OpenPNE 3 requires the open date to be today or later; editing lifts that. */
     protected function openDateRules(): array
     {
-        return ['required', 'date', 'after_or_equal:today'];
+        return ['required', 'date_format:Y-m-d', 'after_or_equal:today'];
     }
 
     /** OpenPNE 3 validateApplicationDeadline: a deadline, if set, must be on or before the open date. */

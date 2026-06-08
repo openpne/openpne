@@ -28,6 +28,6 @@ class UpdateEventRequest extends StoreEventRequest
     /** Editing keeps the original open date even if it is now in the past (OpenPNE 3 validateOpenDate is create-only). */
     protected function openDateRules(): array
     {
-        return ['required', 'date'];
+        return ['required', 'date_format:Y-m-d'];
     }
 }
