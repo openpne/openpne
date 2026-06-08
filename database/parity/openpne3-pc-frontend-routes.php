@@ -123,4 +123,30 @@ return [
             'config_community_topic_notification_mail' => ['/config/communityTopicNotificationMail/:id', 'POST'],
         ],
     ],
+    'communityEvent' => [
+        // opCommunityTopicPlugin's event collection adds communityEvent_nodefaults
+        // (/communityEvent/* → default/error), so the global /:module/:action fallback is off: the
+        // named routes are the complete reachable set. The comment routes are inventoried here (they
+        // belong to the plugin) though they render under the communityEventComment module. Events
+        // reuse the same route-collection class as topics under the `event` name, so the board /
+        // comment shape mirrors communityTopic; the additions are the RSVP roster (memberList) and
+        // the scheduling fields carried in create/update.
+        'disables_global_fallback' => true,
+        'routes' => [
+            'communityEvent_list_community' => ['/communityEvent/listCommunity/:id', 'ANY'],
+            'communityEvent_show' => ['/communityEvent/:id', 'ANY'],
+            'communityEvent_new' => ['/communityEvent/new/:id', 'ANY'],
+            'communityEvent_create' => ['/communityEvent/create/:id', 'POST'],
+            'communityEvent_edit' => ['/communityEvent/edit/:id', 'ANY'],
+            'communityEvent_update' => ['/communityEvent/update/:id', 'POST'],
+            'communityEvent_delete_confirm' => ['/communityEvent/deleteConfirm/:id', 'ANY'],
+            'communityEvent_delete' => ['/communityEvent/delete/:id', 'POST'],
+            'communityEvent_memberList' => ['/communityEvent/:id/memberList', 'ANY'],
+            'communityEvent_comment_create' => ['/communityEvent/:id/comment/create', 'POST'],
+            'communityEvent_comment_delete_confirm' => ['/communityEvent/comment/deleteConfirm/:id', 'ANY'],
+            'communityEvent_comment_delete' => ['/communityEvent/comment/delete/:id', 'POST'],
+            'communityEvent_recently_event_list' => ['/communityEvent/recentlyEventList', 'ANY'],
+            'communityEvent_search_all' => ['/communityEvent/search', 'ANY'],
+        ],
+    ],
 ];

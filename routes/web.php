@@ -2,6 +2,8 @@
 
 use App\Features\Block\BlockController;
 use App\Features\Community\CommunityController;
+use App\Features\CommunityEvent\CommunityEventCommentController;
+use App\Features\CommunityEvent\CommunityEventController;
 use App\Features\CommunityTopic\CommunityTopicCommentController;
 use App\Features\CommunityTopic\CommunityTopicController;
 use App\Features\Diary\DiaryCommentController;
@@ -263,5 +265,29 @@ Route::middleware('auth')->group(function () {
         Route::post('/communityTopic/{topic}/comment/create', 'store')->whereNumber('topic')->name('communityTopic.comment.store');
         Route::get('/communityTopic/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityTopic.comment.delete.show');
         Route::post('/communityTopic/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityTopic.comment.delete');
+    });
+
+    // Community events (Classic only; Modern is none). Same literal-before-wildcard rule as the topic
+    // board: listCommunity/new/create take a community id, the rest an event id, and {event} is
+    // digit-constrained, so /communityEvent/memberList-style literals can never be read as an event id.
+    Route::prefix('communityEvent')->controller(CommunityEventController::class)->group(function () {
+        Route::get('/listCommunity/{community}', 'index')->whereNumber('community')->name('communityEvent.index');
+        Route::get('/new/{community}', 'new')->whereNumber('community')->name('communityEvent.new');
+        Route::post('/create/{community}', 'store')->whereNumber('community')->name('communityEvent.store');
+        Route::get('/edit/{event}', 'edit')->whereNumber('event')->name('communityEvent.edit');
+        Route::post('/update/{event}', 'update')->whereNumber('event')->name('communityEvent.update');
+        Route::get('/deleteConfirm/{event}', 'showDelete')->whereNumber('event')->name('communityEvent.delete.show');
+        Route::post('/delete/{event}', 'delete')->whereNumber('event')->name('communityEvent.delete');
+        Route::get('/{event}/memberList', 'memberList')->whereNumber('event')->name('communityEvent.member_list');
+        Route::get('/{event}', 'show')->whereNumber('event')->name('communityEvent.show');
+    });
+
+    // communityEventComment module. create keys off the event id and carries the merged RSVP form;
+    // deleteConfirm/delete key off the comment id (literal /communityEvent/comment/* never collides
+    // with the numeric event show).
+    Route::controller(CommunityEventCommentController::class)->group(function () {
+        Route::post('/communityEvent/{event}/comment/create', 'store')->whereNumber('event')->name('communityEvent.comment.store');
+        Route::get('/communityEvent/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityEvent.comment.delete.show');
+        Route::post('/communityEvent/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityEvent.comment.delete');
     });
 });

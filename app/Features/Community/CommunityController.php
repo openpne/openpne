@@ -17,6 +17,8 @@ use App\Features\Community\Queries\ListMemberCommunities;
 use App\Features\Community\Queries\ListPendingMembers;
 use App\Features\Community\Queries\SearchCommunities;
 use App\Features\Community\Queries\ShowCommunity;
+use App\Features\CommunityEvent\CommunityEventAccess;
+use App\Features\CommunityEvent\Queries\RecentCommunityEvents;
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\CommunityTopic\Queries\RecentCommunityTopics;
 use App\Http\Controllers\Controller;
@@ -36,15 +38,16 @@ use Illuminate\View\View;
  */
 class CommunityController extends Controller
 {
-    public function show(Request $request, int $community, ShowCommunity $query, RecentCommunityTopics $recentTopics): View
+    public function show(Request $request, int $community, ShowCommunity $query, RecentCommunityTopics $recentTopics, RecentCommunityEvents $recentEvents): View
     {
         $found = $query($community);
         abort_if($found === null, 404);
         $found->loadMissing('category');
         $viewer = $this->viewer();
 
-        // The recent-topics box (OpenPNE 3 community home) only shows when the viewer may read the
-        // board; the "post" link only when they may post.
+        // The recent-topics / recent-events boxes (OpenPNE 3 community home) only show when the viewer
+        // may read that board; the "post" link only when they may post. Events share the topic read
+        // gate, so one canViewBoard check covers both.
         $canViewBoard = CommunityTopicAccess::canViewBoard($found, $viewer);
 
         return $this->classic('community.show', [
@@ -53,6 +56,8 @@ class CommunityController extends Controller
             'isPending' => CommunityMembership::isPending($found, $viewer),
             'recentTopics' => $canViewBoard ? $recentTopics($found) : null,
             'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
+            'recentEvents' => $canViewBoard ? $recentEvents($found) : null,
+            'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
         ]);
     }
 
