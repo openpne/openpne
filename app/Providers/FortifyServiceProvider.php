@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\Fortify\AuthenticateMember;
 use App\Actions\Fortify\CreateNewMember;
 use App\Actions\Fortify\ResetMemberPassword;
+use App\Actions\Fortify\Responses\NeutralPasswordResetLinkResponse;
 use App\Compat\RouteParityRegistry;
 use App\Support\SurfaceResolver;
 use Closure;
@@ -16,13 +17,18 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
+use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Both outcomes of a forgot-password request resolve to the same neutral response, so the
+        // endpoint cannot be used to enumerate which addresses have an account.
+        $this->app->singleton(SuccessfulPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
+        $this->app->singleton(FailedPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
     }
 
     public function boot(): void
@@ -65,6 +71,15 @@ class FortifyServiceProvider extends ServiceProvider
                 Limit::perMinute(5)->by($email.'|'.$request->ip()),
                 Limit::perMinute(10)->by('register-ip|'.$request->ip()),
             ];
+        });
+
+        // Per-IP cap on the credential-bearing password endpoints (the broker only throttles
+        // per-email, leaving relay/guessing across addresses open). Applied to every Fortify route
+        // via config, so the GET forms and the separately-limited login route pass through unlimited.
+        RateLimiter::for('password-reset', function (Request $request) {
+            return in_array($request->route()?->getName(), ['password.email', 'password.update'], true)
+                ? Limit::perMinute(5)->by('password-reset|'.$request->ip())
+                : Limit::none();
         });
     }
 

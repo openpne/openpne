@@ -104,7 +104,7 @@ return [
     |
     */
 
-    'middleware' => ['web', NoReferrer::class],
+    'middleware' => ['web', NoReferrer::class, 'throttle:password-reset'],
 
     /*
     |--------------------------------------------------------------------------

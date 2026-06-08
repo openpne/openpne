@@ -93,7 +93,10 @@ Route::middleware(['guest', NoReferrer::class])->controller(RegistrationControll
     Route::get('/register/sent', 'sent')->name('register.sent');
 });
 
-Route::middleware('auth')->group(function () {
+// auth.session (AuthenticateSession) drops a logged-in session on its next protected request once
+// the member's password hash changes — a best-effort cross-driver fallback; the reset itself purges
+// database-driver sessions outright (see ResetMemberPassword).
+Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
 
     Route::prefix('friend')->controller(FriendController::class)->group(function () {
