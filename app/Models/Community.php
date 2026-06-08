@@ -57,6 +57,12 @@ class Community extends Model
         return $this->hasMany(CommunityTopic::class);
     }
 
+    /** @return HasMany<CommunityEvent, $this> */
+    public function events(): HasMany
+    {
+        return $this->hasMany(CommunityEvent::class);
+    }
+
     /** @return BelongsTo<CommunityCategory, $this> */
     public function category(): BelongsTo
     {
