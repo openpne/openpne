@@ -3,7 +3,8 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\Member;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\Auth\ResetPasswordNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -66,26 +67,59 @@ class PasswordResetTest extends TestCase
         Notification::fake();
         $member = Member::factory()->create();
 
-        $this->post('/forgot-password', ['email' => $member->email]);
+        $this->post('/forgot-password', ['email' => $member->email])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', __('passwords.neutral'));
 
-        Notification::assertSentTo($member, ResetPassword::class);
+        Notification::assertSentTo($member, ResetPasswordNotification::class);
         $this->assertDatabaseHas('password_reset_tokens', ['email' => $member->email]);
     }
 
-    public function test_no_reset_link_is_sent_for_an_unknown_email(): void
+    public function test_an_unknown_email_gets_the_same_neutral_reply_with_no_mail(): void
+    {
+        // Enumeration-safety: identical neutral status and no validation error, so the response is
+        // indistinguishable from the known-member case above — only the mail (none) differs.
+        Notification::fake();
+
+        $this->post('/forgot-password', ['email' => 'stranger@example.com'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', __('passwords.neutral'));
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_the_reset_notification_is_queued(): void
+    {
+        // Queued so a known address does not pay a synchronous SMTP send (a timing oracle).
+        $this->assertInstanceOf(ShouldQueue::class, new ResetPasswordNotification('token', 'en'));
+    }
+
+    public function test_forgot_password_is_rate_limited_per_ip(): void
     {
         Notification::fake();
 
-        $response = $this->post('/forgot-password', ['email' => 'stranger@example.com']);
+        // Distinct addresses, so the broker's per-email throttle never trips — only the per-IP limit.
+        for ($i = 0; $i < 5; $i++) {
+            $this->post('/forgot-password', ['email' => "user{$i}@example.com"])->assertStatus(302);
+        }
 
-        Notification::assertNothingSent();
-        // Fortify surfaces the unknown address as a validation error (not enumeration-hardened).
-        $response->assertSessionHasErrors('email');
+        $this->post('/forgot-password', ['email' => 'user5@example.com'])->assertStatus(429);
+    }
+
+    public function test_reset_password_post_is_rate_limited_per_ip(): void
+    {
+        $payload = ['token' => 'x', 'email' => 'a@example.com', 'password' => 'x', 'password_confirmation' => 'x'];
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->post('/reset-password', $payload)->assertStatus(302);
+        }
+
+        $this->post('/reset-password', $payload)->assertStatus(429);
     }
 
     public function test_password_can_be_reset_with_a_valid_token(): void
     {
-        $member = Member::factory()->create();
+        $member = Member::factory()->create(['remember_token' => 'old-remember-token']);
         $token = Password::broker('members')->createToken($member);
 
         $response = $this->post('/reset-password', [
@@ -96,7 +130,11 @@ class PasswordResetTest extends TestCase
         ]);
 
         $response->assertSessionHasNoErrors();
-        $this->assertTrue(Hash::check('new-secret-password', $member->fresh()->password));
+
+        $fresh = $member->fresh();
+        $this->assertTrue(Hash::check('new-secret-password', $fresh->password));
+        // The remember-me token is rotated, so a "remember me" cookie on another device stops working.
+        $this->assertNotSame('old-remember-token', $fresh->remember_token);
     }
 
     public function test_reset_is_rejected_with_an_invalid_token(): void

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\Auth\ResetPasswordNotification;
 use App\Support\PreferenceKey;
 use App\Support\Visibility;
 use Database\Factories\MemberFactory;
@@ -28,6 +29,12 @@ class Member extends Authenticatable
             'password' => 'hashed',
             'profile_visibility' => Visibility::class,
         ];
+    }
+
+    /** Queue the reset mail (constant-time response) and carry the request-time locale. */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token, app()->getLocale()));
     }
 
     /**

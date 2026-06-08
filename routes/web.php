@@ -93,7 +93,9 @@ Route::middleware(['guest', NoReferrer::class])->controller(RegistrationControll
     Route::get('/register/sent', 'sent')->name('register.sent');
 });
 
-Route::middleware('auth')->group(function () {
+// auth.session (AuthenticateSession) drops a logged-in session when the member's password hash
+// changes — so a password reset invalidates other devices' active sessions on their next request.
+Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
 
     Route::prefix('friend')->controller(FriendController::class)->group(function () {
