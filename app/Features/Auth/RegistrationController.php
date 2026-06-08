@@ -20,15 +20,23 @@ use Inertia\Response as InertiaResponse;
  */
 class RegistrationController extends Controller
 {
-    public function requestForm(Request $request): View|InertiaResponse
+    public function requestForm(Request $request, SpamTrap $trap): View|InertiaResponse
     {
-        return $this->screen($request, 'auth.register-email', 'auth/register-email');
+        $trap->arm($request);
+
+        return $this->screen($request, 'auth.register-email', 'auth/register-email', [
+            'honeypot' => SpamTrap::HONEYPOT,
+        ]);
     }
 
-    public function request(RegisterEmailRequest $request, IssueRegistrationToken $issue): RedirectResponse
+    public function request(RegisterEmailRequest $request, IssueRegistrationToken $issue, SpamTrap $trap): RedirectResponse
     {
-        // Always lands on the same neutral screen whether or not the address is already a member.
-        $issue($request->validated()['email']);
+        // Always lands on the same neutral screen — whether or not the address is already a member,
+        // and whether or not the bot filters passed. A tripped filter just skips issuing the token,
+        // so a bot cannot tell it was caught.
+        if ($trap->passes($request)) {
+            $issue($request->validated()['email']);
+        }
 
         return redirect()->route('register.sent');
     }

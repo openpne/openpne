@@ -11,6 +11,11 @@
             <p>{{ __('Please input your e-mail address. A registration link for :app will be sent to it.', ['app' => config('app.name')]) }}</p>
             <form method="POST" action="{{ route('register.request') }}">
                 @csrf
+                {{-- Honeypot: off-screen and not announced, so a person never fills it; a bot that
+                     does has its submit silently dropped (SpamTrap). --}}
+                <div aria-hidden="true" style="position:absolute; left:-9999px;">
+                    <input type="text" name="{{ $honeypot }}" value="" tabindex="-1" autocomplete="off">
+                </div>
                 <table>
                     <tr>
                         <th><label for="register_email">{{ __('Mail Address') }}</label></th>
