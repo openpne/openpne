@@ -28,9 +28,15 @@ $app = Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_PROTO,
         );
 
-        // Pin the trusted Host to APP_URL (+ subdomains) so a forged Host/X-Forwarded-Host cannot
-        // poison generated URLs (notably the password-reset link). Enforced outside local/testing.
-        $middleware->trustHosts();
+        // Pin the trusted Host to exactly APP_URL — subdomains: false, so a wildcard-DNS or
+        // attacker-controlled subdomain is not trusted either — so a forged Host cannot poison
+        // generated URLs (notably the password-reset link). Enforced outside local/testing.
+        $middleware->trustHosts(
+            at: fn () => array_filter([
+                ($host = parse_url((string) config('app.url'), PHP_URL_HOST)) ? '^'.preg_quote($host).'$' : null,
+            ]),
+            subdomains: false,
+        );
 
         $middleware->web(append: [
             SetLocale::class,

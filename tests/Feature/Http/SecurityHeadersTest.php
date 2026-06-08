@@ -30,6 +30,8 @@ class SecurityHeadersTest extends TestCase
     {
         $this->get('/login')->assertHeader('Referrer-Policy', 'no-referrer');     // Fortify route
         $this->get('/register')->assertHeader('Referrer-Policy', 'no-referrer');  // registration group
+        $this->get('/reset-password/faketoken?email=a@example.com')             // token in the URL
+            ->assertHeader('Referrer-Policy', 'no-referrer');
     }
 
     public function test_non_auth_pages_use_the_softer_referrer_default(): void

@@ -32,7 +32,9 @@ class SecurityHeaders
         }
 
         if (config('openpne.security.force_https')) {
-            $headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            // No includeSubDomains: a self-hoster on an apex domain must not have sibling
+            // services on other subdomains pinned to HTTPS for a year as a side effect.
+            $headers->set('Strict-Transport-Security', 'max-age=31536000');
         }
 
         return $response;
