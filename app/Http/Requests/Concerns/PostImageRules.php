@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Http\Requests\CommunityTopic;
+namespace App\Http\Requests\Concerns;
 
-use App\Features\CommunityTopic\CommunityTopicImages;
+use App\Files\PostImages;
 
 /**
- * Validation rules for the `images[]` upload on a topic or comment, shared so both forms enforce
- * the same cap and decompression-bomb guard. The cap is CommunityTopicImages::MAX_IMAGES.
+ * Validation rules for the `images[]` upload on a community topic/comment or event/comment, shared so
+ * every form enforces the same cap and decompression-bomb guard. The cap is PostImages::MAX_IMAGES.
  */
-final class TopicImageRules
+final class PostImageRules
 {
     /** @return array<string, mixed> */
     public static function rules(): array
@@ -19,7 +19,7 @@ final class TopicImageRules
         $max = (int) config('openpne.images.max_upload_dimension');
 
         return [
-            'images' => ['array', 'max:'.CommunityTopicImages::MAX_IMAGES],
+            'images' => ['array', 'max:'.PostImages::MAX_IMAGES],
             // Raster image only: `image` rejects non-images; `mimes` further drops SVG (scriptable)
             // and other exotic types so only deliverable images get in.
             'images.*' => ['file', 'image', 'mimes:jpeg,png,gif,webp', "dimensions:max_width={$max},max_height={$max}", 'max:5120'],

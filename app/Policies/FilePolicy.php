@@ -2,7 +2,10 @@
 
 namespace App\Policies;
 
+use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Models\CommunityEvent;
+use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\File;
@@ -32,6 +35,9 @@ class FilePolicy extends BasePolicy
             // whoever may read the topic it hangs on (members-only boards hide it).
             $owner instanceof CommunityTopic => $viewer !== null && CommunityTopicAccess::canViewTopic($owner, $viewer),
             $owner instanceof CommunityTopicComment => $viewer !== null && $owner->topic !== null && CommunityTopicAccess::canViewTopic($owner->topic, $viewer),
+            // An event/comment image inherits the same community read gate as the event it hangs on.
+            $owner instanceof CommunityEvent => $viewer !== null && CommunityEventAccess::canViewEvent($owner, $viewer),
+            $owner instanceof CommunityEventComment => $viewer !== null && $owner->event !== null && CommunityEventAccess::canViewEvent($owner->event, $viewer),
             default => false,
         };
     }

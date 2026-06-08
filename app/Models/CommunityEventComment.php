@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['community_event_id', 'member_id', 'number', 'body'])]
 class CommunityEventComment extends Model
@@ -24,5 +25,11 @@ class CommunityEventComment extends Model
     public function member(): BelongsTo
     {
         return $this->belongsTo(Member::class);
+    }
+
+    /** @return HasMany<CommunityEventCommentImage, $this> Attached images, in slot (number) order. */
+    public function images(): HasMany
+    {
+        return $this->hasMany(CommunityEventCommentImage::class, 'post_id')->orderBy('number');
     }
 }

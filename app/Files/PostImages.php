@@ -1,9 +1,7 @@
 <?php
 
-namespace App\Features\CommunityTopic;
+namespace App\Files;
 
-use App\Files\FileStorage;
-use App\Files\FileUploader;
 use App\Models\File;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,16 +10,17 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
- * Stores topic/comment image bytes so they roll back with the surrounding DB transaction.
+ * Stores image bytes for a "post with attachments" (community topic/comment, event/comment) so the
+ * bytes roll back with the surrounding DB transaction.
  *
  * A disk backend's byte write is not part of the transaction, so on rollback the File rows vanish
  * but the bytes would be orphaned — and FileUploader only undoes its own inner failure, not a later
  * one in the outer transaction. So compensating() tracks every File it stores and deletes their
  * bytes best-effort if the transaction fails.
  */
-class CommunityTopicImages
+class PostImages
 {
-    /** OpenPNE 3 app_community_topic_max_image_file_num (default): images per topic or comment. */
+    /** OpenPNE 3 app_community_topic/event_max_image_file_num (default): images per post. */
     public const MAX_IMAGES = 3;
 
     public function __construct(

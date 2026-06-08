@@ -4,6 +4,7 @@ namespace App\Http\Requests\CommunityTopic;
 
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\CommunityTopic\Data\CommunityTopicFormData;
+use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Community;
 use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
@@ -43,7 +44,7 @@ class StoreTopicRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return [...$this->textRules(), ...TopicImageRules::rules()];
+        return [...$this->textRules(), ...PostImageRules::rules()];
     }
 
     /**

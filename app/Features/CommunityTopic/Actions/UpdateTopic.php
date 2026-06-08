@@ -3,17 +3,17 @@
 namespace App\Features\CommunityTopic\Actions;
 
 use App\Features\CommunityTopic\CommunityTopicAccess;
-use App\Features\CommunityTopic\CommunityTopicImages;
 use App\Features\CommunityTopic\Data\CommunityTopicFormData;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionFailure;
+use App\Files\PostImages;
 use App\Models\CommunityTopic;
 use App\Models\Member;
 use Illuminate\Http\UploadedFile;
 
 class UpdateTopic
 {
-    public function __construct(private readonly CommunityTopicImages $images) {}
+    public function __construct(private readonly PostImages $images) {}
 
     /**
      * Edit a topic's text and, OpenPNE 3-style, manage its image slots: remove the images in
@@ -56,7 +56,7 @@ class UpdateTopic
             // payload that slipped the cross-field check) could leave too few slots — fail cleanly
             // rather than index past $free.
             $used = $topic->images()->pluck('number')->all();
-            $free = array_values(array_diff(range(1, CommunityTopicImages::MAX_IMAGES), $used));
+            $free = array_values(array_diff(range(1, PostImages::MAX_IMAGES), $used));
             if (count($newImages) > count($free)) {
                 throw new CommunityTopicActionException(CommunityTopicActionFailure::TooManyImages);
             }

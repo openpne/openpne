@@ -27,28 +27,41 @@ class ToggleParticipation
         return DB::transaction(function () use ($member, $event): bool {
             $locked = CommunityEvent::whereKey($event->getKey())->lockForUpdate()->first();
 
-            // OpenPNE 3 checks closed/expired before the join-or-leave branch, so both block either
-            // direction.
-            if ($locked->isClosed()) {
-                throw new CommunityEventActionException(CommunityEventActionFailure::EventClosed);
-            }
-            if ($locked->isExpired()) {
-                throw new CommunityEventActionException(CommunityEventActionFailure::EventExpired);
-            }
-
-            if ($locked->isParticipant($member)) {
-                $locked->participants()->detach($member);
-
-                return false;
-            }
-
-            if ($locked->isFull()) {
-                throw new CommunityEventActionException(CommunityEventActionFailure::EventAtCapacity);
-            }
-
-            $locked->participants()->attach($member);
-
-            return true;
+            return $this->apply($member, $locked);
         });
+    }
+
+    /**
+     * The toggle decision and roster write, assuming the caller is inside a transaction that already
+     * holds $event's row lock. Split out so the merged comment flow (SubmitEventComment) can run it
+     * in the same compensating transaction as the comment and its images. The capacity/membership
+     * predicates query under that lock, so they cannot race a concurrent join.
+     *
+     * @return bool the member's participation state after the toggle (true = now joined)
+     */
+    public function apply(Member $member, CommunityEvent $event): bool
+    {
+        // OpenPNE 3 checks closed/expired before the join-or-leave branch, so both block either
+        // direction.
+        if ($event->isClosed()) {
+            throw new CommunityEventActionException(CommunityEventActionFailure::EventClosed);
+        }
+        if ($event->isExpired()) {
+            throw new CommunityEventActionException(CommunityEventActionFailure::EventExpired);
+        }
+
+        if ($event->isParticipant($member)) {
+            $event->participants()->detach($member);
+
+            return false;
+        }
+
+        if ($event->isFull()) {
+            throw new CommunityEventActionException(CommunityEventActionFailure::EventAtCapacity);
+        }
+
+        $event->participants()->attach($member);
+
+        return true;
     }
 }

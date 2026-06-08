@@ -3,9 +3,8 @@
 namespace App\Features\CommunityEvent;
 
 use App\Compat\RouteParityRegistry;
-use App\Features\CommunityEvent\Actions\CreateEventComment;
 use App\Features\CommunityEvent\Actions\DeleteEventComment;
-use App\Features\CommunityEvent\Actions\ToggleParticipation;
+use App\Features\CommunityEvent\Actions\SubmitEventComment;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionFailure;
 use App\Http\Controllers\Controller;
@@ -15,39 +14,29 @@ use App\Models\CommunityEventComment;
 use App\Models\Member;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
  * Classic-only adapter for event comments and the merged RSVP form. OpenPNE 3 posts participation
  * through the same comment-create endpoint: the participate/cancel buttons toggle the roster and then
- * save the (required) comment, while the "comment only" button just saves it. The toggle runs before
- * the save inside one transaction, so a closed/expired/full guard aborts both — the comment is not
- * saved either, matching OpenPNE 3. A guard failure is an in-app error (flash + back), not a 404;
- * the 404s are reserved for the membership gate enforced in the request.
+ * save the (required) comment, while the "comment only" button just saves it. SubmitEventComment runs
+ * the toggle, the comment and its images in one compensating transaction, so a closed/expired/full
+ * guard aborts the whole submission (the comment is not saved either, matching OpenPNE 3). A guard
+ * failure is an in-app error (flash + back), not a 404; the 404s are reserved for the membership gate.
  */
 class CommunityEventCommentController extends Controller
 {
-    public function store(
-        StoreEventCommentRequest $request,
-        int $event,
-        ToggleParticipation $toggle,
-        CreateEventComment $comment,
-    ): RedirectResponse {
+    public function store(StoreEventCommentRequest $request, int $event, SubmitEventComment $submit): RedirectResponse
+    {
         $found = CommunityEvent::findOrFail($event);
-        $viewer = $this->viewer();
         $body = $request->validated('body');
+        $images = $request->file('images', []);
 
         // OpenPNE 3 toggles the roster unless the "comment only" button (name=comment) was pressed.
-        $commentOnly = $request->filled('comment');
+        $toggleRoster = ! $request->filled('comment');
 
         try {
-            $joined = DB::transaction(function () use ($commentOnly, $toggle, $comment, $viewer, $found, $body): ?bool {
-                $joined = $commentOnly ? null : $toggle($viewer, $found);
-                $comment($viewer, $found, $body);
-
-                return $joined;
-            });
+            $joined = $submit($this->viewer(), $found, $body, $images, $toggleRoster);
         } catch (CommunityEventActionException $e) {
             // A roster guard (closed / expired / full) is shown in place; the comment is rolled back.
             if ($this->isRosterGuard($e->reason)) {

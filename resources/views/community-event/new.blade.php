@@ -6,10 +6,11 @@
     <div class="dparts form" id="communityEvent_new">
         <div class="partsHeading"><h3>{{ __('Post a new event') }}</h3></div>
         <div class="parts">
-            <form method="POST" action="{{ route('communityEvent.store', $community) }}">
+            <form method="POST" action="{{ route('communityEvent.store', $community) }}" enctype="multipart/form-data">
                 @csrf
                 <table>
                     @include('community-event._fields')
+                    @include('community-event._image_fields')
                 </table>
                 <div class="operation">
                     <ul class="moreInfo button">

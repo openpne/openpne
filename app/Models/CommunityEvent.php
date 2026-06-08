@@ -44,6 +44,12 @@ class CommunityEvent extends Model
         return $this->hasMany(CommunityEventComment::class);
     }
 
+    /** @return HasMany<CommunityEventImage, $this> Attached images, in slot (number) order. */
+    public function images(): HasMany
+    {
+        return $this->hasMany(CommunityEventImage::class, 'post_id')->orderBy('number');
+    }
+
     /** @return BelongsToMany<Member, $this> Members who have RSVP'd, via community_event_members. */
     public function participants(): BelongsToMany
     {

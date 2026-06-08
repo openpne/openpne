@@ -16,7 +16,15 @@ class DeleteEventComment
             throw new CommunityEventActionException(CommunityEventActionFailure::CannotDeleteComment);
         }
 
+        // Collect the comment's owned image Files before the cascade drops the *_image link rows;
+        // their bytes (irreversible on a disk backend) are purged after the row is gone.
+        $files = $comment->images()->with('file')->get()->pluck('file')->filter()->all();
+
         // OpenPNE 3 leaves the remaining numbers and the event timestamps untouched on delete.
         $comment->delete();
+
+        foreach ($files as $file) {
+            $file->delete(); // deleting the File purges its bytes
+        }
     }
 }

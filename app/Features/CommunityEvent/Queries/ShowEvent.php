@@ -12,6 +12,6 @@ class ShowEvent
      */
     public function __invoke(int $eventId): ?CommunityEvent
     {
-        return CommunityEvent::query()->with(['member', 'community'])->find($eventId);
+        return CommunityEvent::query()->with(['member', 'community', 'images.file'])->find($eventId);
     }
 }
