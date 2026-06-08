@@ -7,6 +7,7 @@ use App\Features\CommunityEvent\Actions\CreateEvent;
 use App\Features\CommunityEvent\Actions\CreateEventComment;
 use App\Features\CommunityEvent\Actions\DeleteEvent;
 use App\Features\CommunityEvent\Actions\DeleteEventComment;
+use App\Features\CommunityEvent\Actions\SubmitEventComment;
 use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Features\CommunityTopic\TopicReadAccess;
 use App\Files\DiskFileStorage;
@@ -221,5 +222,46 @@ class CommunityEventImagesTest extends TestCase
         $this->assertDatabaseCount('community_event_images', 0);
         // And the first image's bytes were compensated — no orphan left on disk.
         $this->assertEmpty(Storage::disk('local')->allFiles());
+    }
+
+    public function test_a_failed_image_in_a_merged_participate_rolls_back_the_join_too(): void
+    {
+        // The merged endpoint runs the roster toggle, the comment and its images in ONE compensating
+        // transaction. A failed image write must undo the join and the comment as well, and leave no
+        // orphan bytes — a separate outer transaction around two self-transacting actions would not.
+        config(['openpne.files.disk' => 'local']);
+        Storage::fake('local');
+
+        $real = new DiskFileStorage('local');
+        $writes = 0;
+        $this->instance(FileStorage::class, Mockery::mock(FileStorage::class, function ($mock) use ($real, &$writes) {
+            $mock->shouldReceive('writeStream')->andReturnUsing(function ($file, $stream) use ($real, &$writes) {
+                $writes++;
+                if ($writes === 2) {
+                    throw new RuntimeException('disk full');
+                }
+                $real->writeStream($file, $stream);
+            });
+            $mock->shouldReceive('delete')->andReturnUsing(fn ($file) => $real->delete($file));
+            $mock->shouldReceive('readStream')->andReturnUsing(fn ($file) => $real->readStream($file));
+            $mock->shouldReceive('exists')->andReturnUsing(fn ($file) => $real->exists($file));
+        }));
+
+        $community = Community::factory()->create();
+        $member = $this->joined($community);
+        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+
+        try {
+            app(SubmitEventComment::class)($member, $event, 'Count me in!', [$this->fake('1.png'), $this->fake('2.png')], true);
+            $this->fail('expected the failed image store to throw');
+        } catch (RuntimeException) {
+            // expected
+        }
+
+        $this->assertSame(0, $event->fresh()->participantCount()); // the join rolled back
+        $this->assertDatabaseCount('community_event_comments', 0); // the comment rolled back
+        $this->assertDatabaseCount('community_event_comment_images', 0);
+        $this->assertDatabaseCount('files', 0);
+        $this->assertEmpty(Storage::disk('local')->allFiles()); // no orphan bytes
     }
 }
