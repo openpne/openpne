@@ -17,6 +17,7 @@ use App\Features\Member\MemberSearchController;
 use App\Features\Profile\ProfileController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
+use App\Http\Middleware\AsBackgroundFetch;
 use App\Http\Middleware\EnsureOpenRegistration;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\SetLocale;
@@ -96,8 +97,10 @@ Route::middleware(['guest', NoReferrer::class, EnsureOpenRegistration::class])->
 });
 
 // Fresh ALTCHA challenge for the widget to solve. Throttled per IP; returns {} when CAPTCHA is off.
+// AsBackgroundFetch keeps this JSON endpoint out of the session's previous-URL history so a later
+// redirect()->back() never lands on it.
 Route::get('/altcha/challenge', fn (Captcha $captcha) => response()->json($captcha->challenge()))
-    ->middleware('throttle:60,1')->name('altcha.challenge');
+    ->middleware(['throttle:60,1', AsBackgroundFetch::class])->name('altcha.challenge');
 
 // auth.session (AuthenticateSession) drops a logged-in session on its next protected request once
 // the member's password hash changes — a best-effort cross-driver fallback; the reset itself purges
