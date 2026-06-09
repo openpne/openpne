@@ -60,6 +60,25 @@ class RegistrationCaptchaTest extends TestCase
         $this->assertDatabaseHas('registration_tokens', ['email' => 'newcomer@example.com']);
     }
 
+    public function test_a_solved_payload_cannot_be_replayed(): void
+    {
+        // Single-use: the same solution must not be reusable across posts within the TTL.
+        Notification::fake();
+        $payload = $this->solvedPayload();
+
+        $this->armForm();
+        $this->post('/register', ['email' => 'first@example.com', 'altcha' => $payload])
+            ->assertRedirect(route('register.sent'));
+
+        $this->armForm();
+        $this->from('/register')->post('/register', ['email' => 'second@example.com', 'altcha' => $payload])
+            ->assertRedirect('/register')
+            ->assertSessionHasErrors('altcha');
+
+        $this->assertDatabaseHas('registration_tokens', ['email' => 'first@example.com']);
+        $this->assertDatabaseMissing('registration_tokens', ['email' => 'second@example.com']);
+    }
+
     private function armForm(): void
     {
         $this->get('/register');

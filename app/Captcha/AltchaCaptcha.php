@@ -10,6 +10,7 @@ use AltchaOrg\Altcha\CreateChallengeOptions;
 use AltchaOrg\Altcha\Payload;
 use AltchaOrg\Altcha\Solution;
 use AltchaOrg\Altcha\VerifySolutionOptions;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
@@ -35,6 +36,11 @@ class AltchaCaptcha implements Captcha
         $this->algorithm = new Pbkdf2;
     }
 
+    public function enabled(): bool
+    {
+        return true;
+    }
+
     public function challenge(): array
     {
         return $this->altcha->createChallenge(new CreateChallengeOptions(
@@ -53,14 +59,23 @@ class AltchaCaptcha implements Captcha
 
         try {
             $data = json_decode(base64_decode($payload, true) ?: '', true, 512, JSON_THROW_ON_ERROR);
+            $signature = $data['challenge']['signature'] ?? null;
             $params = ChallengeParameters::fromArray($data['challenge']['parameters']);
-            $challenge = new Challenge($params, $data['challenge']['signature'] ?? null);
+            $challenge = new Challenge($params, $signature);
             $solution = new Solution((int) $data['solution']['counter'], (string) $data['solution']['derivedKey']);
 
-            return $this->altcha->verifySolution(new VerifySolutionOptions(
+            $verified = $this->altcha->verifySolution(new VerifySolutionOptions(
                 payload: new Payload($challenge, $solution),
                 algorithm: $this->algorithm,
             ))->verified;
+
+            // Single-use: a valid payload is accepted once, then its (unique, signed) challenge is
+            // consumed for the rest of the TTL — otherwise one solved payload could be replayed across
+            // many registration posts within the expiry window. Cache::add is atomic, so a concurrent
+            // replay loses the race too.
+            return $verified
+                && is_string($signature)
+                && Cache::add('altcha:used:'.$signature, true, $this->expiresSeconds);
         } catch (Throwable) {
             return false;
         }

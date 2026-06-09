@@ -8,6 +8,9 @@ namespace App\Captcha;
  */
 interface Captcha
 {
+    /** Whether a challenge is actually enforced (false for NullCaptcha) — drives whether the UI renders the widget. */
+    public function enabled(): bool;
+
     /**
      * The challenge the widget fetches and solves, or [] when disabled.
      *
