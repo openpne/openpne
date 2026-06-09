@@ -27,6 +27,7 @@ class Member extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_login_rejected' => 'boolean',
             'profile_visibility' => Visibility::class,
         ];
     }
