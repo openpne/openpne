@@ -74,6 +74,25 @@ class LoginCaptchaTest extends TestCase
         $this->get('/login')->assertDontSee('altcha-widget', false);
     }
 
+    public function test_a_solved_captcha_is_not_blocked_by_the_per_minute_login_limit(): void
+    {
+        // Past both the captcha threshold (2) and the per-minute login limit (5), a correct password
+        // with a fresh solved captcha must still get through — the captcha lifts the cap, not a lockout.
+        $member = Member::factory()->create();
+
+        for ($i = 0; $i < 5; $i++) {
+            $data = ['email' => $member->email, 'password' => 'wrong-password'];
+            if ($i >= 2) {
+                $data['altcha'] = $this->solvedPayload(); // a fresh solve once the captcha is required
+            }
+            $this->post('/login', $data);
+        }
+
+        $this->post('/login', ['email' => $member->email, 'password' => 'password', 'altcha' => $this->solvedPayload()])
+            ->assertRedirect('/');
+        $this->assertAuthenticatedAs($member);
+    }
+
     public function test_no_captcha_is_required_when_the_feature_is_disabled(): void
     {
         config()->set('openpne.captcha.enabled', false);
