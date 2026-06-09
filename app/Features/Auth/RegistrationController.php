@@ -17,6 +17,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -90,20 +91,24 @@ class RegistrationController extends Controller
         }
 
         // The token's address was free when issued, but a member may have claimed it since (admin
-        // creation, or an earlier completion of this same token under a race). There is nothing to
-        // create, so consume the now-stale token and send them to log in instead of leaking an
-        // email-field validation error on a form that has no email field.
+        // creation, or a concurrent completion). The form has no email field, so a unique-email
+        // failure has nowhere to show — every such case consumes the now-dead token and sends them to
+        // sign in. Caught at three layers as the window narrows: this up-front check, the create's
+        // unique rule (ValidationException on `email`), and the insert itself (QueryException).
         if (Member::whereRaw('lower(email) = ?', [$pending->email])->exists()) {
-            $pending->delete();
-
-            return $this->alreadyRegistered();
+            return $this->addressClaimed($pending);
         }
 
         try {
             $member = $complete($pending, $request->all());
+        } catch (ValidationException $e) {
+            if ($e->validator->errors()->has('email')) {
+                return $this->addressClaimed($pending);
+            }
+
+            throw $e; // name / password / profile errors → back to the form, token kept
         } catch (QueryException) {
-            // Lost the unique-email insert to a concurrent completion: same outcome as the check above.
-            return $this->alreadyRegistered();
+            return $this->addressClaimed($pending);
         }
 
         Auth::login($member);
@@ -133,8 +138,11 @@ class RegistrationController extends Controller
             ->with('status', __('That registration link is invalid or has expired. Please request a new one.'));
     }
 
-    private function alreadyRegistered(): RedirectResponse
+    /** The token's address now belongs to a member: burn the dead token and send them to sign in. */
+    private function addressClaimed(RegistrationToken $pending): RedirectResponse
     {
+        $pending->delete();
+
         return redirect()->route('login')
             ->with('status', __('This address is already registered. Please sign in.'));
     }

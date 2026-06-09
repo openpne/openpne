@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Features\Auth\Actions\CompleteRegistration;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -167,6 +169,26 @@ class RegistrationCompletionTest extends TestCase
 
         $this->assertGuest();
         $this->assertSame(1, Member::where('email', 'taken@example.com')->count());
+        $this->assertDatabaseCount('registration_tokens', 0);
+    }
+
+    public function test_an_address_claimed_during_validation_is_sent_to_sign_in(): void
+    {
+        // The up-front check passes (no member yet), but the address is claimed before the create's
+        // unique rule runs, so creation fails on `email` (a ValidationException, not a QueryException).
+        // The form has no email field to show it, so the dead token is consumed and the user is sent
+        // to sign in — the same outcome as the other races.
+        $token = $this->issueToken('newcomer@example.com');
+
+        $this->mock(CompleteRegistration::class)
+            ->shouldReceive('__invoke')
+            ->andThrow(ValidationException::withMessages(['email' => __('This address is already registered. Please sign in.')]));
+
+        $this->post("/register/{$token}", $this->validForm())
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('status');
+
+        $this->assertGuest();
         $this->assertDatabaseCount('registration_tokens', 0);
     }
 
