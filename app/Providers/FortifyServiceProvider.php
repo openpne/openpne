@@ -7,6 +7,7 @@ use App\Actions\Fortify\CreateNewMember;
 use App\Actions\Fortify\ResetMemberPassword;
 use App\Actions\Fortify\Responses\NeutralPasswordResetLinkResponse;
 use App\Compat\RouteParityRegistry;
+use App\Features\Auth\RegistrationMode;
 use App\Support\SurfaceResolver;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -40,10 +41,13 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::resetUserPasswordsUsing(ResetMemberPassword::class);
 
-        Fortify::loginView(fn (Request $request) => $this->screen(
-            $request, 'login', 'auth.login',
-            fn () => Inertia::render('auth/login'),
-        ));
+        Fortify::loginView(function (Request $request) {
+            // Show the "register" link only when the open entry actually exists, so it is never a 404.
+            $props = ['registrationOpen' => RegistrationMode::current()->allowsOpenRegistration()];
+
+            return $this->screen($request, 'login', 'auth.login',
+                fn () => Inertia::render('auth/login', $props), $props);
+        });
         Fortify::requestPasswordResetLinkView(fn (Request $request) => $this->screen(
             $request, 'password.request', 'auth.forgot-password',
             fn () => Inertia::render('auth/forgot-password'),
