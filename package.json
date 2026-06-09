@@ -10,8 +10,8 @@
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
-        "@types/node": "^25.9.1",
-        "@types/react": "^19.2.15",
+        "@types/node": "^25.9.2",
+        "@types/react": "^19.2.17",
         "@types/react-dom": "^19.2.3",
         "@vitejs/plugin-react": "^6.0.2",
         "concurrently": "^9.0.1",
@@ -21,15 +21,15 @@
         "vite": "^8.0.16"
     },
     "dependencies": {
-        "@inertiajs/react": "^3.3.0",
+        "@inertiajs/react": "^3.3.1",
         "altcha": "^3.0.11",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "laravel-react-i18n": "^2.0.5",
         "lucide-react": "^1.17.0",
-        "radix-ui": "^1.4.3",
-        "react": "^19.2.6",
-        "react-dom": "^19.2.6",
+        "radix-ui": "^1.5.0",
+        "react": "^19.2.7",
+        "react-dom": "^19.2.7",
         "tailwind-merge": "^3.6.0"
     },
     "overrides": {
