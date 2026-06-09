@@ -103,6 +103,10 @@ return [
     */
 
     'registration' => [
+        // Who may create an account (App\Features\Auth\RegistrationMode): 'invite' (default) and
+        // 'closed' both 404 the open /register entry; only 'open' exposes it, behind the CAPTCHA.
+        // OpenPNE 3 defaulted to invite-only, so open self-registration is opt-in here too.
+        'mode' => env('OPENPNE_REGISTRATION_MODE', 'invite'), // open | invite | closed
         'token_ttl_minutes' => (int) env('OPENPNE_REGISTRATION_TOKEN_TTL_MINUTES', 1440),
         // Minimum seconds between opening the registration form and submitting it; a faster submit is
         // treated as a script and silently dropped. Even with autofill a person takes longer; tune

@@ -34,7 +34,9 @@
                         </tr>
                     </table>
                 </form>
-                <p class="registerLink"><a href="{{ route('register') }}">{{ __('Register') }}</a></p>
+                @if ($registrationOpen ?? false)
+                    <p class="registerLink"><a href="{{ route('register') }}">{{ __('Register') }}</a></p>
+                @endif
             </div>
         </div>
     </div>

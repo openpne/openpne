@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 
-export default function Login() {
+export default function Login({ registrationOpen = false }: { registrationOpen?: boolean }) {
     const t = useT();
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
@@ -85,11 +85,13 @@ export default function Login() {
                     {signIn}
                 </button>
 
-                <p className="text-center text-sm text-muted-foreground">
-                    <Link href="/register" className="underline">
-                        {t('Create an account')}
-                    </Link>
-                </p>
+                {registrationOpen && (
+                    <p className="text-center text-sm text-muted-foreground">
+                        <Link href="/register" className="underline">
+                            {t('Create an account')}
+                        </Link>
+                    </p>
+                )}
             </form>
         </AuthLayout>
     );
