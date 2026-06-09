@@ -89,11 +89,17 @@ Route::get('/opAuthMailAddress/passwordRecoveryComplete', fn () => redirect()->r
 
 // Multi-stage registration (OpenPNE 3 email-confirmation flow), replacing Fortify's single-stage
 // /register. Guest-only, and gated to 'open' mode — invite/closed 404 the entry (OpenPNE 3 parity).
-// The email-entry half is here; the token-gated form + completion (GET/POST /register/{token}) land later.
+// Email-entry half issues the mailed token; the completion half (GET form + POST create) is gated by
+// that token. The literal /register/sent precedes /register/{token}, and the token is length-pinned to
+// the issued shape, so the two never collide.
 Route::middleware(['guest', NoReferrer::class, EnsureOpenRegistration::class])->controller(RegistrationController::class)->group(function () {
     Route::get('/register', 'requestForm')->name('register');
     Route::post('/register', 'request')->middleware('throttle:register-email')->name('register.request');
     Route::get('/register/sent', 'sent')->name('register.sent');
+    Route::get('/register/{token}', 'form')->where('token', '[A-Za-z0-9]{40}')
+        ->middleware('throttle:register-complete')->name('register.form');
+    Route::post('/register/{token}', 'register')->where('token', '[A-Za-z0-9]{40}')
+        ->middleware('throttle:register-complete')->name('register.complete');
 });
 
 // Fresh ALTCHA challenge for the widget to solve. Throttled per IP; returns {} when CAPTCHA is off.
