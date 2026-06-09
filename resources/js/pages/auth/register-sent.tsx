@@ -14,6 +14,11 @@ export default function RegisterSent() {
             <p className="text-sm text-muted-foreground">
                 {t('Open the link in the mail to begin your registration.')}
             </p>
+            {/* Enumeration-safe hint: an already-registered address sees this same screen but is not
+                mailed, so point that user at sign-in / password reset. */}
+            <p className="text-sm text-muted-foreground">
+                {t('If no email arrives, this address may already be registered. Try signing in, or reset your password.')}
+            </p>
 
             <p className="text-center text-sm text-muted-foreground">
                 <Link href="/login" className="underline">

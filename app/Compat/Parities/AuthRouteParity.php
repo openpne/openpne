@@ -36,6 +36,11 @@ class AuthRouteParity extends RouteParity
             // the input form and the "sent" success under one page id, so both routes share it.
             new RouteMap(null, null, 'register', 'GET', op3Action: 'requestRegisterURL', op3Module: 'opAuthMailAddress'),
             new RouteMap(null, null, 'register.sent', 'GET', op3Action: 'requestRegisterURL', op3Module: 'opAuthMailAddress'),
+
+            // Registration completion — the token-gated account form. OpenPNE 3's mailed link landed on
+            // opAuthMailAddress/register, which forwarded to the member/registerInput form; OpenPNE 4
+            // serves the form directly, so the body id follows the rendered screen (member/registerInput).
+            new RouteMap(null, null, 'register.form', 'GET', op3Action: 'registerInput', op3Module: 'member'),
         ];
     }
 
@@ -71,7 +76,17 @@ class AuthRouteParity extends RouteParity
                 new ScreenElement('mail address input', L::One, S::Ported, 'opRequestRegisterURLForm', 'field name not preserved (email, Level 3)'),
                 new ScreenElement('submit button', L::Two, S::Ported, 'op_include_form requestRegisterURL'),
                 new ScreenElement('"invitation sent" confirmation screen', L::Two, S::Ported, 'requestRegisterURLSuccess.php', 'register.sent; enumeration-safe (shown whether or not the address is a member)'),
-                new ScreenElement('CAPTCHA', L::Three, S::Missing, 'is_use_captcha', 'OpenPNE 3 optional CAPTCHA on the entry form not ported'),
+                new ScreenElement('CAPTCHA', L::Three, S::Ported, 'is_use_captcha', 'self-hosted ALTCHA proof-of-work replaces the OpenPNE 3 image CAPTCHA'),
+            ],
+            // member/registerInput → resources/views/auth/register-complete.blade.php. The address is
+            // fixed by the token (shown, not re-entered); name + password + the registration profile
+            // fields are collected, then the member is created and logged in.
+            'registerInput' => [
+                new ScreenElement('mail address (read-only)', L::Two, S::Ported, 'member/registerInput', 'authoritative from the token, not an input'),
+                new ScreenElement('nickname input', L::One, S::Ported, 'sfWidgetFormInputText nickname', 'field name not preserved (name, Level 3)'),
+                new ScreenElement('password + confirmation inputs', L::One, S::Ported, 'sfWidgetFormInputPassword password / password_confirm'),
+                new ScreenElement('registration profile fields', L::One, S::Ported, 'op_include_form member is_disp_regist'),
+                new ScreenElement('submit button', L::Two, S::Ported, 'op_include_form member/registerInput'),
             ],
         ];
     }

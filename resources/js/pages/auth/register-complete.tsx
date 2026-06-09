@@ -1,4 +1,4 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
@@ -6,27 +6,30 @@ import { ProfileFieldInput } from '@/pages/member/profile-field-input';
 import type { ProfileFormField } from '@/pages/member/types';
 import type { PageProps } from '@/types';
 
-interface RegisterProps extends PageProps {
-    profileFields: ProfileFormField[];
+interface RegisterCompleteProps extends PageProps {
+    /** Raw token from the URL; posted back to /register/{token}. */
+    token: string;
+    /** Address fixed by the token — shown, never entered. */
+    email: string;
+    fields: ProfileFormField[];
 }
 
-export default function Register() {
+export default function RegisterComplete() {
     const t = useT();
-    const { profileFields } = usePage<RegisterProps>().props;
+    const { token, email, fields } = usePage<RegisterCompleteProps>().props;
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
-        email: '',
         password: '',
         password_confirmation: '',
-        profile: Object.fromEntries(profileFields.map((f) => [f.id, f.value])) as Record<number, string | string[]>,
+        profile: Object.fromEntries(fields.map((f) => [f.id, f.value])) as Record<number, string | string[]>,
         visibility: Object.fromEntries(
-            profileFields.filter((f) => f.is_edit_public_flag).map((f) => [f.id, f.visibility]),
+            fields.filter((f) => f.is_edit_public_flag).map((f) => [f.id, f.visibility]),
         ) as Record<number, number>,
     });
 
     function submit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
-        post('/register', {
+        post(`/register/${token}`, {
             onFinish: () => reset('password', 'password_confirmation'),
         });
     }
@@ -41,6 +44,11 @@ export default function Register() {
             <Head title={title} />
 
             <form onSubmit={submit} className="space-y-4">
+                <div className="space-y-1">
+                    <span className="block text-sm font-medium">{t('Mail Address')}</span>
+                    <p className="text-sm text-muted-foreground">{email}</p>
+                </div>
+
                 <div className="space-y-1">
                     <label htmlFor="name" className="block text-sm font-medium">
                         {t('Name')}
@@ -57,23 +65,6 @@ export default function Register() {
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                     {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-                </div>
-
-                <div className="space-y-1">
-                    <label htmlFor="email" className="block text-sm font-medium">
-                        {t('Email')}
-                    </label>
-                    <input
-                        id="email"
-                        type="email"
-                        name="email"
-                        autoComplete="email"
-                        required
-                        value={data.email}
-                        onChange={(e) => setData('email', e.target.value)}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-1">
@@ -109,7 +100,7 @@ export default function Register() {
                     />
                 </div>
 
-                {profileFields.map((field) => (
+                {fields.map((field) => (
                     <div key={field.id} className="space-y-1">
                         <ProfileFieldInput
                             field={field}
@@ -138,12 +129,6 @@ export default function Register() {
                 >
                     {title}
                 </button>
-
-                <p className="text-center text-sm text-muted-foreground">
-                    <Link href="/login" className="underline">
-                        {t('Already have an account? Sign in')}
-                    </Link>
-                </p>
             </form>
         </AuthLayout>
     );
