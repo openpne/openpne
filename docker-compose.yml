@@ -1,7 +1,11 @@
-# Single-site OpenPNE 4 development / self-host stack.
-#   docker compose up -d   →   http://localhost:8080
+# OpenPNE local development stack — NOT a production deployment.
+#   docker compose up -d   →   http://localhost:8080   (caught mail → http://localhost:8025)
 #
-# - Source is bind-mounted so edits are reflected immediately.
+# Tuned for the inner loop: source is bind-mounted, Vite serves HMR, outgoing mail
+# is caught by Mailpit, and queued work runs inline (QUEUE_CONNECTION=sync) so mail
+# appears immediately without a worker. A production stack (released image, real
+# DB/SMTP, queue worker + scheduler) is deliberately separate.
+#
 # - `vendor/` and `node_modules/` live in named volumes so container-side
 #   `composer install` / `npm ci` do not collide with host uid ownership.
 # - SQLite is used by default; opt in to MySQL via a separate compose file.
@@ -11,9 +15,20 @@
 services:
   app:
     build: .
+    # Override .env for the container only: deliver all mail to Mailpit and run queued
+    # work inline, so registration/reset mail shows up at :8025 with no worker. php-fpm
+    # passes these through (clear_env = no), so they win over .env. Production wires real
+    # SMTP and a real queue + worker instead.
+    environment:
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      QUEUE_CONNECTION: sync
     volumes:
       - .:/var/www/html
       - vendor:/var/www/html/vendor
+    depends_on:
+      - mailpit
 
   nginx:
     image: nginx:alpine
@@ -36,6 +51,13 @@ services:
     volumes:
       - .:/var/www/html
       - node_modules:/var/www/html/node_modules
+
+  # Dev mail sink: catches every outgoing mail instead of delivering it and shows
+  # it at http://localhost:8025. The app reaches it over SMTP on the compose network.
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "${OPENPNE_MAILPIT_PORT:-8025}:8025"
 
 volumes:
   vendor:
