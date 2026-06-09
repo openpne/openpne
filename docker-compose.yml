@@ -1,4 +1,4 @@
-# OpenPNE 4 local development stack — NOT a production deployment.
+# OpenPNE local development stack — NOT a production deployment.
 #   docker compose up -d   →   http://localhost:8080   (caught mail → http://localhost:8025)
 #
 # Tuned for the inner loop: source is bind-mounted, Vite serves HMR, outgoing mail
