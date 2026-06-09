@@ -17,6 +17,7 @@ use App\Features\Member\MemberSearchController;
 use App\Features\Profile\ProfileController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
+use App\Http\Middleware\EnsureOpenRegistration;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\SetLocale;
 use App\Models\Member;
@@ -86,9 +87,9 @@ Route::get('/opAuthMailAddress/passwordRecoveryComplete', fn () => redirect()->r
     ->name('auth.password_recovery_complete_compat');
 
 // Multi-stage registration (OpenPNE 3 email-confirmation flow), replacing Fortify's single-stage
-// /register. Guest-only. The email-entry half is here; the token-gated form + completion
-// (GET/POST /register/{token}) land in the next PR.
-Route::middleware(['guest', NoReferrer::class])->controller(RegistrationController::class)->group(function () {
+// /register. Guest-only, and gated to 'open' mode — invite/closed 404 the entry (OpenPNE 3 parity).
+// The email-entry half is here; the token-gated form + completion (GET/POST /register/{token}) land later.
+Route::middleware(['guest', NoReferrer::class, EnsureOpenRegistration::class])->controller(RegistrationController::class)->group(function () {
     Route::get('/register', 'requestForm')->name('register');
     Route::post('/register', 'request')->middleware('throttle:register-email')->name('register.request');
     Route::get('/register/sent', 'sent')->name('register.sent');
