@@ -28,7 +28,7 @@
                     {{-- ALTCHA proof-of-work. The widget submits its solution as the `altcha` field;
                          this is the Classic shell's only JS. --}}
                     @vite('resources/js/altcha.ts')
-                    <altcha-widget challengeurl="{{ $challengeUrl }}" name="altcha"></altcha-widget>
+                    <altcha-widget challenge="{{ $challengeUrl }}" name="altcha"></altcha-widget>
                     @error('altcha')<p class="error" role="alert">{{ $message }}</p>@enderror
                 @endif
                 <div class="operation">

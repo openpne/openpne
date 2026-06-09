@@ -74,7 +74,7 @@ export default function RegisterEmail({ honeypot, captcha, challengeUrl }: Props
 
                 {captcha && (
                     <div className="space-y-1">
-                        <altcha-widget ref={widget} challengeurl={challengeUrl} />
+                        <altcha-widget ref={widget} challenge={challengeUrl} />
                         {errors.altcha && <p className="text-sm text-destructive">{errors.altcha}</p>}
                     </div>
                 )}

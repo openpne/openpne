@@ -7,7 +7,7 @@ declare module '@inertiajs/core' {
 
 // The ALTCHA custom element (registered by `import 'altcha'`); only the attributes we set are typed.
 type AltchaWidgetAttributes = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
-    challengeurl?: string;
+    challenge?: string;
     name?: string;
 };
 
