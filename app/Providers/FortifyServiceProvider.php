@@ -110,6 +110,10 @@ class FortifyServiceProvider extends ServiceProvider
             ];
         });
 
+        // Per-IP cap on the token-gated completion form (GET render + POST submit). The 40-char token
+        // is the real gate; this just bounds blind guessing against the endpoint.
+        RateLimiter::for('register-complete', fn (Request $request) => Limit::perMinute(10)->by('register-complete|'.$request->ip()));
+
         // Per-IP cap on the credential-bearing password endpoints (the broker only throttles
         // per-email, leaving relay/guessing across addresses open). Applied to every Fortify route
         // via config, so the GET forms and the separately-limited login route pass through unlimited.

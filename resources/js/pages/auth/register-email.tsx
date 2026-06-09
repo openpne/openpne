@@ -1,13 +1,16 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useRef, type FormEvent } from 'react';
 import 'altcha';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
+import type { PageProps } from '@/types';
 
 type Props = { honeypot: string; captcha: boolean; challengeUrl: string };
 
 export default function RegisterEmail({ honeypot, captcha, challengeUrl }: Props) {
     const t = useT();
+    // Shown when redirected back here from a spent/expired link (the completion route flashes status).
+    const status = usePage<PageProps>().props.flash.status;
     const { data, setData, post, processing, errors } = useForm<Record<string, string>>({
         email: '',
         [honeypot]: '',
@@ -39,6 +42,8 @@ export default function RegisterEmail({ honeypot, captcha, challengeUrl }: Props
             <p className="text-sm text-muted-foreground">
                 {t('Enter your email and we will send you a registration link.')}
             </p>
+
+            {status && <p className="text-sm font-medium text-foreground">{status}</p>}
 
             <form onSubmit={submit} className="space-y-4">
                 {/* Honeypot: off-screen and not announced; a person never fills it, a bot does and
