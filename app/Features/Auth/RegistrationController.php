@@ -2,6 +2,7 @@
 
 namespace App\Features\Auth;
 
+use App\Captcha\Captcha;
 use App\Compat\RouteParityRegistry;
 use App\Features\Auth\Actions\IssueRegistrationToken;
 use App\Http\Controllers\Controller;
@@ -20,12 +21,16 @@ use Inertia\Response as InertiaResponse;
  */
 class RegistrationController extends Controller
 {
-    public function requestForm(Request $request, SpamTrap $trap): View|InertiaResponse
+    public function requestForm(Request $request, SpamTrap $trap, Captcha $captcha): View|InertiaResponse
     {
         $trap->arm($request);
 
+        // Render the widget iff the resolved driver actually enforces a challenge, so the UI can never
+        // show a captcha the server is ignoring (e.g. enabled but a non-altcha driver → NullCaptcha).
         return $this->screen($request, 'auth.register-email', 'auth/register-email', [
             'honeypot' => SpamTrap::HONEYPOT,
+            'captcha' => $captcha->enabled(),
+            'challengeUrl' => route('altcha.challenge'),
         ]);
     }
 

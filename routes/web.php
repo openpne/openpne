@@ -1,5 +1,6 @@
 <?php
 
+use App\Captcha\Captcha;
 use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
 use App\Features\Community\CommunityController;
@@ -92,6 +93,10 @@ Route::middleware(['guest', NoReferrer::class])->controller(RegistrationControll
     Route::post('/register', 'request')->middleware('throttle:register-email')->name('register.request');
     Route::get('/register/sent', 'sent')->name('register.sent');
 });
+
+// Fresh ALTCHA challenge for the widget to solve. Throttled per IP; returns {} when CAPTCHA is off.
+Route::get('/altcha/challenge', fn (Captcha $captcha) => response()->json($captcha->challenge()))
+    ->middleware('throttle:60,1')->name('altcha.challenge');
 
 // auth.session (AuthenticateSession) drops a logged-in session on its next protected request once
 // the member's password hash changes — a best-effort cross-driver fallback; the reset itself purges
