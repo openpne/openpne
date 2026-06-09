@@ -1,15 +1,30 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import type { FormEvent } from 'react';
+import { useEffect, useRef, type FormEvent } from 'react';
+import 'altcha';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 
-export default function Login({ registrationOpen = false }: { registrationOpen?: boolean }) {
+type Props = { registrationOpen?: boolean; captchaRequired?: boolean; challengeUrl?: string };
+
+export default function Login({ registrationOpen = false, captchaRequired = false, challengeUrl }: Props) {
     const t = useT();
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
         remember: false,
+        altcha: '',
     });
+
+    // Inertia submits the useForm data, not native form fields, so mirror the widget's solution
+    // (carried on its statechange event) into the payload it would otherwise post itself.
+    const widget = useRef<HTMLElement>(null);
+    useEffect(() => {
+        const el = widget.current;
+        if (!el) return;
+        const onState = (e: Event) => setData('altcha', (e as CustomEvent<{ payload?: string }>).detail?.payload ?? '');
+        el.addEventListener('statechange', onState);
+        return () => el.removeEventListener('statechange', onState);
+    }, [setData]);
 
     function submit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -76,6 +91,13 @@ export default function Login({ registrationOpen = false }: { registrationOpen?:
                         {t('Forgot your password?')}
                     </Link>
                 </div>
+
+                {captchaRequired && (
+                    <div className="space-y-1">
+                        <altcha-widget ref={widget} challenge={challengeUrl} />
+                        {errors.altcha && <p className="text-sm text-destructive">{errors.altcha}</p>}
+                    </div>
+                )}
 
                 <button
                     type="submit"

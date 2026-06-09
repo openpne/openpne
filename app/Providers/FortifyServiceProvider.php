@@ -6,8 +6,11 @@ use App\Actions\Fortify\AuthenticateMember;
 use App\Actions\Fortify\CreateNewMember;
 use App\Actions\Fortify\ResetMemberPassword;
 use App\Actions\Fortify\Responses\NeutralPasswordResetLinkResponse;
+use App\Captcha\Captcha;
 use App\Compat\RouteParityRegistry;
+use App\Features\Auth\LoginThrottle;
 use App\Features\Auth\RegistrationMode;
+use App\Models\Member;
 use App\Support\SurfaceResolver;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -16,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
@@ -37,13 +41,40 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::createUsersUsing(CreateNewMember::class);
 
         // A class-string is not a callable, so wrap the invokable action in a closure.
-        Fortify::authenticateUsing(fn (Request $request) => app(AuthenticateMember::class)($request));
+        Fortify::authenticateUsing(function (Request $request): ?Member {
+            $throttle = app(LoginThrottle::class);
+            $captcha = app(Captcha::class);
+            $ip = (string) $request->ip();
+
+            // After repeated failures from this IP, require the CAPTCHA before the credentials are even
+            // checked — a soft escalation, never a lockout. Verified up front so a bad solve is not
+            // counted as a login failure; a missing/invalid solve re-renders the form with the widget.
+            if ($captcha->enabled() && $throttle->challengeRequired($ip)) {
+                $payload = $request->input('altcha');
+                if (! $captcha->verify(is_string($payload) ? $payload : null)) {
+                    throw ValidationException::withMessages(['altcha' => __('Captcha verification failed. Please try again.')]);
+                }
+            }
+
+            $member = app(AuthenticateMember::class)($request);
+
+            $member ? $throttle->clear($ip) : $throttle->recordFailure($ip);
+
+            return $member;
+        });
 
         Fortify::resetUserPasswordsUsing(ResetMemberPassword::class);
 
         Fortify::loginView(function (Request $request) {
-            // Show the "register" link only when the open entry actually exists, so it is never a 404.
-            $props = ['registrationOpen' => RegistrationMode::current()->allowsOpenRegistration()];
+            $captcha = app(Captcha::class);
+            $props = [
+                // Show the "register" link only when the open entry actually exists, so it is never a 404.
+                'registrationOpen' => RegistrationMode::current()->allowsOpenRegistration(),
+                // Surface the challenge once this IP has tripped the failure threshold, so the
+                // widget is on the form before the gated submit needs it.
+                'captchaRequired' => $captcha->enabled() && app(LoginThrottle::class)->challengeRequired((string) $request->ip()),
+                'challengeUrl' => route('altcha.challenge'),
+            ];
 
             return $this->screen($request, 'login', 'auth.login',
                 fn () => Inertia::render('auth/login', $props), $props);

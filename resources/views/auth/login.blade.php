@@ -26,6 +26,12 @@
                             <td colspan="2">
                                 {{-- Fortify flashes the failed-login message on the email key. --}}
                                 @error('email')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                @if ($captchaRequired ?? false)
+                                    {{-- Shown after repeated failures from this IP (ALTCHA proof-of-work). --}}
+                                    @vite('resources/js/altcha.ts')
+                                    <altcha-widget challenge="{{ $challengeUrl }}" name="altcha"></altcha-widget>
+                                    @error('altcha')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                @endif
                                 <p class="password_query">
                                     <a href="{{ route('password.request') }}">{{ __('Can not access your account?') }}</a>
                                 </p>
