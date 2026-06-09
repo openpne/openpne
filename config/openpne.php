@@ -116,6 +116,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Login abuse
+    |--------------------------------------------------------------------------
+    |
+    | After this many failed logins from one IP (within the window) the login form
+    | requires the CAPTCHA — a soft escalation, never a lockout, so it cannot be
+    | weaponised to lock a member out. Complements the per-(email, IP) login rate
+    | limiter (FortifyServiceProvider), which a single IP spraying many addresses
+    | slips past. Has no effect when the CAPTCHA is disabled.
+    |
+    */
+
+    'login' => [
+        'captcha_after_failures' => (int) env('OPENPNE_LOGIN_CAPTCHA_AFTER_FAILURES', 5),
+        'failure_window_minutes' => (int) env('OPENPNE_LOGIN_FAILURE_WINDOW_MINUTES', 15),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | CAPTCHA
     |--------------------------------------------------------------------------
     |

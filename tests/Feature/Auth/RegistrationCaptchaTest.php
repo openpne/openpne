@@ -35,6 +35,15 @@ class RegistrationCaptchaTest extends TestCase
             ->assertJsonStructure(['parameters' => ['algorithm', 'salt', 'keyPrefix', 'nonce'], 'signature']);
     }
 
+    public function test_the_challenge_endpoint_is_kept_out_of_back_navigation(): void
+    {
+        // The widget fetches the challenge with a plain GET; it must not become the session "previous
+        // URL", or a later redirect()->back() (a failed submit) would land on the raw JSON endpoint.
+        $this->get('/altcha/challenge')->assertOk();
+
+        $this->assertNotSame(url('/altcha/challenge'), session()->previousUrl());
+    }
+
     public function test_registration_without_a_solution_is_rejected(): void
     {
         Notification::fake();
