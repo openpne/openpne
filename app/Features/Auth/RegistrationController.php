@@ -134,8 +134,11 @@ class RegistrationController extends Controller
 
     private function expired(): RedirectResponse
     {
+        // A null lookup cannot tell a spent token (registration already finished) from an expired or
+        // unknown one, so the message has to serve both: sign in if you are already registered,
+        // otherwise request a fresh link.
         return redirect()->route('register')
-            ->with('status', __('That registration link is invalid or has expired. Please request a new one.'));
+            ->with('status', __('This registration link is no longer valid. If you have already registered, please sign in; otherwise, enter your email again to get a new link.'));
     }
 
     /** The token's address now belongs to a member: burn the dead token and send them to sign in. */
