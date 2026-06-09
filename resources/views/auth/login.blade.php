@@ -28,7 +28,6 @@
                                 @error('email')<p class="error" role="alert">{{ $message }}</p>@enderror
                                 @if ($captchaRequired ?? false)
                                     {{-- Shown after repeated failures from this IP (ALTCHA proof-of-work). --}}
-                                    @vite('resources/js/altcha.ts')
                                     <altcha-widget challenge="{{ $challengeUrl }}" name="altcha"></altcha-widget>
                                     @error('altcha')<p class="error" role="alert">{{ $message }}</p>@enderror
                                 @endif
@@ -46,4 +45,10 @@
             </div>
         </div>
     </div>
+
+    @if ($captchaRequired ?? false)
+        {{-- Registers <altcha-widget>. Kept outside the form table so the production build's
+             modulepreload <link> is not foster-parented out of the table by the HTML parser. --}}
+        @vite('resources/js/altcha.ts')
+    @endif
 @endsection
