@@ -31,9 +31,18 @@ class AuthenticateMember
 
         $password = (string) $request->input('password');
 
-        return Hash::isHashed($member->password)
+        $verified = Hash::isHashed($member->password)
             ? $this->verifyCurrent($member, $password)
             : $this->verifyLegacy($member, $password);
+
+        // An admin-rejected (OpenPNE 3 is_login_rejected) member cannot log in even with the right
+        // password. Checked after verification so the ban is invisible to anyone without the
+        // credentials — a wrong password fails the same way whether or not the account is banned.
+        if ($verified?->is_login_rejected) {
+            return null;
+        }
+
+        return $verified;
     }
 
     private function verifyCurrent(Member $member, string $password): ?Member
