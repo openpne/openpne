@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
     return {
         plugins: [
             laravel({
-                input: ['resources/css/app.css', 'resources/js/app.tsx'],
+                input: ['resources/css/app.css', 'resources/js/app.tsx', 'resources/js/altcha.ts'],
                 refresh: true,
                 fonts: [
                     bunny('Instrument Sans', {

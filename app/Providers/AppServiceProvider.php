@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Captcha\AltchaCaptcha;
+use App\Captcha\Captcha;
+use App\Captcha\NullCaptcha;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
@@ -27,6 +30,17 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TermService::class);
+
+        $this->app->singleton(Captcha::class, function ($app): Captcha {
+            $config = $app['config']['openpne.captcha'];
+            if (! $config['enabled'] || $config['driver'] !== 'altcha') {
+                return new NullCaptcha;
+            }
+
+            $key = $config['hmac_key'] ?: hash('sha256', (string) $app['config']['app.key'].'|altcha');
+
+            return new AltchaCaptcha($key, (int) $config['altcha']['cost'], (int) $config['altcha']['max_number'], (int) $config['altcha']['expires_seconds']);
+        });
 
         $this->app->extend('translator', function (Translator $base, $app) {
             $wrapped = new TermTranslator(

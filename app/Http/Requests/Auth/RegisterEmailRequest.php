@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Captcha\Captcha;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 /**
  * The registration email-entry submission. Deliberately no `unique` rule: an already-registered
@@ -21,6 +23,25 @@ class RegisterEmailRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email', 'max:255'],
+        ];
+    }
+
+    /**
+     * Verify the captcha in an after-callback rather than as a field rule, so an *absent* `altcha`
+     * (a bot simply omitting it) is still rejected — a field rule is skipped when the field is
+     * missing. No-op when CAPTCHA is disabled (NullCaptcha passes everything).
+     *
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $payload = $this->input('altcha');
+                if (! app(Captcha::class)->verify(is_string($payload) ? $payload : null)) {
+                    $validator->errors()->add('altcha', __('Captcha verification failed. Please try again.'));
+                }
+            },
         ];
     }
 }

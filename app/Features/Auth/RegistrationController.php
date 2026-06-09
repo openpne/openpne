@@ -26,6 +26,8 @@ class RegistrationController extends Controller
 
         return $this->screen($request, 'auth.register-email', 'auth/register-email', [
             'honeypot' => SpamTrap::HONEYPOT,
+            'captcha' => (bool) config('openpne.captcha.enabled'),
+            'challengeUrl' => route('altcha.challenge'),
         ]);
     }
 

@@ -112,6 +112,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | CAPTCHA
+    |--------------------------------------------------------------------------
+    |
+    | Bot challenge on the registration entry (OpenPNE 3 shipped one on by
+    | default; this is the parity replacement). The default driver is self-hosted
+    | ALTCHA proof-of-work (PBKDF2/SHA-256) — no third-party calls, no per-site
+    | keys. The HMAC key defaults to one derived from APP_KEY, so a stock install
+    | needs no extra secret. Disable to fall back to the honeypot/timing floor.
+    | cost × max_number sets the client work; tune for the UX you want.
+    |
+    */
+
+    'captcha' => [
+        'enabled' => (bool) env('OPENPNE_CAPTCHA_ENABLED', true),
+        'driver' => env('OPENPNE_CAPTCHA_DRIVER', 'altcha'),
+        'hmac_key' => env('OPENPNE_CAPTCHA_HMAC_KEY'),
+        'altcha' => [
+            'cost' => (int) env('OPENPNE_CAPTCHA_ALTCHA_COST', 10000),
+            'max_number' => (int) env('OPENPNE_CAPTCHA_ALTCHA_MAX_NUMBER', 100),
+            'expires_seconds' => (int) env('OPENPNE_CAPTCHA_ALTCHA_EXPIRES_SECONDS', 600),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Transport security
     |--------------------------------------------------------------------------
     |

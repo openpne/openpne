@@ -24,6 +24,13 @@
                             @error('email')<p class="error" role="alert">{{ $message }}</p>@enderror</td>
                     </tr>
                 </table>
+                @if ($captcha ?? false)
+                    {{-- ALTCHA proof-of-work. The widget submits its solution as the `altcha` field;
+                         this is the Classic shell's only JS. --}}
+                    @vite('resources/js/altcha.ts')
+                    <altcha-widget challengeurl="{{ $challengeUrl }}" name="altcha"></altcha-widget>
+                    @error('altcha')<p class="error" role="alert">{{ $message }}</p>@enderror
+                @endif
                 <div class="operation">
                     <ul class="moreInfo button">
                         <li><input type="submit" class="input_submit" value="{{ __('Send') }}"></li>
