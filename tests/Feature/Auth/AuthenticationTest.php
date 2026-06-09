@@ -72,6 +72,21 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_a_rejected_member_cannot_authenticate_even_with_the_right_password(): void
+    {
+        // is_login_rejected is OpenPNE 3's admin ban (carried by the upgrade); a banned member
+        // must not log in even with valid credentials.
+        $member = Member::factory()->create();
+        $member->forceFill(['is_login_rejected' => true])->save();
+
+        $this->post('/login', [
+            'email' => $member->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertGuest();
+    }
+
     public function test_members_can_logout(): void
     {
         $member = Member::factory()->create();

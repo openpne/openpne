@@ -189,6 +189,19 @@ class MemberUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('members', ['id' => 30, 'email' => 'new@example.com']);
     }
 
+    public function test_carries_the_is_login_rejected_ban_flag(): void
+    {
+        // The admin ban must survive the upgrade so a rejected member stays unable to log in.
+        $this->seedMember(40, 'Banned');
+        DB::table('member')->where('id', 40)->update(['is_login_rejected' => 1]);
+        $this->seedMember(41, 'Allowed'); // seedMember defaults is_login_rejected = 0
+
+        $this->runUpgrade();
+
+        $this->assertSame(1, (int) DB::table('members')->where('id', 40)->value('is_login_rejected'));
+        $this->assertSame(0, (int) DB::table('members')->where('id', 41)->value('is_login_rejected'));
+    }
+
     public function test_no_member_row_is_dropped(): void
     {
         $this->seedMember(7, 'Grace');

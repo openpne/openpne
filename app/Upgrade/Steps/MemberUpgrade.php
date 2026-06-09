@@ -46,6 +46,7 @@ class MemberUpgrade extends UpgradeStep
             'name' => Column::source('name'),
             'email' => Column::expr($this->memberConfigCoalesce('pc_address', 'mobile_address'), uses: ['id']),
             'password' => Column::expr($this->memberConfigValueLatest('password'), uses: ['id']),
+            'is_login_rejected' => Column::source('is_login_rejected'),
             'profile_visibility' => Column::expr($this->profileVisibilityExpr(), uses: ['id']),
             'locale' => Column::expr($this->localeExpr(), uses: ['id']),
             'created_at' => Column::source('created_at'),
@@ -63,7 +64,6 @@ class MemberUpgrade extends UpgradeStep
     {
         return [
             'invite_member_id' => 'Inviter reference; no corresponding column in the current members schema.',
-            'is_login_rejected' => 'Login-rejection flag; no corresponding column in the current members schema.',
             'is_active' => 'Account status flag; no corresponding column in the current members schema.',
         ];
     }
