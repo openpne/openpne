@@ -6,8 +6,11 @@ use App\Actions\Fortify\AuthenticateMember;
 use App\Actions\Fortify\CreateNewMember;
 use App\Actions\Fortify\ResetMemberPassword;
 use App\Actions\Fortify\Responses\NeutralPasswordResetLinkResponse;
+use App\Captcha\Captcha;
 use App\Compat\RouteParityRegistry;
+use App\Features\Auth\LoginThrottle;
 use App\Features\Auth\RegistrationMode;
+use App\Models\Member;
 use App\Support\SurfaceResolver;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -16,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
@@ -37,13 +41,34 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::createUsersUsing(CreateNewMember::class);
 
         // A class-string is not a callable, so wrap the invokable action in a closure.
-        Fortify::authenticateUsing(fn (Request $request) => app(AuthenticateMember::class)($request));
+        Fortify::authenticateUsing(function (Request $request): ?Member {
+            // After repeated failures from this IP, require the CAPTCHA before the credentials are even
+            // checked — a soft escalation, never a lockout. A missing/invalid solve re-renders the form
+            // with the widget; a bad solve is not counted as a login failure.
+            if ($this->loginChallengeRequired($request) && ! $this->loginCaptchaSolved($request)) {
+                throw ValidationException::withMessages(['altcha' => __('Captcha verification failed. Please try again.')]);
+            }
+
+            $member = app(AuthenticateMember::class)($request);
+
+            $throttle = app(LoginThrottle::class);
+            $member ? $throttle->clear((string) $request->ip()) : $throttle->recordFailure((string) $request->ip());
+
+            return $member;
+        });
 
         Fortify::resetUserPasswordsUsing(ResetMemberPassword::class);
 
         Fortify::loginView(function (Request $request) {
-            // Show the "register" link only when the open entry actually exists, so it is never a 404.
-            $props = ['registrationOpen' => RegistrationMode::current()->allowsOpenRegistration()];
+            $captcha = app(Captcha::class);
+            $props = [
+                // Show the "register" link only when the open entry actually exists, so it is never a 404.
+                'registrationOpen' => RegistrationMode::current()->allowsOpenRegistration(),
+                // Surface the challenge once this IP has tripped the failure threshold, so the
+                // widget is on the form before the gated submit needs it.
+                'captchaRequired' => $captcha->enabled() && app(LoginThrottle::class)->challengeRequired((string) $request->ip()),
+                'challengeUrl' => route('altcha.challenge'),
+            ];
 
             return $this->screen($request, 'login', 'auth.login',
                 fn () => Inertia::render('auth/login', $props), $props);
@@ -60,6 +85,14 @@ class FortifyServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('login', function (Request $request) {
+            // In the challenge phase the proof-of-work + single-use solution is the throttle, so a
+            // solved challenge lifts the per-minute cap — otherwise the solved retry would be 429'd
+            // before the credentials are checked, defeating the escalation. An unsolved request keeps
+            // the per-(email, IP) limit.
+            if ($this->loginChallengeRequired($request) && $this->loginCaptchaSolved($request)) {
+                return Limit::none();
+            }
+
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
@@ -85,6 +118,28 @@ class FortifyServiceProvider extends ServiceProvider
                 ? Limit::perMinute(5)->by('password-reset|'.$request->ip())
                 : Limit::none();
         });
+    }
+
+    /** Whether this IP has failed enough logins that the form must now carry a CAPTCHA. */
+    private function loginChallengeRequired(Request $request): bool
+    {
+        return app(Captcha::class)->enabled()
+            && app(LoginThrottle::class)->challengeRequired((string) $request->ip());
+    }
+
+    /**
+     * Whether the request carries a valid CAPTCHA solution. The solution is single-use, so it is
+     * verified at most once per request and the result is memoised — the rate limiter and the
+     * authentication callback both read it without consuming it twice.
+     */
+    private function loginCaptchaSolved(Request $request): bool
+    {
+        if (! $request->attributes->has('login.captcha')) {
+            $payload = $request->input('altcha');
+            $request->attributes->set('login.captcha', app(Captcha::class)->verify(is_string($payload) ? $payload : null));
+        }
+
+        return $request->attributes->get('login.captcha');
     }
 
     /**
