@@ -52,3 +52,11 @@ Why this matters, not just hardening:
 The deployment side (nginx `real_ip` / passing `X-Forwarded-*`) is the
 operator's/hosting layer's responsibility; this app only consumes the headers
 once `TRUSTED_PROXIES` says the proxy may set them.
+
+## Scheduled tasks
+
+A deployment must run Laravel's scheduler — `php artisan schedule:run` every
+minute from cron (or a systemd timer) — or scheduled work silently never runs.
+Currently that is the daily prune of expired pending registrations
+([`routes/console.php`](../../routes/console.php)); without the scheduler those
+rows accumulate. `php artisan schedule:list` shows what is registered.

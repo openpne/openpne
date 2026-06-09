@@ -3,10 +3,11 @@ import type { FormEvent } from 'react';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 
-export default function RegisterEmail() {
+export default function RegisterEmail({ honeypot }: { honeypot: string }) {
     const t = useT();
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors } = useForm<Record<string, string>>({
         email: '',
+        [honeypot]: '',
     });
 
     function submit(e: FormEvent<HTMLFormElement>) {
@@ -25,6 +26,19 @@ export default function RegisterEmail() {
             </p>
 
             <form onSubmit={submit} className="space-y-4">
+                {/* Honeypot: off-screen and not announced; a person never fills it, a bot does and
+                    its submit is silently dropped (SpamTrap). */}
+                <input
+                    type="text"
+                    name={honeypot}
+                    value={data[honeypot] ?? ''}
+                    onChange={(e) => setData(honeypot, e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    aria-hidden="true"
+                    style={{ position: 'absolute', left: '-9999px' }}
+                />
+
                 <div className="space-y-1">
                     <label htmlFor="email" className="block text-sm font-medium">
                         {t('Email')}

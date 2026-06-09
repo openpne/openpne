@@ -104,6 +104,10 @@ return [
 
     'registration' => [
         'token_ttl_minutes' => (int) env('OPENPNE_REGISTRATION_TOKEN_TTL_MINUTES', 1440),
+        // Minimum seconds between opening the registration form and submitting it; a faster submit is
+        // treated as a script and silently dropped. Even with autofill a person takes longer; tune
+        // down if it ever rejects real users.
+        'min_form_seconds' => (int) env('OPENPNE_REGISTRATION_MIN_FORM_SECONDS', 2),
     ],
 
     /*
