@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Support\Carbon;
 
 /**
@@ -17,6 +19,8 @@ use Illuminate\Support\Carbon;
  */
 class RegistrationToken extends Model
 {
+    use Prunable;
+
     public $timestamps = false;
 
     protected $fillable = ['email', 'token', 'created_at'];
@@ -24,5 +28,15 @@ class RegistrationToken extends Model
     protected function casts(): array
     {
         return ['created_at' => 'datetime'];
+    }
+
+    /**
+     * Expired tokens are dead state (the link no longer works), so prune them past the TTL.
+     *
+     * @return Builder<RegistrationToken>
+     */
+    public function prunable(): Builder
+    {
+        return static::where('created_at', '<', now()->subMinutes((int) config('openpne.registration.token_ttl_minutes')));
     }
 }
