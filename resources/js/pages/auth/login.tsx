@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useEffect, useRef, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import 'altcha';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
@@ -16,19 +16,28 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
     });
 
     // Inertia submits the useForm data, not native form fields, so mirror the widget's solution
-    // (carried on its statechange event) into the payload it would otherwise post itself.
+    // (carried on its statechange event) into the payload it would otherwise post itself. The widget
+    // only appears once captchaRequired flips on and is remounted (widgetKey) after a failed attempt,
+    // so the listener is (re)bound on those changes, not just at mount.
     const widget = useRef<HTMLElement>(null);
+    const [widgetKey, setWidgetKey] = useState(0);
     useEffect(() => {
         const el = widget.current;
         if (!el) return;
         const onState = (e: Event) => setData('altcha', (e as CustomEvent<{ payload?: string }>).detail?.payload ?? '');
         el.addEventListener('statechange', onState);
         return () => el.removeEventListener('statechange', onState);
-    }, [setData]);
+    }, [setData, captchaRequired, widgetKey]);
 
     function submit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
         post('/login', {
+            // The solved payload is single-use and is spent before the credential check, so a failed
+            // attempt must re-solve: drop the stale payload and remount the widget for a fresh challenge.
+            onError: () => {
+                setData('altcha', '');
+                setWidgetKey((k) => k + 1);
+            },
             onFinish: () => reset('password'),
         });
     }
@@ -94,7 +103,7 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
 
                 {captchaRequired && (
                     <div className="space-y-1">
-                        <altcha-widget ref={widget} challenge={challengeUrl} />
+                        <altcha-widget key={widgetKey} ref={widget} challenge={challengeUrl} />
                         {errors.altcha && <p className="text-sm text-destructive">{errors.altcha}</p>}
                     </div>
                 )}
