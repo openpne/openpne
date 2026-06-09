@@ -37,6 +37,13 @@ class RegisterEmailRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
+                // Only verify once the rest of the form is valid: a captcha solution is single-use, so
+                // spending it on a submit that fails on the email would make the corrected resubmit
+                // (Modern keeps the solved widget) look like a replay.
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
                 $payload = $this->input('altcha');
                 if (! app(Captcha::class)->verify(is_string($payload) ? $payload : null)) {
                     $validator->errors()->add('altcha', __('Captcha verification failed. Please try again.'));

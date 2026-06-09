@@ -79,6 +79,25 @@ class RegistrationCaptchaTest extends TestCase
         $this->assertDatabaseMissing('registration_tokens', ['email' => 'second@example.com']);
     }
 
+    public function test_an_invalid_email_does_not_consume_the_captcha_solution(): void
+    {
+        // A submit that fails on the email must not spend the single-use solution, so the corrected
+        // resubmit with the same widget payload still works.
+        Notification::fake();
+        $payload = $this->solvedPayload();
+
+        $this->armForm();
+        $this->from('/register')->post('/register', ['email' => 'not-an-email', 'altcha' => $payload])
+            ->assertRedirect('/register')
+            ->assertSessionHasErrors('email');
+
+        $this->armForm();
+        $this->post('/register', ['email' => 'newcomer@example.com', 'altcha' => $payload])
+            ->assertRedirect(route('register.sent'));
+
+        $this->assertDatabaseHas('registration_tokens', ['email' => 'newcomer@example.com']);
+    }
+
     private function armForm(): void
     {
         $this->get('/register');
