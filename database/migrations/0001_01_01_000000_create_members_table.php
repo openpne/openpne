@@ -17,6 +17,9 @@ return new class extends Migration
             $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
+            // OpenPNE 3 member.is_login_rejected: an admin ban that refuses login. Carried by the
+            // upgrade (MemberUpgrade) so a banned member stays banned; AuthenticateMember enforces it.
+            $table->boolean('is_login_rejected')->default(false);
             // Whether this member's profile page is reachable, on the App\Support\Visibility
             // scale: Open = web-public (guests may view it), otherwise login-required. Default
             // Members keeps profiles SNS-internal until the member opts into web-public.
