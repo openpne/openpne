@@ -59,6 +59,20 @@ Route::post('/locale', function (Request $request) {
     return redirect($target);
 })->name('locale.switch');
 
+// Session-only locale toggle for the Filament admin panel (and its login screen). Unlike
+// `locale.switch` this NEVER writes members.locale: a co-logged-in member switching the panel
+// language must not have their durable preference changed (OpenPNE 3 pc_backend changeLanguage
+// is per-admin session culture, isolated from member config). The admin switcher fetches this
+// and reloads, so a 204 is enough.
+Route::post('/locale/session', function (Request $request) {
+    $locale = (string) $request->input('locale');
+    if (in_array($locale, SetLocale::SUPPORTED_LOCALES, strict: true)) {
+        $request->session()->put('locale', $locale);
+    }
+
+    return response()->noContent();
+})->name('locale.switch.session');
+
 // Member profile page — public so a web-public profile is reachable by a guest. A guest on a
 // non-web-public profile is redirected to login by ProfileController; per-value visibility, the
 // is_public_web gate, and owner→viewer block are enforced in ShowProfile. whereNumber keeps the
