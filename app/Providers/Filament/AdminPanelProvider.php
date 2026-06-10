@@ -12,8 +12,10 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
+use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -65,6 +67,17 @@ class AdminPanelProvider extends PanelProvider
                 // page must not pick up a co-logged-in member's persisted members.locale.
                 SetLocale::class.':session',
             ])
+            // ja↔en toggle in the panel header and on the login screen. Posts to the
+            // session-only locale route so a co-logged-in member's persisted locale is untouched.
+            ->renderHook(
+                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
+                fn (): View => view('filament.locale-switcher'),
+            )
+            ->renderHook(
+                PanelsRenderHook::SIMPLE_LAYOUT_START,
+                fn (): View => view('filament.login-locale-switcher'),
+                scopes: [Login::class],
+            )
             ->authMiddleware([
                 Authenticate::class,
             ]);
