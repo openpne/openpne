@@ -9,6 +9,7 @@ use App\Filament\Resources\AdminUsers\Pages\CreateAdminUser;
 use App\Filament\Resources\AdminUsers\Pages\EditAdminUser;
 use App\Filament\Resources\AdminUsers\Pages\ListAdminUsers;
 use App\Models\AdminUser;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -114,6 +115,40 @@ class AdminUserResourceTest extends TestCase
             ->assertFormFieldIsHidden('password');
     }
 
+    public function test_changing_own_password_requires_the_correct_current_password(): void
+    {
+        $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
+        $this->actingAs($me, 'admin');
+
+        Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
+            ->fillForm([
+                'password' => 'new-strong-pass-1',
+                'password_confirmation' => 'new-strong-pass-1',
+                'current_password' => 'wrong-current',
+            ])
+            ->call('save')
+            ->assertHasFormErrors(['current_password']);
+
+        $this->assertTrue(Hash::check('original-pass-1', $me->fresh()->password));
+    }
+
+    public function test_changing_own_password_succeeds_with_the_correct_current_password(): void
+    {
+        $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
+        $this->actingAs($me, 'admin');
+
+        Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
+            ->fillForm([
+                'password' => 'new-strong-pass-1',
+                'password_confirmation' => 'new-strong-pass-1',
+                'current_password' => 'original-pass-1',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertTrue(Hash::check('new-strong-pass-1', $me->fresh()->password));
+    }
+
     public function test_editing_with_a_blank_password_keeps_the_current_one(): void
     {
         $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
@@ -141,9 +176,9 @@ class AdminUserResourceTest extends TestCase
         $this->assertTrue(AdminUserResource::canDelete($other));
 
         Livewire::test(ListAdminUsers::class)
-            ->assertTableActionHidden('delete', $primary)
-            ->assertTableActionHidden('delete', $acting)
-            ->assertTableActionVisible('delete', $other);
+            ->assertActionHidden(TestAction::make('delete')->table($primary))
+            ->assertActionHidden(TestAction::make('delete')->table($acting))
+            ->assertActionVisible(TestAction::make('delete')->table($other));
     }
 
     public function test_a_deletable_administrator_can_be_removed(): void
@@ -153,7 +188,7 @@ class AdminUserResourceTest extends TestCase
         $this->actingAs($acting, 'admin');
 
         Livewire::test(ListAdminUsers::class)
-            ->callTableAction('delete', $other);
+            ->callAction(TestAction::make('delete')->table($other));
 
         $this->assertDatabaseMissing('admin_user', ['id' => $other->getKey()]);
     }

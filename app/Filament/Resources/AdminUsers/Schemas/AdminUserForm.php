@@ -46,6 +46,19 @@ class AdminUserForm
                     ->rule('confirmed', fn (Get $get): bool => filled($get('password')))
                     ->hidden(fn (?Model $record): bool => self::editingAnotherAdmin($record)),
 
+                // Changing your own password requires re-entering the current one (OpenPNE 3
+                // AdminUserEditPasswordForm verifies old_password). Without this, a left-open or
+                // hijacked admin session could change the password. Only on edit + when a new
+                // password is being set; on create there is no current password.
+                TextInput::make('current_password')
+                    ->label(__('Current password'))
+                    ->password()
+                    ->revealable()
+                    ->dehydrated(false)
+                    ->visible(fn (string $operation, Get $get): bool => $operation === 'edit' && filled($get('password')))
+                    ->required(fn (string $operation, Get $get): bool => $operation === 'edit' && filled($get('password')))
+                    ->rule('current_password:admin', fn (string $operation, Get $get): bool => $operation === 'edit' && filled($get('password'))),
+
                 TextInput::make('password_confirmation')
                     ->label(__('Confirm password'))
                     ->password()
