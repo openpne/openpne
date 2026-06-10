@@ -102,73 +102,71 @@ class AdminUserResourceTest extends TestCase
             ->assertHasFormErrors(['username']);
     }
 
-    public function test_password_field_is_visible_for_own_account_and_hidden_for_others(): void
+    public function test_change_password_action_is_available_only_for_your_own_account(): void
     {
         $me = AdminUser::factory()->create(['username' => 'me']);
         $other = AdminUser::factory()->create(['username' => 'other']);
         $this->actingAs($me, 'admin');
 
         Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
-            ->assertFormFieldIsVisible('password');
+            ->assertActionVisible('changePassword');
 
         Livewire::test(EditAdminUser::class, ['record' => $other->getKey()])
-            ->assertFormFieldIsHidden('password');
+            ->assertActionHidden('changePassword');
     }
 
-    public function test_changing_own_password_requires_the_correct_current_password(): void
+    public function test_change_password_requires_the_correct_current_password(): void
     {
         $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
         $this->actingAs($me, 'admin');
 
         Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
-            ->fillForm([
+            ->callAction('changePassword', [
+                'current_password' => 'wrong-current',
                 'password' => 'new-strong-pass-1',
                 'password_confirmation' => 'new-strong-pass-1',
-                'current_password' => 'wrong-current',
             ])
-            ->call('save')
-            ->assertHasFormErrors(['current_password']);
+            ->assertHasActionErrors(['current_password']);
 
         $this->assertTrue(Hash::check('original-pass-1', $me->fresh()->password));
     }
 
-    public function test_changing_own_password_succeeds_with_the_correct_current_password(): void
+    public function test_change_password_rejects_a_mismatched_confirmation(): void
     {
         $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
         $this->actingAs($me, 'admin');
 
         Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
-            ->fillForm([
-                'password' => 'new-strong-pass-1',
-                'password_confirmation' => 'new-strong-pass-1',
+            ->callAction('changePassword', [
                 'current_password' => 'original-pass-1',
+                'password' => 'new-strong-pass-1',
+                'password_confirmation' => 'different-pass-1',
             ])
-            ->call('save')
-            ->assertHasNoFormErrors();
+            ->assertHasActionErrors(['password']);
 
-        $this->assertTrue(Hash::check('new-strong-pass-1', $me->fresh()->password));
+        $this->assertTrue(Hash::check('original-pass-1', $me->fresh()->password));
     }
 
-    public function test_changing_own_password_resyncs_the_session_hash(): void
+    public function test_change_password_succeeds_with_the_correct_current_password(): void
     {
         $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
         $this->actingAs($me, 'admin');
 
         Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
-            ->fillForm([
+            ->callAction('changePassword', [
+                'current_password' => 'original-pass-1',
                 'password' => 'new-strong-pass-1',
                 'password_confirmation' => 'new-strong-pass-1',
-                'current_password' => 'original-pass-1',
             ])
-            ->call('save')
-            ->assertHasNoFormErrors();
+            ->assertHasNoActionErrors();
 
-        // The session's stored password hash is updated to the new one so AuthenticateSession does
-        // not log the operator out on the next request.
+        $this->assertTrue(Hash::check('new-strong-pass-1', $me->fresh()->password));
+        // The session's stored password hash is resynced so AuthenticateSession does not log the
+        // operator out on the next request.
         $this->assertTrue(Hash::check('new-strong-pass-1', session('password_hash_admin')));
     }
 
-    public function test_editing_with_a_blank_password_keeps_the_current_one(): void
+    public function test_editing_the_username_does_not_change_the_password(): void
     {
         $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
         $this->actingAs($me, 'admin');
