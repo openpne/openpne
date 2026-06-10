@@ -23,11 +23,12 @@ class FriendRequestedNotification extends Notification implements ShouldQueue
     public function toMail(Member $notifiable): MailMessage
     {
         return (new MailMessage)
+            ->from(sns_admin_mail_address(), sns_name())
             ->subject('Friend request received')
             ->greeting("Hi {$notifiable->name},")
             ->line("{$this->requester->name} sent you a friend request.")
             ->action('Open pending requests', route('friend.manage'))
-            ->salutation('— '.config('app.name'));
+            ->salutation('— '.sns_name());
     }
 
     /** @return array<string, mixed> */

@@ -5,6 +5,7 @@ namespace App\Notifications\Auth;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 
 /**
  * The Laravel/Fortify password-reset mail, but queued: a synchronous SMTP send happens only for a
@@ -21,5 +22,10 @@ class ResetPasswordNotification extends ResetPassword implements ShouldQueue
     {
         parent::__construct($token);
         $this->locale($locale);
+    }
+
+    public function toMail($notifiable): MailMessage
+    {
+        return parent::toMail($notifiable)->from(sns_admin_mail_address(), sns_name());
     }
 }

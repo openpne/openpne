@@ -23,11 +23,12 @@ class FriendRequestAcceptedNotification extends Notification implements ShouldQu
     public function toMail(Member $notifiable): MailMessage
     {
         return (new MailMessage)
+            ->from(sns_admin_mail_address(), sns_name())
             ->subject('Friend request accepted')
             ->greeting("Hi {$notifiable->name},")
             ->line("{$this->accepter->name} accepted your friend request.")
             ->action('See your friends', route('friend.list'))
-            ->salutation('— '.config('app.name'));
+            ->salutation('— '.sns_name());
     }
 
     /** @return array<string, mixed> */
