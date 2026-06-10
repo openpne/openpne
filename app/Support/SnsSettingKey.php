@@ -32,7 +32,7 @@ enum SnsSettingKey: string
     /** SNS name shown in the header/logo, page titles, and outgoing mail (OpenPNE 3 general.sns_name). */
     case SnsName = 'sns_name';
 
-    /** Document title for the modern surface, falling back to the SNS name (general.sns_title). */
+    /** Site title shown in the document <title> on both surfaces, falling back to the SNS name (general.sns_title). */
     case SnsTitle = 'sns_title';
 
     /** From-address for system mail / administrator contact (general.admin_mail_address). */

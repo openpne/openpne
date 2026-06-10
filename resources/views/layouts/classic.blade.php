@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title') | {{ sns_name() }}</title>
+    <title>@yield('title') | {{ sns_title() ?: sns_name() }}</title>
     {{-- Default skin, served statically. $classicSkinCss is the seam a future theme resolver injects. --}}
     <link rel="stylesheet" href="{{ $classicSkinCss ?? asset('opSkinBasicPlugin/css/main.css') }}">
 </head>

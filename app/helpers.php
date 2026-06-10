@@ -14,7 +14,7 @@ if (! function_exists('sns_name')) {
 }
 
 if (! function_exists('sns_title')) {
-    /** Document title for the modern surface; empty by default (callers fall back to sns_name()). */
+    /** Site title for the document <title> (both surfaces); empty by default (callers fall back to sns_name()). */
     function sns_title(): string
     {
         return (string) app(SnsSettingService::class)->get(SnsSettingKey::SnsTitle);
