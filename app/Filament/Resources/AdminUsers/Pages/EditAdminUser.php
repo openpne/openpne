@@ -28,4 +28,25 @@ class EditAdminUser extends EditRecord
     {
         return $this->getResource()::getUrl('index');
     }
+
+    // Keep the current session authenticated after changing your own password. AuthenticateSession
+    // compares the session's stored password hash against the user's current hash and logs out on
+    // mismatch; without resyncing, the operator would be bounced to login on the next request.
+    protected function afterSave(): void
+    {
+        $authUser = auth('admin')->user();
+
+        if ($authUser === null || ! $authUser->is($this->getRecord())) {
+            return;
+        }
+
+        $newHash = $this->getRecord()->getAuthPassword();
+
+        if ($authUser->getAuthPassword() === $newHash) {
+            return; // password unchanged
+        }
+
+        $authUser->forceFill(['password' => $newHash]);
+        session()->put('password_hash_admin', $newHash);
+    }
 }

@@ -24,14 +24,29 @@ class AdminUserForm
                         ignoreRecord: true,
                     ),
 
-                // The model casts `password` as `hashed`, so the raw value is hashed once on
-                // save — never call Hash::make() here or it double-hashes. `dehydrated(only
-                // when filled)` lets an edit leave the field blank to keep the current password;
-                // `formatStateUsing(null)` keeps the stored hash out of the field on edit.
-                // OpenPNE 3 parity: only your own password is editable, so the field is hidden
-                // when editing another administrator.
+                // Password fields are stably visible (create, or editing your own account) rather
+                // than appearing only once a value is typed — popping a required field into view on
+                // submit is confusing. Visibility depends only on context; only requiredness reacts
+                // to whether a new password is being set. Hidden entirely when editing another admin
+                // (OpenPNE 3 parity: only your own password is editable).
+
+                // Re-entering the current password guards a self password change against a
+                // left-open or hijacked session (OpenPNE 3 AdminUserEditPasswordForm verifies
+                // old_password). Required only when a new password is actually entered.
+                TextInput::make('current_password')
+                    ->label(__('Current password'))
+                    ->password()
+                    ->revealable()
+                    ->dehydrated(false)
+                    ->visible(fn (string $operation, ?Model $record): bool => $operation === 'edit' && ! self::editingAnotherAdmin($record))
+                    ->required(fn (Get $get): bool => filled($get('password')))
+                    ->rule('current_password:admin', fn (Get $get): bool => filled($get('password'))),
+
+                // The model casts `password` as `hashed`, so the raw value is hashed once on save —
+                // never call Hash::make() here or it double-hashes. `dehydrated(only when filled)`
+                // lets an edit leave the field blank to keep the current password.
                 TextInput::make('password')
-                    ->label(__('Password'))
+                    ->label(fn (string $operation): string => $operation === 'edit' ? __('New password') : __('Password'))
                     ->password()
                     ->revealable()
                     ->live(onBlur: true)
@@ -40,24 +55,10 @@ class AdminUserForm
                     ->dehydrated(fn (?string $state): bool => filled($state))
                     ->required(fn (string $operation): bool => $operation === 'create')
                     // Strength + confirmation only when a password is actually entered: always on
-                    // create, on edit only when a new one is typed (so a blank edit skips both and
-                    // keeps the current password). Mirrors the member rule set (Password::default).
+                    // create, on edit only when a new one is typed. Mirrors the member rule set.
                     ->rule(Password::default(), fn (Get $get): bool => filled($get('password')))
                     ->rule('confirmed', fn (Get $get): bool => filled($get('password')))
-                    ->hidden(fn (?Model $record): bool => self::editingAnotherAdmin($record)),
-
-                // Changing your own password requires re-entering the current one (OpenPNE 3
-                // AdminUserEditPasswordForm verifies old_password). Without this, a left-open or
-                // hijacked admin session could change the password. Only on edit + when a new
-                // password is being set; on create there is no current password.
-                TextInput::make('current_password')
-                    ->label(__('Current password'))
-                    ->password()
-                    ->revealable()
-                    ->dehydrated(false)
-                    ->visible(fn (string $operation, Get $get): bool => $operation === 'edit' && filled($get('password')))
-                    ->required(fn (string $operation, Get $get): bool => $operation === 'edit' && filled($get('password')))
-                    ->rule('current_password:admin', fn (string $operation, Get $get): bool => $operation === 'edit' && filled($get('password'))),
+                    ->visible(fn (?Model $record): bool => ! self::editingAnotherAdmin($record)),
 
                 TextInput::make('password_confirmation')
                     ->label(__('Confirm password'))
@@ -65,8 +66,7 @@ class AdminUserForm
                     ->revealable()
                     ->dehydrated(false)
                     ->required(fn (Get $get): bool => filled($get('password')))
-                    ->visible(fn (string $operation, Get $get, ?Model $record): bool => ! self::editingAnotherAdmin($record)
-                        && ($operation === 'create' || filled($get('password')))),
+                    ->visible(fn (?Model $record): bool => ! self::editingAnotherAdmin($record)),
             ]);
     }
 

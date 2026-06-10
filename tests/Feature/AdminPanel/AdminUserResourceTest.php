@@ -149,6 +149,25 @@ class AdminUserResourceTest extends TestCase
         $this->assertTrue(Hash::check('new-strong-pass-1', $me->fresh()->password));
     }
 
+    public function test_changing_own_password_resyncs_the_session_hash(): void
+    {
+        $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
+        $this->actingAs($me, 'admin');
+
+        Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
+            ->fillForm([
+                'password' => 'new-strong-pass-1',
+                'password_confirmation' => 'new-strong-pass-1',
+                'current_password' => 'original-pass-1',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        // The session's stored password hash is updated to the new one so AuthenticateSession does
+        // not log the operator out on the next request.
+        $this->assertTrue(Hash::check('new-strong-pass-1', session('password_hash_admin')));
+    }
+
     public function test_editing_with_a_blank_password_keeps_the_current_one(): void
     {
         $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
