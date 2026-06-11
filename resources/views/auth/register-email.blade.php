@@ -8,7 +8,7 @@
     <div class="dparts" id="requestRegisterURL">
         <div class="partsHeading"><h3>{{ __('Register') }}</h3></div>
         <div class="parts">
-            <p>{{ __('Please input your e-mail address. A registration link for :app will be sent to it.', ['app' => config('app.name')]) }}</p>
+            <p>{{ __('Please input your e-mail address. A registration link for :app will be sent to it.', ['app' => sns_name()]) }}</p>
             <form method="POST" action="{{ route('register.request') }}">
                 @csrf
                 {{-- Honeypot: off-screen and not announced, so a person never fills it; a bot that

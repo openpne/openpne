@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title') | {{ config('app.name') }}</title>
+    <title>@yield('title') | {{ sns_title() ?: sns_name() }}</title>
     {{-- Default skin, served statically. $classicSkinCss is the seam a future theme resolver injects. --}}
     <link rel="stylesheet" href="{{ $classicSkinCss ?? asset('opSkinBasicPlugin/css/main.css') }}">
 </head>
@@ -13,7 +13,7 @@
     <div id="Container">
         <div id="Header">
             <div id="HeaderContainer">
-                <h1 id="logo"><a href="{{ url('/') }}">{{ config('app.name') }}</a></h1>
+                <h1 id="logo"><a href="{{ url('/') }}">{{ sns_name() }}</a></h1>
                 {{-- A guest reaches the Classic layout on a web-public profile, so the member
                      nav is auth-gated (OpenPNE 3 split secure/insecure nav the same way). --}}
                 <div id="globalNav">
