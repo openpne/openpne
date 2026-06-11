@@ -103,10 +103,9 @@ return [
     */
 
     'registration' => [
-        // Who may create an account (App\Features\Auth\RegistrationMode): 'invite' (default) and
-        // 'closed' both 404 the open /register entry; only 'open' exposes it, behind the CAPTCHA.
-        // OpenPNE 3 defaulted to invite-only, so open self-registration is opt-in here too.
-        'mode' => env('OPENPNE_REGISTRATION_MODE', 'invite'), // open | invite | closed
+        // Who may create an account is the admin `registration_mode` setting (App\Support\SnsSettingKey),
+        // not env: 'invite' (the fail-closed default) and 'closed' both 404 the open /register entry;
+        // only 'open' exposes it, behind the CAPTCHA.
         'token_ttl_minutes' => (int) env('OPENPNE_REGISTRATION_TOKEN_TTL_MINUTES', 1440),
         // Minimum seconds between opening the registration form and submitting it; a faster submit is
         // treated as a script and silently dropped. Even with autofill a person takes longer; tune
@@ -137,17 +136,17 @@ return [
     | CAPTCHA
     |--------------------------------------------------------------------------
     |
-    | Bot challenge on the registration entry (OpenPNE 3 shipped one on by
-    | default; this is the parity replacement). The default driver is self-hosted
-    | ALTCHA proof-of-work (PBKDF2/SHA-256) — no third-party calls, no per-site
-    | keys. The HMAC key defaults to one derived from APP_KEY, so a stock install
-    | needs no extra secret. Disable to fall back to the honeypot/timing floor.
-    | cost × max_number sets the client work; tune for the UX you want.
+    | Bot challenge on the auth entries (OpenPNE 3 shipped one on by default; this
+    | is the parity replacement). Whether it is enforced is the admin `captcha_enabled`
+    | setting (App\Support\SnsSettingKey, fail-closed default on); the keys below only
+    | configure the driver. The default driver is self-hosted ALTCHA proof-of-work
+    | (PBKDF2/SHA-256) — no third-party calls, no per-site keys. The HMAC key defaults
+    | to one derived from APP_KEY, so a stock install needs no extra secret. cost ×
+    | max_number sets the client work; tune for the UX you want.
     |
     */
 
     'captcha' => [
-        'enabled' => (bool) env('OPENPNE_CAPTCHA_ENABLED', true),
         'driver' => env('OPENPNE_CAPTCHA_DRIVER', 'altcha'),
         'hmac_key' => env('OPENPNE_CAPTCHA_HMAC_KEY'),
         'altcha' => [

@@ -51,10 +51,28 @@ class SnsSettingServiceTest extends TestCase
         $this->assertSame('My Community', $service->get(SnsSettingKey::SnsName));
     }
 
+    public function test_captcha_enabled_decodes_fail_closed(): void
+    {
+        // Only an explicit '0' disables the challenge; a malformed stored value keeps it on.
+        DB::table('sns_settings')->updateOrInsert(['key' => 'captcha_enabled'], ['value' => 'garbage']);
+        app(SnsSettingService::class)->clearCache();
+
+        $this->assertTrue(app(SnsSettingService::class)->get(SnsSettingKey::CaptchaEnabled));
+    }
+
     public function test_from_op3_source_name_resolves_known_keys_only(): void
     {
         $this->assertSame(SnsSettingKey::SnsName, SnsSettingKey::fromOp3SourceName('sns_name'));
         $this->assertSame(SnsSettingKey::AdminMailAddress, SnsSettingKey::fromOp3SourceName('admin_mail_address'));
         $this->assertNull(SnsSettingKey::fromOp3SourceName('enable_pc'));
+    }
+
+    public function test_registration_mode_has_no_single_op3_source_column(): void
+    {
+        // It is composed from OpenPNE 3's invite_mode + enable_registration, so no 1:1 column maps to
+        // it — guard against a regression that wires it to enable_registration alone.
+        $this->assertNull(SnsSettingKey::RegistrationMode->op3SourceName());
+        $this->assertNull(SnsSettingKey::fromOp3SourceName('enable_registration'));
+        $this->assertNull(SnsSettingKey::fromOp3SourceName('invite_mode'));
     }
 }

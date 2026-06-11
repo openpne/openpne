@@ -9,12 +9,13 @@ use AltchaOrg\Altcha\ChallengeParameters;
 use AltchaOrg\Altcha\Payload;
 use AltchaOrg\Altcha\SolveChallengeOptions;
 use App\Models\Member;
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
  * After repeated failures from one IP the login form requires a CAPTCHA — a soft escalation, never a
- * lockout. CAPTCHA is off in the test env by default (phpunit.xml), so this turns it on (with a cheap
+ * lockout. CAPTCHA is off in the test baseline (Tests\TestCase), so this turns it on (with a cheap
  * proof-of-work and a low threshold) and drives the failure counter. The widget's browser-side solving
  * is reproduced with the library itself, the same serialization the widget posts.
  */
@@ -25,7 +26,7 @@ class LoginCaptchaTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config()->set('openpne.captcha.enabled', true);
+        $this->setSnsSetting(SnsSettingKey::CaptchaEnabled, true);
         config()->set('openpne.captcha.altcha.cost', 100); // keep the proof-of-work cheap in tests
         config()->set('openpne.login.captcha_after_failures', 2);
     }
@@ -95,7 +96,7 @@ class LoginCaptchaTest extends TestCase
 
     public function test_no_captcha_is_required_when_the_feature_is_disabled(): void
     {
-        config()->set('openpne.captcha.enabled', false);
+        $this->setSnsSetting(SnsSettingKey::CaptchaEnabled, false);
         $member = Member::factory()->create();
         $this->failLogin($member, 2);
 

@@ -6,6 +6,7 @@ namespace Tests\Feature\Filament;
 
 use App\Filament\Pages\SnsBaseSettings;
 use App\Models\AdminUser;
+use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
@@ -26,6 +27,11 @@ class SnsBaseSettingsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Start from a clean settings table: the base TestCase seeds the Auth-group baseline, but this
+        // page owns only the Base keys, so the verbatim-save count assertion must see just those.
+        DB::table('sns_settings')->truncate();
+        app(SnsSettingService::class)->clearCache();
 
         Filament::setCurrentPanel('admin');
         $this->actingAs(AdminUser::factory()->create(), 'admin');
