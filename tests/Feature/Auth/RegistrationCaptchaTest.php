@@ -8,12 +8,13 @@ use AltchaOrg\Altcha\Challenge;
 use AltchaOrg\Altcha\ChallengeParameters;
 use AltchaOrg\Altcha\Payload;
 use AltchaOrg\Altcha\SolveChallengeOptions;
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /**
- * CAPTCHA is disabled in the test env by default (phpunit.xml), so this turns it on and exercises the
+ * CAPTCHA is disabled in the test baseline (Tests\TestCase), so this turns it on and exercises the
  * real ALTCHA verify path. The widget's browser-side solving is not reproducible in CI, so a valid
  * submission is produced here with the library itself — the same serialization the widget posts.
  */
@@ -24,7 +25,7 @@ class RegistrationCaptchaTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config()->set('openpne.captcha.enabled', true);
+        $this->setSnsSetting(SnsSettingKey::CaptchaEnabled, true);
         config()->set('openpne.captcha.altcha.cost', 100); // keep the proof-of-work cheap in tests
     }
 

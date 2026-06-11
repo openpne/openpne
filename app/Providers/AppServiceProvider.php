@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
-use App\Captcha\NullCaptcha;
+use App\Captcha\ConfigurableCaptcha;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
@@ -14,6 +14,7 @@ use App\Models\Member;
 use App\Observers\MemberObserver;
 use App\Policies\FilePolicy;
 use App\Policies\MemberPolicy;
+use App\Services\SnsSettingService;
 use App\Services\TermService;
 use App\Translation\TermTranslator;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -34,13 +35,9 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(Captcha::class, function ($app): Captcha {
             $config = $app['config']['openpne.captcha'];
-            if (! $config['enabled']) {
-                return new NullCaptcha;
-            }
 
-            // Fail loudly on an unknown driver rather than silently falling through to NullCaptcha,
-            // which would render the widget but enforce nothing.
-            return match ($config['driver']) {
+            // Fail loudly on an unknown driver rather than silently enforcing nothing.
+            $driver = match ($config['driver']) {
                 'altcha' => new AltchaCaptcha(
                     $config['hmac_key'] ?: hash('sha256', (string) $app['config']['app.key'].'|altcha'),
                     (int) $config['altcha']['cost'],
@@ -49,6 +46,10 @@ class AppServiceProvider extends ServiceProvider
                 ),
                 default => throw new InvalidArgumentException("Unknown captcha driver [{$config['driver']}]."),
             };
+
+            // Whether the challenge is enforced is the admin `captcha_enabled` setting, resolved per
+            // call by the wrapper (config supplies only the driver's tuning).
+            return new ConfigurableCaptcha($app->make(SnsSettingService::class), $driver);
         });
 
         $this->app->extend('translator', function (Translator $base, $app) {
