@@ -114,6 +114,19 @@ class FortifyServiceProvider extends ServiceProvider
         // is the real gate; this just bounds blind guessing against the endpoint.
         RateLimiter::for('register-complete', fn (Request $request) => Limit::perMinute(10)->by('register-complete|'.$request->ip()));
 
+        // Member invitation send, keyed by the inviting (authenticated) member, not the IP: per-(member,
+        // email) caps re-inviting one address; per-member bounds using the form to mail many different
+        // addresses (an invite-mail relay).
+        RateLimiter::for('member-invite', function (Request $request) {
+            $memberId = $request->user()?->getKey() ?? $request->ip();
+            $email = Str::transliterate(Str::lower((string) $request->input('email')));
+
+            return [
+                Limit::perMinute(3)->by('member-invite|'.$memberId.'|'.$email),
+                Limit::perMinute(10)->by('member-invite|'.$memberId),
+            ];
+        });
+
         // Per-IP cap on the credential-bearing password endpoints (the broker only throttles
         // per-email, leaving relay/guessing across addresses open). Applied to every Fortify route
         // via config, so the GET forms and the separately-limited login route pass through unlimited.

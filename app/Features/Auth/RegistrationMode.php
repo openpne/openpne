@@ -13,7 +13,7 @@ use App\Support\SnsSettingKey;
 enum RegistrationMode: string
 {
     case Open = 'open';      // OpenPNE 3 invite_mode=2: anyone may self-register at /register (behind the CAPTCHA).
-    case Invite = 'invite';  // OpenPNE 3 invite_mode=1 (default): members invite; no open entry (member-invite is a gap → admin-created only for now).
+    case Invite = 'invite';  // OpenPNE 3 invite_mode=1 (default): members invite (/invite); no open self-registration entry.
     case Closed = 'closed';  // OpenPNE 3 invite_mode=0: registration disabled.
 
     /**
@@ -30,5 +30,32 @@ enum RegistrationMode: string
     public function allowsOpenRegistration(): bool
     {
         return $this === self::Open;
+    }
+
+    /** Whether a logged-in member may invite others (OpenPNE 3 invite_mode >= member-invite). */
+    public function allowsMemberInvite(): bool
+    {
+        return $this === self::Open || $this === self::Invite;
+    }
+
+    /** Whether an admin may invite (OpenPNE 3 admin_invite: always, short of a global suspend). */
+    public function allowsAdminInvite(): bool
+    {
+        return $this !== self::Closed;
+    }
+
+    /**
+     * Whether a token of this origin may still complete in the current mode. The mode gates issuance,
+     * but this re-check at completion is what makes a tightened mode retroactive: switching to
+     * admin_only stops outstanding self/member links from completing, not just new issuance. Closed
+     * makes every branch false, so all tokens are dead.
+     */
+    public function allows(RegistrationTokenSource $source): bool
+    {
+        return match ($source) {
+            RegistrationTokenSource::Selfservice => $this->allowsOpenRegistration(),
+            RegistrationTokenSource::MemberInvite => $this->allowsMemberInvite(),
+            RegistrationTokenSource::AdminInvite => $this->allowsAdminInvite(),
+        };
     }
 }
