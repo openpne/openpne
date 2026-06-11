@@ -66,4 +66,13 @@ class SnsSettingServiceTest extends TestCase
         $this->assertSame(SnsSettingKey::AdminMailAddress, SnsSettingKey::fromOp3SourceName('admin_mail_address'));
         $this->assertNull(SnsSettingKey::fromOp3SourceName('enable_pc'));
     }
+
+    public function test_registration_mode_has_no_single_op3_source_column(): void
+    {
+        // It is composed from OpenPNE 3's invite_mode + enable_registration, so no 1:1 column maps to
+        // it — guard against a regression that wires it to enable_registration alone.
+        $this->assertNull(SnsSettingKey::RegistrationMode->op3SourceName());
+        $this->assertNull(SnsSettingKey::fromOp3SourceName('enable_registration'));
+        $this->assertNull(SnsSettingKey::fromOp3SourceName('invite_mode'));
+    }
 }

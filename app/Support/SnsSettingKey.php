@@ -50,14 +50,20 @@ enum SnsSettingKey: string
         };
     }
 
-    /** The OpenPNE 3 `sns_config.name` this setting upgrades from. */
-    public function op3SourceName(): string
+    /**
+     * The OpenPNE 3 `sns_config.name` this setting upgrades from, or null when there is no single
+     * source column. RegistrationMode is composed from OpenPNE 3's `invite_mode` (auth.yml) and
+     * `enable_registration` (sns_config) together — `enable_registration=0` is the global suspend
+     * while `invite_mode` picks open vs invite — so its upgrade is a dedicated composite step, not a
+     * 1:1 column copy.
+     */
+    public function op3SourceName(): ?string
     {
         return match ($this) {
             self::SnsName => 'sns_name',
             self::SnsTitle => 'sns_title',
             self::AdminMailAddress => 'admin_mail_address',
-            self::RegistrationMode => 'enable_registration',
+            self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',
         };
     }
