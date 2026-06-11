@@ -23,9 +23,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the site-wide SNS identity settings (name, title, administrator email). A saved value is
- * stored verbatim; until a setting has been saved (no row) it resolves to its env/config default.
- * The typed registry is App\Support\SnsSettingKey.
+ * Edit the site-wide SNS identity settings (name, title, administrator email). `sns_settings` is
+ * authoritative: every field is stored verbatim on save. Only while no row exists yet does a setting
+ * resolve to its install default. The typed registry is App\Support\SnsSettingKey.
  *
  * @property-read Schema $form
  */

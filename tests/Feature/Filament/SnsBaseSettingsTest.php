@@ -15,8 +15,9 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The SNS base-settings editor, guarding the same "do not persist values that match the default"
- * invariant as the term editor, plus that the page only ever exposes its own (Base) settings group.
+ * The SNS base-settings editor. `sns_settings` is authoritative: every field is stored verbatim on
+ * save (no "blank/equals-default reverts to nothing"), and the page only ever exposes its own (Base)
+ * settings group.
  */
 class SnsBaseSettingsTest extends TestCase
 {

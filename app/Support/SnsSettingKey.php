@@ -10,17 +10,16 @@ namespace App\Support;
  * This enum is the single source of truth for which SNS settings exist: the case value is the
  * stored `key`, and each case declares its OpenPNE 3 origin, default, codec, and admin-page group.
  *
- * An absent row means "follow `default()`" (which may itself fall back to env/config); a saved
- * setting is stored verbatim by the admin page.
- *
- * Unlike term overrides (defaults from static lang files), some defaults fall back to existing
- * env/config (`config('app.name')`, `config('mail.from.address')`) so a stock install keeps working
- * with no row.
+ * `sns_settings` is the single source of truth: the admin page stores every key verbatim. `default()`
+ * is the fallback used only while no row exists yet (fresh install / before first save) — not a
+ * second, env-driven tier that competes with the stored value. A display key's default may borrow an
+ * application config value (`config('app.name')`); a security key (SettingGroup::Auth) must instead
+ * return a fixed fail-closed constant, so a missing row can never open registration or drop a check.
  *
  * Deliberately NOT ported from OpenPNE 3's sns_config (obsolete or superseded in OpenPNE 4):
  *   - enable_pc / enable_mobile — single responsive surface (App\Support\SurfaceResolver), no
  *     PC-vs-mobile split;
- *   - is_use_captcha — superseded by config('openpne.captcha') (migrated to a key in a later PR);
+ *   - is_use_captcha — becomes an Auth-group key with a fail-closed default, not a config read;
  *   - enable_friend_link / enable_cmd / enable_language — always-on or handled by other mechanisms.
  *
  * The OpenPNE 3 sns_config -> sns_settings data upgrade is out of scope here; `op3SourceName()` is
@@ -56,8 +55,9 @@ enum SnsSettingKey: string
     }
 
     /**
-     * Value used when no row is stored. Falls back to existing env/config so a stock install needs
-     * no row. Returns `mixed` because later keys (bool/enum) decode to non-string types.
+     * Fallback used only while no row exists (fresh install / before first save), never as a runtime
+     * tier above a stored value. A display key may borrow an application config value; a security key
+     * must return a fixed fail-closed constant. Returns `mixed` because later keys decode to bool/enum.
      */
     public function default(): mixed
     {
