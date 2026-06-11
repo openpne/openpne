@@ -66,11 +66,17 @@ class RegistrationLinkNotification extends Notification implements ShouldQueue
     /** @return list<string> */
     private function intro(): array
     {
+        // The inviter's display name and personal note are member-supplied free text rendered as a
+        // markdown line, so escape them: the mail template HTML-escapes the line, but raw markdown
+        // would otherwise let a member slip a live link or remote image into a mail sent from the
+        // site's trusted address.
+        $inviter = $this->inviterName !== null ? self::markdownSafe($this->inviterName) : null;
+
         $lines = match ($this->source) {
             RegistrationTokenSource::Selfservice => [__('Open the link below to finish creating your account.')],
             RegistrationTokenSource::MemberInvite => [
-                $this->inviterName !== null
-                    ? __(':inviter has invited you to join :app.', ['inviter' => $this->inviterName, 'app' => sns_name()])
+                $inviter !== null
+                    ? __(':inviter has invited you to join :app.', ['inviter' => $inviter, 'app' => sns_name()])
                     : __('You have been invited to join :app.', ['app' => sns_name()]),
                 __('Open the link below to finish creating your account.'),
             ],
@@ -82,10 +88,16 @@ class RegistrationLinkNotification extends Notification implements ShouldQueue
 
         // A member invite may carry a personal note; show it before the call to action.
         if ($this->message !== null && trim($this->message) !== '') {
-            $lines[] = __('Message from :inviter:', ['inviter' => $this->inviterName ?? sns_name()]);
-            $lines[] = trim($this->message);
+            $lines[] = __('Message from :inviter:', ['inviter' => $inviter ?? sns_name()]);
+            $lines[] = self::markdownSafe(trim($this->message));
         }
 
         return $lines;
+    }
+
+    /** Backslash-escape CommonMark ASCII punctuation so member text renders literally, not as markup. */
+    private static function markdownSafe(string $text): string
+    {
+        return preg_replace('/([!"#$%&\'()*+,\-.\/:;<=>?@\[\\\\\]^_`{|}~])/', '\\\\$1', $text);
     }
 }

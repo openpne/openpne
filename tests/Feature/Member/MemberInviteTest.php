@@ -8,6 +8,7 @@ use App\Models\RegistrationToken;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -122,6 +123,25 @@ class MemberInviteTest extends TestCase
 
         $this->assertDatabaseHas('members', ['email' => 'invitee@example.com']);
         $this->assertDatabaseCount('friendships', 0);
+    }
+
+    public function test_the_invite_email_neutralizes_markdown_in_the_name_and_message(): void
+    {
+        // A member must not be able to slip a live link or remote image into the branded invite mail
+        // through their display name or the personal note (both are markdown lines).
+        $mail = (new RegistrationLinkNotification(
+            Str::random(40),
+            'en',
+            RegistrationTokenSource::MemberInvite,
+            '[evilname](http://evil.test)',
+            'see [here](http://evil.test) ![x](http://evil.test/p.png)',
+        ))->toMail(new AnonymousNotifiable);
+
+        $lines = implode("\n", $mail->introLines);
+
+        $this->assertStringNotContainsString('](http://evil.test', $lines); // no markdown link/image syntax
+        $this->assertStringNotContainsString('![x]', $lines);
+        $this->assertStringContainsString('evilname', $lines); // text kept (escaped), not dropped
     }
 
     /** Create a live member-invite token for an address and return the raw token its link carries. */
