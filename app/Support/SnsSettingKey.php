@@ -10,9 +10,8 @@ namespace App\Support;
  * This enum is the single source of truth for which SNS settings exist: the case value is the
  * stored `key`, and each case declares its OpenPNE 3 origin, default, codec, and admin-page group.
  *
- * Invariant: an absent row means "follow `default()`". `save()` deletes rather than stores a value
- * that equals the default (compared on the encoded string via `isDefault`), so the table only ever
- * holds genuine administrator overrides.
+ * An absent row means "follow `default()`" (which may itself fall back to env/config); a saved
+ * setting is stored verbatim by the admin page.
  *
  * Unlike term overrides (defaults from static lang files), some defaults fall back to existing
  * env/config (`config('app.name')`, `config('mail.from.address')`) so a stock install keeps working
@@ -86,16 +85,6 @@ enum SnsSettingKey: string
     public function decode(?string $value): mixed
     {
         return $value ?? $this->default();
-    }
-
-    /**
-     * Whether a submitted value equals this key's default. Compared on the *encoded* string so a
-     * non-string codec (a later bool/enum key) does not leave a redundant row when it round-trips
-     * to the same stored form as the default.
-     */
-    public function isDefault(mixed $submitted): bool
-    {
-        return $this->encode($this->coerce($submitted)) === $this->encode($this->coerce($this->default()));
     }
 
     public function label(): string

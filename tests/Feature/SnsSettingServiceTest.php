@@ -51,14 +51,6 @@ class SnsSettingServiceTest extends TestCase
         $this->assertSame('My Community', $service->get(SnsSettingKey::SnsName));
     }
 
-    public function test_is_default_compares_on_the_encoded_value(): void
-    {
-        $this->assertTrue(SnsSettingKey::SnsName->isDefault(config('app.name')));
-        $this->assertTrue(SnsSettingKey::SnsName->isDefault('  '.config('app.name').'  '));
-        $this->assertTrue(SnsSettingKey::SnsTitle->isDefault(''));
-        $this->assertFalse(SnsSettingKey::SnsName->isDefault('Something else'));
-    }
-
     public function test_from_op3_source_name_resolves_known_keys_only(): void
     {
         $this->assertSame(SnsSettingKey::SnsName, SnsSettingKey::fromOp3SourceName('sns_name'));

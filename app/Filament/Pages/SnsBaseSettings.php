@@ -23,9 +23,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the site-wide SNS identity settings (name, title, administrator email). Defaults fall back
- * to env/config; this page only persists rows that diverge from them (an absent row means "follow
- * the default"). The typed registry is App\Support\SnsSettingKey.
+ * Edit the site-wide SNS identity settings (name, title, administrator email). A saved value is
+ * stored verbatim; until a setting has been saved (no row) it resolves to its env/config default.
+ * The typed registry is App\Support\SnsSettingKey.
  *
  * @property-read Schema $form
  */
@@ -94,18 +94,9 @@ class SnsBaseSettings extends Page
 
         DB::transaction(function () use ($data): void {
             foreach (SnsSettingKey::inGroup(SettingGroup::Base) as $key) {
-                $submitted = $data[$key->value] ?? null;
-                $trimmed = is_string($submitted) ? trim($submitted) : $submitted;
-
-                if ($trimmed === null || $trimmed === '' || $key->isDefault($trimmed)) {
-                    DB::table('sns_settings')->where('key', $key->value)->delete();
-
-                    continue;
-                }
-
                 DB::table('sns_settings')->updateOrInsert(
                     ['key' => $key->value],
-                    ['value' => $key->encode($key->coerce($trimmed))],
+                    ['value' => $key->encode($key->coerce($data[$key->value] ?? ''))],
                 );
             }
         });
@@ -154,7 +145,6 @@ class SnsBaseSettings extends Page
         }
 
         return Section::make(__('SNS base settings'))
-            ->description(__('Leave a field blank to fall back to the default value.'))
             ->schema($fields);
     }
 }
