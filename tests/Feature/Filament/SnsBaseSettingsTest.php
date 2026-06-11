@@ -1,0 +1,103 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Filament;
+
+use App\Filament\Pages\SnsBaseSettings;
+use App\Models\AdminUser;
+use App\Support\SettingGroup;
+use App\Support\SnsSettingKey;
+use Filament\Facades\Filament;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
+use Tests\TestCase;
+
+/**
+ * The SNS base-settings editor. `sns_settings` is authoritative: every field is stored verbatim on
+ * save (no "blank/equals-default reverts to nothing"), and the page only ever exposes its own (Base)
+ * settings group.
+ */
+class SnsBaseSettingsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Filament::setCurrentPanel('admin');
+        $this->actingAs(AdminUser::factory()->create(), 'admin');
+    }
+
+    public function test_changing_a_field_stores_the_value(): void
+    {
+        Livewire::test(SnsBaseSettings::class)
+            ->fillForm(['sns_name' => 'My Community'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', [
+            'key' => 'sns_name',
+            'value' => 'My Community',
+        ]);
+    }
+
+    public function test_save_persists_every_field_verbatim(): void
+    {
+        // The form mounts pre-filled with the current values; saving stores each one as-is — there
+        // is no "blank reverts to default" magic.
+        Livewire::test(SnsBaseSettings::class)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'sns_name', 'value' => (string) config('app.name')]);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'sns_title', 'value' => '']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'admin_mail_address', 'value' => (string) config('mail.from.address')]);
+        $this->assertSame(3, DB::table('sns_settings')->count());
+    }
+
+    public function test_required_sns_name_cannot_be_blank(): void
+    {
+        Livewire::test(SnsBaseSettings::class)
+            ->fillForm(['sns_name' => ''])
+            ->call('save')
+            ->assertHasErrors('data.sns_name');
+    }
+
+    public function test_admin_mail_address_must_be_an_email(): void
+    {
+        Livewire::test(SnsBaseSettings::class)
+            ->fillForm(['admin_mail_address' => 'not-an-email'])
+            ->call('save')
+            ->assertHasErrors('data.admin_mail_address');
+    }
+
+    public function test_form_reflects_persisted_override_after_save(): void
+    {
+        Livewire::test(SnsBaseSettings::class)
+            ->fillForm(['sns_name' => 'My Community'])
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSet('data.sns_name', 'My Community');
+    }
+
+    public function test_page_only_exposes_the_base_settings_group(): void
+    {
+        // Regression guard for when the Auth group (registration / CAPTCHA) is added: those keys
+        // must stay on their own page, never leak into the identity base-settings form.
+        $data = Livewire::test(SnsBaseSettings::class)->get('data');
+
+        $actual = array_keys($data);
+        sort($actual);
+
+        $expected = array_map(
+            fn (SnsSettingKey $key): string => $key->value,
+            SnsSettingKey::inGroup(SettingGroup::Base),
+        );
+        sort($expected);
+
+        $this->assertSame($expected, $actual);
+    }
+}

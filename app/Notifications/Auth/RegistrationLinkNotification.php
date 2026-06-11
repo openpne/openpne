@@ -36,10 +36,11 @@ class RegistrationLinkNotification extends Notification implements ShouldQueue
         // register.form (GET /register/{token}) is added in the next PR; build the URL directly so
         // this mail does not depend on that route existing yet.
         return (new MailMessage)
-            ->subject(__('Complete your :app registration', ['app' => config('app.name')]))
+            ->from(sns_admin_mail_address(), sns_name())
+            ->subject(__('Complete your :app registration', ['app' => sns_name()]))
             ->line(__('Open the link below to finish creating your account.'))
             ->action(__('Continue registration'), url('/register/'.$this->rawToken))
             ->line(__('This link expires in :hours hours.', ['hours' => $hours]))
-            ->salutation('— '.config('app.name'));
+            ->salutation('— '.sns_name());
     }
 }
