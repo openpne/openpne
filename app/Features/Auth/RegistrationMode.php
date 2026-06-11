@@ -2,6 +2,9 @@
 
 namespace App\Features\Auth;
 
+use App\Services\SnsSettingService;
+use App\Support\SnsSettingKey;
+
 /**
  * Who may create an account, mirroring OpenPNE 3's invite_mode. OpenPNE 3 defaulted to invite-only
  * and 404'd the open self-registration entry unless invite_mode was set to open — OpenPNE keeps that
@@ -13,10 +16,14 @@ enum RegistrationMode: string
     case Invite = 'invite';  // OpenPNE 3 invite_mode=1 (default): members invite; no open entry (member-invite is a gap → admin-created only for now).
     case Closed = 'closed';  // OpenPNE 3 invite_mode=0: registration disabled.
 
-    /** Fall back to the (restrictive) default on an unset/unknown value, so a typo never opens registration. */
+    /**
+     * The configured mode from the admin `registration_mode` setting. Falls back to the (restrictive)
+     * Invite default on an unset/unknown value, so a missing row or a typo never opens registration.
+     */
     public static function current(): self
     {
-        return self::tryFrom((string) config('openpne.registration.mode')) ?? self::Invite;
+        return self::tryFrom((string) app(SnsSettingService::class)->get(SnsSettingKey::RegistrationMode))
+            ?? self::Invite;
     }
 
     /** Whether the open self-registration entry (/register) is exposed; the other modes 404 it. */

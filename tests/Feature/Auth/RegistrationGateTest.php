@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -17,7 +18,7 @@ class RegistrationGateTest extends TestCase
 
     public function test_invite_mode_404s_the_open_entry(): void
     {
-        config()->set('openpne.registration.mode', 'invite');
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'invite');
 
         $this->get('/register')->assertNotFound();
         $this->post('/register', ['email' => 'newcomer@example.com'])->assertNotFound();
@@ -26,7 +27,7 @@ class RegistrationGateTest extends TestCase
 
     public function test_closed_mode_404s_the_open_entry(): void
     {
-        config()->set('openpne.registration.mode', 'closed');
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'closed');
 
         $this->get('/register')->assertNotFound();
         $this->post('/register', ['email' => 'newcomer@example.com'])->assertNotFound();
@@ -35,24 +36,24 @@ class RegistrationGateTest extends TestCase
     public function test_an_unknown_mode_falls_back_to_invite_and_404s(): void
     {
         // A typo must never accidentally expose the open entry.
-        config()->set('openpne.registration.mode', 'nonsense');
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'nonsense');
 
         $this->get('/register')->assertNotFound();
     }
 
     public function test_open_mode_exposes_the_entry(): void
     {
-        config()->set('openpne.registration.mode', 'open');
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'open');
 
         $this->get('/register')->assertOk()->assertSee('name="email"', false);
     }
 
     public function test_the_classic_login_shows_the_register_link_only_when_open(): void
     {
-        config()->set('openpne.registration.mode', 'invite');
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'invite');
         $this->get('/login')->assertOk()->assertDontSee('registerLink', false);
 
-        config()->set('openpne.registration.mode', 'open');
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'open');
         $this->get('/login')->assertOk()->assertSee('registerLink', false);
     }
 
@@ -60,12 +61,12 @@ class RegistrationGateTest extends TestCase
     {
         config()->set('openpne.tenant_default_surface', 'modern');
 
-        config()->set('openpne.registration.mode', 'invite');
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'invite');
         $this->get('/login')->assertInertia(
             fn (AssertableInertia $page) => $page->component('auth/login')->where('registrationOpen', false)
         );
 
-        config()->set('openpne.registration.mode', 'open');
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'open');
         $this->get('/login')->assertInertia(
             fn (AssertableInertia $page) => $page->component('auth/login')->where('registrationOpen', true)
         );

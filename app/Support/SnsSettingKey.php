@@ -19,7 +19,6 @@ namespace App\Support;
  * Deliberately NOT ported from OpenPNE 3's sns_config (obsolete or superseded in OpenPNE 4):
  *   - enable_pc / enable_mobile — single responsive surface (App\Support\SurfaceResolver), no
  *     PC-vs-mobile split;
- *   - is_use_captcha — becomes an Auth-group key with a fail-closed default, not a config read;
  *   - enable_friend_link / enable_cmd / enable_language — always-on or handled by other mechanisms.
  *
  * The OpenPNE 3 sns_config -> sns_settings data upgrade is out of scope here; `op3SourceName()` is
@@ -36,21 +35,36 @@ enum SnsSettingKey: string
     /** From-address for system mail / administrator contact (general.admin_mail_address). */
     case AdminMailAddress = 'admin_mail_address';
 
+    /** Who may create an account (App\Features\Auth\RegistrationMode value): open|invite|closed. */
+    case RegistrationMode = 'registration_mode';
+
+    /** Whether the bot challenge is enforced on the auth entries. */
+    case CaptchaEnabled = 'captcha_enabled';
+
     /** Which admin page edits this setting. */
     public function group(): SettingGroup
     {
         return match ($this) {
             self::SnsName, self::SnsTitle, self::AdminMailAddress => SettingGroup::Base,
+            self::RegistrationMode, self::CaptchaEnabled => SettingGroup::Auth,
         };
     }
 
-    /** The OpenPNE 3 `sns_config.name` this setting upgrades from. */
-    public function op3SourceName(): string
+    /**
+     * The OpenPNE 3 `sns_config.name` this setting upgrades from, or null when there is no single
+     * source column. RegistrationMode is composed from OpenPNE 3's `invite_mode` (auth.yml) and
+     * `enable_registration` (sns_config) together — `enable_registration=0` is the global suspend
+     * while `invite_mode` picks open vs invite — so its upgrade is a dedicated composite step, not a
+     * 1:1 column copy.
+     */
+    public function op3SourceName(): ?string
     {
         return match ($this) {
             self::SnsName => 'sns_name',
             self::SnsTitle => 'sns_title',
             self::AdminMailAddress => 'admin_mail_address',
+            self::RegistrationMode => null,
+            self::CaptchaEnabled => 'is_use_captcha',
         };
     }
 
@@ -65,26 +79,44 @@ enum SnsSettingKey: string
             self::SnsName => (string) config('app.name'),
             self::SnsTitle => '',
             self::AdminMailAddress => (string) config('mail.from.address'),
+            // Fail-closed, hardcoded (no env tier): a missing row must never open registration or
+            // disable the bot challenge.
+            self::RegistrationMode => 'invite',
+            self::CaptchaEnabled => true,
         };
     }
 
     /** Validate and coerce an incoming (form) value to this key's typed value. */
     public function coerce(mixed $value): mixed
     {
-        // Stage 1 keys are free-text strings; trim so " " is treated as empty by the caller.
-        return is_string($value) ? trim($value) : (string) $value;
+        return match ($this) {
+            self::CaptchaEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
+            default => is_string($value) ? trim($value) : (string) $value,
+        };
     }
 
     /** Encode a typed value to the stored string `value`. */
     public function encode(mixed $value): string
     {
-        return (string) $value;
+        return match ($this) {
+            self::CaptchaEnabled => $value ? '1' : '0',
+            default => (string) $value,
+        };
     }
 
     /** Decode the stored string `value` to the typed value; an absent value is the default. */
     public function decode(?string $value): mixed
     {
-        return $value ?? $this->default();
+        if ($value === null) {
+            return $this->default();
+        }
+
+        return match ($this) {
+            // Fail-closed: only an explicit '0' disables the challenge; any other stored value keeps
+            // it on, mirroring RegistrationMode::current()'s restrictive fallback on a bad value.
+            self::CaptchaEnabled => $value !== '0',
+            default => $value,
+        };
     }
 
     public function label(): string
@@ -93,6 +125,8 @@ enum SnsSettingKey: string
             self::SnsName => __('SNS name'),
             self::SnsTitle => __('SNS title'),
             self::AdminMailAddress => __('Administrator email address'),
+            self::RegistrationMode => __('Registration mode'),
+            self::CaptchaEnabled => __('Require CAPTCHA'),
         };
     }
 
@@ -100,7 +134,7 @@ enum SnsSettingKey: string
     {
         return match ($this) {
             self::SnsName, self::AdminMailAddress => true,
-            self::SnsTitle => false,
+            self::SnsTitle, self::RegistrationMode, self::CaptchaEnabled => false,
         };
     }
 
