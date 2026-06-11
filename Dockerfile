@@ -1,5 +1,13 @@
 FROM php:8.5-fpm-bookworm
 
+# git + unzip let `composer install` fall back to a git source checkout (and extract dist
+# archives) when GitHub's dist zipballs are temporarily unavailable (504). The slim php-fpm
+# base ships neither, so without them a flaky dist download aborts the entrypoint install and
+# the container exits before php-fpm starts.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git unzip \
+    && rm -rf /var/lib/apt/lists/*
+
 # Use install-php-extensions to install Laravel-required extensions.
 ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 RUN install-php-extensions intl bcmath zip gd pdo_mysql pdo_sqlite opcache
