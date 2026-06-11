@@ -106,7 +106,9 @@ enum SnsSettingKey: string
         }
 
         return match ($this) {
-            self::CaptchaEnabled => $value === '1',
+            // Fail-closed: only an explicit '0' disables the challenge; any other stored value keeps
+            // it on, mirroring RegistrationMode::current()'s restrictive fallback on a bad value.
+            self::CaptchaEnabled => $value !== '0',
             default => $value,
         };
     }
