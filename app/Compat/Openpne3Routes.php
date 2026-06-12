@@ -15,6 +15,12 @@ final class Openpne3Routes
         return new self(require database_path('parity/openpne3-pc-frontend-routes.php'));
     }
 
+    /** @return list<string> module names in the inventory */
+    public function modules(): array
+    {
+        return array_keys($this->data);
+    }
+
     /** @return list<string> named route names of the module */
     public function routeNames(string $module): array
     {
@@ -24,6 +30,18 @@ final class Openpne3Routes
     public function url(string $module, string $route): ?string
     {
         return $this->module($module)['routes'][$route][0] ?? null;
+    }
+
+    /** The URL pattern for a globally-unique route name across all modules, or null. */
+    public function urlByName(string $route): ?string
+    {
+        foreach ($this->data as $module) {
+            if (isset($module['routes'][$route])) {
+                return $module['routes'][$route][0];
+            }
+        }
+
+        return null;
     }
 
     /** The route's sf_method constraint: 'POST' or 'ANY' (unconstrained). */
