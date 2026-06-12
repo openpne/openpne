@@ -134,6 +134,7 @@ class RegistrationAuthSettings extends Page
                     ->options([
                         'open' => __('Anyone can register'),
                         'invite' => __('Invite only'),
+                        'admin_only' => __('Admin invite only'),
                         'closed' => __('Registration closed'),
                     ])
                     ->required()

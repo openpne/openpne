@@ -35,7 +35,7 @@ enum SnsSettingKey: string
     /** From-address for system mail / administrator contact (general.admin_mail_address). */
     case AdminMailAddress = 'admin_mail_address';
 
-    /** Who may create an account (App\Features\Auth\RegistrationMode value): open|invite|closed. */
+    /** Who may create an account (App\Features\Auth\RegistrationMode value): open|invite|admin_only|closed. */
     case RegistrationMode = 'registration_mode';
 
     /** Whether the bot challenge is enforced on the auth entries. */

@@ -44,6 +44,17 @@ class RegistrationAuthSettingsTest extends TestCase
         $this->assertSame(RegistrationMode::Closed, RegistrationMode::current());
     }
 
+    public function test_saving_admin_only_mode_takes_effect(): void
+    {
+        Livewire::test(RegistrationAuthSettings::class)
+            ->fillForm(['registration_mode' => 'admin_only'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'registration_mode', 'value' => 'admin_only']);
+        $this->assertSame(RegistrationMode::AdminOnly, RegistrationMode::current());
+    }
+
     public function test_toggling_captcha_takes_effect_on_the_bound_instance(): void
     {
         // The seeded baseline is off; resolve the singleton now so a frozen decision would stay off.
