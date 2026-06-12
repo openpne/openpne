@@ -7,6 +7,7 @@ use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Support\Visibility;
+use Database\Seeders\NavigationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -19,6 +20,12 @@ use Tests\TestCase;
 class ClassicLocalNavTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(NavigationSeeder::class);
+    }
 
     public function test_own_pages_render_the_default_localnav(): void
     {
