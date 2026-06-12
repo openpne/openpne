@@ -133,6 +133,12 @@ class CommunityEventController extends Controller
     /** Render a Classic view with the OpenPNE 3 page_{module}_{action} body id from the parity. */
     private function classic(string $view, array $data = []): View
     {
+        // OpenPNE 3 sets the community localNav on every event action (sf_nav_type=community).
+        $community = $data['community'] ?? ($data['event'] ?? null)?->community;
+        if ($community instanceof Community) {
+            $this->markLocalNavCommunity($community);
+        }
+
         return view($view, $data)->with('pageId', RouteParityRegistry::bodyId($this->routeName()));
     }
 
