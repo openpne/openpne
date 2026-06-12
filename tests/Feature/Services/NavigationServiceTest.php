@@ -49,6 +49,25 @@ class NavigationServiceTest extends TestCase
         $this->assertSame(url('/friend/list?id=42'), $items[1]['href']); // no :id → ?id= appended
     }
 
+    public function test_hides_an_id_link_with_no_subject_in_context(): void
+    {
+        // An upgraded @member_profile that landed in a global type normalizes to /member/:id; with
+        // no subject the :id cannot be resolved, so the item is hidden rather than linking to ":id".
+        $this->makeNav('secure_global', '/member/:id', '@member_profile', ['en' => 'Profile']);
+
+        $this->assertSame([], app(NavigationService::class)->visibleEntries('secure_global', 'en'));
+    }
+
+    public function test_falls_back_to_another_language_caption(): void
+    {
+        // Localised only in Japanese; an English-locale render must not show an empty label.
+        $this->makeNav('secure_global', '/member/search', '@member_search', ['ja_JP' => 'メンバー検索']);
+
+        $items = app(NavigationService::class)->visibleEntries('secure_global', 'en');
+
+        $this->assertSame('メンバー検索', $items[0]['label']);
+    }
+
     public function test_logout_item_is_flagged_for_a_post_form(): void
     {
         $this->makeNav('secure_global', '/logout', '@member_logout', ['en' => 'Logout']);
