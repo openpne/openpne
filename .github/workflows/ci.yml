@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   smoke-php-8-3:
     name: Smoke (PHP 8.3)
@@ -62,7 +66,7 @@ jobs:
           php artisan key:generate
           touch database/database.sqlite
       - run: php artisan migrate --force
-      - run: php artisan test
+      - run: php artisan test --parallel
 
   lint:
     name: Lint (Pint)
