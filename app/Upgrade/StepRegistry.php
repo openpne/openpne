@@ -19,6 +19,8 @@ use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberProfileUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\Steps\NavigationTranslationUpgrade;
+use App\Upgrade\Steps\NavigationUpgrade;
 use App\Upgrade\Steps\ProfileOptionTranslationUpgrade;
 use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileTranslationUpgrade;
@@ -60,6 +62,9 @@ final class StepRegistry
             CommunityEventUpgrade::class,
             CommunityEventCommentUpgrade::class,
             CommunityEventMemberUpgrade::class,
+            // navigation_translations.id references navigations.id, so translations run after.
+            NavigationUpgrade::class,
+            NavigationTranslationUpgrade::class,
         ];
     }
 
