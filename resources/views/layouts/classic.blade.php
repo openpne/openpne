@@ -14,28 +14,7 @@
         <div id="Header">
             <div id="HeaderContainer">
                 <h1 id="logo"><a href="{{ url('/') }}">{{ sns_name() }}</a></h1>
-                {{-- A guest reaches the Classic layout on a web-public profile, so the member
-                     nav is auth-gated (OpenPNE 3 split secure/insecure nav the same way). --}}
-                <div id="globalNav">
-                    <ul>
-                        <li id="globalNav_home"><a href="{{ url('/') }}">{{ __('Home') }}</a></li>
-                        @auth
-                            <li id="globalNav_diary"><a href="{{ route('diary.list_member') }}">{{ __('%Diary%') }}</a></li>
-                            <li id="globalNav_friend"><a href="{{ route('friend.list') }}">{{ __('%Friends%') }}</a></li>
-                            <li id="globalNav_search"><a href="{{ route('member.search') }}">{{ __('Member search') }}</a></li>
-                            <li id="globalNav_block"><a href="{{ route('block.list') }}">{{ __('Blocked members') }}</a></li>
-                            <li id="globalNav_profile"><a href="{{ route('member.profile.mine_compat') }}">{{ __('My profile') }}</a></li>
-                            <li id="globalNav_logout">
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit">{{ __('Log Out') }}</button>
-                                </form>
-                            </li>
-                        @else
-                            <li id="globalNav_login"><a href="{{ route('login') }}">{{ __('Log In') }}</a></li>
-                        @endauth
-                    </ul>
-                </div>
+                @include('layouts.partials.global-nav')
             </div><!-- HeaderContainer -->
         </div><!-- Header -->
 

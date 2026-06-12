@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Support\Visibility;
+use Database\Seeders\NavigationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -18,17 +19,38 @@ class ShellNavigationTest extends TestCase
 
     public function test_secure_page_renders_the_default_local_nav(): void
     {
+        $this->seed(NavigationSeeder::class);
         $member = Member::factory()->create();
 
+        // ids carry OpenPNE 3's op_url_to_id(source_uri) so custom CSS keeps matching.
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertSee('<ul class="default">', false)
-            ->assertSee('id="default_home"', false)
-            ->assertSee('id="default_friend"', false)
-            ->assertSee('id="default_diary"', false)
-            ->assertSee('id="default_profile"', false)
-            ->assertSee('id="default_editProfile"', false)
-            ->assertDontSee('%My_friends%', false); // term layer resolved the caption
+            ->assertSee('id="default__homepage"', false)
+            ->assertSee('id="default__friend_list"', false)
+            ->assertSee('id="default_diary_listMember"', false)
+            ->assertSee('id="default__member_profile_mine"', false)
+            ->assertSee('id="default__member_editProfile"', false)
+            ->assertDontSee('%my_friend%', false); // term layer resolved the caption
+    }
+
+    public function test_secure_global_nav_uses_openpne3_ids_and_hides_unreachable_items(): void
+    {
+        $this->seed(NavigationSeeder::class);
+        $member = Member::factory()->create();
+
+        $html = $this->actingAs($member)->get('/')->assertOk()
+            ->assertSee('id="globalNav__homepage"', false)
+            ->assertSee('id="globalNav__member_search"', false)
+            ->assertSee('id="globalNav__member_invite"', false)
+            ->assertSee('id="globalNav__member_logout"', false)
+            // /member/config is an access-block shim; /diary index is unported — both hidden.
+            ->assertDontSee('id="globalNav__member_config"', false)
+            ->assertDontSee('id="globalNav_diary_index"', false)
+            ->getContent();
+
+        // logout is GET-unreachable in OpenPNE 4, so it renders as a POST form button.
+        $this->assertStringContainsString('<form method="POST" action="'.route('logout').'"', $html);
     }
 
     public function test_guest_on_a_classic_page_does_not_see_the_local_nav(): void
