@@ -62,16 +62,17 @@ class NavigationService
             $caption = $row['captions'][$lang] ?? $row['captions']['en'] ?? '';
             $label = $terms->replace($caption, $locale);
 
-            // Internal links render absolute (url()), matching every other Classic link; an external
-            // http(s) URL is kept verbatim.
-            if ($this->isLogout($uri)) {
-                $items[] = ['href' => url($uri), 'label' => $label, 'domId' => $domId, 'isPostLogout' => true];
+            // An external http(s) URL is kept verbatim — checked before the logout case so an external
+            // URL whose path happens to be /logout stays a plain link, not a CSRF POST form.
+            if (NavigationUri::isExternal($uri)) {
+                $items[] = ['href' => $uri, 'label' => $label, 'domId' => $domId, 'isPostLogout' => false];
 
                 continue;
             }
 
-            if (NavigationUri::isExternal($uri)) {
-                $items[] = ['href' => $uri, 'label' => $label, 'domId' => $domId, 'isPostLogout' => false];
+            // Internal links render absolute (url()), matching every other Classic link.
+            if ($this->isLogout($uri)) {
+                $items[] = ['href' => url($uri), 'label' => $label, 'domId' => $domId, 'isPostLogout' => true];
 
                 continue;
             }

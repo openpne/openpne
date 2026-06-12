@@ -60,6 +60,17 @@ class NavigationServiceTest extends TestCase
         $this->assertSame(url('/logout'), $items[0]['href']);
     }
 
+    public function test_external_url_ending_in_logout_stays_a_plain_link(): void
+    {
+        $this->makeNav('secure_global', 'https://example.com/logout', null, ['en' => 'External']);
+
+        $items = app(NavigationService::class)->visibleEntries('secure_global', 'en');
+
+        $this->assertCount(1, $items);
+        $this->assertFalse($items[0]['isPostLogout']); // external, not the logout POST form
+        $this->assertSame('https://example.com/logout', $items[0]['href']);
+    }
+
     public function test_hides_unresolved_missing_route_and_shim_items(): void
     {
         $this->makeNav('secure_global', '@homepage', '@homepage', ['en' => 'Unconverted'], 0); // not normalized
