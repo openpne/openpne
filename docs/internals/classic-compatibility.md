@@ -88,27 +88,28 @@ confirmations and the avatar upload stay free-form (no field table).
 `#globalNav` and `#localNav` are OpenPNE 3's primary and secondary nav bars, both driven from the
 admin-editable `navigations` table (`App\Services\NavigationService`), keyed by type:
 `secure_global` / `insecure_global` for `#globalNav`, `default` / `friend` / `community` for
-`#localNav` (secure pages only). `#localNav` renders the `default` set on the viewer's own pages and
-the `friend` set (the subject member's id-scoped links) on a page about another member, switching on
-the subject a controller records via `Controller::markLocalNavSubject` (OpenPNE 3
-`sf_nav_type`/`sf_nav_id`); guests get an empty hook. The table is seeded with OpenPNE 3's default
-set (a later admin editor and the upgrade tool populate it); navigation settings are Classic-only —
-Modern's nav is component-driven, not data-driven from this table. A stored `uri` is a normalized
-internal path (with an optional `:id` slot threaded with the subject id, else `?id=` appended) or an
-http(s) URL; the renderer hides any item whose path matches no route or an OpenPNE 3 compatibility
-shim, and renders a logout-style item (GET-unreachable in OpenPNE 4) as a POST form button. The
-`<li>` id is `{prefix}_{op_url_to_id(source_uri)}` — `source_uri` keeps the original OpenPNE 3 value
-so a site's custom CSS keeps matching after the upgrade normalizes `uri`. The `community` context is
-seeded but not yet rendered. The `#Footer` bar renders `openpne.classic.footer_html` (a trusted-HTML
-seam for the future admin SnsConfig footer; `$classicFooterHtml` overrides it per request).
+`#localNav` (secure pages only). `#localNav` renders the `community` set on a community page (its
+Top / Topics / Events / Join / Leave links), the `friend` set (the subject member's id-scoped links)
+on a page about another member, and the `default` set on the viewer's own pages — switching on the
+community / subject a controller records via `Controller::markLocalNavCommunity` /
+`markLocalNavSubject` (OpenPNE 3 `sf_nav_type`/`sf_nav_id`), community winning as its module's
+default_nav does; guests get an empty hook. The table is seeded with OpenPNE 3's default set (a later
+admin editor and the upgrade tool populate it); navigation settings are Classic-only — Modern's nav
+is component-driven, not data-driven from this table. A stored `uri` is a normalized internal path
+(with an optional `:id` slot threaded with the context id, else `?id=` appended) or an http(s) URL;
+the renderer hides any item whose path matches no route or an OpenPNE 3 compatibility shim, and
+renders a logout-style item (GET-unreachable in OpenPNE 4) as a POST form button. The `<li>` id is
+`{prefix}_{op_url_to_id(source_uri)}` — `source_uri` keeps the original OpenPNE 3 value so a site's
+custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar renders
+`openpne.classic.footer_html` (a trusted-HTML seam for the future admin SnsConfig footer;
+`$classicFooterHtml` overrides it per request).
 
 Carried gaps in this slice: the shell renders single-column `LayoutC`, while OpenPNE 3
 `member/home` / `member/profile` are `layoutA` — deferred until the `#Left` sidemenu/gadget
 slots land (Level 2). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching, admin custom
-CSS, and gadget layout are not ported. `#localNav` renders the `default` and `friend` contexts from
-the `navigations` table; the `community` context is seeded but not yet rendered (Level 2). The footer
-omits the privacy-policy / terms links until those routes exist.
+CSS, and gadget layout are not ported. The footer omits the privacy-policy / terms links until those
+routes exist.
 
 ## JavaScript compatibility
 
