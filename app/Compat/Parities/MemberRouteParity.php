@@ -53,6 +53,10 @@ class MemberRouteParity extends RouteParity
             // Login — Fortify owns /login; the OpenPNE 3 /member/login/* URL is preserved by a static
             // redirect (compatRedirects), and the Classic body id stays page_member_login.
             new RouteMap('login', '/member/login/*', 'login', 'GET', op3Action: 'login'),
+            // Member invitation — OpenPNE 3 member/invite at /invite; the GET form and POST send share
+            // the URL. Keeps page_member_invite for the Classic body id.
+            new RouteMap('member_invite', '/invite', 'member.invite', 'GET', op3Action: 'invite'),
+            new RouteMap('member_invite', '/invite', 'member.invite.submit', 'POST'),
         ];
     }
 
@@ -61,7 +65,6 @@ class MemberRouteParity extends RouteParity
         return [
             'member_logout' => 'Logout is served by Fortify at POST /logout (OpenPNE 3 also allowed GET).',
             'member_delete' => 'Member withdrawal (/leave) is not ported.',
-            'member_invite' => 'Member invitation (/invite) is not ported.',
             'member_config' => 'The member config screen is not ported; its access-block category is redirected by the Block parity.',
             'member_config_jsonapi' => 'The legacy config JSON API (/member/config/jsonapi) is not ported.',
             'global_changeLanguage' => 'Locale switching is POST /locale (locale.switch), not the OpenPNE 3 GET /language URL.',

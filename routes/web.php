@@ -12,12 +12,14 @@ use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
 use App\Features\Home\HomeController;
+use App\Features\Member\InviteController;
 use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Profile\ProfileController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
 use App\Http\Middleware\AsBackgroundFetch;
+use App\Http\Middleware\EnsureMemberInviteAllowed;
 use App\Http\Middleware\EnsureOpenRegistration;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\SetLocale;
@@ -102,14 +104,18 @@ Route::get('/opAuthMailAddress/passwordRecoveryComplete', fn () => redirect()->r
     ->name('auth.password_recovery_complete_compat');
 
 // Multi-stage registration (OpenPNE 3 email-confirmation flow), replacing Fortify's single-stage
-// /register. Guest-only, and gated to 'open' mode — invite/closed 404 the entry (OpenPNE 3 parity).
-// Email-entry half issues the mailed token; the completion half (GET form + POST create) is gated by
-// that token. The literal /register/sent precedes /register/{token}, and the token is length-pinned to
-// the issued shape, so the two never collide.
+// /register. Guest-only. The email-entry half (request the token, neutral confirmation) is the open
+// self-service entry, 404'd outside 'open' mode (OpenPNE 3 parity). The completion half is gated by
+// the token itself, not the mode entry — an invited member must finish in invite/admin_only mode — so
+// it sits outside EnsureOpenRegistration and the controller re-checks the mode against the token's
+// origin (RegistrationController::resolveForCompletion). The literal /register/sent precedes
+// /register/{token}, and the token is length-pinned to the issued shape, so the two never collide.
 Route::middleware(['guest', NoReferrer::class, EnsureOpenRegistration::class])->controller(RegistrationController::class)->group(function () {
     Route::get('/register', 'requestForm')->name('register');
     Route::post('/register', 'request')->middleware('throttle:register-email')->name('register.request');
     Route::get('/register/sent', 'sent')->name('register.sent');
+});
+Route::middleware(['guest', NoReferrer::class])->controller(RegistrationController::class)->group(function () {
     Route::get('/register/{token}', 'form')->where('token', '[A-Za-z0-9]{40}')
         ->middleware('throttle:register-complete')->name('register.form');
     Route::post('/register/{token}', 'register')->where('token', '[A-Za-z0-9]{40}')
@@ -121,6 +127,14 @@ Route::middleware(['guest', NoReferrer::class, EnsureOpenRegistration::class])->
 // redirect()->back() never lands on it.
 Route::get('/altcha/challenge', fn (Captcha $captcha) => response()->json($captcha->challenge()))
     ->middleware(['throttle:60,1', AsBackgroundFetch::class])->name('altcha.challenge');
+
+// Member invitation (OpenPNE 3 member/invite): a logged-in member invites an address, which issues a
+// registration token and mails the link. Gated to modes that allow member invites (open/invite);
+// admin_only/closed 404 it. The send is throttled per member to bound invite mail.
+Route::middleware(['auth', 'auth.session', EnsureMemberInviteAllowed::class])->controller(InviteController::class)->group(function () {
+    Route::get('/invite', 'show')->name('member.invite');
+    Route::post('/invite', 'submit')->middleware('throttle:member-invite')->name('member.invite.submit');
+});
 
 // auth.session (AuthenticateSession) drops a logged-in session on its next protected request once
 // the member's password hash changes — a best-effort cross-driver fallback; the reset itself purges

@@ -62,9 +62,9 @@ class RegistrationController extends Controller
 
     public function form(Request $request, string $token, RegistrationFields $fields): View|InertiaResponse|RedirectResponse
     {
-        $pending = $this->pending($token);
-        if ($pending === null) {
-            return $this->expired();
+        $pending = $this->resolveForCompletion($token);
+        if ($pending instanceof RedirectResponse) {
+            return $pending;
         }
 
         $lang = $this->translationLang();
@@ -85,9 +85,9 @@ class RegistrationController extends Controller
 
     public function register(Request $request, string $token, CompleteRegistration $complete): RedirectResponse
     {
-        $pending = $this->pending($token);
-        if ($pending === null) {
-            return $this->expired();
+        $pending = $this->resolveForCompletion($token);
+        if ($pending instanceof RedirectResponse) {
+            return $pending;
         }
 
         // The token's address was free when issued, but a member may have claimed it since (admin
@@ -117,6 +117,28 @@ class RegistrationController extends Controller
         return redirect()->intended(route('home'))->with('status', __('Your account is ready.'));
     }
 
+    /**
+     * Resolves a raw token for completion, applying the mode gate, or returns a redirect to send the
+     * visitor away. The completion route is no longer open-only (an invite must be completable in
+     * invite/admin_only mode), so the mode is re-checked here against the token's origin:
+     *   1. closed → 404 before the lookup, so the route is wholly off (known and unknown tokens alike).
+     *   2. unknown/expired → the expired() redirect (only reached when not closed).
+     *   3. a live token whose source the current mode no longer issues (e.g. a self token in invite) → 404.
+     */
+    private function resolveForCompletion(string $token): RegistrationToken|RedirectResponse
+    {
+        abort_if(RegistrationMode::current() === RegistrationMode::Closed, 404);
+
+        $pending = $this->pending($token);
+        if ($pending === null) {
+            return $this->expired();
+        }
+
+        abort_unless(RegistrationMode::current()->allows($pending->source), 404);
+
+        return $pending;
+    }
+
     /** The live pending registration for a raw token, or null when it is unknown or past its TTL. */
     private function pending(string $rawToken): ?RegistrationToken
     {
@@ -136,9 +158,16 @@ class RegistrationController extends Controller
     {
         // A null lookup cannot tell a spent token (registration already finished) from an expired or
         // unknown one, so the message has to serve both: sign in if you are already registered,
-        // otherwise request a fresh link.
-        return redirect()->route('register')
-            ->with('status', __('This registration link is no longer valid. If you have already registered, please sign in; otherwise, enter your email again to get a new link.'));
+        // otherwise get a fresh link. Where to send them depends on the mode: only open exposes the
+        // self-service entry, so the "enter your email again" path is offered there; the invite modes
+        // send the visitor to sign-in (their fresh link comes from a new invitation, not self-service).
+        if (RegistrationMode::current()->allowsOpenRegistration()) {
+            return redirect()->route('register')
+                ->with('status', __('This registration link is no longer valid. If you have already registered, please sign in; otherwise, enter your email again to get a new link.'));
+        }
+
+        return redirect()->route('login')
+            ->with('status', __('This registration link is no longer valid. If you have already registered, please sign in; otherwise, ask to be invited again.'));
     }
 
     /** The token's address now belongs to a member: burn the dead token and send them to sign in. */
