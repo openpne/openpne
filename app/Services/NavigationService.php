@@ -59,8 +59,7 @@ class NavigationService
             }
 
             $domId = $prefix.'_'.Navigation::slug($row['source_uri'] ?? $uri);
-            $caption = $row['captions'][$lang] ?? $row['captions']['en'] ?? '';
-            $label = $terms->replace($caption, $locale);
+            $label = $terms->replace($this->caption($row['captions'], $lang), $locale);
 
             // An external http(s) URL is kept verbatim — checked before the logout case so an external
             // URL whose path happens to be /logout stays a plain link, not a CSRF POST form.
@@ -78,7 +77,9 @@ class NavigationService
             }
 
             $href = $this->applySubject($uri, $subjectId);
-            if (! $this->internalPathExists($href)) {
+            // A `:id` link with no subject in this context (e.g. an upgraded `@member_profile` that
+            // landed in a global type) cannot be resolved — hide it rather than link to literal :id.
+            if (str_contains($href, ':id') || ! $this->internalPathExists($href)) {
                 continue;
             }
 
@@ -125,6 +126,17 @@ class NavigationService
         });
     }
 
+    /**
+     * The caption for the requested translation lang, falling back to en, then ja_JP, then any
+     * present translation — so a row localised in only one language is never an empty label.
+     *
+     * @param  array<string, string>  $captions
+     */
+    private function caption(array $captions, string $lang): string
+    {
+        return $captions[$lang] ?? $captions['en'] ?? $captions['ja_JP'] ?? (string) (reset($captions) ?: '');
+    }
+
     /** Thread the context subject id into a `:id` slot, else append `?id=N` (OpenPNE 3 behaviour). */
     private function applySubject(string $uri, ?int $subjectId): string
     {
@@ -155,8 +167,6 @@ class NavigationService
     private function internalPathExists(string $href): bool
     {
         $path = parse_url($href, PHP_URL_PATH) ?: '/';
-        // A leftover :id (no subject in context) gets a placeholder so the route still matches.
-        $path = str_replace(':id', '1', $path);
 
         return $this->pathExists[$path] ??= $this->matchesRealRoute($path);
     }
