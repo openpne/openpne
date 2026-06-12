@@ -303,6 +303,12 @@ class CommunityController extends Controller
     /** Render a Classic view with the OpenPNE 3 page_{module}_{action} body id from the parity. */
     private function classic(string $view, array $data = []): View
     {
+        // A page about one concrete community renders the community localNav; search and the
+        // member-community list (plural `communities`) keep the default nav, as OpenPNE 3 does.
+        if (($data['community'] ?? null) instanceof Community) {
+            $this->markLocalNavCommunity($data['community']);
+        }
+
         return view($view, $data)->with('pageId', RouteParityRegistry::bodyId($this->routeName()));
     }
 

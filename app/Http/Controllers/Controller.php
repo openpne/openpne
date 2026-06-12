@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Community;
 use App\Models\Member;
 use Illuminate\Support\Facades\Gate;
 
@@ -36,5 +37,16 @@ abstract class Controller
         if ($viewer !== null && ! $viewer->is($subject)) {
             request()->attributes->set('localNavSubject', $subject);
         }
+    }
+
+    /**
+     * Record the community a page is about so the Classic localNav renders OpenPNE 3's `community`
+     * context (the community's id-scoped Top / Topics / Events / Join / Leave links) instead of the
+     * viewer's `default` nav. OpenPNE 3 community module default_nav=community; the search and
+     * member-community-list actions, which are not about one community, keep the default nav.
+     */
+    protected function markLocalNavCommunity(Community $community): void
+    {
+        request()->attributes->set('localNavCommunity', $community);
     }
 }
