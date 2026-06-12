@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(PresetProfileSeeder::class);
+        $this->call(NavigationSeeder::class);
 
         Member::factory()->create([
             'name' => 'Test Member',
