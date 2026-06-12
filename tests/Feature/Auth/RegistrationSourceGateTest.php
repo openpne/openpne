@@ -69,6 +69,18 @@ class RegistrationSourceGateTest extends TestCase
         $this->assertDatabaseHas('members', ['email' => 'self@example.com']);
     }
 
+    public function test_admin_only_mode_completes_an_admin_invite_but_404s_self_and_member(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'admin_only');
+
+        $this->get('/register/'.$this->issue('self@example.com', RegistrationTokenSource::Selfservice))->assertNotFound();
+        $this->get('/register/'.$this->issue('member@example.com', RegistrationTokenSource::MemberInvite))->assertNotFound();
+
+        $raw = $this->issue('admin@example.com', RegistrationTokenSource::AdminInvite);
+        $this->post("/register/{$raw}", $this->validForm())->assertRedirect('/');
+        $this->assertDatabaseHas('members', ['email' => 'admin@example.com']);
+    }
+
     public function test_closed_mode_404s_a_valid_token(): void
     {
         $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'closed');

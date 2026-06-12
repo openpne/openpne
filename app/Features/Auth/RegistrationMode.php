@@ -12,9 +12,10 @@ use App\Support\SnsSettingKey;
  */
 enum RegistrationMode: string
 {
-    case Open = 'open';      // OpenPNE 3 invite_mode=2: anyone may self-register at /register (behind the CAPTCHA).
-    case Invite = 'invite';  // OpenPNE 3 invite_mode=1 (default): members invite (/invite); no open self-registration entry.
-    case Closed = 'closed';  // OpenPNE 3 invite_mode=0: registration disabled.
+    case Open = 'open';            // OpenPNE 3 invite_mode=2: anyone may self-register at /register (behind the CAPTCHA).
+    case Invite = 'invite';        // OpenPNE 3 invite_mode=1 (default): members invite (/invite); no open self-registration entry.
+    case AdminOnly = 'admin_only'; // OpenPNE 3 invite_mode=0 + admin_invite: only an admin may invite; members cannot.
+    case Closed = 'closed';        // Registration suspended: even a valid token cannot complete.
 
     /**
      * The configured mode from the admin `registration_mode` setting. Falls back to the (restrictive)

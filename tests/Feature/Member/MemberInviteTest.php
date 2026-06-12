@@ -51,6 +51,17 @@ class MemberInviteTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_admin_only_mode_404s_the_member_invite_form(): void
+    {
+        // admin_only allows admin invites but not member invites.
+        $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'admin_only');
+
+        $this->actingAs(Member::factory()->create())->get('/invite')->assertNotFound();
+        $this->actingAs(Member::factory()->create())
+            ->post('/invite', ['email' => 'invitee@example.com'])
+            ->assertNotFound();
+    }
+
     public function test_a_guest_cannot_reach_the_member_invite_form(): void
     {
         $this->get('/invite')->assertRedirect(route('login'));
