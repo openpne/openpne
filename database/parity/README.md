@@ -5,6 +5,13 @@ Classic adapters map from, consumed by `App\Compat`. It grounds the route-parity
 every OpenPNE 3 route is checked to be mapped or gapped, and the OpenPNE 3 URLs in the
 mappings are checked against this inventory.
 
+`openpne3-module-actions.php` maps an OpenPNE 3 `module/action` (the bare form a navigation row
+may store, e.g. `diary/listMember`) to a route name, split into id-less / id-bearing variants
+because symfony resolved the pair to different routes by context. It is a separate file, not extra
+columns on the inventory, so the inventory stays a faithful `app:routes` dump that can be
+regenerated as-is. `App\Upgrade\Steps\NavigationUpgrade` resolves the route name to its URL through
+the inventory, keeping the URL single-sourced there.
+
 ## Regenerating
 
 From a clean OpenPNE 3 install (OpenPNE 3 is Apache-2.0, so this inventory ships in-repo):
