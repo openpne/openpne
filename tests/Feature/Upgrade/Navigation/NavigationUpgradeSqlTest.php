@@ -69,11 +69,15 @@ class NavigationUpgradeSqlTest extends TestCase
 
     public function test_keeps_an_id_bearing_route_name(): void
     {
+        // A route name fixes its URL, so @member_profile normalizes the same in any context — even a
+        // global type. The renderer (not the upgrade) hides such a row where no subject id exists.
         $this->seedNav(1, 'friend', '@member_profile');
+        $this->seedNav(2, 'secure_global', '@member_profile');
 
         $this->runUpgrade();
 
         $this->assertSame('/member/:id', $this->upgradedUri(1));
+        $this->assertSame('/member/:id', $this->upgradedUri(2));
     }
 
     public function test_module_action_is_type_aware(): void
