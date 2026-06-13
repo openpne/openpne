@@ -28,9 +28,13 @@ abstract class TestCase extends BaseTestCase
     /** Persist a global SNS setting for the test and refresh the cached map. */
     protected function setSnsSetting(SnsSettingKey $key, mixed $value): void
     {
-        DB::table('sns_settings')->updateOrInsert(
-            ['key' => $key->value],
-            ['value' => $key->encode($key->coerce($value))],
+        // Atomic upsert, not updateOrInsert: Unit tests don't use RefreshDatabase, so under
+        // parallel MySQL they share one database and their setUp() baseline seeds race —
+        // updateOrInsert's SELECT-then-INSERT loses to a duplicate-key 1062.
+        DB::table('sns_settings')->upsert(
+            [['key' => $key->value, 'value' => $key->encode($key->coerce($value))]],
+            ['key'],
+            ['value'],
         );
         app(SnsSettingService::class)->clearCache();
     }
