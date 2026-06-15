@@ -21,8 +21,9 @@ namespace App\Support;
  *     PC-vs-mobile split;
  *   - enable_friend_link / enable_cmd / enable_language — always-on or handled by other mechanisms.
  *
- * The OpenPNE 3 sns_config -> sns_settings data upgrade is out of scope here; `op3SourceName()` is
- * the seam that later upgrade step maps from.
+ * App\Upgrade\Steps\SnsSettingUpgrade copies the OpenPNE 3 sns_config values via `op3SourceName()`,
+ * for the keys `isMigratedFromOp3()` allows (display + gadget layout; the security keys are excluded
+ * so an OpenPNE 3 value cannot silently override their fail-closed default).
  */
 enum SnsSettingKey: string
 {
@@ -41,12 +42,20 @@ enum SnsSettingKey: string
     /** Whether the bot challenge is enforced on the auth entries. */
     case CaptchaEnabled = 'captcha_enabled';
 
+    /** The Classic gadget layout (layoutA/B/C) for the home / profile / login pages (App\Gadgets\GadgetLayout). */
+    case GadgetHomeLayout = 'gadget_home_layout';
+
+    case GadgetProfileLayout = 'gadget_profile_layout';
+
+    case GadgetLoginLayout = 'gadget_login_layout';
+
     /** Which admin page edits this setting. */
     public function group(): SettingGroup
     {
         return match ($this) {
             self::SnsName, self::SnsTitle, self::AdminMailAddress => SettingGroup::Base,
             self::RegistrationMode, self::CaptchaEnabled => SettingGroup::Auth,
+            self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => SettingGroup::GadgetLayout,
         };
     }
 
@@ -65,6 +74,26 @@ enum SnsSettingKey: string
             self::AdminMailAddress => 'admin_mail_address',
             self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',
+            // OpenPNE 3 stored the gadget layout as `{type}_layout` in sns_config (the home context
+            // is keyed "home", not "gadget").
+            self::GadgetHomeLayout => 'home_layout',
+            self::GadgetProfileLayout => 'profile_layout',
+            self::GadgetLoginLayout => 'login_layout',
+        };
+    }
+
+    /**
+     * Whether SnsSettingUpgrade copies this key from OpenPNE 3 sns_config. Display and gadget-layout
+     * keys do; the security keys (registration mode, CAPTCHA) are deliberately excluded — copying an
+     * OpenPNE 3 value could silently override their fail-closed default (e.g. an OpenPNE 3 site with
+     * the CAPTCHA off would turn it off here), so carrying those over is a separate, security-reviewed
+     * decision rather than part of this copy.
+     */
+    public function isMigratedFromOp3(): bool
+    {
+        return match ($this->group()) {
+            SettingGroup::Base, SettingGroup::GadgetLayout => $this->op3SourceName() !== null,
+            SettingGroup::Auth => false,
         };
     }
 
@@ -83,6 +112,7 @@ enum SnsSettingKey: string
             // disable the bot challenge.
             self::RegistrationMode => 'invite',
             self::CaptchaEnabled => true,
+            self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => 'layoutA',
         };
     }
 
@@ -127,6 +157,9 @@ enum SnsSettingKey: string
             self::AdminMailAddress => __('Administrator email address'),
             self::RegistrationMode => __('Registration mode'),
             self::CaptchaEnabled => __('Require CAPTCHA'),
+            self::GadgetHomeLayout => __('Home layout'),
+            self::GadgetProfileLayout => __('Profile layout'),
+            self::GadgetLoginLayout => __('Login layout'),
         };
     }
 
@@ -134,7 +167,8 @@ enum SnsSettingKey: string
     {
         return match ($this) {
             self::SnsName, self::AdminMailAddress => true,
-            self::SnsTitle, self::RegistrationMode, self::CaptchaEnabled => false,
+            self::SnsTitle, self::RegistrationMode, self::CaptchaEnabled,
+            self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => false,
         };
     }
 
