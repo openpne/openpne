@@ -27,9 +27,14 @@
                     @include('layouts.partials.local-nav')
                 </div>
 
-                {{-- A screen that defines a `sidemenu` section opts into OpenPNE 3's two-column
-                     LayoutB (Left + Center); others stay single-column LayoutC. --}}
-                @php($layout = $layout ?? (\Illuminate\Support\Facades\View::hasSection('sidemenu') ? 'B' : 'C'))
+                {{-- OpenPNE 3 layout letter from the zones present: A has a `top` row, B a `sidemenu`
+                     column, C neither (gadget pages feed top/sidemenu/bottom; other pages only
+                     content/sidemenu, so they stay B/C exactly as before). --}}
+                @php($layout = $layout ?? match (true) {
+                    \Illuminate\Support\Facades\View::hasSection('top') => 'A',
+                    \Illuminate\Support\Facades\View::hasSection('sidemenu') => 'B',
+                    default => 'C',
+                })
                 <div id="Layout{{ $layout }}" class="Layout">
                     {{-- OpenPNE 3 alertBox markup so the ported skin styles flash messages. --}}
                     @if (session('error'))
@@ -43,6 +48,12 @@
                         </div>
                     @endif
 
+                    @hasSection('top')
+                        <div id="Top">
+                            @yield('top')
+                        </div><!-- Top -->
+                    @endif
+
                     @hasSection('sidemenu')
                         <div id="Left">
                             @yield('sidemenu')
@@ -52,6 +63,12 @@
                     <div id="Center">
                         @yield('content')
                     </div><!-- Center -->
+
+                    @hasSection('bottom')
+                        <div id="Bottom">
+                            @yield('bottom')
+                        </div><!-- Bottom -->
+                    @endif
                 </div><!-- Layout -->
             </div><!-- ContentsContainer -->
         </div><!-- Contents -->
