@@ -23,4 +23,9 @@ class SearchBoxGadget extends GadgetKind
     {
         return 'gadget.search-box';
     }
+
+    public function partId(int $gadgetId): ?string
+    {
+        return 'searchLine_'.$gadgetId;
+    }
 }

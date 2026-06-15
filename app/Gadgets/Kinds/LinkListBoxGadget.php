@@ -43,4 +43,7 @@ class LinkListBoxGadget extends GadgetKind
     {
         return $context === 'sidebanner' ? self::ANYONE : self::MEMBERS;
     }
+
+    // partId stays null: OpenPNE 3's box id here was not gadget-scoped (a loop-variable artifact),
+    // so there is no stable per-gadget id to preserve.
 }

@@ -56,9 +56,14 @@ abstract class GadgetKind
         return true;
     }
 
-    /** The DOM id of the rendered block: kind-scoped + gadget id, so two gadgets never collide. */
-    public function partId(int $gadgetId): string
+    /**
+     * The OpenPNE 3-compatible DOM id of this kind's rendered block, so a site's custom CSS keeps
+     * matching. OpenPNE 3 used a kind-specific prefix + gadget id (e.g. `information_{id}`,
+     * `friendList_{id}`), so each kind overrides this; null when OpenPNE 3 emitted no id (a kind that
+     * renders a bare form, e.g. the login / language selector).
+     */
+    public function partId(int $gadgetId): ?string
     {
-        return $this->name().'_'.$gadgetId;
+        return null;
     }
 }

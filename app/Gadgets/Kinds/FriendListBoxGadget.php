@@ -16,4 +16,9 @@ class FriendListBoxGadget extends GridListGadget
     {
         return 'gadget.friend-list-box';
     }
+
+    public function partId(int $gadgetId): ?string
+    {
+        return 'friendList_'.$gadgetId;
+    }
 }

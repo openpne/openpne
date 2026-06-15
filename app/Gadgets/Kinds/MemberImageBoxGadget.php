@@ -28,4 +28,9 @@ class MemberImageBoxGadget extends GadgetKind
     {
         return $context === 'profile' ? self::ANYONE : self::MEMBERS;
     }
+
+    public function partId(int $gadgetId): ?string
+    {
+        return 'memberImageBox_'.$gadgetId;
+    }
 }

@@ -36,4 +36,9 @@ class InformationBoxGadget extends GadgetKind
     {
         return $context === 'sidebanner' ? self::ANYONE : self::MEMBERS;
     }
+
+    public function partId(int $gadgetId): ?string
+    {
+        return 'information_'.$gadgetId;
+    }
 }

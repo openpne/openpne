@@ -106,13 +106,14 @@ class GadgetServiceTest extends TestCase
         $this->assertSame('full', $grid['type']);
     }
 
-    public function test_part_id_is_kind_scoped(): void
+    public function test_passes_through_kind_part_id_and_subject(): void
     {
+        $subject = Member::factory()->create();
         $gadget = $this->makeGadget('home', 'contents', 'freeArea');
-        $viewer = Member::factory()->create();
 
-        $zones = app(GadgetService::class)->zones('home', null, $viewer);
+        $item = app(GadgetService::class)->zones('home', $subject, Member::factory()->create())['contents'][0];
 
-        $this->assertSame('freeArea_'.$gadget->id, $zones['contents'][0]['partId']);
+        $this->assertSame('freeArea_'.$gadget->id, $item['partId']);
+        $this->assertTrue($subject->is($item['subject'])); // the subject the caller passed reaches the item
     }
 }

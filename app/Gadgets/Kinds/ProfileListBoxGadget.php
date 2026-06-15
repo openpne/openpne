@@ -28,4 +28,10 @@ class ProfileListBoxGadget extends GadgetKind
     {
         return self::ANYONE;
     }
+
+    /** OpenPNE 3 used the fixed id `profile` here (one profile list per page), not a gadget-scoped one. */
+    public function partId(int $gadgetId): ?string
+    {
+        return 'profile';
+    }
 }

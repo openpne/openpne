@@ -16,4 +16,9 @@ class CommunityJoinListBoxGadget extends GridListGadget
     {
         return 'gadget.community-join-list-box';
     }
+
+    public function partId(int $gadgetId): ?string
+    {
+        return 'communityList_'.$gadgetId;
+    }
 }

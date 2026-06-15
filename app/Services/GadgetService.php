@@ -32,11 +32,12 @@ class GadgetService
 
     /**
      * Render-ready gadgets for a context, grouped by the active layout's zones (in render order, all
-     * present even when empty). $subject is the member a per-member kind renders for (its meaning is
-     * fixed per context: home=viewer, profile=owner, login/sidebanner=null); $viewer is the
+     * present even when empty). $subject is the member a per-member kind (memberImageBox, friend /
+     * community list, profileListBox) renders for and is passed through on each item; its meaning is
+     * fixed per context: home=viewer, profile=owner, login/sidebanner=null. $viewer is the
      * authenticated member, or null for a guest.
      *
-     * @return array<string, list<array{name: string, component: string, config: array<string, mixed>, partId: string}>>
+     * @return array<string, list<array{name: string, component: string, config: array<string, mixed>, partId: ?string, subject: ?Member}>>
      */
     public function zones(string $context, ?Member $subject = null, ?Member $viewer = null): array
     {
@@ -70,6 +71,7 @@ class GadgetService
                 'component' => $kind->component(),
                 'config' => $config,
                 'partId' => $kind->partId($row['id']),
+                'subject' => $subject,
             ];
         }
 
