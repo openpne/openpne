@@ -15,6 +15,8 @@ use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
+use App\Upgrade\Steps\GadgetConfigUpgrade;
+use App\Upgrade\Steps\GadgetUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberProfileUpgrade;
@@ -25,6 +27,7 @@ use App\Upgrade\Steps\ProfileOptionTranslationUpgrade;
 use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileTranslationUpgrade;
 use App\Upgrade\Steps\ProfileUpgrade;
+use App\Upgrade\Steps\SnsSettingUpgrade;
 
 /** The upgrade steps in run order. Adding a feature = adding its step here. */
 final class StepRegistry
@@ -65,6 +68,11 @@ final class StepRegistry
             // navigation_translations.id references navigations.id, so translations run after.
             NavigationUpgrade::class,
             NavigationTranslationUpgrade::class,
+            // gadget_configs.gadget_id references gadgets.id, so configs run after gadgets.
+            GadgetUpgrade::class,
+            GadgetConfigUpgrade::class,
+            // sns_settings is independent (no FK); migrates the display + gadget-layout sns_config keys.
+            SnsSettingUpgrade::class,
         ];
     }
 
