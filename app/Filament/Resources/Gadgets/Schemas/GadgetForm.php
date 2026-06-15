@@ -6,6 +6,7 @@ use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKindRegistry;
 use App\Models\Gadget;
+use Closure;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
@@ -13,6 +14,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 /**
@@ -34,6 +36,12 @@ class GadgetForm
                     ->options(GadgetResource::contextOptions())
                     ->required()
                     ->live()
+                    // Changing the placement invalidates the kind/zone choices (and their config).
+                    ->afterStateUpdated(function (Set $set): void {
+                        $set('name', null);
+                        $set('zone', null);
+                    })
+                    ->rules(['in:'.implode(',', array_keys(GadgetResource::contextOptions()))])
                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
 
                 Select::make('name')
@@ -41,12 +49,30 @@ class GadgetForm
                     ->options(fn (Get $get): array => GadgetResource::kindOptions((string) $get('context')))
                     ->required()
                     ->live()
+                    // The options only filter the dropdown; this rejects a kind not offered in the
+                    // chosen context on save (so the renderer never sees an out-of-context kind).
+                    ->rules([
+                        fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                            if ($value !== null && $value !== ''
+                                && ! array_key_exists((string) $value, GadgetResource::kindOptions((string) $get('context')))) {
+                                $fail(__('This gadget is not available for the selected placement.'));
+                            }
+                        },
+                    ])
                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
 
                 Select::make('zone')
                     ->label(__('Zone'))
                     ->options(fn (Get $get): array => GadgetResource::zoneOptions((string) $get('context')))
-                    ->required(),
+                    ->required()
+                    ->rules([
+                        fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                            if ($value !== null && $value !== ''
+                                && ! array_key_exists((string) $value, GadgetResource::zoneOptions((string) $get('context')))) {
+                                $fail(__('This zone is not available for the selected placement.'));
+                            }
+                        },
+                    ]),
 
                 TextInput::make('sort_order')
                     ->label(__('Sort Order'))

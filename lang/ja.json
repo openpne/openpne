@@ -627,5 +627,7 @@
     "Side menu": "サイドメニュー",
     "Top": "上部",
     "Unsupported": "未対応",
-    "Zone": "ゾーン"
+    "Zone": "ゾーン",
+    "This gadget is not available for the selected placement.": "選択した配置ではこのガジェットを使用できません。",
+    "This zone is not available for the selected placement.": "選択した配置ではこのゾーンを使用できません。"
 }

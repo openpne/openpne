@@ -91,6 +91,29 @@ class GadgetResourceTest extends TestCase
         $this->assertSame('New', $item['config']['title']);
     }
 
+    public function test_rejects_a_kind_not_offered_in_the_context(): void
+    {
+        // loginForm is login-only; placing it on the home page must fail validation, not save.
+        Livewire::test(CreateGadget::class)
+            ->fillForm([
+                'context' => 'home',
+                'name' => 'loginForm',
+                'zone' => 'contents',
+                'sort_order' => 10,
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['name']);
+    }
+
+    public function test_service_skips_a_row_whose_kind_is_not_valid_for_its_context(): void
+    {
+        $viewer = Member::factory()->create();
+        // A row planted out of context (e.g. a hand-edited DB / unexpected upgrade) must not render.
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'loginForm', 'sort_order' => 0]);
+
+        $this->assertSame([], app(GadgetService::class)->zones('home', null, $viewer)['contents']);
+    }
+
     public function test_table_flags_an_unsupported_kind(): void
     {
         // A gadget whose kind is not registered (an OpenPNE 3 kind not yet ported) is flagged.

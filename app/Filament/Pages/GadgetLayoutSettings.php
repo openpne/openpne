@@ -131,7 +131,8 @@ class GadgetLayoutSettings extends Page
                 ->label($key->label())
                 ->options(self::layoutOptions())
                 ->selectablePlaceholder(false)
-                ->required();
+                ->required()
+                ->rules(['in:'.implode(',', array_keys(self::layoutOptions()))]);
         }
 
         return Section::make(__('Gadget layout'))->schema($fields);

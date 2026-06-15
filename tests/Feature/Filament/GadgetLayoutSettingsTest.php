@@ -49,4 +49,15 @@ class GadgetLayoutSettingsTest extends TestCase
         // both caches cleared, so the renderer uses layoutC (no `top` zone) immediately
         $this->assertArrayNotHasKey('top', app(GadgetService::class)->zones('home', null, $viewer));
     }
+
+    public function test_rejects_an_unknown_layout(): void
+    {
+        // layoutD is sidebanner-only (not selectable); an unknown value must not reach sns_settings.
+        Livewire::test(GadgetLayoutSettings::class)
+            ->fillForm(['gadget_home_layout' => 'layoutD'])
+            ->call('save')
+            ->assertHasErrors('data.gadget_home_layout');
+
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'gadget_home_layout', 'value' => 'layoutD']);
+    }
 }
