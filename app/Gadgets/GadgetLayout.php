@@ -8,12 +8,8 @@ use App\Support\SnsSettingKey;
 
 /**
  * The SSoT for gadget placement: the ported PC contexts, the zones each layout exposes, and the
- * OpenPNE 3 `gadget.type` ↔ (context, zone) mapping the upgrade splits on.
- *
- * A selectable context (home/profile/login) lets the admin pick layoutA/B/C, which decides the
- * active zone set; sidebanner is a fixed single-zone global area (OpenPNE 3 layoutD). The zone set a
- * context can ever hold is layoutA's (the widest), so the upgrade keeps every type that maps into a
- * ported context and drops the rest (mobile/smartphone/dailyNews).
+ * OpenPNE 3 `gadget.type` ↔ (context, zone) mapping the upgrade splits on. Selectable contexts
+ * (home/profile/login) pick layoutA/B/C; sidebanner is a fixed single-zone global area.
  */
 final class GadgetLayout
 {
@@ -75,9 +71,8 @@ final class GadgetLayout
     }
 
     /**
-     * OpenPNE 3 `gadget.type` => [context, zone] for every ported type. Built by replaying the
-     * OpenPNE 3 type-naming over each context's widest layout, so it is impossible to drift from the
-     * naming rule. Used by GadgetUpgrade to build the split CASEs and the keep filter.
+     * OpenPNE 3 `gadget.type` => [context, zone] for every ported type, built by replaying the
+     * type-naming rule (over each context's widest layout) so it cannot drift from it.
      *
      * @return array<string, array{context: string, zone: string}>
      */

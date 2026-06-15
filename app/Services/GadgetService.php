@@ -13,14 +13,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Resolves the admin-configurable Classic gadgets (`gadgets` + `gadget_configs`) into render-ready
- * items grouped by zone, mirroring NavigationService: the stored rows are cached as plain arrays
- * (never Eloquent models — the production cache cannot serialize classes), and the admin UI calls
- * clearCache() after a change.
- *
- * A row is dropped when its kind is unregistered or unavailable (hidden, like an unresolved nav
- * uri), when the active layout does not expose its zone, or when a guest viewer may not see a
- * members-only kind in this context.
+ * Resolves the gadgets (`gadgets` + `gadget_configs`) into render-ready items grouped by zone. Rows
+ * are cached as plain arrays (the production cache cannot serialize models); the admin UI calls
+ * clearCache() after a change. A row is dropped when its kind is unregistered/unavailable, its zone
+ * is not in the active layout, or a guest may not see a members-only kind here.
  */
 class GadgetService
 {
@@ -31,11 +27,9 @@ class GadgetService
     public function __construct(private readonly SnsSettingService $settings) {}
 
     /**
-     * Render-ready gadgets for a context, grouped by the active layout's zones (in render order, all
-     * present even when empty). $subject is the member a per-member kind (memberImageBox, friend /
-     * community list, profileListBox) renders for and is passed through on each item; its meaning is
-     * fixed per context: home=viewer, profile=owner, login/sidebanner=null. $viewer is the
-     * authenticated member, or null for a guest.
+     * Render-ready gadgets for a context, grouped by the active layout's zones (all present, in order).
+     * $subject is passed through on each item for the per-member kinds; its meaning is per context
+     * (home=viewer, profile=owner, login/sidebanner=null). $viewer is null for a guest.
      *
      * @return array<string, list<array{name: string, component: string, config: array<string, mixed>, partId: ?string, subject: ?Member}>>
      */
@@ -93,9 +87,8 @@ class GadgetService
     }
 
     /**
-     * Gadget rows grouped by context as plain arrays (with each row's config name=>value map),
-     * ordered by sort_order so every zone comes out sorted. Cached; guards against the table not
-     * existing yet (pre-migrate / console boot).
+     * Gadget rows grouped by context as plain arrays (each with its config name=>value map), ordered
+     * by sort_order. Cached; guards against the table not existing yet (pre-migrate / console boot).
      *
      * @return array<string, list<array{id: int, zone: string, name: string, source_type: ?string, sort_order: ?int, config: array<string, string>}>>
      */

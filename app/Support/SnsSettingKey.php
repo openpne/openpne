@@ -22,8 +22,8 @@ namespace App\Support;
  *   - enable_friend_link / enable_cmd / enable_language — always-on or handled by other mechanisms.
  *
  * App\Upgrade\Steps\SnsSettingUpgrade copies the OpenPNE 3 sns_config values via `op3SourceName()`,
- * for the keys `isMigratedFromOp3()` allows (display + gadget layout; the security keys are deferred
- * to the auth-settings work so a fail-closed default is never silently overridden).
+ * for the keys `isMigratedFromOp3()` allows (display + gadget layout; the security keys are excluded
+ * so an OpenPNE 3 value cannot silently override their fail-closed default).
  */
 enum SnsSettingKey: string
 {
@@ -84,9 +84,10 @@ enum SnsSettingKey: string
 
     /**
      * Whether SnsSettingUpgrade copies this key from OpenPNE 3 sns_config. Display and gadget-layout
-     * keys do; the security keys (registration mode, CAPTCHA) are deliberately excluded — their
-     * OpenPNE 3 values are migrated by the auth-settings work (SNS Stage 2) under security review, so
-     * a fail-closed default is never silently overridden here.
+     * keys do; the security keys (registration mode, CAPTCHA) are deliberately excluded — copying an
+     * OpenPNE 3 value could silently override their fail-closed default (e.g. an OpenPNE 3 site with
+     * the CAPTCHA off would turn it off here), so carrying those over is a separate, security-reviewed
+     * decision rather than part of this copy.
      */
     public function isMigratedFromOp3(): bool
     {

@@ -7,13 +7,8 @@ use App\Upgrade\Column;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `gadget` → OpenPNE 4 `gadgets`, splitting the single OpenPNE 3 `type` (e.g.
- * `profileSideMenu`) into `context` + `zone` and keeping the original in `source_type` for custom-CSS
- * compatibility.
- *
- * The split is a pair of SQL CASEs built from GadgetLayout::op3TypeMap() (the SSoT replaying the
- * OpenPNE 3 type-naming rule), and the filter keeps only the types that map into a ported PC context
- * — mobile/smartphone/daily-news gadget types are dropped (see gaps()).
+ * OpenPNE 3 `gadget` → OpenPNE 4 `gadgets`: splits `type` into `context` + `zone` (a pair of CASEs
+ * from GadgetLayout::op3TypeMap()) and keeps only the types that map into a ported PC context.
  */
 class GadgetUpgrade extends UpgradeStep
 {
@@ -52,7 +47,6 @@ class GadgetUpgrade extends UpgradeStep
         ];
     }
 
-    /** Comma-separated quoted list of the OpenPNE 3 types that map into a ported context. */
     private function typeList(): string
     {
         return implode(', ', array_map(
@@ -61,7 +55,6 @@ class GadgetUpgrade extends UpgradeStep
         ));
     }
 
-    /** CASE `type` WHEN <op3 type> THEN <context|zone> ... END, from the type map. */
     private function splitCase(string $field): string
     {
         $whens = [];

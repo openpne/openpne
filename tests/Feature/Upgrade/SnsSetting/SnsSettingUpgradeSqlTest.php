@@ -12,7 +12,7 @@ use Tests\TestCase;
 /**
  * Runs the compiled sns_config → sns_settings copy against the real OpenPNE 3 `sns_config` DDL:
  * display settings carry over, gadget layout keys are renamed, and the security/unknown keys are not
- * migrated (their values are deferred to the auth-settings work).
+ * migrated (a security key's OpenPNE 3 value must not silently override its fail-closed default).
  *
  * MySQL only, like the other upgrade SQL tests.
  */
@@ -69,7 +69,7 @@ class SnsSettingUpgradeSqlTest extends TestCase
 
     public function test_does_not_migrate_security_or_unknown_keys(): void
     {
-        $this->seedConfig('is_use_captcha', '0');   // security key — deferred to the auth-settings work
+        $this->seedConfig('is_use_captcha', '0');   // security key — excluded so it cannot weaken the fail-closed default
         $this->seedConfig('enable_pc', '1');         // obsolete in OpenPNE 4
         $this->seedConfig('some_plugin_config', 'x'); // unrecognised custom config
 
