@@ -2,22 +2,21 @@
 
 namespace App\View\Components\Gadget;
 
-use App\Features\Profile\Data\ProfileFieldValue;
 use App\Features\Profile\Queries\ShowProfile;
 use App\Models\Member;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Collection;
 use Illuminate\View\Component;
 
 /**
  * OpenPNE 3 member/profileListBox: the subject member's profile values, filtered to what the
- * current viewer may see. The page-level owner→viewer block is the controller's; here we only
- * resolve per-field visibility, so the viewer comes from the request.
+ * current viewer may see. OpenPNE 3 always seeds the nickname row first, so the box renders even
+ * for a member with no visible fields; the visible profile fields follow. The page-level
+ * owner→viewer block is the controller's; here we only resolve per-field visibility.
  */
 class ProfileListBox extends Component
 {
-    /** @var Collection<int, ProfileFieldValue> */
-    public Collection $fields;
+    /** @var list<array{caption: string, value: string}> */
+    public array $rows;
 
     public string $lang;
 
@@ -30,12 +29,21 @@ class ProfileListBox extends Component
     ) {
         $this->lang = app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
 
+        if ($subject === null) {
+            $this->rows = [];
+
+            return;
+        }
+
         /** @var Member|null $viewer */
         $viewer = auth()->user();
 
-        $this->fields = $subject !== null
-            ? ($showProfile($viewer, $subject, $this->lang) ?? collect())
-            : collect();
+        $rows = [['caption' => __('%Nickname%'), 'value' => $subject->name]];
+        foreach ($showProfile($viewer, $subject, $this->lang) ?? collect() as $field) {
+            $rows[] = ['caption' => $field->profile->getCaption($this->lang), 'value' => $field->display($this->lang)];
+        }
+
+        $this->rows = $rows;
     }
 
     public function render(): View

@@ -1,12 +1,12 @@
-{{-- OpenPNE 3 member/profileListBox (listBox parts): the subject's visible profile values. Skipped
-     when nothing is visible, matching OpenPNE 3's empty-content drop. --}}
-@if ($fields->isNotEmpty())
+{{-- OpenPNE 3 member/profileListBox (listBox parts): the nickname row plus the subject's
+     viewer-visible profile values. --}}
+@if (count($rows))
     <x-gadget-part :part-id="$partId" part-name="listBox" :title="__('Profile')">
         <table>
-            @foreach ($fields as $field)
+            @foreach ($rows as $row)
                 <tr>
-                    <th>{{ $field->profile->getCaption($lang) }}</th>
-                    <td>{{ $field->display($lang) }}</td>
+                    <th>{{ $row['caption'] }}</th>
+                    <td>{{ $row['value'] }}</td>
                 </tr>
             @endforeach
         </table>

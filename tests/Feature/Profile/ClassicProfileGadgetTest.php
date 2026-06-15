@@ -44,6 +44,19 @@ class ClassicProfileGadgetTest extends TestCase
             ->assertDontSee('id="member_profile"', false); // the fixed fallback box is gone
     }
 
+    public function test_profile_list_box_renders_the_nickname_row_with_no_visible_fields(): void
+    {
+        $owner = Member::factory()->create(['name' => 'Owner']);
+        $viewer = Member::factory()->create();
+        // No profile fields: OpenPNE 3 still shows the Profile box, seeded with the nickname row.
+        $this->makeGadget('contents', 'profileListBox');
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('class="dparts listBox"', false) // box renders despite zero visible fields
+            ->assertSee('<th>Nickname</th>', false); // the always-present nickname row
+    }
+
     public function test_subject_is_the_profile_owner_not_the_viewer(): void
     {
         $owner = Member::factory()->create();
