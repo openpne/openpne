@@ -5,7 +5,6 @@ namespace App\View\Components\Gadget;
 use App\Features\Friend\Queries\ListFriends;
 use App\Models\Member;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Collection;
 use Illuminate\View\Component;
 
 /**
@@ -14,8 +13,12 @@ use Illuminate\View\Component;
  */
 class FriendListBox extends Component
 {
-    /** @var Collection<int, Member> */
-    public Collection $friends;
+    /** @var list<array{url: string, imageUrl: ?string, name: string}> */
+    public array $items;
+
+    public int $rows;
+
+    public int $cols;
 
     public string $type;
 
@@ -27,10 +30,18 @@ class FriendListBox extends Component
         public ?string $partId = null,
     ) {
         $this->type = (string) ($config['type'] ?? 'full');
-        $limit = max(1, (int) ($config['row'] ?? 3) * (int) ($config['col'] ?? 3));
-        $this->friends = $subject !== null
-            ? collect($listFriends($subject, $subject, $limit)->items())
+        $this->rows = max(1, (int) ($config['row'] ?? 3));
+        $this->cols = max(1, (int) ($config['col'] ?? 3));
+
+        $friends = $subject !== null
+            ? $listFriends->take($subject, $subject, $this->rows * $this->cols)
             : collect();
+
+        $this->items = $friends->map(fn (Member $member) => [
+            'url' => route('member.profile.show', $member),
+            'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'name' => $member->name,
+        ])->all();
     }
 
     public function render(): View

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Home;
 
+use App\Models\Community;
+use App\Models\CommunityMember;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
 use App\Models\Member;
@@ -65,16 +67,66 @@ class ClassicHomeGadgetTest extends TestCase
             ->assertSee('<p>TopNews</p>', false);
     }
 
-    public function test_data_driven_list_boxes_render_without_error(): void
+    public function test_data_driven_list_boxes_render_the_openpne3_nine_table_grid(): void
     {
         $member = Member::factory()->create();
+        $friend = Member::factory()->create(['name' => 'AlphaFriend']);
+        DB::table('friendships')->insert([
+            ['member_id' => $member->id, 'friend_id' => $friend->id],
+            ['member_id' => $friend->id, 'friend_id' => $member->id],
+        ]);
+        $community = Community::factory()->create(['name' => 'BetaCommunity']);
+        CommunityMember::factory()->create(['community_id' => $community->id, 'member_id' => $member->id]);
+
         $friends = $this->makeGadget('home', 'sideMenu', 'friendListBox');
         $communities = $this->makeGadget('home', 'sideMenu', 'communityJoinListBox');
 
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertSee('id="friendList_'.$friends->id.'"', false)
-            ->assertSee('id="communityList_'.$communities->id.'"', false);
+            ->assertSee('id="communityList_'.$communities->id.'"', false)
+            ->assertSee('class="dparts nineTable"', false) // skin targets .nineTable tr.photo td
+            ->assertSee('AlphaFriend')
+            ->assertSee('BetaCommunity');
+    }
+
+    public function test_empty_list_box_is_dropped_like_openpne3(): void
+    {
+        $member = Member::factory()->create();
+        $this->makeGadget('home', 'sideMenu', 'friendListBox');
+
+        // No friends: OpenPNE 3 drops the whole box rather than render an orphan heading.
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertDontSee('nineTable', false);
+    }
+
+    public function test_wrapper_carries_the_openpne3_parts_name_class(): void
+    {
+        $member = Member::factory()->create();
+        $this->makeGadget('home', 'contents', 'freeArea', ['value' => '<p>x</p>']);   // box, dparts
+        $this->makeGadget('home', 'top', 'informationBox', ['value' => '<p>y</p>']);  // single parts
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertSee('class="dparts box"', false)
+            ->assertSee('class="parts informationBox"', false); // single drops the inner div.parts
+    }
+
+    public function test_list_box_ignores_the_host_pages_page_query(): void
+    {
+        $member = Member::factory()->create();
+        $friend = Member::factory()->create(['name' => 'PageOneFriend']);
+        DB::table('friendships')->insert([
+            ['member_id' => $member->id, 'friend_id' => $friend->id],
+            ['member_id' => $friend->id, 'friend_id' => $member->id],
+        ]);
+        $this->makeGadget('home', 'sideMenu', 'friendListBox');
+
+        // A ?page= on the host page must not paginate the gadget's list away.
+        $this->actingAs($member)->get('/?page=2')
+            ->assertOk()
+            ->assertSee('PageOneFriend');
     }
 
     public function test_active_layout_narrows_the_rendered_zones(): void

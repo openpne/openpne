@@ -3,10 +3,8 @@
 namespace App\View\Components\Gadget;
 
 use App\Features\Community\Queries\ListMemberCommunities;
-use App\Models\Community;
 use App\Models\Member;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Collection;
 use Illuminate\View\Component;
 
 /**
@@ -15,8 +13,12 @@ use Illuminate\View\Component;
  */
 class CommunityJoinListBox extends Component
 {
-    /** @var Collection<int, Community> */
-    public Collection $communities;
+    /** @var list<array{url: string, imageUrl: ?string, name: string}> */
+    public array $items;
+
+    public int $rows;
+
+    public int $cols;
 
     public string $type;
 
@@ -28,10 +30,18 @@ class CommunityJoinListBox extends Component
         public ?string $partId = null,
     ) {
         $this->type = (string) ($config['type'] ?? 'full');
-        $limit = max(1, (int) ($config['row'] ?? 3) * (int) ($config['col'] ?? 3));
-        $this->communities = $subject !== null
-            ? collect($listCommunities($subject, $limit)->items())
+        $this->rows = max(1, (int) ($config['row'] ?? 3));
+        $this->cols = max(1, (int) ($config['col'] ?? 3));
+
+        $communities = $subject !== null
+            ? $listCommunities->take($subject, $this->rows * $this->cols)
             : collect();
+
+        $this->items = $communities->map(fn ($community) => [
+            'url' => route('community.show', $community),
+            'imageUrl' => $community->image?->thumbnailUrl(76, 76, square: true),
+            'name' => $community->name,
+        ])->all();
     }
 
     public function render(): View

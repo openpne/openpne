@@ -1,15 +1,16 @@
-{{-- OpenPNE 3 default/memberImageBox: the subject member's avatar + name, linking to the profile. --}}
+{{-- OpenPNE 3 default/memberImageBox (single parts): the subject member's avatar (p.photo) and
+     name (p.text). --}}
 @props(['config' => [], 'subject' => null, 'partId' => null])
 @if ($subject)
     @php($avatar = $subject->avatar?->file)
-    <x-gadget-part :part-id="$partId">
-        <div class="memberImageBox">
-            <a href="{{ route('member.profile.show', $subject) }}">
+    <x-gadget-part :part-id="$partId" part-name="memberImageBox" :single="true">
+        <div class="sortHandle">
+            <p class="photo">
                 @if ($avatar)
-                    <img src="{{ $avatar->thumbnailUrl(120, 120, square: true) }}" alt="{{ $subject->name }}">
+                    <img src="{{ $avatar->thumbnailUrl(180, 180, square: true) }}" alt="{{ $subject->name }}">
                 @endif
-                <span class="memberName">{{ $subject->name }}</span>
-            </a>
+            </p>
+            <p class="text">{{ $subject->name }}</p>
         </div>
     </x-gadget-part>
 @endif

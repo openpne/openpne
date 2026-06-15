@@ -1,21 +1,7 @@
-<x-gadget-part :part-id="$partId" :title="__('%Community%')">
-    @if ($communities->isNotEmpty())
-        <ul class="communityList">
-            @foreach ($communities as $community)
-                <li>
-                    <a href="{{ route('community.show', $community) }}">
-                        @if ($type !== 'only_name')
-                            @php($image = $community->image)
-                            @if ($image)
-                                <img src="{{ $image->thumbnailUrl(76, 76, square: true) }}" alt="{{ $community->name }}">
-                            @endif
-                        @endif
-                        @if ($type !== 'only_image')
-                            <span class="communityName">{{ $community->name }}</span>
-                        @endif
-                    </a>
-                </li>
-            @endforeach
-        </ul>
-    @endif
-</x-gadget-part>
+{{-- OpenPNE 3 community/joinListBox (nineTable). Skipped entirely when the member has joined no
+     community, matching OpenPNE 3's empty-content drop. --}}
+@if (count($items))
+    <x-gadget-part :part-id="$partId" part-name="nineTable" :title="__('%Community%')">
+        <x-gadget.nine-table :items="$items" :rows="$rows" :cols="$cols" :type="$type" />
+    </x-gadget-part>
+@endif
