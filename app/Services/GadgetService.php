@@ -48,7 +48,7 @@ class GadgetService
             }
 
             $kind = GadgetKindRegistry::find($row['name']);
-            if ($kind === null || ! $kind->isAvailable()) {
+            if ($kind === null || ! $kind->isAvailable() || ! in_array($context, $kind->contexts(), true)) {
                 continue;
             }
             if (! $isMember && $kind->viewablePrivilege($context) !== GadgetKind::ANYONE) {

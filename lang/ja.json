@@ -613,5 +613,21 @@
     "length": "長さ",
     "of": "の",
     "results": "結果",
-    "to": "に"
+    "to": "に",
+    "Bottom": "下部",
+    "Contents": "メイン",
+    "Gadget": "ガジェット",
+    "Gadget layout": "ガジェットレイアウト",
+    "Gadgets": "ガジェット",
+    "Home page": "ホーム画面",
+    "Login page": "ログイン画面",
+    "Placement": "配置",
+    "Profile page": "プロフィール画面",
+    "Side banner": "サイドバナー",
+    "Side menu": "サイドメニュー",
+    "Top": "上部",
+    "Unsupported": "未対応",
+    "Zone": "ゾーン",
+    "This gadget is not available for the selected placement.": "選択した配置ではこのガジェットを使用できません。",
+    "This zone is not available for the selected placement.": "選択した配置ではこのゾーンを使用できません。"
 }

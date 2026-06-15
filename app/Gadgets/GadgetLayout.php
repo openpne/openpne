@@ -54,6 +54,14 @@ final class GadgetLayout
         return self::LAYOUTS[$layout] ?? self::LAYOUTS['layoutA'];
     }
 
+    /** Every zone a context can hold (its widest layout) — the admin's zone choices. */
+    public static function contextZones(string $context): array
+    {
+        $meta = self::CONTEXTS[$context] ?? null;
+
+        return $meta === null ? [] : self::zones($meta['selectable'] ? 'layoutA' : $meta['default']);
+    }
+
     /** The SnsSettingKey holding a selectable context's chosen layout, or null when fixed. */
     public static function layoutSettingKey(string $context): ?SnsSettingKey
     {
