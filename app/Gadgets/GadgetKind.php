@@ -33,7 +33,7 @@ abstract class GadgetKind
      */
     abstract public function contexts(): array;
 
-    /** The Blade dynamic-component name the renderer resolves (its view lands with the render PRs). */
+    /** The Blade dynamic-component name the renderer resolves to this kind's view. */
     abstract public function component(): string;
 
     /**
