@@ -16,4 +16,7 @@ enum SettingGroup
 
     /** Registration / authentication settings (added with the auth settings page). */
     case Auth;
+
+    /** Per-context gadget layout choice, edited on the gadget layout page (not the base page). */
+    case GadgetLayout;
 }
