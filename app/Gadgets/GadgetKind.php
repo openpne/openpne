@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Gadgets;
 
+use Illuminate\Support\Str;
+
 /**
  * A gadget kind — what a `gadgets.name` value renders as (OpenPNE 3 gadget definition: component,
  * config schema, viewable_privilege), registered in GadgetKindRegistry.
@@ -28,6 +30,12 @@ abstract class GadgetKind
 
     /** The Blade dynamic-component name the renderer resolves to this kind's view. */
     abstract public function component(): string;
+
+    /** Human label for the admin (add-gadget dropdown, table). */
+    public function label(): string
+    {
+        return Str::headline($this->name());
+    }
 
     /**
      * Config parameters for a context, in form order.
