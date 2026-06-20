@@ -39,8 +39,11 @@ class BannerImageActionsTest extends TestCase
         $this->assertTrue($image->banners->contains($banner));
         $this->assertSame('https://ad.example.test', $image->url);
 
-        // Public: a guest can fetch the bytes through the banner delivery route.
-        $this->get(route('banner.image', $file->name))->assertOk();
+        // Public: a guest can fetch the bytes through the banner delivery route, served inline as the
+        // raster image type.
+        $response = $this->get(route('banner.image', $file->name));
+        $response->assertOk();
+        $this->assertStringContainsString('image/', (string) $response->headers->get('Content-Type'));
     }
 
     public function test_update_changes_metadata_and_placements(): void

@@ -15,18 +15,27 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class BannerImageController extends Controller
 {
+    /**
+     * MIME types served inline. Anything else is sent as an opaque attachment so a stored file is
+     * never interpreted as a same-origin document — the same second-line defense as FileController,
+     * kept here because this route is public and cacheable (the upload path already rejects non-raster
+     * types; a future OpenPNE 3 banner-image upgrade may not).
+     */
+    private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
     public function show(File $file, FileStorage $storage): StreamedResponse
     {
         abort_unless($file->related_entity_type === 'bannerImage', 404);
         abort_unless(Gate::allows('view', $file), 404);
 
+        $inline = in_array($file->type, self::INLINE_IMAGE_TYPES, true);
         $stream = $storage->readStream($file);
 
         return response()->stream(function () use ($stream): void {
             fpassthru($stream);
             fclose($stream);
         }, 200, [
-            'Content-Type' => $file->type,
+            'Content-Type' => $inline ? $file->type : 'application/octet-stream',
             'Content-Length' => (string) $file->byte_size,
             'X-Content-Type-Options' => 'nosniff',
             // Public and immutable (keyed by the opaque name), so it may be cached, unlike authed files.
