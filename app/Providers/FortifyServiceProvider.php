@@ -8,9 +8,10 @@ use App\Actions\Fortify\ResetMemberPassword;
 use App\Actions\Fortify\Responses\NeutralPasswordResetLinkResponse;
 use App\Captcha\Captcha;
 use App\Compat\RouteParityRegistry;
+use App\Features\Auth\LoginFormData;
 use App\Features\Auth\LoginThrottle;
-use App\Features\Auth\RegistrationMode;
 use App\Models\Member;
+use App\Services\GadgetService;
 use App\Support\SurfaceResolver;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -60,18 +61,11 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetMemberPassword::class);
 
         Fortify::loginView(function (Request $request) {
-            $captcha = app(Captcha::class);
-            $props = [
-                // Show the "register" link only when the open entry actually exists, so it is never a 404.
-                'registrationOpen' => RegistrationMode::current()->allowsOpenRegistration(),
-                // Surface the challenge once this IP has tripped the failure threshold, so the
-                // widget is on the form before the gated submit needs it.
-                'captchaRequired' => $captcha->enabled() && app(LoginThrottle::class)->challengeRequired((string) $request->ip()),
-                'challengeUrl' => route('altcha.challenge'),
-            ];
+            $props = LoginFormData::for($request);
 
             return $this->screen($request, 'login', 'auth.login',
-                fn () => Inertia::render('auth/login', $props), $props);
+                fn () => Inertia::render('auth/login', $props),
+                $props + ['zones' => app(GadgetService::class)->zones('login', viewer: $request->user())]);
         });
         Fortify::requestPasswordResetLinkView(fn (Request $request) => $this->screen(
             $request, 'password.request', 'auth.forgot-password',
