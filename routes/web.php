@@ -16,6 +16,7 @@ use App\Features\Member\InviteController;
 use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Profile\ProfileController;
+use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
 use App\Http\Middleware\AsBackgroundFetch;
@@ -127,6 +128,11 @@ Route::middleware(['guest', NoReferrer::class])->controller(RegistrationControll
 // redirect()->back() never lands on it.
 Route::get('/altcha/challenge', fn (Captcha $captcha) => response()->json($captcha->challenge()))
     ->middleware(['throttle:60,1', AsBackgroundFetch::class])->name('altcha.challenge');
+
+// Admin custom CSS, served as a text/css document the Classic shell <link>s (OpenPNE 3 parity:
+// /cache/css/customizing.css). Public — it styles guest pages too — and dynamic from the DB, not a
+// written cache file. See App\Http\Controllers\CustomizingCssController.
+Route::get('/cache/css/customizing.css', [CustomizingCssController::class, 'show'])->name('design.customizing_css');
 
 // Member invitation (OpenPNE 3 member/invite): a logged-in member invites an address, which issues a
 // registration token and mails the link. Gated to modes that allow member invites (open/invite);

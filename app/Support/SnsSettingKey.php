@@ -22,8 +22,8 @@ namespace App\Support;
  *   - enable_friend_link / enable_cmd / enable_language — always-on or handled by other mechanisms.
  *
  * App\Upgrade\Steps\SnsSettingUpgrade copies the OpenPNE 3 sns_config values via `op3SourceName()`,
- * for the keys `isMigratedFromOp3()` allows (display + gadget layout; the security keys are excluded
- * so an OpenPNE 3 value cannot silently override their fail-closed default).
+ * for the keys `isMigratedFromOp3()` allows (display + gadget layout + design customization; the
+ * security keys are excluded so an OpenPNE 3 value cannot silently override their fail-closed default).
  */
 enum SnsSettingKey: string
 {
@@ -49,6 +49,31 @@ enum SnsSettingKey: string
 
     case GadgetLoginLayout = 'gadget_login_layout';
 
+    /** OpenPNE 3 admin custom CSS, served to Classic as a `text/css` document (design.customizing_css). */
+    case CustomCss = 'customizing_css';
+
+    /** OpenPNE 3 PC HTML insertion slots, emitted raw at fixed positions in the Classic shell (design.*). */
+    case PcHtmlHead = 'pc_html_head';
+
+    case PcHtmlTop2 = 'pc_html_top2';
+
+    case PcHtmlTop = 'pc_html_top';
+
+    case PcHtmlBottom2 = 'pc_html_bottom2';
+
+    case PcHtmlBottom = 'pc_html_bottom';
+
+    /** Classic footer HTML, by page security (insecure / secure pages, OpenPNE 3 footer_before/after — not the viewer's login state). */
+    case FooterBefore = 'footer_before';
+
+    case FooterAfter = 'footer_after';
+
+    /**
+     * OpenPNE 3's default footer (its sns_config footer_before/after seed), the install default for the
+     * footer keys so a fresh site shows the same bar it always did.
+     */
+    private const FOOTER_DEFAULT = 'Powered by <a href="https://www.openpne.jp/" target="_blank" rel="noopener">OpenPNE</a>';
+
     /** Which admin page edits this setting. */
     public function group(): SettingGroup
     {
@@ -56,6 +81,8 @@ enum SnsSettingKey: string
             self::SnsName, self::SnsTitle, self::AdminMailAddress => SettingGroup::Base,
             self::RegistrationMode, self::CaptchaEnabled => SettingGroup::Auth,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => SettingGroup::GadgetLayout,
+            self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
+            self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => SettingGroup::Design,
         };
     }
 
@@ -79,6 +106,9 @@ enum SnsSettingKey: string
             self::GadgetHomeLayout => 'home_layout',
             self::GadgetProfileLayout => 'profile_layout',
             self::GadgetLoginLayout => 'login_layout',
+            // Design keys keep the OpenPNE 3 sns_config name verbatim (1:1 copy).
+            self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
+            self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => $this->value,
         };
     }
 
@@ -92,7 +122,7 @@ enum SnsSettingKey: string
     public function isMigratedFromOp3(): bool
     {
         return match ($this->group()) {
-            SettingGroup::Base, SettingGroup::GadgetLayout => $this->op3SourceName() !== null,
+            SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design => $this->op3SourceName() !== null,
             SettingGroup::Auth => false,
         };
     }
@@ -113,12 +143,23 @@ enum SnsSettingKey: string
             self::RegistrationMode => 'invite',
             self::CaptchaEnabled => true,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => 'layoutA',
+            // No custom CSS / HTML insertion until an operator sets it; the footer shows OpenPNE 3's bar.
+            self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
+            self::PcHtmlBottom => '',
+            self::FooterBefore, self::FooterAfter => self::FOOTER_DEFAULT,
         };
     }
 
     /** Validate and coerce an incoming (form) value to this key's typed value. */
     public function coerce(mixed $value): mixed
     {
+        // Design CSS/HTML is stored verbatim: trimming would drop a leading newline or space, and a
+        // stylesheet's @charset / @import is only honored at the very start (OpenPNE 3 stored these
+        // with trim disabled).
+        if ($this->group() === SettingGroup::Design) {
+            return is_string($value) ? $value : (string) $value;
+        }
+
         return match ($this) {
             self::CaptchaEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
             default => is_string($value) ? trim($value) : (string) $value,
@@ -160,6 +201,16 @@ enum SnsSettingKey: string
             self::GadgetHomeLayout => __('Home layout'),
             self::GadgetProfileLayout => __('Profile layout'),
             self::GadgetLoginLayout => __('Login layout'),
+            self::CustomCss => __('Custom CSS'),
+            self::PcHtmlHead => __('HTML insertion: <head>'),
+            self::PcHtmlTop2 => __('HTML insertion: page top (before content)'),
+            self::PcHtmlTop => __('HTML insertion: content top'),
+            self::PcHtmlBottom2 => __('HTML insertion: page bottom'),
+            self::PcHtmlBottom => __('HTML insertion: content bottom'),
+            // Chosen by the page's secure_page/insecure_page class (OpenPNE 3 isSecurePage), not the
+            // viewer's login state.
+            self::FooterBefore => __('Footer (insecure pages)'),
+            self::FooterAfter => __('Footer (secure pages)'),
         };
     }
 
@@ -168,7 +219,9 @@ enum SnsSettingKey: string
         return match ($this) {
             self::SnsName, self::AdminMailAddress => true,
             self::SnsTitle, self::RegistrationMode, self::CaptchaEnabled,
-            self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => false,
+            self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
+            self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
+            self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => false,
         };
     }
 
@@ -180,6 +233,19 @@ enum SnsSettingKey: string
     public function maxLength(): int
     {
         return 255;
+    }
+
+    /**
+     * Maximum stored size in BYTES. Design CSS/HTML is multi-line free text bounded only by the
+     * `sns_settings.value` TEXT column (65535 bytes, matching OpenPNE 3's sns_config.value), so it is
+     * validated by byte length, not the char-count maxLength() the short identity fields use.
+     */
+    public function maxBytes(): int
+    {
+        return match ($this->group()) {
+            SettingGroup::Design => 65535,
+            default => $this->maxLength(),
+        };
     }
 
     /**

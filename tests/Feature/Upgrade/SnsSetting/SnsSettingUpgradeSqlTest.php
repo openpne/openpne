@@ -67,6 +67,23 @@ class SnsSettingUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('sns_settings', ['key' => 'gadget_login_layout', 'value' => 'layoutA']);
     }
 
+    public function test_migrates_design_settings_verbatim(): void
+    {
+        $this->seedConfig('customizing_css', '#logo { color: red; }');
+        $this->seedConfig('pc_html_head', '<meta name="x" content="y">');
+        $this->seedConfig('pc_html_bottom2', '<script>analytics()</script>');
+        $this->seedConfig('footer_before', 'Guest footer');
+        $this->seedConfig('footer_after', 'Member footer');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'customizing_css', 'value' => '#logo { color: red; }']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'pc_html_head', 'value' => '<meta name="x" content="y">']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'pc_html_bottom2', 'value' => '<script>analytics()</script>']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'footer_before', 'value' => 'Guest footer']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'footer_after', 'value' => 'Member footer']);
+    }
+
     public function test_does_not_migrate_security_or_unknown_keys(): void
     {
         $this->seedConfig('is_use_captcha', '0');   // security key — excluded so it cannot weaken the fail-closed default

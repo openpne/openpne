@@ -19,4 +19,7 @@ enum SettingGroup
 
     /** Per-context gadget layout choice, edited on the gadget layout page (not the base page). */
     case GadgetLayout;
+
+    /** OpenPNE 3 design customizations (custom CSS, PC HTML insertion slots, footer HTML), edited on the design page. */
+    case Design;
 }

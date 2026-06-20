@@ -7,6 +7,7 @@ namespace Tests\Feature\Classic;
 use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Database\Seeders\NavigationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -72,7 +73,8 @@ class ShellNavigationTest extends TestCase
 
     public function test_footer_renders_the_configured_html(): void
     {
-        config(['openpne.classic.footer_html' => 'Operated by <a href="https://example.test">Example</a>']);
+        // A logged-in member is on a secure page, so the footer shows footer_after (OpenPNE 3 parity).
+        $this->setSnsSetting(SnsSettingKey::FooterAfter, 'Operated by <a href="https://example.test">Example</a>');
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/')
@@ -82,7 +84,7 @@ class ShellNavigationTest extends TestCase
 
     public function test_footer_paragraph_is_omitted_when_no_html_is_configured(): void
     {
-        config(['openpne.classic.footer_html' => '']);
+        $this->setSnsSetting(SnsSettingKey::FooterAfter, '');
         $member = Member::factory()->create();
 
         $html = $this->actingAs($member)->get('/')->assertOk()->getContent();
