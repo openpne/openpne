@@ -632,5 +632,17 @@
     "Unsupported": "未対応",
     "Zone": "ゾーン",
     "This gadget is not available for the selected placement.": "選択した配置ではこのガジェットを使用できません。",
-    "This zone is not available for the selected placement.": "選択した配置ではこのゾーンを使用できません。"
+    "This zone is not available for the selected placement.": "選択した配置ではこのゾーンを使用できません。",
+    "Design settings": "デザイン設定",
+    "Custom CSS": "カスタム CSS",
+    "HTML insertion": "HTML 挿入",
+    "HTML insertion: <head>": "HTML 挿入: <head>",
+    "HTML insertion: page top (before content)": "HTML 挿入: ページ上部（コンテンツ前）",
+    "HTML insertion: content top": "HTML 挿入: コンテンツ上部",
+    "HTML insertion: page bottom": "HTML 挿入: ページ下部",
+    "HTML insertion: content bottom": "HTML 挿入: コンテンツ下部",
+    "Footer": "フッター",
+    "Footer (logged out)": "フッター（ログアウト時）",
+    "Footer (logged in)": "フッター（ログイン時）",
+    "The :label value is too large.": "「:label」の値が大きすぎます。"
 }
