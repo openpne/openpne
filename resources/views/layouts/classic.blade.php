@@ -25,6 +25,8 @@
             <div id="HeaderContainer">
                 <h1 id="logo"><a href="{{ url('/') }}">{{ sns_name() }}</a></h1>
                 @include('layouts.partials.global-nav')
+                {{-- OpenPNE 3 #topBanner: operator banner shown above the content, by login state. --}}
+                <div id="topBanner">{!! classic_top_banner() !!}</div>
             </div><!-- HeaderContainer -->
         </div><!-- Header -->
 

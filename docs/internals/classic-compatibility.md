@@ -110,8 +110,8 @@ custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar 
 Carried gaps in this slice: the shell renders single-column `LayoutC`, while OpenPNE 3
 `member/home` / `member/profile` are `layoutA` — deferred until the `#Left` sidemenu/gadget
 slots land (Level 2). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
-broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching and banners are not
-yet ported; admin custom CSS, the PC HTML insertion slots, the footer, and gadget layout are. The
+broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching is not yet ported;
+admin custom CSS, the PC HTML insertion slots, the footer, gadget layout, and the top banner are. The
 footer omits the privacy-policy / terms links until those routes exist.
 
 ## JavaScript compatibility
@@ -134,8 +134,17 @@ the footer (`footer_before` / `footer_after`) are stored in `sns_settings` (the 
 [`SnsSettingKey`](../../app/Support/SnsSettingKey.php) group), edited on the admin
 [`DesignSettings`](../../app/Filament/Pages/DesignSettings.php) page, carried over verbatim by
 [`SnsSettingUpgrade`](../../app/Upgrade/Steps/SnsSettingUpgrade.php), and emitted raw as trusted
-operator HTML/CSS — stored without trimming so a stylesheet's leading `@charset` survives. Banners
-are the remaining design item, deferred to a later slice.
+operator HTML/CSS — stored without trimming so a stylesheet's leading `@charset` survives.
+
+The top banner (`#topBanner` above the content, OpenPNE 3 `op_banner`) shows operator HTML or one
+of a pool of images at random, by login state (`top_after` when signed in, else `top_before`). Images
+are uploaded in the [`BannerImages`](../../app/Filament/Resources/BannerImages/BannerImageResource.php)
+resource and served publicly through [`BannerImageController`](../../app/Http/Controllers/BannerImageController.php)
+(banners show to guests, so unlike other files they are not auth-gated); each placement's mode and HTML
+are set on [`BannerSettings`](../../app/Filament/Pages/BannerSettings.php). The OpenPNE 3 side banner is
+not ported: the PC side column is the gadget `sideBanner` zone (already ported) and `op_banner` side
+placements were mobile-only. Upgrading existing OpenPNE 3 banner rows is gated on the deferred
+`file` / `file_bin` upgrade.
 
 Modern does not apply the same CSS/HTML. It offers its own migration targets
 (logo, primary color, header image, footer/free area, a scoped safe-HTML slot).
