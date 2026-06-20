@@ -7,7 +7,7 @@ namespace App\Gadgets\Kinds;
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
 
-/** A free-form titled HTML block (OpenPNE 3 default/freeAreaBox). Public on the profile page. */
+/** A free-form titled HTML block (OpenPNE 3 default/freeAreaBox). Public on the profile/login pages. */
 class FreeAreaGadget extends GadgetKind
 {
     public function name(): string
@@ -17,7 +17,7 @@ class FreeAreaGadget extends GadgetKind
 
     public function contexts(): array
     {
-        return ['home', 'profile'];
+        return ['home', 'profile', 'login'];
     }
 
     public function component(): string
@@ -35,7 +35,7 @@ class FreeAreaGadget extends GadgetKind
 
     public function viewablePrivilege(string $context): int
     {
-        return $context === 'profile' ? self::ANYONE : self::MEMBERS;
+        return $context === 'home' ? self::MEMBERS : self::ANYONE;
     }
 
     public function partId(int $gadgetId): ?string

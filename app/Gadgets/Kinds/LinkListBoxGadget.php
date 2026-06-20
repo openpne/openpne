@@ -7,7 +7,7 @@ namespace App\Gadgets\Kinds;
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
 
-/** A titled list of up to ten links (OpenPNE 3 default/linkListBox). Public in the side banner. */
+/** A titled list of up to ten links (OpenPNE 3 default/linkListBox). Public in the side banner / login. */
 class LinkListBoxGadget extends GadgetKind
 {
     private const MAX_LINKS = 10;
@@ -19,7 +19,7 @@ class LinkListBoxGadget extends GadgetKind
 
     public function contexts(): array
     {
-        return ['home', 'sidebanner'];
+        return ['home', 'sidebanner', 'login'];
     }
 
     public function component(): string
@@ -41,7 +41,7 @@ class LinkListBoxGadget extends GadgetKind
 
     public function viewablePrivilege(string $context): int
     {
-        return $context === 'sidebanner' ? self::ANYONE : self::MEMBERS;
+        return $context === 'home' ? self::MEMBERS : self::ANYONE;
     }
 
     // partId stays null: OpenPNE 3's box id here was not gadget-scoped (a loop-variable artifact),
