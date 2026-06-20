@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Files\FileStorage;
 use App\Models\File;
 use Illuminate\Support\Facades\Gate;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -37,6 +38,11 @@ class BannerImageController extends Controller
         }, 200, [
             'Content-Type' => $inline ? $file->type : 'application/octet-stream',
             'Content-Length' => (string) $file->byte_size,
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                $inline ? HeaderUtils::DISPOSITION_INLINE : HeaderUtils::DISPOSITION_ATTACHMENT,
+                $file->original_filename ?? $file->name,
+                $file->name, // ASCII fallback for the opaque token
+            ),
             'X-Content-Type-Options' => 'nosniff',
             // Public and immutable (keyed by the opaque name), so it may be cached, unlike authed files.
             'Cache-Control' => 'public, max-age=86400',

@@ -46,6 +46,19 @@ class BannerImageActionsTest extends TestCase
         $this->assertStringContainsString('image/', (string) $response->headers->get('Content-Type'));
     }
 
+    public function test_a_non_raster_banner_file_is_served_as_an_attachment(): void
+    {
+        // The Filament upload rejects non-raster types, but a future OpenPNE 3 banner-image upgrade may
+        // import one; it must be an attachment, never an inline same-origin document.
+        $image = app(StoreBannerImage::class)(UploadedFile::fake()->create('x.html', 1, 'text/html'), null, null, []);
+
+        $response = $this->get(route('banner.image', $image->file->name));
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/octet-stream', (string) $response->headers->get('Content-Type'));
+        $this->assertStringContainsString('attachment', (string) $response->headers->get('Content-Disposition'));
+    }
+
     public function test_update_changes_metadata_and_placements(): void
     {
         $before = Banner::create(['name' => 'top_before']);
