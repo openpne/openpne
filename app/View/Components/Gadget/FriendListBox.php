@@ -9,7 +9,8 @@ use Illuminate\View\Component;
 
 /**
  * OpenPNE 3 friend/friendListBox: the subject member's friends as a row × col thumbnail grid. The
- * subject is also the viewer (home/profile own pages), so block-aware visibility is satisfied.
+ * subject owns the list (home: the viewer; profile: the viewed member); a profile the viewer may
+ * not see is already a 404 in the controller, so listing the owner's friends here is safe.
  */
 class FriendListBox extends Component
 {
