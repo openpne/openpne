@@ -644,5 +644,15 @@
     "Footer": "フッター",
     "The :label value is too large.": "「:label」の値が大きすぎます。",
     "Footer (insecure pages)": "フッター（非セキュアページ）",
-    "Footer (secure pages)": "フッター（セキュアページ）"
+    "Footer (secure pages)": "フッター（セキュアページ）",
+    "Banner image": "バナー画像",
+    "Banner images": "バナー画像",
+    "Top banner (before login)": "トップバナー（ログイン前）",
+    "Top banner (after login)": "トップバナー（ログイン後）",
+    "Label": "ラベル",
+    "Placements": "掲出位置",
+    "Upload a new image to replace the current one.": "現在の画像を置き換える新しい画像をアップロードします。",
+    "Banner settings": "バナー設定",
+    "Use HTML instead of images": "画像の代わりに HTML を使う",
+    "HTML": "HTML"
 }

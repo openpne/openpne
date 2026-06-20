@@ -16,6 +16,7 @@ use App\Features\Member\InviteController;
 use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Profile\ProfileController;
+use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
@@ -133,6 +134,11 @@ Route::get('/altcha/challenge', fn (Captcha $captcha) => response()->json($captc
 // /cache/css/customizing.css). Public — it styles guest pages too — and dynamic from the DB, not a
 // written cache file. See App\Http\Controllers\CustomizingCssController.
 Route::get('/cache/css/customizing.css', [CustomizingCssController::class, 'show'])->name('design.customizing_css');
+
+// Banner image bytes, public — OpenPNE 3 banners show to guests. Only banner-owned files are served
+// here (BannerImageController 404s anything else); the rest of the file store stays behind the authed
+// FileController. Bound by the opaque `name` token.
+Route::get('/banner/image/{file:name}', [BannerImageController::class, 'show'])->name('banner.image');
 
 // Member invitation (OpenPNE 3 member/invite): a logged-in member invites an address, which issues a
 // registration token and mails the link. Gated to modes that allow member invites (open/invite);
