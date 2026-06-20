@@ -36,8 +36,9 @@ class BannerImageForm
 
             TextInput::make('url')
                 ->label(__('Link URL'))
-                ->url()
-                ->maxLength(255),
+                // OpenPNE 3 stored the link in a TEXT column with no length cap; only require a valid
+                // URL (a stored http(s) link, rendered escaped in an <a href>).
+                ->url(),
 
             TextInput::make('name')
                 ->label(__('Label'))

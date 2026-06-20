@@ -3,8 +3,8 @@
 namespace Tests\Feature\Banner;
 
 use App\Features\Banner\Actions\DeleteBannerImage;
-use App\Features\Banner\Actions\ReplaceBannerImage;
 use App\Features\Banner\Actions\StoreBannerImage;
+use App\Features\Banner\Actions\UpdateBannerImage;
 use App\Files\FileStorage;
 use App\Models\Banner;
 use App\Models\BannerImage;
@@ -12,6 +12,7 @@ use App\Models\File;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Tests\TestCase;
 use Throwable;
 
@@ -42,12 +43,26 @@ class BannerImageActionsTest extends TestCase
         $this->get(route('banner.image', $file->name))->assertOk();
     }
 
-    public function test_replace_swaps_the_file_and_purges_the_old_one(): void
+    public function test_update_changes_metadata_and_placements(): void
+    {
+        $before = Banner::create(['name' => 'top_before']);
+        $after = Banner::create(['name' => 'top_after']);
+        $image = app(StoreBannerImage::class)(UploadedFile::fake()->image('x.png', 10, 10), 'https://old.test', 'Old', [$before->getKey()]);
+
+        app(UpdateBannerImage::class)($image, 'https://new.test', 'New', [$after->getKey()], null);
+
+        $fresh = $image->fresh();
+        $this->assertSame('https://new.test', $fresh->url);
+        $this->assertSame('New', $fresh->name);
+        $this->assertEqualsCanonicalizing([$after->getKey()], $fresh->banners->pluck('id')->all());
+    }
+
+    public function test_update_swaps_the_file_and_purges_the_old_one(): void
     {
         $image = app(StoreBannerImage::class)(UploadedFile::fake()->image('one.png', 10, 10), null, null, []);
         $old = $image->file;
 
-        app(ReplaceBannerImage::class)($image, UploadedFile::fake()->image('two.png', 10, 10));
+        app(UpdateBannerImage::class)($image, null, null, [], UploadedFile::fake()->image('two.png', 10, 10));
 
         $new = $image->fresh()->file;
         $this->assertNotSame($old->getKey(), $new->getKey());
@@ -56,6 +71,32 @@ class BannerImageActionsTest extends TestCase
 
         $this->assertNull(File::find($old->getKey()));
         $this->assertSame(0, DB::table('file_bin')->where('file_id', $old->getKey())->count());
+    }
+
+    public function test_a_failed_image_swap_rolls_back_the_metadata_too(): void
+    {
+        $banner = Banner::create(['name' => 'top_after']);
+        $image = app(StoreBannerImage::class)(UploadedFile::fake()->image('old.png', 10, 10), 'https://old.test', 'Old', [$banner->getKey()]);
+        $oldFileId = $image->file_id;
+
+        // The replacement byte write fails; the whole edit (link/label included) must roll back.
+        $this->mock(FileStorage::class, function ($mock): void {
+            $mock->shouldReceive('writeStream')->andThrow(new RuntimeException('storage down'));
+            $mock->shouldReceive('delete');
+        });
+
+        try {
+            app(UpdateBannerImage::class)($image, 'https://new.test', 'New', [$banner->getKey()], UploadedFile::fake()->image('new.png', 10, 10));
+            $this->fail('expected the failed store to throw');
+        } catch (Throwable) {
+            // expected
+        }
+
+        $fresh = $image->fresh();
+        $this->assertSame('https://old.test', $fresh->url);
+        $this->assertSame('Old', $fresh->name);
+        $this->assertSame($oldFileId, $fresh->file_id);
+        $this->assertNotNull(File::find($oldFileId));
     }
 
     public function test_delete_removes_the_row_its_placements_and_the_file(): void

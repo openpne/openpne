@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\BannerImages\Pages;
 
 use App\Features\Banner\Actions\DeleteBannerImage;
-use App\Features\Banner\Actions\ReplaceBannerImage;
+use App\Features\Banner\Actions\UpdateBannerImage;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\BannerImage;
 use Filament\Actions\DeleteAction;
@@ -43,25 +43,22 @@ class EditBannerImage extends EditRecord
     }
 
     /**
-     * url/label/placements update in place; a new upload (if any) replaces the image through the action,
-     * which purges the old File only after the swap commits.
+     * One atomic edit: link/label/placements and an optional replacement image, all in the action's
+     * compensating transaction (a failed image swap rolls back the metadata too).
      *
      * @param  array<string, mixed>  $data
      */
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         /** @var BannerImage $record */
-        $record->update([
-            'url' => $data['url'] ?? null,
-            'name' => $data['name'] ?? null,
-        ]);
-        $record->banners()->sync(array_map('intval', $data['placements'] ?? []));
-
         $upload = Arr::first((array) ($data['image'] ?? []));
-        if ($upload instanceof UploadedFile) {
-            app(ReplaceBannerImage::class)($record, $upload);
-        }
 
-        return $record->refresh();
+        return app(UpdateBannerImage::class)(
+            $record,
+            $data['url'] ?? null,
+            $data['name'] ?? null,
+            array_map('intval', $data['placements'] ?? []),
+            $upload instanceof UploadedFile ? $upload : null,
+        );
     }
 }
