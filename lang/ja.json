@@ -643,6 +643,6 @@
     "HTML insertion: content bottom": "HTML 挿入: コンテンツ下部",
     "Footer": "フッター",
     "The :label value is too large.": "「:label」の値が大きすぎます。",
-    "Footer (public pages)": "フッター（公開ページ）",
-    "Footer (member-only pages)": "フッター（メンバー専用ページ）"
+    "Footer (insecure pages)": "フッター（非セキュアページ）",
+    "Footer (secure pages)": "フッター（セキュアページ）"
 }

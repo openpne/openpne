@@ -207,10 +207,10 @@ enum SnsSettingKey: string
             self::PcHtmlTop => __('HTML insertion: content top'),
             self::PcHtmlBottom2 => __('HTML insertion: page bottom'),
             self::PcHtmlBottom => __('HTML insertion: content bottom'),
-            // Chosen by page security (secure_page/insecure_page), not the viewer's login state: a
-            // logged-in member on a public page still gets the public-pages footer.
-            self::FooterBefore => __('Footer (public pages)'),
-            self::FooterAfter => __('Footer (member-only pages)'),
+            // Chosen by the page's secure_page/insecure_page class (OpenPNE 3 isSecurePage), not the
+            // viewer's login state.
+            self::FooterBefore => __('Footer (insecure pages)'),
+            self::FooterAfter => __('Footer (secure pages)'),
         };
     }
 
