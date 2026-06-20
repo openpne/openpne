@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
+use App\Models\BannerImage;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
@@ -84,6 +85,7 @@ class AppServiceProvider extends ServiceProvider
             'communityTopicComment' => CommunityTopicComment::class,
             'communityEvent' => CommunityEvent::class,
             'communityEventComment' => CommunityEventComment::class,
+            'bannerImage' => BannerImage::class,
         ]);
 
         Gate::policy(File::class, FilePolicy::class);

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Models\BannerImage;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
@@ -28,6 +29,10 @@ class FilePolicy extends BasePolicy
         $owner = $this->owner($file);
 
         return match (true) {
+            // A banner image is public by design: a banner shows to guests (the before-login
+            // placement), so anyone may fetch it. Writes are admin-only, so the public set is
+            // exactly the images an operator placed.
+            $owner instanceof BannerImage => true,
             // A member's image (avatar) is visible to any signed-in member the owner
             // has not blocked. ownerBlocksViewer is one-way (BasePolicy).
             $owner instanceof Member => $viewer !== null && ! $this->ownerBlocksViewer($owner, $viewer),

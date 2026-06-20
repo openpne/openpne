@@ -101,6 +101,10 @@ final class StepRegistry
             'community_topic_comment_image' => 'OpenPNE 3 topic-comment image attachments (up to three per comment, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
             'community_event_image' => 'OpenPNE 3 event image attachments (up to three per event, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
             'community_event_comment_image' => 'OpenPNE 3 event-comment image attachments (up to three per comment, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
+            'banner' => 'OpenPNE 3 design banners (top_before / top_after placements). Migrated by BannerUpgrade together with their images; pending the `file` step those images depend on.',
+            'banner_image' => 'OpenPNE 3 banner image pool. Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
+            'banner_use_image' => 'OpenPNE 3 banner↔image placement links. Migrated with BannerUpgrade; pending the `file` step those images depend on.',
+            'banner_translation' => 'OpenPNE 3 banner caption (I18n). Not migrated: the caption was an admin-only label, never rendered, and OpenPNE 4 labels the fixed placements in the UI.',
             'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped (Phase A is approval-only).',
         ];
     }
