@@ -11,6 +11,7 @@ use App\Features\Profile\Serializers\ProfileSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Models\Member;
+use App\Services\GadgetService;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,7 @@ use Inertia\Response as InertiaResponse;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request, Member $member, ShowProfile $query): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, Member $member, ShowProfile $query, GadgetService $gadgets): View|InertiaResponse|RedirectResponse
     {
         /** @var Member|null $viewer */
         $viewer = $request->user();
@@ -45,6 +46,7 @@ class ProfileController extends Controller
                 'fields' => $fields,
                 'isSelf' => $isSelf,
                 'lang' => $lang,
+                'zones' => $gadgets->zones('profile', subject: $member, viewer: $viewer),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/show', [
                 'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang),
