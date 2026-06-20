@@ -7,9 +7,19 @@
     <title>@yield('title') | {{ sns_title() ?: sns_name() }}</title>
     {{-- Default skin, served statically. $classicSkinCss is the seam a future theme resolver injects. --}}
     <link rel="stylesheet" href="{{ $classicSkinCss ?? asset('opSkinBasicPlugin/css/main.css') }}">
+    {{-- Admin custom CSS (OpenPNE 3 customizing_css), linked after the skin so it overrides it. --}}
+    @if ($customCssUrl = classic_custom_css_url())
+        <link rel="stylesheet" href="{{ $customCssUrl }}">
+    @endif
+    {{-- Operator HTML insertion in <head> (OpenPNE 3 pc_html_head); admin-trusted, output raw. --}}
+    {!! classic_html_slot('head') !!}
 </head>
 <body id="{{ $pageId ?? '' }}" class="{{ $pageClass ?? 'secure_page' }}">
+{{-- Operator HTML insertion just inside <body> (OpenPNE 3 pc_html_top2). --}}
+{!! classic_html_slot('top2') !!}
 <div id="Body">
+{{-- Operator HTML insertion at the top of #Body (OpenPNE 3 pc_html_top). --}}
+{!! classic_html_slot('top') !!}
     <div id="Container">
         <div id="Header">
             <div id="HeaderContainer">
@@ -77,15 +87,21 @@
 
         <div id="Footer">
             <div id="FooterContainer">
-                {{-- Trusted admin/operator HTML (OpenPNE 3 SnsConfig footer). $classicFooterHtml
-                     is the seam a future admin resolver injects; config is the default. --}}
-                @php($footerHtml = $classicFooterHtml ?? config('openpne.classic.footer_html'))
+                {{-- Trusted admin/operator HTML (OpenPNE 3 footer_before/after), chosen by the page's
+                     secure_page/insecure_page class, matching OpenPNE 3 isSecurePage. $classicFooterHtml
+                     stays a per-request override seam. --}}
+                @php($footerHtml = $classicFooterHtml ?? classic_footer_html(($pageClass ?? 'secure_page') !== 'insecure_page'))
                 @if ($footerHtml)
                     <p>{!! $footerHtml !!}</p>
                 @endif
             </div>
         </div><!-- Footer -->
+
+        {{-- Operator HTML insertion before #Container closes (OpenPNE 3 pc_html_bottom2). --}}
+        {!! classic_html_slot('bottom2') !!}
     </div><!-- Container -->
+    {{-- Operator HTML insertion before #Body closes (OpenPNE 3 pc_html_bottom). --}}
+    {!! classic_html_slot('bottom') !!}
 </div><!-- Body -->
 </body>
 </html>

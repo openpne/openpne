@@ -77,8 +77,11 @@ reproduces the base OpenPNE 3 `pc_frontend` layout DOM (`#Body > #Container > #H
 #Contents / #Footer`, `div#globalNav > ul > li`, `#localNav`, `#Layout{A..E} > #Center`, and the
 `alertBox` flash). The OpenPNE 3 default skin (`opSkinBasicPlugin`) is vendored verbatim and
 served statically from [`public/opSkinBasicPlugin/`](../../public/opSkinBasicPlugin) through a
-plain `<link>`; the `$classicSkinCss` view variable is the seam a later theme / `customizing.css`
-resolver swaps. `@vite` is not used for Classic.
+plain `<link>`; the `$classicSkinCss` view variable is the seam a later theme resolver swaps. Admin
+custom CSS is linked after it as its own `text/css` document
+([`/cache/css/customizing.css`](../../app/Http/Controllers/CustomizingCssController.php), OpenPNE 3
+parity) rather than inlined, so `@charset` / `@import` / relative `url(...)` keep stylesheet
+semantics. `@vite` is not used for Classic.
 
 Classic forms use the OpenPNE 3 `.form` two-column `<table>` (`<th>` label / `<td>` field), the
 `input_text` / `input_file` / `input_submit` classes, the `operation` button area, and the
@@ -100,16 +103,16 @@ is component-driven, not data-driven from this table. A stored `uri` is a normal
 the renderer hides any item whose path matches no route or an OpenPNE 3 compatibility shim, and
 renders a logout-style item (GET-unreachable in OpenPNE 4) as a POST form button. The `<li>` id is
 `{prefix}_{op_url_to_id(source_uri)}` — `source_uri` keeps the original OpenPNE 3 value so a site's
-custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar renders
-`openpne.classic.footer_html` (a trusted-HTML seam for the future admin SnsConfig footer;
-`$classicFooterHtml` overrides it per request).
+custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar renders the admin
+`footer_before` / `footer_after` setting, chosen by the page's `secure_page` / `insecure_page` class
+(OpenPNE 3 `isSecurePage`); `$classicFooterHtml` overrides it per request.
 
 Carried gaps in this slice: the shell renders single-column `LayoutC`, while OpenPNE 3
 `member/home` / `member/profile` are `layoutA` — deferred until the `#Left` sidemenu/gadget
 slots land (Level 2). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
-broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching, admin custom
-CSS, and gadget layout are not ported. The footer omits the privacy-policy / terms links until those
-routes exist.
+broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching and banners are not
+yet ported; admin custom CSS, the PC HTML insertion slots, the footer, and gadget layout are. The
+footer omits the privacy-policy / terms links until those routes exist.
 
 ## JavaScript compatibility
 
@@ -125,6 +128,14 @@ as a gap (below).
 OpenPNE 3 admin design customizations are reproduced in Classic as far as
 possible: active skin/theme, custom CSS, PC HTML insertion slots, footer HTML,
 banners, gadgets, layout and navigation settings.
+
+Custom CSS, the PC HTML insertion slots (`pc_html_head` / `top2` / `top` / `bottom2` / `bottom`) and
+the footer (`footer_before` / `footer_after`) are stored in `sns_settings` (the `Design`
+[`SnsSettingKey`](../../app/Support/SnsSettingKey.php) group), edited on the admin
+[`DesignSettings`](../../app/Filament/Pages/DesignSettings.php) page, carried over verbatim by
+[`SnsSettingUpgrade`](../../app/Upgrade/Steps/SnsSettingUpgrade.php), and emitted raw as trusted
+operator HTML/CSS — stored without trimming so a stylesheet's leading `@charset` survives. Banners
+are the remaining design item, deferred to a later slice.
 
 Modern does not apply the same CSS/HTML. It offers its own migration targets
 (logo, primary color, header image, footer/free area, a scoped safe-HTML slot).
