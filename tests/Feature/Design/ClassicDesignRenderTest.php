@@ -25,6 +25,12 @@ class ClassicDesignRenderTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::CustomCss, 'body{}');
 
         $this->get('/login')->assertOk()->assertSee('/cache/css/customizing.css', false);
+
+        // An explicitly-empty value counts as "no custom CSS": the presence check is an existence
+        // query for a non-empty row, so no <link> is emitted.
+        $this->setSnsSetting(SnsSettingKey::CustomCss, '');
+
+        $this->get('/login')->assertOk()->assertDontSee('/cache/css/customizing.css', false);
     }
 
     public function test_html_insertion_slots_render_raw(): void

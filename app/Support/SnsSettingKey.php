@@ -63,7 +63,7 @@ enum SnsSettingKey: string
 
     case PcHtmlBottom = 'pc_html_bottom';
 
-    /** Classic footer HTML, by page security: insecure (logged-out) and secure (logged-in) — OpenPNE 3 footer_before/after. */
+    /** Classic footer HTML, by page security (insecure / secure pages, OpenPNE 3 footer_before/after — not the viewer's login state). */
     case FooterBefore = 'footer_before';
 
     case FooterAfter = 'footer_after';
@@ -207,8 +207,10 @@ enum SnsSettingKey: string
             self::PcHtmlTop => __('HTML insertion: content top'),
             self::PcHtmlBottom2 => __('HTML insertion: page bottom'),
             self::PcHtmlBottom => __('HTML insertion: content bottom'),
-            self::FooterBefore => __('Footer (logged out)'),
-            self::FooterAfter => __('Footer (logged in)'),
+            // Chosen by page security (secure_page/insecure_page), not the viewer's login state: a
+            // logged-in member on a public page still gets the public-pages footer.
+            self::FooterBefore => __('Footer (public pages)'),
+            self::FooterAfter => __('Footer (member-only pages)'),
         };
     }
 

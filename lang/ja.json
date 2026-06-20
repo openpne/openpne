@@ -642,7 +642,7 @@
     "HTML insertion: page bottom": "HTML 挿入: ページ下部",
     "HTML insertion: content bottom": "HTML 挿入: コンテンツ下部",
     "Footer": "フッター",
-    "Footer (logged out)": "フッター（ログアウト時）",
-    "Footer (logged in)": "フッター（ログイン時）",
-    "The :label value is too large.": "「:label」の値が大きすぎます。"
+    "The :label value is too large.": "「:label」の値が大きすぎます。",
+    "Footer (public pages)": "フッター（公開ページ）",
+    "Footer (member-only pages)": "フッター（メンバー専用ページ）"
 }
