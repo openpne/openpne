@@ -70,6 +70,8 @@
                         </div><!-- Bottom -->
                     @endif
                 </div><!-- Layout -->
+
+                @include('layouts.partials.side-banner')
             </div><!-- ContentsContainer -->
         </div><!-- Contents -->
 

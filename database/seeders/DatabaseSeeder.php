@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(PresetProfileSeeder::class);
         $this->call(NavigationSeeder::class);
+        $this->call(GadgetSeeder::class);
 
         Member::factory()->create([
             'name' => 'Test Member',
