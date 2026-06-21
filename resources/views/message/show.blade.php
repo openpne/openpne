@@ -1,6 +1,8 @@
 @extends('layouts.classic')
 
-@section('title', $view->message->subject)
+{{-- A null subject (legacy data) must stay the inline form: @section('title', null) would open a
+     block buffer with no @endsection. --}}
+@section('title', $view->message->subject ?? '')
 
 @section('sidemenu')
     <x-message.sidemenu :current="$view->box" :linkCurrent="true" />
@@ -47,7 +49,7 @@
             </table>
 
             <div class="block">
-                <p class="text"><x-user-text :value="$view->message->body" /></p>
+                <p class="text"><x-user-text :value="$view->message->body ?? ''" /></p>
             </div>
         </div>
     </div>

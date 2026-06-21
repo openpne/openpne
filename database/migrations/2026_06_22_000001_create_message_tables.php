@@ -26,10 +26,12 @@ return new class extends Migration
             // Keep the message when its author is deleted (OpenPNE 3 Member onDelete: set null), so
             // the recipient's copy still renders with a withdrawn sender.
             $table->foreignId('sender_id')->nullable()->constrained('members')->nullOnDelete();
-            // OpenPNE 3 subject/body are Doctrine `type: string` (no length) = MySQL TEXT; TEXT (not
-            // VARCHAR) so migrated content is never truncated.
-            $table->text('subject');
-            $table->text('body');
+            // OpenPNE 3 subject/body are Doctrine `type: string` (no length, no notnull) = nullable
+            // MySQL TEXT. Kept nullable so the upgrade copies legacy rows verbatim without losing a
+            // null/empty distinction or needing normalization; the compose form requires both. TEXT
+            // (not VARCHAR) so migrated content is never truncated.
+            $table->text('subject')->nullable();
+            $table->text('body')->nullable();
             // Reply links (OpenPNE 3 return_message_id = direct parent, thread_message_id = root).
             // Nullable, no FK cascade: a GC purge may remove a referenced row, and the upgrade
             // null-normalizes any dangling reference rather than carry a broken self-FK.

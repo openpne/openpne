@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -42,14 +43,16 @@ class ListMessages
             ->whereNull('message_recipients.recipient_purged_at')
             ->where('messages.is_draft', false)
             ->with('message.sender')
-            ->orderByDesc('messages.created_at')
+            // OpenPNE 3 sorts/dates the inbox by the receipt (MessageSendList.created_at), not the
+            // message — a draft delivered later appears by its delivery time, not its authoring time.
+            ->orderByDesc('message_recipients.created_at')
             ->select('message_recipients.*')
             ->paginate($perPage)
             ->through(fn (MessageRecipient $r): MessageListItem => new MessageListItem(
                 (int) $r->message_id,
                 $r->message?->sender,
                 (string) $r->message?->subject,
-                $r->message->created_at,
+                $r->created_at,
                 $r->read_at === null,
             ));
     }
@@ -84,18 +87,20 @@ class ListMessages
     {
         $id = $viewer->getKey();
 
+        // OpenPNE 3 sorts/dates the trash by the moved-to-trash time (DeletedMessage.created_at),
+        // which folds onto the per-side *_deleted_at column here.
         $received = DB::table('message_recipients')
             ->join('messages', 'messages.id', '=', 'message_recipients.message_id')
             ->where('message_recipients.recipient_id', $id)
             ->whereNotNull('message_recipients.recipient_deleted_at')
             ->whereNull('message_recipients.recipient_purged_at')
-            ->select('messages.id as message_id', 'messages.created_at as sort_at', DB::raw("'received' as role"));
+            ->select('messages.id as message_id', 'message_recipients.recipient_deleted_at as sort_at', DB::raw("'received' as role"));
 
         $sent = DB::table('messages')
             ->where('messages.sender_id', $id)
             ->whereNotNull('messages.sender_deleted_at')
             ->whereNull('messages.sender_purged_at')
-            ->select('messages.id as message_id', 'messages.created_at as sort_at', DB::raw("'sent' as role"));
+            ->select('messages.id as message_id', 'messages.sender_deleted_at as sort_at', DB::raw("'sent' as role"));
 
         $page = $received->unionAll($sent)->orderByDesc('sort_at')->paginate($perPage);
 
@@ -117,7 +122,7 @@ class ListMessages
                 (int) $message->getKey(),
                 $counterparty,
                 (string) $message->subject,
-                $message->created_at,
+                Carbon::parse($row->sort_at),
                 false,
             );
         });

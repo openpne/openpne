@@ -69,6 +69,17 @@ class MessageControllerTest extends TestCase
         $this->assertNotNull($message->recipients()->first()->fresh()->read_at);
     }
 
+    public function test_show_renders_a_legacy_message_with_null_subject_and_body(): void
+    {
+        // OpenPNE 3 subject/body are nullable; a migrated legacy row may carry null. The show page
+        // must still render rather than error.
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $message = $this->deliver($sender, $recipient, ['subject' => null, 'body' => null]);
+
+        $this->actingAs($recipient)->get(route('message.receive.show', ['message' => $message->getKey()]))
+            ->assertOk();
+    }
+
     public function test_received_show_404s_for_a_non_recipient(): void
     {
         [$sender, $recipient, $stranger] = Member::factory()->count(3)->create();

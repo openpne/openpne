@@ -70,6 +70,36 @@ class ListMessagesTest extends TestCase
         $this->assertCount(1, (new ListMessages)($sender, MessageBox::Draft)->items());
     }
 
+    public function test_inbox_orders_and_dates_by_the_receipt_not_the_message(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        // Authored earlier but delivered (receipt created) later — OpenPNE 3 sorts/dates by the receipt.
+        $earlierAuthored = Message::factory()->create(['sender_id' => $sender->getKey(), 'created_at' => now()->subDays(5), 'subject' => 'authored earlier']);
+        MessageRecipient::factory()->create(['message_id' => $earlierAuthored->getKey(), 'recipient_id' => $recipient->getKey(), 'created_at' => now()]);
+        $laterAuthored = Message::factory()->create(['sender_id' => $sender->getKey(), 'created_at' => now(), 'subject' => 'authored later']);
+        MessageRecipient::factory()->create(['message_id' => $laterAuthored->getKey(), 'recipient_id' => $recipient->getKey(), 'created_at' => now()->subDays(5)]);
+
+        $items = (new ListMessages)($recipient, MessageBox::Receive)->items();
+
+        $this->assertSame('authored earlier', $items[0]->subject); // later receipt sorts first
+        $this->assertSame('authored later', $items[1]->subject);
+        $this->assertTrue($items[0]->date->isToday());             // date is the receipt's, not the message's
+    }
+
+    public function test_trash_orders_and_dates_by_the_moved_to_trash_time(): void
+    {
+        [$me, $other] = Member::factory()->count(2)->create();
+        Message::factory()->create(['sender_id' => $me->getKey(), 'sender_deleted_at' => now()->subDay(), 'subject' => 'trashed earlier']);
+        $recentlyTrashed = Message::factory()->create(['sender_id' => $other->getKey(), 'subject' => 'trashed later']);
+        MessageRecipient::factory()->create(['message_id' => $recentlyTrashed->getKey(), 'recipient_id' => $me->getKey(), 'recipient_deleted_at' => now()]);
+
+        $items = (new ListMessages)($me, MessageBox::Trash)->items();
+
+        $this->assertSame('trashed later', $items[0]->subject);  // most recently trashed first
+        $this->assertSame('trashed earlier', $items[1]->subject);
+        $this->assertTrue($items[0]->date->isToday());           // date is the trash time
+    }
+
     public function test_trash_mixes_sender_and_recipient_trashed_and_excludes_purged(): void
     {
         [$me, $other] = Member::factory()->count(2)->create();
