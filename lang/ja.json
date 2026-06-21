@@ -664,5 +664,14 @@
     "From/To": "差出人/宛先",
     "Subject": "件名",
     "Message": "メッセージ",
-    "There are no messages": "メッセージはありません"
+    "There are no messages": "メッセージはありません",
+    "Compose Message": "メッセージを作成",
+    "Send Message": "メッセージを送る",
+    "Reply": "返信",
+    "Edit draft": "下書きを編集",
+    "Save as draft": "下書き保存",
+    "The message was sent successfully.": "メッセージを送信しました。",
+    "The message was saved successfully.": "メッセージを下書き保存しました。",
+    "Cannot send the message.": "メッセージを送信できません。",
+    "A message can have at most :max images.": "メッセージに添付できる画像は最大 :max 枚です。"
 }

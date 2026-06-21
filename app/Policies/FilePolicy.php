@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Features\Message\MessageAccess;
 use App\Models\BannerImage;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
@@ -11,6 +12,7 @@ use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\File;
 use App\Models\Member;
+use App\Models\Message;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
@@ -43,6 +45,9 @@ class FilePolicy extends BasePolicy
             // An event/comment image inherits the same community read gate as the event it hangs on.
             $owner instanceof CommunityEvent => $viewer !== null && CommunityEventAccess::canViewEvent($owner, $viewer),
             $owner instanceof CommunityEventComment => $viewer !== null && $owner->event !== null && CommunityEventAccess::canViewEvent($owner->event, $viewer),
+            // A message attachment is private to the message's parties: the sender, and a recipient of
+            // a delivered (non-draft) message. A draft's recipient is excluded (MessageAccess).
+            $owner instanceof Message => $viewer !== null && MessageAccess::canViewMessage($owner, $viewer),
             default => false,
         };
     }

@@ -41,6 +41,12 @@ class Message extends Model
         return $this->hasMany(MessageRecipient::class);
     }
 
+    /** @return HasMany<MessageFile, $this> Attached images, in slot (number) order. */
+    public function files(): HasMany
+    {
+        return $this->hasMany(MessageFile::class)->orderBy('number');
+    }
+
     /** Direct reply parent (OpenPNE 3 return_message_id), or null. @return BelongsTo<Message, $this> */
     public function parent(): BelongsTo
     {

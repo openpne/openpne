@@ -24,6 +24,13 @@ class MessageRouteParity extends RouteParity
             new RouteMap('readReceiveMessage', '/message/read/:id', 'message.receive.show', 'GET', op3Action: 'show'),
             new RouteMap('readSendMessage', '/message/check/:id', 'message.send.show', 'GET', op3Action: 'show'),
             new RouteMap('readDustMessage', '/message/checkDelete/:id', 'message.trash.show', 'GET', op3Action: 'show'),
+            // Compose / reply / draft edit. OpenPNE 3 reached these via the module/action fallback
+            // (no named route), so they bind to no inventory entry but still derive a body id.
+            new RouteMap(null, null, 'message.compose', 'GET', op3Action: 'sendToFriend'),
+            new RouteMap(null, null, 'message.compose.store', 'POST'),
+            new RouteMap(null, null, 'message.reply', 'GET', op3Action: 'reply'),
+            new RouteMap(null, null, 'message.draft.edit', 'GET', op3Action: 'edit'),
+            new RouteMap(null, null, 'message.draft.update', 'POST'),
         ];
     }
 
@@ -79,8 +86,18 @@ class MessageRouteParity extends RouteParity
                 new ScreenElement('counterparty thumbnail', L::Two, S::Deferred, 'image_tag_sf_image 76x76', 'avatar delivery exists; wired with the write/profile-link pass'),
                 new ScreenElement('subject + created-at', L::One, S::Ported, '$message->getSubject() / format_datetime'),
                 new ScreenElement('body line breaks + auto-link', L::Two, S::Ported, 'auto_link_text(nl2br(getDecoratedMessageBody))', 'x-user-text (BodyText); <op:*> decoration not rendered'),
-                new ScreenElement('attachment images', L::Three, S::Deferred, '$message->getMessageFile()', 'attachments land with the write surface (next PR)'),
-                new ScreenElement('reply / delete / restore buttons', L::Two, S::Missing, 'operation buttons', 'write surface (next PR)'),
+                new ScreenElement('attachment images', L::Three, S::Ported, '$message->getMessageFile()', 'thumbnails link to the full image (FilePolicy-gated to the parties)'),
+                new ScreenElement('reply button (received)', L::Two, S::Ported, "button_to('message/reply')", 'shown on a received, non-draft message with a present sender'),
+                new ScreenElement('delete / restore buttons', L::Two, S::Missing, 'operation buttons', 'trash surface (next PR)'),
+            ],
+            // sendToFriendInput.php (PluginSendMessageDataForm) → message/compose.blade.php + edit.blade.php
+            'sendToFriend' => [
+                new ScreenElement('recipient (To) + photo', L::Two, S::Ported, '$sendMember name/photo'),
+                new ScreenElement('subject input', L::One, S::Ported, 'sfWidgetFormInput subject (required)'),
+                new ScreenElement('body textarea', L::One, S::Ported, 'body (required)'),
+                new ScreenElement('image upload (x3)', L::Three, S::Ported, 'app_message_is_upload_images + MessageFileForm x3', 'PostImages; edit manages existing slots'),
+                new ScreenElement('send + save-as-draft buttons', L::One, S::Ported, 'Send button + is_draft'),
+                new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea; OpenPNE 3 rich-text widget not ported'),
             ],
         ];
     }
