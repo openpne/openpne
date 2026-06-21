@@ -654,5 +654,15 @@
     "Upload a new image to replace the current one.": "現在の画像を置き換える新しい画像をアップロードします。",
     "Banner settings": "バナー設定",
     "Use HTML instead of images": "画像の代わりに HTML を使う",
-    "HTML": "HTML"
+    "HTML": "HTML",
+    "Inbox": "受信箱",
+    "Sent Message": "送信箱",
+    "Drafts": "下書き",
+    "Trash": "ゴミ箱",
+    "From": "差出人",
+    "To": "宛先",
+    "From/To": "差出人/宛先",
+    "Subject": "件名",
+    "Message": "メッセージ",
+    "There are no messages": "メッセージはありません"
 }

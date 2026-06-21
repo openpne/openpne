@@ -52,4 +52,9 @@ return [
     'communityTopic/listCommunity' => ['with_id' => 'communityTopic_list_community'],
     'communityTopic/search' => ['no_id' => 'communityTopic_search_all', 'with_id' => 'communityTopic_search'],
     'communityEvent/listCommunity' => ['with_id' => 'communityEvent_list_community'],
+
+    // message (the PC default nav stores message/index, which forwards to the inbox). Without this
+    // it would stay verbatim and NavigationUri would hide the link. The friend-context
+    // message/sendToFriend (compose) resolves once the write surface lands.
+    'message/index' => ['no_id' => 'receiveList'],
 ];

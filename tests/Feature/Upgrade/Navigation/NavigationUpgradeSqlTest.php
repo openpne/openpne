@@ -95,13 +95,27 @@ class NavigationUpgradeSqlTest extends TestCase
 
     public function test_keeps_an_unresolved_value_verbatim(): void
     {
-        $this->seedNav(1, 'secure_global', '@receiveList'); // unported message plugin route
-        $this->seedNav(2, 'secure_global', 'message/index'); // unmapped module/action
+        $this->seedNav(1, 'secure_global', '@unported_plugin_route'); // a route name not in the inventory
+        $this->seedNav(2, 'friend', 'message/sendToFriend'); // module/action whose compose target is the write surface
 
         $this->runUpgrade();
 
-        $this->assertSame('@receiveList', $this->upgradedUri(1));
-        $this->assertSame('message/index', $this->upgradedUri(2));
+        $this->assertSame('@unported_plugin_route', $this->upgradedUri(1));
+        $this->assertSame('message/sendToFriend', $this->upgradedUri(2));
+    }
+
+    public function test_resolves_ported_message_links(): void
+    {
+        // OpenPNE 3 links the inbox by route name (@receiveList, smartphone nav) and by
+        // module/action (message/index, the PC default nav). Both normalize to the URL now that
+        // message is ported — leaving them verbatim would let NavigationUri hide the link.
+        $this->seedNav(1, 'secure_global', '@receiveList');
+        $this->seedNav(2, 'default', 'message/index');
+
+        $this->runUpgrade();
+
+        $this->assertSame('/message/receiveList', $this->upgradedUri(1));
+        $this->assertSame('/message/receiveList', $this->upgradedUri(2));
     }
 
     public function test_carries_the_original_in_source_uri(): void
