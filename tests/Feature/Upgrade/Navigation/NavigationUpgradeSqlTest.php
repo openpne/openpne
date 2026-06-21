@@ -95,13 +95,24 @@ class NavigationUpgradeSqlTest extends TestCase
 
     public function test_keeps_an_unresolved_value_verbatim(): void
     {
-        $this->seedNav(1, 'secure_global', '@receiveList'); // unported message plugin route
+        $this->seedNav(1, 'secure_global', '@unported_plugin_route'); // a route name not in the inventory
         $this->seedNav(2, 'secure_global', 'message/index'); // unmapped module/action
 
         $this->runUpgrade();
 
-        $this->assertSame('@receiveList', $this->upgradedUri(1));
+        $this->assertSame('@unported_plugin_route', $this->upgradedUri(1));
         $this->assertSame('message/index', $this->upgradedUri(2));
+    }
+
+    public function test_resolves_a_ported_message_route_name(): void
+    {
+        // OpenPNE 3's message nav links by route name (@receiveList); now that message is ported it
+        // normalizes to the preserved URL rather than staying verbatim.
+        $this->seedNav(1, 'secure_global', '@receiveList');
+
+        $this->runUpgrade();
+
+        $this->assertSame('/message/receiveList', $this->upgradedUri(1));
     }
 
     public function test_carries_the_original_in_source_uri(): void
