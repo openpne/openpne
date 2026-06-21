@@ -15,6 +15,7 @@ use App\Features\Home\HomeController;
 use App\Features\Member\InviteController;
 use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberSearchController;
+use App\Features\Message\MessageController;
 use App\Features\Profile\ProfileController;
 use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
@@ -372,5 +373,21 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/communityEvent/{event}/comment/create', 'store')->whereNumber('event')->name('communityEvent.comment.store');
         Route::get('/communityEvent/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityEvent.comment.delete.show');
         Route::post('/communityEvent/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityEvent.comment.delete');
+    });
+
+    // Private messages (Classic only; Modern is none). The four boxes plus a per-box show page.
+    // OpenPNE 3 keyed show by message id with the box in the path (/message/read|check|checkDelete/:id);
+    // those URLs are preserved. /message and /message/index land on the inbox. Compose / reply /
+    // delete are the write surface (PR2).
+    Route::prefix('message')->controller(MessageController::class)->group(function () {
+        Route::get('/', 'index')->name('message.index');
+        Route::get('/index', 'index');
+        Route::get('/receiveList', 'receive')->name('message.receive');
+        Route::get('/sendList', 'send')->name('message.send');
+        Route::get('/draftList', 'draft')->name('message.draft');
+        Route::get('/dustList', 'trash')->name('message.trash');
+        Route::get('/read/{message}', 'showReceived')->whereNumber('message')->name('message.receive.show');
+        Route::get('/check/{message}', 'showSent')->whereNumber('message')->name('message.send.show');
+        Route::get('/checkDelete/{message}', 'showTrashed')->whereNumber('message')->name('message.trash.show');
     });
 });
