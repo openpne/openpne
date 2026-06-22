@@ -4,6 +4,8 @@ namespace Tests\Feature\Upgrade;
 
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
+use App\Upgrade\Steps\FileUpgrade;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -94,6 +96,51 @@ class UpgradeMatrixAuditTest extends TestCase
             $this->assertNotEmpty($schema->columns($table),
                 "deferred source table `{$table}` is declared but absent from the source schema fixture");
             $this->assertNotEmpty($reason, "deferred source table `{$table}` must carry a reason");
+        }
+    }
+
+    public function test_every_file_referencing_column_is_owned_or_deferred(): void
+    {
+        // A file's binary is preserved (FileUpgrade keeps every `file` row), but its owner must be
+        // explicitly accounted for so no upload silently loses its owning entity. An owner can sit on
+        // a join table (member_image) or a plain column (community.file_id), so this is checked per
+        // file_id column, not per table: each is owned by FileUpgrade, on a deferred source table, or
+        // declared in unownedFileColumns() — anything else (e.g. a file column on a migrated table
+        // that nothing owns) is a silent drop.
+        $references = SourceSchema::default()->fileReferencingColumns();
+
+        $owned = array_keys((new FileUpgrade)->ownedFileReferences());
+        $deferredTables = array_keys(StepRegistry::deferredSourceTables());
+        $unowned = array_keys(StepRegistry::unownedFileColumns());
+
+        foreach ($references as $reference) {
+            [$table] = explode('.', $reference);
+
+            $accounted = in_array($reference, $owned, true)
+                || in_array($table, $deferredTables, true)
+                || in_array($reference, $unowned, true);
+
+            $this->assertTrue($accounted,
+                "{$reference} references `file` but is neither owned by FileUpgrade, on a deferred source table, nor declared in unownedFileColumns() — its file's owner would be silently dropped");
+        }
+
+        // No stale declaration: a declared owner/unowned reference must be a real fixture file FK.
+        foreach (array_merge($owned, $unowned) as $reference) {
+            $this->assertContains($reference, $references,
+                "{$reference} is declared as a file reference but is not a `file` foreign key in the source schema");
+        }
+    }
+
+    public function test_file_owner_morph_aliases_are_registered(): void
+    {
+        // FileUpgrade writes the morph alias into files.related_entity_type as a string literal; an
+        // alias absent from the map resolves to no model, so the FilePolicy would deny the file
+        // forever (a silent, invisible loss). Pin the aliases to the registered map.
+        $morphMap = Relation::morphMap();
+
+        foreach ((new FileUpgrade)->ownedFileReferences() as $reference => $spec) {
+            $this->assertArrayHasKey($spec['type'], $morphMap,
+                "FileUpgrade owns {$reference} as morph alias '{$spec['type']}', which is not in the morph map");
         }
     }
 }
