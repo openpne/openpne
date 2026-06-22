@@ -37,6 +37,8 @@
                         <a href="{{ route('member.avatar.edit') }}">{{ __('Profile image') }}</a>
                     </p>
                 @endif
+                {{-- Compose to another member is the friend localNav "Send Message" entry (rendered on
+                     every page about them, gadgets or not), not a profile-content link. --}}
             </div>
         </div>
     @endsection

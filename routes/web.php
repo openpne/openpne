@@ -378,7 +378,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // Private messages (Classic only; Modern is none). The four boxes plus a per-box show page.
     // OpenPNE 3 keyed show by message id with the box in the path (/message/read|check|checkDelete/:id);
     // those URLs are preserved. /message and /message/index land on the inbox. Compose / reply /
-    // delete are the write surface (PR2).
+    // edit-draft are below; delete / restore / purge are the trash surface (next PR).
     Route::prefix('message')->controller(MessageController::class)->group(function () {
         Route::get('/', 'index')->name('message.index');
         Route::get('/index', 'index');
@@ -386,6 +386,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/sendList', 'send')->name('message.send');
         Route::get('/draftList', 'draft')->name('message.draft');
         Route::get('/dustList', 'trash')->name('message.trash');
+        // Compose (sendToFriend?id=), reply, and draft edit. OpenPNE 3 reached these through the
+        // module/action fallback (no named route); the path shape is preserved.
+        Route::get('/sendToFriend', 'compose')->name('message.compose');
+        Route::post('/sendToFriend', 'store')->name('message.compose.store');
+        Route::get('/reply/{message}', 'reply')->whereNumber('message')->name('message.reply');
+        Route::get('/edit/{message}', 'edit')->whereNumber('message')->name('message.draft.edit');
+        Route::post('/edit/{message}', 'update')->whereNumber('message')->name('message.draft.update');
         Route::get('/read/{message}', 'showReceived')->whereNumber('message')->name('message.receive.show');
         Route::get('/check/{message}', 'showSent')->whereNumber('message')->name('message.send.show');
         Route::get('/checkDelete/{message}', 'showTrashed')->whereNumber('message')->name('message.trash.show');

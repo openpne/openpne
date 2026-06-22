@@ -121,7 +121,9 @@ class NavigationUpgrade extends UpgradeStep
 
     /**
      * `module/action` → URL. For the id-bearing contexts the id route is preferred (falling back to
-     * the id-less one); for the id-less contexts only the id-less route is used.
+     * the id-less one); for the id-less contexts only the id-less route is used. A mapping value that
+     * begins with `/` is a literal URL (an action reached via the OpenPNE 3 module/action fallback,
+     * which has no named route to resolve), used as-is; any other value is an inventory route name.
      *
      * @return array<string, string>
      */
@@ -130,7 +132,10 @@ class NavigationUpgrade extends UpgradeStep
         $map = [];
         foreach ($this->actions as $pair => $routes) {
             $name = $idBearing ? ($routes['with_id'] ?? $routes['no_id'] ?? null) : ($routes['no_id'] ?? null);
-            $url = $name !== null ? $this->routes->urlByName($name) : null;
+            if ($name === null) {
+                continue;
+            }
+            $url = str_starts_with($name, '/') ? $name : $this->routes->urlByName($name);
             if ($url !== null) {
                 $map[$pair] = $url;
             }

@@ -53,8 +53,12 @@ return [
     'communityTopic/search' => ['no_id' => 'communityTopic_search_all', 'with_id' => 'communityTopic_search'],
     'communityEvent/listCommunity' => ['with_id' => 'communityEvent_list_community'],
 
-    // message (the PC default nav stores message/index, which forwards to the inbox). Without this
-    // it would stay verbatim and NavigationUri would hide the link. The friend-context
-    // message/sendToFriend (compose) resolves once the write surface lands.
+    // message. The PC default nav stores message/index (forwards to the inbox); the friend nav
+    // stores message/sendToFriend (compose to that member). Both would otherwise stay verbatim and
+    // NavigationUri would hide them. sendToFriend has no named OpenPNE 3 route (reached via the
+    // module/action fallback), so it maps to its literal fallback URL — a value beginning with `/`
+    // the upgrade uses directly instead of an inventory route-name lookup. The renderer threads the
+    // subject id into the :id slot.
     'message/index' => ['no_id' => 'receiveList'],
+    'message/sendToFriend' => ['with_id' => '/message/sendToFriend?id=:id'],
 ];

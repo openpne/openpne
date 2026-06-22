@@ -48,9 +48,33 @@
                 </tr>
             </table>
 
+            @if ($view->message->files->isNotEmpty())
+                <div class="block">
+                    <ul class="photo">
+                        @foreach ($view->message->files as $image)
+                            @continue($image->file === null)
+                            <li>
+                                <a href="{{ $image->file->url() }}" target="_blank" rel="noopener">
+                                    <img src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="block">
                 <p class="text"><x-user-text :value="$view->message->body ?? ''" /></p>
             </div>
+
+            {{-- OpenPNE 3 shows Reply on a received (non-trash) message whose sender still exists. --}}
+            @if ($view->box === \App\Features\Message\MessageBox::Receive && $view->message->sender !== null)
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><a href="{{ route('message.reply', ['message' => $view->message->getKey()]) }}" class="input_submit">{{ __('Reply') }}</a></li>
+                    </ul>
+                </div>
+            @endif
         </div>
     </div>
 @endsection

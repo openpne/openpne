@@ -19,7 +19,7 @@ class ShowMessage
 {
     public function __invoke(Member $viewer, MessageBox $box, int $messageId): ?MessageView
     {
-        $message = Message::query()->with(['sender', 'recipients.recipient'])->find($messageId);
+        $message = Message::query()->with(['sender', 'recipients.recipient', 'files.file'])->find($messageId);
         if ($message === null) {
             return null;
         }
