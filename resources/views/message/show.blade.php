@@ -67,14 +67,38 @@
                 <p class="text"><x-user-text :value="$view->message->body ?? ''" /></p>
             </div>
 
-            {{-- OpenPNE 3 shows Reply on a received (non-trash) message whose sender still exists. --}}
-            @if ($view->box === \App\Features\Message\MessageBox::Receive && $view->message->sender !== null)
-                <div class="operation">
-                    <ul class="moreInfo button">
-                        <li><a href="{{ route('message.reply', ['message' => $view->message->getKey()]) }}" class="input_submit">{{ __('Reply') }}</a></li>
-                    </ul>
-                </div>
-            @endif
+            @php($id = $view->message->getKey())
+            <div class="operation">
+                <ul class="moreInfo button">
+                    @if ($view->box === \App\Features\Message\MessageBox::Receive)
+                        {{-- OpenPNE 3 shows Reply on a received message whose sender still exists. --}}
+                        @if ($view->message->sender !== null)
+                            <li><a href="{{ route('message.reply', ['message' => $id]) }}" class="input_submit">{{ __('Reply') }}</a></li>
+                        @endif
+                        <li>
+                            <form method="POST" action="{{ route('message.receive.trash', ['message' => $id]) }}">
+                                @csrf
+                                <button type="submit" class="input_submit">{{ __('Delete') }}</button>
+                            </form>
+                        </li>
+                    @elseif ($view->box === \App\Features\Message\MessageBox::Sent)
+                        <li>
+                            <form method="POST" action="{{ route('message.send.trash', ['message' => $id]) }}">
+                                @csrf
+                                <button type="submit" class="input_submit">{{ __('Delete') }}</button>
+                            </form>
+                        </li>
+                    @elseif ($view->box === \App\Features\Message\MessageBox::Trash)
+                        <li>
+                            <form method="POST" action="{{ route('message.trash.restore', ['message' => $id]) }}">
+                                @csrf
+                                <button type="submit" class="input_submit">{{ __('Restore') }}</button>
+                            </form>
+                        </li>
+                        <li><a href="{{ route('message.trash.purge.confirm', ['message' => $id]) }}" class="input_submit">{{ __('Delete permanently') }}</a></li>
+                    @endif
+                </ul>
+            </div>
         </div>
     </div>
 @endsection

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\MessageRecipientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,5 +39,17 @@ class MessageRecipient extends Model
     public function recipient(): BelongsTo
     {
         return $this->belongsTo(Member::class);
+    }
+
+    /**
+     * Receipts of delivered (non-draft) messages. A draft carries a receipt too, but it is never the
+     * recipient's to see or act on in any box (only the sender works a draft), so every recipient-side
+     * query must scope through this — otherwise a draft's recipient could reach the unsent body.
+     *
+     * @param  Builder<MessageRecipient>  $query
+     */
+    public function scopeOfDelivered(Builder $query): void
+    {
+        $query->whereHas('message', fn (Builder $q) => $q->where('is_draft', false));
     }
 }

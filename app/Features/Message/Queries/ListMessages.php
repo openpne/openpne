@@ -92,6 +92,7 @@ class ListMessages
         $received = DB::table('message_recipients')
             ->join('messages', 'messages.id', '=', 'message_recipients.message_id')
             ->where('message_recipients.recipient_id', $id)
+            ->where('messages.is_draft', false) // a draft is never the recipient's, even in trash
             ->whereNotNull('message_recipients.recipient_deleted_at')
             ->whereNull('message_recipients.recipient_purged_at')
             ->select('messages.id as message_id', 'message_recipients.recipient_deleted_at as sort_at', DB::raw("'received' as role"));

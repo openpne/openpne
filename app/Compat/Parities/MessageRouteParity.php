@@ -31,17 +31,22 @@ class MessageRouteParity extends RouteParity
             new RouteMap(null, null, 'message.reply', 'GET', op3Action: 'reply'),
             new RouteMap(null, null, 'message.draft.edit', 'GET', op3Action: 'edit'),
             new RouteMap(null, null, 'message.draft.update', 'POST'),
+            // Trash. The move-to-trash and purge submits are CSRF form posts (POST in the inventory),
+            // not bookmarkable URLs; the single purge has a GET confirm page. Restore and the bulk
+            // list action have no named OpenPNE 3 route (module/action fallback), so they bind to no
+            // inventory entry. The bulk route derives the list body id for its confirmation page.
+            new RouteMap('deleteReceiveMessage', '/message/deleteReceiveMessage/:id', 'message.receive.trash', 'POST'),
+            new RouteMap('deleteSendMessage', '/message/deleteSendMessage/:id', 'message.send.trash', 'POST'),
+            new RouteMap('deleteConfirmDustMessage', '/message/deleteConfirm/:id', 'message.trash.purge.confirm', 'GET', op3Action: 'deleteConfirm'),
+            new RouteMap('deleteDustMessage', '/message/deleteComplete/:id', 'message.trash.purge', 'POST'),
+            new RouteMap(null, null, 'message.trash.restore', 'POST'),
+            new RouteMap(null, null, 'message.bulk', 'POST', op3Action: 'list'),
         ];
     }
 
     public function gaps(): array
     {
         return [
-            // Delete / restore / purge (trash) — the write surface, lands in the next PR.
-            'deleteReceiveMessage' => 'Move a received message to trash; write surface (next PR).',
-            'deleteSendMessage' => 'Move a sent message to trash; write surface (next PR).',
-            'deleteDustMessage' => 'Purge a message from trash; write surface (next PR).',
-            'deleteConfirmDustMessage' => 'Purge confirmation; write surface (next PR).',
             // Smartphone-only thread view; OpenPNE 4 has no mobile surface.
             'messageChain' => 'Smartphone-only message thread; OpenPNE 4 has no mobile surface.',
             // JSON message API (compose / search / recent) — not ported (Phase 2+).
@@ -76,7 +81,7 @@ class MessageRouteParity extends RouteParity
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "format_datetime(created_at, 'f')", 'LocalizedDate'),
                 new ScreenElement('pager navigation', L::Two, S::Ported, 'op_include_pager_navigation'),
                 new ScreenElement('empty-state message', L::Three, S::Ported, "__('There are no messages')"),
-                new ScreenElement('bulk delete / restore form + check-all', L::Two, S::Missing, 'MessageDeleteForm checkboxes', 'write surface (next PR)'),
+                new ScreenElement('bulk delete / restore form + check-all', L::Two, S::Ported, 'MessageDeleteForm checkboxes', 'trash from receive/send/draft, restore/purge from trash; purge confirms first'),
             ],
             // showSuccess.php → message/show.blade.php
             'show' => [
@@ -88,7 +93,7 @@ class MessageRouteParity extends RouteParity
                 new ScreenElement('body line breaks + auto-link', L::Two, S::Ported, 'auto_link_text(nl2br(getDecoratedMessageBody))', 'x-user-text (BodyText); <op:*> decoration not rendered'),
                 new ScreenElement('attachment images', L::Three, S::Ported, '$message->getMessageFile()', 'thumbnails link to the full image (FilePolicy-gated to the parties)'),
                 new ScreenElement('reply button (received)', L::Two, S::Ported, "button_to('message/reply')", 'shown on a received, non-draft message with a present sender'),
-                new ScreenElement('delete / restore buttons', L::Two, S::Missing, 'operation buttons', 'trash surface (next PR)'),
+                new ScreenElement('delete / restore buttons', L::Two, S::Ported, 'operation buttons', 'receive/send move to trash; trash restores or purges (purge confirms first)'),
             ],
             // sendToFriendInput.php (PluginSendMessageDataForm) → message/compose.blade.php + edit.blade.php
             'sendToFriend' => [

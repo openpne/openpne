@@ -78,8 +78,13 @@ class ShowMessage
     /** Trash box: the viewer trashed (not yet purged) this message on either side. */
     private function isInTrash(Member $viewer, Message $message, bool $viewerIsSender): bool
     {
-        if ($viewerIsSender && $message->sender_deleted_at !== null && $message->sender_purged_at === null) {
-            return true;
+        if ($viewerIsSender) {
+            return $message->sender_deleted_at !== null && $message->sender_purged_at === null;
+        }
+
+        // A draft is never the recipient's, even via trash — only the sender works a draft.
+        if ($message->is_draft) {
+            return false;
         }
 
         return $message->recipients
@@ -123,6 +128,7 @@ class ShowMessage
             MessageBox::Trash => DB::table('message_recipients')
                 ->join('messages', 'messages.id', '=', 'message_recipients.message_id')
                 ->where('message_recipients.recipient_id', $id)
+                ->where('messages.is_draft', false) // a draft is never the recipient's, even in trash
                 ->whereNotNull('message_recipients.recipient_deleted_at')
                 ->whereNull('message_recipients.recipient_purged_at')
                 ->select('messages.id as id')
