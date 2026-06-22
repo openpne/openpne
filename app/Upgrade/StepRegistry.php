@@ -3,12 +3,16 @@
 namespace App\Upgrade;
 
 use App\Upgrade\Steps\CommunityCategoryUpgrade;
+use App\Upgrade\Steps\CommunityEventCommentImageUpgrade;
 use App\Upgrade\Steps\CommunityEventCommentUpgrade;
+use App\Upgrade\Steps\CommunityEventImageUpgrade;
 use App\Upgrade\Steps\CommunityEventMemberUpgrade;
 use App\Upgrade\Steps\CommunityEventUpgrade;
 use App\Upgrade\Steps\CommunityJoinRequestUpgrade;
 use App\Upgrade\Steps\CommunityMemberUpgrade;
+use App\Upgrade\Steps\CommunityTopicCommentImageUpgrade;
 use App\Upgrade\Steps\CommunityTopicCommentUpgrade;
+use App\Upgrade\Steps\CommunityTopicImageUpgrade;
 use App\Upgrade\Steps\CommunityTopicUpgrade;
 use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
@@ -19,6 +23,7 @@ use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\GadgetConfigUpgrade;
 use App\Upgrade\Steps\GadgetUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
+use App\Upgrade\Steps\MemberImageUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberProfileUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
@@ -82,6 +87,13 @@ final class StepRegistry
             // messages reference members; message_recipients reference the messages, so messages run first.
             MessageUpgrade::class,
             MessageRecipientUpgrade::class,
+            // Image join rows: each references a file (FileUpgrade, first) plus its owning member or
+            // post (all migrated above), so they run last.
+            MemberImageUpgrade::class,
+            CommunityTopicImageUpgrade::class,
+            CommunityTopicCommentImageUpgrade::class,
+            CommunityEventImageUpgrade::class,
+            CommunityEventCommentImageUpgrade::class,
         ];
     }
 
@@ -104,11 +116,6 @@ final class StepRegistry
     {
         return [
             'file_bin' => 'OpenPNE 3 file bytes. Not a copy step: the runner migrates it by an in-place ALTER that re-points the file_id FK from `file` onto `files` (the file_bin schema is frozen, and FileUpgrade keeps file.id, for exactly that), so the gigabytes of BLOBs are never rewritten.',
-            'member_image' => 'OpenPNE 3 member profile images (up to three, one primary). OpenPNE 4 is a single avatar (member_images.member_id is unique), so the upgrade keeps one row per member — the primary (is_primary DESC, then id) — and drops the rest; copied by its own step (not written yet), preserving file_id.',
-            'community_topic_image' => 'OpenPNE 3 topic image attachments (up to three per topic, by post_id + number). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
-            'community_topic_comment_image' => 'OpenPNE 3 topic-comment image attachments (up to three per comment, by post_id + number). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
-            'community_event_image' => 'OpenPNE 3 event image attachments (up to three per event, by post_id + number). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
-            'community_event_comment_image' => 'OpenPNE 3 event-comment image attachments (up to three per comment, by post_id + number). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
             'banner' => 'OpenPNE 3 design banners (top_before / top_after placements). Migrated by BannerUpgrade together with their images; copied with its own step (not written yet).',
             'banner_image' => 'OpenPNE 3 banner image pool. Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
             'banner_use_image' => 'OpenPNE 3 banner↔image placement links. Migrated with BannerUpgrade; copied with its own step (not written yet).',
