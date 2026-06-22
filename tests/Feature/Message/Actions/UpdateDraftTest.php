@@ -9,7 +9,6 @@ use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
 use App\Notifications\Message\MessageReceivedNotification;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -101,16 +100,5 @@ class UpdateDraftTest extends TestCase
             // expected
         }
         $this->assertSame(1, MessageRecipient::where('message_id', $draft->getKey())->count());
-    }
-
-    public function test_a_message_cannot_carry_two_receipts_for_one_recipient(): void
-    {
-        [$s, $r] = Member::factory()->count(2)->create();
-        $m = Message::factory()->create(['sender_id' => $s->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $m->getKey(), 'recipient_id' => $r->getKey()]);
-
-        // The unique index backstops the delivery idempotency the lock already enforces.
-        $this->expectException(QueryException::class);
-        MessageRecipient::factory()->create(['message_id' => $m->getKey(), 'recipient_id' => $r->getKey()]);
     }
 }

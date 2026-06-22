@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\Schema;
  * from message_recipients and so can never reach a draft.
  *
  * Drafts created under the old model carried a receipt, so this also folds each such draft's recipient
- * onto the column and drops the draft receipt, and adds a (message_id, recipient_id) unique index that
- * keeps a delivery idempotent (a double-submit can never insert a second receipt).
+ * onto the column and drops the draft receipt, aligning old data with the new invariant. (Delivery
+ * idempotency — no duplicate receipt on a double-submitted send — is enforced in UpdateDraft, which
+ * re-checks the draft under a row lock; a unique index on (message_id, recipient_id) was avoided
+ * because MySQL adopts it as the message_id foreign key's index, which then blocks rollback.)
  */
 return new class extends Migration
 {
@@ -36,18 +38,10 @@ return new class extends Migration
         DB::table('message_recipients')
             ->whereIn('message_id', fn ($q) => $q->select('id')->from('messages')->where('is_draft', true))
             ->delete();
-
-        Schema::table('message_recipients', function (Blueprint $table) {
-            $table->unique(['message_id', 'recipient_id']);
-        });
     }
 
     public function down(): void
     {
-        Schema::table('message_recipients', function (Blueprint $table) {
-            $table->dropUnique(['message_id', 'recipient_id']);
-        });
-
         // Restore the receipt each draft carried before up() folded it into the column (old model).
         DB::table('messages')->where('is_draft', true)->whereNotNull('draft_recipient_id')->orderBy('id')->each(function (object $draft): void {
             DB::table('message_recipients')->insert([
