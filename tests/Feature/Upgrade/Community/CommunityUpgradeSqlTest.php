@@ -103,7 +103,7 @@ class CommunityUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('community_categories', ['id' => 2, 'name' => 'Sports', 'is_allow_member_community' => 1, 'parent_id' => null]);
         $this->assertDatabaseHas('community_categories', ['id' => 3, 'is_allow_member_community' => 0]);
 
-        // Config flattened; pending admin captured; image deferred to its null default.
+        // Config flattened; pending admin captured; top-image file_id copied verbatim (null here).
         $this->assertDatabaseHas('communities', [
             'id' => 100,
             'name' => 'Tokyo Runners',
@@ -139,6 +139,25 @@ class CommunityUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('community_join_requests', ['community_id' => 100, 'member_id' => $applicant->id]);
     }
 
+    public function test_preserves_the_top_image_file_id(): void
+    {
+        // FileUpgrade keeps file.id, so the community's top-image link resolves; CommunityUpgrade
+        // carries it onto communities.file_id even though the file is not given an owner yet.
+        DB::table('files')->insert([
+            'id' => 42,
+            'name' => 'community_top_token',
+            'type' => 'image/png',
+            'byte_size' => 256,
+            'created_at' => '2016-01-01 00:00:00',
+            'updated_at' => '2016-01-01 00:00:00',
+        ]);
+        $this->seedCommunity(120, 'Photo Club', categoryId: null, fileId: 42);
+
+        $this->runUpgrade(new CommunityUpgrade);
+
+        $this->assertDatabaseHas('communities', ['id' => 120, 'file_id' => 42]);
+    }
+
     private function runUpgrade(UpgradeStep $step): void
     {
         DB::statement((new InsertSelectCompiler)->compile($step));
@@ -156,12 +175,12 @@ class CommunityUpgradeSqlTest extends TestCase
         ]);
     }
 
-    private function seedCommunity(int $id, string $name, ?int $categoryId, string $createdAt = '2016-02-02 00:00:00'): void
+    private function seedCommunity(int $id, string $name, ?int $categoryId, ?int $fileId = null, string $createdAt = '2016-02-02 00:00:00'): void
     {
         DB::table('community')->insert([
             'id' => $id,
             'name' => $name,
-            'file_id' => null,
+            'file_id' => $fileId,
             'community_category_id' => $categoryId,
             'created_at' => $createdAt,
             'updated_at' => $createdAt,

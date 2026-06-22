@@ -27,9 +27,10 @@ use App\Upgrade\UpgradeStep;
  *  - community_category_id: nulled when it points at a category that was not migrated — the
  *    OpenPNE 3 root (lft=1) is dropped by CommunityCategoryUpgrade — so the target FK holds.
  *
- * The binary top image is deferred to the file step: communities.file_id relies on its null default
- * (targetDefaults), and the source community.file_id is recorded as a gap. file_id is NOT a pending
- * target — a pending target would make InsertSelectCompiler refuse the whole community body.
+ * The top-image file_id is copied verbatim onto communities.file_id, preserving which file each
+ * community used (FileUpgrade keeps file.id, so the FK resolves). FileUpgrade does not yet assign that
+ * file an owner — the community-image delivery surface is not built — so the owner is backfilled from
+ * communities.file_id when it lands; the link is what makes that recoverable.
  *
  * The subqueries name community_config / community_member_position / community_category unqualified,
  * so (like MemberUpgrade's member_config subqueries) they are not rewritten for a source prefix or
@@ -53,21 +54,9 @@ class CommunityUpgrade extends UpgradeStep
             'topic_post_authority' => Column::expr($this->topicPostAuthorityExpr(), uses: ['id']),
             'community_category_id' => Column::expr($this->categoryIdExpr(), uses: ['community_category_id']),
             'pending_admin_member_id' => Column::expr($this->pendingAdminExpr(), uses: ['id']),
+            'file_id' => Column::source('file_id'),
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),
-        ];
-    }
-
-    public function targetDefaults(): array
-    {
-        // Top-image binary is migrated by the (pending) file step; rely on the null default for now.
-        return ['file_id'];
-    }
-
-    public function gaps(): array
-    {
-        return [
-            'file_id' => 'Top-image file reference; the binary migration is deferred to the file step, so communities.file_id relies on its null default for now.',
         ];
     }
 
