@@ -378,7 +378,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // Private messages (Classic only; Modern is none). The four boxes plus a per-box show page.
     // OpenPNE 3 keyed show by message id with the box in the path (/message/read|check|checkDelete/:id);
     // those URLs are preserved. /message and /message/index land on the inbox. Compose / reply /
-    // edit-draft are below; delete / restore / purge are the trash surface (next PR).
+    // edit-draft and the trash surface (delete / restore / purge) follow.
     Route::prefix('message')->controller(MessageController::class)->group(function () {
         Route::get('/', 'index')->name('message.index');
         Route::get('/index', 'index');
@@ -396,5 +396,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/read/{message}', 'showReceived')->whereNumber('message')->name('message.receive.show');
         Route::get('/check/{message}', 'showSent')->whereNumber('message')->name('message.send.show');
         Route::get('/checkDelete/{message}', 'showTrashed')->whereNumber('message')->name('message.trash.show');
+        // Trash management. The move-to-trash and purge submits are CSRF form posts (OpenPNE 3
+        // button_to), not bookmarkable URLs; the single purge has a GET confirm page. Restore and the
+        // bulk list action have no named OpenPNE 3 route (reached via the module/action fallback).
+        Route::post('/deleteReceiveMessage/{message}', 'trashReceived')->whereNumber('message')->name('message.receive.trash');
+        Route::post('/deleteSendMessage/{message}', 'trashSent')->whereNumber('message')->name('message.send.trash');
+        Route::post('/restore/{message}', 'restore')->whereNumber('message')->name('message.trash.restore');
+        Route::get('/deleteConfirm/{message}', 'purgeConfirm')->whereNumber('message')->name('message.trash.purge.confirm');
+        Route::post('/deleteComplete/{message}', 'purge')->whereNumber('message')->name('message.trash.purge');
+        Route::post('/bulk', 'bulk')->name('message.bulk');
     });
 });

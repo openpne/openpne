@@ -154,7 +154,11 @@ return [
         // adds message_no_default (/message/* → default/error), but compose/reply/edit/restore have
         // no named route and are reached through the module/action fallback, so the named routes are
         // NOT the complete reachable set — fallback stays acknowledged (disables_global_fallback off).
-        // *.json are the smartphone/API endpoints; messageChain is the smartphone thread view.
+        // OpenPNE 3 left the delete/deleteComplete routes method-unconstrained, but they are
+        // CSRF-protected button_to submits with no working GET form, so they carry no GET
+        // URL-preservation obligation and are recorded POST (the obligation the method field drives,
+        // not literal sf_method); only the deleteConfirm page is a GET screen. *.json are the
+        // smartphone/API endpoints; messageChain is the smartphone thread view.
         'disables_global_fallback' => false,
         'routes' => [
             'receiveList' => ['/message/receiveList', 'ANY'],
@@ -164,9 +168,9 @@ return [
             'readReceiveMessage' => ['/message/read/:id', 'ANY'],
             'readSendMessage' => ['/message/check/:id', 'ANY'],
             'readDustMessage' => ['/message/checkDelete/:id', 'ANY'],
-            'deleteReceiveMessage' => ['/message/deleteReceiveMessage/:id', 'ANY'],
-            'deleteSendMessage' => ['/message/deleteSendMessage/:id', 'ANY'],
-            'deleteDustMessage' => ['/message/deleteComplete/:id', 'ANY'],
+            'deleteReceiveMessage' => ['/message/deleteReceiveMessage/:id', 'POST'],
+            'deleteSendMessage' => ['/message/deleteSendMessage/:id', 'POST'],
+            'deleteDustMessage' => ['/message/deleteComplete/:id', 'POST'],
             'deleteConfirmDustMessage' => ['/message/deleteConfirm/:id', 'ANY'],
             'messageChain' => ['/message/chain/:id', 'ANY'],
             'message_post' => ['/message/post.json', 'POST'],

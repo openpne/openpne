@@ -3,13 +3,17 @@
 namespace App\Features\Message;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Message\Actions\PurgeMessages;
+use App\Features\Message\Actions\RestoreMessages;
 use App\Features\Message\Actions\SendMessage;
+use App\Features\Message\Actions\TrashMessages;
 use App\Features\Message\Actions\UpdateDraft;
 use App\Features\Message\Exceptions\MessageActionException;
 use App\Features\Message\Exceptions\MessageActionFailure;
 use App\Features\Message\Queries\ListMessages;
 use App\Features\Message\Queries\ShowMessage;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Message\BulkMessageRequest;
 use App\Http\Requests\Message\ComposeMessageRequest;
 use App\Http\Requests\Message\UpdateDraftRequest;
 use App\Models\Member;
@@ -133,6 +137,83 @@ class MessageController extends Controller
         }
 
         return $this->afterWrite($draft->is_draft);
+    }
+
+    /** Move a received message to the trash (OpenPNE 3 deleteReceiveMessage). */
+    public function trashReceived(int $message, TrashMessages $action): RedirectResponse
+    {
+        abort_if($action($this->viewer(), MessageBox::Receive, [$message]) === 0, 404);
+
+        return redirect()->route('message.receive')->with('status', __('The message was moved to the trash.'));
+    }
+
+    /** Move a sent message to the trash (OpenPNE 3 deleteSendMessage). */
+    public function trashSent(int $message, TrashMessages $action): RedirectResponse
+    {
+        abort_if($action($this->viewer(), MessageBox::Sent, [$message]) === 0, 404);
+
+        return redirect()->route('message.send')->with('status', __('The message was moved to the trash.'));
+    }
+
+    /** Restore a trashed message to its box (OpenPNE 3 restore). */
+    public function restore(int $message, RestoreMessages $action): RedirectResponse
+    {
+        abort_if($action($this->viewer(), [$message]) === 0, 404);
+
+        return redirect()->route('message.trash')->with('status', __('The message was restored.'));
+    }
+
+    /** Confirm purging a single trashed message (OpenPNE 3 deleteConfirmDustMessage). */
+    public function purgeConfirm(int $message, ShowMessage $query): View
+    {
+        $view = $query($this->viewer(), MessageBox::Trash, $message);
+        abort_if($view === null, 404);
+
+        return $this->classic('message.purge_confirm', ['message' => $view->message]);
+    }
+
+    /** Purge a single trashed message (OpenPNE 3 deleteDustMessage). */
+    public function purge(int $message, PurgeMessages $action): RedirectResponse
+    {
+        abort_if($action($this->viewer(), [$message]) === 0, 404);
+
+        return redirect()->route('message.trash')->with('status', __('The message was deleted.'));
+    }
+
+    /**
+     * Bulk action over a list's checked rows (OpenPNE 3 MessageDeleteForm): trash from the
+     * receive/send/draft boxes, restore or purge from the trash box. Purge is gated behind a
+     * confirmation page, so the first submit renders it and the confirmed submit carries it out.
+     */
+    public function bulk(BulkMessageRequest $request, TrashMessages $trash, RestoreMessages $restore, PurgeMessages $purge): View|RedirectResponse
+    {
+        $viewer = $this->viewer();
+        $box = $request->box();
+        $ids = $request->ids();
+
+        if ($ids === []) {
+            return redirect()->route($box->listRoute());
+        }
+
+        if ($box !== MessageBox::Trash) {
+            $trash($viewer, $box, $ids);
+
+            return redirect()->route($box->listRoute())->with('status', __('The message was moved to the trash.'));
+        }
+
+        if ($request->action() === 'restore') {
+            $restore($viewer, $ids);
+
+            return redirect()->route('message.trash')->with('status', __('The message was restored.'));
+        }
+
+        if (! $request->confirmed()) {
+            return $this->classic('message.bulk_purge_confirm', ['ids' => $ids]);
+        }
+
+        $purge($viewer, $ids);
+
+        return redirect()->route('message.trash')->with('status', __('The message was deleted.'));
     }
 
     private function composeForm(Member $recipient, ?int $parentId = null, ?int $threadId = null, string $subject = '', string $body = ''): View
