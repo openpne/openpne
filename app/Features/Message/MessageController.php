@@ -115,12 +115,12 @@ class MessageController extends Controller
     /** Edit one of the viewer's own drafts (OpenPNE 3 edit). */
     public function edit(int $message): View
     {
-        $draft = Message::with(['files.file', 'recipients.recipient'])->findOrFail($message);
+        $draft = Message::with(['files.file', 'draftRecipient'])->findOrFail($message);
         abort_unless($this->ownsLiveDraft($draft), 404);
 
         return $this->classic('message.edit', [
             'draft' => $draft,
-            'recipient' => $draft->recipients->first()?->recipient,
+            'recipient' => $draft->draftRecipient,
         ]);
     }
 
