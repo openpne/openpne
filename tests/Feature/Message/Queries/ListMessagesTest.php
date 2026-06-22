@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Message\Queries;
 
+use App\Features\Message\Actions\SendMessage;
 use App\Features\Message\MessageBox;
+use App\Features\Message\MessageComposeData;
 use App\Features\Message\Queries\ListMessages;
 use App\Models\Member;
 use App\Models\Message;
@@ -68,6 +70,29 @@ class ListMessagesTest extends TestCase
         Message::factory()->draft()->trashedBySender()->create(['sender_id' => $sender->getKey()]); // trashed draft: hidden
 
         $this->assertCount(1, (new ListMessages)($sender, MessageBox::Draft)->items());
+    }
+
+    public function test_draft_box_shows_the_pending_recipient_from_the_column(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        // A draft has no receipt; its recipient lives on the draft_recipient_id column.
+        $draft = Message::factory()->draft()->create(['sender_id' => $sender->getKey(), 'draft_recipient_id' => $recipient->getKey()]);
+
+        $item = (new ListMessages)($sender, MessageBox::Draft)->items()[0];
+
+        $this->assertSame($draft->getKey(), $item->messageId);
+        $this->assertTrue($item->counterparty->is($recipient)); // To = the draft's pending recipient
+    }
+
+    public function test_a_real_draft_creates_no_receipt_and_never_reaches_its_recipient(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        // The real compose flow: a draft creates no receipt, so the recipient has nothing, anywhere.
+        app(SendMessage::class)($sender, new MessageComposeData($recipient->getKey(), 'Secret', 'Body'), asDraft: true);
+
+        $this->assertSame(0, MessageRecipient::count());
+        $this->assertCount(0, (new ListMessages)($recipient, MessageBox::Receive)->items());
+        $this->assertCount(0, (new ListMessages)($recipient, MessageBox::Trash)->items());
     }
 
     public function test_inbox_orders_and_dates_by_the_receipt_not_the_message(): void

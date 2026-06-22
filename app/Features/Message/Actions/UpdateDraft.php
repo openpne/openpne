@@ -14,8 +14,9 @@ use Illuminate\Http\UploadedFile;
 /**
  * Edit one of the sender's own drafts: change its text, manage its image slots (OpenPNE 3-style:
  * remove selected images, add new ones into the freed slots), and either keep it a draft or send it.
- * The recipient is the one fixed when the draft was created. Image bytes are rollback-safe (new
- * uploads compensated on failure; removed bytes purged only after commit). Sending notifies the
+ * The recipient is the one fixed when the draft was created (draft_recipient_id); sending materializes
+ * its receipt and clears the column, so the message becomes delivered. Image bytes are rollback-safe
+ * (new uploads compensated on failure; removed bytes purged only after commit). Sending notifies the
  * recipient after commit.
  */
 class UpdateDraft
@@ -33,12 +34,12 @@ class UpdateDraft
         abort_unless((int) $draft->sender_id === (int) $sender->getKey() && $draft->is_draft
             && $draft->sender_deleted_at === null && $draft->sender_purged_at === null, 404);
 
-        $recipient = $draft->recipients()->with('recipient')->first()?->recipient;
+        $recipient = $draft->draftRecipient;
         if (! $asDraft && ($recipient === null || ! MessageAccess::canSend($sender, $recipient))) {
             throw new MessageActionException(MessageActionFailure::CannotSend);
         }
 
-        $removedFiles = $this->images->compensating(function (callable $store) use ($draft, $subject, $body, $asDraft, $newImages, $removeImageIds): array {
+        $removedFiles = $this->images->compensating(function (callable $store) use ($draft, $recipient, $subject, $body, $asDraft, $newImages, $removeImageIds): array {
             // Serialize concurrent edits: the free-slot read and the inserts must not interleave with
             // another edit, or both could claim the same slot or push past the cap.
             Message::whereKey($draft->getKey())->lockForUpdate()->first();
@@ -46,7 +47,14 @@ class UpdateDraft
             $draft->subject = $subject;
             $draft->body = $body;
             $draft->is_draft = $asDraft;
+            if (! $asDraft) {
+                // Sending: the receipt below makes it delivered, so the draft-only column is cleared.
+                $draft->draft_recipient_id = null;
+            }
             $draft->save();
+            if (! $asDraft) {
+                $draft->recipients()->create(['recipient_id' => $recipient->getKey()]);
+            }
 
             // Drop the selected images (this draft's only). Keep their Files to purge after commit.
             $removed = $draft->files()->whereKey(array_unique($removeImageIds))->with('file')->get();

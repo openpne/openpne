@@ -44,11 +44,14 @@ class UpdateDraftTest extends TestCase
         Notification::fake();
         $sender = Member::factory()->create();
         $draft = $this->draft($sender);
-        $recipient = $draft->recipients()->with('recipient')->first()->recipient;
+        $recipient = $draft->draftRecipient; // a draft holds its recipient here, not in a receipt
 
         app(UpdateDraft::class)($sender, $draft, 'Subject', 'Body', asDraft: false);
 
         $this->assertFalse($draft->fresh()->is_draft);
+        // Sending materializes the receipt and clears the draft-only column.
+        $this->assertDatabaseHas('message_recipients', ['message_id' => $draft->getKey(), 'recipient_id' => $recipient->getKey()]);
+        $this->assertNull($draft->fresh()->draft_recipient_id);
         Notification::assertSentTo($recipient, MessageReceivedNotification::class);
     }
 

@@ -14,8 +14,9 @@ use Illuminate\Http\UploadedFile;
 
 /**
  * Compose a new message (a fresh message or a reply) and either send it or keep it as a draft.
- * A receipt row is created either way — OpenPNE 3 stores the recipient on a draft too; it only
- * surfaces in the inbox once sent (is_draft=false). Sending notifies the recipient after commit.
+ * Sending creates the receipt (message_recipients) and notifies the recipient after commit; a draft
+ * has no receipt and holds its pending recipient in draft_recipient_id, so a draft is never the
+ * recipient's. Editing the draft (UpdateDraft) materializes the receipt when it is finally sent.
  */
 class SendMessage
 {
@@ -41,13 +42,17 @@ class SendMessage
             persist: function () use ($sender, $recipient, $data, $asDraft): Message {
                 $message = Message::create([
                     'sender_id' => $sender->getKey(),
+                    // A draft keeps its recipient here; sending materializes a receipt instead.
+                    'draft_recipient_id' => $asDraft ? $recipient->getKey() : null,
                     'subject' => $data->subject,
                     'body' => $data->body,
                     'is_draft' => $asDraft,
                     'parent_id' => $data->parentId,
                     'thread_id' => $data->threadId,
                 ]);
-                $message->recipients()->create(['recipient_id' => $recipient->getKey()]);
+                if (! $asDraft) {
+                    $message->recipients()->create(['recipient_id' => $recipient->getKey()]);
+                }
 
                 return $message;
             },

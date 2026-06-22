@@ -42,14 +42,35 @@ class MessageRecipient extends Model
     }
 
     /**
-     * Receipts of delivered (non-draft) messages. A draft carries a receipt too, but it is never the
-     * recipient's to see or act on in any box (only the sender works a draft), so every recipient-side
-     * query must scope through this — otherwise a draft's recipient could reach the unsent body.
+     * Receipts of delivered (non-draft) messages. A receipt is created only when a message is sent
+     * (see SendMessage / UpdateDraft), so this normally holds for every receipt; it stays as the
+     * single guard against a stray draft receipt ever surfacing to its recipient.
      *
      * @param  Builder<MessageRecipient>  $query
      */
     public function scopeOfDelivered(Builder $query): void
     {
         $query->whereHas('message', fn (Builder $q) => $q->where('is_draft', false));
+    }
+
+    /**
+     * A live receipt: in an active box, neither trashed nor purged. (Active boxes exclude purged too,
+     * so a stray purged-without-trashed row never resurfaces.)
+     *
+     * @param  Builder<MessageRecipient>  $query
+     */
+    public function scopeRecipientLive(Builder $query): void
+    {
+        $query->whereNull('recipient_deleted_at')->whereNull('recipient_purged_at');
+    }
+
+    /**
+     * A receipt in the trash: moved to trash, not yet purged.
+     *
+     * @param  Builder<MessageRecipient>  $query
+     */
+    public function scopeRecipientTrashed(Builder $query): void
+    {
+        $query->whereNotNull('recipient_deleted_at')->whereNull('recipient_purged_at');
     }
 }
