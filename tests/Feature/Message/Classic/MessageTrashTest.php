@@ -185,4 +185,46 @@ class MessageTrashTest extends TestCase
 
         $this->assertNull($receipt->fresh()->recipient_deleted_at);
     }
+
+    public function test_a_draft_recipient_cannot_trash_or_view_the_unsent_draft(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        // A draft carries a receipt for its intended recipient, but the draft is the sender's alone.
+        $draft = Message::factory()->draft()->create([
+            'sender_id' => $sender->getKey(),
+            'subject' => 'UNSENT-DRAFT-SUBJECT',
+            'body' => 'UNSENT-DRAFT-BODY',
+        ]);
+        $receipt = MessageRecipient::factory()->create([
+            'message_id' => $draft->getKey(),
+            'recipient_id' => $recipient->getKey(),
+        ]);
+
+        // The intended recipient cannot move the unsent draft to their trash.
+        $this->actingAs($recipient)->post(route('message.receive.trash', ['message' => $draft->getKey()]))->assertNotFound();
+        $this->assertNull($receipt->fresh()->recipient_deleted_at);
+
+        // Even a stray trashed receipt (e.g. bad imported data) must not surface the draft.
+        $receipt->forceFill(['recipient_deleted_at' => now()])->save();
+        $this->actingAs($recipient)->get(route('message.trash'))->assertOk()
+            ->assertDontSee('UNSENT-DRAFT-SUBJECT');
+        $this->actingAs($recipient)->get(route('message.trash.show', ['message' => $draft->getKey()]))->assertNotFound();
+    }
+
+    public function test_bulk_trash_does_not_cross_boxes(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        [$sent] = $this->delivered($sender, $recipient);
+        $draft = Message::factory()->draft()->create(['sender_id' => $sender->getKey()]);
+
+        // The draft box only trashes drafts: a sent id submitted there is ignored.
+        $this->actingAs($sender)->post(route('message.bulk'), ['box' => 'draft', 'action' => 'delete', 'ids' => [$sent->getKey()]])
+            ->assertRedirect(route('message.draft'));
+        $this->assertNull($sent->fresh()->sender_deleted_at);
+
+        // The sent box only trashes sent messages: a draft id submitted there is ignored.
+        $this->actingAs($sender)->post(route('message.bulk'), ['box' => 'sent', 'action' => 'delete', 'ids' => [$draft->getKey()]])
+            ->assertRedirect(route('message.send'));
+        $this->assertNull($draft->fresh()->sender_deleted_at);
+    }
 }

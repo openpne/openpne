@@ -97,7 +97,9 @@ class MessageController extends Controller
     {
         $original = Message::with('recipients')->findOrFail($message);
         $viewer = $this->viewer();
-        abort_unless(! $original->is_draft && $this->isRecipient($original, $viewer), 404);
+        // Reply is an inbox action: only on a live received message. A trashed or purged receipt has
+        // left the inbox, so its body must not resurface as a quote (purge revokes the viewer's view).
+        abort_unless(! $original->is_draft && $this->hasLiveInboxReceipt($original, $viewer), 404);
         abort_if($original->sender === null, 404); // a withdrawn sender cannot be replied to
 
         return $this->composeForm(
@@ -260,10 +262,13 @@ class MessageController extends Controller
         abort(404); // too many images: a payload past the cross-field cap
     }
 
-    private function isRecipient(Message $message, Member $viewer): bool
+    /** The viewer has a live inbox receipt (delivered, not trashed, not purged) for this message. */
+    private function hasLiveInboxReceipt(Message $message, Member $viewer): bool
     {
         return $message->recipients->contains(
             fn (MessageRecipient $r): bool => (int) $r->recipient_id === (int) $viewer->getKey()
+                && $r->recipient_deleted_at === null
+                && $r->recipient_purged_at === null
         );
     }
 

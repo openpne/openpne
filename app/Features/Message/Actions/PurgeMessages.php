@@ -38,6 +38,7 @@ class PurgeMessages
                 ->update(['sender_purged_at' => now()]);
 
             $recipient = MessageRecipient::query()
+                ->ofDelivered() // a draft is never the recipient's, even if a stray receipt were trashed
                 ->where('recipient_id', $viewerId)
                 ->whereIn('message_id', $ids)
                 ->whereNotNull('recipient_deleted_at')
