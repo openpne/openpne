@@ -12,6 +12,7 @@ use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\File;
 use App\Models\Member;
+use App\Models\Message;
 use App\Observers\MemberObserver;
 use App\Policies\FilePolicy;
 use App\Policies\MemberPolicy;
@@ -86,6 +87,7 @@ class AppServiceProvider extends ServiceProvider
             'communityEvent' => CommunityEvent::class,
             'communityEventComment' => CommunityEventComment::class,
             'bannerImage' => BannerImage::class,
+            'message' => Message::class,
         ]);
 
         Gate::policy(File::class, FilePolicy::class);

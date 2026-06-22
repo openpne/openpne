@@ -96,12 +96,12 @@ class NavigationUpgradeSqlTest extends TestCase
     public function test_keeps_an_unresolved_value_verbatim(): void
     {
         $this->seedNav(1, 'secure_global', '@unported_plugin_route'); // a route name not in the inventory
-        $this->seedNav(2, 'friend', 'message/sendToFriend'); // module/action whose compose target is the write surface
+        $this->seedNav(2, 'friend', 'message/reply'); // a module/action with no nav mapping
 
         $this->runUpgrade();
 
         $this->assertSame('@unported_plugin_route', $this->upgradedUri(1));
-        $this->assertSame('message/sendToFriend', $this->upgradedUri(2));
+        $this->assertSame('message/reply', $this->upgradedUri(2));
     }
 
     public function test_resolves_ported_message_links(): void
@@ -111,11 +111,15 @@ class NavigationUpgradeSqlTest extends TestCase
         // message is ported — leaving them verbatim would let NavigationUri hide the link.
         $this->seedNav(1, 'secure_global', '@receiveList');
         $this->seedNav(2, 'default', 'message/index');
+        // The friend nav's message/sendToFriend (compose) has no named OpenPNE 3 route; it maps to
+        // its literal fallback URL with the :id slot the renderer threads the subject id into.
+        $this->seedNav(3, 'friend', 'message/sendToFriend');
 
         $this->runUpgrade();
 
         $this->assertSame('/message/receiveList', $this->upgradedUri(1));
         $this->assertSame('/message/receiveList', $this->upgradedUri(2));
+        $this->assertSame('/message/sendToFriend?id=:id', $this->upgradedUri(3));
     }
 
     public function test_carries_the_original_in_source_uri(): void
