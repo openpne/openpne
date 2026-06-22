@@ -61,6 +61,16 @@ class UpgradeMatrixCommand extends Command
             $this->line('');
         }
 
+        if (StepRegistry::unownedFileColumns() !== []) {
+            $this->line('## Migrated columns whose file is left ownerless');
+            $this->line('');
+            $this->line('file_id columns on migrated tables whose file FileUpgrade does not assign an owner yet (the binary and the link are kept; the owner is backfilled when the feature lands):');
+            foreach (StepRegistry::unownedFileColumns() as $column => $reason) {
+                $this->line("- `{$column}` — {$reason}");
+            }
+            $this->line('');
+        }
+
         // member_config is a KV table; the per-step column audit cannot show which names are
         // migrated vs dropped, so list that per-name coverage explicitly.
         $this->line('## `member_config` name coverage');

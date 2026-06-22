@@ -13,6 +13,7 @@ use App\Upgrade\Steps\CommunityTopicUpgrade;
 use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
+use App\Upgrade\Steps\FileUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\GadgetConfigUpgrade;
@@ -38,6 +39,9 @@ final class StepRegistry
     public static function classes(): array
     {
         return [
+            // files have no FK dependency and are referenced by communities.file_id and every owning
+            // image/attachment table, so the file step runs before anything that points at a file.
+            FileUpgrade::class,
             MemberUpgrade::class,
             // member_preferences references members; only the member step must precede it.
             MemberPreferenceUpgrade::class,
@@ -99,22 +103,43 @@ final class StepRegistry
     public static function deferredSourceTables(): array
     {
         return [
-            'file' => 'OpenPNE 3 file metadata. The upgrade maps file ownership onto the related_entity columns, which needs the OpenPNE 4 tables that own files (avatars, attachments) to exist first; no step yet.',
-            'file_bin' => 'OpenPNE 3 file bytes. Migrated by a metadata-only FK rewire onto `files` (the file_bin schema is frozen for exactly that), not a BLOB copy; pending the `file` step.',
-            'member_image' => 'OpenPNE 3 member profile images (up to three, one primary). OpenPNE 4 is a single avatar (member_images.member_id is unique), so the upgrade keeps one row per member — the primary (is_primary DESC, then id) — and drops the rest; pending the `file` step it depends on.',
-            'community_topic_image' => 'OpenPNE 3 topic image attachments (up to three per topic, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
-            'community_topic_comment_image' => 'OpenPNE 3 topic-comment image attachments (up to three per comment, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
-            'community_event_image' => 'OpenPNE 3 event image attachments (up to three per event, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
-            'community_event_comment_image' => 'OpenPNE 3 event-comment image attachments (up to three per comment, by post_id + number). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
-            'banner' => 'OpenPNE 3 design banners (top_before / top_after placements). Migrated by BannerUpgrade together with their images; pending the `file` step those images depend on.',
-            'banner_image' => 'OpenPNE 3 banner image pool. Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
-            'banner_use_image' => 'OpenPNE 3 banner↔image placement links. Migrated with BannerUpgrade; pending the `file` step those images depend on.',
+            'file_bin' => 'OpenPNE 3 file bytes. Not a copy step: the runner migrates it by an in-place ALTER that re-points the file_id FK from `file` onto `files` (the file_bin schema is frozen, and FileUpgrade keeps file.id, for exactly that), so the gigabytes of BLOBs are never rewritten.',
+            'member_image' => 'OpenPNE 3 member profile images (up to three, one primary). OpenPNE 4 is a single avatar (member_images.member_id is unique), so the upgrade keeps one row per member — the primary (is_primary DESC, then id) — and drops the rest; copied by its own step (not written yet), preserving file_id.',
+            'community_topic_image' => 'OpenPNE 3 topic image attachments (up to three per topic, by post_id + number). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
+            'community_topic_comment_image' => 'OpenPNE 3 topic-comment image attachments (up to three per comment, by post_id + number). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
+            'community_event_image' => 'OpenPNE 3 event image attachments (up to three per event, by post_id + number). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
+            'community_event_comment_image' => 'OpenPNE 3 event-comment image attachments (up to three per comment, by post_id + number). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
+            'banner' => 'OpenPNE 3 design banners (top_before / top_after placements). Migrated by BannerUpgrade together with their images; copied with its own step (not written yet).',
+            'banner_image' => 'OpenPNE 3 banner image pool. Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
+            'banner_use_image' => 'OpenPNE 3 banner↔image placement links. Migrated with BannerUpgrade; copied with its own step (not written yet).',
             'banner_translation' => 'OpenPNE 3 banner caption (I18n). Not migrated: the caption was an admin-only label, never rendered, and OpenPNE 4 labels the fixed placements in the UI.',
             'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped (Phase A is approval-only).',
-            'message_file' => 'OpenPNE 3 message image attachments (up to three per message, by message_id). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
+            'message_file' => 'OpenPNE 3 message image attachments (up to three per message, by message_id). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
             'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: MessageUpgrade / MessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the messages.sender_* / message_recipients.recipient_* soft-delete columns via correlated subquery.',
             'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
             'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
+            // File-owning tables with no OpenPNE 4 successor surface. FileUpgrade still migrates their
+            // binaries (every `file` row is kept) with a null owner; an owner is assigned if and when
+            // the corresponding feature lands.
+            'diary_image' => 'OpenPNE 3 diary inline images. No successor surface (the diary body is plain text in OpenPNE 4); the binaries are kept with a null owner for a later diary-image feature.',
+            'diary_comment_image' => 'OpenPNE 3 diary-comment inline images. Same as diary_image: no successor surface yet; binaries kept with a null owner.',
+            'activity_image' => 'OpenPNE 3 activity (timeline) images. The timeline is not built; the binaries are kept with a null owner for when it lands.',
+            'oauth_consumer' => 'OpenPNE 3 OAuth consumer registry (incl. a consumer logo file_id). OpenPNE 4 has no OAuth provider, so the table is not migrated; the logo binary is kept with a null owner.',
+        ];
+    }
+
+    /**
+     * file_id columns that sit on an otherwise-migrated table but are intentionally left without a
+     * file owner, with the reason. Distinct from deferredSourceTables() (whole tables with no step):
+     * the table migrates, but FileUpgrade assigns its file no related_entity yet. The matrix coverage
+     * audit treats these as accounted-for so the column is not read as a silent drop.
+     *
+     * @return array<string, string> "table.column" => reason
+     */
+    public static function unownedFileColumns(): array
+    {
+        return [
+            'community.file_id' => 'Community top image. CommunityUpgrade copies it onto communities.file_id, so which file each community used is preserved; FileUpgrade leaves the file ownerless because the community-image delivery surface (morph alias, FilePolicy arm, display) is not built. When it lands, the owner is backfilled from communities.file_id.',
         ];
     }
 

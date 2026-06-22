@@ -51,6 +51,30 @@ final class SourceSchema
         return $matches[1];
     }
 
+    /**
+     * Every `table.column` that is a foreign key onto `file`(id), in fixture order. A file owner can
+     * be a join table (member_image, *_image) or a plain column on another table (community.file_id),
+     * so coverage of the upload binaries is a column-level question, not a table-level one — this is
+     * what the matrix audit checks each reference is either owned or explicitly deferred.
+     *
+     * @return list<string>
+     */
+    public function fileReferencingColumns(): array
+    {
+        preg_match_all('/CREATE TABLE `([a-z0-9_]+)` \((.*?)\n\) ENGINE=/s', $this->contents(), $blocks, PREG_SET_ORDER);
+
+        $references = [];
+        foreach ($blocks as [, $table, $body]) {
+            if (preg_match_all('/FOREIGN KEY \(`([a-z0-9_]+)`\) REFERENCES `file`\s*\(/', $body, $columns)) {
+                foreach ($columns[1] as $column) {
+                    $references[] = "{$table}.{$column}";
+                }
+            }
+        }
+
+        return $references;
+    }
+
     private function contents(): string
     {
         $contents = file_get_contents($this->path);
