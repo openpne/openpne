@@ -58,7 +58,7 @@ class MemberImageUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('member_images', ['member_id' => $member->id, 'file_id' => 2]);
     }
 
-    public function test_with_no_primary_keeps_the_lowest_id_row(): void
+    public function test_ties_among_equal_rank_break_by_lowest_id(): void
     {
         $member = Member::factory()->create();
         $this->seedFile(4);
@@ -70,6 +70,22 @@ class MemberImageUpgradeSqlTest extends TestCase
 
         $this->assertDatabaseCount('member_images', 1);
         $this->assertDatabaseHas('member_images', ['member_id' => $member->id, 'file_id' => 4]);
+    }
+
+    public function test_a_demoted_image_outranks_a_never_primary_one(): void
+    {
+        // OpenPNE 3's Member::getImage() orders by is_primary DESC, so a demoted 0 (was the main image,
+        // changeMainImage sets the old one false) outranks a never-primary NULL even at a higher id.
+        $member = Member::factory()->create();
+        $this->seedFile(8);
+        $this->seedFile(9);
+        $this->seedMemberImage(30, $member->id, 8, isPrimary: null); // never primary, lower id
+        $this->seedMemberImage(31, $member->id, 9, isPrimary: 0);     // demoted, higher id, kept
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseCount('member_images', 1);
+        $this->assertDatabaseHas('member_images', ['member_id' => $member->id, 'file_id' => 9]);
     }
 
     public function test_one_avatar_per_member_across_members(): void
