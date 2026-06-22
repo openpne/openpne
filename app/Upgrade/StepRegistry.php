@@ -2,6 +2,9 @@
 
 namespace App\Upgrade;
 
+use App\Upgrade\Steps\BannerImageUpgrade;
+use App\Upgrade\Steps\BannerUpgrade;
+use App\Upgrade\Steps\BannerUseImageUpgrade;
 use App\Upgrade\Steps\CommunityCategoryUpgrade;
 use App\Upgrade\Steps\CommunityEventCommentImageUpgrade;
 use App\Upgrade\Steps\CommunityEventCommentUpgrade;
@@ -27,6 +30,7 @@ use App\Upgrade\Steps\MemberImageUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberProfileUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\Steps\MessageFileUpgrade;
 use App\Upgrade\Steps\MessageRecipientUpgrade;
 use App\Upgrade\Steps\MessageUpgrade;
 use App\Upgrade\Steps\NavigationTranslationUpgrade;
@@ -94,6 +98,12 @@ final class StepRegistry
             CommunityTopicCommentImageUpgrade::class,
             CommunityEventImageUpgrade::class,
             CommunityEventCommentImageUpgrade::class,
+            // banner_images reference files; banner_use_images reference banners and banner_images.
+            BannerUpgrade::class,
+            BannerImageUpgrade::class,
+            BannerUseImageUpgrade::class,
+            // message_files reference the messages (above) and the files (FileUpgrade, first).
+            MessageFileUpgrade::class,
         ];
     }
 
@@ -116,12 +126,8 @@ final class StepRegistry
     {
         return [
             'file_bin' => 'OpenPNE 3 file bytes. Not a copy step: the runner migrates it by an in-place ALTER that re-points the file_id FK from `file` onto `files` (the file_bin schema is frozen, and FileUpgrade keeps file.id, for exactly that), so the gigabytes of BLOBs are never rewritten.',
-            'banner' => 'OpenPNE 3 design banners (top_before / top_after placements). Migrated by BannerUpgrade together with their images; copied with its own step (not written yet).',
-            'banner_image' => 'OpenPNE 3 banner image pool. Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
-            'banner_use_image' => 'OpenPNE 3 banner↔image placement links. Migrated with BannerUpgrade; copied with its own step (not written yet).',
             'banner_translation' => 'OpenPNE 3 banner caption (I18n). Not migrated: the caption was an admin-only label, never rendered, and OpenPNE 4 labels the fixed placements in the UI.',
             'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped (Phase A is approval-only).',
-            'message_file' => 'OpenPNE 3 message image attachments (up to three per message, by message_id). Copied by its own step (not written yet), preserving file_id (FileUpgrade keeps file.id).',
             'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: MessageUpgrade / MessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the messages.sender_* / message_recipients.recipient_* soft-delete columns via correlated subquery.',
             'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
             'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
