@@ -21,6 +21,8 @@ use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberProfileUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\Steps\MessageRecipientUpgrade;
+use App\Upgrade\Steps\MessageUpgrade;
 use App\Upgrade\Steps\NavigationTranslationUpgrade;
 use App\Upgrade\Steps\NavigationUpgrade;
 use App\Upgrade\Steps\ProfileOptionTranslationUpgrade;
@@ -73,6 +75,9 @@ final class StepRegistry
             GadgetConfigUpgrade::class,
             // sns_settings is independent (no FK); migrates the display + gadget-layout sns_config keys.
             SnsSettingUpgrade::class,
+            // messages reference members; message_recipients reference the messages, so messages run first.
+            MessageUpgrade::class,
+            MessageRecipientUpgrade::class,
         ];
     }
 
@@ -106,6 +111,10 @@ final class StepRegistry
             'banner_use_image' => 'OpenPNE 3 banner↔image placement links. Migrated with BannerUpgrade; pending the `file` step those images depend on.',
             'banner_translation' => 'OpenPNE 3 banner caption (I18n). Not migrated: the caption was an admin-only label, never rendered, and OpenPNE 4 labels the fixed placements in the UI.',
             'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped (Phase A is approval-only).',
+            'message_file' => 'OpenPNE 3 message image attachments (up to three per message, by message_id). Migrated by a metadata-only FK rewire onto `files`, not a BLOB copy; pending the `file` step it depends on.',
+            'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: MessageUpgrade / MessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the messages.sender_* / message_recipients.recipient_* soft-delete columns via correlated subquery.',
+            'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
+            'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
         ];
     }
 
