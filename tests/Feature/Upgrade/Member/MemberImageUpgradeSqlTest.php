@@ -13,7 +13,7 @@ use Tests\TestCase;
 /**
  * Runs the compiled `member_image` → `member_images` INSERT...SELECT against the real OpenPNE 3 DDL,
  * checking the single-avatar collapse: one row per member (member_images.member_id is unique), the
- * primary kept, else the lowest id, the rest dropped.
+ * row OpenPNE 3's getImage() would show (is_primary DESC, then id), the rest dropped.
  *
  * MySQL only: the set-based copy, the source DDL and the correlated filter are MySQL features.
  */
