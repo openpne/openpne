@@ -673,5 +673,13 @@
     "The message was sent successfully.": "メッセージを送信しました。",
     "The message was saved successfully.": "メッセージを下書き保存しました。",
     "Cannot send the message.": "メッセージを送信できません。",
-    "A message can have at most :max images.": "メッセージに添付できる画像は最大 :max 枚です。"
+    "A message can have at most :max images.": "メッセージに添付できる画像は最大 :max 枚です。",
+    "Delete permanently": "完全に削除",
+    "Delete this message": "このメッセージを削除",
+    "Do you delete this message?": "このメッセージを削除しますか？",
+    "Delete messages": "メッセージを削除",
+    "Do you delete messages?": "選択したメッセージを削除しますか？",
+    "The message was moved to the trash.": "メッセージをゴミ箱に移動しました。",
+    "The message was restored.": "メッセージを復元しました。",
+    "The message was deleted.": "メッセージを完全に削除しました。"
 }

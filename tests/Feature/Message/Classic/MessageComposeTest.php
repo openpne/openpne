@@ -133,6 +133,22 @@ class MessageComposeTest extends TestCase
         $this->actingAs($stranger)->get(route('message.reply', ['message' => $original->getKey()]))->assertNotFound();
     }
 
+    public function test_reply_is_unavailable_once_the_received_message_leaves_the_inbox(): void
+    {
+        Notification::fake();
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $original = app(SendMessage::class)($sender, new MessageComposeData($recipient->getKey(), 'Original', 'Body'), asDraft: false);
+        $receipt = $original->recipients()->firstOrFail();
+
+        // Trashed: reply is an inbox action, so it is gone.
+        $receipt->forceFill(['recipient_deleted_at' => now()])->save();
+        $this->actingAs($recipient)->get(route('message.reply', ['message' => $original->getKey()]))->assertNotFound();
+
+        // Purged: still gone — the body must not resurface as a quote.
+        $receipt->forceFill(['recipient_purged_at' => now()])->save();
+        $this->actingAs($recipient)->get(route('message.reply', ['message' => $original->getKey()]))->assertNotFound();
+    }
+
     public function test_draft_edit_renders_for_the_owner_and_sends(): void
     {
         Notification::fake();
