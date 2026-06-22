@@ -31,18 +31,16 @@ class RestoreMessages
 
         return DB::transaction(function () use ($ids, $viewerId): int {
             $sender = Message::query()
+                ->senderTrashed()
                 ->where('sender_id', $viewerId)
                 ->whereIn('id', $ids)
-                ->whereNotNull('sender_deleted_at')
-                ->whereNull('sender_purged_at')
                 ->update(['sender_deleted_at' => null]);
 
             $recipient = MessageRecipient::query()
                 ->ofDelivered() // a draft is never the recipient's, even if a stray receipt were trashed
+                ->recipientTrashed()
                 ->where('recipient_id', $viewerId)
                 ->whereIn('message_id', $ids)
-                ->whereNotNull('recipient_deleted_at')
-                ->whereNull('recipient_purged_at')
                 ->update(['recipient_deleted_at' => null]);
 
             return $sender + $recipient;

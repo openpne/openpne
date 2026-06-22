@@ -32,19 +32,17 @@ class TrashMessages
         return match ($box) {
             MessageBox::Receive => MessageRecipient::query()
                 ->ofDelivered() // a draft is never the recipient's, even to trash
+                ->recipientLive()
                 ->where('recipient_id', $viewerId)
                 ->whereIn('message_id', $ids)
-                ->whereNull('recipient_deleted_at')
-                ->whereNull('recipient_purged_at')
                 ->update(['recipient_deleted_at' => now()]),
             // The sender owns both their sent box and their drafts; each box trashes only its own kind,
             // so a sent id submitted as a draft (or vice versa) cannot cross boxes.
             MessageBox::Sent, MessageBox::Draft => Message::query()
+                ->senderLive()
                 ->where('sender_id', $viewerId)
                 ->whereIn('id', $ids)
                 ->where('is_draft', $box === MessageBox::Draft)
-                ->whereNull('sender_deleted_at')
-                ->whereNull('sender_purged_at')
                 ->update(['sender_deleted_at' => now()]),
             MessageBox::Trash => 0, // the trash box restores or purges, it does not trash
         };

@@ -41,7 +41,7 @@ class SendMessageTest extends TestCase
         Notification::assertSentTo($recipient, MessageReceivedNotification::class);
     }
 
-    public function test_a_draft_is_unsent_carries_a_receipt_and_does_not_notify(): void
+    public function test_a_draft_holds_its_recipient_without_a_receipt_and_does_not_notify(): void
     {
         Notification::fake();
         [$sender, $recipient] = Member::factory()->count(2)->create();
@@ -49,7 +49,9 @@ class SendMessageTest extends TestCase
         $message = ($this->send())($sender, new MessageComposeData($recipient->getKey(), 'Hi', 'Hello'), asDraft: true);
 
         $this->assertTrue($message->is_draft);
-        $this->assertDatabaseHas('message_recipients', ['message_id' => $message->getKey(), 'recipient_id' => $recipient->getKey()]);
+        // A draft is not delivered: the recipient sits on the row, with no receipt to surface it.
+        $this->assertSame($recipient->getKey(), (int) $message->draft_recipient_id);
+        $this->assertDatabaseMissing('message_recipients', ['message_id' => $message->getKey()]);
         Notification::assertNothingSent();
     }
 

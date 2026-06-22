@@ -7,6 +7,7 @@ use App\Features\Message\Actions\UpdateDraft;
 use App\Features\Message\MessageComposeData;
 use App\Models\Member;
 use App\Models\Message;
+use App\Models\MessageRecipient;
 use App\Notifications\Message\MessageReceivedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -44,11 +45,14 @@ class UpdateDraftTest extends TestCase
         Notification::fake();
         $sender = Member::factory()->create();
         $draft = $this->draft($sender);
-        $recipient = $draft->recipients()->with('recipient')->first()->recipient;
+        $recipient = $draft->draftRecipient; // a draft holds its recipient here, not in a receipt
 
         app(UpdateDraft::class)($sender, $draft, 'Subject', 'Body', asDraft: false);
 
         $this->assertFalse($draft->fresh()->is_draft);
+        // Sending materializes the receipt and clears the draft-only column.
+        $this->assertDatabaseHas('message_recipients', ['message_id' => $draft->getKey(), 'recipient_id' => $recipient->getKey()]);
+        $this->assertNull($draft->fresh()->draft_recipient_id);
         Notification::assertSentTo($recipient, MessageReceivedNotification::class);
     }
 
@@ -76,5 +80,25 @@ class UpdateDraftTest extends TestCase
 
         $this->expectException(NotFoundHttpException::class);
         app(UpdateDraft::class)($stranger, $draft, 'X', 'Y', asDraft: true);
+    }
+
+    public function test_a_racing_second_send_does_not_duplicate_the_receipt(): void
+    {
+        Notification::fake();
+        $sender = Member::factory()->create();
+        $draft = $this->draft($sender);
+        $stale = Message::findOrFail($draft->getKey()); // a second handle, still a draft in memory
+
+        app(UpdateDraft::class)($sender, $draft, 'S', 'B', asDraft: false); // first send delivers it
+        $this->assertSame(1, MessageRecipient::where('message_id', $draft->getKey())->count());
+
+        // The racing send works the stale handle; under the lock it re-reads a non-draft and aborts.
+        try {
+            app(UpdateDraft::class)($sender, $stale, 'S', 'B', asDraft: false);
+            $this->fail('Expected the stale concurrent send to abort.');
+        } catch (NotFoundHttpException) {
+            // expected
+        }
+        $this->assertSame(1, MessageRecipient::where('message_id', $draft->getKey())->count());
     }
 }
