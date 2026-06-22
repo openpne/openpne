@@ -39,10 +39,14 @@ class UpdateDraft
             throw new MessageActionException(MessageActionFailure::CannotSend);
         }
 
-        $removedFiles = $this->images->compensating(function (callable $store) use ($draft, $recipient, $subject, $body, $asDraft, $newImages, $removeImageIds): array {
-            // Serialize concurrent edits: the free-slot read and the inserts must not interleave with
-            // another edit, or both could claim the same slot or push past the cap.
-            Message::whereKey($draft->getKey())->lockForUpdate()->first();
+        $removedFiles = $this->images->compensating(function (callable $store) use ($sender, $draft, $recipient, $subject, $body, $asDraft, $newImages, $removeImageIds): array {
+            // Re-read under the lock and re-check the fresh state — not the stale $draft read before the
+            // lock. This serializes concurrent edits (so two adds can't claim the same image slot) and,
+            // crucially, stops a double-submitted send: a racing send commits is_draft=false first, then
+            // this one sees a non-draft and aborts instead of inserting a second receipt / notifying.
+            $fresh = Message::whereKey($draft->getKey())->lockForUpdate()->first();
+            abort_unless($fresh !== null && (int) $fresh->sender_id === (int) $sender->getKey()
+                && $fresh->is_draft && $fresh->sender_deleted_at === null && $fresh->sender_purged_at === null, 404);
 
             $draft->subject = $subject;
             $draft->body = $body;

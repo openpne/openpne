@@ -222,4 +222,33 @@ class MessageComposeTest extends TestCase
             ->assertOk()
             ->assertSee(route('message.compose', ['id' => $owner->getKey()]), false);
     }
+
+    public function test_a_reply_link_to_a_message_the_viewer_is_not_party_to_is_rejected(): void
+    {
+        [$viewer, $other, $stranger] = Member::factory()->count(3)->create();
+        // A message between two other members; the viewer is not a party to it.
+        $foreign = app(SendMessage::class)($stranger, new MessageComposeData($other->getKey(), 'X', 'Y'), asDraft: false);
+
+        $this->actingAs($viewer)->post(route('message.compose.store'), [
+            'to' => $other->getKey(),
+            'subject' => 'Hi', 'body' => 'Body', 'action' => 'send',
+            'parent_id' => $foreign->getKey(),
+        ])->assertSessionHasErrors('parent_id');
+
+        $this->assertSame(1, Message::count()); // nothing new sent
+    }
+
+    public function test_a_reply_link_to_a_received_message_is_accepted(): void
+    {
+        Notification::fake();
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $original = app(SendMessage::class)($sender, new MessageComposeData($recipient->getKey(), 'Orig', 'Body'), asDraft: false);
+
+        // The recipient may reply, carrying the thread links to the message they received.
+        $this->actingAs($recipient)->post(route('message.compose.store'), [
+            'to' => $sender->getKey(),
+            'subject' => 'Re:Orig', 'body' => 'Reply', 'action' => 'send',
+            'parent_id' => $original->getKey(), 'thread_id' => $original->getKey(),
+        ])->assertRedirect(route('message.send'));
+    }
 }
