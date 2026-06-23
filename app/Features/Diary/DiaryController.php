@@ -203,7 +203,7 @@ class DiaryController extends Controller
 
     public function store(StoreDiaryRequest $request, CreateDiary $action): RedirectResponse
     {
-        $diary = $action($this->viewer(), $request->toData());
+        $diary = $action($this->viewer(), $request->toData(), $request->file('images', []));
 
         return redirect()
             ->route(SurfaceResolver::redirectName($request, 'diary.show'), $diary)
@@ -214,6 +214,9 @@ class DiaryController extends Controller
     {
         $viewer = $this->viewer();
         abort_unless($viewer->is($diary->member), 404);
+
+        // Render the current images (and let the Modern serializer read them) without an N+1.
+        $diary->load('images.file');
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('diary.edit', [
@@ -229,7 +232,13 @@ class DiaryController extends Controller
     public function update(UpdateDiaryRequest $request, Diary $diary, UpdateDiary $action): RedirectResponse
     {
         try {
-            $action($this->viewer(), $diary, $request->toData());
+            $action(
+                $this->viewer(),
+                $diary,
+                $request->toData(),
+                $request->file('images', []),
+                $request->input('remove_images', []),
+            );
         } catch (DiaryActionException) {
             abort(404);
         }

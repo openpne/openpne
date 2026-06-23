@@ -84,7 +84,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('Japanese datetime format', L::Three, S::Ported, "op_format_date(created_at, 'XDateTimeJa')", 'LocalizedDate; inline single-line (XDateTimeJaBr stacks the parts for the OpenPNE 3 sidebar column)'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; author avatar links to the profile'),
                 new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + prev/next month + day-archive links (MemberDiaryDays)'),
-                new ScreenElement('diary images', L::Three, S::Deferred, '$diary->getDiaryImagesJoinFile()', 'image delivery not built (FileStorage)'),
+                new ScreenElement('diary images', L::Three, S::Ported, '$diary->getDiaryImagesJoinFile()', 'DiaryImage thumbnails via the shared _images partial; each fetch FilePolicy-gated by diary visibility'),
             ],
             // newSuccess.php + _form.php (PluginDiaryForm) → diary/new.blade.php
             'new' => [
@@ -93,7 +93,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('web-public (Open) visibility option', L::Two, S::Ported, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'gated by openpne.diary.allow_web_public (OpenPNE 3 op_diary_plugin_use_open_diary, default on)'),
                 new ScreenElement('remembered default visibility', L::Three, S::Missing, 'MemberConfigDiaryForm::PUBLIC_FLAG default', 'OpenPNE 4 hardcodes the members default'),
                 new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea; OpenPNE 3 rich-text widget not ported'),
-                new ScreenElement('image upload (x3)', L::Three, S::Deferred, 'app_diary_is_upload_images + DiaryImageForm', 'image delivery not built (FileStorage)'),
+                new ScreenElement('image upload (x3)', L::Three, S::Ported, 'app_diary_is_upload_images + DiaryImageForm', 'up to PostImages::MAX_IMAGES via the shared _image_fields partial; PostImageRules validation'),
                 new ScreenElement('post button', L::Two, S::Ported, 'op_include_form diaryForm button'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; author avatar links to the profile'),
                 new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + prev/next month + day-archive links (MemberDiaryDays)'),
@@ -104,7 +104,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('visibility choice (members/friends/private)', L::One, S::Ported, 'public_flag sfWidgetFormChoice'),
                 new ScreenElement('web-public (Open) visibility option', L::Two, S::Ported, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'shared diary form; gated by openpne.diary.allow_web_public'),
                 new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea; OpenPNE 3 rich-text widget not ported'),
-                new ScreenElement('existing image edit / delete', L::Three, S::Deferred, '_formEditImage / DiaryImageForm', 'image delivery not built (FileStorage)'),
+                new ScreenElement('existing image edit / delete', L::Three, S::Ported, '_formEditImage / DiaryImageForm', 'current-image thumbnails + remove_images[] checkboxes; UpdateDiary frees and refills the slots'),
                 new ScreenElement('save button', L::Two, S::Ported, 'op_include_form diaryForm button'),
                 new ScreenElement('delete-diary box', L::Three, S::Missing, "formDiaryDelete url_for('diary_delete_confirm')", 'OpenPNE 4 places the delete entry on the show page instead'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; author avatar links to the profile'),
@@ -120,7 +120,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "op_format_date(created_at, 'XDateTimeJa')", 'LocalizedDate'),
                 new ScreenElement('author thumbnail', L::Two, S::Ported, 'image_tag_sf_image(Member->getImageFilename, 76x76)', 'Member->avatar 76×76 square linking to the entry; rendered only when set (OpenPNE 4 has no default-avatar placeholder)'),
                 new ScreenElement('body excerpt', L::Two, S::Ported, 'op_truncate(op_decoration(body, true), 36, ..., 3)', 'BodyText::excerpt; single-line width 108 (OpenPNE 3 wraps to 3×36); <op:*> decoration tags stripped'),
-                new ScreenElement('has-images icon', L::Three, S::Missing, 'op_diary_image_icon', 'image delivery not built'),
+                new ScreenElement('has-images icon', L::Three, S::Ported, 'op_diary_image_icon', 'images_count-driven .imageIcon marker (OpenPNE 4 ships no camera gif, so a CSS-hook span)'),
             ],
             // listFriendSuccess.php → diary/feed.blade.php (variant=friends, no search form)
             'listFriend' => [
@@ -129,7 +129,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('empty-state message', L::Three, S::Ported, 'op_include_box diaryList'),
                 new ScreenElement('per-entry title + comment count', L::Two, S::Ported, 'op_diary_get_title_and_count', 'DiaryTitle: title truncated to display width 36 + "(N)"'),
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "op_format_date(created_at, 'XDateTimeJa')", 'LocalizedDate'),
-                new ScreenElement('has-images icon', L::Three, S::Missing, 'op_diary_image_icon', 'image delivery not built'),
+                new ScreenElement('has-images icon', L::Three, S::Ported, 'op_diary_image_icon', 'images_count-driven .imageIcon marker (OpenPNE 4 ships no camera gif, so a CSS-hook span)'),
             ],
             // listMemberSuccess.php → diary/list.blade.php
             'listMember' => [

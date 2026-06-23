@@ -35,8 +35,8 @@ class DiaryUpgrade extends UpgradeStep
     public function gaps(): array
     {
         return [
-            'has_images' => 'Denormalized flag for the diary image tables; this step migrates the diary record only.',
-            'diary_image' => 'Diary image attachments — outside this step (image delivery is not built).',
+            'has_images' => 'Denormalized flag for the diary image tables; OpenPNE 4 derives it from the relation, so this step migrates the diary record only.',
+            'diary_image' => 'Diary image attachments — migrated by DiaryImageUpgrade (its own join-row step), not this record step.',
         ];
     }
 

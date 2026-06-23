@@ -17,6 +17,7 @@ export default function DiaryNew({
         title: '',
         body: '',
         visibility: defaultVisibility,
+        images: [] as File[],
     });
 
     return (
@@ -30,7 +31,9 @@ export default function DiaryNew({
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        post('/m/diary/create');
+                        // forceFormData: the upload needs a multipart body, which Inertia uses
+                        // automatically once a File is present but not for an initially-empty array.
+                        post('/m/diary/create', { forceFormData: true });
                     }}
                     className="space-y-4"
                 >
@@ -70,6 +73,17 @@ export default function DiaryNew({
                             ))}
                         </select>
                         {errors.visibility && <p role="alert">{errors.visibility}</p>}
+                    </div>
+                    <div>
+                        <label htmlFor="diary_images">{t('Images')}</label>
+                        <input
+                            id="diary_images"
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            multiple
+                            onChange={(e) => setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
+                        />
+                        {errors.images && <p role="alert">{errors.images}</p>}
                     </div>
                     <button type="submit" disabled={processing}>
                         {t('Post')}

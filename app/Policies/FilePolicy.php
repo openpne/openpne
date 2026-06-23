@@ -4,12 +4,14 @@ namespace App\Policies;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Features\Diary\DiaryAccess;
 use App\Features\Message\MessageAccess;
 use App\Models\BannerImage;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
+use App\Models\Diary;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\Message;
@@ -38,6 +40,9 @@ class FilePolicy extends BasePolicy
             // A member's image (avatar) is visible to any signed-in member the owner
             // has not blocked. ownerBlocksViewer is one-way (BasePolicy).
             $owner instanceof Member => $viewer !== null && ! $this->ownerBlocksViewer($owner, $viewer),
+            // A diary image inherits the diary's visibility: a web-public (Open) diary's images are
+            // public (guest-readable); otherwise the viewer's clearance on the author, blocked → none.
+            $owner instanceof Diary => DiaryAccess::canView($viewer, $owner),
             // A topic/comment image inherits the board's read access: visible exactly to
             // whoever may read the topic it hangs on (members-only boards hide it).
             $owner instanceof CommunityTopic => $viewer !== null && CommunityTopicAccess::canViewTopic($owner, $viewer),

@@ -30,6 +30,9 @@
             </p>
             <div class="diaryBody"><x-user-text :value="$diary->body" /></div>
 
+            {{-- OpenPNE 3 showSuccess.php: the diary's attached images as a thumbnail gallery. --}}
+            @include('community-topic._images', ['images' => $diary->images])
+
             @if ($diary->member->is(auth()->user()))
                 <p>
                     <a href="{{ route('diary.edit', $diary) }}">{{ __('Edit') }}</a>

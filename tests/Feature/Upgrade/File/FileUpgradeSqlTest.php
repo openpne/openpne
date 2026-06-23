@@ -25,6 +25,7 @@ class FileUpgradeSqlTest extends TestCase
     private array $sourceTables = [
         'file',
         'member_image',
+        'diary_image',
         'community_topic_image',
         'community_topic_comment_image',
         'community_event_image',
@@ -35,7 +36,7 @@ class FileUpgradeSqlTest extends TestCase
         'banner_image',
         // Not read by the owner CASE; seeded to show a file only an unowned surface points at stays
         // ownerless (community.file_id / oauth_consumer.file_id behave the same — see the matrix audit).
-        'diary_image',
+        'activity_image',
     ];
 
     protected function setUp(): void
@@ -104,6 +105,16 @@ class FileUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('files', ['id' => 11, 'related_entity_type' => 'member', 'related_entity_id' => 77]);
     }
 
+    public function test_resolves_diary_image_owner(): void
+    {
+        $this->seedFile(12);
+        DB::table('diary_image')->insert(['id' => 1, 'diary_id' => 88, 'file_id' => 12, 'number' => 1]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 12, 'related_entity_type' => 'diary', 'related_entity_id' => 88]);
+    }
+
     public function test_resolves_community_topic_and_event_owners(): void
     {
         $this->seedFile(20);
@@ -159,7 +170,9 @@ class FileUpgradeSqlTest extends TestCase
     public function test_a_file_only_an_unowned_surface_points_at_is_migrated_ownerless(): void
     {
         $this->seedFile(50);
-        DB::table('diary_image')->insert(['id' => 1, 'diary_id' => 7, 'file_id' => 50, 'number' => 1]);
+        // activity_image has no OpenPNE 4 successor surface (the timeline is not built), so a file only
+        // it points at keeps a null owner — the FileUpgrade fail-closed default.
+        DB::table('activity_image')->insert(['id' => 1, 'activity_data_id' => 7, 'mime_type' => 'image/png', 'uri' => null, 'file_id' => 50, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
 
         $this->runUpgrade();
 

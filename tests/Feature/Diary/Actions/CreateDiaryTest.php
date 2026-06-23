@@ -18,7 +18,7 @@ class CreateDiaryTest extends TestCase
         $author = Member::factory()->create();
         $data = new DiaryFormData('My title', 'My body', Visibility::Members);
 
-        $diary = (new CreateDiary)($author, $data);
+        $diary = app(CreateDiary::class)($author, $data);
 
         $this->assertDatabaseHas('diaries', [
             'id' => $diary->getKey(),
@@ -34,7 +34,7 @@ class CreateDiaryTest extends TestCase
         $author = Member::factory()->create();
         $data = new DiaryFormData('Title', 'Body', Visibility::Friends);
 
-        $diary = (new CreateDiary)($author, $data);
+        $diary = app(CreateDiary::class)($author, $data);
 
         $this->assertSame(Visibility::Friends, $diary->visibility);
     }
@@ -47,7 +47,7 @@ class CreateDiaryTest extends TestCase
         $longTitle = str_repeat('あ', 500);
         $data = new DiaryFormData($longTitle, 'Body', Visibility::Members);
 
-        $diary = (new CreateDiary)($author, $data);
+        $diary = app(CreateDiary::class)($author, $data);
 
         $this->assertSame($longTitle, $diary->fresh()->title);
     }

@@ -10,7 +10,7 @@
     <div class="dparts form" id="diary_new">
         <div class="partsHeading"><h3>{{ __('Write a %diary%') }}</h3></div>
         <div class="parts">
-            <form method="POST" action="{{ route('diary.store') }}">
+            <form method="POST" action="{{ route('diary.store') }}" enctype="multipart/form-data">
                 @csrf
                 <table>
                     <tr>
@@ -39,6 +39,7 @@
                             @error('visibility')<p class="error">{{ $message }}</p>@enderror
                         </td>
                     </tr>
+                    @include('community-topic._image_fields')
                 </table>
                 <div class="operation">
                     <ul class="moreInfo button">

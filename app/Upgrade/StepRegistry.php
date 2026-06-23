@@ -19,6 +19,7 @@ use App\Upgrade\Steps\CommunityTopicImageUpgrade;
 use App\Upgrade\Steps\CommunityTopicUpgrade;
 use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
+use App\Upgrade\Steps\DiaryImageUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FileUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
@@ -94,6 +95,7 @@ final class StepRegistry
             // Image join rows: each references a file (FileUpgrade, first) plus its owning member or
             // post (all migrated above), so they run last.
             MemberImageUpgrade::class,
+            DiaryImageUpgrade::class,
             CommunityTopicImageUpgrade::class,
             CommunityTopicCommentImageUpgrade::class,
             CommunityEventImageUpgrade::class,
@@ -134,8 +136,7 @@ final class StepRegistry
             // File-owning tables with no OpenPNE 4 successor surface. FileUpgrade still migrates their
             // binaries (every `file` row is kept) with a null owner; an owner is assigned if and when
             // the corresponding feature lands.
-            'diary_image' => 'OpenPNE 3 diary inline images. No successor surface (the diary body is plain text in OpenPNE 4); the binaries are kept with a null owner for a later diary-image feature.',
-            'diary_comment_image' => 'OpenPNE 3 diary-comment inline images. Same as diary_image: no successor surface yet; binaries kept with a null owner.',
+            'diary_comment_image' => 'OpenPNE 3 diary-comment inline images. No successor surface yet (diary post images are migrated by DiaryImageUpgrade, but comments are not); binaries kept with a null owner.',
             'activity_image' => 'OpenPNE 3 activity (timeline) images. The timeline is not built; the binaries are kept with a null owner for when it lands.',
             'oauth_consumer' => 'OpenPNE 3 OAuth consumer registry (incl. a consumer logo file_id). OpenPNE 4 has no OAuth provider, so the table is not migrated; the logo binary is kept with a null owner.',
         ];
