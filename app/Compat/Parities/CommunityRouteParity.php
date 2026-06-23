@@ -46,7 +46,7 @@ class CommunityRouteParity extends RouteParity
     {
         return [
             'community_memberManage' => 'The full member-management page (sub-admin nomination, admin transfer, member removal). Phase A ports only the pending-approval slice as a native screen (community.members.pending, reusing page_community_memberManage); the /community/member/manage/:id URL itself is not preserved.',
-            'community_deleteImage' => 'Top-image edit/removal; pending the community image slice (FileStorage).',
+            'community_deleteImage' => 'Top-image upload and removal are ported into the edit form (a file field plus a remove checkbox), so the standalone /community/deleteImage/:id URL is not preserved.',
         ];
     }
 
