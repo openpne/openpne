@@ -22,11 +22,9 @@ use App\Upgrade\UpgradeStep;
  * FKs, so an owning table cannot be wired into one without the other.
  *
  * Files an owner cannot be found for keep a null owner, which the FilePolicy resolves fail-closed
- * (private). Those are the references this step does not own: the community top image (its binary and
- * the communities.file_id link are preserved, but the community-image delivery surface is not built
- * yet, so the owner is backfilled when it lands), activity / oauth-consumer images (no successor
- * surface), and attachments on non-personal messages (those messages are not migrated). All `file`
- * rows migrate regardless, so no binary is lost.
+ * (private). Those are the references this step does not own: activity / oauth-consumer images (no
+ * successor surface) and attachments on non-personal messages (those messages are not migrated). All
+ * `file` rows migrate regardless, so no binary is lost.
  *
  * The subqueries name the owning tables unqualified, so (like MessageUpgrade's) they are not rewritten
  * for a source prefix or separate source database — acceptable for the fleet (empty prefix, same DB).
@@ -69,6 +67,9 @@ class FileUpgrade extends UpgradeStep
     {
         return [
             'member_image.file_id' => ['type' => 'member', 'table' => 'member_image', 'file' => 'file_id', 'id' => 'member_id'],
+            // The community top image is a direct column on `community` (not a join table): the owner
+            // is the community itself, so the id source is the community's own id.
+            'community.file_id' => ['type' => 'community', 'table' => 'community', 'file' => 'file_id', 'id' => 'id'],
             'diary_image.file_id' => ['type' => 'diary', 'table' => 'diary_image', 'file' => 'file_id', 'id' => 'diary_id'],
             'diary_comment_image.file_id' => ['type' => 'diaryComment', 'table' => 'diary_comment_image', 'file' => 'file_id', 'id' => 'diary_comment_id'],
             'community_topic_image.file_id' => ['type' => 'communityTopic', 'table' => 'community_topic_image', 'file' => 'file_id', 'id' => 'post_id'],

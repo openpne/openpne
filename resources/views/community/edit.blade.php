@@ -16,7 +16,7 @@
                 </ul>
             @endif
 
-            <form method="POST" action="{{ route('community.save', $community ? ['id' => $community->getKey()] : []) }}">
+            <form method="POST" action="{{ route('community.save', $community ? ['id' => $community->getKey()] : []) }}" enctype="multipart/form-data">
                 @csrf
                 <table class="formTable">
                     <tr>
@@ -46,6 +46,19 @@
                                     <option value="{{ $category->getKey() }}" @selected((int) old('community_category_id', $community?->community_category_id) === $category->getKey())>{{ $category->name }}</option>
                                 @endforeach
                             </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>{{ __('Image') }}</th>
+                        <td>
+                            @if ($community?->image)
+                                <p class="photo">
+                                    <img src="{{ $community->image->thumbnailUrl(120, 120, square: true) }}" alt="">
+                                    <label><input type="checkbox" name="remove_image" value="1"> {{ __('Delete') }}</label>
+                                </p>
+                            @endif
+                            <input type="file" name="image" accept="image/jpeg,image/png,image/gif,image/webp">
+                            @error('image')<p class="error">{{ $message }}</p>@enderror
                         </td>
                     </tr>
                 </table>

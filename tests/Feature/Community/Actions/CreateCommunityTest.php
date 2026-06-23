@@ -23,7 +23,7 @@ class CreateCommunityTest extends TestCase
         $creator = Member::factory()->create();
         $data = new CommunityFormData('Hiking', 'desc', JoinPolicy::Approval, null);
 
-        $community = (new CreateCommunity)($creator, $data);
+        $community = app(CreateCommunity::class)($creator, $data);
 
         $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'name' => 'Hiking']);
         $this->assertSame(JoinPolicy::Approval, $community->refresh()->register_policy);
@@ -40,7 +40,7 @@ class CreateCommunityTest extends TestCase
         $category = CommunityCategory::factory()->adminOnly()->create();
         $data = new CommunityFormData('X', null, JoinPolicy::Open, $category->getKey());
 
-        $this->assertFailsWith(CommunityActionFailure::CategoryNotAllowed, fn () => (new CreateCommunity)($creator, $data));
+        $this->assertFailsWith(CommunityActionFailure::CategoryNotAllowed, fn () => app(CreateCommunity::class)($creator, $data));
         $this->assertDatabaseMissing('communities', ['name' => 'X']);
     }
 
@@ -50,7 +50,7 @@ class CreateCommunityTest extends TestCase
         $category = CommunityCategory::factory()->create();
         $data = new CommunityFormData('Y', null, JoinPolicy::Open, $category->getKey());
 
-        $community = (new CreateCommunity)($creator, $data);
+        $community = app(CreateCommunity::class)($creator, $data);
 
         $this->assertSame($category->getKey(), $community->community_category_id);
     }

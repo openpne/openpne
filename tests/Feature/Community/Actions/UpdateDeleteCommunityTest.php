@@ -31,7 +31,7 @@ class UpdateDeleteCommunityTest extends TestCase
         $admin = Member::factory()->create();
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
-        (new UpdateCommunity)($admin, $community, $this->data());
+        app(UpdateCommunity::class)($admin, $community, $this->data());
 
         $this->assertSame('Renamed', $community->refresh()->name);
         $this->assertSame(JoinPolicy::Approval, $community->register_policy);
@@ -43,7 +43,7 @@ class UpdateDeleteCommunityTest extends TestCase
         $sub = Member::factory()->create();
         CommunityMember::factory()->subAdmin()->create(['community_id' => $community->getKey(), 'member_id' => $sub->getKey()]);
 
-        (new UpdateCommunity)($sub, $community, $this->data());
+        app(UpdateCommunity::class)($sub, $community, $this->data());
 
         $this->assertSame('Renamed', $community->refresh()->name);
     }
@@ -54,7 +54,7 @@ class UpdateDeleteCommunityTest extends TestCase
         $member = Member::factory()->create();
         CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
 
-        $this->assertFailsWith(CommunityActionFailure::NotManager, fn () => (new UpdateCommunity)($member, $community, $this->data()));
+        $this->assertFailsWith(CommunityActionFailure::NotManager, fn () => app(UpdateCommunity::class)($member, $community, $this->data()));
         $this->assertSame('Old', $community->refresh()->name);
     }
 
@@ -65,7 +65,7 @@ class UpdateDeleteCommunityTest extends TestCase
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
         $category = CommunityCategory::factory()->adminOnly()->create();
 
-        $this->assertFailsWith(CommunityActionFailure::CategoryNotAllowed, fn () => (new UpdateCommunity)($admin, $community, $this->data($category->getKey())));
+        $this->assertFailsWith(CommunityActionFailure::CategoryNotAllowed, fn () => app(UpdateCommunity::class)($admin, $community, $this->data($category->getKey())));
     }
 
     public function test_update_keeps_an_admin_only_category_already_set(): void
@@ -77,7 +77,7 @@ class UpdateDeleteCommunityTest extends TestCase
         $admin = Member::factory()->create();
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
-        (new UpdateCommunity)($admin, $community, $this->data($category->getKey()));
+        app(UpdateCommunity::class)($admin, $community, $this->data($category->getKey()));
 
         $this->assertDatabaseHas('communities', [
             'id' => $community->getKey(),
@@ -92,7 +92,7 @@ class UpdateDeleteCommunityTest extends TestCase
         $admin = Member::factory()->create();
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
-        (new DeleteCommunity)($admin, $community);
+        app(DeleteCommunity::class)($admin, $community);
 
         $this->assertDatabaseMissing('communities', ['id' => $community->getKey()]);
         $this->assertDatabaseMissing('community_members', ['community_id' => $community->getKey()]);
@@ -104,7 +104,7 @@ class UpdateDeleteCommunityTest extends TestCase
         $sub = Member::factory()->create();
         CommunityMember::factory()->subAdmin()->create(['community_id' => $community->getKey(), 'member_id' => $sub->getKey()]);
 
-        $this->assertFailsWith(CommunityActionFailure::NotAdmin, fn () => (new DeleteCommunity)($sub, $community));
+        $this->assertFailsWith(CommunityActionFailure::NotAdmin, fn () => app(DeleteCommunity::class)($sub, $community));
         $this->assertDatabaseHas('communities', ['id' => $community->getKey()]);
     }
 }

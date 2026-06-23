@@ -142,7 +142,7 @@ class CommunityUpgradeSqlTest extends TestCase
     public function test_preserves_the_top_image_file_id(): void
     {
         // FileUpgrade keeps file.id, so the community's top-image link resolves; CommunityUpgrade
-        // carries it onto communities.file_id even though the file is not given an owner yet.
+        // carries it onto communities.file_id (FileUpgrade assigns the file its `community` owner).
         DB::table('files')->insert([
             'id' => 42,
             'name' => 'community_top_token',

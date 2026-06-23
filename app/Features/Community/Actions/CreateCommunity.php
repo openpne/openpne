@@ -6,20 +6,25 @@ use App\Features\Community\CommunityRole;
 use App\Features\Community\Data\CommunityFormData;
 use App\Features\Community\Exceptions\CommunityActionException;
 use App\Features\Community\Exceptions\CommunityActionFailure;
+use App\Files\PostImages;
 use App\Models\Community;
 use App\Models\CommunityCategory;
 use App\Models\Member;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\UploadedFile;
 
 class CreateCommunity
 {
-    public function __invoke(Member $creator, CommunityFormData $data): Community
+    public function __construct(private readonly PostImages $images) {}
+
+    public function __invoke(Member $creator, CommunityFormData $data, ?UploadedFile $image = null): Community
     {
         if (! CommunityCategory::memberCreatable($data->categoryId)) {
             throw new CommunityActionException(CommunityActionFailure::CategoryNotAllowed);
         }
 
-        return DB::transaction(function () use ($creator, $data) {
+        // compensating() (not a bare transaction) so a failed top-image byte write rolls back
+        // wholesale without orphaning bytes on a disk backend.
+        return $this->images->compensating(function (callable $store) use ($creator, $data, $image): Community {
             $community = Community::create([
                 'name' => $data->name,
                 'description' => $data->description,
@@ -32,6 +37,11 @@ class CreateCommunity
                 'member_id' => $creator->getKey(),
                 'role' => CommunityRole::Admin,
             ]);
+
+            if ($image !== null) {
+                $file = $store($image, 'community', (int) $community->getKey());
+                $community->update(['file_id' => $file->getKey()]);
+            }
 
             return $community;
         });

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Community;
 
 use App\Features\Community\Data\CommunityFormData;
 use App\Features\Community\JoinPolicy;
+use App\Http\Requests\Concerns\PostImageRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -25,6 +26,10 @@ class CommunityRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'register_policy' => ['required', Rule::in(array_map(static fn (JoinPolicy $p): int => $p->value, JoinPolicy::cases()))],
             'community_category_id' => ['nullable', 'integer', 'exists:community_categories,id'],
+            // Single top image (OpenPNE 3 CommunityFileForm), with a remove toggle. The bytes are
+            // handled in the action, not the DTO — same split as the topic/event image uploads.
+            'image' => PostImageRules::single(),
+            'remove_image' => ['boolean'],
         ];
     }
 

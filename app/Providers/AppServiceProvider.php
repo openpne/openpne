@@ -6,6 +6,7 @@ use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
 use App\Models\BannerImage;
+use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
@@ -86,6 +87,7 @@ class AppServiceProvider extends ServiceProvider
             'member' => Member::class,
             'diary' => Diary::class,
             'diaryComment' => DiaryComment::class,
+            'community' => Community::class,
             'communityTopic' => CommunityTopic::class,
             'communityTopicComment' => CommunityTopicComment::class,
             'communityEvent' => CommunityEvent::class,

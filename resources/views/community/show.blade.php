@@ -6,6 +6,10 @@
     <div class="dparts" id="community_profile">
         <div class="partsHeading"><h3>{{ $community->name }}</h3></div>
         <div class="parts">
+            @if ($community->image)
+                {{-- OpenPNE 3 community home: the top image (communityImageBox), linking to the full bytes. --}}
+                <p class="photo"><a href="{{ $community->image->url() }}" target="_blank" rel="noopener"><img src="{{ $community->image->thumbnailUrl(120, 120, square: true) }}" alt=""></a></p>
+            @endif
             @if ($community->category)
                 <p class="category">{{ $community->category->name }}</p>
             @endif

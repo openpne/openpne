@@ -42,7 +42,7 @@ class CommunityController extends Controller
     {
         $found = $query($community);
         abort_if($found === null, 404);
-        $found->loadMissing('category');
+        $found->loadMissing('category', 'image');
         $viewer = $this->viewer();
 
         // The recent-topics / recent-events boxes (OpenPNE 3 community home) only show when the viewer
@@ -129,10 +129,10 @@ class CommunityController extends Controller
 
         try {
             if ($community === null) {
-                $community = $create($this->viewer(), $request->toData());
+                $community = $create($this->viewer(), $request->toData(), $request->file('image'));
             } else {
                 abort_unless(Gate::allows('update', $community), 404);
-                $update($this->viewer(), $community, $request->toData());
+                $update($this->viewer(), $community, $request->toData(), $request->file('image'), $request->boolean('remove_image'));
             }
         } catch (CommunityActionException $e) {
             return back()->withInput()->with('error', $this->messageFor($e->reason));
