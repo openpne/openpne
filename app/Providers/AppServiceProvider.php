@@ -16,6 +16,7 @@ use App\Models\DiaryComment;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\Message;
+use App\Models\TimelinePost;
 use App\Observers\MemberObserver;
 use App\Policies\FilePolicy;
 use App\Policies\MemberPolicy;
@@ -94,6 +95,7 @@ class AppServiceProvider extends ServiceProvider
             'communityEventComment' => CommunityEventComment::class,
             'bannerImage' => BannerImage::class,
             'message' => Message::class,
+            'timelinePost' => TimelinePost::class,
         ]);
 
         Gate::policy(File::class, FilePolicy::class);

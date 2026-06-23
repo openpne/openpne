@@ -4,7 +4,10 @@ namespace Tests\Feature\File;
 
 use App\Models\File;
 use App\Models\Member;
+use App\Models\TimelinePost;
+use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
@@ -76,12 +79,58 @@ class FilePolicyTest extends TestCase
         $this->assertFalse(Gate::forUser(Member::factory()->create())->allows('view', $file));
     }
 
+    // A timeline post's image inherits the post's visibility (morph alias `timelinePost` +
+    // FilePolicy branch). Without these the fetch would fail-closed to 404.
+
+    public function test_members_post_image_is_visible_to_any_member(): void
+    {
+        $owner = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $owner->getKey()]); // Members
+
+        $this->assertTrue(Gate::forUser(Member::factory()->create())->allows('view', $this->postImage($post)));
+    }
+
+    public function test_friends_post_image_is_hidden_from_a_non_friend(): void
+    {
+        $owner = Member::factory()->create();
+        $post = TimelinePost::factory()->friends()->create(['member_id' => $owner->getKey()]);
+
+        $this->assertFalse(Gate::forUser(Member::factory()->create())->allows('view', $this->postImage($post)));
+    }
+
+    public function test_post_image_is_hidden_when_owner_blocks_viewer(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey()]);
+        $post = TimelinePost::factory()->create(['member_id' => $owner->getKey()]);
+
+        $this->assertFalse(Gate::forUser($viewer)->allows('view', $this->postImage($post)));
+    }
+
+    public function test_open_post_image_is_guest_readable(): void
+    {
+        $owner = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Open]);
+
+        $this->assertTrue(Gate::forUser(null)->allows('view', $this->postImage($post)));
+    }
+
     private function memberImage(Member $owner): File
     {
         return File::factory()->create([
             'type' => 'image/png',
             'related_entity_type' => 'member',
             'related_entity_id' => $owner->getKey(),
+        ]);
+    }
+
+    private function postImage(TimelinePost $post): File
+    {
+        return File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'timelinePost',
+            'related_entity_id' => $post->getKey(),
         ]);
     }
 }

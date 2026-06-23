@@ -17,6 +17,7 @@ use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Message\MessageController;
 use App\Features\Profile\ProfileController;
+use App\Features\Timeline\TimelineController;
 use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
@@ -242,6 +243,22 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/m/diary/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete.show');
         Route::post('/m/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete');
     });
+
+    // OpenPNE 3 opTimelinePlugin: a member's timeline and a single-post permalink.
+    Route::controller(TimelineController::class)->group(function () {
+        Route::get('/member/{member}/timeline', 'member')->whereNumber('member')->name('timeline.member');
+        Route::get('/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->name('timeline.show');
+    });
+
+    Route::controller(TimelineController::class)->group(function () {
+        Route::get('/m/member/{member}/timeline', 'member')->whereNumber('member')->defaults('surface', 'modern')->name('timeline.modern.member');
+        Route::get('/m/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.show');
+    });
+
+    // OpenPNE 3 linked the single-post permalink at /timeline/show/id/:id (reached via the global
+    // /:module/:action fallback); preserve that URL by redirecting to the canonical timeline.show.
+    Route::get('/timeline/show/id/{timelinePost}', fn (int $timelinePost) => redirect()->route('timeline.show', ['timelinePost' => $timelinePost]))
+        ->whereNumber('timelinePost')->name('timeline.show.compat');
 
     // OpenPNE 3 compatibility: access block lived at /member/config?category=accessBlock.
     // The member config module is not ported yet, so resolve just that category to the
