@@ -253,6 +253,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/timeline/create', 'store')->name('timeline.store');
         Route::get('/timeline/deleteConfirm/{timelinePost}', 'showDelete')->whereNumber('timelinePost')->name('timeline.delete.show');
         Route::post('/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->name('timeline.delete');
+        Route::post('/timeline/{timelinePost}/reply', 'storeReply')->whereNumber('timelinePost')->name('timeline.reply.store');
         Route::get('/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->name('timeline.show');
     });
 
@@ -263,6 +264,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/m/timeline/create', 'store')->defaults('surface', 'modern')->name('timeline.modern.store');
         Route::get('/m/timeline/deleteConfirm/{timelinePost}', 'showDelete')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.delete.show');
         Route::post('/m/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.delete');
+        Route::post('/m/timeline/{timelinePost}/reply', 'storeReply')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.reply.store');
         Route::get('/m/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.show');
     });
 

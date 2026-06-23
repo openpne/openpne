@@ -85,7 +85,7 @@ class TimelineRouteParity extends RouteParity
                 new ScreenElement('permalink + datetime', L::Three, S::Ported, 'timelineTemplate timeline/show/id/${id} + jquery.timeago', 'absolute localized datetime linking to timeline.show; OpenPNE 3 renders a relative timeago'),
                 new ScreenElement('pagination', L::Two, S::Ported, '_timelineProfile #timeline-loadmore もっと読む', 'server-side pager; OpenPNE 3 is infinite-scroll over the API'),
                 new ScreenElement('compose box', L::One, S::Ported, '_timelineProfile #timeline-submit-button', 'standalone /timeline/new compose page linked from the timeline; OpenPNE 3 inlines the form'),
-                new ScreenElement('per-post reply form', L::Two, S::Deferred, 'timelineTemplate #timeline-post-comment-form', 'reply threads are not part of the read view'),
+                new ScreenElement('per-post reply form', L::Two, S::Deferred, 'timelineTemplate #timeline-post-comment-form', 'OpenPNE 3 inlines a reply form on each streamed post; OpenPNE 4 replies on the post\'s thread page (timeline.show)'),
                 new ScreenElement('own-post delete', L::Two, S::Ported, 'timelineTemplate timeline-post-delete-confirm', 'delete link + confirm page; OpenPNE 3 uses an inline JS confirm'),
             ],
             // showSuccess.php → timeline/show.blade.php
@@ -95,8 +95,10 @@ class TimelineRouteParity extends RouteParity
                 new ScreenElement('activity body', L::Two, S::Partial, 'timelineTemplate {{html body_html}}', 'plain text; display-time URL auto-link / decoration not rendered'),
                 new ScreenElement('attached image', L::Three, S::Ported, 'activity_image (opTimeline image) + lightbox.js', 'ActivityImage thumbnail via the shared File; FilePolicy-gated by the activity visibility'),
                 new ScreenElement('visibility label', L::Three, S::Ported, 'timelineTemplate public_status friend/private', 'Visibility label shown for every level (OpenPNE 3 labels only friend/private)'),
-                new ScreenElement('reply thread', L::One, S::Deferred, 'showSuccess gorgon timeline-list (commentSearch API)', 'reply threads are not part of the read view'),
-                new ScreenElement('own-post delete', L::Two, S::Missing, 'timelineTemplate timeline-post-delete-confirm', 'no delete control on the permalink page; delete is reached from the member timeline'),
+                new ScreenElement('reply thread', L::One, S::Ported, 'showSuccess gorgon timeline-list (commentSearch API)', 'replies rendered server-side oldest-first; OpenPNE 3 streams them from the API. A reply permalink re-centers to the thread root'),
+                new ScreenElement('reply form', L::Two, S::Ported, 'timelineTemplate #timeline-post-comment-form', 'reply posts to the thread root, inheriting its audience'),
+                new ScreenElement('reply count + "show all"', L::Three, S::Partial, 'opTimeline COMMENT_DISPLAY_MAX + showAllComment', 'all replies are shown; OpenPNE 3 caps at 10 with a show-all control'),
+                new ScreenElement('own-post delete', L::Two, S::Ported, 'timelineTemplate timeline-post-delete-confirm', 'delete link + confirm page on the viewer\'s own post and replies'),
             ],
         ];
     }
