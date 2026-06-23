@@ -1,18 +1,16 @@
 @extends('layouts.classic')
 
-@php($title = $owner->is(auth()->user()) ? __('%Activity%') : __(":name's %activity%", ['name' => $owner->name]))
+@php($title = __('%Activity%'))
 
 @section('title', $title)
 
 @section('content')
-    {{-- OpenPNE 3 timelineProfile component (memberSuccess.php). OpenPNE 3 streams the posts
-         client-side from the API; the Classic adapter renders them server-side with a pager. --}}
-    <div class="dparts profileTimeline" id="profileTimeline_{{ $owner->getKey() }}">
+    {{-- OpenPNE 3 SNS-wide timeline (homeAllTimeline gadget, _timelineAll.php). OpenPNE 3 streams
+         posts client-side from the API; the Classic adapter renders them server-side with a pager. --}}
+    <div class="dparts homeAllTimeline" id="homeAllTimeline">
         <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="parts">
-            @if ($owner->is(auth()->user()))
-                <p><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
-            @endif
+            <p><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
 
             @if ($posts->isEmpty())
                 <p>{{ __('No %activity% posts to show.') }}</p>
