@@ -16,7 +16,15 @@ export default function DiaryEdit() {
         visibility: String(
             diary.visibility === 'private' ? 3 : diary.visibility === 'friends' ? 2 : 1,
         ),
+        images: [] as File[],
+        remove_images: [] as number[],
     });
+
+    const toggleRemove = (id: number, remove: boolean) =>
+        setData(
+            'remove_images',
+            remove ? [...data.remove_images, id] : data.remove_images.filter((x) => x !== id),
+        );
 
     return (
         <>
@@ -29,7 +37,7 @@ export default function DiaryEdit() {
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        post(`/m/diary/update/${diary.id}`);
+                        post(`/m/diary/update/${diary.id}`, { forceFormData: true });
                     }}
                     className="space-y-4"
                 >
@@ -67,6 +75,36 @@ export default function DiaryEdit() {
                             <option value="3">{t('Private')}</option>
                         </select>
                         {errors.visibility && <p role="alert">{errors.visibility}</p>}
+                    </div>
+                    {diary.images.length > 0 && (
+                        <div>
+                            <p>{t('Current images')}</p>
+                            <ul className="flex flex-wrap gap-3">
+                                {diary.images.map((image) => (
+                                    <li key={image.id}>
+                                        <img src={image.thumbnailUrl} alt="" className="size-24 object-cover" />
+                                        <label className="text-sm">
+                                            <input
+                                                type="checkbox"
+                                                onChange={(e) => toggleRemove(image.id, e.target.checked)}
+                                            />{' '}
+                                            {t('Delete')}
+                                        </label>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    <div>
+                        <label htmlFor="diary_images">{t('Images')}</label>
+                        <input
+                            id="diary_images"
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            multiple
+                            onChange={(e) => setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
+                        />
+                        {errors.images && <p role="alert">{errors.images}</p>}
                     </div>
                     <button type="submit" disabled={processing}>
                         {t('Save')}

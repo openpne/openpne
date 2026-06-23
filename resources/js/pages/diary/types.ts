@@ -5,16 +5,24 @@ export interface DiaryAuthor {
     name: string;
 }
 
+export interface DiaryImage {
+    id: number;
+    url: string; // full bytes (FilePolicy-gated)
+    thumbnailUrl: string; // 120×120 square
+}
+
 export interface DiarySummary {
     id: number;
     title: string;
     visibility: DiaryVisibility;
+    hasImages: boolean; // drives the feed's has-photos marker
     author: DiaryAuthor;
     createdAt: string;
 }
 
 export interface DiaryDetail extends DiarySummary {
     body: string;
+    images: DiaryImage[];
 }
 
 export interface DiaryComment {

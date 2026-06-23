@@ -24,7 +24,7 @@ use App\Upgrade\UpgradeStep;
  * Files an owner cannot be found for keep a null owner, which the FilePolicy resolves fail-closed
  * (private). Those are the references this step does not own: the community top image (its binary and
  * the communities.file_id link are preserved, but the community-image delivery surface is not built
- * yet, so the owner is backfilled when it lands), diary / activity / oauth-consumer images (no
+ * yet, so the owner is backfilled when it lands), diary-comment / activity / oauth-consumer images (no
  * successor surface), and attachments on non-personal messages (those messages are not migrated). All
  * `file` rows migrate regardless, so no binary is lost.
  *
@@ -69,6 +69,7 @@ class FileUpgrade extends UpgradeStep
     {
         return [
             'member_image.file_id' => ['type' => 'member', 'table' => 'member_image', 'file' => 'file_id', 'id' => 'member_id'],
+            'diary_image.file_id' => ['type' => 'diary', 'table' => 'diary_image', 'file' => 'file_id', 'id' => 'diary_id'],
             'community_topic_image.file_id' => ['type' => 'communityTopic', 'table' => 'community_topic_image', 'file' => 'file_id', 'id' => 'post_id'],
             'community_topic_comment_image.file_id' => ['type' => 'communityTopicComment', 'table' => 'community_topic_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
             'community_event_image.file_id' => ['type' => 'communityEvent', 'table' => 'community_event_image', 'file' => 'file_id', 'id' => 'post_id'],

@@ -2,19 +2,20 @@
 
 namespace App\Http\Requests\Diary;
 
-use App\Features\Diary\Data\DiaryFormData;
-use App\Features\Diary\DiaryVisibility;
+use App\Files\PostImages;
+use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Diary;
 use App\Models\Member;
-use App\Support\Visibility;
-use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
 
-class UpdateDiaryRequest extends FormRequest
+/**
+ * Edit a diary. Ownership is checked in authorize() before validation, so a non-owner's invalid
+ * payload gets the same 404 as a valid one and doesn't leak existence. Editing adds new images into
+ * free slots and removes selected ones (remove_images[]); the total after the edit may not exceed
+ * the cap.
+ */
+class UpdateDiaryRequest extends StoreDiaryRequest
 {
-    /**
-     * Abort 404 for non-owners before validation runs, so invalid payloads
-     * from non-owners get the same 404 as valid ones and don't leak existence.
-     */
     public function authorize(): bool
     {
         $diary = $this->route('diary');
@@ -30,22 +31,35 @@ class UpdateDiaryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // No max length: OpenPNE 3 diary.title/body are TEXT with no validator limit.
-            // Capping here would lock out re-editing of long migrated content.
-            'title' => ['required', 'string'],
-            'body' => ['required', 'string'],
-            'visibility' => ['required', DiaryVisibility::rule()],
+            ...$this->textRules(),
+            ...PostImageRules::rules(),
+            'remove_images' => ['array'],
+            'remove_images.*' => ['integer'],
         ];
     }
 
-    public function toData(): DiaryFormData
+    /**
+     * Cross-field cap: the images kept (current minus the ones being removed) plus the new uploads
+     * may not exceed MAX_IMAGES. remove_images ids that aren't this diary's are ignored, so a bogus
+     * id can't inflate the kept count downwards.
+     */
+    public function withValidator(Validator $validator): void
     {
-        $validated = $this->validated();
+        $validator->after(function (Validator $validator): void {
+            $diary = $this->route('diary');
+            if (! $diary instanceof Diary) {
+                return;
+            }
 
-        return new DiaryFormData(
-            title: $validated['title'],
-            body: $validated['body'],
-            visibility: Visibility::from($validated['visibility']),
-        );
+            $currentIds = $diary->images()->pluck('id')->all();
+            // array_unique first: a crafted remove_images=[id, id] must not count one image twice
+            // and so undercount what is kept, slipping the cap.
+            $removing = array_unique(array_intersect(array_map('intval', (array) $this->input('remove_images', [])), $currentIds));
+            $kept = count($currentIds) - count($removing);
+
+            if ($kept + count($this->file('images', [])) > PostImages::MAX_IMAGES) {
+                $validator->errors()->add('images', __('A %diary% can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
+            }
+        });
     }
 }

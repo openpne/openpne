@@ -10,6 +10,7 @@ use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
+use App\Models\Diary;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\Message;
@@ -82,6 +83,7 @@ class AppServiceProvider extends ServiceProvider
         // FilePolicy resolves the owning entity through this map.
         Relation::morphMap([
             'member' => Member::class,
+            'diary' => Diary::class,
             'communityTopic' => CommunityTopic::class,
             'communityTopicComment' => CommunityTopicComment::class,
             'communityEvent' => CommunityEvent::class,

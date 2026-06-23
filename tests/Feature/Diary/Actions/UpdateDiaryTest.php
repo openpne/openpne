@@ -22,7 +22,7 @@ class UpdateDiaryTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
         $data = new DiaryFormData('New title', 'New body', Visibility::Private);
 
-        (new UpdateDiary)($owner, $diary, $data);
+        app(UpdateDiary::class)($owner, $diary, $data);
 
         $this->assertDatabaseHas('diaries', [
             'id' => $diary->getKey(),
@@ -41,7 +41,7 @@ class UpdateDiaryTest extends TestCase
         $data = new DiaryFormData('Hacked', 'body', Visibility::Members);
 
         try {
-            (new UpdateDiary)($other, $diary, $data);
+            app(UpdateDiary::class)($other, $diary, $data);
             $this->fail('Expected DiaryActionException');
         } catch (DiaryActionException $e) {
             $this->assertSame(DiaryActionFailure::NotAuthor, $e->reason);

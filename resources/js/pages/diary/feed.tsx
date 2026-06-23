@@ -63,6 +63,11 @@ export default function DiaryFeed() {
                                 <li key={entry.id} className="flex items-center justify-between">
                                     <Link href={`/m/diary/${entry.id}`} className="hover:underline">
                                         {entry.title}
+                                        {entry.hasImages && (
+                                            <span className="imageIcon" title={t('This entry has photos')} aria-label={t('This entry has photos')}>
+                                                {' '}📷
+                                            </span>
+                                        )}
                                     </Link>
                                     <span className="text-sm text-muted-foreground">
                                         {entry.author.name} &mdash; {new Date(entry.createdAt).toLocaleDateString()}
