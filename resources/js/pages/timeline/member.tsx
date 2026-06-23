@@ -21,6 +21,12 @@ export default function TimelineMember() {
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <h1 className="text-2xl font-semibold">{title}</h1>
 
+                {isOwner && (
+                    <Link href="/m/timeline/new" className="hover:underline">
+                        {t('%Post_activity%')}
+                    </Link>
+                )}
+
                 {flash.status && <p role="status">{flash.status}</p>}
                 {flash.error && <p role="alert">{flash.error}</p>}
 
@@ -46,6 +52,11 @@ export default function TimelineMember() {
                                                 <img key={image.id} src={image.thumbnailUrl} alt="" className="rounded" />
                                             ))}
                                         </div>
+                                    )}
+                                    {isOwner && (
+                                        <Link href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm hover:underline">
+                                            {t('Delete')}
+                                        </Link>
                                     )}
                                 </li>
                             ))}
