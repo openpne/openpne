@@ -77,7 +77,9 @@ class TimelineController extends Controller
         // ShowTimelinePost already gated the block (null → 404 above); record the author for the
         // Classic friend localNav when viewing someone else's post.
         $this->markLocalNavSubject($post->member);
-        $post->load(['replies.member']);
+        // Eager-load the replies' images too: the serializer reads each post's images, so loading
+        // only replies.member would lazy-load one (empty, by the no-image contract) query per reply.
+        $post->load(['replies.member', 'replies.images.file']);
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [
