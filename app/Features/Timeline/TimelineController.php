@@ -3,6 +3,7 @@
 namespace App\Features\Timeline;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Timeline\Actions\CreateReply;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Features\Timeline\Queries\HomeFeed;
@@ -10,6 +11,7 @@ use App\Features\Timeline\Queries\MemberTimeline;
 use App\Features\Timeline\Queries\ShowTimelinePost;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Timeline\StoreReplyRequest;
 use App\Http\Requests\Timeline\StoreTimelinePostRequest;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -60,21 +62,32 @@ class TimelineController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $timelinePost, ShowTimelinePost $query): View|InertiaResponse
+    public function show(Request $request, int $timelinePost, ShowTimelinePost $query): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewer();
         $post = $query($viewer, $timelinePost);
         abort_if($post === null, 404);
+
+        // A reply permalink re-centered to its thread root; send it to the root's canonical URL so a
+        // thread has one address.
+        if ($post->getKey() !== $timelinePost) {
+            return redirect()->route(SurfaceResolver::redirectName($request, 'timeline.show'), ['timelinePost' => $post->getKey()]);
+        }
+
         // ShowTimelinePost already gated the block (null → 404 above); record the author for the
         // Classic friend localNav when viewing someone else's post.
         $this->markLocalNavSubject($post->member);
+        $post->load(['replies.member']);
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [
                 'post' => $post,
+                'viewer' => $viewer,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/show', [
                 'post' => TimelinePostSerializer::entry($post),
+                'replies' => array_map([TimelinePostSerializer::class, 'entry'], $post->replies->all()),
+                'viewerId' => $viewer->getKey(),
             ]),
         ]);
     }
@@ -108,6 +121,21 @@ class TimelineController extends Controller
             ->with('status', __('Posted.'));
     }
 
+    public function storeReply(StoreReplyRequest $request, int $timelinePost, ShowTimelinePost $query, CreateReply $action): RedirectResponse
+    {
+        $viewer = $this->viewer();
+        // Replying requires viewing the thread; ShowTimelinePost re-centers to the root and applies
+        // the same clearance/block gate, so a reply always attaches to a viewable top-level post.
+        $root = $query($viewer, $timelinePost);
+        abort_if($root === null, 404);
+
+        $action($viewer, $root, $request->validated('body'));
+
+        return redirect()
+            ->route(SurfaceResolver::redirectName($request, 'timeline.show'), ['timelinePost' => $root->getKey()])
+            ->with('status', __('Reply posted.'));
+    }
+
     public function showDelete(Request $request, TimelinePost $timelinePost): View|InertiaResponse
     {
         abort_unless($this->viewer()->is($timelinePost->member), 404);
@@ -124,7 +152,16 @@ class TimelineController extends Controller
     {
         $viewer = $this->viewer();
         abort_unless($viewer->is($timelinePost->member), 404);
+        // Capture the thread root before the row is gone: deleting a reply returns to its thread,
+        // deleting a top-level post returns to the author's timeline.
+        $parentId = $timelinePost->in_reply_to_id;
         $action($timelinePost);
+
+        if ($parentId !== null) {
+            return redirect()
+                ->route(SurfaceResolver::redirectName($request, 'timeline.show'), ['timelinePost' => $parentId])
+                ->with('status', __('Reply deleted.'));
+        }
 
         return redirect()
             ->route(SurfaceResolver::redirectName($request, 'timeline.member'), ['member' => $viewer->getKey()])
