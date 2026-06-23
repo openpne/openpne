@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\Schema;
 /*
  * The single image attached to a timeline post (successor of OpenPNE 3 `activity_image`).
  * A pure join row: timeline_post_id -> the post, file_id -> the stored bytes, number = the slot
- * (always 1 — OpenPNE 3 allows one image per activity, and replies carry none). No timestamps
- * (the File carries them). OpenPNE 3's external-URI image variant is not migrated (file-backed
- * only). The owned File's bytes are purged explicitly by DeleteTimelinePost, not the FK cascade.
+ * (always 1 — OpenPNE 3 allows one image per post). No timestamps (the File carries them).
+ * OpenPNE 3's external-URI image variant has no column here (file-backed only). The FK cascade
+ * drops only this join row, never the File bytes.
  */
 return new class extends Migration
 {

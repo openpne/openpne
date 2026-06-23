@@ -244,8 +244,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/m/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete');
     });
 
-    // OpenPNE 3 opTimelinePlugin (activity stream). A member's timeline + a single-activity
-    // permalink; the cross-member home feed and reply threads land in later slices.
+    // OpenPNE 3 opTimelinePlugin: a member's timeline and a single-post permalink.
     Route::controller(TimelineController::class)->group(function () {
         Route::get('/member/{member}/timeline', 'member')->whereNumber('member')->name('timeline.member');
         Route::get('/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->name('timeline.show');

@@ -12,7 +12,6 @@ use App\Support\Visibility;
  * TimelineVisibilityScope (which constrains a query). Same rule: a guest (no Member) sees only
  * web-public, a blocked viewer sees nothing, otherwise up to the viewer's clearance on the
  * author. ShowTimelinePost and FilePolicy (post image access) share this so the two never drift.
- * A reply copies its parent's visibility on create, so this rule applies uniformly to both.
  */
 final class TimelineAccess
 {

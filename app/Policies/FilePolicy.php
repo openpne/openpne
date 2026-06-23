@@ -62,9 +62,9 @@ class FilePolicy extends BasePolicy
             // A message attachment is private to the message's parties: the sender, and a recipient of
             // a delivered (non-draft) message. A draft's recipient is excluded (MessageAccess).
             $owner instanceof Message => $viewer !== null && MessageAccess::canViewMessage($owner, $viewer),
-            // A timeline post's image inherits the post's visibility, like a diary image: a
-            // web-public (Open) post's image is guest-readable, otherwise the viewer's clearance
-            // on the author, blocked → none. TimelineAccess handles the guest (null) case.
+            // A timeline post's image inherits the post's visibility: a web-public (Open) post's
+            // image is guest-readable, otherwise the viewer's clearance on the author, blocked →
+            // none. TimelineAccess handles the guest (null) case.
             $owner instanceof TimelinePost => TimelineAccess::canView($viewer, $owner),
             default => false,
         };

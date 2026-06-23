@@ -8,8 +8,7 @@ use Illuminate\Support\Facades\Schema;
  * Timeline posts (successor of OpenPNE 3 `activity_data`, opTimelinePlugin). A single
  * self-referential table: a reply is a post row with in_reply_to_id set, so the feed reads
  * top-level rows (in_reply_to_id IS NULL) and a thread reads a parent's replies. OpenPNE 3
- * public_flag (0=OPEN/1=SNS/2=FRIEND/3=PRIVATE) maps 1:1 onto Visibility. (Named TimelinePost,
- * not Activity: see worklog/decisions/2026-06-23-timeline-entity-naming.md.)
+ * public_flag (0=OPEN/1=SNS/2=FRIEND/3=PRIVATE) maps 1:1 onto Visibility.
  */
 return new class extends Migration
 {
@@ -30,7 +29,6 @@ return new class extends Migration
 
             $table->foreign('in_reply_to_id')->references('id')->on('timeline_posts')->cascadeOnDelete();
             // Member timeline: WHERE member_id=? AND in_reply_to_id IS NULL ORDER BY created_at DESC.
-            // Cross-member feed indexes (visibility + created_at) added when the feed route lands.
             $table->index(['member_id', 'created_at']);
         });
     }

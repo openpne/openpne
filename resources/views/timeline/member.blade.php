@@ -17,7 +17,7 @@
                     @foreach ($posts as $post)
                         <li class="timeline-post" data-timeline-id="{{ $post->getKey() }}">
                             <div class="timeline-member-name">
-                                {{-- screen_name (@handle) lands in Phase B; Classic shows the nickname. --}}
+                                {{-- OpenPNE 3 shows the @screen_name handle here; Classic shows the nickname. --}}
                                 <a href="{{ route('member.profile.show', $post->member) }}">{{ $post->member->name }}</a>
                             </div>
                             <div class="timeline-post-body">{{ $post->body }}</div>

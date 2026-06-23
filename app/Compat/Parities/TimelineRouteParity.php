@@ -26,10 +26,10 @@ class TimelineRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            // The cross-member home feed (OpenPNE 3 /sns/timeline) lands with the feed slice.
-            'sns_timeline' => 'Home activity feed (self + friends + all members) lands in a later slice.',
-            // Community-scoped activities are Phase B.
-            'community_timeline' => 'Community-scoped timeline is Phase B (foreign_table=community).',
+            // OpenPNE 3 /sns/timeline: the cross-member home feed, a distinct surface from the
+            // per-member timeline.
+            'sns_timeline' => 'The cross-member home feed (self + friends + all members).',
+            'community_timeline' => 'Community-scoped timeline (foreign_table=community).',
         ];
     }
 
@@ -51,7 +51,7 @@ class TimelineRouteParity extends RouteParity
      * _timelineTemplate.php + showSuccess.php). OpenPNE 3 streams activities client-side from the
      * API via jQuery templates; the Classic adapter renders them server-side, so the rendering
      * mechanism differs (an L3 may-differ) while the content is preserved. Write-side and reply
-     * elements are deferred to their slices.
+     * elements are not part of this read surface.
      */
     public function screens(): array
     {
@@ -59,25 +59,25 @@ class TimelineRouteParity extends RouteParity
             // memberSuccess.php → timelineProfile component → timeline/member.blade.php
             'member' => [
                 new ScreenElement('author nickname + profile link', L::Two, S::Ported, 'timelineTemplate <a href="${member.profile_url}">${member.name}', 'Classic links the nickname server-side; OpenPNE 3 builds the post client-side from the API'),
-                new ScreenElement('screen-name handle', L::Three, S::Deferred, 'timelineTemplate ${member.screen_name}', 'members.screen_name lands in Phase B; Classic shows the nickname'),
-                new ScreenElement('activity body', L::Two, S::Partial, 'timelineTemplate {{html body_html}}', 'plain text; display-time URL auto-link / decoration deferred (Phase C)'),
+                new ScreenElement('screen-name handle', L::Three, S::Deferred, 'timelineTemplate ${member.screen_name}', 'OpenPNE 3 shows the @screen_name handle; Classic shows the nickname'),
+                new ScreenElement('activity body', L::Two, S::Partial, 'timelineTemplate {{html body_html}}', 'plain text; display-time URL auto-link / decoration not rendered'),
                 new ScreenElement('attached image', L::Three, S::Ported, 'activity_image (opTimeline image) + lightbox.js', 'ActivityImage thumbnail via the shared File; FilePolicy-gated by the activity visibility'),
                 new ScreenElement('visibility label', L::Three, S::Ported, 'timelineTemplate public_status friend/private', 'Visibility label shown for every level (OpenPNE 3 labels only friend/private)'),
                 new ScreenElement('permalink + datetime', L::Three, S::Ported, 'timelineTemplate timeline/show/id/${id} + jquery.timeago', 'absolute localized datetime linking to timeline.show; OpenPNE 3 renders a relative timeago'),
                 new ScreenElement('pagination', L::Two, S::Ported, '_timelineProfile #timeline-loadmore もっと読む', 'server-side pager; OpenPNE 3 is infinite-scroll over the API'),
-                new ScreenElement('compose box', L::One, S::Deferred, '_timelineProfile #timeline-submit-button', 'posting lands in the write slice (A2)'),
-                new ScreenElement('per-post reply form', L::Two, S::Deferred, 'timelineTemplate #timeline-post-comment-form', 'reply threads land in a later slice (A4)'),
-                new ScreenElement('own-post delete', L::Two, S::Deferred, 'timelineTemplate timeline-post-delete-confirm', 'delete lands in the write slice (A2)'),
+                new ScreenElement('compose box', L::One, S::Deferred, '_timelineProfile #timeline-submit-button', 'posting is part of the write surface'),
+                new ScreenElement('per-post reply form', L::Two, S::Deferred, 'timelineTemplate #timeline-post-comment-form', 'reply threads are not part of the read view'),
+                new ScreenElement('own-post delete', L::Two, S::Deferred, 'timelineTemplate timeline-post-delete-confirm', 'delete is part of the write surface'),
             ],
             // showSuccess.php → timeline/show.blade.php
             'show' => [
                 new ScreenElement('single activity (author, body, datetime)', L::One, S::Ported, 'showSuccess $activity->getMember()->getName() + timelineTemplate'),
-                new ScreenElement('screen-name handle', L::Three, S::Deferred, 'timelineTemplate ${member.screen_name}', 'members.screen_name lands in Phase B; Classic shows the nickname'),
-                new ScreenElement('activity body', L::Two, S::Partial, 'timelineTemplate {{html body_html}}', 'plain text; display-time URL auto-link / decoration deferred (Phase C)'),
+                new ScreenElement('screen-name handle', L::Three, S::Deferred, 'timelineTemplate ${member.screen_name}', 'OpenPNE 3 shows the @screen_name handle; Classic shows the nickname'),
+                new ScreenElement('activity body', L::Two, S::Partial, 'timelineTemplate {{html body_html}}', 'plain text; display-time URL auto-link / decoration not rendered'),
                 new ScreenElement('attached image', L::Three, S::Ported, 'activity_image (opTimeline image) + lightbox.js', 'ActivityImage thumbnail via the shared File; FilePolicy-gated by the activity visibility'),
                 new ScreenElement('visibility label', L::Three, S::Ported, 'timelineTemplate public_status friend/private', 'Visibility label shown for every level (OpenPNE 3 labels only friend/private)'),
-                new ScreenElement('reply thread', L::One, S::Deferred, 'showSuccess gorgon timeline-list (commentSearch API)', 'reply thread lands in a later slice (A4)'),
-                new ScreenElement('own-post delete', L::Two, S::Deferred, 'timelineTemplate timeline-post-delete-confirm', 'delete lands in the write slice (A2)'),
+                new ScreenElement('reply thread', L::One, S::Deferred, 'showSuccess gorgon timeline-list (commentSearch API)', 'reply threads are not part of the read view'),
+                new ScreenElement('own-post delete', L::Two, S::Deferred, 'timelineTemplate timeline-post-delete-confirm', 'delete is part of the write surface'),
             ],
         ];
     }

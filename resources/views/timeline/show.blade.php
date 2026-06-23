@@ -5,7 +5,7 @@
 @section('title', $title)
 
 @section('content')
-    {{-- OpenPNE 3 showSuccess.php: a single timeline post (its reply thread lands in a later slice). --}}
+    {{-- OpenPNE 3 showSuccess.php: a single timeline post. --}}
     <div class="dparts" id="timeline_show">
         <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="parts">

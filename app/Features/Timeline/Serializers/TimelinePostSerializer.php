@@ -8,8 +8,8 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * Modern surface shapes for the Timeline feature. visibility is always a string slug (never raw
- * int) to avoid JS falsy-zero bugs with Open=0. A timeline card shows the body and image inline
- * (unlike a diary list, which shows only a title), so entry() carries the full content.
+ * int) to avoid JS falsy-zero bugs with Open=0. A timeline card shows the body and image inline,
+ * so entry() carries the full content.
  */
 class TimelinePostSerializer
 {

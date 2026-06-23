@@ -10,9 +10,8 @@ use App\Models\TimelinePost;
  * A single timeline post permalink, gated by the viewer's clearance.
  *
  * OpenPNE 3 re-centers a permalink whose id is a reply (in_reply_to set) to its parent post and
- * opens the thread there. A1 has no way to create replies (the reply slice is A4), so no reply
- * rows exist yet and this returns the addressed row directly; the parent re-centering lands with
- * the reply thread in A4.
+ * opens the thread there; this returns the addressed post directly. Re-centering belongs with the
+ * reply thread.
  */
 class ShowTimelinePost
 {

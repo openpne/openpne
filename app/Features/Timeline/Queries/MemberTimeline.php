@@ -10,9 +10,8 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * One member's timeline — their top-level posts under the viewer's clearance. Replies
- * (in_reply_to_id set) are excluded; they belong to a thread, not the member's stream, matching
- * OpenPNE 3's member timeline (opActivityQueryBuilder reads in_reply_to_activity_id IS NULL).
- * Same visibility/block rule as ListDiaries.
+ * (in_reply_to_id set) are excluded, matching OpenPNE 3's member timeline (opActivityQueryBuilder
+ * reads in_reply_to_activity_id IS NULL).
  *
  * @return LengthAwarePaginator<int, TimelinePost>
  */
