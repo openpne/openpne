@@ -19,25 +19,7 @@
             @else
                 <ul class="timeline-list">
                     @foreach ($posts as $post)
-                        <li class="timeline-post" data-timeline-id="{{ $post->getKey() }}">
-                            <div class="timeline-member-name">
-                                {{-- OpenPNE 3 shows the @screen_name handle here; Classic shows the nickname. --}}
-                                <a href="{{ route('member.profile.show', $post->member) }}">{{ $post->member->name }}</a>
-                            </div>
-                            <div class="timeline-post-body">{{ $post->body }}</div>
-                            @foreach ($post->images as $image)
-                                @if ($image->file)
-                                    <img class="timeline-post-image" src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
-                                @endif
-                            @endforeach
-                            <div class="timeline-post-control">
-                                <span class="public-flag">{{ __($post->visibility->label()) }}</span>
-                                <a href="{{ route('timeline.show', $post) }}"><span class="timestamp">{{ \App\Support\LocalizedDate::dateTime($post->created_at) }}</span></a>
-                                @if ($owner->is(auth()->user()))
-                                    <a href="{{ route('timeline.delete.show', $post) }}">{{ __('Delete') }}</a>
-                                @endif
-                            </div>
-                        </li>
+                        @include('timeline._post', ['post' => $post])
                     @endforeach
                 </ul>
 

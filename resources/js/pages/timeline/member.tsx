@@ -2,17 +2,19 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { Pagination } from '@/components/pagination';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
+import { TimelinePostCard } from './post-card';
 import type { PaginatedTimelinePosts, TimelinePostAuthor } from './types';
 
 interface MemberProps extends PageProps {
     owner: TimelinePostAuthor;
     isOwner: boolean;
+    viewerId: number;
     posts: PaginatedTimelinePosts;
 }
 
 export default function TimelineMember() {
     const t = useT();
-    const { owner, isOwner, posts, flash } = usePage<MemberProps>().props;
+    const { owner, isOwner, viewerId, posts, flash } = usePage<MemberProps>().props;
     const title = isOwner ? t('%Activity%') : t(":name's %activity%", { name: owner.name });
 
     return (
@@ -36,29 +38,7 @@ export default function TimelineMember() {
                     <>
                         <ul className="space-y-4">
                             {posts.data.map((post) => (
-                                <li key={post.id} className="space-y-2 border-b pb-4">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <Link href={`/m/member/${post.author.id}/timeline`} className="font-medium hover:underline">
-                                            {post.author.name}
-                                        </Link>
-                                        <Link href={`/m/timeline/${post.id}`} className="text-muted-foreground hover:underline">
-                                            {new Date(post.createdAt).toLocaleString()}
-                                        </Link>
-                                    </div>
-                                    <p className="whitespace-pre-wrap">{post.body}</p>
-                                    {post.images.length > 0 && (
-                                        <div className="flex flex-wrap gap-2">
-                                            {post.images.map((image) => (
-                                                <img key={image.id} src={image.thumbnailUrl} alt="" className="rounded" />
-                                            ))}
-                                        </div>
-                                    )}
-                                    {isOwner && (
-                                        <Link href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm hover:underline">
-                                            {t('Delete')}
-                                        </Link>
-                                    )}
-                                </li>
+                                <TimelinePostCard key={post.id} post={post} viewerId={viewerId} />
                             ))}
                         </ul>
                         <Pagination meta={posts.meta} />

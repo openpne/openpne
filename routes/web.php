@@ -244,9 +244,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/m/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete');
     });
 
-    // OpenPNE 3 opTimelinePlugin: a member's timeline, posting, and a single-post permalink.
-    // Literal-prefix routes precede the {timelinePost} wildcard.
+    // OpenPNE 3 opTimelinePlugin: the cross-member home feed, a member's timeline, posting, and a
+    // single-post permalink. Literal-prefix routes precede the {timelinePost} wildcard.
     Route::controller(TimelineController::class)->group(function () {
+        Route::get('/timeline', 'index')->name('timeline.index');
         Route::get('/member/{member}/timeline', 'member')->whereNumber('member')->name('timeline.member');
         Route::get('/timeline/new', 'new')->name('timeline.new');
         Route::post('/timeline/create', 'store')->name('timeline.store');
@@ -256,6 +257,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     });
 
     Route::controller(TimelineController::class)->group(function () {
+        Route::get('/m/timeline', 'index')->defaults('surface', 'modern')->name('timeline.modern.index');
         Route::get('/m/member/{member}/timeline', 'member')->whereNumber('member')->defaults('surface', 'modern')->name('timeline.modern.member');
         Route::get('/m/timeline/new', 'new')->defaults('surface', 'modern')->name('timeline.modern.new');
         Route::post('/m/timeline/create', 'store')->defaults('surface', 'modern')->name('timeline.modern.store');
@@ -268,6 +270,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // /:module/:action fallback); preserve that URL by redirecting to the canonical timeline.show.
     Route::get('/timeline/show/id/{timelinePost}', fn (int $timelinePost) => redirect()->route('timeline.show', ['timelinePost' => $timelinePost]))
         ->whereNumber('timelinePost')->name('timeline.show.compat');
+
+    // OpenPNE 3's SNS-wide timeline lived at /sns/timeline; preserve that URL by redirecting to the
+    // canonical home feed at /timeline.
+    Route::get('/sns/timeline', fn () => redirect()->route('timeline.index'))->name('timeline.index.compat');
 
     // OpenPNE 3 compatibility: access block lived at /member/config?category=accessBlock.
     // The member config module is not ported yet, so resolve just that category to the
