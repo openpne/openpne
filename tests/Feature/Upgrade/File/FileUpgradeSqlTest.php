@@ -26,6 +26,7 @@ class FileUpgradeSqlTest extends TestCase
         'file',
         'member_image',
         'diary_image',
+        'diary_comment_image',
         'community_topic_image',
         'community_topic_comment_image',
         'community_event_image',
@@ -113,6 +114,17 @@ class FileUpgradeSqlTest extends TestCase
         $this->runUpgrade();
 
         $this->assertDatabaseHas('files', ['id' => 12, 'related_entity_type' => 'diary', 'related_entity_id' => 88]);
+    }
+
+    public function test_resolves_diary_comment_image_owner(): void
+    {
+        $this->seedFile(13);
+        // diary_comment_image has no `number` column (unlike the other image tables).
+        DB::table('diary_comment_image')->insert(['id' => 1, 'diary_comment_id' => 99, 'file_id' => 13]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 13, 'related_entity_type' => 'diaryComment', 'related_entity_id' => 99]);
     }
 
     public function test_resolves_community_topic_and_event_owners(): void

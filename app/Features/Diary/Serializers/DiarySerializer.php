@@ -4,6 +4,7 @@ namespace App\Features\Diary\Serializers;
 
 use App\Models\Diary;
 use App\Models\DiaryComment;
+use App\Models\DiaryCommentImage;
 use App\Models\DiaryImage;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -64,12 +65,12 @@ class DiarySerializer
     }
 
     /**
-     * A single attached image: the full-bytes url and a square thumbnail, both FilePolicy-gated.
-     * Skips a number-only row whose File is gone (defensive; the join cascades with the File).
+     * A single attached image (diary or comment): the full-bytes url and a square thumbnail, both
+     * FilePolicy-gated. Tolerates a row whose File is gone (defensive; the join cascades with it).
      *
      * @return array{id: int, url: string, thumbnailUrl: string}
      */
-    public static function image(DiaryImage $image): array
+    public static function image(DiaryImage|DiaryCommentImage $image): array
     {
         $file = $image->file;
 
@@ -84,7 +85,7 @@ class DiarySerializer
      * `author` is null for a withdrawn member; `deletable` is the viewer-specific delete
      * permission, computed server-side so the client never re-derives authorization.
      *
-     * @return array{id: int, number: int, body: string, author: array{id: int, name: string}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string}|null, createdAt: string, deletable: bool}
      */
     public static function comment(DiaryComment $comment, Member $viewer): array
     {
@@ -92,6 +93,7 @@ class DiarySerializer
             'id' => $comment->getKey(),
             'number' => $comment->number,
             'body' => $comment->body,
+            'images' => $comment->images->map([self::class, 'image'])->all(),
             'author' => $comment->member ? [
                 'id' => $comment->member->getKey(),
                 'name' => $comment->member->name,

@@ -18,6 +18,7 @@ use App\Upgrade\Steps\CommunityTopicCommentUpgrade;
 use App\Upgrade\Steps\CommunityTopicImageUpgrade;
 use App\Upgrade\Steps\CommunityTopicUpgrade;
 use App\Upgrade\Steps\CommunityUpgrade;
+use App\Upgrade\Steps\DiaryCommentImageUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryImageUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
@@ -96,6 +97,7 @@ final class StepRegistry
             // post (all migrated above), so they run last.
             MemberImageUpgrade::class,
             DiaryImageUpgrade::class,
+            DiaryCommentImageUpgrade::class,
             CommunityTopicImageUpgrade::class,
             CommunityTopicCommentImageUpgrade::class,
             CommunityEventImageUpgrade::class,
@@ -136,7 +138,6 @@ final class StepRegistry
             // File-owning tables with no OpenPNE 4 successor surface. FileUpgrade still migrates their
             // binaries (every `file` row is kept) with a null owner; an owner is assigned if and when
             // the corresponding feature lands.
-            'diary_comment_image' => 'OpenPNE 3 diary-comment inline images. No successor surface yet (diary post images are migrated by DiaryImageUpgrade, but comments are not); binaries kept with a null owner.',
             'activity_image' => 'OpenPNE 3 activity (timeline) images. The timeline is not built; the binaries are kept with a null owner for when it lands.',
             'oauth_consumer' => 'OpenPNE 3 OAuth consumer registry (incl. a consumer logo file_id). OpenPNE 4 has no OAuth provider, so the table is not migrated; the logo binary is kept with a null owner.',
         ];

@@ -12,6 +12,7 @@ use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\Message;
@@ -43,6 +44,8 @@ class FilePolicy extends BasePolicy
             // A diary image inherits the diary's visibility: a web-public (Open) diary's images are
             // public (guest-readable); otherwise the viewer's clearance on the author, blocked → none.
             $owner instanceof Diary => DiaryAccess::canView($viewer, $owner),
+            // A comment image inherits the visibility of the diary the comment hangs on.
+            $owner instanceof DiaryComment => $owner->diary !== null && DiaryAccess::canView($viewer, $owner->diary),
             // A topic/comment image inherits the board's read access: visible exactly to
             // whoever may read the topic it hangs on (members-only boards hide it).
             $owner instanceof CommunityTopic => $viewer !== null && CommunityTopicAccess::canViewTopic($owner, $viewer),

@@ -13,10 +13,13 @@ export default function DiaryShow() {
     const { diary, comments, flash, auth } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
 
-    const form = useForm({ body: '' });
+    const form = useForm({ body: '', images: [] as File[] });
     const submitComment = (e: React.FormEvent) => {
         e.preventDefault();
-        form.post(`/m/diary/${diary.id}/comment/create`, { onSuccess: () => form.reset('body') });
+        form.post(`/m/diary/${diary.id}/comment/create`, {
+            forceFormData: true,
+            onSuccess: () => form.reset('body', 'images'),
+        });
     };
 
     return (
@@ -86,6 +89,17 @@ export default function DiaryShow() {
                                         )}
                                     </p>
                                     <p className="whitespace-pre-wrap">{comment.body}</p>
+                                    {comment.images.length > 0 && (
+                                        <ul className="mt-1 flex flex-wrap gap-2">
+                                            {comment.images.map((image) => (
+                                                <li key={image.id}>
+                                                    <a href={image.url} target="_blank" rel="noopener noreferrer">
+                                                        <img src={image.thumbnailUrl} alt="" className="size-20 object-cover" />
+                                                    </a>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </li>
                             ))}
                         </ul>
@@ -104,6 +118,17 @@ export default function DiaryShow() {
                         rows={8}
                     />
                     {form.errors.body && <p role="alert">{form.errors.body}</p>}
+                    <div>
+                        <label htmlFor="comment_images">{t('Images')}</label>
+                        <input
+                            id="comment_images"
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            multiple
+                            onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
+                        />
+                        {form.errors.images && <p role="alert">{form.errors.images}</p>}
+                    </div>
                     <button type="submit" disabled={form.processing}>
                         {t('Save')}
                     </button>

@@ -46,9 +46,8 @@ class DiaryRouteParity extends RouteParity
     {
         return [
             'diary_index' => 'Diary top (/diary) is not ported.',
-            // Comment create/delete are ported (above) on both surfaces. Still deferred within
-            // comments: image attachments, notifications, unread tracking, thread pagination, and
-            // this history feed.
+            // Comment create/delete and image attachments are ported (above) on both surfaces. Still
+            // deferred within comments: notifications, unread tracking, and this history feed.
             'diary_comment_history' => 'Comment history feed is not ported.',
         ];
     }
@@ -69,11 +68,11 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('comment thread pagination + order toggle', L::Two, S::Ported, 'diaryComment/_list pager (size, ASC/DESC, older/newer)', 'DiaryCommentThread: reversible pager, sizes 20/100, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->body))', 'x-user-text (BodyText); comments carry no op_decoration in OpenPNE 3'),
                 new ScreenElement('comment datetime', L::Three, S::Ported, "op_format_date(comment->created_at, 'XDateTimeJaBr')", 'LocalizedDate; inline single-line'),
-                new ScreenElement('comment images', L::Three, S::Deferred, '$comment->getDiaryCommentImagesJoinFile()', 'image delivery not built (FileStorage)'),
+                new ScreenElement('comment images', L::Three, S::Ported, '$comment->getDiaryCommentImagesJoinFile()', 'DiaryCommentImage thumbnails via the shared _images partial; FilePolicy-gated by the diary visibility'),
                 // Comment post form. Text posting + the web-public notice are faithful; the OpenPNE 3
                 // form is multipart and embeds photo fields, which is a separate deferred element.
                 new ScreenElement('comment post form + is_open notice', L::One, S::Ported, 'op_include_form formDiaryComment'),
-                new ScreenElement('comment image upload', L::Three, S::Deferred, 'formDiaryComment isMultipart + DiaryCommentImageForm x3', 'OpenPNE 3 embeds up to 3 photo fields; image delivery not built'),
+                new ScreenElement('comment image upload', L::Three, S::Ported, 'formDiaryComment isMultipart + DiaryCommentImageForm x3', 'up to PostImages::MAX_IMAGES via the shared _image_fields partial; PostImageRules validation'),
                 // Diary record.
                 new ScreenElement('owner edit entry', L::One, S::Ported, "operation form url_for('diary_edit')"),
                 new ScreenElement('visibility label', L::Two, S::Ported, '$diary->getPublicFlagLabel()'),
