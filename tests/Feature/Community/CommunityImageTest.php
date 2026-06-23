@@ -78,6 +78,29 @@ class CommunityImageTest extends TestCase
         $this->assertSame(0, DB::table('file_bin')->where('file_id', $file->getKey())->count());
     }
 
+    public function test_a_stale_instance_still_purges_the_current_image_on_replace(): void
+    {
+        // Regression for the concurrency race: file_id is a mutable self-column, so an action handed
+        // a stale community (its in-memory file_id already overwritten by a concurrent edit) must
+        // read the *current* image under the lock, not the stale one, or the live image orphans.
+        [$community, $admin] = $this->communityWithAdmin();
+        app(UpdateCommunity::class)($admin, $community, $this->data(), $this->fake('a.png'));
+
+        // A concurrent edit replaces the image through a fresh instance; $community is now stale.
+        $fresh = Community::findOrFail($community->getKey());
+        app(UpdateCommunity::class)($admin, $fresh, $this->data(), $this->fake('b.png'));
+        $fileB = $fresh->refresh()->image()->first();
+
+        // Replace again through the STALE $community (still carrying file_id = A in memory).
+        app(UpdateCommunity::class)($admin, $community, $this->data(), $this->fake('c.png'));
+
+        $fileC = $community->refresh()->image()->first();
+        $this->assertNotSame($fileB->getKey(), $fileC->getKey());
+        // The live image (B) was purged, not missed; no orphan left behind.
+        $this->assertNull(File::find($fileB->getKey()));
+        $this->assertSame(0, DB::table('file_bin')->where('file_id', $fileB->getKey())->count());
+    }
+
     public function test_a_new_upload_wins_over_the_remove_flag(): void
     {
         [$community, $admin] = $this->communityWithAdmin();

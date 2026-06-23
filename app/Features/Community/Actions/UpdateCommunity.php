@@ -37,11 +37,14 @@ class UpdateCommunity
         }
 
         $replaced = $this->images->compensating(function (callable $store) use ($community, $data, $image, $removeImage): ?File {
-            // Serialize concurrent edits of this community so two image replacements can't both
-            // win the file_id write and orphan the loser's bytes.
-            Community::whereKey($community->getKey())->lockForUpdate()->first();
+            // Re-read under the lock and work off $locked: file_id is a mutable column on this row, so
+            // the passed-in instance may carry a value already overwritten by a concurrent edit that
+            // won the lock first. Reading the prior File off the stale value would miss that edit's
+            // image and orphan its bytes. (UpdateTopic is safe without this because it reads images by
+            // the immutable post_id, not a self-column.)
+            $locked = Community::whereKey($community->getKey())->lockForUpdate()->firstOrFail();
 
-            $community->update([
+            $locked->update([
                 'name' => $data->name,
                 'description' => $data->description,
                 'register_policy' => $data->registerPolicy,
@@ -50,16 +53,16 @@ class UpdateCommunity
 
             // A new upload wins over a remove flag. Capture the prior File (if any) to purge after commit.
             if ($image !== null) {
-                $previous = $community->image()->first();
-                $file = $store($image, 'community', (int) $community->getKey());
-                $community->update(['file_id' => $file->getKey()]);
+                $previous = $locked->image()->first();
+                $file = $store($image, 'community', (int) $locked->getKey());
+                $locked->update(['file_id' => $file->getKey()]);
 
                 return $previous;
             }
 
             if ($removeImage) {
-                $previous = $community->image()->first();
-                $community->update(['file_id' => null]);
+                $previous = $locked->image()->first();
+                $locked->update(['file_id' => null]);
 
                 return $previous;
             }
