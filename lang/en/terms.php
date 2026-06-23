@@ -6,7 +6,7 @@ return [
     'community' => 'community',
     'nickname' => 'nickname',
     'activity' => 'timeline',
-    'post_activity' => 'tweet',
+    'post_activity' => 'post',
     'diary' => 'diary',
     'topic' => 'topic',
 ];

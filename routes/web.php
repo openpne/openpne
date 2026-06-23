@@ -17,6 +17,7 @@ use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Message\MessageController;
 use App\Features\Profile\ProfileController;
+use App\Features\Timeline\TimelineController;
 use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
@@ -241,6 +242,18 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/m/diary/{diary}/comment/create', 'store')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.comment.store');
         Route::get('/m/diary/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete.show');
         Route::post('/m/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete');
+    });
+
+    // OpenPNE 3 opTimelinePlugin (activity stream). A member's timeline + a single-activity
+    // permalink; the cross-member home feed and reply threads land in later slices.
+    Route::controller(TimelineController::class)->group(function () {
+        Route::get('/member/{member}/timeline', 'member')->whereNumber('member')->name('timeline.member');
+        Route::get('/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->name('timeline.show');
+    });
+
+    Route::controller(TimelineController::class)->group(function () {
+        Route::get('/m/member/{member}/timeline', 'member')->whereNumber('member')->defaults('surface', 'modern')->name('timeline.modern.member');
+        Route::get('/m/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.show');
     });
 
     // OpenPNE 3 compatibility: access block lived at /member/config?category=accessBlock.
