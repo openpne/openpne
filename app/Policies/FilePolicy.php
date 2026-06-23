@@ -6,6 +6,7 @@ use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\Diary\DiaryAccess;
 use App\Features\Message\MessageAccess;
+use App\Features\Timeline\TimelineAccess;
 use App\Models\BannerImage;
 use App\Models\Community;
 use App\Models\CommunityEvent;
@@ -17,6 +18,7 @@ use App\Models\DiaryComment;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\Message;
+use App\Models\TimelinePost;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
@@ -60,6 +62,10 @@ class FilePolicy extends BasePolicy
             // A message attachment is private to the message's parties: the sender, and a recipient of
             // a delivered (non-draft) message. A draft's recipient is excluded (MessageAccess).
             $owner instanceof Message => $viewer !== null && MessageAccess::canViewMessage($owner, $viewer),
+            // A timeline post's image inherits the post's visibility: a web-public (Open) post's
+            // image is guest-readable, otherwise the viewer's clearance on the author, blocked →
+            // none. TimelineAccess handles the guest (null) case.
+            $owner instanceof TimelinePost => TimelineAccess::canView($viewer, $owner),
             default => false,
         };
     }

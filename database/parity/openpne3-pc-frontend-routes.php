@@ -178,4 +178,16 @@ return [
             'recent_message_list' => ['/message/recentList.json', 'POST'],
         ],
     ],
+    'timeline' => [
+        // opTimelinePlugin adds no timeline_nodefaults route, so the global /:module/:action
+        // fallback stays on: the API endpoints (post/search/show.json) and the smt* mobile views
+        // are reached un-named. The three pc_frontend named routes are the member / community /
+        // SNS timeline feeds; every one is sf_method-unconstrained, so all are ANY (GET-reachable).
+        'disables_global_fallback' => false,
+        'routes' => [
+            'member_timeline' => ['/member/:id/timeline', 'ANY'],
+            'community_timeline' => ['/community/:id/timeline', 'ANY'],
+            'sns_timeline' => ['/sns/timeline', 'ANY'],
+        ],
+    ],
 ];

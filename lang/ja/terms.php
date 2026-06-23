@@ -6,7 +6,7 @@ return [
     'community' => 'コミュニティ',
     'nickname' => 'ニックネーム',
     'activity' => 'タイムライン',
-    'post_activity' => 'つぶやく',
+    'post_activity' => 'ポスト',
     'diary' => '日記',
     'topic' => 'トピック',
 ];
