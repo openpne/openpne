@@ -39,16 +39,22 @@ class DiarySerializer
     }
 
     /**
-     * @return array{id: int, title: string, body: string, visibility: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string}, createdAt: string}
+     * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
+     * full images plus hasImages, so a caller typed on either shape reads consistent data.
+     *
+     * @return array{id: int, title: string, body: string, visibility: string, hasImages: bool, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string}, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
+        $images = $diary->images->map([self::class, 'image'])->all();
+
         return [
             'id' => $diary->getKey(),
             'title' => $diary->title,
             'body' => $diary->body,
             'visibility' => $diary->visibility->slug(),
-            'images' => $diary->images->map([self::class, 'image'])->all(),
+            'hasImages' => $images !== [],
+            'images' => $images,
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
