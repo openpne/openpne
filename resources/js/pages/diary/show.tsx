@@ -34,6 +34,18 @@ export default function DiaryShow() {
 
                 <div className="whitespace-pre-wrap">{diary.body}</div>
 
+                {diary.images.length > 0 && (
+                    <ul className="flex flex-wrap gap-3">
+                        {diary.images.map((image) => (
+                            <li key={image.id}>
+                                <a href={image.url} target="_blank" rel="noopener noreferrer">
+                                    <img src={image.thumbnailUrl} alt="" className="size-28 object-cover" />
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
                 {isOwner && (
                     <div className="flex gap-4 text-sm">
                         <Link href={`/m/diary/edit/${diary.id}`} className="hover:underline">
