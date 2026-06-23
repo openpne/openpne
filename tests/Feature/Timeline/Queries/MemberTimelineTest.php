@@ -102,6 +102,19 @@ class MemberTimelineTest extends TestCase
         $this->assertSame($first->getKey(), $items[1]->getKey());
     }
 
+    public function test_same_timestamp_posts_are_ordered_by_id_descending(): void
+    {
+        $owner = Member::factory()->create();
+        $first = $this->postFor($owner, Visibility::Members, createdAt: '2026-03-01 12:00:00');
+        $second = $this->postFor($owner, Visibility::Members, createdAt: '2026-03-01 12:00:00');
+
+        $items = (new MemberTimeline)($owner, $owner)->items();
+
+        // Same created_at → higher id first (OpenPNE 3 orders by id DESC).
+        $this->assertSame($second->getKey(), $items[0]->getKey());
+        $this->assertSame($first->getKey(), $items[1]->getKey());
+    }
+
     public function test_result_is_paginated(): void
     {
         $owner = Member::factory()->create();

@@ -32,6 +32,9 @@ class MemberTimeline
             $query->where('visibility', '<=', Visibility::clearanceFor($viewer, $owner)->value);
         }
 
-        return $query->orderByDesc('created_at')->paginate($perPage);
+        // OpenPNE 3 opActivityQueryBuilder orders by id DESC. Keep created_at as the primary key
+        // for human-meaningful order, with id DESC as the stable tiebreaker for same-second posts
+        // (and migrated rows sharing a timestamp).
+        return $query->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage);
     }
 }

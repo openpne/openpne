@@ -39,6 +39,13 @@ class TimelineRouteParity extends RouteParity
         return true;
     }
 
+    public function compatRedirects(): array
+    {
+        // OpenPNE 3's single-post permalink (timeline/show/id/:id, reached via the global
+        // fallback and linked from the post timestamp) is redirected to the canonical timeline.show.
+        return ['/timeline/show/id/:id' => 'timeline.show'];
+    }
+
     /**
      * Surface elements per OpenPNE 3 timeline template (templates/_timelineProfile.php +
      * _timelineTemplate.php + showSuccess.php). OpenPNE 3 streams activities client-side from the

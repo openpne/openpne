@@ -256,6 +256,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/m/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.show');
     });
 
+    // OpenPNE 3 linked the single-post permalink at /timeline/show/id/:id (reached via the global
+    // /:module/:action fallback); preserve that URL by redirecting to the canonical timeline.show.
+    Route::get('/timeline/show/id/{timelinePost}', fn (int $timelinePost) => redirect()->route('timeline.show', ['timelinePost' => $timelinePost]))
+        ->whereNumber('timelinePost')->name('timeline.show.compat');
+
     // OpenPNE 3 compatibility: access block lived at /member/config?category=accessBlock.
     // The member config module is not ported yet, so resolve just that category to the
     // canonical Block list. 302 (not 301) because a future member config module will

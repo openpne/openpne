@@ -64,4 +64,15 @@ class TimelineRoutesTest extends TestCase
 
         $this->actingAs($alice)->get("/timeline/{$post->getKey()}")->assertNotFound();
     }
+
+    public function test_op3_permalink_redirects_to_canonical_show(): void
+    {
+        // OpenPNE 3 linked single posts at /timeline/show/id/:id; preserve that URL.
+        $member = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+
+        $this->actingAs($member)
+            ->get("/timeline/show/id/{$post->getKey()}")
+            ->assertRedirect("/timeline/{$post->getKey()}");
+    }
 }
