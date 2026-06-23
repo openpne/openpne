@@ -93,6 +93,7 @@
                                 </p>
                             </div>
                             <div class="body"><p class="text"><x-user-text :value="$comment->body" /></p></div>
+                            @include('community-topic._images', ['images' => $comment->images])
                         </dd>
                     </dl>
                 @endforeach
@@ -106,7 +107,7 @@
             @if ($diary->visibility === \App\Support\Visibility::Open)
                 <p class="attention">{{ __('Your comment is visible to everyone on the web.') }}</p>
             @endif
-            <form method="POST" action="{{ route('diary.comment.store', $diary) }}">
+            <form method="POST" action="{{ route('diary.comment.store', $diary) }}" enctype="multipart/form-data">
                 @csrf
                 <table>
                     <tr>
@@ -116,6 +117,7 @@
                             @error('body')<p class="error">{{ $message }}</p>@enderror
                         </td>
                     </tr>
+                    @include('community-topic._image_fields')
                 </table>
                 <div class="operation">
                     <ul class="moreInfo button">
