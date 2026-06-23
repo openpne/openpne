@@ -58,6 +58,19 @@ class TimelinePostWriteTest extends TestCase
         $this->assertDatabaseCount('timeline_posts', 0);
     }
 
+    public function test_store_rejects_web_public_open_by_default(): void
+    {
+        // OpenPNE 3 op_activity_is_open defaults off, so Open is not a selectable audience.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/timeline/create', [
+            'body' => 'open?',
+            'visibility' => (string) Visibility::Open->value,
+        ])->assertSessionHasErrors('visibility');
+
+        $this->assertDatabaseCount('timeline_posts', 0);
+    }
+
     public function test_delete_confirm_404_for_non_author(): void
     {
         [$owner, $other] = Member::factory()->count(2)->create()->all();

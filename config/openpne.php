@@ -76,8 +76,9 @@ return [
     ],
 
     'timeline' => [
-        // OpenPNE 3 op_activity_is_open: whether a post may be made web-public (Open).
-        'allow_web_public' => (bool) env('OPENPNE_TIMELINE_ALLOW_WEB_PUBLIC', true),
+        // OpenPNE 3 op_activity_is_open (default off): whether a post may be made web-public (Open).
+        // When off, OpenPNE 3 drops the Open option from the form (ActivityDataTable::getPublicFlags).
+        'allow_web_public' => (bool) env('OPENPNE_TIMELINE_ALLOW_WEB_PUBLIC', false),
     ],
 
     /*
