@@ -10,6 +10,10 @@
     <div class="dparts profileTimeline" id="profileTimeline_{{ $owner->getKey() }}">
         <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="parts">
+            @if ($owner->is(auth()->user()))
+                <p><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
+            @endif
+
             @if ($posts->isEmpty())
                 <p>{{ __('No %activity% posts to show.') }}</p>
             @else
@@ -29,6 +33,9 @@
                             <div class="timeline-post-control">
                                 <span class="public-flag">{{ __($post->visibility->label()) }}</span>
                                 <a href="{{ route('timeline.show', $post) }}"><span class="timestamp">{{ \App\Support\LocalizedDate::dateTime($post->created_at) }}</span></a>
+                                @if ($owner->is(auth()->user()))
+                                    <a href="{{ route('timeline.delete.show', $post) }}">{{ __('Delete') }}</a>
+                                @endif
                             </div>
                         </li>
                     @endforeach

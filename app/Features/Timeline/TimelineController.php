@@ -3,12 +3,18 @@
 namespace App\Features\Timeline;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Timeline\Actions\CreateTimelinePost;
+use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Features\Timeline\Queries\MemberTimeline;
 use App\Features\Timeline\Queries\ShowTimelinePost;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Timeline\StoreTimelinePostRequest;
 use App\Models\Member;
+use App\Models\TimelinePost;
 use App\Support\SurfaceResolver;
+use App\Support\Visibility;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Inertia\Inertia;
@@ -52,6 +58,58 @@ class TimelineController extends Controller
                 'post' => TimelinePostSerializer::entry($post),
             ]),
         ]);
+    }
+
+    public function new(Request $request): View|InertiaResponse
+    {
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('timeline.new', [
+                'visibilityOptions' => TimelineVisibility::options(),
+                'defaultVisibility' => Visibility::Members,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('timeline/new', [
+                'defaultVisibility' => (string) Visibility::Members->value,
+                // Drive the Modern select from the same selectable audiences as Classic, so it
+                // can never submit an option (e.g. Open) it does not visibly render.
+                'visibilityOptions' => array_map(
+                    fn (Visibility $option): array => ['value' => (string) $option->value, 'label' => $option->label()],
+                    TimelineVisibility::options(),
+                ),
+            ]),
+        ]);
+    }
+
+    public function store(StoreTimelinePostRequest $request, CreateTimelinePost $action): RedirectResponse
+    {
+        $viewer = $this->viewer();
+        $action($viewer, $request->toData(), $request->file('image'));
+
+        return redirect()
+            ->route(SurfaceResolver::redirectName($request, 'timeline.member'), ['member' => $viewer->getKey()])
+            ->with('status', __('Posted.'));
+    }
+
+    public function showDelete(Request $request, TimelinePost $timelinePost): View|InertiaResponse
+    {
+        abort_unless($this->viewer()->is($timelinePost->member), 404);
+
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('timeline.delete', ['post' => $timelinePost]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('timeline/delete', [
+                'post' => TimelinePostSerializer::entry($timelinePost->load(['member', 'images.file'])),
+            ]),
+        ]);
+    }
+
+    public function delete(Request $request, TimelinePost $timelinePost, DeleteTimelinePost $action): RedirectResponse
+    {
+        $viewer = $this->viewer();
+        abort_unless($viewer->is($timelinePost->member), 404);
+        $action($timelinePost);
+
+        return redirect()
+            ->route(SurfaceResolver::redirectName($request, 'timeline.member'), ['member' => $viewer->getKey()])
+            ->with('status', __('Post deleted.'));
     }
 
     /**

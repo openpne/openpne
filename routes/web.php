@@ -244,14 +244,23 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/m/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete');
     });
 
-    // OpenPNE 3 opTimelinePlugin: a member's timeline and a single-post permalink.
+    // OpenPNE 3 opTimelinePlugin: a member's timeline, posting, and a single-post permalink.
+    // Literal-prefix routes precede the {timelinePost} wildcard.
     Route::controller(TimelineController::class)->group(function () {
         Route::get('/member/{member}/timeline', 'member')->whereNumber('member')->name('timeline.member');
+        Route::get('/timeline/new', 'new')->name('timeline.new');
+        Route::post('/timeline/create', 'store')->name('timeline.store');
+        Route::get('/timeline/deleteConfirm/{timelinePost}', 'showDelete')->whereNumber('timelinePost')->name('timeline.delete.show');
+        Route::post('/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->name('timeline.delete');
         Route::get('/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->name('timeline.show');
     });
 
     Route::controller(TimelineController::class)->group(function () {
         Route::get('/m/member/{member}/timeline', 'member')->whereNumber('member')->defaults('surface', 'modern')->name('timeline.modern.member');
+        Route::get('/m/timeline/new', 'new')->defaults('surface', 'modern')->name('timeline.modern.new');
+        Route::post('/m/timeline/create', 'store')->defaults('surface', 'modern')->name('timeline.modern.store');
+        Route::get('/m/timeline/deleteConfirm/{timelinePost}', 'showDelete')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.delete.show');
+        Route::post('/m/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.delete');
         Route::get('/m/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.show');
     });
 
