@@ -65,9 +65,9 @@ class TimelineRouteParity extends RouteParity
                 new ScreenElement('visibility label', L::Three, S::Ported, 'timelineTemplate public_status friend/private', 'Visibility label shown for every level (OpenPNE 3 labels only friend/private)'),
                 new ScreenElement('permalink + datetime', L::Three, S::Ported, 'timelineTemplate timeline/show/id/${id} + jquery.timeago', 'absolute localized datetime linking to timeline.show; OpenPNE 3 renders a relative timeago'),
                 new ScreenElement('pagination', L::Two, S::Ported, '_timelineProfile #timeline-loadmore もっと読む', 'server-side pager; OpenPNE 3 is infinite-scroll over the API'),
-                new ScreenElement('compose box', L::One, S::Deferred, '_timelineProfile #timeline-submit-button', 'posting is part of the write surface'),
+                new ScreenElement('compose box', L::One, S::Ported, '_timelineProfile #timeline-submit-button', 'standalone /timeline/new compose page linked from the timeline; OpenPNE 3 inlines the form'),
                 new ScreenElement('per-post reply form', L::Two, S::Deferred, 'timelineTemplate #timeline-post-comment-form', 'reply threads are not part of the read view'),
-                new ScreenElement('own-post delete', L::Two, S::Deferred, 'timelineTemplate timeline-post-delete-confirm', 'delete is part of the write surface'),
+                new ScreenElement('own-post delete', L::Two, S::Ported, 'timelineTemplate timeline-post-delete-confirm', 'delete link + confirm page; OpenPNE 3 uses an inline JS confirm'),
             ],
             // showSuccess.php → timeline/show.blade.php
             'show' => [
@@ -77,7 +77,7 @@ class TimelineRouteParity extends RouteParity
                 new ScreenElement('attached image', L::Three, S::Ported, 'activity_image (opTimeline image) + lightbox.js', 'ActivityImage thumbnail via the shared File; FilePolicy-gated by the activity visibility'),
                 new ScreenElement('visibility label', L::Three, S::Ported, 'timelineTemplate public_status friend/private', 'Visibility label shown for every level (OpenPNE 3 labels only friend/private)'),
                 new ScreenElement('reply thread', L::One, S::Deferred, 'showSuccess gorgon timeline-list (commentSearch API)', 'reply threads are not part of the read view'),
-                new ScreenElement('own-post delete', L::Two, S::Deferred, 'timelineTemplate timeline-post-delete-confirm', 'delete is part of the write surface'),
+                new ScreenElement('own-post delete', L::Two, S::Missing, 'timelineTemplate timeline-post-delete-confirm', 'no delete control on the permalink page; delete is reached from the member timeline'),
             ],
         ];
     }
