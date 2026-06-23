@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Diary;
 
+use App\Http\Requests\Concerns\PostImageRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCommentRequest extends FormRequest
@@ -23,6 +24,7 @@ class StoreCommentRequest extends FormRequest
         return [
             // No max length: OpenPNE 3 comment body is TEXT with no validator limit.
             'body' => ['required', 'string'],
+            ...PostImageRules::rules(),
         ];
     }
 }

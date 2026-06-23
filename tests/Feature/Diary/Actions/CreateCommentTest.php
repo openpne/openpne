@@ -18,7 +18,7 @@ class CreateCommentTest extends TestCase
         $diary = Diary::factory()->create();
         $author = Member::factory()->create();
 
-        $comment = (new CreateComment)($author, $diary, 'Nice entry');
+        $comment = app(CreateComment::class)($author, $diary, 'Nice entry');
 
         $this->assertDatabaseHas('diary_comments', [
             'id' => $comment->getKey(),
@@ -35,10 +35,10 @@ class CreateCommentTest extends TestCase
         $other = Diary::factory()->create();
         $author = Member::factory()->create();
 
-        $first = (new CreateComment)($author, $diary, 'one');
-        $second = (new CreateComment)($author, $diary, 'two');
+        $first = app(CreateComment::class)($author, $diary, 'one');
+        $second = app(CreateComment::class)($author, $diary, 'two');
         // A different diary starts its own sequence at 1.
-        $elsewhere = (new CreateComment)($author, $other, 'elsewhere');
+        $elsewhere = app(CreateComment::class)($author, $other, 'elsewhere');
 
         $this->assertSame(1, $first->number);
         $this->assertSame(2, $second->number);
@@ -63,7 +63,7 @@ class CreateCommentTest extends TestCase
         $author = Member::factory()->create();
         $longBody = str_repeat('あ', 500);
 
-        $comment = (new CreateComment)($author, $diary, $longBody);
+        $comment = app(CreateComment::class)($author, $diary, $longBody);
 
         $this->assertSame($longBody, $comment->fresh()->body);
     }

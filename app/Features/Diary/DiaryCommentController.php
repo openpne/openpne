@@ -29,7 +29,7 @@ class DiaryCommentController extends Controller
         $found = $query($viewer, $diary);
         abort_if($found === null, 404);
 
-        $action($viewer, $found, $request->validated('body'));
+        $action($viewer, $found, $request->validated('body'), $request->file('images', []));
 
         return redirect()
             ->route(SurfaceResolver::redirectName($request, 'diary.show'), $found)
