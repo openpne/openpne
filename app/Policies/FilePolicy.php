@@ -7,6 +7,7 @@ use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\Diary\DiaryAccess;
 use App\Features\Message\MessageAccess;
 use App\Models\BannerImage;
+use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
@@ -46,6 +47,9 @@ class FilePolicy extends BasePolicy
             $owner instanceof Diary => DiaryAccess::canView($viewer, $owner),
             // A comment image inherits the visibility of the diary the comment hangs on.
             $owner instanceof DiaryComment => $owner->diary !== null && DiaryAccess::canView($viewer, $owner->diary),
+            // A community top image is visible to any signed-in member: a community page is browsable
+            // by every member (only its boards carry a read gate), so the image on it is too.
+            $owner instanceof Community => $viewer !== null,
             // A topic/comment image inherits the board's read access: visible exactly to
             // whoever may read the topic it hangs on (members-only boards hide it).
             $owner instanceof CommunityTopic => $viewer !== null && CommunityTopicAccess::canViewTopic($owner, $viewer),

@@ -149,13 +149,14 @@ final class StepRegistry
      * the table migrates, but FileUpgrade assigns its file no related_entity yet. The matrix coverage
      * audit treats these as accounted-for so the column is not read as a silent drop.
      *
+     * Currently empty: every migrated table's file column is owned by FileUpgrade (the community top
+     * image now is too). Kept as the registered home for the next such case.
+     *
      * @return array<string, string> "table.column" => reason
      */
     public static function unownedFileColumns(): array
     {
-        return [
-            'community.file_id' => 'Community top image. CommunityUpgrade copies it onto communities.file_id, so which file each community used is preserved; FileUpgrade leaves the file ownerless because the community-image delivery surface (morph alias, FilePolicy arm, display) is not built. When it lands, the owner is backfilled from communities.file_id.',
-        ];
+        return [];
     }
 
     /**
