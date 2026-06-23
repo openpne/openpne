@@ -5,6 +5,7 @@ namespace App\Features\Timeline;
 use App\Compat\RouteParityRegistry;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
+use App\Features\Timeline\Queries\HomeFeed;
 use App\Features\Timeline\Queries\MemberTimeline;
 use App\Features\Timeline\Queries\ShowTimelinePost;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
@@ -22,6 +23,23 @@ use Inertia\Response as InertiaResponse;
 
 class TimelineController extends Controller
 {
+    public function index(Request $request, HomeFeed $query): View|InertiaResponse
+    {
+        $viewer = $this->viewer();
+        $posts = $query($viewer);
+
+        return $this->respondWith($request, [
+            SurfaceResolver::CLASSIC => fn () => view('timeline.index', [
+                'viewer' => $viewer,
+                'posts' => $posts,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('timeline/index', [
+                'viewerId' => $viewer->getKey(),
+                'posts' => TimelinePostSerializer::paginator($posts),
+            ]),
+        ]);
+    }
+
     public function member(Request $request, MemberTimeline $query, Member $member): View|InertiaResponse
     {
         $viewer = $this->viewer();
@@ -36,6 +54,7 @@ class TimelineController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/member', [
                 'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
                 'isOwner' => $viewer->is($owner),
+                'viewerId' => $viewer->getKey(),
                 'posts' => TimelinePostSerializer::paginator($posts),
             ]),
         ]);

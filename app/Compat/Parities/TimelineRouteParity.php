@@ -16,6 +16,10 @@ class TimelineRouteParity extends RouteParity
     {
         return [
             new RouteMap('member_timeline', '/member/:id/timeline', 'timeline.member', 'GET', op3Action: 'member'),
+            // The SNS-wide home feed. OpenPNE 3's pc_frontend executeSns forwarded to the error page
+            // (the feed ran on mobile and as the homeAllTimeline home gadget); OpenPNE 4 unifies it
+            // into a real /timeline page. The /sns/timeline URL is preserved by redirect (below).
+            new RouteMap('sns_timeline', '/sns/timeline', 'timeline.index', 'GET', op3Action: 'sns'),
             // OpenPNE 3 reached the single-activity page through the global /:module/:action fallback
             // (/timeline/show/id/:id), so there is no named route — a fallback-only map that still
             // derives the page_timeline_show body id.
@@ -26,9 +30,6 @@ class TimelineRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            // OpenPNE 3 /sns/timeline: the cross-member home feed, a distinct surface from the
-            // per-member timeline.
-            'sns_timeline' => 'The cross-member home feed (self + friends + all members).',
             'community_timeline' => 'Community-scoped timeline (foreign_table=community).',
         ];
     }
@@ -41,21 +42,39 @@ class TimelineRouteParity extends RouteParity
 
     public function compatRedirects(): array
     {
-        // OpenPNE 3's single-post permalink (timeline/show/id/:id, reached via the global
-        // fallback and linked from the post timestamp) is redirected to the canonical timeline.show.
-        return ['/timeline/show/id/:id' => 'timeline.show'];
+        return [
+            // OpenPNE 3's single-post permalink (timeline/show/id/:id, reached via the global
+            // fallback and linked from the post timestamp) → canonical timeline.show.
+            '/timeline/show/id/:id' => 'timeline.show',
+            // OpenPNE 3's SNS-wide timeline URL → canonical home feed.
+            '/sns/timeline' => 'timeline.index',
+        ];
     }
 
     /**
-     * Surface elements per OpenPNE 3 timeline template (templates/_timelineProfile.php +
-     * _timelineTemplate.php + showSuccess.php). OpenPNE 3 streams activities client-side from the
-     * API via jQuery templates; the Classic adapter renders them server-side, so the rendering
-     * mechanism differs (an L3 may-differ) while the content is preserved. Write-side and reply
-     * elements are not part of this read surface.
+     * Surface elements per OpenPNE 3 timeline template (templates/_timelineAll.php +
+     * _timelineProfile.php + _timelineTemplate.php + showSuccess.php). OpenPNE 3 streams activities
+     * client-side from the API via jQuery templates; the Classic adapter renders them server-side,
+     * so the rendering mechanism differs (an L3 may-differ) while the content is preserved.
+     * Write-side and reply elements are not part of this read surface.
      */
     public function screens(): array
     {
         return [
+            // The SNS-wide home feed. OpenPNE 3 rendered this as the homeAllTimeline home gadget
+            // (_timelineAll.php) sharing _timelineTemplate.php; OpenPNE 4 serves it as the /timeline page.
+            'sns' => [
+                new ScreenElement('author nickname + profile link', L::Two, S::Ported, 'timelineTemplate <a href="${member.profile_url}">${member.name}', 'cross-member feed; Classic links the nickname server-side, OpenPNE 3 builds each post client-side from the API'),
+                new ScreenElement('screen-name handle', L::Three, S::Deferred, 'timelineTemplate ${member.screen_name}', 'OpenPNE 3 shows the @screen_name handle; Classic shows the nickname'),
+                new ScreenElement('activity body', L::Two, S::Partial, 'timelineTemplate {{html body_html}}', 'plain text; display-time URL auto-link / decoration not rendered'),
+                new ScreenElement('attached image', L::Three, S::Ported, 'activity_image (opTimeline image) + lightbox.js', 'ActivityImage thumbnail via the shared File; FilePolicy-gated by the activity visibility'),
+                new ScreenElement('visibility label', L::Three, S::Ported, 'timelineTemplate public_status friend/private', 'Visibility label shown for every level (OpenPNE 3 labels only friend/private)'),
+                new ScreenElement('permalink + datetime', L::Three, S::Ported, 'timelineTemplate timeline/show/id/${id} + jquery.timeago', 'absolute localized datetime linking to timeline.show; OpenPNE 3 renders a relative timeago'),
+                new ScreenElement('pagination', L::Two, S::Ported, '_timelineAll #timeline-loadmore もっと読む', 'server-side pager; OpenPNE 3 is infinite-scroll over the API'),
+                new ScreenElement('compose box', L::One, S::Ported, '_timelineAll #timeline-submit-button', 'standalone /timeline/new compose page linked from the feed; OpenPNE 3 inlines the form'),
+                new ScreenElement('per-post reply form', L::Two, S::Deferred, 'timelineTemplate #timeline-post-comment-form', 'reply threads are not part of the read view'),
+                new ScreenElement('own-post delete', L::Two, S::Ported, 'timelineTemplate timeline-post-delete-confirm', 'delete link + confirm page on the viewer\'s own posts; OpenPNE 3 uses an inline JS confirm'),
+            ],
             // memberSuccess.php → timelineProfile component → timeline/member.blade.php
             'member' => [
                 new ScreenElement('author nickname + profile link', L::Two, S::Ported, 'timelineTemplate <a href="${member.profile_url}">${member.name}', 'Classic links the nickname server-side; OpenPNE 3 builds the post client-side from the API'),
