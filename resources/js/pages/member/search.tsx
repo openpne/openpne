@@ -130,7 +130,7 @@ function SearchField({ field, value, range, monthDay, onValue, onRange, onMonthD
                         {(['from', 'to'] as const).map((bound) => (
                             <span key={bound} className="flex gap-1">
                                 <select
-                                    aria-label={`${t(bound === 'from' ? 'From' : 'To')} ${t('Month')}`}
+                                    aria-label={`${t(bound === 'from' ? 'Start' : 'End')} ${t('Month')}`}
                                     value={monthDay?.[`${bound}_month`] ?? ''}
                                     onChange={(e) => onMonthDay(`${bound}_month`, e.target.value)}
                                 >
@@ -140,7 +140,7 @@ function SearchField({ field, value, range, monthDay, onValue, onRange, onMonthD
                                     ))}
                                 </select>
                                 <select
-                                    aria-label={`${t(bound === 'from' ? 'From' : 'To')} ${t('Day')}`}
+                                    aria-label={`${t(bound === 'from' ? 'Start' : 'End')} ${t('Day')}`}
                                     value={monthDay?.[`${bound}_day`] ?? ''}
                                     onChange={(e) => onMonthDay(`${bound}_day`, e.target.value)}
                                 >
