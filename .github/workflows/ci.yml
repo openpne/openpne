@@ -13,8 +13,69 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  # Decide whether anything outside docs changed; the lanes below run only when code changed and
+  # are skipped (via `if`, never paths-ignore) on a docs-only change. A job skipped by `if` reports
+  # a "skipped" conclusion, which branch protection treats as satisfied — a paths-ignore filter
+  # would instead never report the status, so a required check would wait forever on a docs-only PR.
+  # A file is "docs" iff it is a *.md (any depth), under docs/, or LICENSE; anything else is code.
+  # On an unknown base (first push / force-push) or no diff, fall back to running the full CI.
+  #
+  # NOTE: the required-checks set must include this "Detect changed paths" job, not just the lanes:
+  # the lanes report "skipped" on docs-only PRs, so a broken `changes` job (which skips them via
+  # `needs`) must not let a code PR merge untested — making `changes` itself required closes that.
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.detect.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Detect non-docs changes
+        id: detect
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docs_re='(^|/)[^/]+\.md$|^docs/|^LICENSE$'
+
+          if [ "$EVENT" = "pull_request" ]; then
+            base="${BASE_SHA:-}"
+          else
+            base="${BEFORE_SHA:-}"
+          fi
+
+          # Never skip on uncertainty: unknown/absent base => run the full CI.
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "base commit unavailable; running full CI"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          files="$(git diff --name-only "$base" "$HEAD_SHA")"
+          echo "changed files:"
+          printf '%s\n' "$files"
+
+          if [ -z "$files" ]; then
+            echo "no changed files; running full CI"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          elif printf '%s\n' "$files" | grep -qvE "$docs_re"; then
+            echo "non-docs change detected; running code lanes"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs-only change; skipping code lanes"
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   smoke-php-8-3:
     name: Smoke (PHP 8.3)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -27,6 +88,8 @@ jobs:
 
   test:
     name: Test (PHP ${{ matrix.php }}, ${{ matrix.db }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -70,6 +133,8 @@ jobs:
 
   lint:
     name: Lint (Pint)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -82,6 +147,8 @@ jobs:
 
   frontend:
     name: Frontend (type-check + build)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
