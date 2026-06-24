@@ -44,12 +44,16 @@ row, back to default-following). `setPreference($default)` is **not** the same a
 
 The page is Classic + Modern ([`MemberConfigController`](../../app/Features/Member/MemberConfigController.php),
 canonical `member.config` + `/m/*` siblings). **Each section is its own submit** — diary default
-audience, language, surface — so saving one never rewrites another. This is load-bearing, not
-cosmetic: the diary section shows `DiaryVisibility::defaultFor()`, which **clamps** a stored
-`Open` to Members at read time once web-public is off; a single combined save would write that
-clamped value back and destroy the stored `Open`. Independent submits keep the read-time clamp
+audience, age visibility, language, surface — so saving one never rewrites another. This is
+load-bearing, not cosmetic: the diary section shows `DiaryVisibility::defaultFor()`, which **clamps**
+a stored `Open` to Members at read time once web-public is off; a single combined save would write
+that clamped value back and destroy the stored `Open`. Independent submits keep the read-time clamp
 out of the write path.
 
+- **Age visibility** sets who may see the member's derived age (`AgeVisibility`); the audience model
+  and web-public gate are under [member profile](member-profile.md#age-derived-from-the-birthday).
+  Its options offer `Open` only when web-public age is on — the same gate the read uses, so the
+  setter and the read can never disagree.
 - **Language** reuses the shared [`locale.switch`](../../routes/web.php) endpoint (durable
   `members.locale` write + the Inertia hard-navigation it already needs), not a field on this
   page's own form.

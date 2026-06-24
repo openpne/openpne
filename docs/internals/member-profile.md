@@ -67,6 +67,28 @@ access check is one range comparison `value.visibility <= clearanceFor(viewer, o
   page-level guest gate is the controller's) and `applyVisibility()` in search (below).
   Both also drop owners who block the viewer, like Diary.
 
+## Age (derived from the birthday)
+
+The age shown on the profile is **derived from the `op_preset_birthday` value, never stored**, and is
+gated **separately** from that field by the per-member
+[`AgeVisibility`](member-preferences.md#the-typed-registry) preference (default Private). The birth
+**year** — which the
+age reveals — is therefore exposed *only* through that gate, never through the birthday field:
+
+- The birthday field itself **displays and searches month/day only** (the year is stripped, like
+  OpenPNE 3's `XShortDateJa`), so it cannot leak the year whatever its own visibility.
+- [`VisibleAge`](../../app/Features/Profile/Queries/VisibleAge.php) is the sole reader of the year:
+  it returns the age only when `AgeVisibility` is within the viewer's clearance (the same monotonic
+  check as a profile value) and never for an owner who blocks the viewer. For a Members/Friends/Private
+  choice the owner sees their own age — a divergence from OpenPNE 3's `getAge(true)`, which hides even
+  a Private age from its owner; a stored `Open` while web-public is off (below) is shown to nobody, the
+  owner included.
+- **Web-public** age (Open) additionally requires the `AllowWebPublicAge`
+  [SNS setting](../../app/Support/SnsSettingKey.php) (default off, **fail-closed** — only an explicit
+  `'1'` enables it, the opposite direction from the CAPTCHA flag). When off, an Open age is shown to
+  **nobody**, matching OpenPNE 3's `getAge()`, which gates a web-public flag on that admin setting.
+  The [setter](../../app/Features/Profile/AgeVisibility.php) offers Open only when it is on.
+
 ## One validation + save path for edit and registration
 
 Profile edit and registration validate and store **identically** so they cannot drift:
@@ -101,6 +123,11 @@ Privacy is enforced **in SQL**, not after the fact:
 - A **forcibly-private** field (default Private and not member-editable) is dropped from the
   search form, since no other member could ever match on it (OpenPNE 3's
   `is_check_public_flag`).
+- **Age** is a derived criterion (an age range → a birthday window), gated by `AgeVisibility`
+  rather than a field visibility, with the same fail-closed (malformed preference → Private) and
+  web-public rules as the display. The birthday field is searched by **month/day only**, so a date
+  range cannot probe the birth year (= age) — that is reachable solely through the gated age
+  criterion. OpenPNE 3 likewise gated its birthday-by-year search on the age public flag.
 
 ## Key invariants
 
@@ -112,3 +139,6 @@ Privacy is enforced **in SQL**, not after the fact:
    `SaveMemberProfile`, and persist only their own `is_disp_*` field set.
 4. A read or search MUST constrain matches to the viewer's clearance and exclude
    owner→viewer blocks; search additionally hides forcibly-private fields from the form.
+5. The birth **year** (= age) is exposed only through `AgeVisibility` — via `VisibleAge` and the age
+   search criterion. The birthday field displays and searches month/day only; web-public age also
+   requires the `AllowWebPublicAge` SNS setting (fail-closed, default off).
