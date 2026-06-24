@@ -38,20 +38,22 @@ change when the surface does.
 
 `SurfaceResolver::resolve()` chooses Classic or Modern for a canonical route in
 priority order: the feature's `modern_status` → an explicit `/m/*` route → a
-per-install `modern_only` mode → a per-member session override → the per-install
-default surface. The full chain and the fact that most inputs currently fall back
-to built-in defaults are documented in
-[feature-modules.md](feature-modules.md#surface-selection); today the effective
-behavior is that a canonical route renders Classic and `/m/*` renders Modern.
+per-install `modern_only` mode → a member's durable surface choice → a per-member
+session override → the per-install default surface. The full chain is documented in
+[feature-modules.md](feature-modules.md#surface-selection); absent a member choice
+the effective behavior is that a canonical route renders Classic and `/m/*` renders
+Modern.
 
 The root (`/`) is the canonical OpenPNE 3 `member/home`: the same resolver renders the
 Classic home or redirects to the Modern dashboard, and it is where login and registration
 land. `/member` aliases it. Both are recorded in the [member route
 parity](../../app/Compat/Parities/MemberRouteParity.php).
 
-The per-member override (`migration_ui_override`, held in the session) is a
-minimal safety valve for the migration period — it lets an individual try Modern,
-or fall back to Classic — not a permanent preference system. It has no writer yet.
+The session override (`migration_ui_override`) is a minimal, transient safety valve
+for the migration period — it lets an individual try Modern, or fall back to
+Classic, for the current session only. It has no writer yet. The **durable**
+per-member preference that outranks it is the member config page's surface setting
+([member-preferences.md](member-preferences.md)).
 
 ## Rendering compatibility
 

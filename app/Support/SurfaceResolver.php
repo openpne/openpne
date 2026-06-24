@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Member;
 use Illuminate\Http\Request;
 
 /**
@@ -27,6 +28,13 @@ class SurfaceResolver
 
         if (config('openpne.tenant_mode', 'mixed') === 'modern_only') {
             return self::MODERN;
+        }
+
+        // A member's durable choice (member_preferences) outranks the transient session toggle and
+        // the tenant default — but never the explicit /m/* URL, modern_only, or a non-native feature.
+        $member = $request->user('member');
+        if ($member instanceof Member && ($preferred = $member->preferredSurface()) !== null) {
+            return $preferred->value;
         }
 
         $override = $request->session()->get('migration_ui_override');

@@ -50,6 +50,12 @@ class MemberRouteParity extends RouteParity
             // Profile editor — one OpenPNE 3 route (ANY) splits into a GET form + POST submit.
             new RouteMap('member_editProfile', '/member/edit/profile', 'member.profile.edit', 'GET', op3Action: 'editProfile'),
             new RouteMap('member_editProfile', '/member/edit/profile', 'member.profile.update', 'POST'),
+            // Member config — the member's own settings page (diary default / language / surface).
+            // OpenPNE 3 had one ANY route; OpenPNE 4 keeps the GET URL and splits saves into
+            // per-section POSTs (so saving one section never rewrites another).
+            new RouteMap('member_config', '/member/config', 'member.config', 'GET', op3Action: 'config'),
+            new RouteMap('member_config', '/member/config', 'member.config.diary', 'POST'),
+            new RouteMap('member_config', '/member/config', 'member.config.surface', 'POST'),
             // Login — Fortify owns /login; the OpenPNE 3 /member/login/* URL is preserved by a static
             // redirect (compatRedirects), and the Classic body id stays page_member_login.
             new RouteMap('login', '/member/login/*', 'login', 'GET', op3Action: 'login'),
@@ -65,7 +71,6 @@ class MemberRouteParity extends RouteParity
         return [
             'member_logout' => 'Logout is served by Fortify at POST /logout (OpenPNE 3 also allowed GET).',
             'member_delete' => 'Member withdrawal (/leave) is not ported.',
-            'member_config' => 'The member config screen is not ported; its access-block category is redirected by the Block parity.',
             'member_config_jsonapi' => 'The legacy config JSON API (/member/config/jsonapi) is not ported.',
             'global_changeLanguage' => 'Locale switching is POST /locale (locale.switch), not the OpenPNE 3 GET /language URL.',
         ];
