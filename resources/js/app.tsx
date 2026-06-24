@@ -23,7 +23,11 @@ void createInertiaApp({
             <LaravelReactI18nProvider
                 locale={locale}
                 fallbackLocale="en"
-                files={import.meta.glob('/lang/*.json')}
+                // Eager so the active locale's dictionary is present on the first paint. A lazy glob
+                // loads it in a post-mount effect, so the first render shows raw (English) keys and
+                // then swaps to the translation — a visible flash on every full Modern load, e.g. a
+                // Classic→Modern surface switch. Eager bundles ja/en (small, flat dicts) instead.
+                files={import.meta.glob('/lang/*.json', { eager: true })}
             >
                 <App {...props} />
             </LaravelReactI18nProvider>,

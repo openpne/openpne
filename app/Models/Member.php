@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Notifications\Auth\ResetPasswordNotification;
 use App\Support\PreferenceKey;
+use App\Support\Surface;
 use App\Support\Visibility;
 use Database\Factories\MemberFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -126,12 +127,16 @@ class Member extends Authenticatable
     }
 
     /**
-     * The member's typed value for $key, or the key default when unset. Reads the loaded
+     * The member's Visibility value for $key, or the key default when unset. Reads the loaded
      * `preferences` relation (lazy-loaded once and cached), so repeated calls share one query.
+     * Only Visibility-scaled keys go through here; the typed Surface key has its own accessor.
      */
     public function preference(PreferenceKey $key): Visibility
     {
-        return $key->decode($this->preferences->firstWhere('key', $key->value)?->value);
+        $value = $key->decode($this->storedPreference($key));
+        assert($value instanceof Visibility);
+
+        return $value;
     }
 
     /**
@@ -140,17 +145,51 @@ class Member extends Authenticatable
      */
     public function setPreference(PreferenceKey $key, Visibility $value): void
     {
-        $this->preferences()->updateOrCreate(
-            ['key' => $key->value],
-            ['value' => $key->encode($value)],
-        );
-        $this->unsetRelation('preferences');
+        $this->writePreference($key, $value);
     }
 
     /** Drop any stored value for $key so reads fall back to the key default. */
     public function resetPreference(PreferenceKey $key): void
     {
         $this->preferences()->where('key', $key->value)->delete();
+        $this->unsetRelation('preferences');
+    }
+
+    /**
+     * The member's durable surface choice, or null when unset (an absent row means "no choice —
+     * defer to SurfaceResolver's session/tenant fallback"). Separate from preference() so the
+     * Surface value type stays type-safe at the call site.
+     */
+    public function preferredSurface(): ?Surface
+    {
+        $value = PreferenceKey::PreferredSurface->decode($this->storedPreference(PreferenceKey::PreferredSurface));
+        assert($value === null || $value instanceof Surface);
+
+        return $value;
+    }
+
+    public function setPreferredSurface(Surface $surface): void
+    {
+        $this->writePreference(PreferenceKey::PreferredSurface, $surface);
+    }
+
+    /** Drop the surface choice so resolution falls back to the session/tenant default. */
+    public function resetPreferredSurface(): void
+    {
+        $this->resetPreference(PreferenceKey::PreferredSurface);
+    }
+
+    private function storedPreference(PreferenceKey $key): ?string
+    {
+        return $this->preferences->firstWhere('key', $key->value)?->value;
+    }
+
+    private function writePreference(PreferenceKey $key, Visibility|Surface $value): void
+    {
+        $this->preferences()->updateOrCreate(
+            ['key' => $key->value],
+            ['value' => $key->encode($value)],
+        );
         $this->unsetRelation('preferences');
     }
 
