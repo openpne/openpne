@@ -5,6 +5,7 @@ namespace Tests\Feature\Profile;
 use App\Features\Profile\AgeVisibility;
 use App\Models\Member;
 use App\Support\PreferenceKey;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\Rules\Enum;
@@ -46,14 +47,40 @@ class AgeVisibilityTest extends TestCase
         $this->assertSame(Visibility::Friends, AgeVisibility::defaultFor($member));
     }
 
-    public function test_default_for_clamps_a_stored_web_public_to_members(): void
+    public function test_default_for_clamps_a_stored_web_public_to_members_when_disabled(): void
     {
-        // An OpenPNE 3 web-public age upgrades in as Open, which the setter does not offer; among
-        // non-guests it already behaves as Members, so it pre-selects as Members.
+        // With web-public off the setter does not offer Open (it conveys no visibility then), so a
+        // stored Open pre-selects as Members.
         $member = Member::factory()->create();
         $member->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
 
         $this->assertSame(Visibility::Members, AgeVisibility::defaultFor($member));
+    }
+
+    public function test_options_include_web_public_first_when_enabled(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+
+        $this->assertSame(
+            [Visibility::Open, Visibility::Members, Visibility::Friends, Visibility::Private],
+            AgeVisibility::options(),
+        );
+    }
+
+    public function test_the_rule_allows_web_public_when_enabled(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+
+        $this->assertTrue($this->passes(AgeVisibility::rule(), (string) Visibility::Open->value));
+    }
+
+    public function test_default_for_preselects_a_stored_web_public_when_enabled(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        $member = Member::factory()->create();
+        $member->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
+
+        $this->assertSame(Visibility::Open, AgeVisibility::defaultFor($member));
     }
 
     private function passes(Enum $rule, string $value): bool

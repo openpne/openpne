@@ -7,6 +7,7 @@ use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Support\PreferenceKey;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -46,14 +47,38 @@ class VisibleAgeTest extends TestCase
         $this->assertSame(35, $this->age($owner, $owner));
     }
 
-    public function test_guest_never_sees_age_even_when_open(): void
+    public function test_an_open_age_is_hidden_from_everyone_while_web_public_is_disabled(): void
     {
+        // Web-public age is off by default: an Open age conveys no visibility, not even to members,
+        // matching OpenPNE 3's getAge() gating flag=4 on is_allow_web_public_flag_age.
         $owner = Member::factory()->create();
         $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
         $this->giveBirthday($owner, '1990-06-23');
 
-        $this->assertNull($this->age(null, $owner));                       // fail-closed for guests
-        $this->assertSame(36, $this->age(Member::factory()->create(), $owner)); // a member still sees it
+        $this->assertNull($this->age(null, $owner));                        // guest
+        $this->assertNull($this->age(Member::factory()->create(), $owner)); // member
+    }
+
+    public function test_an_open_age_is_shown_to_everyone_when_web_public_is_enabled(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        $owner = Member::factory()->create();
+        $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
+        $this->giveBirthday($owner, '1990-06-23');
+
+        $this->assertSame(36, $this->age(null, $owner));                        // guest
+        $this->assertSame(36, $this->age(Member::factory()->create(), $owner)); // member
+    }
+
+    public function test_a_members_age_is_never_shown_to_a_guest_even_with_web_public_on(): void
+    {
+        // Web-public only ever exposes an Open age; a Members age stays members-only.
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        $owner = Member::factory()->create();
+        $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Members);
+        $this->giveBirthday($owner, '1990-06-23');
+
+        $this->assertNull($this->age(null, $owner));
     }
 
     public function test_private_age_is_visible_only_to_self(): void

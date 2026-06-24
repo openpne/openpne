@@ -22,4 +22,7 @@ enum SettingGroup
 
     /** OpenPNE 3 design customizations (custom CSS, PC HTML insertion slots, footer HTML), edited on the design page. */
     case Design;
+
+    /** Member-privacy policy settings (e.g. whether members may make their age web-public), edited on the "member privacy" page. */
+    case Privacy;
 }

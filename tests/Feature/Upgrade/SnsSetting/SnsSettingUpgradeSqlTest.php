@@ -84,6 +84,15 @@ class SnsSettingUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('sns_settings', ['key' => 'footer_after', 'value' => 'Member footer']);
     }
 
+    public function test_migrates_the_web_public_age_setting(): void
+    {
+        $this->seedConfig('is_allow_web_public_flag_age', '1');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'allow_web_public_age', 'value' => '1']);
+    }
+
     public function test_does_not_migrate_security_or_unknown_keys(): void
     {
         $this->seedConfig('is_use_captcha', '0');   // security key — excluded so it cannot weaken the fail-closed default
