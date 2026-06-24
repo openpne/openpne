@@ -33,13 +33,15 @@ class MemberSearchSerializer
      * @param  Collection<int, Profile>  $profiles
      * @return list<array<string, mixed>>
      */
-    public static function formFields(Collection $profiles, string $lang): array
+    public static function formFields(Collection $profiles, string $lang, string $birthdayName): array
     {
+        // The birthday renders as a month/day picker (its year is searched via the age criterion), so
+        // it gets a synthetic 'birthday' formType the front-end switches on.
         return $profiles->map(fn (Profile $profile): array => [
             'id' => $profile->getKey(),
             'name' => $profile->name,
             'caption' => $profile->getCaption($lang),
-            'formType' => $profile->form_type,
+            'formType' => $profile->name === $birthdayName ? 'birthday' : $profile->form_type,
             'options' => $profile->choices($lang),
             'countries' => $profile->form_type === 'country_select' ? self::countries($lang) : null,
             'regions' => $profile->form_type === 'region_select' ? self::regions($profile, $lang) : null,
