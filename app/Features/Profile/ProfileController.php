@@ -6,6 +6,7 @@ use App\Compat\RouteParityRegistry;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Queries\EditProfileFields;
 use App\Features\Profile\Queries\ShowProfile;
+use App\Features\Profile\Queries\VisibleAge;
 use App\Features\Profile\Serializers\ProfileFormSerializer;
 use App\Features\Profile\Serializers\ProfileSerializer;
 use App\Http\Controllers\Controller;
@@ -22,7 +23,7 @@ use Inertia\Response as InertiaResponse;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request, Member $member, ShowProfile $query, GadgetService $gadgets): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, Member $member, ShowProfile $query, GadgetService $gadgets, VisibleAge $visibleAge): View|InertiaResponse|RedirectResponse
     {
         /** @var Member|null $viewer */
         $viewer = $request->user();
@@ -39,17 +40,21 @@ class ProfileController extends Controller
         abort_if($fields === null, 404); // defense in depth: ShowProfile also nulls on block
 
         $isSelf = $viewer?->is($member) ?? false;
+        // The gadget-driven Classic surface re-resolves age in the ProfileListBox component; this
+        // covers the Modern surface and the no-gadget fixed box.
+        $age = $visibleAge($viewer, $member);
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('member.show', [
                 'owner' => $member,
                 'fields' => $fields,
+                'age' => $age,
                 'isSelf' => $isSelf,
                 'lang' => $lang,
                 'zones' => $gadgets->zones('profile', subject: $member, viewer: $viewer),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/show', [
-                'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang),
+                'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang, $age),
             ]),
         ]);
     }

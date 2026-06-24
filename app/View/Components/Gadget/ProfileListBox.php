@@ -3,6 +3,7 @@
 namespace App\View\Components\Gadget;
 
 use App\Features\Profile\Queries\ShowProfile;
+use App\Features\Profile\Queries\VisibleAge;
 use App\Models\Member;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
@@ -23,6 +24,7 @@ class ProfileListBox extends Component
     /** @param array<string, mixed> $config */
     public function __construct(
         ShowProfile $showProfile,
+        VisibleAge $visibleAge,
         public ?Member $subject = null,
         public array $config = [],
         public ?string $partId = null,
@@ -38,7 +40,12 @@ class ProfileListBox extends Component
         /** @var Member|null $viewer */
         $viewer = auth()->user();
 
+        // OpenPNE 3 seeds the nickname row, then Age right after it (gated separately from the
+        // birthday field), then the visible profile fields.
         $rows = [['caption' => __('%Nickname%'), 'value' => $subject->name]];
+        if (($age = $visibleAge($viewer, $subject)) !== null) {
+            $rows[] = ['caption' => __('Age'), 'value' => __(':age years old', ['age' => $age])];
+        }
         foreach ($showProfile($viewer, $subject, $this->lang) ?? collect() as $field) {
             $rows[] = ['caption' => $field->profile->getCaption($this->lang), 'value' => $field->display($this->lang)];
         }

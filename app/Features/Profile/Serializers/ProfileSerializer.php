@@ -11,9 +11,9 @@ class ProfileSerializer
 {
     /**
      * @param  Collection<int, ProfileFieldValue>  $fields
-     * @return array{owner: array{id: int, name: string, avatarUrl: ?string}, isSelf: bool, fields: list<array{name: string, caption: string, value: string}>}
+     * @return array{owner: array{id: int, name: string, avatarUrl: ?string}, isSelf: bool, age: ?int, fields: list<array{name: string, caption: string, value: string}>}
      */
-    public static function page(Member $owner, Collection $fields, bool $isSelf, string $lang): array
+    public static function page(Member $owner, Collection $fields, bool $isSelf, string $lang, ?int $age): array
     {
         return [
             'owner' => [
@@ -22,6 +22,7 @@ class ProfileSerializer
                 'avatarUrl' => $owner->avatar?->file?->thumbnailUrl(120, 120, square: true),
             ],
             'isSelf' => $isSelf,
+            'age' => $age,
             'fields' => $fields->map(fn (ProfileFieldValue $field): array => [
                 'name' => $field->profile->name,
                 'caption' => $field->profile->getCaption($lang),

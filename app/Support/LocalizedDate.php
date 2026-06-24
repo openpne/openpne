@@ -32,4 +32,18 @@ final class LocalizedDate
 
         return $date->locale(App::getLocale())->isoFormat('LL');
     }
+
+    /**
+     * op_format_date XShortDateJa: "06月04日" for ja (year stripped), a localized month+day
+     * otherwise. The locale is passed in (not read from App) so a profile rendered for an
+     * explicit lang formats consistently regardless of the request locale.
+     */
+    public static function monthDay(CarbonInterface $date, string $locale): string
+    {
+        if ($locale === 'ja') {
+            return $date->format('m月d日');
+        }
+
+        return $date->locale($locale)->isoFormat('MMMM D');
+    }
 }
