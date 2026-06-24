@@ -17,7 +17,7 @@ jobs:
     name: Smoke (PHP 8.3)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -54,7 +54,7 @@ jobs:
       DB_USERNAME: ${{ matrix.db == 'mysql' && 'root' || '' }}
       DB_PASSWORD: ${{ matrix.db == 'mysql' && 'secret' || '' }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -72,7 +72,7 @@ jobs:
     name: Lint (Pint)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
@@ -84,7 +84,7 @@ jobs:
     name: Frontend (type-check + build)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
