@@ -126,7 +126,7 @@ class ClassicProfileGadgetTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertOk()
-            ->assertSee('<th>Age</th>', false)
+            ->assertSeeInOrder(['<th>Nickname</th>', '<th>Age</th>'], false) // age sits right after nickname
             ->assertSee('36 years old');
     }
 
