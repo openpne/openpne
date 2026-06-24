@@ -4,6 +4,7 @@ namespace Tests\Feature\Member;
 
 use App\Models\Member;
 use App\Support\PreferenceKey;
+use App\Support\SnsSettingKey;
 use App\Support\Surface;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -109,9 +110,9 @@ class MemberConfigTest extends TestCase
         ]);
     }
 
-    public function test_updating_age_visibility_rejects_web_public(): void
+    public function test_updating_age_visibility_rejects_web_public_when_disabled(): void
     {
-        // Age is never web-public (guests are fail-closed), so Open is not an accepted choice.
+        // Web-public age is off by default, so Open is not an accepted choice.
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/member/config/age', [
@@ -120,6 +121,30 @@ class MemberConfigTest extends TestCase
 
         $this->assertDatabaseMissing('member_preferences', [
             'member_id' => $member->id, 'key' => 'age_visibility',
+        ]);
+    }
+
+    public function test_age_options_include_web_public_when_enabled(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/m/member/config')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('form.age.options', fn ($options) => collect($options)->pluck('value')->all() === ['0', '1', '2', '3']));
+    }
+
+    public function test_updating_age_visibility_accepts_web_public_when_enabled(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/age', [
+            'age_visibility' => (string) Visibility::Open->value,
+        ])->assertRedirect(route('member.config'));
+
+        $this->assertDatabaseHas('member_preferences', [
+            'member_id' => $member->id, 'key' => 'age_visibility', 'value' => '0',
         ]);
     }
 

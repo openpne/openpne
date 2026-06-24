@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Support\PreferenceKey;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -135,6 +136,22 @@ class MemberProfileRoutesTest extends TestCase
                 ->component('member/show')
                 ->where('profile.age', 36)
             );
+    }
+
+    public function test_a_guest_sees_a_web_public_age_on_a_web_public_profile(): void
+    {
+        // Two gates must both be open for a guest: the profile page itself is web-public, and the SNS
+        // allows web-public age + the owner chose Open (OpenPNE 3 profile_page_public_flag × age_public_flag).
+        $this->travelTo(Carbon::parse('2026-06-24'));
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
+        $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
+        $this->giveBirthday($owner, '1990-06-23');
+
+        $this->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('<th>Age</th>', false)
+            ->assertSee('36 years old');
     }
 
     private function giveBirthday(Member $owner, string $date): void
