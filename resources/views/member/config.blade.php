@@ -70,7 +70,7 @@
                     <p>
                         <label>
                             <input type="radio" name="preferred_surface" value="{{ $option->value }}" @checked($currentSurface === $option)>
-                            <strong>{{ __($option->label()) }}</strong> — {{ __($option->description()) }}
+                            {{ __($option->label()) }} — {{ __($option->description()) }}
                         </label>
                     </p>
                 @endforeach
