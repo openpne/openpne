@@ -46,7 +46,8 @@ class MemberConfigTest extends TestCase
                 ->where('form.surface.options', fn ($options) => count($options) === 2) // binary: no "default" option
                 ->has('form.diary.options')
                 ->where('form.age.value', '3') // default Private
-                ->where('form.age.options', fn ($options) => count($options) === 3) // Members/Friends/Private, no Open
+                // Members/Friends/Private — Open (value "0") is absent regardless of locale.
+                ->where('form.age.options', fn ($options) => collect($options)->pluck('value')->all() === ['1', '2', '3'])
             );
     }
 
