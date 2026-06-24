@@ -79,8 +79,10 @@ age reveals — is therefore exposed *only* through that gate, never through the
   OpenPNE 3's `XShortDateJa`), so it cannot leak the year whatever its own visibility.
 - [`VisibleAge`](../../app/Features/Profile/Queries/VisibleAge.php) is the sole reader of the year:
   it returns the age only when `AgeVisibility` is within the viewer's clearance (the same monotonic
-  check as a profile value) and never for an owner who blocks the viewer. The owner always sees their
-  own age — an intentional divergence from OpenPNE 3's `getAge(true)`.
+  check as a profile value) and never for an owner who blocks the viewer. For a Members/Friends/Private
+  choice the owner sees their own age — a divergence from OpenPNE 3's `getAge(true)`, which hides even
+  a Private age from its owner; a stored `Open` while web-public is off (below) is shown to nobody, the
+  owner included.
 - **Web-public** age (Open) additionally requires the `AllowWebPublicAge`
   [SNS setting](../../app/Support/SnsSettingKey.php) (default off, **fail-closed** — only an explicit
   `'1'` enables it, the opposite direction from the CAPTCHA flag). When off, an Open age is shown to
