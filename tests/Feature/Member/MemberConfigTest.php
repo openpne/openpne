@@ -19,7 +19,7 @@ class MemberConfigTest extends TestCase
         $this->get('/member/config')->assertRedirect('/login');
     }
 
-    public function test_the_classic_page_renders_the_three_sections(): void
+    public function test_the_classic_page_renders_the_config_sections(): void
     {
         $member = Member::factory()->create();
 
@@ -27,6 +27,9 @@ class MemberConfigTest extends TestCase
             ->assertOk()
             ->assertSee('id="page_member_config"', false)
             ->assertSee('name="diary_default_visibility"', false)
+            ->assertSee('id="member_config_age"', false)
+            ->assertSee('name="age_visibility"', false)
+            ->assertSee('Who can see your age')
             ->assertSee(route('locale.switch'), false)
             ->assertSee('name="preferred_surface"', false);
     }
@@ -41,7 +44,11 @@ class MemberConfigTest extends TestCase
                 ->component('member/config')
                 ->where('form.surface.value', 'classic') // preselected to the current surface (tenant default)
                 ->where('form.surface.options', fn ($options) => count($options) === 2) // binary: no "default" option
-                ->has('form.diary.options'));
+                ->has('form.diary.options')
+                ->where('form.age.value', '3') // default Private
+                // Members/Friends/Private — Open (value "0") is absent regardless of locale.
+                ->where('form.age.options', fn ($options) => collect($options)->pluck('value')->all() === ['1', '2', '3'])
+            );
     }
 
     public function test_the_access_block_category_redirects_to_the_block_list(): void
@@ -74,6 +81,45 @@ class MemberConfigTest extends TestCase
 
         $this->assertDatabaseMissing('member_preferences', [
             'member_id' => $member->id, 'key' => 'diary_default_visibility',
+        ]);
+    }
+
+    public function test_updating_age_visibility_writes_the_preference(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/age', [
+            'age_visibility' => (string) Visibility::Friends->value,
+        ])->assertRedirect(route('member.config'));
+
+        $this->assertDatabaseHas('member_preferences', [
+            'member_id' => $member->id, 'key' => 'age_visibility', 'value' => '2',
+        ]);
+    }
+
+    public function test_updating_age_visibility_rejects_an_invalid_value(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/age', ['age_visibility' => '99'])
+            ->assertSessionHasErrors('age_visibility');
+
+        $this->assertDatabaseMissing('member_preferences', [
+            'member_id' => $member->id, 'key' => 'age_visibility',
+        ]);
+    }
+
+    public function test_updating_age_visibility_rejects_web_public(): void
+    {
+        // Age is never web-public (guests are fail-closed), so Open is not an accepted choice.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/age', [
+            'age_visibility' => (string) Visibility::Open->value,
+        ])->assertSessionHasErrors('age_visibility');
+
+        $this->assertDatabaseMissing('member_preferences', [
+            'member_id' => $member->id, 'key' => 'age_visibility',
         ]);
     }
 
