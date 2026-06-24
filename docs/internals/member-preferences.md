@@ -54,8 +54,9 @@ out of the write path.
   `members.locale` write + the Inertia hard-navigation it already needs), not a field on this
   page's own form.
 - **Surface** is a **binary** Classic/Modern choice, preselected to the member's current surface
-  ([`SurfaceResolver::preferenceOrDefault()`](../../app/Support/SurfaceResolver.php) — their durable
-  value or the tenant default, ignoring the config page's own `/m/*` route). There is deliberately
+  ([`SurfaceResolver::canonicalSurface()`](../../app/Support/SurfaceResolver.php) — resolve() minus
+  the config page's own `/m/*` opt-in, but still honouring the modern_status / modern_only hard
+  gates so a member already forced onto a surface is shown that surface). There is deliberately
   **no user-facing "follow the default" option**: that abstract state has no user-side signal to
   follow (unlike a device-linked dark-mode "auto") and tested poorly. The tri-state still exists in
   data, preserved by a server-side rule: `updateSurface()` pins only an actual change (chosen ≠

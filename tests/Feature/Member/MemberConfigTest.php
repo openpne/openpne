@@ -125,6 +125,24 @@ class MemberConfigTest extends TestCase
         ]);
     }
 
+    public function test_modern_only_tenant_shows_modern_and_does_not_false_pin(): void
+    {
+        // The "current surface" must honour the modern_only hard gate, not just the tenant default.
+        // Otherwise an unset member on a modern_only tenant (default Classic) sees Modern, but the
+        // form would call the current surface Classic and selecting Modern would wrongly pin them.
+        config(['openpne.tenant_mode' => 'modern_only', 'openpne.tenant_default_surface' => 'classic']);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/m/member/config')
+            ->assertInertia(fn (Assert $page) => $page->where('form.surface.value', 'modern'));
+
+        $this->actingAs($member)->post('/member/config/surface', ['preferred_surface' => 'modern']);
+
+        $this->assertDatabaseMissing('member_preferences', [
+            'member_id' => $member->id, 'key' => 'preferred_surface',
+        ]);
+    }
+
     public function test_saving_the_current_surface_is_a_no_op_so_an_unset_member_stays_unset(): void
     {
         // Binary UI has no "follow default" option; instead, saving the surface the member is already

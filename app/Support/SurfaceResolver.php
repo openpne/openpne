@@ -22,8 +22,26 @@ class SurfaceResolver
             return self::CLASSIC;
         }
 
+        // An explicit /m/* route opts into Modern, above everything except a non-native feature.
         if ($request->route('surface') === self::MODERN) {
             return self::MODERN;
+        }
+
+        return self::canonicalSurface($request, $feature);
+    }
+
+    /**
+     * The surface a member gets on a CANONICAL route — resolve() minus the explicit /m/* opt-in.
+     * Still honours the hard gates (a non-native feature is Classic, modern_only is Modern) before
+     * the member's durable choice / session toggle / tenant default. The member config page uses
+     * this both for the surface it preselects and for its "saving the current surface is a no-op"
+     * check, so the form reflects what the member actually sees when browsing normally — not the /m
+     * URL the page itself may be on, and not the bare tenant default when a hard gate overrides it.
+     */
+    public static function canonicalSurface(Request $request, string $feature): string
+    {
+        if (config("features.{$feature}.modern_status", 'native') !== 'native') {
+            return self::CLASSIC;
         }
 
         if (config('openpne.tenant_mode', 'mixed') === 'modern_only') {
@@ -31,19 +49,7 @@ class SurfaceResolver
         }
 
         // A member's durable choice (member_preferences) outranks the transient session toggle and
-        // the tenant default — but never the explicit /m/* URL, modern_only, or a non-native feature.
-        return self::preferenceOrDefault($request);
-    }
-
-    /**
-     * The surface a member gets on a canonical route from their own choice alone: the durable
-     * member_preferences value, else the session toggle, else the tenant default. Unlike resolve()
-     * this ignores the request's /m/* route default, so the member config page (reachable on both
-     * /member/config and /m/member/config) can show the member's actual current surface rather than
-     * the surface of whichever URL they opened.
-     */
-    public static function preferenceOrDefault(Request $request): string
-    {
+        // the tenant default.
         $member = $request->user('member');
         if ($member instanceof Member && ($preferred = $member->preferredSurface()) !== null) {
             return $preferred->value;

@@ -36,7 +36,7 @@ class MemberConfigController extends Controller
         }
 
         $viewer = $this->viewer();
-        $currentSurface = Surface::from(SurfaceResolver::preferenceOrDefault($request));
+        $currentSurface = Surface::from(SurfaceResolver::canonicalSurface($request, 'member'));
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('member.config', [
@@ -66,11 +66,12 @@ class MemberConfigController extends Controller
         $chosen = Surface::from($request->validated('preferred_surface'));
         $viewer = $this->viewer();
 
-        // Pin only an actual change. Saving the surface the member is already on (their stored choice
-        // or, when unset, the tenant default) is a no-op, so it neither pins an unset member nor
-        // strips the operator's ability to move them later — the binary UI's stand-in for a
-        // "disabled until changed" button, enforced the same way on both surfaces.
-        $changed = $chosen->value !== SurfaceResolver::preferenceOrDefault($request);
+        // Pin only an actual change. Saving the surface the member is already on (their stored choice,
+        // or the gate/default they currently follow when unset) is a no-op, so it neither pins an
+        // unset member nor strips the operator's ability to move them later — the binary UI's stand-in
+        // for a "disabled until changed" button, enforced the same way on both surfaces. canonicalSurface
+        // honours modern_status/modern_only, so a member already forced onto a surface is never pinned.
+        $changed = $chosen->value !== SurfaceResolver::canonicalSurface($request, 'member');
         if ($changed) {
             $viewer->setPreferredSurface($chosen);
             $request->session()->flash('status', __('Settings updated.'));
