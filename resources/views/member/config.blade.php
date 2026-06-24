@@ -52,7 +52,7 @@
                 </table>
                 <div class="operation">
                     <ul class="moreInfo button">
-                        <li><input type="submit" class="input_submit" value="{{ __('Change') }}"></li>
+                        <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
                     </ul>
                 </div>
             </form>

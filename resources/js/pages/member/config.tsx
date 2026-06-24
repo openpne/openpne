@@ -75,7 +75,7 @@ export default function MemberConfig() {
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
                     </select>
-                    <button type="submit" disabled={locale.processing}>{t('Change')}</button>
+                    <button type="submit" disabled={locale.processing}>{t('Save')}</button>
                 </form>
 
                 <form
