@@ -3,31 +3,34 @@
 namespace App\Features\Profile;
 
 use App\Models\Member;
+use App\Services\SnsSettingService;
 use App\Support\PreferenceKey;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Validation\Rules\Enum;
 
 /**
  * The audiences a member may choose for who sees their age. Single source for the config-form
- * options and the request validation rule so the two cannot drift.
+ * options, the request validation rule, and VisibleAge's web-public gate, so they cannot drift.
  *
- * Unlike DiaryVisibility, age has no web-public choice: VisibleAge fail-closes guests (OpenPNE 3
- * gates web-public age behind is_allow_web_public_flag_age, default off, with no OpenPNE 4
- * equivalent yet), so Open would be a choice that never affects anyone — it is excluded from both
- * the options and the rule.
+ * Web-public (Open) is offered only while the SNS allows it (SnsSettingKey::AllowWebPublicAge,
+ * OpenPNE 3 is_allow_web_public_flag_age, default off) — mirroring DiaryVisibility's web-public
+ * gate, but the SNS setting (not a config flag) so an OpenPNE 3 site's choice carries over.
  */
 final class AgeVisibility
 {
     /** @return list<Visibility> */
     public static function options(): array
     {
-        return [Visibility::Members, Visibility::Friends, Visibility::Private];
+        $webPublic = self::allowsWebPublic() ? [Visibility::Open] : [];
+
+        return [...$webPublic, Visibility::Members, Visibility::Friends, Visibility::Private];
     }
 
     /**
-     * The audience to pre-select for $member: their stored AgeVisibility (default Private). A
-     * stored Open (upgraded from an OpenPNE 3 web-public age) is not offered, and among non-guests
-     * it already behaves as Members (VisibleAge fail-closes guests), so it pre-selects as Members.
+     * The audience to pre-select for $member: their stored AgeVisibility (default Private), clamped
+     * to the currently selectable audiences — so a stored Open pre-selects as Members once
+     * web-public age is off (it conveys no visibility then; see VisibleAge).
      */
     public static function defaultFor(Member $member): Visibility
     {
@@ -36,9 +39,17 @@ final class AgeVisibility
         return in_array($preferred, self::options(), true) ? $preferred : Visibility::Members;
     }
 
-    /** Validation rule restricting age visibility to the selectable audiences (no web-public). */
+    /** Validation rule restricting age visibility to the selectable audiences. */
     public static function rule(): Enum
     {
-        return (new Enum(Visibility::class))->except([Visibility::Open]);
+        $rule = new Enum(Visibility::class);
+
+        return self::allowsWebPublic() ? $rule : $rule->except([Visibility::Open]);
+    }
+
+    /** Whether the SNS lets members make their age visible to web guests. */
+    public static function allowsWebPublic(): bool
+    {
+        return (bool) app(SnsSettingService::class)->get(SnsSettingKey::AllowWebPublicAge);
     }
 }
