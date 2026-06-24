@@ -29,9 +29,12 @@ class NavigationService
 
     /**
      * Route names that resolve but are not real pages (OpenPNE 3 compatibility shims), so a nav
-     * item pointing at them is hidden rather than linking to a 404/redirect.
+     * item pointing at them is hidden rather than linking to a 404/redirect. Empty now that
+     * /member/config is a real page; keep the mechanism for the next shim.
+     *
+     * @var list<string>
      */
-    private const SHIM_ROUTES = ['member.config.access_block_compat'];
+    private const SHIM_ROUTES = [];
 
     /** Per-request memo of internal-path existence, keyed by path. */
     private array $pathExists = [];

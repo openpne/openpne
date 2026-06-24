@@ -9,10 +9,9 @@ use Illuminate\Database\Seeder;
 /**
  * OpenPNE 3's default PC navigation set, with each uri normalized to its OpenPNE 4 URL (the form
  * the upgrade tool also produces) and `source_uri` keeping the original OpenPNE 3 value for DOM-id
- * compatibility. Items pointing at not-yet-ported features (`/diary` index) or compatibility shims
- * (`/member/config`) are seeded faithfully and stay hidden by the renderer's route check until
- * those features land. The community set is seeded now and rendered once the community localNav
- * context is wired.
+ * compatibility. Items pointing at not-yet-ported features (`/diary` index) are seeded faithfully
+ * and stay hidden by the renderer's route check until those features land. The community set is
+ * seeded now and rendered once the community localNav context is wired.
  */
 class NavigationSeeder extends Seeder
 {

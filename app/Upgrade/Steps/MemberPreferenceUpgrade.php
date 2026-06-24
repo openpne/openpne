@@ -45,7 +45,7 @@ class MemberPreferenceUpgrade extends UpgradeStep
     {
         $names = implode(', ', array_map(
             static fn (PreferenceKey $key): string => "'{$key->op3SourceName()}'",
-            PreferenceKey::cases(),
+            PreferenceKey::upgradableCases(),
         ));
 
         // Latest row per (member_id, name): collapse any KV duplicates to the most recently
@@ -73,7 +73,7 @@ class MemberPreferenceUpgrade extends UpgradeStep
     {
         $whens = array_map(
             static fn (PreferenceKey $key): string => sprintf("WHEN '%s' THEN '%s'", $key->op3SourceName(), $key->value),
-            PreferenceKey::cases(),
+            PreferenceKey::upgradableCases(),
         );
 
         return 'CASE `name` '.implode(' ', $whens).' END';

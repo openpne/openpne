@@ -82,16 +82,20 @@ return $this->respondWith($request, [
 1. the feature's `modern_status` (anything other than `native` forces Classic);
 2. an explicit `/m/*` route (`route('surface') === 'modern'`);
 3. a per-install `tenant_mode` of `modern_only`;
-4. a per-member `migration_ui_override` held in the session;
-5. the per-install `tenant_default_surface`.
+4. a member's **durable** surface choice
+   ([`PreferenceKey::PreferredSurface`](../../app/Support/PreferenceKey.php), see
+   [member-preferences.md](member-preferences.md));
+5. a per-member `migration_ui_override` held in the session;
+6. the per-install `tenant_default_surface`.
 
-The selection logic is wired into every dual-surface controller, but most of its
-inputs currently fall back to built-in defaults: there is no `config/features.php`
-(so `modern_status` defaults to `native`), `config/openpne.php` carries no
-`tenant_mode` / `tenant_default_surface` (defaulting to `mixed` / `classic`), and
-nothing writes `migration_ui_override` yet. The effective behavior today is
-therefore: a canonical route renders Classic, its `/m/*` sibling renders Modern.
-The rest of the chain is in place for when those inputs are populated.
+The selection logic is wired into every dual-surface controller. Several inputs
+still fall back to built-in defaults: there is no `config/features.php` (so
+`modern_status` defaults to `native`), `config/openpne.php` carries no `tenant_mode`
+/ `tenant_default_surface` (defaulting to `mixed` / `classic`), and nothing writes
+the session `migration_ui_override`. The durable member choice (4) **is** writable —
+the member config page sets it — so a member can opt into Modern persistently;
+absent that choice the effective behavior is: a canonical route renders Classic, its
+`/m/*` sibling renders Modern.
 
 `SurfaceResolver::redirectName()` keeps a post-submit redirect on the surface it
 came from by mapping `friend.list` ⇄ `friend.modern.list`; `canonicalName()` is

@@ -90,11 +90,10 @@ class NavigationServiceTest extends TestCase
         $this->assertSame('https://example.com/logout', $items[0]['href']);
     }
 
-    public function test_hides_unresolved_missing_route_and_shim_items(): void
+    public function test_hides_unresolved_and_missing_route_items(): void
     {
         $this->makeNav('secure_global', '@homepage', '@homepage', ['en' => 'Unconverted'], 0); // not normalized
         $this->makeNav('secure_global', '/diary', 'diary/index', ['en' => 'Diary'], 1); // no route
-        $this->makeNav('secure_global', '/member/config', '@member_config', ['en' => 'Settings'], 2); // shim
 
         $items = app(NavigationService::class)->visibleEntries('secure_global', 'en');
 

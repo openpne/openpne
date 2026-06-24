@@ -14,6 +14,7 @@ use App\Features\Friend\FriendController;
 use App\Features\Home\HomeController;
 use App\Features\Member\InviteController;
 use App\Features\Member\MemberAvatarController;
+use App\Features\Member\MemberConfigController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Message\MessageController;
 use App\Features\Profile\ProfileController;
@@ -277,15 +278,18 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // canonical home feed at /timeline.
     Route::get('/sns/timeline', fn () => redirect()->route('timeline.index'))->name('timeline.index.compat');
 
-    // OpenPNE 3 compatibility: access block lived at /member/config?category=accessBlock.
-    // The member config module is not ported yet, so resolve just that category to the
-    // canonical Block list. 302 (not 301) because a future member config module will
-    // reclaim this URL. Folded into that module once it exists.
-    Route::get('/member/config', function (Request $request) {
-        abort_unless($request->query('category') === 'accessBlock', 404);
-
-        return redirect()->route('block.list');
-    })->name('member.config.access_block_compat');
+    // OpenPNE 3 member/config — the member's own settings page. GET renders (Classic/Modern); each
+    // section saves on its own POST so one change never rewrites another. The OpenPNE 3 access-block
+    // category (/member/config?category=accessBlock) is redirected to the Block list inside show().
+    Route::get('/member/config', [MemberConfigController::class, 'show'])->name('member.config');
+    Route::post('/member/config/diary', [MemberConfigController::class, 'updateDiary'])->name('member.config.diary');
+    Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
+    Route::get('/m/member/config', [MemberConfigController::class, 'show'])
+        ->defaults('surface', 'modern')->name('member.modern.config');
+    Route::post('/m/member/config/diary', [MemberConfigController::class, 'updateDiary'])
+        ->defaults('surface', 'modern')->name('member.modern.config.diary');
+    Route::post('/m/member/config/surface', [MemberConfigController::class, 'updateSurface'])
+        ->defaults('surface', 'modern')->name('member.modern.config.surface');
 
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {
         Route::get('/avatar', 'edit')->name('member.avatar.edit');

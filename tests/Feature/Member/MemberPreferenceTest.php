@@ -4,6 +4,7 @@ namespace Tests\Feature\Member;
 
 use App\Models\Member;
 use App\Support\PreferenceKey;
+use App\Support\Surface;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -68,5 +69,32 @@ class MemberPreferenceTest extends TestCase
             'member_id' => $member->id, 'key' => 'diary_default_visibility',
         ]);
         $this->assertSame(Visibility::Members, $member->preference(PreferenceKey::DiaryDefaultVisibility));
+    }
+
+    public function test_preferred_surface_is_null_until_set_then_persists(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->assertNull($member->preferredSurface());
+
+        $member->setPreferredSurface(Surface::Modern);
+
+        $this->assertSame(Surface::Modern, $member->preferredSurface());
+        $this->assertDatabaseHas('member_preferences', [
+            'member_id' => $member->id, 'key' => 'preferred_surface', 'value' => 'modern',
+        ]);
+    }
+
+    public function test_reset_preferred_surface_drops_the_row_so_it_follows_the_default(): void
+    {
+        $member = Member::factory()->create();
+        $member->setPreferredSurface(Surface::Classic);
+
+        $member->resetPreferredSurface();
+
+        $this->assertNull($member->preferredSurface());
+        $this->assertDatabaseMissing('member_preferences', [
+            'member_id' => $member->id, 'key' => 'preferred_surface',
+        ]);
     }
 }

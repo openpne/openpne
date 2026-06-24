@@ -45,8 +45,9 @@ class ShellNavigationTest extends TestCase
             ->assertSee('id="globalNav__member_search"', false)
             ->assertSee('id="globalNav__member_invite"', false)
             ->assertSee('id="globalNav__member_logout"', false)
-            // /member/config is an access-block shim; /diary index is unported — both hidden.
-            ->assertDontSee('id="globalNav__member_config"', false)
+            // /member/config is now a real page (the member settings page), so it renders.
+            ->assertSee('id="globalNav__member_config"', false)
+            // /diary index is still unported — hidden by the renderer's route check.
             ->assertDontSee('id="globalNav_diary_index"', false)
             ->getContent();
 
