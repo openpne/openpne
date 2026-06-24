@@ -22,10 +22,13 @@ class MemberSearchController extends Controller
         $name = is_string($nameParam) ? $nameParam : '';
         $profileFilters = $this->arrayParam($request, 'profile');
         $dateRanges = $this->arrayParam($request, 'date');
+        $monthDayRanges = $this->arrayParam($request, 'monthday');
+        $ageRange = $this->arrayParam($request, 'age');
 
-        $members = $query($viewer, $name, $profileFilters, $dateRanges);
+        $members = $query($viewer, $name, $profileFilters, $dateRanges, $monthDayRanges, $ageRange);
         $lang = app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
         $profiles = $query->searchableProfiles();
+        $birthdayName = $query->birthdayProfileName();
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('member.search', [
@@ -34,13 +37,22 @@ class MemberSearchController extends Controller
                 'name' => $name,
                 'filters' => $profileFilters,
                 'dateRanges' => $dateRanges,
+                'monthDayRanges' => $monthDayRanges,
+                'ageRange' => $ageRange,
+                'birthdayName' => $birthdayName,
                 'lang' => $lang,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/search', [
                 'members' => MemberSearchSerializer::paginator($members),
-                'profiles' => MemberSearchSerializer::formFields($profiles, $lang),
+                'profiles' => MemberSearchSerializer::formFields($profiles, $lang, $birthdayName),
                 // Cast to object so an empty filter set serialises as {} (a keyed map), not [].
-                'criteria' => ['name' => $name, 'profile' => (object) $profileFilters, 'date' => (object) $dateRanges],
+                'criteria' => [
+                    'name' => $name,
+                    'profile' => (object) $profileFilters,
+                    'date' => (object) $dateRanges,
+                    'monthday' => (object) $monthDayRanges,
+                    'age' => (object) $ageRange,
+                ],
             ]),
         ]);
     }

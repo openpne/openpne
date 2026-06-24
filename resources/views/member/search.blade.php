@@ -22,65 +22,40 @@
                         <tr>
                             <th><label>{{ $profile->getCaption($lang) }}</label></th>
                             <td>
-                                @switch($profile->form_type)
-                                    @case('select')
-                                    @case('radio')
-                                        <select name="profile[{{ $id }}]">
-                                            <option value="">{{ __('Any') }}</option>
-                                            @foreach ($profile->choices($lang) as $choice)
-                                                <option value="{{ $choice['id'] }}" @selected((string) $current === (string) $choice['id'])>{{ $choice['caption'] }}</option>
-                                            @endforeach
+                                @if ($profile->name === $birthdayName)
+                                    @php($md = $monthDayRanges[$id] ?? [])
+                                    {{-- Month/day only: the birth year (= age) is searched via the Age field below. --}}
+                                    @foreach (['from', 'to'] as $bound)
+                                        <select name="monthday[{{ $id }}][{{ $bound }}_month]">
+                                            <option value="">{{ __('Month') }}</option>
+                                            @for ($m = 1; $m <= 12; $m++)
+                                                <option value="{{ $m }}" @selected((string) ($md[$bound.'_month'] ?? '') === (string) $m)>{{ $m }}</option>
+                                            @endfor
                                         </select>
-                                        @break
-
-                                    @case('checkbox')
-                                        @php $selected = array_map('strval', (array) $current); @endphp
-                                        @foreach ($profile->choices($lang) as $choice)
-                                            <label><input type="checkbox" name="profile[{{ $id }}][]" value="{{ $choice['id'] }}" @checked(in_array((string) $choice['id'], $selected, true))> {{ $choice['caption'] }}</label>
-                                        @endforeach
-                                        @break
-
-                                    @case('date')
-                                        <input type="date" class="input_text" name="date[{{ $id }}][from]" value="{{ $range['from'] ?? '' }}">
-                                        <span>–</span>
-                                        <input type="date" class="input_text" name="date[{{ $id }}][to]" value="{{ $range['to'] ?? '' }}">
-                                        @break
-
-                                    @case('country_select')
-                                        <select name="profile[{{ $id }}]">
-                                            <option value="">{{ __('Any') }}</option>
-                                            @foreach (app(\App\Services\CountryListService::class)->getOptions($lang) as $code => $countryName)
-                                                <option value="{{ $code }}" @selected((string) $current === $code)>{{ $countryName }}</option>
-                                            @endforeach
+                                        <select name="monthday[{{ $id }}][{{ $bound }}_day]">
+                                            <option value="">{{ __('Day') }}</option>
+                                            @for ($d = 1; $d <= 31; $d++)
+                                                <option value="{{ $d }}" @selected((string) ($md[$bound.'_day'] ?? '') === (string) $d)>{{ $d }}</option>
+                                            @endfor
                                         </select>
-                                        @break
-
-                                    @case('region_select')
-                                        @php $regionOptions = app(\App\Services\RegionListService::class)->getOptions($profile->value_type, $lang); @endphp
-                                        <select name="profile[{{ $id }}]">
-                                            <option value="">{{ __('Any') }}</option>
-                                            @if (($profile->value_type ?: 'string') === 'string')
-                                                @foreach ($regionOptions as $countryName => $regions)
-                                                    <optgroup label="{{ $countryName }}">
-                                                        @foreach ($regions as $value => $regionLabel)
-                                                            <option value="{{ $value }}" @selected((string) $current === (string) $value)>{{ $regionLabel }}</option>
-                                                        @endforeach
-                                                    </optgroup>
-                                                @endforeach
-                                            @else
-                                                @foreach ($regionOptions as $value => $regionLabel)
-                                                    <option value="{{ $value }}" @selected((string) $current === (string) $value)>{{ $regionLabel }}</option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                        @break
-
-                                    @default
-                                        <input type="text" class="input_text" name="profile[{{ $id }}]" value="{{ is_array($current) ? '' : $current }}">
-                                @endswitch
+                                        @if ($bound === 'from')<span>–</span>@endif
+                                    @endforeach
+                                @else
+                                    @include('member.partials.search-profile-field')
+                                @endif
                             </td>
                         </tr>
                     @endforeach
+
+                    {{-- Derived age, gated by AgeVisibility (separate from the birthday field above). --}}
+                    <tr>
+                        <th><label for="age_min">{{ __('Age') }}</label></th>
+                        <td>
+                            <input type="number" min="0" class="input_text" id="age_min" name="age[min]" value="{{ $ageRange['min'] ?? '' }}">
+                            <span>–</span>
+                            <input type="number" min="0" class="input_text" name="age[max]" value="{{ $ageRange['max'] ?? '' }}">
+                        </td>
+                    </tr>
                 </table>
 
                 <div class="operation">
