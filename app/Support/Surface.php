@@ -22,4 +22,13 @@ enum Surface: string
             self::Modern => 'Modern',
         };
     }
+
+    /** One-line description key for the surface picker, translated via __()/t(). */
+    public function description(): string
+    {
+        return match ($this) {
+            self::Classic => 'Traditional design, suited to desktop.',
+            self::Modern => 'New mobile-first design.',
+        };
+    }
 }

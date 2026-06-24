@@ -39,7 +39,8 @@ class MemberConfigTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('member/config')
-                ->where('form.surface.value', '') // unset = follow the site default
+                ->where('form.surface.value', 'classic') // preselected to the current surface (tenant default)
+                ->where('form.surface.options', fn ($options) => count($options) === 2) // binary: no "default" option
                 ->has('form.diary.options'));
     }
 
@@ -114,20 +115,25 @@ class MemberConfigTest extends TestCase
         // The explicit /m/* URL is top of SurfaceResolver's order, so a Classic choice must leave it
         // for the canonical config URL, or the page would stay Modern (Codex High 2).
         $member = Member::factory()->create();
+        $member->setPreferredSurface(Surface::Modern); // currently Modern, so choosing Classic is a real change
 
         $this->actingAs($member)->post('/m/member/config/surface', ['preferred_surface' => 'classic'])
             ->assertRedirect(route('member.config'));
+
+        $this->assertDatabaseHas('member_preferences', [
+            'member_id' => $member->id, 'key' => 'preferred_surface', 'value' => 'classic',
+        ]);
     }
 
-    public function test_resetting_the_surface_follows_the_tenant_default(): void
+    public function test_saving_the_current_surface_is_a_no_op_so_an_unset_member_stays_unset(): void
     {
-        // The empty option deletes the row; resolution then follows the tenant default — Modern here,
-        // proving a reset is not the same as forcing Classic (Codex Low).
+        // Binary UI has no "follow default" option; instead, saving the surface the member is already
+        // on never pins them, so the operator can still move unset members later. Default is Modern
+        // here; an unset member saving Modern stays unset and keeps following the default.
         config(['openpne.tenant_default_surface' => 'modern']);
         $member = Member::factory()->create();
-        $member->setPreferredSurface(Surface::Classic);
 
-        $this->actingAs($member)->post('/member/config/surface', ['preferred_surface' => '']);
+        $this->actingAs($member)->post('/member/config/surface', ['preferred_surface' => 'modern']);
 
         $this->assertDatabaseMissing('member_preferences', [
             'member_id' => $member->id, 'key' => 'preferred_surface',

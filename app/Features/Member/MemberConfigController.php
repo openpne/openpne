@@ -36,16 +36,17 @@ class MemberConfigController extends Controller
         }
 
         $viewer = $this->viewer();
+        $currentSurface = Surface::from(SurfaceResolver::preferenceOrDefault($request));
 
         return $this->respondWith($request, [
             SurfaceResolver::CLASSIC => fn () => view('member.config', [
                 'diaryDefault' => DiaryVisibility::defaultFor($viewer),
                 'diaryOptions' => DiaryVisibility::options(),
                 'locale' => app()->getLocale(),
-                'preferredSurface' => $viewer->preferredSurface(),
+                'currentSurface' => $currentSurface,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/config', [
-                'form' => MemberConfigSerializer::form($viewer),
+                'form' => MemberConfigSerializer::form($viewer, $currentSurface),
             ]),
         ]);
     }
@@ -62,22 +63,23 @@ class MemberConfigController extends Controller
 
     public function updateSurface(UpdatePreferredSurfaceRequest $request): Response
     {
-        $value = $request->validated('preferred_surface');
-        $surface = $value === null ? null : Surface::from($value);
+        $chosen = Surface::from($request->validated('preferred_surface'));
         $viewer = $this->viewer();
 
-        if ($surface === null) {
-            $viewer->resetPreferredSurface();
-        } else {
-            $viewer->setPreferredSurface($surface);
+        // Pin only an actual change. Saving the surface the member is already on (their stored choice
+        // or, when unset, the tenant default) is a no-op, so it neither pins an unset member nor
+        // strips the operator's ability to move them later — the binary UI's stand-in for a
+        // "disabled until changed" button, enforced the same way on both surfaces.
+        $changed = $chosen->value !== SurfaceResolver::preferenceOrDefault($request);
+        if ($changed) {
+            $viewer->setPreferredSurface($chosen);
+            $request->session()->flash('status', __('Settings updated.'));
         }
 
         // Land on the chosen surface's own config page so the whole shell re-renders there. An
-        // explicit /m/* URL is top of SurfaceResolver's order, so a Classic (or reset) choice MUST
-        // leave /m/* for the canonical route, or the page would stay Modern. A reset then follows
-        // the session/tenant fallback, which the canonical route resolves correctly.
-        $target = $surface === Surface::Modern ? route('member.modern.config') : route('member.config');
-        $request->session()->flash('status', __('Settings updated.'));
+        // explicit /m/* URL is top of SurfaceResolver's order, so a Classic choice MUST leave /m/*
+        // for the canonical route, or the page would stay Modern.
+        $target = $chosen === Surface::Modern ? route('member.modern.config') : route('member.config');
 
         return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
     }

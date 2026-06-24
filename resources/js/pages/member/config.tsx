@@ -5,6 +5,7 @@ import type { PageProps } from '@/types';
 interface Option {
     value: string;
     label: string;
+    description?: string;
 }
 
 interface ConfigForm {
@@ -86,18 +87,26 @@ export default function MemberConfig() {
                     className="space-y-2"
                 >
                     <h2 className="font-semibold">{t('Display')}</h2>
-                    <label htmlFor="preferred_surface">{t('Interface')}</label>
-                    <select
-                        id="preferred_surface"
-                        value={surface.data.preferred_surface}
-                        onChange={(e) => surface.setData('preferred_surface', e.target.value)}
-                    >
+                    <fieldset className="space-y-1">
                         {form.surface.options.map((opt) => (
-                            <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
+                            <label key={opt.value} className="flex items-start gap-2">
+                                <input
+                                    type="radio"
+                                    name="preferred_surface"
+                                    value={opt.value}
+                                    checked={surface.data.preferred_surface === opt.value}
+                                    onChange={(e) => surface.setData('preferred_surface', e.target.value)}
+                                />
+                                <span>
+                                    <strong>{t(opt.label)}</strong>
+                                    {opt.description && <span> — {t(opt.description)}</span>}
+                                </span>
+                            </label>
                         ))}
-                    </select>
+                    </fieldset>
                     {surface.errors.preferred_surface && <p role="alert">{surface.errors.preferred_surface}</p>}
-                    <button type="submit" disabled={surface.processing}>{t('Save')}</button>
+                    {/* Disabled until the choice differs from the current surface, so a casual save never pins. */}
+                    <button type="submit" disabled={surface.processing || surface.data.preferred_surface === form.surface.value}>{t('Save')}</button>
                 </form>
             </main>
         </>

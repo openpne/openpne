@@ -8,9 +8,11 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * The surface section of the member config page: the member's durable Classic/Modern choice. The
- * empty option means "follow the site/session default" — normalized to null so it resets the stored
- * preference rather than failing validation.
+ * The surface section of the member config page: the member's Classic/Modern choice. A binary
+ * choice — there is no user-facing "follow the default" option (that abstract state confuses users
+ * and has no user-side signal to follow, unlike a device-linked dark-mode "auto"). The unset state
+ * still exists in data; the controller keeps a member unset when they save the surface they are
+ * already on, so a casual save never pins them.
  */
 class UpdatePreferredSurfaceRequest extends FormRequest
 {
@@ -19,16 +21,9 @@ class UpdatePreferredSurfaceRequest extends FormRequest
         return $this->user() instanceof Member;
     }
 
-    protected function prepareForValidation(): void
-    {
-        if ($this->input('preferred_surface') === '') {
-            $this->merge(['preferred_surface' => null]);
-        }
-    }
-
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return ['preferred_surface' => ['nullable', Rule::enum(Surface::class)]];
+        return ['preferred_surface' => ['required', Rule::enum(Surface::class)]];
     }
 }

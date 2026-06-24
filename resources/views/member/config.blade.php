@@ -59,25 +59,22 @@
         </div>
     </div>
 
-    {{-- Display surface (member_preferences[preferred_surface]); empty = follow the site default. --}}
+    {{-- Display surface (member_preferences[preferred_surface]); binary, preselected to the member's
+         current surface. Saving the current one is a no-op server-side, so it never pins. --}}
     <div class="dparts form" id="member_config_surface">
         <div class="partsHeading"><h3>{{ __('Display') }}</h3></div>
         <div class="parts">
             <form method="POST" action="{{ route('member.config.surface') }}">
                 @csrf
-                <table>
-                    <tr>
-                        <th><label for="preferred_surface">{{ __('Interface') }}</label></th>
-                        <td>
-                            <select id="preferred_surface" name="preferred_surface">
-                                <option value="" @selected($preferredSurface === null)>{{ __('Site default') }}</option>
-                                <option value="{{ Surface::Classic->value }}" @selected($preferredSurface === Surface::Classic)>{{ __('Classic') }}</option>
-                                <option value="{{ Surface::Modern->value }}" @selected($preferredSurface === Surface::Modern)>{{ __('Modern') }}</option>
-                            </select>
-                            @error('preferred_surface')<p class="error">{{ $message }}</p>@enderror
-                        </td>
-                    </tr>
-                </table>
+                @foreach ([Surface::Classic, Surface::Modern] as $option)
+                    <p>
+                        <label>
+                            <input type="radio" name="preferred_surface" value="{{ $option->value }}" @checked($currentSurface === $option)>
+                            <strong>{{ __($option->label()) }}</strong> — {{ __($option->description()) }}
+                        </label>
+                    </p>
+                @endforeach
+                @error('preferred_surface')<p class="error">{{ $message }}</p>@enderror
                 <div class="operation">
                     <ul class="moreInfo button">
                         <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>

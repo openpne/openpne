@@ -53,11 +53,19 @@ out of the write path.
 - **Language** reuses the shared [`locale.switch`](../../routes/web.php) endpoint (durable
   `members.locale` write + the Inertia hard-navigation it already needs), not a field on this
   page's own form.
-- **Surface** writes `PreferredSurface`; the empty option resets it ("follow the site default").
-  After a change the controller lands the member on the chosen surface's own config URL — Modern
-  → `/m/member/config`, Classic / reset → canonical `/member/config` — because an explicit `/m/*`
-  URL outranks the member preference in resolution, so a Classic choice **must** leave `/m/*` or
-  the page would stay Modern.
+- **Surface** is a **binary** Classic/Modern choice, preselected to the member's current surface
+  ([`SurfaceResolver::preferenceOrDefault()`](../../app/Support/SurfaceResolver.php) — their durable
+  value or the tenant default, ignoring the config page's own `/m/*` route). There is deliberately
+  **no user-facing "follow the default" option**: that abstract state has no user-side signal to
+  follow (unlike a device-linked dark-mode "auto") and tested poorly. The tri-state still exists in
+  data, preserved by a server-side rule: `updateSurface()` pins only an actual change (chosen ≠
+  current), so saving the surface you are already on is a no-op — an unset member stays unset and
+  the operator keeps the ability to move them. This is the binary UI's equivalent of a
+  "disabled until changed" button, enforced identically on both surfaces (the Classic surface is
+  script-free). After a real change the controller lands the member on the chosen surface's own
+  config URL — Modern → `/m/member/config`, Classic → canonical `/member/config` — because an
+  explicit `/m/*` URL outranks the member preference in resolution, so a Classic choice **must**
+  leave `/m/*` or the page would stay Modern.
 
 The OpenPNE 3 `/member/config?category=accessBlock` URL is preserved: `show()` redirects just
 that category to the Block list. The seeded config nav link renders because `/member/config` is a
@@ -83,7 +91,8 @@ such unique. All disposition of `member_config` names (migrated vs dropped) is r
    `PreferredSurface`'s default is `null` (defer to the surface fallback). Reset deletes the row;
    it is not `setPreference($default)`.
 3. The config page saves each section independently, so the diary section's read-time clamp is
-   never written back; a surface change must redirect to the canonical URL when the choice is not
-   Modern.
+   never written back. The surface section is binary; `updateSurface()` pins only an actual change
+   (chosen ≠ current), keeping an unset member unset, and redirects to the canonical URL when the
+   choice is not Modern.
 4. The upgrade migrates exactly `PreferenceKey::upgradableCases()` (non-null `op3SourceName()`);
    native keys are never migrated.

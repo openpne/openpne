@@ -32,6 +32,18 @@ class SurfaceResolver
 
         // A member's durable choice (member_preferences) outranks the transient session toggle and
         // the tenant default — but never the explicit /m/* URL, modern_only, or a non-native feature.
+        return self::preferenceOrDefault($request);
+    }
+
+    /**
+     * The surface a member gets on a canonical route from their own choice alone: the durable
+     * member_preferences value, else the session toggle, else the tenant default. Unlike resolve()
+     * this ignores the request's /m/* route default, so the member config page (reachable on both
+     * /member/config and /m/member/config) can show the member's actual current surface rather than
+     * the surface of whichever URL they opened.
+     */
+    public static function preferenceOrDefault(Request $request): string
+    {
         $member = $request->user('member');
         if ($member instanceof Member && ($preferred = $member->preferredSurface()) !== null) {
             return $preferred->value;
