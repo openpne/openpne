@@ -283,11 +283,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // category (/member/config?category=accessBlock) is redirected to the Block list inside show().
     Route::get('/member/config', [MemberConfigController::class, 'show'])->name('member.config');
     Route::post('/member/config/diary', [MemberConfigController::class, 'updateDiary'])->name('member.config.diary');
+    Route::post('/member/config/age', [MemberConfigController::class, 'updateAge'])->name('member.config.age');
     Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
     Route::get('/m/member/config', [MemberConfigController::class, 'show'])
         ->defaults('surface', 'modern')->name('member.modern.config');
     Route::post('/m/member/config/diary', [MemberConfigController::class, 'updateDiary'])
         ->defaults('surface', 'modern')->name('member.modern.config.diary');
+    Route::post('/m/member/config/age', [MemberConfigController::class, 'updateAge'])
+        ->defaults('surface', 'modern')->name('member.modern.config.age');
     Route::post('/m/member/config/surface', [MemberConfigController::class, 'updateSurface'])
         ->defaults('surface', 'modern')->name('member.modern.config.surface');
 

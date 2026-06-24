@@ -5,7 +5,9 @@ namespace App\Features\Member;
 use App\Compat\RouteParityRegistry;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\Member\Serializers\MemberConfigSerializer;
+use App\Features\Profile\AgeVisibility;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Member\UpdateAgeVisibilityRequest;
 use App\Http\Requests\Member\UpdateDiaryDefaultRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Models\Member;
@@ -42,6 +44,8 @@ class MemberConfigController extends Controller
             SurfaceResolver::CLASSIC => fn () => view('member.config', [
                 'diaryDefault' => DiaryVisibility::defaultFor($viewer),
                 'diaryOptions' => DiaryVisibility::options(),
+                'ageDefault' => AgeVisibility::defaultFor($viewer),
+                'ageOptions' => AgeVisibility::options(),
                 'locale' => app()->getLocale(),
                 'currentSurface' => $currentSurface,
             ]),
@@ -55,6 +59,16 @@ class MemberConfigController extends Controller
     {
         $value = PreferenceKey::DiaryDefaultVisibility->coerce($request->validated('diary_default_visibility'));
         $this->viewer()->setPreference(PreferenceKey::DiaryDefaultVisibility, $value);
+
+        return redirect()
+            ->route(SurfaceResolver::redirectName($request, 'member.config'))
+            ->with('status', __('Settings updated.'));
+    }
+
+    public function updateAge(UpdateAgeVisibilityRequest $request): RedirectResponse
+    {
+        $value = PreferenceKey::AgeVisibility->coerce($request->validated('age_visibility'));
+        $this->viewer()->setPreference(PreferenceKey::AgeVisibility, $value);
 
         return redirect()
             ->route(SurfaceResolver::redirectName($request, 'member.config'))

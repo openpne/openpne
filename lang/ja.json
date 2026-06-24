@@ -610,6 +610,7 @@
     "This link expires in :hours hours.": "このリンクは :hours 時間で無効になります。",
     "We sent you a registration link.": "登録用リンクをお送りしました。",
     "Welcome, :name.": ":name さん、ようこそ。",
+    "Who can see your age": "年齢を公開する範囲",
     "Whoops!": "おっと！",
     "Withdrawn member": "退会したメンバー",
     "Write a %diary%": "%Diary%を書く",

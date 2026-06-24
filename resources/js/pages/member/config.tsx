@@ -10,6 +10,7 @@ interface Option {
 
 interface ConfigForm {
     diary: { value: string; options: Option[] };
+    age: { value: string; options: Option[] };
     locale: { value: string; options: Option[] };
     surface: { value: string; options: Option[] };
 }
@@ -24,6 +25,7 @@ export default function MemberConfig() {
 
     // One form per section so saving one never resubmits another (mirrors the Classic surface).
     const diary = useForm({ diary_default_visibility: form.diary.value });
+    const age = useForm({ age_visibility: form.age.value });
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface.value });
 
@@ -55,6 +57,28 @@ export default function MemberConfig() {
                     </select>
                     {diary.errors.diary_default_visibility && <p role="alert">{diary.errors.diary_default_visibility}</p>}
                     <button type="submit" disabled={diary.processing}>{t('Save')}</button>
+                </form>
+
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        age.post('/m/member/config/age');
+                    }}
+                    className="space-y-2"
+                >
+                    <h2 className="font-semibold">{t('Age')}</h2>
+                    <label htmlFor="age_visibility">{t('Who can see your age')}</label>
+                    <select
+                        id="age_visibility"
+                        value={age.data.age_visibility}
+                        onChange={(e) => age.setData('age_visibility', e.target.value)}
+                    >
+                        {form.age.options.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
+                        ))}
+                    </select>
+                    {age.errors.age_visibility && <p role="alert">{age.errors.age_visibility}</p>}
+                    <button type="submit" disabled={age.processing}>{t('Save')}</button>
                 </form>
 
                 <form

@@ -33,6 +33,34 @@
         </div>
     </div>
 
+    {{-- Age visibility (member_preferences[age_visibility]); no web-public choice — age is never shown to guests. --}}
+    <div class="dparts form" id="member_config_age">
+        <div class="partsHeading"><h3>{{ __('Age') }}</h3></div>
+        <div class="parts">
+            <form method="POST" action="{{ route('member.config.age') }}">
+                @csrf
+                <table>
+                    <tr>
+                        <th><label for="age_visibility">{{ __('Who can see your age') }}</label></th>
+                        <td>
+                            <select id="age_visibility" name="age_visibility">
+                                @foreach ($ageOptions as $option)
+                                    <option value="{{ $option->value }}" @selected(old('age_visibility', $ageDefault->value) == $option->value)>{{ __($option->label()) }}</option>
+                                @endforeach
+                            </select>
+                            @error('age_visibility')<p class="error">{{ $message }}</p>@enderror
+                        </td>
+                    </tr>
+                </table>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
+                    </ul>
+                </div>
+            </form>
+        </div>
+    </div>
+
     {{-- Language: reuses the shared locale switch endpoint (durable members.locale write). --}}
     <div class="dparts form" id="member_config_language">
         <div class="partsHeading"><h3>{{ __('Language') }}</h3></div>
