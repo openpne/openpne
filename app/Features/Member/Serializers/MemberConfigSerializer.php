@@ -3,6 +3,7 @@
 namespace App\Features\Member\Serializers;
 
 use App\Features\Diary\DiaryVisibility;
+use App\Features\Profile\AgeVisibility;
 use App\Models\Member;
 use App\Support\Surface;
 use App\Support\Visibility;
@@ -24,6 +25,13 @@ class MemberConfigSerializer
                 'options' => array_map(
                     static fn (Visibility $v): array => ['value' => (string) $v->value, 'label' => $v->label()],
                     DiaryVisibility::options(),
+                ),
+            ],
+            'age' => [
+                'value' => (string) AgeVisibility::defaultFor($member)->value,
+                'options' => array_map(
+                    static fn (Visibility $v): array => ['value' => (string) $v->value, 'label' => $v->label()],
+                    AgeVisibility::options(),
                 ),
             ],
             'locale' => [
