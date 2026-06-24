@@ -43,14 +43,27 @@ class MemberProfileDisplayTest extends TestCase
         $this->assertSame('赤', $value->displayValue('ja_JP'));
     }
 
-    public function test_date_value_formats_the_datetime(): void
+    public function test_birthday_renders_month_and_day_only(): void
     {
+        // The birth year is stripped; it is revealed only through the separately-gated age.
         $value = $this->valueFor(
             ['name' => 'op_preset_birthday', 'form_type' => 'date'],
             ['value' => '1990-01-02', 'value_datetime' => '1990-01-02 00:00:00'],
         );
 
-        $this->assertSame('1990-01-02', $value->displayValue('ja_JP'));
+        $this->assertSame('01月02日', $value->displayValue('ja_JP'));
+        $this->assertSame('January 2', $value->displayValue('en'));
+    }
+
+    public function test_custom_date_keeps_the_full_date(): void
+    {
+        // Only the preset birthday is year-stripped; a custom date field keeps Y-m-d.
+        $value = $this->valueFor(
+            ['name' => 'anniversary', 'form_type' => 'date'],
+            ['value' => '2010-03-04'],
+        );
+
+        $this->assertSame('2010-03-04', $value->displayValue('ja_JP'));
     }
 
     public function test_country_value_renders_the_localised_country_name(): void

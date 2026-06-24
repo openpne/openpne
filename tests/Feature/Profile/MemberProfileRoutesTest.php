@@ -5,7 +5,9 @@ namespace Tests\Feature\Profile;
 use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
+use App\Support\PreferenceKey;
 use App\Support\Visibility;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
@@ -93,6 +95,54 @@ class MemberProfileRoutesTest extends TestCase
         MemberProfile::factory()->create([
             'member_id' => $owner->getKey(), 'profile_id' => $profile->getKey(),
             'value' => $value, 'visibility' => Visibility::Open,
+        ]);
+    }
+
+    public function test_classic_shows_the_age_row_to_self(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24'));
+        $owner = Member::factory()->create();
+        $this->giveBirthday($owner, '1990-06-23');
+
+        $this->actingAs($owner)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('<th>Age</th>', false)
+            ->assertSee('36 years old');
+    }
+
+    public function test_classic_hides_age_from_a_non_friend_by_default(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24'));
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $this->giveBirthday($owner, '1990-06-23'); // AgeVisibility default = Private
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertDontSee('<th>Age</th>', false);
+    }
+
+    public function test_modern_payload_carries_the_gated_age(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24'));
+        $owner = Member::factory()->create();
+        $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Members);
+        $viewer = Member::factory()->create();
+        $this->giveBirthday($owner, '1990-06-23');
+
+        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('member/show')
+                ->where('profile.age', 36)
+            );
+    }
+
+    private function giveBirthday(Member $owner, string $date): void
+    {
+        $profile = Profile::factory()->create(['name' => 'op_preset_birthday', 'form_type' => 'date']);
+        MemberProfile::factory()->create([
+            'member_id' => $owner->getKey(), 'profile_id' => $profile->getKey(),
+            'value' => $date, 'value_datetime' => $date.' 00:00:00',
         ]);
     }
 

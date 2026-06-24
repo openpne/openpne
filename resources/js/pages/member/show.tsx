@@ -11,6 +11,7 @@ interface ProfileField {
 interface ProfilePage {
     owner: { id: number; name: string; avatarUrl: string | null };
     isSelf: boolean;
+    age: number | null;
     fields: ProfileField[];
 }
 
@@ -21,7 +22,7 @@ interface ShowProps extends PageProps {
 export default function MemberShow() {
     const t = useT();
     const { profile } = usePage<ShowProps>().props;
-    const { owner, fields, isSelf } = profile;
+    const { owner, fields, isSelf, age } = profile;
 
     return (
         <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
@@ -39,10 +40,16 @@ export default function MemberShow() {
                 )}
             </div>
 
-            {fields.length === 0 ? (
+            {age === null && fields.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t('No profile to show.')}</p>
             ) : (
                 <dl className="divide-y divide-border">
+                    {age !== null && (
+                        <div className="flex gap-4 py-2 text-sm">
+                            <dt className="w-40 shrink-0 font-medium">{t('Age')}</dt>
+                            <dd className="text-foreground">{t(':age years old', { age })}</dd>
+                        </div>
+                    )}
                     {fields.map((field) => (
                         <div key={field.name} className="flex gap-4 py-2 text-sm">
                             <dt className="w-40 shrink-0 font-medium">{field.caption}</dt>

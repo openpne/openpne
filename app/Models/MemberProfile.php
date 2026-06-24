@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\CountryListService;
 use App\Services\PresetProfileService;
 use App\Services\RegionListService;
+use App\Support\LocalizedDate;
 use App\Support\Visibility;
 use Database\Factories\MemberProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -75,6 +76,12 @@ class MemberProfile extends Model
         }
 
         if ($profile->form_type === 'date') {
+            // The preset birthday shows month/day only; its birth year is revealed solely through
+            // the separately-gated age (App\Features\Profile\Queries\VisibleAge), matching OpenPNE 3.
+            if ($profile->name === $presets->nameForKey('birthday')['name'] && $this->value_datetime !== null) {
+                return LocalizedDate::monthDay($this->value_datetime, $this->localeFor($lang));
+            }
+
             return $this->value_datetime?->format('Y-m-d') ?? (string) $this->value;
         }
 

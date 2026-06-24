@@ -9,7 +9,9 @@ use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
+use App\Support\PreferenceKey;
 use App\Support\Visibility;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -110,6 +112,43 @@ class ClassicProfileGadgetTest extends TestCase
         DB::table('friendships')->insert([
             ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
             ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
+        ]);
+    }
+
+    public function test_profile_list_box_gadget_shows_the_age_row_after_the_nickname(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24'));
+        $owner = Member::factory()->create(['name' => 'Owner']);
+        $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Members);
+        $viewer = Member::factory()->create();
+        $this->giveBirthday($owner, '1990-06-23');
+        $this->makeGadget('contents', 'profileListBox');
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('<th>Age</th>', false)
+            ->assertSee('36 years old');
+    }
+
+    public function test_profile_list_box_gadget_hides_age_from_a_guest(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24'));
+        $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
+        $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Open); // even web-public age is hidden
+        $this->giveBirthday($owner, '1990-06-23');
+        $this->makeGadget('contents', 'profileListBox');
+
+        $this->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertDontSee('<th>Age</th>', false);
+    }
+
+    private function giveBirthday(Member $owner, string $date): void
+    {
+        $profile = Profile::factory()->create(['name' => 'op_preset_birthday', 'form_type' => 'date']);
+        MemberProfile::factory()->create([
+            'member_id' => $owner->getKey(), 'profile_id' => $profile->getKey(),
+            'value' => $date, 'value_datetime' => $date.' 00:00:00',
         ]);
     }
 
