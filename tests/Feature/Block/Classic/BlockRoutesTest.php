@@ -161,10 +161,12 @@ class BlockRoutesTest extends TestCase
         $response->assertRedirect(route('block.list'));
     }
 
-    public function test_member_config_without_access_block_category_is_404(): void
+    public function test_member_config_with_another_category_renders_the_settings_page(): void
     {
+        // /member/config is now the real member settings page; only the accessBlock category is
+        // redirected. Any other (legacy) category just renders the page.
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/member/config?category=profile')->assertNotFound();
+        $this->actingAs($member)->get('/member/config?category=profile')->assertOk();
     }
 }
