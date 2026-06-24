@@ -18,10 +18,16 @@
                     <p><img src="{{ $avatar->thumbnailUrl(120, 120, square: true) }}" alt="{{ $owner->name }}"></p>
                 @endif
 
-                @if ($fields->isEmpty())
+                @if ($fields->isEmpty() && $age === null)
                     <p>{{ __('No profile to show.') }}</p>
                 @else
                     <table class="listBox">
+                        @if ($age !== null)
+                            <tr>
+                                <th>{{ __('Age') }}</th>
+                                <td>{{ __(':age years old', ['age' => $age]) }}</td>
+                            </tr>
+                        @endif
                         @foreach ($fields as $field)
                             <tr>
                                 <th>{{ $field->profile->getCaption($lang) }}</th>
