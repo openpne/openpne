@@ -45,11 +45,25 @@ export interface SearchFormField {
     id: number;
     name: string;
     caption: string;
-    formType: ProfileFormType;
+    // 'birthday' is the preset birthday rendered as a month/day picker (its year is searched via age).
+    formType: ProfileFormType | 'birthday';
     options: ProfileChoice[];
     countries: Array<{ value: string; label: string }> | null;
     regions: RegionGroup[] | null;
 }
+
+// Type aliases (not interfaces) so they satisfy Inertia's FormDataConvertible index signature.
+export type MonthDayRange = {
+    from_month?: string;
+    from_day?: string;
+    to_month?: string;
+    to_day?: string;
+};
+
+export type AgeRange = {
+    min?: string;
+    max?: string;
+};
 
 export interface MemberRow {
     id: number;
@@ -61,4 +75,6 @@ export interface SearchCriteria {
     name: string;
     profile: Record<string, string | string[]>;
     date: Record<string, { from?: string; to?: string }>;
+    monthday: Record<string, MonthDayRange>;
+    age: AgeRange;
 }
