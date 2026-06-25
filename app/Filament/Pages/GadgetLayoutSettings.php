@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use App\Gadgets\GadgetLayout;
+use App\Filament\Forms\Components\GadgetLayoutPicker;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -127,25 +126,12 @@ class GadgetLayoutSettings extends Page
     {
         $fields = [];
         foreach (SnsSettingKey::inGroup(SettingGroup::GadgetLayout) as $key) {
-            $fields[] = Select::make($key->value)
+            $fields[] = GadgetLayoutPicker::make($key->value)
                 ->label($key->label())
-                ->options(self::layoutOptions())
-                ->selectablePlaceholder(false)
                 ->required()
-                ->rules(['in:'.implode(',', array_keys(self::layoutOptions()))]);
+                ->rules(['in:'.implode(',', GadgetLayoutPicker::SELECTABLE)]);
         }
 
         return Section::make(__('Gadget layout'))->schema($fields);
-    }
-
-    /** @return array<string, string> layout => "Layout X (its zones)". */
-    private static function layoutOptions(): array
-    {
-        $options = [];
-        foreach (['layoutA', 'layoutB', 'layoutC'] as $layout) {
-            $options[$layout] = 'Layout '.strtoupper(substr($layout, -1)).' ('.implode(', ', GadgetLayout::zones($layout)).')';
-        }
-
-        return $options;
     }
 }
