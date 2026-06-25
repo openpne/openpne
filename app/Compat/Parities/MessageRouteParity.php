@@ -44,6 +44,22 @@ class MessageRouteParity extends RouteParity
         ];
     }
 
+    protected function layouts(): array
+    {
+        // OpenPNE 3 message module is layoutB (its view.yml `all:`): the four box lists and the
+        // per-box show carry the message sidemenu. The compose/reply/draft-edit forms and the
+        // delete-confirm pages keep layoutC (decorate_with on the confirms, no sidemenu).
+        return [
+            'message.receive' => 'B',
+            'message.send' => 'B',
+            'message.draft' => 'B',
+            'message.trash' => 'B',
+            'message.receive.show' => 'B',
+            'message.send.show' => 'B',
+            'message.trash.show' => 'B',
+        ];
+    }
+
     public function gaps(): array
     {
         return [

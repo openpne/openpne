@@ -51,4 +51,17 @@ final class RouteParityRegistry
 
         return null;
     }
+
+    /** The Classic layout letter for a Laravel route across all parities, or null for the default (C). */
+    public static function layout(string $laravelRoute): ?string
+    {
+        foreach (self::all() as $parity) {
+            $letter = $parity->layout($laravelRoute);
+            if ($letter !== null) {
+                return $letter;
+            }
+        }
+
+        return null;
+    }
 }

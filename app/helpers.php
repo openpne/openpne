@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Compat\RouteParityRegistry;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
+use App\Support\SurfaceResolver;
 
 if (! function_exists('sns_name')) {
     /** Site SNS name (header/logo, page titles, mail), or the configured app name by default. */
@@ -73,6 +75,23 @@ if (! function_exists('classic_footer_html')) {
         return (string) app(SnsSettingService::class)->get(
             $secure ? SnsSettingKey::FooterAfter : SnsSettingKey::FooterBefore,
         );
+    }
+}
+
+if (! function_exists('classic_layout')) {
+    /**
+     * The Classic shell layout letter (OpenPNE 3 `id="Layout…"`) for the current route, from the
+     * route-parity registry, defaulting to the global layoutC. OpenPNE 3 keyed the letter off the
+     * screen's layout (setLayout / view.yml / decorate_with), not its content; gadget pages set
+     * `$layout` themselves, so the shell only calls this when none was passed.
+     */
+    function classic_layout(): string
+    {
+        $name = request()->route()?->getName();
+
+        return $name === null
+            ? 'C'
+            : RouteParityRegistry::layout(SurfaceResolver::canonicalName($name)) ?? 'C';
     }
 }
 
