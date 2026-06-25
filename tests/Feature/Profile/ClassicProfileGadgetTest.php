@@ -107,6 +107,23 @@ class ClassicProfileGadgetTest extends TestCase
             ->assertDontSee('<p>TopArea</p>', false);
     }
 
+    public function test_profile_layout_letter_tracks_the_setting_even_with_an_empty_top_zone(): void
+    {
+        DB::table('sns_settings')->insert(['key' => 'gadget_profile_layout', 'value' => 'layoutA']);
+        app(SnsSettingService::class)->clearCache();
+
+        // layoutA has a `top` row, but only a sideMenu gadget is placed. OpenPNE 3 keys the letter off
+        // the setting (setLayout), so it must stay A — not B inferred from which zones have content.
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $this->makeGadget('sideMenu', 'profileListBox');
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('id="LayoutA"', false)
+            ->assertDontSee('id="LayoutB"', false);
+    }
+
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([

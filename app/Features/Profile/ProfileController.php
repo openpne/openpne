@@ -52,6 +52,7 @@ class ProfileController extends Controller
                 'isSelf' => $isSelf,
                 'lang' => $lang,
                 'zones' => $gadgets->zones('profile', subject: $member, viewer: $viewer),
+                'layout' => $gadgets->layoutLetter('profile'),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/show', [
                 'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang, $age),

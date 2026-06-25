@@ -39,9 +39,10 @@
                     @include('layouts.partials.local-nav')
                 </div>
 
-                {{-- OpenPNE 3 layout letter from the zones present: A has a `top` row, B a `sidemenu`
-                     column, C neither (gadget pages feed top/sidemenu/bottom; other pages only
-                     content/sidemenu, so they stay B/C exactly as before). --}}
+                {{-- OpenPNE 3 layout letter. Gadget pages (home/profile/login) pass the configured
+                     layout's letter so it tracks the setting even when a zone is empty (OP3
+                     setLayout). Other pages infer it from the sections present: a `top` row → A, a
+                     `sidemenu` column → B, else C. --}}
                 @php($layout = $layout ?? match (true) {
                     \Illuminate\Support\Facades\View::hasSection('top') => 'A',
                     \Illuminate\Support\Facades\View::hasSection('sidemenu') => 'B',

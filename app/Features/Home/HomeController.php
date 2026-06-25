@@ -30,6 +30,7 @@ class HomeController extends Controller
 
         return view('home.index', [
             'zones' => $gadgets->zones('home', $viewer, $viewer),
+            'layout' => $gadgets->layoutLetter('home'),
             'pageId' => RouteParityRegistry::bodyId('home'),
         ]);
     }
