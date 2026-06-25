@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Gadgets\Pages;
 
 use App\Filament\Resources\Gadgets\GadgetResource;
+use App\Filament\Resources\Gadgets\Widgets\GadgetArrangementPreview;
 use App\Services\GadgetService;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -20,10 +21,18 @@ class ListGadgets extends ListRecords
         ];
     }
 
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            GadgetArrangementPreview::class,
+        ];
+    }
+
     public function reorderTable(array $order, int|string|null $draggedRecordKey = null): void
     {
         parent::reorderTable($order, $draggedRecordKey);
         app(GadgetService::class)->clearCache();
+        $this->dispatch('gadgets-arranged'); // refresh the arrangement preview
     }
 
     /**
