@@ -7,7 +7,6 @@ namespace Tests\Feature\Filament;
 use App\Filament\Pages\BannerSettings;
 use App\Filament\Pages\DesignSettings;
 use App\Filament\Pages\GadgetLayoutSettings;
-use App\Filament\Pages\SurfaceGuide;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Gadgets\Pages\CreateGadget;
@@ -37,13 +36,13 @@ class AppearanceNavigationTest extends TestCase
     {
         foreach ([
             GadgetResource::class, NavigationResource::class, BannerImageResource::class,
-            GadgetLayoutSettings::class, BannerSettings::class, DesignSettings::class, SurfaceGuide::class,
+            GadgetLayoutSettings::class, BannerSettings::class, DesignSettings::class,
         ] as $screen) {
             $this->assertSame(__('Appearance'), $screen::getNavigationGroup(), $screen);
         }
     }
 
-    public function test_appearance_group_builds_under_ja_with_the_guide_first(): void
+    public function test_appearance_group_builds_under_ja_in_sort_order(): void
     {
         app()->setLocale('ja');
 
@@ -54,7 +53,7 @@ class AppearanceNavigationTest extends TestCase
         $this->assertNotNull($appearance, 'Appearance group is matched in the ja locale.');
 
         $labels = (new Collection($appearance->getItems()))->map->getLabel()->values();
-        $this->assertSame(__('Display mode'), $labels->first()); // sort 0
+        $this->assertSame(__('Gadget layout'), $labels->first()); // lowest sort
         foreach ([__('Gadgets'), __('Navigation'), __('Banner images')] as $expected) {
             $this->assertContains($expected, $labels->all());
         }
@@ -80,22 +79,21 @@ class AppearanceNavigationTest extends TestCase
 
     public function test_classic_scope_note_shows_on_list_and_create(): void
     {
-        $note = __('These settings affect the Classic view only.');
+        // Default config: mixed / classic default → the Classic-applies note.
+        config(['openpne.tenant_mode' => 'mixed', 'openpne.tenant_default_surface' => 'classic']);
+        $note = __('These settings affect the Classic view (members see Classic by default).');
 
         Livewire::test(ListGadgets::class)->assertSee($note);
         Livewire::test(CreateGadget::class)->assertSee($note);
     }
 
-    public function test_surface_guide_reflects_the_configured_default_surface(): void
+    public function test_modern_only_warns_that_classic_settings_do_not_apply(): void
     {
-        config(['openpne.tenant_mode' => 'mixed', 'openpne.tenant_default_surface' => 'classic']);
-        Livewire::test(SurfaceGuide::class)
-            ->assertSee(__('By default members see the Classic view.'))
-            ->assertSee(__('The appearance settings in this section affect the Classic view. Modern has its own design settings.'));
-
         config(['openpne.tenant_mode' => 'modern_only']);
-        Livewire::test(SurfaceGuide::class)
-            ->assertSee(__('Members see the Modern view on canonical URLs (modern_only mode).'));
+        $warning = __('The site shows the Modern view, so these Classic settings do not affect what members currently see.');
+
+        Livewire::test(ListGadgets::class)->assertSee($warning);
+        Livewire::test(CreateGadget::class)->assertSee($warning);
     }
 
     public function test_gadget_form_shows_field_helper_text(): void
