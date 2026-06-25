@@ -41,14 +41,23 @@ class MemberConfigController extends Controller
         $currentSurface = Surface::from(SurfaceResolver::canonicalSurface($request, 'member'));
 
         return $this->respondWith($request, [
-            SurfaceResolver::CLASSIC => fn () => view('member.config', [
-                'diaryDefault' => DiaryVisibility::defaultFor($viewer),
-                'diaryOptions' => DiaryVisibility::options(),
-                'ageDefault' => AgeVisibility::defaultFor($viewer),
-                'ageOptions' => AgeVisibility::options(),
-                'locale' => app()->getLocale(),
-                'currentSurface' => $currentSurface,
-            ]),
+            // Classic paginates by ?category= (OpenPNE 3 member/config). An absent / non-string /
+            // unrecognized value resolves to null = the "select an item" landing (no 404 — OpenPNE 4
+            // keeps unknown categories renderable; only accessBlock redirects, handled above). Resolved
+            // inside the Classic closure so the Modern single page never sees ?category=.
+            SurfaceResolver::CLASSIC => function () use ($viewer, $currentSurface, $request) {
+                $raw = $request->query('category');
+
+                return view('member.config', [
+                    'category' => is_string($raw) ? MemberConfigCategory::tryFrom($raw) : null,
+                    'diaryDefault' => DiaryVisibility::defaultFor($viewer),
+                    'diaryOptions' => DiaryVisibility::options(),
+                    'ageDefault' => AgeVisibility::defaultFor($viewer),
+                    'ageOptions' => AgeVisibility::options(),
+                    'locale' => app()->getLocale(),
+                    'currentSurface' => $currentSurface,
+                ]);
+            },
             SurfaceResolver::MODERN => fn () => Inertia::render('member/config', [
                 'form' => MemberConfigSerializer::form($viewer, $currentSurface),
             ]),
@@ -60,9 +69,7 @@ class MemberConfigController extends Controller
         $value = PreferenceKey::DiaryDefaultVisibility->coerce($request->validated('diary_default_visibility'));
         $this->viewer()->setPreference(PreferenceKey::DiaryDefaultVisibility, $value);
 
-        return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'member.config'))
-            ->with('status', __('Settings updated.'));
+        return $this->savedRedirect($request, MemberConfigCategory::Diary);
     }
 
     public function updateAge(UpdateAgeVisibilityRequest $request): RedirectResponse
@@ -70,9 +77,7 @@ class MemberConfigController extends Controller
         $value = PreferenceKey::AgeVisibility->coerce($request->validated('age_visibility'));
         $this->viewer()->setPreference(PreferenceKey::AgeVisibility, $value);
 
-        return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'member.config'))
-            ->with('status', __('Settings updated.'));
+        return $this->savedRedirect($request, MemberConfigCategory::PublicFlag);
     }
 
     public function updateSurface(UpdatePreferredSurfaceRequest $request): Response
@@ -94,9 +99,24 @@ class MemberConfigController extends Controller
         // Land on the chosen surface's own config page so the whole shell re-renders there. An
         // explicit /m/* URL is top of SurfaceResolver's order, so a Classic choice MUST leave /m/*
         // for the canonical route, or the page would stay Modern.
-        $target = $chosen === Surface::Modern ? route('member.modern.config') : route('member.config');
+        $target = $chosen === Surface::Modern
+            ? route('member.modern.config')
+            : route('member.config', ['category' => MemberConfigCategory::General->value]);
 
         return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
+    }
+
+    /**
+     * Redirect back to the just-saved section: the Classic category page (`?category=`), or the bare
+     * Modern config page on Modern (single page, no category). Gating the param to the Classic route
+     * keeps the Modern redirect category-free.
+     */
+    private function savedRedirect(Request $request, MemberConfigCategory $category): RedirectResponse
+    {
+        $name = SurfaceResolver::redirectName($request, 'member.config');
+        $params = $name === 'member.config' ? ['category' => $category->value] : [];
+
+        return redirect()->route($name, $params)->with('status', __('Settings updated.'));
     }
 
     private function viewer(): Member

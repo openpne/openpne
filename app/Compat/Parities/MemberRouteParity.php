@@ -26,6 +26,13 @@ class MemberRouteParity extends RouteParity
 {
     protected string $module = 'member';
 
+    protected function layouts(): array
+    {
+        // OpenPNE 3 member/config is layoutB (config/view.yml `configSuccess: layout: layoutB`): the
+        // category pageNav fills the sidemenu. Classic only — Modern keeps its single Inertia page.
+        return ['member.config' => 'B'];
+    }
+
     public function maps(): array
     {
         return [
@@ -50,11 +57,12 @@ class MemberRouteParity extends RouteParity
             // Profile editor — one OpenPNE 3 route (ANY) splits into a GET form + POST submit.
             new RouteMap('member_editProfile', '/member/edit/profile', 'member.profile.edit', 'GET', op3Action: 'editProfile'),
             new RouteMap('member_editProfile', '/member/edit/profile', 'member.profile.update', 'POST'),
-            // Member config — the member's own settings page (diary default / language / surface).
-            // OpenPNE 3 had one ANY route; OpenPNE 4 keeps the GET URL and splits saves into
-            // per-section POSTs (so saving one section never rewrites another).
+            // Member config — the member's own settings page (diary default / age / language / surface).
+            // OpenPNE 3 had one ANY route; OpenPNE 4 keeps the GET URL (Classic paginates it by
+            // ?category=) and splits saves into per-section POSTs (so saving one never rewrites another).
             new RouteMap('member_config', '/member/config', 'member.config', 'GET', op3Action: 'config'),
             new RouteMap('member_config', '/member/config', 'member.config.diary', 'POST'),
+            new RouteMap('member_config', '/member/config', 'member.config.age', 'POST'),
             new RouteMap('member_config', '/member/config', 'member.config.surface', 'POST'),
             // Login — Fortify owns /login; the OpenPNE 3 /member/login/* URL is preserved by a static
             // redirect (compatRedirects), and the Classic body id stays page_member_login.
