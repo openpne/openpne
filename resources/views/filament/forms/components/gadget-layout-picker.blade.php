@@ -36,6 +36,17 @@
             .op-gl-card.is-selected .op-gl-radio::after { transform:scale(1); }
             .op-gl-name { font-size:0.875rem; font-weight:600; color:var(--gray-700); }
             .op-gl-zones { font-size:0.6875rem; line-height:1.3; text-align:center; color:var(--gray-500); }
+
+            /* Filament's --gray-* is an absolute scale (not flipped for dark), so dark text needs lighter shades. */
+            .dark .op-gl-card { border-color:var(--gray-700); color:var(--gray-300); }
+            .dark .op-gl-card:hover { border-color:var(--gray-600); }
+            .dark .op-gl-card.is-selected { border-color:var(--primary-500); color:var(--primary-400); }
+            .dark .op-gl-name { color:var(--gray-100); }
+            .dark .op-gl-zones { color:var(--gray-400); }
+            .dark .op-gl-radio { border-color:var(--gray-600); }
+            .dark .op-gl-card.is-selected .op-gl-radio { border-color:var(--primary-400); }
+            .dark .op-gl-radio::after { background:var(--primary-400); }
+            .dark .op-gl-badge { color:var(--primary-400); }
         </style>
     @endonce
 
