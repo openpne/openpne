@@ -90,4 +90,14 @@ class RegistrationAuthSettingsTest extends TestCase
             ->assertSet('data.registration_mode', 'invite')
             ->assertSet('data.captcha_enabled', true);
     }
+
+    public function test_each_registration_mode_shows_an_explanation(): void
+    {
+        app()->setLocale('en');
+
+        Livewire::test(RegistrationAuthSettings::class)
+            ->assertSee('Anyone may sign up at the registration page (behind the CAPTCHA); members can also send invitations.')
+            ->assertSee('Only people an admin invites can register; members cannot send invitations.')
+            ->assertSee('Registration is suspended; even already-issued invitations cannot be completed.');
+    }
 }
