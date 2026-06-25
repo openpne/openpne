@@ -300,6 +300,10 @@ class MemberConfigTest extends TestCase
         $this->actingAs($member)->post('/m/member/config/diary', [
             'diary_default_visibility' => (string) Visibility::Friends->value,
         ])->assertRedirect(route('member.modern.config'));
+
+        $this->actingAs($member)->post('/m/member/config/age', [
+            'age_visibility' => (string) Visibility::Friends->value,
+        ])->assertRedirect(route('member.modern.config'));
     }
 
     public function test_an_invalid_value_returns_to_its_category(): void
@@ -313,6 +317,12 @@ class MemberConfigTest extends TestCase
             ->post('/member/config/diary', ['diary_default_visibility' => '99'])
             ->assertRedirect(route('member.config', ['category' => 'diary']))
             ->assertSessionHasErrors('diary_default_visibility');
+
+        $this->actingAs($member)
+            ->from(route('member.config', ['category' => 'publicFlag']))
+            ->post('/member/config/age', ['age_visibility' => '99'])
+            ->assertRedirect(route('member.config', ['category' => 'publicFlag']))
+            ->assertSessionHasErrors('age_visibility');
     }
 
     public function test_the_language_form_returns_to_the_language_category(): void
