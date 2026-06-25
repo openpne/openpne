@@ -50,6 +50,20 @@ class GadgetLayoutSettingsTest extends TestCase
         $this->assertArrayNotHasKey('top', app(GadgetService::class)->zones('home', null, $viewer));
     }
 
+    public function test_renders_a_wireframe_radio_card_per_selectable_layout(): void
+    {
+        Livewire::test(GadgetLayoutSettings::class)
+            ->assertSee('Layout A')
+            ->assertSee('Layout B')
+            ->assertSee('Layout C')
+            // a radio group of cards, not a plain dropdown
+            ->assertSeeHtml('role="radiogroup"')
+            ->assertSeeHtml('type="radio"')
+            // the zone wireframe
+            ->assertSeeHtml('viewBox="0 0 240 200"')
+            ->assertSeeHtml('top, sideMenu, contents, bottom');
+    }
+
     public function test_rejects_an_unknown_layout(): void
     {
         // layoutD is sidebanner-only (not selectable); an unknown value must not reach sns_settings.
