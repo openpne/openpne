@@ -52,6 +52,9 @@ class CommunityController extends Controller
 
         return $this->classic('community.show', [
             'community' => $found,
+            // The sidemenu member grid (OpenPNE 3 nineTable, 3×3), admins first like ListCommunityMembers.
+            'sidebarMembers' => $found->members()->with('member.avatar.file')
+                ->orderByDesc('role')->orderBy('id')->limit(9)->get(),
             'role' => CommunityMembership::roleOf($found, $viewer),
             'isPending' => CommunityMembership::isPending($found, $viewer),
             'recentTopics' => $canViewBoard ? $recentTopics($found) : null,

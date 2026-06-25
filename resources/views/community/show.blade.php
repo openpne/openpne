@@ -2,14 +2,25 @@
 
 @section('title', $community->name)
 
+@section('sidemenu')
+    <x-community.sidemenu :community="$community" :members="$sidebarMembers" />
+@endsection
+
+@if ($isPending)
+    {{-- OpenPNE 3 community home op_top: the pending-approval notice, shown only while waiting. --}}
+    @section('top')
+        <div class="dparts" id="community_pending">
+            <div class="parts">
+                <p>{{ __('You are waiting for the participation approval by %community% administrator.') }}</p>
+            </div>
+        </div>
+    @endsection
+@endif
+
 @section('content')
     <div class="dparts" id="community_profile">
         <div class="partsHeading"><h3>{{ $community->name }}</h3></div>
         <div class="parts">
-            @if ($community->image)
-                {{-- OpenPNE 3 community home: the top image (communityImageBox), linking to the full bytes. --}}
-                <p class="photo"><a href="{{ $community->image->url() }}" target="_blank" rel="noopener"><img src="{{ $community->image->thumbnailUrl(120, 120, square: true) }}" alt=""></a></p>
-            @endif
             @if ($community->category)
                 <p class="category">{{ $community->category->name }}</p>
             @endif

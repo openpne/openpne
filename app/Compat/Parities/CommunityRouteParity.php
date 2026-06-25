@@ -9,6 +9,13 @@ class CommunityRouteParity extends RouteParity
 {
     protected string $module = 'community';
 
+    protected function layouts(): array
+    {
+        // OpenPNE 3 community/home is layoutA (its view.yml): the community image box and member
+        // grid fill the sidemenu, the pending-approval notice the top row.
+        return ['community.show' => 'A'];
+    }
+
     public function maps(): array
     {
         return [

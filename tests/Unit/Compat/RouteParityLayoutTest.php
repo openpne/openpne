@@ -53,9 +53,10 @@ class RouteParityLayoutTest extends TestCase
     {
         $this->assertSame('B', RouteParityRegistry::layout('diary.show'));
         $this->assertSame('B', RouteParityRegistry::layout('message.receive'));
+        $this->assertSame('A', RouteParityRegistry::layout('community.show')); // home: top + sidemenu
         // A screen with no non-default entry resolves to null; the shell falls back to layoutC.
         $this->assertNull(RouteParityRegistry::layout('friend.list'));
-        $this->assertNull(RouteParityRegistry::layout('community.show'));
+        $this->assertNull(RouteParityRegistry::layout('community.edit'));
     }
 
     public function test_modern_route_resolves_via_its_canonical_form(): void
@@ -91,7 +92,7 @@ class RouteParityLayoutTest extends TestCase
         // #Left only under A/B). Adding one here is the prompt to declare its layout in the
         // matching RouteParity::layouts(); otherwise it renders under the default LayoutC and breaks.
         $this->assertSame([
-            'diary/edit', 'diary/list', 'diary/new', 'diary/show',
+            'community/show', 'diary/edit', 'diary/list', 'diary/new', 'diary/show',
             'message/list', 'message/show',
         ], $found);
     }
