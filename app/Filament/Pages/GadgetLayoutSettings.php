@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Forms\Components\GadgetLayoutPicker;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
@@ -32,6 +33,10 @@ use Illuminate\Support\Facades\DB;
  */
 class GadgetLayoutSettings extends Page
 {
+    use IndicatesClassicSurface;
+
+    protected static ?int $navigationSort = 1;
+
     /** @var array<string, mixed>|null */
     public ?array $data = [];
 
@@ -42,7 +47,7 @@ class GadgetLayoutSettings extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Settings');
+        return __('Appearance');
     }
 
     public static function getNavigationLabel(): string

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\Banner;
 use BackedEnum;
@@ -30,6 +31,10 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class BannerSettings extends Page
 {
+    use IndicatesClassicSurface;
+
+    protected static ?int $navigationSort = 4;
+
     /** OpenPNE 3 PC banner placements (top only; see BannerSeeder). */
     private const PLACEMENTS = ['top_before', 'top_after'];
 
@@ -45,7 +50,7 @@ class BannerSettings extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Settings');
+        return __('Appearance');
     }
 
     public static function getNavigationLabel(): string

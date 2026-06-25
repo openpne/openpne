@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\Gadgets\Pages;
 
+use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateGadget extends CreateRecord
 {
+    use IndicatesClassicSurface;
     use PersistsGadgetConfig;
 
     protected static string $resource = GadgetResource::class;

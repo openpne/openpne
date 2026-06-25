@@ -8,6 +8,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -48,6 +49,14 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
                 FilamentInfoWidget::class,
+            ])
+            // Explicit group order. Labels are closures so they resolve in the request locale (matching
+            // each screen's getNavigationGroup()); a bare __() here would evaluate at boot and a locale
+            // mismatch would silently drop a group to the end.
+            ->navigationGroups([
+                NavigationGroup::make(fn (): string => __('Settings')),
+                NavigationGroup::make(fn (): string => __('Appearance')),
+                NavigationGroup::make(fn (): string => __('Master Data')),
             ])
             ->middleware([
                 EncryptCookies::class,

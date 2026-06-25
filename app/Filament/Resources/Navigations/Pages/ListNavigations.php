@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Navigations\Pages;
 
+use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Resources\Navigations\NavigationResource;
 use App\Services\NavigationService;
 use Filament\Actions\CreateAction;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListNavigations extends ListRecords
 {
+    use IndicatesClassicSurface;
+
     protected static string $resource = NavigationResource::class;
 
     protected function getHeaderActions(): array

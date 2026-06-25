@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Services\SnsSettingService;
 use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
@@ -36,6 +37,10 @@ use Illuminate\Support\Facades\DB;
  */
 class DesignSettings extends Page
 {
+    use IndicatesClassicSurface;
+
+    protected static ?int $navigationSort = 6;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -48,7 +53,7 @@ class DesignSettings extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Settings');
+        return __('Appearance');
     }
 
     public static function getNavigationLabel(): string

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\BannerImages\Pages;
 
 use App\Features\Banner\Actions\DeleteBannerImage;
 use App\Features\Banner\Actions\UpdateBannerImage;
+use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\BannerImage;
 use Filament\Actions\DeleteAction;
@@ -14,6 +15,8 @@ use Illuminate\Support\Arr;
 
 class EditBannerImage extends EditRecord
 {
+    use IndicatesClassicSurface;
+
     protected static string $resource = BannerImageResource::class;
 
     protected function getHeaderActions(): array

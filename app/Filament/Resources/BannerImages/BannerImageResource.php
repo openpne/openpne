@@ -35,7 +35,7 @@ class BannerImageResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Master Data');
+        return __('Appearance');
     }
 
     /** @return array<int, string> banner id => human label, in placement order. */

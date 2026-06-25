@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BannerImages\Pages;
 
 use App\Features\Banner\Actions\StoreBannerImage;
+use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,8 @@ use Illuminate\Support\Arr;
 
 class CreateBannerImage extends CreateRecord
 {
+    use IndicatesClassicSurface;
+
     protected static string $resource = BannerImageResource::class;
 
     protected function getRedirectUrl(): string
