@@ -20,19 +20,70 @@ class MemberConfigTest extends TestCase
         $this->get('/member/config')->assertRedirect('/login');
     }
 
-    public function test_the_classic_page_renders_the_config_sections(): void
+    public function test_the_classic_landing_shows_the_category_nav_and_no_form(): void
     {
+        // OpenPNE 3 member/config with no ?category=: LayoutB, the category pageNav, and the
+        // "select an item" box — no section form yet.
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/member/config')
             ->assertOk()
             ->assertSee('id="page_member_config"', false)
-            ->assertSee('name="diary_default_visibility"', false)
-            ->assertSee('id="member_config_age"', false)
-            ->assertSee('name="age_visibility"', false)
-            ->assertSee('Who can see your age')
-            ->assertSee(route('locale.switch'), false)
-            ->assertSee('name="preferred_surface"', false);
+            ->assertSee('id="LayoutB"', false)
+            ->assertSee('id="Left"', false)
+            ->assertSee('class="parts pageNav"', false)
+            ->assertSee('Please select the item')
+            ->assertDontSee('id="member_config_diary"', false)
+            ->assertDontSee('id="member_config_surface"', false);
+    }
+
+    public function test_the_category_nav_links_to_the_other_categories(): void
+    {
+        $member = Member::factory()->create();
+
+        // On the diary page, diary is plain text and the other three are links.
+        $this->actingAs($member)->get('/member/config?category=diary')
+            ->assertOk()
+            ->assertSee('id="LayoutB"', false)
+            ->assertSee('href="'.route('member.config', ['category' => 'publicFlag']).'"', false)
+            ->assertSee('href="'.route('member.config', ['category' => 'language']).'"', false)
+            ->assertSee('href="'.route('member.config', ['category' => 'general']).'"', false)
+            ->assertDontSee('href="'.route('member.config', ['category' => 'diary']).'"', false);
+    }
+
+    public function test_each_category_shows_only_its_section(): void
+    {
+        // Asserted by the section's form id (a `name="locale"` marker would be polluted by the global
+        // side-banner language gadget).
+        $sections = [
+            'diary' => 'member_config_diary',
+            'publicFlag' => 'member_config_age',
+            'language' => 'member_config_language',
+            'general' => 'member_config_surface',
+        ];
+        $member = Member::factory()->create();
+
+        foreach ($sections as $category => $shownId) {
+            $response = $this->actingAs($member)->get('/member/config?category='.$category)->assertOk();
+            $response->assertSee('id="'.$shownId.'"', false);
+            foreach (array_diff(array_values($sections), [$shownId]) as $hiddenId) {
+                $response->assertDontSee('id="'.$hiddenId.'"', false);
+            }
+        }
+    }
+
+    public function test_an_unknown_category_renders_the_landing_not_404(): void
+    {
+        // BlockRoutesTest locks /member/config?category=profile as OK; unknown categories fall
+        // through to the landing rather than 404 (only accessBlock redirects).
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/member/config?category=profile')
+            ->assertOk()
+            ->assertSee('Please select the item')
+            ->assertDontSee('id="member_config_diary"', false);
+
+        $this->actingAs($member)->get('/member/config?category=zzz')->assertOk();
     }
 
     public function test_the_modern_page_renders_the_inertia_component(): void
@@ -66,7 +117,7 @@ class MemberConfigTest extends TestCase
 
         $this->actingAs($member)->post('/member/config/diary', [
             'diary_default_visibility' => (string) Visibility::Friends->value,
-        ])->assertRedirect(route('member.config'));
+        ])->assertRedirect(route('member.config', ['category' => 'diary']));
 
         $this->assertDatabaseHas('member_preferences', [
             'member_id' => $member->id, 'key' => 'diary_default_visibility', 'value' => '2',
@@ -91,7 +142,7 @@ class MemberConfigTest extends TestCase
 
         $this->actingAs($member)->post('/member/config/age', [
             'age_visibility' => (string) Visibility::Friends->value,
-        ])->assertRedirect(route('member.config'));
+        ])->assertRedirect(route('member.config', ['category' => 'publicFlag']));
 
         $this->assertDatabaseHas('member_preferences', [
             'member_id' => $member->id, 'key' => 'age_visibility', 'value' => '2',
@@ -141,7 +192,7 @@ class MemberConfigTest extends TestCase
 
         $this->actingAs($member)->post('/member/config/age', [
             'age_visibility' => (string) Visibility::Open->value,
-        ])->assertRedirect(route('member.config'));
+        ])->assertRedirect(route('member.config', ['category' => 'publicFlag']));
 
         $this->assertDatabaseHas('member_preferences', [
             'member_id' => $member->id, 'key' => 'age_visibility', 'value' => '0',
@@ -189,7 +240,7 @@ class MemberConfigTest extends TestCase
         $member->setPreferredSurface(Surface::Modern); // currently Modern, so choosing Classic is a real change
 
         $this->actingAs($member)->post('/m/member/config/surface', ['preferred_surface' => 'classic'])
-            ->assertRedirect(route('member.config'));
+            ->assertRedirect(route('member.config', ['category' => 'general']));
 
         $this->assertDatabaseHas('member_preferences', [
             'member_id' => $member->id, 'key' => 'preferred_surface', 'value' => 'classic',
@@ -229,5 +280,50 @@ class MemberConfigTest extends TestCase
         ]);
         $this->actingAs($member)->get('/friend/list')
             ->assertInertia(fn (Assert $page) => $page->component('friend/list'));
+    }
+
+    public function test_modern_ignores_the_category_query_and_stays_single_page(): void
+    {
+        // The /m/* URL forces Modern; ?category= is a Classic concept and must not 404 or branch.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/m/member/config?category=zzz')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('member/config'));
+    }
+
+    public function test_a_modern_save_redirect_carries_no_category(): void
+    {
+        // The diary/age POSTs are shared with Modern; the category param is gated to the Classic target.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/m/member/config/diary', [
+            'diary_default_visibility' => (string) Visibility::Friends->value,
+        ])->assertRedirect(route('member.modern.config'));
+    }
+
+    public function test_an_invalid_value_returns_to_its_category(): void
+    {
+        // The section forms POST to category-less routes, so the browser referer (->from) is what
+        // carries the category back on a validation failure.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)
+            ->from(route('member.config', ['category' => 'diary']))
+            ->post('/member/config/diary', ['diary_default_visibility' => '99'])
+            ->assertRedirect(route('member.config', ['category' => 'diary']))
+            ->assertSessionHasErrors('diary_default_visibility');
+    }
+
+    public function test_the_language_form_returns_to_the_language_category(): void
+    {
+        // Language posts to the shared locale.switch, which redirects to url()->previous(); from the
+        // language category page that preserves ?category=language.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)
+            ->from(route('member.config', ['category' => 'language']))
+            ->post(route('locale.switch'), ['locale' => 'en'])
+            ->assertRedirect(route('member.config', ['category' => 'language']));
     }
 }
