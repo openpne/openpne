@@ -62,10 +62,14 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::loginView(function (Request $request) {
             $props = LoginFormData::for($request);
+            $gadgets = app(GadgetService::class);
 
             return $this->screen($request, 'login', 'auth.login',
                 fn () => Inertia::render('auth/login', $props),
-                $props + ['zones' => app(GadgetService::class)->zones('login', viewer: $request->user())]);
+                $props + [
+                    'zones' => $gadgets->zones('login', viewer: $request->user()),
+                    'layout' => $gadgets->layoutLetter('login'),
+                ]);
         });
         Fortify::requestPasswordResetLinkView(fn (Request $request) => $this->screen(
             $request, 'password.request', 'auth.forgot-password',
