@@ -9,7 +9,7 @@ use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -129,7 +129,7 @@ class RegistrationAuthSettings extends Page
     {
         return Section::make(__('Registration & authentication'))
             ->schema([
-                Select::make(SnsSettingKey::RegistrationMode->value)
+                Radio::make(SnsSettingKey::RegistrationMode->value)
                     ->label(SnsSettingKey::RegistrationMode->label())
                     ->options([
                         'open' => __('Anyone can register'),
@@ -137,8 +137,13 @@ class RegistrationAuthSettings extends Page
                         'admin_only' => __('Admin invite only'),
                         'closed' => __('Registration closed'),
                     ])
-                    ->required()
-                    ->selectablePlaceholder(false),
+                    ->descriptions([
+                        'open' => __('Anyone may sign up at the registration page (behind the CAPTCHA); members can also send invitations.'),
+                        'invite' => __('Open self-registration is off; only people a member invites can register.'),
+                        'admin_only' => __('Only people an admin invites can register; members cannot send invitations.'),
+                        'closed' => __('Registration is suspended; even already-issued invitations cannot be completed.'),
+                    ])
+                    ->required(),
                 Toggle::make(SnsSettingKey::CaptchaEnabled->value)
                     ->label(SnsSettingKey::CaptchaEnabled->label()),
             ]);
