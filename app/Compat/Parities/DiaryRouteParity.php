@@ -42,6 +42,21 @@ class DiaryRouteParity extends RouteParity
         ];
     }
 
+    protected function layouts(): array
+    {
+        // OpenPNE 3 decorate_with('layoutB') on the member-scoped diary screens (showSuccess,
+        // newSuccess, editSuccess, listMemberSuccess), which carry the author/calendar sidemenu.
+        // The all-diary and friend lists (diary.list/list_friend/search → the feed view) keep the
+        // global default layoutC, sidemenu-less, as OpenPNE 3 did.
+        return [
+            'diary.show' => 'B',
+            'diary.new' => 'B',
+            'diary.edit' => 'B',
+            'diary.list_member' => 'B',
+            'diary.list_member.archive' => 'B',
+        ];
+    }
+
     public function gaps(): array
     {
         return [

@@ -89,6 +89,26 @@ abstract class RouteParity
     }
 
     /**
+     * The Classic shell layout letter (A/B/C) per Laravel route, for screens whose OpenPNE 3
+     * layout is not the global default (layoutC). The letter is what OpenPNE 3 emitted as
+     * `id="Layout…"` — chosen there by setLayout / view.yml / `decorate_with`, independent of
+     * which zones have content. A/B require a sidemenu column (the skin floats `#Left` only under
+     * A/B); list only the non-default screens, the rest fall back to C.
+     *
+     * @return array<string, string> laravelRoute => letter
+     */
+    protected function layouts(): array
+    {
+        return [];
+    }
+
+    /** The Classic layout letter for a Laravel route, or null when it uses the global default (C). */
+    public function layout(string $laravelRoute): ?string
+    {
+        return $this->layouts()[$laravelRoute] ?? null;
+    }
+
+    /**
      * The Classic `<body id>` for a Laravel route, or null if it renders no `<body>`
      * (POST form submits). Derived from the mapped OpenPNE 3 action as OpenPNE 3 emitted it:
      * `page_{module}_{action}`.

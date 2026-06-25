@@ -40,14 +40,9 @@
                 </div>
 
                 {{-- OpenPNE 3 layout letter. Gadget pages (home/profile/login) pass the configured
-                     layout's letter so it tracks the setting even when a zone is empty (OP3
-                     setLayout). Other pages infer it from the sections present: a `top` row → A, a
-                     `sidemenu` column → B, else C. --}}
-                @php($layout = $layout ?? match (true) {
-                    \Illuminate\Support\Facades\View::hasSection('top') => 'A',
-                    \Illuminate\Support\Facades\View::hasSection('sidemenu') => 'B',
-                    default => 'C',
-                })
+                     layout's letter (OP3 setLayout); every other Classic screen resolves it from the
+                     route-parity registry (OP3 view.yml / decorate_with), defaulting to layoutC. --}}
+                @php($layout = $layout ?? classic_layout())
                 <div id="Layout{{ $layout }}" class="Layout">
                     {{-- OpenPNE 3 alertBox markup so the ported skin styles flash messages. --}}
                     @if (session('error'))
