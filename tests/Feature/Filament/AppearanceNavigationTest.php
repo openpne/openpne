@@ -57,11 +57,15 @@ class AppearanceNavigationTest extends TestCase
         // Matched under ja — the lazy-label registration did not silently drop the group.
         $this->assertNotNull($appearance, 'Appearance group is matched in the ja locale.');
 
-        $labels = (new Collection($appearance->getItems()))->map->getLabel()->values();
-        $this->assertSame(__('Gadget layout'), $labels->first()); // lowest sort
-        foreach ([__('Gadgets'), __('Navigation'), __('Banner images')] as $expected) {
-            $this->assertContains($expected, $labels->all());
-        }
+        $labels = (new Collection($appearance->getItems()))->map->getLabel()->values()->all();
+        $this->assertSame([
+            __('Gadget layout'),
+            __('Gadgets'),
+            __('Navigation'),
+            __('Banner settings'),
+            __('Banner images'),
+            __('Design settings'),
+        ], $labels);
     }
 
     public function test_nav_groups_are_ordered_settings_then_appearance_then_master_data(): void
@@ -98,6 +102,20 @@ class AppearanceNavigationTest extends TestCase
         app()->setLocale('ja');
         $groups = (new Collection(Filament::getCurrentPanel()->getNavigation()))->map->getLabel()->all();
         $this->assertNotContains(__('Appearance (Classic)'), $groups);
+    }
+
+    public function test_modern_only_with_a_classic_pinned_feature_keeps_them_visible(): void
+    {
+        // A feature pinned off Modern still renders Classic under modern_only (SurfaceResolver's hard
+        // gate), so the Classic design settings must stay reachable — not hidden by a bare modern_only check.
+        config([
+            'openpne.tenant_mode' => 'modern_only',
+            'features.diary.modern_status' => 'fallback',
+        ]);
+
+        foreach ($this->appearanceScreens() as $screen) {
+            $this->assertTrue($screen::canAccess(), "{$screen} stays visible when a feature is Classic-pinned");
+        }
     }
 
     public function test_gadget_form_shows_field_helper_text(): void
