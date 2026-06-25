@@ -2,15 +2,12 @@
 
 namespace App\Filament\Resources\Navigations\Pages;
 
-use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Resources\Navigations\NavigationResource;
 use App\Services\NavigationService;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateNavigation extends CreateRecord
 {
-    use IndicatesClassicSurface;
-
     protected static string $resource = NavigationResource::class;
 
     private string $captionJa = '';

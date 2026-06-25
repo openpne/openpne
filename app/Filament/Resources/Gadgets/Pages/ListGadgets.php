@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Gadgets\Pages;
 
-use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Services\GadgetService;
 use Filament\Actions\CreateAction;
@@ -12,8 +11,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListGadgets extends ListRecords
 {
-    use IndicatesClassicSurface;
-
     protected static string $resource = GadgetResource::class;
 
     protected function getHeaderActions(): array

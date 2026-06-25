@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Navigations\Pages;
 
-use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Resources\Navigations\NavigationResource;
 use App\Services\NavigationService;
 use Filament\Actions\DeleteAction;
@@ -10,8 +9,6 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditNavigation extends EditRecord
 {
-    use IndicatesClassicSurface;
-
     protected static string $resource = NavigationResource::class;
 
     protected function getHeaderActions(): array

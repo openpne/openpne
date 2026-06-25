@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\BannerImages;
 
+use App\Filament\Concerns\HiddenWhenModernOnly;
 use App\Filament\Resources\BannerImages\Pages\CreateBannerImage;
 use App\Filament\Resources\BannerImages\Pages\EditBannerImage;
 use App\Filament\Resources\BannerImages\Pages\ListBannerImages;
@@ -17,6 +18,8 @@ use Filament\Tables\Table;
 
 class BannerImageResource extends Resource
 {
+    use HiddenWhenModernOnly;
+
     protected static ?string $model = BannerImage::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPhoto;
@@ -35,7 +38,7 @@ class BannerImageResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Appearance');
+        return __('Appearance (Classic)');
     }
 
     /** @return array<int, string> banner id => human label, in placement order. */

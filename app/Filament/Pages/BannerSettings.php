@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use App\Filament\Concerns\IndicatesClassicSurface;
+use App\Filament\Concerns\HiddenWhenModernOnly;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\Banner;
 use BackedEnum;
@@ -31,7 +31,7 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class BannerSettings extends Page
 {
-    use IndicatesClassicSurface;
+    use HiddenWhenModernOnly;
 
     protected static ?int $navigationSort = 4;
 
@@ -50,7 +50,7 @@ class BannerSettings extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Appearance');
+        return __('Appearance (Classic)');
     }
 
     public static function getNavigationLabel(): string

@@ -10,7 +10,6 @@ use App\Filament\Pages\GadgetLayoutSettings;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Gadgets\Pages\CreateGadget;
-use App\Filament\Resources\Gadgets\Pages\ListGadgets;
 use App\Filament\Resources\Navigations\NavigationResource;
 use App\Models\AdminUser;
 use Filament\Facades\Filament;
@@ -32,13 +31,19 @@ class AppearanceNavigationTest extends TestCase
         app()->setLocale('en');
     }
 
-    public function test_the_six_appearance_screens_share_one_group(): void
+    /** @return list<class-string> */
+    private function appearanceScreens(): array
     {
-        foreach ([
+        return [
             GadgetResource::class, NavigationResource::class, BannerImageResource::class,
             GadgetLayoutSettings::class, BannerSettings::class, DesignSettings::class,
-        ] as $screen) {
-            $this->assertSame(__('Appearance'), $screen::getNavigationGroup(), $screen);
+        ];
+    }
+
+    public function test_the_six_appearance_screens_share_one_group(): void
+    {
+        foreach ($this->appearanceScreens() as $screen) {
+            $this->assertSame(__('Appearance (Classic)'), $screen::getNavigationGroup(), $screen);
         }
     }
 
@@ -47,7 +52,7 @@ class AppearanceNavigationTest extends TestCase
         app()->setLocale('ja');
 
         $groups = Filament::getCurrentPanel()->getNavigation();
-        $appearance = collect($groups)->first(fn ($group) => $group->getLabel() === __('Appearance'));
+        $appearance = collect($groups)->first(fn ($group) => $group->getLabel() === __('Appearance (Classic)'));
 
         // Matched under ja — the lazy-label registration did not silently drop the group.
         $this->assertNotNull($appearance, 'Appearance group is matched in the ja locale.');
@@ -67,7 +72,7 @@ class AppearanceNavigationTest extends TestCase
         // returns positions, not those keys.
         $order = (new Collection(Filament::getCurrentPanel()->getNavigation()))->map->getLabel()->values()->all();
         $settings = array_search(__('Settings'), $order, true);
-        $appearance = array_search(__('Appearance'), $order, true);
+        $appearance = array_search(__('Appearance (Classic)'), $order, true);
         $master = array_search(__('Master Data'), $order, true);
 
         $this->assertTrue(
@@ -77,23 +82,22 @@ class AppearanceNavigationTest extends TestCase
         );
     }
 
-    public function test_classic_scope_note_shows_on_list_and_create(): void
+    public function test_modern_only_hides_the_classic_appearance_screens(): void
     {
-        // Default config: mixed / classic default → the Classic-applies note.
-        config(['openpne.tenant_mode' => 'mixed', 'openpne.tenant_default_surface' => 'classic']);
-        $note = __('These settings affect the Classic view (members see Classic by default).');
+        config(['openpne.tenant_mode' => 'mixed']);
+        foreach ($this->appearanceScreens() as $screen) {
+            $this->assertTrue($screen::canAccess(), "{$screen} should be accessible in mixed mode");
+        }
 
-        Livewire::test(ListGadgets::class)->assertSee($note);
-        Livewire::test(CreateGadget::class)->assertSee($note);
-    }
-
-    public function test_modern_only_warns_that_classic_settings_do_not_apply(): void
-    {
         config(['openpne.tenant_mode' => 'modern_only']);
-        $warning = __('The site shows the Modern view, so these Classic settings do not affect what members currently see.');
+        foreach ($this->appearanceScreens() as $screen) {
+            $this->assertFalse($screen::canAccess(), "{$screen} should be hidden in modern_only mode");
+        }
 
-        Livewire::test(ListGadgets::class)->assertSee($warning);
-        Livewire::test(CreateGadget::class)->assertSee($warning);
+        // With every item gated off, the Classic appearance group disappears from the sidebar.
+        app()->setLocale('ja');
+        $groups = (new Collection(Filament::getCurrentPanel()->getNavigation()))->map->getLabel()->all();
+        $this->assertNotContains(__('Appearance (Classic)'), $groups);
     }
 
     public function test_gadget_form_shows_field_helper_text(): void

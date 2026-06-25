@@ -55,7 +55,7 @@ class AdminPanelProvider extends PanelProvider
             // mismatch would silently drop a group to the end.
             ->navigationGroups([
                 NavigationGroup::make(fn (): string => __('Settings')),
-                NavigationGroup::make(fn (): string => __('Appearance')),
+                NavigationGroup::make(fn (): string => __('Appearance (Classic)')),
                 NavigationGroup::make(fn (): string => __('Master Data')),
             ])
             ->middleware([

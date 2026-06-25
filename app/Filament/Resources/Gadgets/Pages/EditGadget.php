@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Gadgets\Pages;
 
-use App\Filament\Concerns\IndicatesClassicSurface;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Filament\Resources\Gadgets\Schemas\GadgetForm;
 use App\Services\GadgetService;
@@ -11,7 +10,6 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditGadget extends EditRecord
 {
-    use IndicatesClassicSurface;
     use PersistsGadgetConfig;
 
     protected static string $resource = GadgetResource::class;
