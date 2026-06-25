@@ -40,6 +40,40 @@ class CommunityRoutesTest extends TestCase
         $this->actingAs(Member::factory()->create())->get('/community/999999')->assertNotFound();
     }
 
+    public function test_home_renders_layout_a_with_the_member_sidemenu(): void
+    {
+        $community = Community::factory()->create(['name' => 'Tokyo Runners']);
+        $admin = Member::factory()->create(['name' => 'AdminAlice']);
+        $member = Member::factory()->create(['name' => 'MemberBob']);
+        CommunityMember::create(['community_id' => $community->id, 'member_id' => $admin->id, 'role' => CommunityRole::Admin]);
+        CommunityMember::create(['community_id' => $community->id, 'member_id' => $member->id, 'role' => CommunityRole::Member]);
+
+        $response = $this->actingAs($member)->get(route('community.show', $community));
+
+        $response->assertOk();
+        $response->assertSee('id="LayoutA"', false);  // OpenPNE 3 community/home layout
+        $response->assertSee('id="Left"', false);      // the sidemenu column
+        $response->assertSee('id="communityMembers"', false);
+        $response->assertSee('AdminAlice');
+        $response->assertSee('MemberBob');
+    }
+
+    public function test_pending_applicant_sees_the_approval_notice_in_the_top_row(): void
+    {
+        $community = Community::factory()->create();
+        $applicant = Member::factory()->create();
+        DB::table('community_join_requests')->insert([
+            'community_id' => $community->getKey(),
+            'member_id' => $applicant->getKey(),
+        ]);
+
+        $response = $this->actingAs($applicant)->get(route('community.show', $community));
+
+        $response->assertOk();
+        $response->assertSee('id="Top"', false); // OpenPNE 3 op_top, present only while pending
+        $response->assertSee('waiting for the participation approval', false);
+    }
+
     public function test_search_route_is_not_captured_by_the_show_wildcard(): void
     {
         $response = $this->actingAs(Member::factory()->create())->get('/community/search');
