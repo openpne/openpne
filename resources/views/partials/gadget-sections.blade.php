@@ -1,5 +1,5 @@
-{{-- Maps a context's gadget zones onto the Classic shell sections. Empty side zones are left
-     undefined so the shell's layout-letter derivation (top→A, sideMenu→B) stays accurate. --}}
+{{-- Maps a context's gadget zones onto the Classic shell sections. An empty side zone is left
+     undefined so its structural div is omitted, matching OpenPNE 3's has_slot gating. --}}
 @if (! empty($zones['top'] ?? []))
     @section('top')<x-gadget-zone :items="$zones['top']" />@endsection
 @endif

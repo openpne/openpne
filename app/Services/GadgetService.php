@@ -72,6 +72,15 @@ class GadgetService
         return $zones;
     }
 
+    /**
+     * The active layout's OpenPNE 3 letter (e.g. "A") for the Classic shell's `id="Layout…"`. Driven
+     * by the setting, so it matches the configured layout even when a zone has no gadgets (OP3 parity).
+     */
+    public function layoutLetter(string $context): string
+    {
+        return GadgetLayout::letter($this->activeLayout($context));
+    }
+
     /** Drop the cached gadget rows. Call after persisting changes from the admin UI. */
     public function clearCache(): void
     {

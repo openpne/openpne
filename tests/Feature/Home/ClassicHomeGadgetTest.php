@@ -42,14 +42,17 @@ class ClassicHomeGadgetTest extends TestCase
             ->assertDontSee('id="home_index"', false); // the empty-state fallback is gone
     }
 
-    public function test_sidemenu_zone_renders_the_left_column_as_layout_b(): void
+    public function test_sidemenu_zone_renders_the_left_column(): void
     {
         $member = Member::factory()->create(['name' => 'Hanako']);
         $gadget = $this->makeGadget('home', 'sideMenu', 'memberImageBox');
 
+        // Default home layout is layoutA: a sideMenu gadget fills #Left while the empty top zone just
+        // omits its div. The letter stays A from the setting (OpenPNE 3 setLayout), not B from content.
         $this->actingAs($member)->get('/')
             ->assertOk()
-            ->assertSee('id="LayoutB"', false)
+            ->assertSee('id="LayoutA"', false)
+            ->assertDontSee('id="LayoutB"', false)
             ->assertSee('id="Left"', false)
             ->assertSee('id="memberImageBox_'.$gadget->id.'"', false)
             ->assertSee('Hanako');

@@ -34,6 +34,14 @@ class GadgetLayoutTest extends TestCase
         $this->assertArrayNotHasKey('smartphoneContents', $map);
     }
 
+    public function test_letter_is_the_layout_suffix_with_an_unknown_fallback(): void
+    {
+        $this->assertSame('A', GadgetLayout::letter('layoutA'));
+        $this->assertSame('C', GadgetLayout::letter('layoutC'));
+        $this->assertSame('D', GadgetLayout::letter('layoutD'));
+        $this->assertSame('A', GadgetLayout::letter('bogus')); // unknown falls back to A, like zones()
+    }
+
     public function test_sidebanner_is_a_fixed_single_zone_context(): void
     {
         $this->assertFalse(GadgetLayout::isSelectable('sidebanner'));

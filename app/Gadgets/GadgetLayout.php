@@ -54,6 +54,16 @@ final class GadgetLayout
         return self::LAYOUTS[$layout] ?? self::LAYOUTS['layoutA'];
     }
 
+    /**
+     * The OpenPNE 3 layout letter (layoutA => "A") for the Classic shell's `id="Layout…"`. OpenPNE 3
+     * picks it from the setting (setLayout), not from which zones have content; unknown falls back to
+     * "A" to match zones().
+     */
+    public static function letter(string $layout): string
+    {
+        return strtoupper(substr(isset(self::LAYOUTS[$layout]) ? $layout : 'layoutA', -1));
+    }
+
     /** Every zone a context can hold (its widest layout) — the admin's zone choices. */
     public static function contextZones(string $context): array
     {
