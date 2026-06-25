@@ -67,6 +67,13 @@ existing themes and customizations depend on:
 - `secure_page` / `insecure_page` body classes, `LayoutA`–`LayoutE`, the
   `dparts` / `parts` / `partsHeading` / `body` structure, `localNav`, gadget slots,
   and the `opSkinBasicPlugin` / `opSkinThemePlugin` CSS hooks.
+- The `#Layout{A..C}` letter — OpenPNE 3's `setLayout` / `view.yml` / `decorate_with` choice — is
+  resolved per screen by [`RouteParity::layouts()`](../../app/Compat/RouteParity.php) through the
+  `classic_layout()` helper, defaulting to OpenPNE 3's global `layoutC`; gadget pages (home /
+  profile / login) instead pass the admin-configured layout's letter. Letter and columns are coupled
+  by the skin CSS — `#Left` floats only under `LayoutA` (270px) / `LayoutB` (175px) — so a
+  two-column screen must declare `A`/`B`; a `RouteParityLayoutTest` tripwire fires when a new
+  Classic view with a `sidemenu` / `top` section forgets to.
 
 Modern does **not** inherit any of these. It uses its own theme primitives and
 Inertia props. Pulling `LayoutA`–`LayoutE` or `dparts` into Modern erodes the
@@ -109,9 +116,7 @@ custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar 
 `footer_before` / `footer_after` setting, chosen by the page's `secure_page` / `insecure_page` class
 (OpenPNE 3 `isSecurePage`); `$classicFooterHtml` overrides it per request.
 
-Carried gaps in this slice: the shell renders single-column `LayoutC`, while OpenPNE 3
-`member/home` / `member/profile` are `layoutA` — deferred until the `#Left` sidemenu/gadget
-slots land (Level 2). The skin's one dead `url(./skin/default/img/marker.gif)` ref (already
+Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching is not yet ported;
 admin custom CSS, the PC HTML insertion slots, the footer, gadget layout, and the top banner are. The
 footer omits the privacy-policy / terms links until those routes exist.
