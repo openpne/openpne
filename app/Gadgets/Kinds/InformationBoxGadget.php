@@ -15,6 +15,11 @@ class InformationBoxGadget extends GadgetKind
         return 'informationBox';
     }
 
+    public function description(): string
+    {
+        return __('Announcements from the site.');
+    }
+
     public function contexts(): array
     {
         return ['home', 'sidebanner'];

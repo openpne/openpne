@@ -18,6 +18,11 @@ class LanguageSelecterBoxGadget extends GadgetKind
         return 'languageSelecterBox';
     }
 
+    public function description(): string
+    {
+        return __('A language switcher.');
+    }
+
     public function contexts(): array
     {
         return ['sidebanner'];

@@ -12,6 +12,11 @@ class FriendListBoxGadget extends GridListGadget
         return 'friendListBox';
     }
 
+    public function description(): string
+    {
+        return __("A list of the member's friends.");
+    }
+
     public function component(): string
     {
         return 'gadget.friend-list-box';

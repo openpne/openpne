@@ -16,7 +16,10 @@ class ListGadgets extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            // Carry the current context tab into Create so the form's Placement (and its page diagram) is
+            // pre-selected to the page the operator was just looking at.
+            CreateAction::make()
+                ->url(fn (): string => GadgetResource::getUrl('create', ['context' => $this->activeTab])),
         ];
     }
 

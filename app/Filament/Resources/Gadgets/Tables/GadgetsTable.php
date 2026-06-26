@@ -27,7 +27,8 @@ class GadgetsTable
 
                 TextColumn::make('name')
                     ->label(__('Gadget'))
-                    ->getStateUsing(fn (Gadget $record): string => GadgetKindRegistry::find($record->name)?->label() ?? $record->name),
+                    ->getStateUsing(fn (Gadget $record): string => GadgetKindRegistry::find($record->name)?->label() ?? $record->name)
+                    ->description(fn (Gadget $record): ?string => GadgetKindRegistry::find($record->name)?->description() ?: null),
 
                 // Surfaces a row the renderer hides: a `name` with no registered kind (an OpenPNE 3
                 // gadget not yet ported) cannot render.

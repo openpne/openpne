@@ -15,6 +15,11 @@ class FreeAreaGadget extends GadgetKind
         return 'freeArea';
     }
 
+    public function description(): string
+    {
+        return __('A free area for a custom title and HTML/text.');
+    }
+
     public function contexts(): array
     {
         return ['home', 'profile', 'login'];

@@ -88,8 +88,9 @@ class AppearanceNavigationTest extends TestCase
 
     public function test_gadget_form_shows_field_helper_text(): void
     {
+        // The Placement field keeps its helper; the Gadget field is now a radio list whose per-kind
+        // descriptions are asserted in GadgetResourceTest.
         Livewire::test(CreateGadget::class)
-            ->assertSee(__('Which page this gadget appears on.'))
-            ->assertSee(__('The kind of content to show.'));
+            ->assertSee(__('Which page this gadget appears on.'));
     }
 }
