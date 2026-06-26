@@ -136,8 +136,11 @@ class CheckTranslationsCommand extends Command
             return self::SORTABLE_FILES;
         }
 
-        $normalized = ltrim(str_replace('\\', '/', $value), './');
-        if (! in_array($normalized, self::SORTABLE_FILES, true)) {
+        $normalized = str_replace('\\', '/', $value);
+        if (str_starts_with($normalized, './')) {
+            $normalized = substr($normalized, 2);
+        }
+        if (str_contains($normalized, '..') || ! in_array($normalized, self::SORTABLE_FILES, true)) {
             return null;
         }
 
@@ -199,10 +202,16 @@ class CheckTranslationsCommand extends Command
         foreach (self::SORTABLE_FILES as $rel) {
             $path = "{$base}/{$rel}";
             if (! is_file($path)) {
+                $unordered++;
+                $this->error("{$rel} is missing — it is a required dictionary.");
+
                 continue;
             }
             $data = json_decode((string) file_get_contents($path), true);
             if (! is_array($data)) {
+                $unordered++;
+                $this->error("{$rel} is not a valid JSON object.");
+
                 continue;
             }
             $keys = array_map('strval', array_keys($data));
