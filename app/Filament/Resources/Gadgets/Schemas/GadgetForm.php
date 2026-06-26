@@ -33,6 +33,7 @@ class GadgetForm
             ->components([
                 Select::make('context')
                     ->label(__('Placement'))
+                    ->helperText(__('Which page this gadget appears on.'))
                     ->options(GadgetResource::contextOptions())
                     ->required()
                     ->live()
@@ -46,6 +47,7 @@ class GadgetForm
 
                 Select::make('name')
                     ->label(__('Gadget'))
+                    ->helperText(__('The kind of content to show.'))
                     ->options(fn (Get $get): array => GadgetResource::kindOptions((string) $get('context')))
                     ->required()
                     ->live()
@@ -63,6 +65,7 @@ class GadgetForm
 
                 Select::make('zone')
                     ->label(__('Zone'))
+                    ->helperText(__('Which area of the page.'))
                     ->options(fn (Get $get): array => GadgetResource::zoneOptions((string) $get('context')))
                     ->required()
                     ->rules([

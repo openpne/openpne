@@ -32,6 +32,8 @@ use Illuminate\Support\Facades\DB;
  */
 class GadgetLayoutSettings extends Page
 {
+    protected static ?int $navigationSort = 1;
+
     /** @var array<string, mixed>|null */
     public ?array $data = [];
 
@@ -42,7 +44,7 @@ class GadgetLayoutSettings extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Settings');
+        return __('Appearance (Classic)');
     }
 
     public static function getNavigationLabel(): string
