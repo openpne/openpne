@@ -22,6 +22,7 @@ class NavigationForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Select::make('type')
                     ->label(__('Type'))

@@ -20,33 +20,35 @@ class BannerImageForm
     {
         $maxDimension = (int) config('openpne.images.max_upload_dimension', 5000);
 
-        return $schema->components([
-            FileUpload::make('image')
-                ->label(__('Image'))
-                ->image()
+        return $schema
+            ->columns(1)
+            ->components([
+                FileUpload::make('image')
+                    ->label(__('Image'))
+                    ->image()
                 // Raster types only (no SVG), matching the avatar upload rules.
-                ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
-                ->maxSize(5120)
-                ->rules(["dimensions:max_width={$maxDimension},max_height={$maxDimension}"])
-                ->storeFiles(false)
-                ->required(fn (string $operation): bool => $operation === 'create')
-                ->helperText(fn (string $operation): ?string => $operation === 'edit'
-                    ? __('Upload a new image to replace the current one.')
-                    : null),
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+                    ->maxSize(5120)
+                    ->rules(["dimensions:max_width={$maxDimension},max_height={$maxDimension}"])
+                    ->storeFiles(false)
+                    ->required(fn (string $operation): bool => $operation === 'create')
+                    ->helperText(fn (string $operation): ?string => $operation === 'edit'
+                        ? __('Upload a new image to replace the current one.')
+                        : null),
 
-            TextInput::make('url')
-                ->label(__('Link URL'))
-                // OpenPNE 3 stored the link in a TEXT column with no length cap; only require a valid
-                // URL (a stored http(s) link, rendered escaped in an <a href>).
-                ->url(),
+                TextInput::make('url')
+                    ->label(__('Link URL'))
+                    // OpenPNE 3 stored the link in a TEXT column with no length cap; only require a valid
+                    // URL (a stored http(s) link, rendered escaped in an <a href>).
+                    ->url(),
 
-            TextInput::make('name')
-                ->label(__('Label'))
-                ->maxLength(64),
+                TextInput::make('name')
+                    ->label(__('Label'))
+                    ->maxLength(64),
 
-            CheckboxList::make('placements')
-                ->label(__('Placements'))
-                ->options(BannerImageResource::placementOptions()),
-        ]);
+                CheckboxList::make('placements')
+                    ->label(__('Placements'))
+                    ->options(BannerImageResource::placementOptions()),
+            ]);
     }
 }

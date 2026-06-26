@@ -15,6 +15,7 @@ class CommunityCategoryForm
         // future shallow hierarchy but is intentionally not exposed yet — an unrestricted parent
         // select would let an admin create self-parent / cyclic master data nothing reads.
         return $schema
+            ->columns(1)
             ->components([
                 TextInput::make('name')
                     ->label(__('Name'))
