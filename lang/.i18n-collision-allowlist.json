@@ -1,0 +1,6 @@
+{
+    "_note": "Accepted case-fold key collisions in lang/ja.json. `php artisan i18n:check` reports case-insensitive key collisions so inconsistent translations surface for review; groups listed here are intentional (distinct meaning per case) and suppressed. Matching is on the exact key set, so adding a new case variant re-surfaces the group.",
+    "groups": [
+        ["To", "to"]
+    ]
+}

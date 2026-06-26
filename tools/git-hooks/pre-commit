@@ -1,22 +1,49 @@
 #!/usr/bin/env bash
-# Block commits that introduce new translation gaps. Runs only when staged
-# files could affect i18n coverage (.tsx/.ts/.php/.blade.php). Bypass with
-# `git commit --no-verify` if absolutely necessary.
+# Block commits that introduce new translation gaps or leave a dictionary out
+# of canonical key order, and auto-sort staged lang/{ja,en}.json. Runs only when
+# staged files could affect i18n coverage (.tsx/.ts/.php/.blade.php) or the JSON
+# dictionaries. Bypass with `git commit --no-verify` if absolutely necessary.
 #
 # Install:
 #   composer install-hooks
 
 set -e
 
-staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(tsx|ts|php|blade\.php)$' || true)
+code_staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(tsx|ts|php|blade\.php)$' || true)
+json_staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^lang/(ja|en)\.json$' || true)
 
-if [ -z "$staged" ]; then
+if [ -z "$code_staged" ] && [ -z "$json_staged" ]; then
     exit 0
 fi
 
 if ! command -v php >/dev/null 2>&1; then
     echo "[pre-commit] Skipping i18n:check — php not on PATH."
     exit 0
+fi
+
+# Auto-format staged dictionaries. A partially staged file is refused rather
+# than sorted: re-adding it would also stage the unstaged hunks. Detect this
+# before touching the working tree (sorting itself creates unstaged changes).
+if [ -n "$json_staged" ]; then
+    unstaged=$(git diff --name-only -- $json_staged || true)
+    blocked=""
+    for f in $json_staged; do
+        if echo "$unstaged" | grep -qxF "$f"; then
+            blocked="$blocked $f"
+        fi
+    done
+    if [ -n "$blocked" ]; then
+        echo "[pre-commit] Partially staged dictionaries:$blocked"
+        echo "[pre-commit] Auto-sorting would capture their unstaged changes. Run, then re-stage:"
+        for f in $blocked; do
+            echo "    php artisan i18n:check --sort=$f && git add $f"
+        done
+        exit 1
+    fi
+    for f in $json_staged; do
+        php artisan i18n:check --sort="$f"
+        git add "$f"
+    done
 fi
 
 echo "[pre-commit] Running: php artisan i18n:check"
