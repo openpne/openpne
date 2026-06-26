@@ -144,6 +144,7 @@ class GadgetResourceTest extends TestCase
 
         Livewire::test(CreateGadget::class)
             ->fillForm(['context' => 'home'])
+            ->assertSee(__('Click an area of the page to place the gadget.')) // tells the operator the areas are clickable
             ->assertSee('Information Box')   // existing gadget chip
             ->assertSee(__('Top'))           // the home page's zones are drawn
             ->assertSee(__('Contents'));

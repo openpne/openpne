@@ -5,6 +5,7 @@
     @once
         <style>
             .op-zp-hint { font-size:0.8125rem; color:var(--gray-500); }
+            .op-zp-instruct { display:flex; align-items:center; gap:0.25rem; font-size:0.75rem; color:var(--gray-500); margin-bottom:0.5rem; }
             .op-zp-grid { display:grid; gap:0.5rem; }
             .op-zp-zone {
                 position:relative; display:block; cursor:pointer; min-height:3.75rem;
@@ -30,6 +31,7 @@
             .op-zp-zone.is-selected .op-zp-placing { opacity:1; }
 
             .dark .op-zp-hint { color:var(--gray-400); }
+            .dark .op-zp-instruct { color:var(--gray-400); }
             .dark .op-zp-zone { border-color:var(--gray-700); }
             .dark .op-zp-zone:hover { border-color:var(--gray-600); }
             .dark .op-zp-label { color:var(--gray-400); }
@@ -55,6 +57,10 @@
     @if ($context === '')
         <p class="op-zp-hint">{{ __('Select a placement first.') }}</p>
     @else
+        <p class="op-zp-instruct">
+            <x-filament::icon icon="heroicon-m-cursor-arrow-rays" style="width:0.875rem;height:0.875rem;flex-shrink:0;" />
+            {{ __('Click an area of the page to place the gadget.') }}
+        </p>
         <div
             x-data="{ state: $wire.$entangle('{{ $getStatePath() }}') }"
             role="radiogroup"
