@@ -71,7 +71,7 @@ class GadgetForm
                     ->descriptions(fn (Get $get): array => GadgetResource::kindDescriptions((string) $get('context')))
                     ->required()
                     ->live()
-                    // The options only filter the dropdown; this rejects a kind not offered in the
+                    // The options only filter the list; this rejects a kind not offered in the
                     // chosen context on save (so the renderer never sees an out-of-context kind).
                     ->rules([
                         fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
