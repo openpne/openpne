@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Gadgets\Schemas;
 
+use App\Filament\Forms\Components\GadgetZonePicker;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKindRegistry;
@@ -35,6 +36,9 @@ class GadgetForm
                     ->label(__('Placement'))
                     ->helperText(__('Which page this gadget appears on.'))
                     ->options(GadgetResource::contextOptions())
+                    // Pre-select from the ?context= the list's Create button passes (the tab in view); a
+                    // bogus value is ignored. Only applies on create (the field is disabled on edit).
+                    ->default(fn (): ?string => in_array($c = (string) request()->input('context'), array_keys(GadgetResource::contextOptions()), true) ? $c : null)
                     ->required()
                     ->live()
                     // Changing the placement invalidates the kind/zone choices (and their config).
@@ -45,13 +49,42 @@ class GadgetForm
                     ->rules(['in:'.implode(',', array_keys(GadgetResource::contextOptions()))])
                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
 
-                Select::make('name')
+                // The page diagram: click an area to place into. Same `zone` state + same context-dependent
+                // rule as the dropdown it replaces; the picker reads `context` via $get to draw that page.
+                GadgetZonePicker::make('zone')
+                    ->label(__('Zone'))
+                    ->required()
+                    ->rules([
+                        fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                            if ($value !== null && $value !== ''
+                                && ! array_key_exists((string) $value, GadgetResource::zoneOptions((string) $get('context')))) {
+                                $fail(__('This zone is not available for the selected placement.'));
+                            }
+                        },
+                    ]),
+
+                // A radio list (not a dropdown) so every gadget kind is visible at once with its one-line
+                // description. On edit the kind is fixed (changing it would orphan its config), so only the
+                // chosen kind is shown — not the whole list.
+                Radio::make('name')
                     ->label(__('Gadget'))
-                    ->helperText(__('The kind of content to show.'))
-                    ->options(fn (Get $get): array => GadgetResource::kindOptions((string) $get('context')))
+                    ->options(function (Get $get, string $operation): array {
+                        $options = GadgetResource::kindOptions((string) $get('context'));
+
+                        return $operation === 'edit'
+                            ? array_intersect_key($options, [(string) $get('name') => true])
+                            : $options;
+                    })
+                    ->descriptions(function (Get $get, string $operation): array {
+                        $descriptions = GadgetResource::kindDescriptions((string) $get('context'));
+
+                        return $operation === 'edit'
+                            ? array_intersect_key($descriptions, [(string) $get('name') => true])
+                            : $descriptions;
+                    })
                     ->required()
                     ->live()
-                    // The options only filter the dropdown; this rejects a kind not offered in the
+                    // The options only filter the list; this rejects a kind not offered in the
                     // chosen context on save (so the renderer never sees an out-of-context kind).
                     ->rules([
                         fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
@@ -62,20 +95,6 @@ class GadgetForm
                         },
                     ])
                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
-
-                Select::make('zone')
-                    ->label(__('Zone'))
-                    ->helperText(__('Which area of the page.'))
-                    ->options(fn (Get $get): array => GadgetResource::zoneOptions((string) $get('context')))
-                    ->required()
-                    ->rules([
-                        fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
-                            if ($value !== null && $value !== ''
-                                && ! array_key_exists((string) $value, GadgetResource::zoneOptions((string) $get('context')))) {
-                                $fail(__('This zone is not available for the selected placement.'));
-                            }
-                        },
-                    ]),
 
                 TextInput::make('sort_order')
                     ->label(__('Sort Order'))

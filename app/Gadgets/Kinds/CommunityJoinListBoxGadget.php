@@ -12,6 +12,11 @@ class CommunityJoinListBoxGadget extends GridListGadget
         return 'communityJoinListBox';
     }
 
+    public function description(): string
+    {
+        return __('A list of the communities the member belongs to.');
+    }
+
     public function component(): string
     {
         return 'gadget.community-join-list-box';

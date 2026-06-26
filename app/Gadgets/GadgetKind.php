@@ -31,10 +31,16 @@ abstract class GadgetKind
     /** The Blade dynamic-component name the renderer resolves to this kind's view. */
     abstract public function component(): string;
 
-    /** Human label for the admin (add-gadget dropdown, table). */
+    /** Human label for the admin (add-gadget list, table). */
     public function label(): string
     {
         return Str::headline($this->name());
+    }
+
+    /** A one-line "what this shows" for the admin Gadget picker; each kind overrides, empty by default. */
+    public function description(): string
+    {
+        return '';
     }
 
     /**

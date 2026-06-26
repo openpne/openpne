@@ -79,6 +79,41 @@ class GadgetResource extends Resource
         return $options;
     }
 
+    /** @return array<string, string> kind name => one-line description, for the kinds offered in a context. */
+    public static function kindDescriptions(string $context): array
+    {
+        $descriptions = [];
+        foreach (GadgetKindRegistry::forContext($context) as $kind) {
+            if (($description = $kind->description()) !== '') {
+                $descriptions[$kind->name()] = $description;
+            }
+        }
+
+        return $descriptions;
+    }
+
+    /**
+     * Existing gadgets in a context as `zone => [label, ...]` in render order, for the placement picker's
+     * chips. Null sort_order sorts last (matching GadgetService and the table). An unregistered kind falls
+     * back to its stored name.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function placements(string $context): array
+    {
+        $byZone = [];
+        $rows = Gadget::query()
+            ->where('context', $context)
+            ->orderByRaw('sort_order IS NULL, sort_order')
+            ->get(['zone', 'name']);
+
+        foreach ($rows as $row) {
+            $byZone[$row->zone][] = GadgetKindRegistry::find($row->name)?->label() ?? $row->name;
+        }
+
+        return $byZone;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return GadgetForm::configure($schema);

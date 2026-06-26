@@ -81,6 +81,18 @@ class GadgetService
         return GadgetLayout::letter($this->activeLayout($context));
     }
 
+    /**
+     * The zones the active layout actually renders for a context, in order. The admin may place into any
+     * of the context's widest zones (zoneOptions), but only these render now; the placement picker dims
+     * the rest.
+     *
+     * @return list<string>
+     */
+    public function activeZones(string $context): array
+    {
+        return GadgetLayout::zones($this->activeLayout($context));
+    }
+
     /** Drop the cached gadget rows. Call after persisting changes from the admin UI. */
     public function clearCache(): void
     {
