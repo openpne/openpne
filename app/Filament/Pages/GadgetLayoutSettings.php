@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use App\Filament\Concerns\HiddenWhenModernOnly;
 use App\Filament\Forms\Components\GadgetLayoutPicker;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
@@ -33,8 +32,6 @@ use Illuminate\Support\Facades\DB;
  */
 class GadgetLayoutSettings extends Page
 {
-    use HiddenWhenModernOnly;
-
     protected static ?int $navigationSort = 1;
 
     /** @var array<string, mixed>|null */

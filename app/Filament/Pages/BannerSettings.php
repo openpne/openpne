@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use App\Filament\Concerns\HiddenWhenModernOnly;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\Banner;
 use BackedEnum;
@@ -31,8 +30,6 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class BannerSettings extends Page
 {
-    use HiddenWhenModernOnly;
-
     protected static ?int $navigationSort = 4;
 
     /** OpenPNE 3 PC banner placements (top only; see BannerSeeder). */

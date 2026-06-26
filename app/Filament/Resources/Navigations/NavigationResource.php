@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Navigations;
 
-use App\Filament\Concerns\HiddenWhenModernOnly;
 use App\Filament\Resources\Navigations\Pages\CreateNavigation;
 use App\Filament\Resources\Navigations\Pages\EditNavigation;
 use App\Filament\Resources\Navigations\Pages\ListNavigations;
@@ -18,8 +17,6 @@ use Illuminate\Database\Eloquent\Builder;
 
 class NavigationResource extends Resource
 {
-    use HiddenWhenModernOnly;
-
     protected static ?string $model = Navigation::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBars3;

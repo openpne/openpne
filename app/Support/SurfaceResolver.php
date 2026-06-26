@@ -64,27 +64,6 @@ class SurfaceResolver
     }
 
     /**
-     * Whether the Classic surface is rendered for anyone on this site. True unless the site is
-     * modern_only AND no feature is pinned off Modern — mirroring resolve()'s precedence, where a
-     * non-native feature renders Classic even under modern_only. Lets admin UIs hide Classic-only
-     * settings exactly when no one can reach the Classic surface, not merely when modern_only is set.
-     */
-    public static function classicReachable(): bool
-    {
-        if (config('openpne.tenant_mode', 'mixed') !== 'modern_only') {
-            return true;
-        }
-
-        foreach ((array) config('features', []) as $feature) {
-            if (is_array($feature) && ($feature['modern_status'] ?? 'native') !== 'native') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * On a Modern route, maps `friend.list` -> `friend.modern.list` so a
      * post-submit redirect stays on the surface it came from. Consumers must
      * name routes `{feature}.{rest}` <-> `{feature}.modern.{rest}`.

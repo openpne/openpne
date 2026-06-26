@@ -86,38 +86,6 @@ class AppearanceNavigationTest extends TestCase
         );
     }
 
-    public function test_modern_only_hides_the_classic_appearance_screens(): void
-    {
-        config(['openpne.tenant_mode' => 'mixed']);
-        foreach ($this->appearanceScreens() as $screen) {
-            $this->assertTrue($screen::canAccess(), "{$screen} should be accessible in mixed mode");
-        }
-
-        config(['openpne.tenant_mode' => 'modern_only']);
-        foreach ($this->appearanceScreens() as $screen) {
-            $this->assertFalse($screen::canAccess(), "{$screen} should be hidden in modern_only mode");
-        }
-
-        // With every item gated off, the Classic appearance group disappears from the sidebar.
-        app()->setLocale('ja');
-        $groups = (new Collection(Filament::getCurrentPanel()->getNavigation()))->map->getLabel()->all();
-        $this->assertNotContains(__('Appearance (Classic)'), $groups);
-    }
-
-    public function test_modern_only_with_a_classic_pinned_feature_keeps_them_visible(): void
-    {
-        // A feature pinned off Modern still renders Classic under modern_only (SurfaceResolver's hard
-        // gate), so the Classic design settings must stay reachable — not hidden by a bare modern_only check.
-        config([
-            'openpne.tenant_mode' => 'modern_only',
-            'features.diary.modern_status' => 'fallback',
-        ]);
-
-        foreach ($this->appearanceScreens() as $screen) {
-            $this->assertTrue($screen::canAccess(), "{$screen} stays visible when a feature is Classic-pinned");
-        }
-    }
-
     public function test_gadget_form_shows_field_helper_text(): void
     {
         Livewire::test(CreateGadget::class)
