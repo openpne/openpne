@@ -33,10 +33,10 @@ class I18nKeyOrderTest extends TestCase
     {
         foreach (['ja', 'en'] as $lang) {
             $path = base_path("lang/{$lang}.json");
-            $decoded = json_decode((string) file_get_contents($path), true);
-            $this->assertIsArray($decoded, "lang/{$lang}.json must be a valid JSON object");
+            $raw = (string) file_get_contents($path);
+            $this->assertInstanceOf(\stdClass::class, json_decode($raw, false), "lang/{$lang}.json must be a JSON object");
 
-            $keys = array_map('strval', array_keys($decoded));
+            $keys = array_map('strval', array_keys((array) json_decode($raw, true)));
             $sorted = $keys;
             usort($sorted, [Cmd::class, 'localeKeyCompare']);
 

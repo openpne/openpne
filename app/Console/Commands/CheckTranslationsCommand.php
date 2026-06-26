@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use SplFileInfo;
+use stdClass;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -207,13 +208,16 @@ class CheckTranslationsCommand extends Command
 
                 continue;
             }
-            $data = json_decode((string) file_get_contents($path), true);
-            if (! is_array($data)) {
+            $raw = (string) file_get_contents($path);
+            // Enforce the JSON-object shape: a `[]` array (or scalar/invalid)
+            // is not a dictionary. `{}` decodes to an empty stdClass and passes.
+            if (! json_decode($raw, false) instanceof stdClass) {
                 $unordered++;
-                $this->error("{$rel} is not a valid JSON object.");
+                $this->error("{$rel} is not a JSON object.");
 
                 continue;
             }
+            $data = (array) json_decode($raw, true);
             $keys = array_map('strval', array_keys($data));
             $sorted = $keys;
             usort($sorted, [self::class, 'localeKeyCompare']);
