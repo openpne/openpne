@@ -12,12 +12,15 @@ use SplFileInfo;
 use Symfony\Component\Finder\Finder;
 
 /**
- * Detect translation key references in code that are missing from lang/{ja,en}.json.
+ * Detect translation key references in code that are missing from lang/{ja,en}.json,
+ * and enforce a canonical key order.
  *
- *   php artisan i18n:check                  # CI gate
+ *   php artisan i18n:check                  # CI gate: missing keys + key order
  *   php artisan i18n:check --unused         # also list defined-but-unused JSON keys
  *   php artisan i18n:check --update-baseline # snapshot current gaps to lang/.i18n-baseline.json
  *   php artisan i18n:check --prune-identity  # strip k === v entries from lang/{ja,en}.json
+ *   php artisan i18n:check --sort            # rewrite lang/{ja,en}.json in canonical key order
+ *   php artisan i18n:check --sort=lang/ja.json # ... restricted to a single file
  *
  * Omission policy: English-source codebase, so `key === English text`. Both `__()`
  * and `laravel-react-i18n` return the key verbatim when no entry is found, so
@@ -31,9 +34,17 @@ class CheckTranslationsCommand extends Command
     protected $signature = 'i18n:check
         {--unused : Also report keys defined in lang/ but not used anywhere (informational, never fails CI)}
         {--update-baseline : Refresh lang/.i18n-baseline.json with the current set of missing keys}
-        {--prune-identity : Remove all k === v entries from lang/{ja,en}.json (redundant under the omission policy)}';
+        {--prune-identity : Remove all k === v entries from lang/{ja,en}.json (redundant under the omission policy)}
+        {--sort= : Rewrite lang/{ja,en}.json in canonical key order; optionally scope to one file (lang/ja.json|lang/en.json)}';
 
-    protected $description = 'Detect translation key references that are missing from lang/ja.json or lang/en.json';
+    protected $description = 'Detect missing translation keys and enforce canonical key order in lang/ja.json / lang/en.json';
+
+    /**
+     * JSON dictionaries whose key order is enforced and rewritten by --sort.
+     */
+    private const SORTABLE_FILES = ['lang/ja.json', 'lang/en.json'];
+
+    private const COLLISION_ALLOWLIST_FILE = 'lang/.i18n-collision-allowlist.json';
 
     /**
      * Pre-existing gaps recorded here are grandfathered; only NEW missing keys outside fail CI.
@@ -66,6 +77,10 @@ class CheckTranslationsCommand extends Command
     {
         $base = base_path();
 
+        if ($this->wantsSort()) {
+            return $this->sortFiles($base);
+        }
+
         if ($this->option('prune-identity')) {
             return $this->pruneIdentityEntries($base);
         }
@@ -79,12 +94,230 @@ class CheckTranslationsCommand extends Command
         }
 
         $missing = $this->reportMissing($found, $defined, $baseline);
+        $unordered = $this->reportOrder($base);
+        $this->reportCollisions($base);
 
         if ($this->option('unused')) {
             $this->reportUnused($found);
         }
 
-        return $missing > 0 ? 1 : 0;
+        return ($missing > 0 || $unordered > 0) ? 1 : 0;
+    }
+
+    /**
+     * Canonical key comparator: ASCII case-insensitive, with a byte-order
+     * tiebreak so the order is total — case-only variants (`Cancel`/`cancel`)
+     * get a single deterministic position. ASCII `strtolower` keeps it
+     * locale/ICU-independent; non-ASCII bytes are settled by the tiebreak.
+     * This is lexicographic, not numeric-aware: `Page 10` sorts before `Page 2`.
+     */
+    public static function localeKeyCompare(string $a, string $b): int
+    {
+        return strcmp(strtolower($a), strtolower($b)) ?: strcmp($a, $b);
+    }
+
+    private function wantsSort(): bool
+    {
+        return $this->input->hasParameterOption('--sort', true)
+            || $this->option('sort') !== null;
+    }
+
+    /**
+     * Resolve the --sort target(s). Empty value means both dictionaries;
+     * a path is normalised and validated against the allow-list. Returns
+     * null for an out-of-list path (caller reports the error).
+     *
+     * @return list<string>|null
+     */
+    private function sortTargets(): ?array
+    {
+        $value = (string) $this->option('sort');
+        if ($value === '') {
+            return self::SORTABLE_FILES;
+        }
+
+        $normalized = ltrim(str_replace('\\', '/', $value), './');
+        if (! in_array($normalized, self::SORTABLE_FILES, true)) {
+            return null;
+        }
+
+        return [$normalized];
+    }
+
+    private function sortFiles(string $base): int
+    {
+        $targets = $this->sortTargets();
+        if ($targets === null) {
+            $this->error('Invalid --sort target. Allowed: '.implode(', ', self::SORTABLE_FILES));
+
+            return 1;
+        }
+
+        foreach ($targets as $rel) {
+            $path = "{$base}/{$rel}";
+            if (! is_file($path)) {
+                $this->warn("Skipped {$rel}: not found");
+
+                continue;
+            }
+            $data = json_decode((string) file_get_contents($path), true);
+            if (! is_array($data)) {
+                $this->warn("Skipped {$rel}: not a JSON object");
+
+                continue;
+            }
+            $this->writeSorted($path, $data);
+            $this->info(sprintf('Sorted %s (%d keys)', $rel, count($data)));
+        }
+
+        return 0;
+    }
+
+    /**
+     * Rewrite a JSON dictionary with keys in canonical order, preserving the
+     * encoding the rest of the tooling uses (unescaped unicode/slashes, pretty,
+     * trailing newline).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function writeSorted(string $path, array $data): void
+    {
+        uksort($data, [self::class, 'localeKeyCompare']);
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        file_put_contents($path, $json."\n");
+    }
+
+    /**
+     * Hard gate: fail when a dictionary's keys are not in canonical order.
+     * Uses the same comparator as --sort so the fixer's output always passes.
+     *
+     * @return int number of files out of order
+     */
+    private function reportOrder(string $base): int
+    {
+        $unordered = 0;
+        foreach (self::SORTABLE_FILES as $rel) {
+            $path = "{$base}/{$rel}";
+            if (! is_file($path)) {
+                continue;
+            }
+            $data = json_decode((string) file_get_contents($path), true);
+            if (! is_array($data)) {
+                continue;
+            }
+            $keys = array_map('strval', array_keys($data));
+            $sorted = $keys;
+            usort($sorted, [self::class, 'localeKeyCompare']);
+            if ($keys === $sorted) {
+                continue;
+            }
+            $unordered++;
+            $first = null;
+            foreach ($keys as $i => $key) {
+                if ($key !== $sorted[$i]) {
+                    $first = $key;
+                    break;
+                }
+            }
+            $this->error(sprintf(
+                '%s is not in canonical key order (first out of place: %s). Fix: php artisan i18n:check --sort=%s',
+                $rel,
+                json_encode($first, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                $rel,
+            ));
+        }
+
+        return $unordered;
+    }
+
+    /**
+     * Advisory (never fails): list case-fold key collisions in lang/ja.json so
+     * inconsistent translations of near-identical keys surface for review. The
+     * canonical sort separates first-letter case variants, so this is the
+     * deterministic net the adjacency cannot guarantee. Groups recorded in
+     * COLLISION_ALLOWLIST_FILE (matched on the exact key set) are accepted and
+     * suppressed; after normalisation the steady state is empty.
+     */
+    private function reportCollisions(string $base): void
+    {
+        $path = "{$base}/lang/ja.json";
+        if (! is_file($path)) {
+            return;
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+        if (! is_array($data)) {
+            return;
+        }
+
+        $allow = $this->loadCollisionAllowlist($base);
+
+        $byFold = [];
+        foreach (array_keys($data) as $key) {
+            $byFold[strtolower((string) $key)][] = (string) $key;
+        }
+
+        $unresolved = [];
+        foreach ($byFold as $keys) {
+            if (count($keys) < 2) {
+                continue;
+            }
+            if (isset($allow[$this->collisionSignature($keys)])) {
+                continue;
+            }
+            $unresolved[] = $keys;
+        }
+
+        if ($unresolved === []) {
+            return;
+        }
+
+        $this->warn(sprintf('Case-fold key collisions in lang/ja.json (%d) — informational, review for inconsistent translations:', count($unresolved)));
+        foreach ($unresolved as $keys) {
+            $values = array_map(static fn (string $k) => $data[$k], $keys);
+            $tag = count(array_unique($values)) === 1 ? 'same-ja' : 'differ';
+            $parts = array_map(
+                static fn (string $k) => json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                    .'='.json_encode($data[$k], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                $keys,
+            );
+            $this->line(sprintf('  - [%s] %s', $tag, implode('  ', $parts)));
+        }
+    }
+
+    /**
+     * @return array<string, true> exact-key-set signatures of accepted collisions
+     */
+    private function loadCollisionAllowlist(string $base): array
+    {
+        $path = "{$base}/".self::COLLISION_ALLOWLIST_FILE;
+        if (! is_file($path)) {
+            return [];
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+        $groups = is_array($data) ? ($data['groups'] ?? []) : [];
+
+        $out = [];
+        foreach ((array) $groups as $group) {
+            if (is_array($group) && $group !== []) {
+                $out[$this->collisionSignature(array_map('strval', $group))] = true;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Order-independent signature of a collision group: the exact set of keys.
+     * Matching on the full set (not the folded key) means adding a third
+     * variant later re-surfaces the group instead of staying suppressed.
+     *
+     * @param  list<string>  $keys
+     */
+    private function collisionSignature(array $keys): string
+    {
+        sort($keys, SORT_STRING);
+
+        return implode("\0", $keys);
     }
 
     /**
@@ -186,9 +419,7 @@ class CheckTranslationsCommand extends Command
                 }
                 $kept[$key] = $v;
             }
-            ksort($kept, SORT_STRING);
-            $json = json_encode($kept, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-            file_put_contents($path, $json."\n");
+            $this->writeSorted($path, $kept);
             $removed = $before - count($kept);
             $this->info(sprintf('lang/%s.json: %d → %d (-%d identity entries)', $lang, $before, count($kept), $removed));
         }
