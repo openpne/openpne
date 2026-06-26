@@ -35,7 +35,7 @@ class NavigationResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Master Data');
+        return __('Appearance (Classic)');
     }
 
     /**

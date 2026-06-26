@@ -22,7 +22,7 @@ class GadgetResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
     public static function getModelLabel(): string
     {
@@ -36,7 +36,7 @@ class GadgetResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Master Data');
+        return __('Appearance (Classic)');
     }
 
     /** @return array<string, string> context => label, in display order. */

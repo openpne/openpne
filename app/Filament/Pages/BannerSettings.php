@@ -30,6 +30,8 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class BannerSettings extends Page
 {
+    protected static ?int $navigationSort = 4;
+
     /** OpenPNE 3 PC banner placements (top only; see BannerSeeder). */
     private const PLACEMENTS = ['top_before', 'top_after'];
 
@@ -45,7 +47,7 @@ class BannerSettings extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Settings');
+        return __('Appearance (Classic)');
     }
 
     public static function getNavigationLabel(): string
