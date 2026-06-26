@@ -53,7 +53,7 @@
     @endphp
 
     @if ($context === '')
-        <p class="op-zp-hint">{{ __('Choose a page first.') }}</p>
+        <p class="op-zp-hint">{{ __('Select a placement first.') }}</p>
     @else
         <div
             x-data="{ state: $wire.$entangle('{{ $getStatePath() }}') }"

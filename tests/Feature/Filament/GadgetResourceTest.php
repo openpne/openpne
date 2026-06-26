@@ -187,4 +187,26 @@ class GadgetResourceTest extends TestCase
             ->fillForm(['context' => 'home', 'name' => 'freeArea'])
             ->assertSee(__('A free area for a custom title and HTML/text.'));
     }
+
+    public function test_create_inherits_the_context_from_the_query(): void
+    {
+        app()->setLocale('en');
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 0]);
+
+        // The list's Create button links to ?context=<active tab>; the form pre-selects that page so its
+        // diagram renders immediately, instead of the "select a placement first" prompt.
+        $this->get(GadgetResource::getUrl('create', ['context' => 'home']))
+            ->assertOk()
+            ->assertSee('Information Box')
+            ->assertDontSee(__('Select a placement first.'));
+    }
+
+    public function test_create_without_a_context_prompts_for_one(): void
+    {
+        app()->setLocale('en');
+
+        $this->get(GadgetResource::getUrl('create'))
+            ->assertOk()
+            ->assertSee(__('Select a placement first.'));
+    }
 }

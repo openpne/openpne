@@ -678,7 +678,7 @@
     "Zone": "ゾーン",
     "This gadget is not available for the selected placement.": "選択した配置ではこのガジェットを使用できません。",
     "This zone is not available for the selected placement.": "選択した配置ではこのゾーンを使用できません。",
-    "Choose a page first.": "先にページを選んでください。",
+    "Select a placement first.": "先に「配置」を選択してください。",
     "Placing here": "ここに配置",
     "(empty)": "(空)",
     "Not shown in the current layout.": "現在のレイアウトでは表示されません。",

@@ -36,6 +36,9 @@ class GadgetForm
                     ->label(__('Placement'))
                     ->helperText(__('Which page this gadget appears on.'))
                     ->options(GadgetResource::contextOptions())
+                    // Pre-select from the ?context= the list's Create button passes (the tab in view); a
+                    // bogus value is ignored. Only applies on create (the field is disabled on edit).
+                    ->default(fn (): ?string => in_array($c = (string) request()->input('context'), array_keys(GadgetResource::contextOptions()), true) ? $c : null)
                     ->required()
                     ->live()
                     // Changing the placement invalidates the kind/zone choices (and their config).
