@@ -168,6 +168,17 @@ class GadgetResourceTest extends TestCase
             ->assertHasFormErrors(['zone']);
     }
 
+    public function test_edit_shows_only_the_fixed_kind_not_the_whole_list(): void
+    {
+        app()->setLocale('en');
+        $gadget = Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'freeArea', 'sort_order' => 0]);
+
+        // The kind can't change on edit, so the radio shows only the chosen kind — not every home kind.
+        Livewire::test(EditGadget::class, ['record' => $gadget->getKey()])
+            ->assertSee('Free Area')
+            ->assertDontSee('Information Box');
+    }
+
     public function test_edit_can_move_a_gadget_to_another_zone(): void
     {
         $gadget = Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'freeArea', 'sort_order' => 0]);

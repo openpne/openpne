@@ -64,11 +64,24 @@ class GadgetForm
                     ]),
 
                 // A radio list (not a dropdown) so every gadget kind is visible at once with its one-line
-                // description — the operator sees what's available and what each does without selecting first.
+                // description. On edit the kind is fixed (changing it would orphan its config), so only the
+                // chosen kind is shown — not the whole list.
                 Radio::make('name')
                     ->label(__('Gadget'))
-                    ->options(fn (Get $get): array => GadgetResource::kindOptions((string) $get('context')))
-                    ->descriptions(fn (Get $get): array => GadgetResource::kindDescriptions((string) $get('context')))
+                    ->options(function (Get $get, string $operation): array {
+                        $options = GadgetResource::kindOptions((string) $get('context'));
+
+                        return $operation === 'edit'
+                            ? array_intersect_key($options, [(string) $get('name') => true])
+                            : $options;
+                    })
+                    ->descriptions(function (Get $get, string $operation): array {
+                        $descriptions = GadgetResource::kindDescriptions((string) $get('context'));
+
+                        return $operation === 'edit'
+                            ? array_intersect_key($descriptions, [(string) $get('name') => true])
+                            : $descriptions;
+                    })
                     ->required()
                     ->live()
                     // The options only filter the list; this rejects a kind not offered in the
