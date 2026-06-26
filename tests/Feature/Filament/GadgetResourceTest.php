@@ -13,6 +13,7 @@ use App\Models\Gadget;
 use App\Models\GadgetConfig;
 use App\Models\Member;
 use App\Services\GadgetService;
+use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -122,5 +123,68 @@ class GadgetResourceTest extends TestCase
         Livewire::test(ListGadgets::class)
             ->set('activeTab', 'home')
             ->assertTableColumnStateSet('status', __('Unsupported'), $gadget);
+    }
+
+    public function test_placements_groups_by_zone_with_nulls_last(): void
+    {
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'freeArea', 'sort_order' => null]);
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 5]);
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'rssBox', 'sort_order' => 0]); // unregistered
+
+        $contents = GadgetResource::placements('home')['contents'];
+
+        // numeric sort_order first (0, 5), null last; unregistered kind falls back to the raw name.
+        $this->assertSame(['rssBox', 'Information Box', 'Free Area'], $contents);
+    }
+
+    public function test_zone_picker_shows_existing_gadgets_and_the_pages_zones(): void
+    {
+        app()->setLocale('en');
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 0]);
+
+        Livewire::test(CreateGadget::class)
+            ->fillForm(['context' => 'home'])
+            ->assertSee('Information Box')   // existing gadget chip
+            ->assertSee(__('Top'))           // the home page's zones are drawn
+            ->assertSee(__('Contents'));
+    }
+
+    public function test_zone_picker_marks_zones_the_current_layout_hides(): void
+    {
+        app()->setLocale('en');
+        $this->setSnsSetting(SnsSettingKey::GadgetHomeLayout, 'layoutC'); // contents/bottom only
+
+        Livewire::test(CreateGadget::class)
+            ->fillForm(['context' => 'home'])
+            ->assertSee(__('Not shown in the current layout.')); // top / sideMenu are dimmed
+    }
+
+    public function test_rejects_a_zone_not_valid_for_the_context(): void
+    {
+        Livewire::test(CreateGadget::class)
+            ->fillForm(['context' => 'home', 'name' => 'freeArea', 'zone' => 'bogus', 'sort_order' => 10])
+            ->call('create')
+            ->assertHasFormErrors(['zone']);
+    }
+
+    public function test_edit_can_move_a_gadget_to_another_zone(): void
+    {
+        $gadget = Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'freeArea', 'sort_order' => 0]);
+
+        Livewire::test(EditGadget::class, ['record' => $gadget->getKey()])
+            ->fillForm(['zone' => 'top'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('gadgets', ['id' => $gadget->id, 'zone' => 'top']);
+    }
+
+    public function test_gadget_kind_description_shows_in_the_form(): void
+    {
+        app()->setLocale('en');
+
+        Livewire::test(CreateGadget::class)
+            ->fillForm(['context' => 'home', 'name' => 'freeArea'])
+            ->assertSee(__('A free area for a custom title and HTML/text.'));
     }
 }

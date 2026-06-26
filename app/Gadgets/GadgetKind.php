@@ -38,6 +38,28 @@ abstract class GadgetKind
     }
 
     /**
+     * A one-line "what this shows" for the admin Gadget picker. Centralised here (a closed registry of
+     * presentational copy, easy to review/translate in one place) rather than scattered per kind; empty
+     * for kinds without one, which fall back to a generic line.
+     */
+    public function description(): string
+    {
+        return match ($this->name()) {
+            'freeArea' => __('A free area for a custom title and HTML/text.'),
+            'informationBox' => __('Announcements from the site.'),
+            'memberImageBox' => __("The member's profile image."),
+            'friendListBox' => __("A list of the member's friends."),
+            'communityJoinListBox' => __('A list of the communities the member belongs to.'),
+            'loginForm' => __('The login form, shown to logged-out visitors.'),
+            'profileListBox' => __("The member's profile fields."),
+            'languageSelecterBox' => __('A language switcher.'),
+            'linkListBox' => __('A list of links.'),
+            'searchBox' => __('A member search box.'),
+            default => '',
+        };
+    }
+
+    /**
      * Config parameters for a context, in form order.
      *
      * @return list<GadgetConfigField>

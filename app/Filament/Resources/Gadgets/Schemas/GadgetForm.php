@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Gadgets\Schemas;
 
+use App\Filament\Forms\Components\GadgetZonePicker;
 use App\Filament\Resources\Gadgets\GadgetResource;
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKindRegistry;
@@ -45,9 +46,24 @@ class GadgetForm
                     ->rules(['in:'.implode(',', array_keys(GadgetResource::contextOptions()))])
                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
 
+                // The page diagram: click an area to place into. Same `zone` state + same context-dependent
+                // rule as the dropdown it replaces; the picker reads `context` via $get to draw that page.
+                GadgetZonePicker::make('zone')
+                    ->label(__('Zone'))
+                    ->required()
+                    ->rules([
+                        fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                            if ($value !== null && $value !== ''
+                                && ! array_key_exists((string) $value, GadgetResource::zoneOptions((string) $get('context')))) {
+                                $fail(__('This zone is not available for the selected placement.'));
+                            }
+                        },
+                    ]),
+
                 Select::make('name')
                     ->label(__('Gadget'))
-                    ->helperText(__('The kind of content to show.'))
+                    ->helperText(fn (Get $get): string => GadgetKindRegistry::find((string) $get('name'))?->description()
+                        ?: __('The kind of content to show.'))
                     ->options(fn (Get $get): array => GadgetResource::kindOptions((string) $get('context')))
                     ->required()
                     ->live()
@@ -62,20 +78,6 @@ class GadgetForm
                         },
                     ])
                     ->disabled(fn (string $operation): bool => $operation === 'edit'),
-
-                Select::make('zone')
-                    ->label(__('Zone'))
-                    ->helperText(__('Which area of the page.'))
-                    ->options(fn (Get $get): array => GadgetResource::zoneOptions((string) $get('context')))
-                    ->required()
-                    ->rules([
-                        fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
-                            if ($value !== null && $value !== ''
-                                && ! array_key_exists((string) $value, GadgetResource::zoneOptions((string) $get('context')))) {
-                                $fail(__('This zone is not available for the selected placement.'));
-                            }
-                        },
-                    ]),
 
                 TextInput::make('sort_order')
                     ->label(__('Sort Order'))
