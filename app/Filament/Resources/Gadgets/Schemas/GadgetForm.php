@@ -63,11 +63,12 @@ class GadgetForm
                         },
                     ]),
 
-                Select::make('name')
+                // A radio list (not a dropdown) so every gadget kind is visible at once with its one-line
+                // description — the operator sees what's available and what each does without selecting first.
+                Radio::make('name')
                     ->label(__('Gadget'))
-                    ->helperText(fn (Get $get): string => GadgetKindRegistry::find((string) $get('name'))?->description()
-                        ?: __('The kind of content to show.'))
                     ->options(fn (Get $get): array => GadgetResource::kindOptions((string) $get('context')))
+                    ->descriptions(fn (Get $get): array => GadgetResource::kindDescriptions((string) $get('context')))
                     ->required()
                     ->live()
                     // The options only filter the dropdown; this rejects a kind not offered in the

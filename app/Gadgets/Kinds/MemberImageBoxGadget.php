@@ -14,6 +14,11 @@ class MemberImageBoxGadget extends GadgetKind
         return 'memberImageBox';
     }
 
+    public function description(): string
+    {
+        return __("The member's profile image.");
+    }
+
     public function contexts(): array
     {
         return ['home', 'profile'];

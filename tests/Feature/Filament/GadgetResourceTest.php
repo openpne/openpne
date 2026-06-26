@@ -180,12 +180,25 @@ class GadgetResourceTest extends TestCase
         $this->assertDatabaseHas('gadgets', ['id' => $gadget->id, 'zone' => 'top']);
     }
 
-    public function test_gadget_kind_description_shows_in_the_form(): void
+    public function test_gadget_kinds_are_listed_with_descriptions(): void
     {
         app()->setLocale('en');
 
+        // The radio list shows every kind for the context with its one-line description — visible without
+        // selecting one first (unlike the old dropdown).
         Livewire::test(CreateGadget::class)
-            ->fillForm(['context' => 'home', 'name' => 'freeArea'])
+            ->fillForm(['context' => 'home'])
+            ->assertSee(__('A free area for a custom title and HTML/text.'))
+            ->assertSee(__('A member search box.'));
+    }
+
+    public function test_list_table_shows_the_kind_description(): void
+    {
+        app()->setLocale('en');
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'freeArea', 'sort_order' => 0]);
+
+        Livewire::test(ListGadgets::class)
+            ->set('activeTab', 'home')
             ->assertSee(__('A free area for a custom title and HTML/text.'));
     }
 

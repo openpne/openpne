@@ -17,6 +17,11 @@ class LinkListBoxGadget extends GadgetKind
         return 'linkListBox';
     }
 
+    public function description(): string
+    {
+        return __('A list of links.');
+    }
+
     public function contexts(): array
     {
         return ['home', 'sidebanner', 'login'];
