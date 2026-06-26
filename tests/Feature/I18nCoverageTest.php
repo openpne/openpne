@@ -22,9 +22,10 @@ class I18nCoverageTest extends TestCase
         $this->assertSame(
             0,
             $exitCode,
-            'Translation keys are referenced from code but missing from lang/{ja,en}.json. '
-            .'Add the missing entries (or run `php artisan i18n:check --update-baseline` if '
-            ."the gap is pre-existing), then re-run `php artisan i18n:check` locally.\n\n"
+            'lang/{ja,en}.json has missing keys or invalid key order. Add the missing '
+            .'entries (or run `php artisan i18n:check --update-baseline` if the gap is '
+            .'pre-existing), run `php artisan i18n:check --sort` if the order is off, '
+            ."then re-run `php artisan i18n:check` locally.\n\n"
             .Artisan::output()
         );
     }
