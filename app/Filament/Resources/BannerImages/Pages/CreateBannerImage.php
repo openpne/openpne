@@ -4,10 +4,9 @@ namespace App\Filament\Resources\BannerImages\Pages;
 
 use App\Features\Banner\Actions\StoreBannerImage;
 use App\Filament\Resources\BannerImages\BannerImageResource;
+use App\Files\FormUpload;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Arr;
 
 class CreateBannerImage extends CreateRecord
 {
@@ -26,8 +25,8 @@ class CreateBannerImage extends CreateRecord
      */
     protected function handleRecordCreation(array $data): Model
     {
-        $upload = Arr::first((array) ($data['image'] ?? []));
-        abort_unless($upload instanceof UploadedFile, 422);
+        $upload = FormUpload::single($data['image'] ?? null);
+        abort_unless($upload !== null, 422);
 
         return app(StoreBannerImage::class)(
             $upload,

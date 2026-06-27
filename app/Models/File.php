@@ -20,6 +20,9 @@ class File extends Model
     /** @use HasFactory<FileFactory> */
     use HasFactory;
 
+    /** explicit_visibility value that makes a file web-readable regardless of owner (FilePolicy). */
+    public const VISIBILITY_PUBLIC = 'public';
+
     protected $table = 'files';
 
     /**
@@ -41,6 +44,15 @@ class File extends Model
     public function url(): string
     {
         return route('file.show', ['file' => $this->name]);
+    }
+
+    /**
+     * Login-free URL for a file marked explicit_visibility='public' (an admin asset). Served by the
+     * public PublicFileController, unlike url() which is behind the authed FileController.
+     */
+    public function publicUrl(): string
+    {
+        return route('file.public', ['file' => $this->name]);
     }
 
     /** The image format token (jpg/png/gif/webp) from the MIME type, or null if not a supported image. */

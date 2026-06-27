@@ -29,11 +29,19 @@ use Illuminate\Database\Eloquent\Relations\Relation;
  * Fail-closed: an unlinked file (no related entity), an unknown entity type, or an
  * owner that no longer exists is denied — never served as if public. New owner types
  * must be added to the match explicitly, so an unhandled type stays private.
+ *
+ * An explicit_visibility='public' override is the one ownerless-but-public case: an admin-uploaded
+ * asset embedded in custom HTML/CSS. Only the literal 'public' opens it, so the override is itself
+ * fail-closed.
  */
 class FilePolicy extends BasePolicy
 {
     public function view(?Member $viewer, File $file): bool
     {
+        if ($file->explicit_visibility === File::VISIBILITY_PUBLIC) {
+            return true;
+        }
+
         $owner = $this->owner($file);
 
         return match (true) {

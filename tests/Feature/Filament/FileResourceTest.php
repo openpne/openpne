@@ -41,6 +41,15 @@ class FileResourceTest extends TestCase
         return $file;
     }
 
+    public function test_upload_image_header_action_is_available(): void
+    {
+        // The FileUpload field needs a real Livewire temp upload the test harness can't drive, so this
+        // asserts the surface is wired; the byte+visibility path is covered at the FileUploader seam
+        // (Tests\Feature\File\AdminImageUploadTest) and the shape extraction by FormUploadTest.
+        Livewire::test(ListFiles::class)
+            ->assertActionExists('uploadImage');
+    }
+
     public function test_list_page_renders_files(): void
     {
         $files = File::factory()->count(2)->create();
