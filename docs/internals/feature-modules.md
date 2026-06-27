@@ -125,6 +125,16 @@ a side effect, such as deleting a diary/comment/member, approving a join request
 or member withdrawal — it calls the shared **Action**, so cleanup and side
 effects are not bypassed.
 
+The admin panel authorizes through its own `admin` guard (an `AdminUser`, not a
+`Member`), so it cannot satisfy a member-actor check. A `Delete*` Action that
+gates on the acting member therefore splits in two: `__invoke(Member $actor, …)`
+keeps the frontend's author/actor check, and an author-less `purge(…)` core holds
+the actual deletion + cleanup. Member adapters call `__invoke`; the Filament
+Resource calls `purge` directly (its guard is the authorization). The cleanup
+lives once, in `purge`. Member withdrawal is the same shape: `WithdrawMember` has
+no per-actor check (the panel guard authorizes) and the member-facing `/leave` is
+a separate, deferred adapter.
+
 ## When to use this contract
 
 Apply it when a feature: appears on both Classic and Modern; is triggered from
@@ -200,3 +210,6 @@ invariant.
    `toArray()`, so the exposed columns stay explicit.
 5. A `/m/*` route MUST set `->defaults('surface', 'modern')` and be named
    `{feature}.modern.{rest}`, so `SurfaceResolver` redirect/canonical mapping holds.
+6. A `Delete*` Action that checks the acting member MUST keep the deletion +
+   cleanup in an author-less `purge(…)` the admin panel calls; `__invoke` only
+   adds the member-actor check. The cleanup is not duplicated in the Resource.
