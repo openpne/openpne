@@ -2,13 +2,15 @@
 
 namespace App\Features\Timeline;
 
+use App\Services\SnsSettingService;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Validation\Rules\Enum;
 
 /**
  * The audiences a member may choose when posting. Single source for the form options and the
- * request validation rule so the two cannot drift: both honour the openpne.timeline.allow_web_public
- * gate (OpenPNE 3 op_activity_is_open). The form default is Members (OpenPNE 3 public_flag SNS).
+ * request validation rule so the two cannot drift: both honour the SnsSettingKey::TimelineAllowWebPublic
+ * setting (OpenPNE 3 op_activity_is_open). The form default is Members (OpenPNE 3 public_flag SNS).
  */
 final class TimelineVisibility
 {
@@ -30,6 +32,6 @@ final class TimelineVisibility
 
     private static function allowsWebPublic(): bool
     {
-        return (bool) config('openpne.timeline.allow_web_public');
+        return (bool) app(SnsSettingService::class)->get(SnsSettingKey::TimelineAllowWebPublic);
     }
 }

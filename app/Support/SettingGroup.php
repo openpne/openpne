@@ -25,4 +25,7 @@ enum SettingGroup
 
     /** Member-privacy policy settings (e.g. whether members may make their age web-public), edited on the "member privacy" page. */
     case Privacy;
+
+    /** Timeline policy settings (e.g. whether members may make posts web-public), edited on the "timeline settings" page. */
+    case Timeline;
 }
