@@ -81,6 +81,33 @@ class BannerSettingsTest extends TestCase
         $this->assertEqualsCanonicalizing([$a->getKey(), $b->getKey()], $banner->images->pluck('id')->all());
     }
 
+    public function test_switching_to_images_keeps_the_html(): void
+    {
+        // The HTML textarea is hidden (not dehydrated) in image mode, so saving must not wipe the
+        // stored html — it survives for a round-trip back to HTML mode (mirrors the image selection).
+        $banner = Banner::create(['name' => 'top_after', 'is_use_html' => true, 'html' => '<p>keep me</p>']);
+
+        Livewire::test(BannerSettings::class)
+            ->fillForm(['top_after_mode' => 'images'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $fresh = $banner->fresh();
+        $this->assertFalse($fresh->is_use_html);
+        $this->assertSame('<p>keep me</p>', $fresh->html);
+    }
+
+    public function test_saving_ignores_a_selected_image_that_no_longer_exists(): void
+    {
+        // A stale page (image deleted elsewhere) or tampered input must not hit a FK violation.
+        Livewire::test(BannerSettings::class)
+            ->fillForm(['top_before_mode' => 'images', 'top_before_images' => [999999]])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertCount(0, Banner::where('name', 'top_before')->first()->images);
+    }
+
     public function test_switching_to_html_keeps_the_image_selection(): void
     {
         // Saving in HTML mode must not drop the placement's images (and must update the row, not

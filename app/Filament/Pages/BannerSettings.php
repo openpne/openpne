@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Filament\Forms\Components\BannerImagePicker;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\Banner;
+use App\Models\BannerImage;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
@@ -101,18 +102,23 @@ class BannerSettings extends Page
         $data = $this->form->getState();
 
         foreach (self::PLACEMENTS as $name) {
-            $banner = Banner::updateOrCreate(
-                ['name' => $name],
-                [
-                    'is_use_html' => ($data[$name.'_mode'] ?? 'images') === 'html',
-                    'html' => ($data[$name.'_html'] ?? '') !== '' ? $data[$name.'_html'] : null,
-                ],
-            );
+            $mode = $data[$name.'_mode'] ?? 'images';
 
-            // Keep the image selection only while the placement is in image mode; switching to HTML
-            // leaves it untouched so it survives a round-trip back to images (OpenPNE 3 parity).
-            if (($data[$name.'_mode'] ?? 'images') === 'images') {
-                $banner->images()->sync(array_map('intval', $data[$name.'_images'] ?? []));
+            $banner = Banner::firstOrCreate(['name' => $name]);
+            $banner->is_use_html = $mode === 'html';
+            // Write each mode's payload only in its own mode so the other survives a round-trip
+            // (OpenPNE 3 keeps both banner.html and the image selection regardless of is_use_html;
+            // the hidden field is also not dehydrated, so writing it here would wipe it).
+            if ($mode === 'html') {
+                $banner->html = ($data[$name.'_html'] ?? '') !== '' ? $data[$name.'_html'] : null;
+            }
+            $banner->save();
+
+            if ($mode === 'images') {
+                // Drop ids whose image was deleted since the page loaded, so a stale selection can't
+                // hit a banner_use_images FK violation.
+                $selected = BannerImage::whereKey(array_map('intval', $data[$name.'_images'] ?? []))->pluck('id')->all();
+                $banner->images()->sync($selected);
             }
         }
 
