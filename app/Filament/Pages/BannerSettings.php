@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Filament\Forms\Components\BannerImagePicker;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\Banner;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -17,14 +18,17 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 
 /**
- * Per-placement banner mode for the Classic #topBanner: each placement shows either its pool images
- * (default) or operator HTML (is_use_html). The HTML is emitted raw in the Classic shell (OpenPNE 3
- * parity, admin-trusted); the images themselves are managed in the Banner images resource.
+ * The Classic #topBanner config, one screen per placement (OpenPNE 3 design/banner). Each placement
+ * either shows images picked from the shared pool (default, one at random per request) or operator
+ * HTML (is_use_html, emitted raw — admin-trusted). The images themselves are uploaded and edited in
+ * the Banner images resource; here you choose which of them each placement shows.
  *
  * @property-read Schema $form
  */
@@ -52,12 +56,12 @@ class BannerSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Banner settings');
+        return __('Banner');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Banner settings');
+        return __('Banner');
     }
 
     public function mount(): void
@@ -97,13 +101,19 @@ class BannerSettings extends Page
         $data = $this->form->getState();
 
         foreach (self::PLACEMENTS as $name) {
-            Banner::updateOrCreate(
+            $banner = Banner::updateOrCreate(
                 ['name' => $name],
                 [
-                    'is_use_html' => (bool) ($data[$name.'_use_html'] ?? false),
+                    'is_use_html' => ($data[$name.'_mode'] ?? 'images') === 'html',
                     'html' => ($data[$name.'_html'] ?? '') !== '' ? $data[$name.'_html'] : null,
                 ],
             );
+
+            // Keep the image selection only while the placement is in image mode; switching to HTML
+            // leaves it untouched so it survives a round-trip back to images (OpenPNE 3 parity).
+            if (($data[$name.'_mode'] ?? 'images') === 'images') {
+                $banner->images()->sync(array_map('intval', $data[$name.'_images'] ?? []));
+            }
         }
 
         Notification::make()
@@ -121,16 +131,19 @@ class BannerSettings extends Page
     {
         $values = [];
         foreach (self::PLACEMENTS as $name) {
-            $banner = Banner::where('name', $name)->first();
-            $values[$name.'_use_html'] = (bool) $banner?->is_use_html;
-            $values[$name.'_html'] = (string) $banner?->html;
+            $banner = Banner::firstOrCreate(['name' => $name]);
+            $values[$name.'_mode'] = $banner->is_use_html ? 'html' : 'images';
+            $values[$name.'_html'] = (string) $banner->html;
+            // Strings so the picker's Alpine checkbox x-model matches the option values (which are strings).
+            $values[$name.'_images'] = $banner->images()->pluck('banner_images.id')->map(fn (int $id): string => (string) $id)->all();
         }
 
         return $values;
     }
 
     /**
-     * One section per placement: a mode toggle and the HTML used when it is on.
+     * One section per placement: the mode, the pool images shown when in image mode, and the HTML used
+     * when in HTML mode.
      *
      * @return list<Section>
      */
@@ -139,11 +152,32 @@ class BannerSettings extends Page
         $sections = [];
         foreach (self::PLACEMENTS as $name) {
             $sections[] = Section::make(BannerImageResource::placementLabel($name))->schema([
-                Toggle::make($name.'_use_html')
-                    ->label(__('Use HTML instead of images')),
+                Radio::make($name.'_mode')
+                    ->label(__('Display mode'))
+                    ->options([
+                        'images' => __('Show banner images'),
+                        'html' => __('Use custom HTML'),
+                    ])
+                    ->descriptions([
+                        'images' => __('Show one of the selected images at random.'),
+                        'html' => __('Show your own HTML instead of images.'),
+                    ])
+                    ->default('images')
+                    ->live(),
+
+                BannerImagePicker::make($name.'_images')
+                    ->label(__('Images shown here'))
+                    ->helperText(new HtmlString(sprintf(
+                        '<a href="%s" style="text-decoration:underline">%s</a>',
+                        e(BannerImageResource::getUrl('index')),
+                        e(__('Add or manage banner images')),
+                    )))
+                    ->visible(fn (Get $get): bool => $get($name.'_mode') === 'images'),
+
                 Textarea::make($name.'_html')
                     ->label(__('HTML'))
-                    ->rows(4),
+                    ->rows(4)
+                    ->visible(fn (Get $get): bool => $get($name.'_mode') === 'html'),
             ]);
         }
 
