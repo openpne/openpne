@@ -62,7 +62,7 @@ class AppearanceNavigationTest extends TestCase
             __('Gadget layout'),
             __('Gadgets'),
             __('Navigation'),
-            __('Banner settings'),
+            __('Banner'),
             __('Banner images'),
             __('Design settings'),
         ], $labels);

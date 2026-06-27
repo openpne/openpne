@@ -17,6 +17,7 @@ class EditBannerImage extends EditRecord
 
     protected function getHeaderActions(): array
     {
+        // Full size is opened by clicking the preview image (shared lightbox), not a header action.
         return [
             DeleteAction::make()
                 ->action(fn (BannerImage $record) => app(DeleteBannerImage::class)($record)),
@@ -34,7 +35,6 @@ class EditBannerImage extends EditRecord
      */
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        $data['placements'] = $this->record->banners()->pluck('banners.id')->all();
         // The upload starts empty: leaving it blank keeps the current image.
         unset($data['image']);
 
@@ -42,8 +42,9 @@ class EditBannerImage extends EditRecord
     }
 
     /**
-     * One atomic edit: link/label/placements and an optional replacement image, all in the action's
-     * compensating transaction (a failed image swap rolls back the metadata too).
+     * One atomic edit: link/label and an optional replacement image, in the action's compensating
+     * transaction (a failed image swap rolls back the metadata too). Placements are not touched here —
+     * they are chosen on the Banner page — so null leaves them as they are.
      *
      * @param  array<string, mixed>  $data
      */
@@ -57,7 +58,7 @@ class EditBannerImage extends EditRecord
             $record,
             $data['url'] ?? null,
             $data['name'] ?? null,
-            array_map('intval', $data['placements'] ?? []),
+            null,
             $upload,
         );
     }

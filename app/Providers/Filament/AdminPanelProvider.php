@@ -84,6 +84,11 @@ class AdminPanelProvider extends PanelProvider
                 fn (): View => view('filament.login-locale-switcher'),
                 scopes: [Login::class],
             )
+            // Shared client-side image lightbox; thumbnails dispatch `open-image-lightbox` to it.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): View => view('filament.components.image-lightbox'),
+            )
             ->authMiddleware([
                 Authenticate::class,
             ]);
