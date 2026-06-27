@@ -75,11 +75,8 @@ return [
         'allow_web_public' => (bool) env('OPENPNE_DIARY_ALLOW_WEB_PUBLIC', true),
     ],
 
-    'timeline' => [
-        // OpenPNE 3 op_activity_is_open (default off): whether a post may be made web-public (Open).
-        // When off, OpenPNE 3 drops the Open option from the form (ActivityDataTable::getPublicFlags).
-        'allow_web_public' => (bool) env('OPENPNE_TIMELINE_ALLOW_WEB_PUBLIC', false),
-    ],
+    // Timeline web-public is now an admin setting (SnsSettingKey::TimelineAllowWebPublic), no longer
+    // an env flag. The diary equivalent stays here until its admin surface lands.
 
     /*
     |--------------------------------------------------------------------------
