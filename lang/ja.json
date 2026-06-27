@@ -737,6 +737,7 @@
     "Upgrade Required": "アップグレードが必要",
     "Upload": "アップロード",
     "Upload a new image to replace the current one.": "現在の画像を置き換える新しい画像をアップロードします。",
+    "Upload a public image to embed in custom HTML/CSS. The upload returns a login-free URL.": "カスタムHTML/CSSに埋め込む公開画像をアップロードします。アップロードするとログイン不要のURLが返されます。",
     "Upload image": "画像をアップロード",
     "URI Too Long": "URLが長すぎます",
     "Use HTML instead of images": "画像の代わりに HTML を使う",

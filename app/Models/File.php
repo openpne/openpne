@@ -46,6 +46,15 @@ class File extends Model
         return route('file.show', ['file' => $this->name]);
     }
 
+    /**
+     * Login-free URL for a file marked explicit_visibility='public' (an admin asset). Served by the
+     * public PublicFileController, unlike url() which is behind the authed FileController.
+     */
+    public function publicUrl(): string
+    {
+        return route('file.public', ['file' => $this->name]);
+    }
+
     /** The image format token (jpg/png/gif/webp) from the MIME type, or null if not a supported image. */
     public function imageFormat(): ?string
     {

@@ -24,6 +24,7 @@ use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\PublicFileController;
 use App\Http\Middleware\AsBackgroundFetch;
 use App\Http\Middleware\EnsureMemberInviteAllowed;
 use App\Http\Middleware\EnsureOpenRegistration;
@@ -143,6 +144,11 @@ Route::get('/cache/css/customizing.css', [CustomizingCssController::class, 'show
 // here (BannerImageController 404s anything else); the rest of the file store stays behind the authed
 // FileController. Bound by the opaque `name` token.
 Route::get('/banner/image/{file:name}', [BannerImageController::class, 'show'])->name('banner.image');
+
+// Admin-uploaded public asset bytes (explicit_visibility='public'), e.g. an image embedded in custom
+// HTML/CSS. Public — no login — but PublicFileController 404s any file not explicitly marked public,
+// keeping the rest of the store behind the authed FileController. Bound by the opaque `name` token.
+Route::get('/file/public/{file:name}', [PublicFileController::class, 'show'])->name('file.public');
 
 // Admin file monitor byte delivery (thumbnail + download). Gated by the `admin` guard inside the
 // controller (404 for non-admins) and intentionally bypassing FilePolicy: an administrator may
