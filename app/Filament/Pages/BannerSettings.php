@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use App\Filament\Forms\Components\BannerImagePicker;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Models\Banner;
+use App\Models\BannerImage;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Actions;
@@ -17,14 +19,17 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 
 /**
- * Per-placement banner mode for the Classic #topBanner: each placement shows either its pool images
- * (default) or operator HTML (is_use_html). The HTML is emitted raw in the Classic shell (OpenPNE 3
- * parity, admin-trusted); the images themselves are managed in the Banner images resource.
+ * The Classic #topBanner config, one screen per placement (OpenPNE 3 design/banner). Each placement
+ * either shows images picked from the shared pool (default, one at random per request) or operator
+ * HTML (is_use_html, emitted raw — admin-trusted). The images themselves are uploaded and edited in
+ * the Banner images resource; here you choose which of them each placement shows.
  *
  * @property-read Schema $form
  */
@@ -52,12 +57,12 @@ class BannerSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Banner settings');
+        return __('Banner');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Banner settings');
+        return __('Banner');
     }
 
     public function mount(): void
@@ -97,13 +102,24 @@ class BannerSettings extends Page
         $data = $this->form->getState();
 
         foreach (self::PLACEMENTS as $name) {
-            Banner::updateOrCreate(
-                ['name' => $name],
-                [
-                    'is_use_html' => (bool) ($data[$name.'_use_html'] ?? false),
-                    'html' => ($data[$name.'_html'] ?? '') !== '' ? $data[$name.'_html'] : null,
-                ],
-            );
+            $mode = $data[$name.'_mode'] ?? 'images';
+
+            $banner = Banner::firstOrCreate(['name' => $name]);
+            $banner->is_use_html = $mode === 'html';
+            // Write each mode's payload only in its own mode so the other survives a round-trip
+            // (OpenPNE 3 keeps both banner.html and the image selection regardless of is_use_html;
+            // the hidden field is also not dehydrated, so writing it here would wipe it).
+            if ($mode === 'html') {
+                $banner->html = ($data[$name.'_html'] ?? '') !== '' ? $data[$name.'_html'] : null;
+            }
+            $banner->save();
+
+            if ($mode === 'images') {
+                // Drop ids whose image was deleted since the page loaded, so a stale selection can't
+                // hit a banner_use_images FK violation.
+                $selected = BannerImage::whereKey(array_map('intval', $data[$name.'_images'] ?? []))->pluck('id')->all();
+                $banner->images()->sync($selected);
+            }
         }
 
         Notification::make()
@@ -121,16 +137,19 @@ class BannerSettings extends Page
     {
         $values = [];
         foreach (self::PLACEMENTS as $name) {
-            $banner = Banner::where('name', $name)->first();
-            $values[$name.'_use_html'] = (bool) $banner?->is_use_html;
-            $values[$name.'_html'] = (string) $banner?->html;
+            $banner = Banner::firstOrCreate(['name' => $name]);
+            $values[$name.'_mode'] = $banner->is_use_html ? 'html' : 'images';
+            $values[$name.'_html'] = (string) $banner->html;
+            // Strings so the picker's Alpine checkbox x-model matches the option values (which are strings).
+            $values[$name.'_images'] = $banner->images()->pluck('banner_images.id')->map(fn (int $id): string => (string) $id)->all();
         }
 
         return $values;
     }
 
     /**
-     * One section per placement: a mode toggle and the HTML used when it is on.
+     * One section per placement: the mode, the pool images shown when in image mode, and the HTML used
+     * when in HTML mode.
      *
      * @return list<Section>
      */
@@ -139,11 +158,32 @@ class BannerSettings extends Page
         $sections = [];
         foreach (self::PLACEMENTS as $name) {
             $sections[] = Section::make(BannerImageResource::placementLabel($name))->schema([
-                Toggle::make($name.'_use_html')
-                    ->label(__('Use HTML instead of images')),
+                Radio::make($name.'_mode')
+                    ->label(__('Display mode'))
+                    ->options([
+                        'images' => __('Show banner images'),
+                        'html' => __('Use custom HTML'),
+                    ])
+                    ->descriptions([
+                        'images' => __('Show one of the selected images at random.'),
+                        'html' => __('Show your own HTML instead of images.'),
+                    ])
+                    ->default('images')
+                    ->live(),
+
+                BannerImagePicker::make($name.'_images')
+                    ->label(__('Images shown here'))
+                    ->helperText(new HtmlString(sprintf(
+                        '<a href="%s" style="text-decoration:underline">%s</a>',
+                        e(BannerImageResource::getUrl('index')),
+                        e(__('Add or manage banner images')),
+                    )))
+                    ->visible(fn (Get $get): bool => $get($name.'_mode') === 'images'),
+
                 Textarea::make($name.'_html')
                     ->label(__('HTML'))
-                    ->rows(4),
+                    ->rows(4)
+                    ->visible(fn (Get $get): bool => $get($name.'_mode') === 'html'),
             ]);
         }
 

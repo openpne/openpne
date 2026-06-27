@@ -7,8 +7,8 @@ use App\Models\BannerImage;
 use Illuminate\Http\UploadedFile;
 
 /**
- * Applies one admin edit of a banner image — link, label, placements, and optionally a replacement
- * file — atomically.
+ * Applies one admin edit of a banner image — link, label, optionally its placements, and optionally a
+ * replacement file — atomically.
  *
  * Everything runs in one compensating transaction so a failed image swap rolls back the metadata too
  * (no half-saved edit). The row is locked first (like SetAvatar) so two concurrent edits/replaces
@@ -20,15 +20,18 @@ class UpdateBannerImage
     public function __construct(private readonly PostImages $images) {}
 
     /**
-     * @param  list<int>  $placementIds
+     * @param  list<int>|null  $placementIds  null leaves the current placements untouched
      */
-    public function __invoke(BannerImage $image, ?string $url, ?string $name, array $placementIds, ?UploadedFile $upload = null): BannerImage
+    public function __invoke(BannerImage $image, ?string $url, ?string $name, ?array $placementIds = null, ?UploadedFile $upload = null): BannerImage
     {
         $replaced = $this->images->compensating(function (callable $store) use ($image, $url, $name, $placementIds, $upload): ?\App\Models\File {
             $locked = $image->newQuery()->whereKey($image->getKey())->lockForUpdate()->first();
 
             $locked->update(['url' => $url, 'name' => $name]);
-            $locked->banners()->sync($placementIds);
+
+            if ($placementIds !== null) {
+                $locked->banners()->sync($placementIds);
+            }
 
             if ($upload === null) {
                 return null;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Filament;
 
 use App\Filament\Resources\BannerImages\Pages\CreateBannerImage;
+use App\Filament\Resources\BannerImages\Pages\EditBannerImage;
 use App\Filament\Resources\BannerImages\Pages\ListBannerImages;
 use App\Models\AdminUser;
 use App\Models\BannerImage;
@@ -48,5 +49,30 @@ class BannerImageResourceTest extends TestCase
     public function test_the_list_page_loads(): void
     {
         Livewire::test(ListBannerImages::class)->assertOk();
+    }
+
+    public function test_the_list_thumbnail_opens_the_lightbox(): void
+    {
+        // A row present exercises the thumbnail column, which is wired to the shared lightbox on click.
+        $image = BannerImage::factory()->create(['name' => 'Promo']);
+
+        Livewire::test(ListBannerImages::class)
+            ->assertOk()
+            ->assertSee($image->file->name)
+            ->assertSee('open-image-lightbox')
+            // Data rides on data-* attributes (not a JSON literal that attribute escaping would mangle).
+            ->assertSee('data-lb-src');
+    }
+
+    public function test_the_edit_page_preview_opens_the_lightbox(): void
+    {
+        // The current-image preview reads the record and is wired to the shared lightbox on click.
+        $image = BannerImage::factory()->create(['name' => 'Promo']);
+
+        Livewire::test(EditBannerImage::class, ['record' => $image->getRouteKey()])
+            ->assertOk()
+            ->assertSee($image->file->name)
+            ->assertSee('open-image-lightbox')
+            ->assertSee('data-lb-src');
     }
 }

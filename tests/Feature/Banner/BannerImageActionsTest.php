@@ -73,6 +73,20 @@ class BannerImageActionsTest extends TestCase
         $this->assertEqualsCanonicalizing([$after->getKey()], $fresh->banners->pluck('id')->all());
     }
 
+    public function test_update_with_null_placements_leaves_them_untouched(): void
+    {
+        // The image edit form no longer manages placements (they are chosen on the Banner page), so a
+        // null placements argument must preserve the existing associations.
+        $banner = Banner::create(['name' => 'top_before']);
+        $image = app(StoreBannerImage::class)(UploadedFile::fake()->image('x.png', 10, 10), 'https://old.test', 'Old', [$banner->getKey()]);
+
+        app(UpdateBannerImage::class)($image, 'https://new.test', 'New', null, null);
+
+        $fresh = $image->fresh();
+        $this->assertSame('https://new.test', $fresh->url);
+        $this->assertEqualsCanonicalizing([$banner->getKey()], $fresh->banners->pluck('id')->all());
+    }
+
     public function test_update_swaps_the_file_and_purges_the_old_one(): void
     {
         $image = app(StoreBannerImage::class)(UploadedFile::fake()->image('one.png', 10, 10), null, null, []);

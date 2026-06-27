@@ -145,10 +145,11 @@ operator HTML/CSS — stored without trimming so a stylesheet's leading `@charse
 
 The top banner (`#topBanner` above the content, OpenPNE 3 `op_banner`) shows operator HTML or one
 of a pool of images at random, by login state (`top_after` when signed in, else `top_before`). Images
-are uploaded in the [`BannerImages`](../../app/Filament/Resources/BannerImages/BannerImageResource.php)
+are uploaded and edited in the [`BannerImages`](../../app/Filament/Resources/BannerImages/BannerImageResource.php)
 resource and served publicly through [`BannerImageController`](../../app/Http/Controllers/BannerImageController.php)
-(banners show to guests, so unlike other files they are not auth-gated); each placement's mode and HTML
-are set on [`BannerSettings`](../../app/Filament/Pages/BannerSettings.php). The OpenPNE 3 side banner is
+(banners show to guests, so unlike other files they are not auth-gated); each placement's mode, the
+images it shows (picked from that shared pool), and any HTML are set on the
+[`Banner`](../../app/Filament/Pages/BannerSettings.php) page. The OpenPNE 3 side banner is
 not ported: the PC side column is the gadget `sideBanner` zone (already ported) and `op_banner` side
 placements were mobile-only. Upgrading existing OpenPNE 3 banner rows is gated on the deferred
 `file` / `file_bin` upgrade.
