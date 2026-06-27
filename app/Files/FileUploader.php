@@ -24,7 +24,7 @@ class FileUploader
 {
     public function __construct(private readonly FileStorage $storage) {}
 
-    public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null): File
+    public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null, ?string $explicitVisibility = null): File
     {
         $file = new File([
             // Opaque, backend-agnostic storage key and URL token (collision is
@@ -34,6 +34,9 @@ class FileUploader
             'original_filename' => $upload->getClientOriginalName(),
             'related_entity_type' => $relatedType,
             'related_entity_id' => $relatedId,
+            // null = inherit visibility from the owner; an ownerless admin asset passes 'public' so
+            // FilePolicy serves it (an ownerless file is otherwise fail-closed denied).
+            'explicit_visibility' => $explicitVisibility,
             'byte_size' => (int) $upload->getSize(),
         ]);
 

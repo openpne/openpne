@@ -5,12 +5,11 @@ namespace App\Filament\Resources\BannerImages\Pages;
 use App\Features\Banner\Actions\DeleteBannerImage;
 use App\Features\Banner\Actions\UpdateBannerImage;
 use App\Filament\Resources\BannerImages\BannerImageResource;
+use App\Files\FormUpload;
 use App\Models\BannerImage;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Arr;
 
 class EditBannerImage extends EditRecord
 {
@@ -51,14 +50,15 @@ class EditBannerImage extends EditRecord
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         /** @var BannerImage $record */
-        $upload = Arr::first((array) ($data['image'] ?? []));
+        // Null when the upload was left blank — keep the current image.
+        $upload = FormUpload::single($data['image'] ?? null);
 
         return app(UpdateBannerImage::class)(
             $record,
             $data['url'] ?? null,
             $data['name'] ?? null,
             array_map('intval', $data['placements'] ?? []),
-            $upload instanceof UploadedFile ? $upload : null,
+            $upload,
         );
     }
 }
