@@ -55,7 +55,9 @@ class DiaryResourceTest extends TestCase
         $this->assertNotNull($file);
 
         Livewire::test(ListDiaries::class)
-            ->callAction(TestAction::make('delete')->table($diary));
+            ->callAction(TestAction::make('delete')->table($diary))
+            // using() must return truthy, or DeleteAction reports failure after a real delete.
+            ->assertNotified(__('filament-actions::delete.single.notifications.deleted.title'));
 
         // The author-less purge core removed the diary and its owned image File bytes.
         $this->assertModelMissing($diary);
