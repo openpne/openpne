@@ -96,18 +96,20 @@ class UploadImage extends Page
     {
         return Form::make([EmbeddedSchema::make('form')])
             ->id('form')
-            ->livewireSubmitHandler('upload')
+            // Not 'upload': that is a reserved Livewire JS method ($wire.upload), so wire:submit="upload"
+            // would invoke the file-upload manager instead of this handler.
+            ->livewireSubmitHandler('save')
             ->footer([
                 Actions::make([
-                    Action::make('upload')
+                    Action::make('save')
                         ->label(__('Upload'))
-                        ->submit('upload')
+                        ->submit('save')
                         ->keyBindings(['mod+s']),
                 ]),
             ]);
     }
 
-    public function upload(): void
+    public function save(): void
     {
         $upload = Arr::first((array) ($this->form->getState()['image'] ?? []));
         abort_unless($upload instanceof UploadedFile, 422);
