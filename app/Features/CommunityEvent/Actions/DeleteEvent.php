@@ -17,6 +17,16 @@ class DeleteEvent
             throw new CommunityEventActionException(CommunityEventActionFailure::CannotEdit);
         }
 
+        $this->purge($event);
+    }
+
+    /**
+     * Delete the event and purge its (and its comments') image bytes — no authorization. The admin
+     * moderation panel calls this directly (the panel's `admin` guard is an AdminUser, not a Member);
+     * frontend callers always go through __invoke.
+     */
+    public function purge(CommunityEvent $event): void
+    {
         // Collect every owned image File (the event's and its comments') before the row is gone: the
         // FK cascade drops the *_image link rows but never the File bytes, which a disk backend
         // deletes irreversibly. Purge them after the event is deleted (post-commit).
