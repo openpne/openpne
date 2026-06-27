@@ -45,6 +45,9 @@ enum SnsSettingKey: string
     /** Whether members may make their age visible to web guests (OpenPNE 3 is_allow_web_public_flag_age). */
     case AllowWebPublicAge = 'allow_web_public_age';
 
+    /** Whether members may make a timeline post visible to web guests (OpenPNE 3 op_activity_is_open). */
+    case TimelineAllowWebPublic = 'timeline_allow_web_public';
+
     /** The Classic gadget layout (layoutA/B/C) for the home / profile / login pages (App\Gadgets\GadgetLayout). */
     case GadgetHomeLayout = 'gadget_home_layout';
 
@@ -84,6 +87,7 @@ enum SnsSettingKey: string
             self::SnsName, self::SnsTitle, self::AdminMailAddress => SettingGroup::Base,
             self::RegistrationMode, self::CaptchaEnabled => SettingGroup::Auth,
             self::AllowWebPublicAge => SettingGroup::Privacy,
+            self::TimelineAllowWebPublic => SettingGroup::Timeline,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => SettingGroup::GadgetLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => SettingGroup::Design,
@@ -106,6 +110,9 @@ enum SnsSettingKey: string
             self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',
             self::AllowWebPublicAge => 'is_allow_web_public_flag_age',
+            // OpenPNE 3's op_activity_is_open is an sfConfig (app.yml) value, not an sns_config row, so
+            // there is nothing to copy; upgraded sites fall back to the same off default.
+            self::TimelineAllowWebPublic => null,
             // OpenPNE 3 stored the gadget layout as `{type}_layout` in sns_config (the home context
             // is keyed "home", not "gadget").
             self::GadgetHomeLayout => 'home_layout',
@@ -128,7 +135,7 @@ enum SnsSettingKey: string
     {
         return match ($this->group()) {
             SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy => $this->op3SourceName() !== null,
-            SettingGroup::Auth => false,
+            SettingGroup::Auth, SettingGroup::Timeline => false,
         };
     }
 
@@ -150,6 +157,9 @@ enum SnsSettingKey: string
             // Off, matching OpenPNE 3's is_allow_web_public_flag_age default — members may not make
             // their age web-public until an admin opts in.
             self::AllowWebPublicAge => false,
+            // Off, matching OpenPNE 3's op_activity_is_open default — posts may not be web-public
+            // until an admin opts in.
+            self::TimelineAllowWebPublic => false,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => 'layoutA',
             // No custom CSS / HTML insertion until an operator sets it; the footer shows OpenPNE 3's bar.
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
@@ -169,7 +179,7 @@ enum SnsSettingKey: string
         }
 
         return match ($this) {
-            self::CaptchaEnabled, self::AllowWebPublicAge => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
+            self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
             default => is_string($value) ? trim($value) : (string) $value,
         };
     }
@@ -178,7 +188,7 @@ enum SnsSettingKey: string
     public function encode(mixed $value): string
     {
         return match ($this) {
-            self::CaptchaEnabled, self::AllowWebPublicAge => $value ? '1' : '0',
+            self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic => $value ? '1' : '0',
             default => (string) $value,
         };
     }
@@ -196,7 +206,7 @@ enum SnsSettingKey: string
             self::CaptchaEnabled => $value !== '0',
             // Fail-closed the OTHER way: here `true` widens exposure, so only an explicit '1' enables
             // it; a malformed/empty value must not open web-public age (the opposite of CaptchaEnabled).
-            self::AllowWebPublicAge => $value === '1',
+            self::AllowWebPublicAge, self::TimelineAllowWebPublic => $value === '1',
             default => $value,
         };
     }
@@ -210,6 +220,7 @@ enum SnsSettingKey: string
             self::RegistrationMode => __('Registration mode'),
             self::CaptchaEnabled => __('Require CAPTCHA'),
             self::AllowWebPublicAge => __('Allow members to make their age public to the web'),
+            self::TimelineAllowWebPublic => __('Allow members to make timeline posts public to the web'),
             self::GadgetHomeLayout => __('Home layout'),
             self::GadgetProfileLayout => __('Profile layout'),
             self::GadgetLoginLayout => __('Login layout'),
@@ -231,6 +242,7 @@ enum SnsSettingKey: string
         return match ($this) {
             self::SnsName, self::AdminMailAddress => true,
             self::SnsTitle, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge,
+            self::TimelineAllowWebPublic,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => false,
