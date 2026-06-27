@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Features\CommunityTopic\Actions\CreateTopicComment;
 use App\Filament\Widgets\OverviewStatsWidget;
 use App\Filament\Widgets\RecentMembersWidget;
 use App\Filament\Widgets\RegistrationModeWidget;
 use App\Models\AdminUser;
 use App\Models\Community;
+use App\Models\CommunityMember;
+use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
@@ -59,6 +62,36 @@ class DashboardWidgetsTest extends TestCase
         Livewire::test(RegistrationModeWidget::class)
             ->assertSuccessful()
             ->assertSee(__('Registration closed'));
+    }
+
+    public function test_active_communities_count_includes_a_fresh_comment_on_an_old_topic(): void
+    {
+        $since = now()->subDays(30);
+
+        // A community whose only topic is old, but just received a comment — must count as active
+        // (the comment bumps the topic's updated_at).
+        $active = Community::factory()->create();
+        $oldTopic = CommunityTopic::factory()->create([
+            'community_id' => $active->getKey(),
+            'created_at' => now()->subYear(),
+            'updated_at' => now()->subYear(),
+        ]);
+        $commenter = Member::factory()->create();
+        CommunityMember::factory()->create([
+            'community_id' => $active->getKey(),
+            'member_id' => $commenter->getKey(),
+        ]);
+        app(CreateTopicComment::class)($commenter, $oldTopic, 'A fresh reply on an old thread.');
+
+        // A community with only an old, untouched topic — must not count.
+        $stale = Community::factory()->create();
+        CommunityTopic::factory()->create([
+            'community_id' => $stale->getKey(),
+            'created_at' => now()->subYear(),
+            'updated_at' => now()->subYear(),
+        ]);
+
+        $this->assertSame(1, OverviewStatsWidget::activeCommunityCount($since));
     }
 
     public function test_recent_members_shows_latest_capped_at_ten(): void

@@ -55,8 +55,8 @@ class OverviewStatsWidget extends StatsOverviewWidget
             Stat::make(__('%Communities%'), number_format(Community::query()->count()))
                 ->url(CommunityResource::getUrl('index')),
 
-            Stat::make(__('Active %communities% (last 30 days)'), number_format($this->activeCommunities($activeSince)))
-                ->description(__('Topics or events in the last 30 days'))
+            Stat::make(__('Active %communities% (last 30 days)'), number_format(self::activeCommunityCount($activeSince)))
+                ->description(__('Topics, events, or comments in the last 30 days'))
                 ->color('success'),
         ];
     }
@@ -72,11 +72,16 @@ class OverviewStatsWidget extends StatsOverviewWidget
         return $query->count();
     }
 
-    /** Distinct communities with a topic or event posted since $since. */
-    private function activeCommunities(CarbonInterface $since): int
+    /**
+     * Distinct communities with topic/event activity since $since. Keyed on updated_at, not
+     * created_at: a new comment bumps its parent topic/event updated_at (CreateTopicComment /
+     * CreateEventComment), so a fresh comment on an old thread counts as activity too — matching how
+     * the board orders threads. Public+static so it's assertable without rendering the widget.
+     */
+    public static function activeCommunityCount(CarbonInterface $since): int
     {
-        return CommunityTopic::query()->where('created_at', '>=', $since)->distinct()->pluck('community_id')
-            ->merge(CommunityEvent::query()->where('created_at', '>=', $since)->distinct()->pluck('community_id'))
+        return CommunityTopic::query()->where('updated_at', '>=', $since)->distinct()->pluck('community_id')
+            ->merge(CommunityEvent::query()->where('updated_at', '>=', $since)->distinct()->pluck('community_id'))
             ->unique()
             ->count();
     }
