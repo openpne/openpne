@@ -56,6 +56,12 @@ class CommunityEvent extends Model
         return $this->belongsToMany(Member::class, 'community_event_members')->withTimestamps();
     }
 
+    /** @return HasMany<CommunityEventMember, $this> RSVP roster rows; admin moderation lists/removes these individually. */
+    public function eventMembers(): HasMany
+    {
+        return $this->hasMany(CommunityEventMember::class);
+    }
+
     /** Past the join window: now is later than the day after open_date (OpenPNE 3 isClosed). */
     public function isClosed(): bool
     {
