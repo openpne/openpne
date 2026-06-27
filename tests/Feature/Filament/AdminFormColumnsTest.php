@@ -6,8 +6,10 @@ namespace Tests\Feature\Filament;
 
 use App\Models\AdminUser;
 use Filament\Facades\Filament;
+use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use ReflectionMethod;
 use Tests\TestCase;
 
 class AdminFormColumnsTest extends TestCase
@@ -36,6 +38,13 @@ class AdminFormColumnsTest extends TestCase
         $this->assertNotEmpty($resources, 'The admin panel registers resources to check.');
 
         foreach ($resources as $resource) {
+            // A list-only moderation resource (e.g. diary monitoring) does not declare a form(),
+            // so it inherits the base Resource::form() that returns the schema unchanged. The
+            // single-column rule only constrains resources that actually have a form — skip the rest.
+            if ((new ReflectionMethod($resource, 'form'))->getDeclaringClass()->getName() === Resource::class) {
+                continue;
+            }
+
             $schema = $resource::form(Schema::make());
 
             $this->assertTrue(
