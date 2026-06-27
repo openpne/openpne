@@ -19,6 +19,7 @@ use App\Features\Member\MemberSearchController;
 use App\Features\Message\MessageController;
 use App\Features\Profile\ProfileController;
 use App\Features\Timeline\TimelineController;
+use App\Http\Controllers\Admin\AdminFileController;
 use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
@@ -142,6 +143,11 @@ Route::get('/cache/css/customizing.css', [CustomizingCssController::class, 'show
 // here (BannerImageController 404s anything else); the rest of the file store stays behind the authed
 // FileController. Bound by the opaque `name` token.
 Route::get('/banner/image/{file:name}', [BannerImageController::class, 'show'])->name('banner.image');
+
+// Admin file monitor byte delivery (thumbnail + download). Gated by the `admin` guard inside the
+// controller (404 for non-admins) and intentionally bypassing FilePolicy: an administrator may
+// inspect any uploaded file. Bound by the opaque `name` token.
+Route::get('/admin/file/{file:name}/raw', [AdminFileController::class, 'show'])->name('admin.file.raw');
 
 // Member invitation (OpenPNE 3 member/invite): a logged-in member invites an address, which issues a
 // registration token and mails the link. Gated to modes that allow member invites (open/invite);
