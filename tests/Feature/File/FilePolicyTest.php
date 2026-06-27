@@ -79,6 +79,31 @@ class FilePolicyTest extends TestCase
         $this->assertFalse(Gate::forUser(Member::factory()->create())->allows('view', $file));
     }
 
+    public function test_explicit_public_file_is_guest_readable(): void
+    {
+        // An admin-uploaded asset: no owner, explicit_visibility='public' → served to anyone.
+        $file = File::factory()->create([
+            'related_entity_type' => null,
+            'related_entity_id' => null,
+            'explicit_visibility' => File::VISIBILITY_PUBLIC,
+        ]);
+
+        $this->assertTrue(Gate::forUser(null)->allows('view', $file));
+    }
+
+    public function test_non_public_explicit_visibility_does_not_open_an_unlinked_file(): void
+    {
+        // Only the literal 'public' opens an ownerless file; any other value falls through to the
+        // fail-closed owner resolution (the override is itself fail-closed).
+        $file = File::factory()->create([
+            'related_entity_type' => null,
+            'related_entity_id' => null,
+            'explicit_visibility' => 'friends',
+        ]);
+
+        $this->assertFalse(Gate::forUser(Member::factory()->create())->allows('view', $file));
+    }
+
     // A timeline post's image inherits the post's visibility (morph alias `timelinePost` +
     // FilePolicy branch). Without these the fetch would fail-closed to 404.
 

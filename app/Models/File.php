@@ -20,6 +20,9 @@ class File extends Model
     /** @use HasFactory<FileFactory> */
     use HasFactory;
 
+    /** explicit_visibility value that makes a file web-readable regardless of owner (FilePolicy). */
+    public const VISIBILITY_PUBLIC = 'public';
+
     protected $table = 'files';
 
     /**
