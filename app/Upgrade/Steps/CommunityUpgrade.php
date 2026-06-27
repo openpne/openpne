@@ -50,6 +50,7 @@ class CommunityUpgrade extends UpgradeStep
             'name' => Column::source('name'),
             'description' => Column::expr($this->configValueLatest('description'), uses: ['id']),
             'register_policy' => Column::expr($this->registerPolicyExpr(), uses: ['id']),
+            'is_default' => Column::expr($this->isDefaultExpr(), uses: ['id']),
             'topic_read_access' => Column::expr($this->topicReadAccessExpr(), uses: ['id']),
             'topic_post_authority' => Column::expr($this->topicPostAuthorityExpr(), uses: ['id']),
             'community_category_id' => Column::expr($this->categoryIdExpr(), uses: ['community_category_id']),
@@ -80,6 +81,16 @@ class CommunityUpgrade extends UpgradeStep
             JoinPolicy::Open->value,
             JoinPolicy::Open->value,
         );
+    }
+
+    /**
+     * community_config[is_default] → communities.is_default. OpenPNE 3 marks the default community
+     * with the KV value '1' (CommunityTable::getDefaultCommunities queries value = true); only that
+     * maps to true, everything else (missing/empty/other) to false.
+     */
+    private function isDefaultExpr(): string
+    {
+        return sprintf("CASE WHEN %s = '1' THEN 1 ELSE 0 END", $this->configValueLatest('is_default'));
     }
 
     /**

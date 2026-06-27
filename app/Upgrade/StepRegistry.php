@@ -220,11 +220,10 @@ final class StepRegistry
             'description' => 'communities.description, CommunityUpgrade.',
             'public_flag' => 'communities.topic_read_access (public→Everyone, auth_commu_member→MembersOnly; missing→Everyone), CommunityUpgrade. Shared read gate for both the topic board and events (OpenPNE 3 reads the same config for both).',
             'topic_authority' => 'communities.topic_post_authority (public→Members, admin_only→AdminsOnly; missing→Members), CommunityUpgrade. Shared post gate for both the topic board and events.',
+            'is_default' => 'communities.is_default (KV "1"→true, else false), CommunityUpgrade.',
             // Owned by a later feature.
             'is_send_pc_joinCommunity_mail' => 'Per-community join-notification opt-in — lands with the notification feature.',
             'is_send_mobile_joinCommunity_mail' => 'Mobile join-notification opt-in — the mobile frontend is out of scope.',
-            // Intentionally deferred / dropped: no Phase A consumer.
-            'is_default' => 'Deferred: default community (auto-join every member) is an admin feature for a later slice.',
         ];
     }
 }

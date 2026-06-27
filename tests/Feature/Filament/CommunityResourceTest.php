@@ -21,6 +21,7 @@ use App\Models\CommunityTopicComment;
 use App\Models\CommunityTopicCommentImage;
 use App\Models\CommunityTopicImage;
 use App\Models\File;
+use App\Models\Member;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -117,5 +118,34 @@ class CommunityResourceTest extends TestCase
         foreach ($files as $file) {
             $this->assertModelMissing($file);
         }
+    }
+
+    public function test_toggle_default_flips_the_flag(): void
+    {
+        $community = Community::factory()->create(['is_default' => false]);
+
+        Livewire::test(ListCommunities::class)
+            ->callAction(TestAction::make('toggleDefault')->table($community));
+
+        $this->assertTrue($community->refresh()->is_default);
+
+        Livewire::test(ListCommunities::class)
+            ->callAction(TestAction::make('toggleDefault')->table($community));
+
+        $this->assertFalse($community->refresh()->is_default);
+    }
+
+    public function test_add_all_members_action_joins_outsiders(): void
+    {
+        $community = Community::factory()->create();
+        $a = Member::factory()->create();
+        $b = Member::factory()->create();
+
+        Livewire::test(ListCommunities::class)
+            ->callAction(TestAction::make('addAllMembers')->table($community))
+            ->assertNotified(__('Members added'));
+
+        $this->assertDatabaseHas('community_members', ['community_id' => $community->getKey(), 'member_id' => $a->getKey()]);
+        $this->assertDatabaseHas('community_members', ['community_id' => $community->getKey(), 'member_id' => $b->getKey()]);
     }
 }
