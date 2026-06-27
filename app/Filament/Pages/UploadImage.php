@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Pages;
 
 use App\Files\FileUploader;
+use App\Files\FormUpload;
 use App\Models\File;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -19,8 +20,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Arr;
 
 /**
  * Upload a standalone public image (no owning entity) to embed in custom HTML/CSS. Stored through
@@ -111,8 +110,8 @@ class UploadImage extends Page
 
     public function save(): void
     {
-        $upload = Arr::first((array) ($this->form->getState()['image'] ?? []));
-        abort_unless($upload instanceof UploadedFile, 422);
+        $upload = FormUpload::single($this->form->getState()['image'] ?? null);
+        abort_unless($upload !== null, 422);
 
         $file = app(FileUploader::class)->store($upload, explicitVisibility: File::VISIBILITY_PUBLIC);
 
