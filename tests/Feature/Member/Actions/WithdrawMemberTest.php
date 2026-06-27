@@ -117,6 +117,28 @@ class WithdrawMemberTest extends TestCase
         $this->assertSame(CommunityRole::Admin, $oldest->role);
     }
 
+    public function test_sub_admin_is_not_treated_as_admin_and_is_promoted(): void
+    {
+        $admin = Member::factory()->create();
+        $community = Community::factory()->create();
+        CommunityMember::factory()->create([
+            'community_id' => $community->getKey(),
+            'member_id' => $admin->getKey(),
+            'role' => CommunityRole::Admin,
+        ]);
+        // A SubAdmin is not an admin: with the sole Admin leaving, it must be promoted, not skipped.
+        $subAdmin = CommunityMember::factory()->create([
+            'community_id' => $community->getKey(),
+            'role' => CommunityRole::SubAdmin,
+        ]);
+
+        $this->withdraw($admin);
+
+        $this->assertModelExists($community);
+        $subAdmin->refresh();
+        $this->assertSame(CommunityRole::Admin, $subAdmin->role);
+    }
+
     public function test_sole_admin_community_with_no_other_members_is_deleted(): void
     {
         $admin = Member::factory()->create();
