@@ -54,6 +54,7 @@ class AdminPanelProvider extends PanelProvider
             // each screen's getNavigationGroup()); a bare __() here would evaluate at boot and a locale
             // mismatch would silently drop a group to the end.
             ->navigationGroups([
+                NavigationGroup::make(fn (): string => __('Content')),
                 NavigationGroup::make(fn (): string => __('Settings')),
                 NavigationGroup::make(fn (): string => __('Appearance (Classic)')),
                 NavigationGroup::make(fn (): string => __('Master Data')),
