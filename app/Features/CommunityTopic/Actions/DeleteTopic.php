@@ -17,6 +17,16 @@ class DeleteTopic
             throw new CommunityTopicActionException(CommunityTopicActionFailure::CannotEdit);
         }
 
+        $this->purge($topic);
+    }
+
+    /**
+     * Delete the topic and purge its (and its comments') image bytes — no authorization. The admin
+     * moderation panel calls this directly (the panel's `admin` guard is an AdminUser, not a Member);
+     * frontend callers always go through __invoke.
+     */
+    public function purge(CommunityTopic $topic): void
+    {
         // Collect every owned image File (the topic's and its comments') before the row is gone:
         // the FK cascade drops the *_image link rows but never the File bytes, which a disk backend
         // deletes irreversibly. Purge them after the topic is deleted (post-commit).
