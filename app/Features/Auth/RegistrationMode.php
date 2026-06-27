@@ -27,6 +27,17 @@ enum RegistrationMode: string
             ?? self::Invite;
     }
 
+    /** Admin-facing label (translation key) for the current mode; matches the settings page options. */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Open => 'Anyone can register',
+            self::Invite => 'Invite only',
+            self::AdminOnly => 'Admin invite only',
+            self::Closed => 'Registration closed',
+        };
+    }
+
     /** Whether the open self-registration entry (/register) is exposed; the other modes 404 it. */
     public function allowsOpenRegistration(): bool
     {
