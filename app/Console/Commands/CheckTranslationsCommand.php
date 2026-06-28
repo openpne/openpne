@@ -98,7 +98,7 @@ class CheckTranslationsCommand extends Command
 
         $missing = $this->reportMissing($found, $defined, $baseline);
         $unordered = $this->reportOrder($base);
-        $markerGaps = $this->reportMarkerEnGaps($base);
+        $markerGaps = $this->reportMarkerLeaks($base);
         $this->reportCollisions($base);
         $this->reportNearFold($base);
 
@@ -396,30 +396,32 @@ class CheckTranslationsCommand extends Command
 
     /**
      * Hard gate: a homograph marker key (`Word (noun)` / `(verb)` /
-     * `(adjective)` / `(adverb)`) MUST have an en.json entry — otherwise the
-     * `(context)` tag leaks into the English UI, since the JSON fallback
-     * renders the key verbatim. The closed vocabulary keeps this from catching
-     * display parentheticals like `Caption (English)` or `Message (optional)`.
+     * `(adjective)` / `(adverb)`) must render a real translation in BOTH
+     * locales — never the key itself. A missing entry falls back to the key,
+     * and an identity entry (value === key) IS the key, so either one leaks the
+     * `(context)` tag into the UI. (`--prune-identity` is not part of the
+     * default gate, so the value is checked here.) The closed vocabulary keeps
+     * this from catching display parentheticals like `Caption (English)`.
      *
-     * @return int number of marker keys missing an en.json entry
+     * @return int number of marker keys that would leak the tag
      */
-    private function reportMarkerEnGaps(string $base): int
+    private function reportMarkerLeaks(string $base): int
     {
-        $missing = self::markerKeysMissingEn(
-            array_map('strval', array_keys($this->loadJsonDictionary("{$base}/lang/ja.json"))),
-            array_map('strval', array_keys($this->loadJsonDictionary("{$base}/lang/en.json"))),
+        $leaking = self::markerKeysWithLeak(
+            array_map('strval', $this->loadJsonDictionary("{$base}/lang/ja.json")),
+            array_map('strval', $this->loadJsonDictionary("{$base}/lang/en.json")),
         );
 
-        if ($missing === []) {
+        if ($leaking === []) {
             return 0;
         }
 
-        $this->error(sprintf('Marker keys missing an en.json entry (%d) — the `(context)` tag would leak into the English UI:', count($missing)));
-        foreach ($missing as $key) {
+        $this->error(sprintf('Marker keys without a real translation (%d) — a missing or identity-valued ja/en entry leaks the `(context)` tag into the UI:', count($leaking)));
+        foreach ($leaking as $key) {
             $this->line('  - '.json_encode($key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
 
-        return count($missing);
+        return count($leaking);
     }
 
     /**
@@ -498,18 +500,31 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * @param  list<string>  $jaKeys
-     * @param  list<string>  $enKeys
+     * Marker keys that would leak the `(context)` tag: the value is missing
+     * (falls back to the key) or identity (equals the key) in ja or en. Checked
+     * against full key→value maps, not just key presence — an identity entry
+     * passes a presence check but still renders the tag.
+     *
+     * @param  array<string, string>  $ja
+     * @param  array<string, string>  $en
      * @return list<string>
      */
-    public static function markerKeysMissingEn(array $jaKeys, array $enKeys): array
+    public static function markerKeysWithLeak(array $ja, array $en): array
     {
-        $en = array_flip($enKeys);
+        $leaking = [];
+        foreach (array_unique([...array_keys($ja), ...array_keys($en)]) as $key) {
+            $key = (string) $key;
+            if (! self::isMarkerKey($key)) {
+                continue;
+            }
+            $jaLeaks = ! array_key_exists($key, $ja) || $ja[$key] === $key;
+            $enLeaks = ! array_key_exists($key, $en) || $en[$key] === $key;
+            if ($jaLeaks || $enLeaks) {
+                $leaking[] = $key;
+            }
+        }
 
-        return array_values(array_filter(
-            $jaKeys,
-            static fn (string $key): bool => self::isMarkerKey($key) && ! isset($en[$key]),
-        ));
+        return $leaking;
     }
 
     /**

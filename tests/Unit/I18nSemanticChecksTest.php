@@ -26,15 +26,28 @@ class I18nSemanticChecksTest extends TestCase
         }
     }
 
-    public function test_marker_keys_missing_en_flags_only_unmatched_markers(): void
+    public function test_marker_keys_with_leak_flags_missing_or_identity_values(): void
     {
-        $ja = ['Post (noun)', 'Post (verb)', 'Cancel', 'Sender'];
+        // Real ja translations for both markers; the non-marker key is ignored.
+        $ja = ['Post (noun)' => '投稿', 'Post (verb)' => '投稿する', 'Cancel' => 'キャンセル'];
 
-        // 'Post (verb)' has no en entry → flagged; non-marker gaps are ignored.
-        $this->assertSame(['Post (verb)'], Cmd::markerKeysMissingEn($ja, ['Post (noun)']));
+        // en is identity-valued for one marker and missing the other → both leak.
+        $this->assertSame(
+            ['Post (noun)', 'Post (verb)'],
+            Cmd::markerKeysWithLeak($ja, ['Post (noun)' => 'Post (noun)']),
+        );
 
-        // Every marker key has en → clean.
-        $this->assertSame([], Cmd::markerKeysMissingEn($ja, ['Post (noun)', 'Post (verb)']));
+        // Real en values for both markers → clean.
+        $this->assertSame(
+            [],
+            Cmd::markerKeysWithLeak($ja, ['Post (noun)' => 'Post', 'Post (verb)' => 'Post']),
+        );
+
+        // An identity ja value leaks too, even when en is fine.
+        $this->assertSame(
+            ['Post (noun)'],
+            Cmd::markerKeysWithLeak(['Post (noun)' => 'Post (noun)'], ['Post (noun)' => 'Post']),
+        );
     }
 
     public function test_near_fold_stem_collapses_plurals_but_keeps_irregulars_stable(): void
