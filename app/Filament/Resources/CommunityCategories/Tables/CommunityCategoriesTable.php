@@ -15,7 +15,7 @@ class CommunityCategoriesTable
         return $table
             ->columns([
                 TextColumn::make('sort_order')
-                    ->label(__('Order'))
+                    ->label(__('Sort Order'))
                     ->sortable(),
 
                 TextColumn::make('name')

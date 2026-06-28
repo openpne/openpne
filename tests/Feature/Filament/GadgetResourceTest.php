@@ -147,7 +147,7 @@ class GadgetResourceTest extends TestCase
             ->assertSee(__('Click an area of the page to place the gadget.')) // tells the operator the areas are clickable
             ->assertSee('Information Box')   // existing gadget chip
             ->assertSee(__('Top'))           // the home page's zones are drawn
-            ->assertSee(__('Contents'));
+            ->assertSee(__('Main area'));
     }
 
     public function test_zone_picker_marks_zones_the_current_layout_hides(): void

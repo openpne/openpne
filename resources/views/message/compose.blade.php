@@ -13,7 +13,7 @@
                 @isset($threadId)<input type="hidden" name="thread_id" value="{{ $threadId }}">@endisset
                 <table>
                     <tr>
-                        <th>{{ __('To') }}</th>
+                        <th>{{ __('Recipient') }}</th>
                         <td><a href="{{ route('member.profile.show', $recipient) }}">{{ $recipient->name }}</a></td>
                     </tr>
                     @include('message._fields', ['subject' => $subject ?? '', 'body' => $body ?? ''])

@@ -56,7 +56,7 @@ class GadgetResource extends Resource
         $labels = [
             'top' => __('Top'),
             'sideMenu' => __('Side menu'),
-            'contents' => __('Contents'),
+            'contents' => __('Main area'),
             'bottom' => __('Bottom'),
         ];
 

@@ -38,7 +38,7 @@ class CommunitiesTable
                     ->default('-'),
 
                 TextColumn::make('members_count')
-                    ->label(__('Members'))
+                    ->label(__('Member count'))
                     ->counts('members')
                     ->sortable(),
 

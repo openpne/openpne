@@ -25,11 +25,9 @@ class MemberResource extends Resource
         return __('Member');
     }
 
-    // `Members` already means "member count" elsewhere; reuse the singular so the list title and nav
-    // label render "メンバー" rather than "メンバー数".
     public static function getPluralModelLabel(): string
     {
-        return __('Member');
+        return __('Members');
     }
 
     public static function getNavigationGroup(): ?string

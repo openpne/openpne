@@ -27,7 +27,7 @@
 
             <table>
                 <tr>
-                    <th>{{ $view->viewerIsSender ? __('To') : __('From') }}</th>
+                    <th>{{ $view->viewerIsSender ? __('Recipient') : __('Sender') }}</th>
                     <td>
                         <ul>
                             @forelse ($view->counterparties as $member)

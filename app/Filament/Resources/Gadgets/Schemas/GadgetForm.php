@@ -34,7 +34,7 @@ class GadgetForm
             ->columns(1)
             ->components([
                 Select::make('context')
-                    ->label(__('Placement'))
+                    ->label(__('Gadget placement'))
                     ->helperText(__('Which page this gadget appears on.'))
                     ->options(GadgetResource::contextOptions())
                     // Pre-select from the ?context= the list's Create button passes (the tab in view); a

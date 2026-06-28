@@ -69,7 +69,7 @@ class ProfileOptionsRelationManager extends RelationManager
                     ->getStateUsing(fn (ProfileOption $record): string => $record->getLabel('en')),
 
                 TextColumn::make('sort_order')
-                    ->label(__('Order'))
+                    ->label(__('Sort Order'))
                     ->sortable(),
             ])
             ->headerActions($editable ? [

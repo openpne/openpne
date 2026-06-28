@@ -23,7 +23,7 @@ class ProfilesTable
             ->modifyQueryUsing(fn ($query) => $query->with(['translations' => fn ($q) => $q->where('lang', $lang)]))
             ->columns([
                 TextColumn::make('sort_order')
-                    ->label(__('Order'))
+                    ->label(__('Sort Order'))
                     ->sortable(),
 
                 TextColumn::make('name')
