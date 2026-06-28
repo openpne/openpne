@@ -82,7 +82,7 @@ export default function MemberSearch() {
                 </form>
 
                 <section className="space-y-3">
-                    <h2 className="text-lg font-medium">{t('Results')}</h2>
+                    <h2 className="text-lg font-medium">{t('Search Results')}</h2>
                     {members.data.length === 0 ? (
                         <p className="text-sm text-muted-foreground">{t('No members found.')}</p>
                     ) : (

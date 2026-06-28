@@ -68,7 +68,7 @@
     </div>
 
     <div class="dparts" id="member_search_result">
-        <div class="partsHeading"><h3>{{ __('Results') }}</h3></div>
+        <div class="partsHeading"><h3>{{ __('Search Results') }}</h3></div>
         <div class="parts">
             @if ($members->isEmpty())
                 <p>{{ __('No members found.') }}</p>

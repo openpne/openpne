@@ -48,13 +48,13 @@ enum MessageBox: string
         };
     }
 
-    /** The counterparty column header: From (inbox), To (sent/draft), From/To (trash mixes sides). */
+    /** The counterparty column header: Sender (inbox), Recipient (sent/draft), Sender/Recipient (trash mixes sides). */
     public function counterpartyHeading(): string
     {
         return match ($this) {
-            self::Receive => __('From'),
-            self::Sent, self::Draft => __('To'),
-            self::Trash => __('From/To'),
+            self::Receive => __('Sender'),
+            self::Sent, self::Draft => __('Recipient'),
+            self::Trash => __('Sender/Recipient'),
         };
     }
 }

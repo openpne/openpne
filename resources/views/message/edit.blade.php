@@ -11,7 +11,7 @@
                 <table>
                     @if ($recipient)
                         <tr>
-                            <th>{{ __('To') }}</th>
+                            <th>{{ __('Recipient') }}</th>
                             <td><a href="{{ route('member.profile.show', $recipient) }}">{{ $recipient->name }}</a></td>
                         </tr>
                     @endif

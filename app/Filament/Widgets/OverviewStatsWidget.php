@@ -39,7 +39,7 @@ class OverviewStatsWidget extends StatsOverviewWidget
         $diariesDelta = $diaries - $this->countSince(Diary::class, $lastMonthStart, $monthStart);
 
         return [
-            Stat::make(__('Members'), number_format(Member::query()->count()))
+            Stat::make(__('Member count'), number_format(Member::query()->count()))
                 ->url(MemberResource::getUrl('index')),
 
             Stat::make(__('New members this month'), number_format($newMembers))
