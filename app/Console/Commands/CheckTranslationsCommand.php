@@ -16,8 +16,9 @@ use Symfony\Component\Finder\Finder;
  * Detect translation key references in code that are missing from lang/{ja,en}.json,
  * and enforce a canonical key order.
  *
- *   php artisan i18n:check                  # CI gate: missing keys + key order
+ *   php artisan i18n:check                  # CI gate: missing keys + key order + marker en
  *   php artisan i18n:check --unused         # also list defined-but-unused JSON keys
+ *   php artisan i18n:check --duplicates     # also list keys sharing an identical ja value
  *   php artisan i18n:check --update-baseline # snapshot current gaps to lang/.i18n-baseline.json
  *   php artisan i18n:check --prune-identity  # strip k === v entries from lang/{ja,en}.json
  *   php artisan i18n:check --sort            # rewrite lang/{ja,en}.json in canonical key order
@@ -34,6 +35,7 @@ class CheckTranslationsCommand extends Command
 {
     protected $signature = 'i18n:check
         {--unused : Also report keys defined in lang/ but not used anywhere (informational, never fails CI)}
+        {--duplicates : Also list keys that share an identical ja value, i.e. consolidation candidates (informational, never fails CI)}
         {--update-baseline : Refresh lang/.i18n-baseline.json with the current set of missing keys}
         {--prune-identity : Remove all k === v entries from lang/{ja,en}.json (redundant under the omission policy)}
         {--sort= : Rewrite lang/{ja,en}.json in canonical key order; optionally scope to one file (lang/ja.json|lang/en.json)}';
@@ -96,13 +98,18 @@ class CheckTranslationsCommand extends Command
 
         $missing = $this->reportMissing($found, $defined, $baseline);
         $unordered = $this->reportOrder($base);
+        $markerGaps = $this->reportMarkerLeaks($base);
         $this->reportCollisions($base);
+        $this->reportNearFold($base);
 
         if ($this->option('unused')) {
             $this->reportUnused($found);
         }
+        if ($this->option('duplicates')) {
+            $this->reportDuplicateValues($base);
+        }
 
-        return ($missing > 0 || $unordered > 0) ? 1 : 0;
+        return ($missing > 0 || $unordered > 0 || $markerGaps > 0) ? 1 : 0;
     }
 
     /**
@@ -331,6 +338,193 @@ class CheckTranslationsCommand extends Command
         sort($keys, SORT_STRING);
 
         return implode("\0", $keys);
+    }
+
+    /**
+     * Advisory (never fails): near-fold key pairs — label keys whose singularised,
+     * lowercased form matches (singular/plural/light derivation) but whose
+     * Japanese differs (e.g. `Link` リンク vs `Links` リンク集). Only `[differ]`
+     * groups surface; same-ja folds (`Diary`/`Diaries`→日記) are benign and
+     * omitted. Uses Str::singular (not naive s/es stripping) so `Status`,
+     * `Address`, `News` keep a stable stem. Restricted to plain ASCII label
+     * keys so sentences and `%name%`/`:count` strings never group. Intentional
+     * pairs are recorded in COLLISION_ALLOWLIST_FILE, same as case-fold groups.
+     */
+    private function reportNearFold(string $base): void
+    {
+        $data = $this->loadJsonDictionary("{$base}/lang/ja.json");
+        if ($data === []) {
+            return;
+        }
+
+        $allow = $this->loadCollisionAllowlist($base);
+
+        $byStem = [];
+        foreach ($data as $key => $value) {
+            $key = (string) $key;
+            if (! self::isNearFoldCandidate($key)) {
+                continue;
+            }
+            $byStem[self::nearFoldStem($key)][$key] = (string) $value;
+        }
+
+        $flagged = [];
+        foreach ($byStem as $group) {
+            if (count($group) < 2 || count(array_unique($group)) === 1) {
+                continue; // single key, or a benign same-ja fold
+            }
+            if (isset($allow[$this->collisionSignature(array_keys($group))])) {
+                continue;
+            }
+            $flagged[] = $group;
+        }
+
+        if ($flagged === []) {
+            return;
+        }
+
+        $this->warn(sprintf('Near-fold key pairs with differing ja in lang/ja.json (%d) — informational, review for semantic collisions:', count($flagged)));
+        foreach ($flagged as $group) {
+            $parts = [];
+            foreach ($group as $k => $v) {
+                $parts[] = json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                    .'='.json_encode($v, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+            $this->line('  - [differ] '.implode('  ', $parts));
+        }
+    }
+
+    /**
+     * Hard gate: a homograph marker key (`Word (noun)` / `(verb)` /
+     * `(adjective)` / `(adverb)`) must render a real translation in BOTH
+     * locales — never the key itself. A missing entry falls back to the key,
+     * and an identity entry (value === key) IS the key, so either one leaks the
+     * `(context)` tag into the UI. (`--prune-identity` is not part of the
+     * default gate, so the value is checked here.) The closed vocabulary keeps
+     * this from catching display parentheticals like `Caption (English)`.
+     *
+     * @return int number of marker keys that would leak the tag
+     */
+    private function reportMarkerLeaks(string $base): int
+    {
+        $leaking = self::markerKeysWithLeak(
+            array_map('strval', $this->loadJsonDictionary("{$base}/lang/ja.json")),
+            array_map('strval', $this->loadJsonDictionary("{$base}/lang/en.json")),
+        );
+
+        if ($leaking === []) {
+            return 0;
+        }
+
+        $this->error(sprintf('Marker keys without a real translation (%d) — a missing or identity-valued ja/en entry leaks the `(context)` tag into the UI:', count($leaking)));
+        foreach ($leaking as $key) {
+            $this->line('  - '.json_encode($key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        }
+
+        return count($leaking);
+    }
+
+    /**
+     * Advisory, opt-in (`--duplicates`): keys sharing an identical ja value are
+     * consolidation candidates (`Order` / `Sort Order` → 並び順). Off by default
+     * because many identical-value groups are legitimately distinct keys; this
+     * is a manual review aid, not a gate.
+     */
+    private function reportDuplicateValues(string $base): void
+    {
+        $byValue = [];
+        foreach ($this->loadJsonDictionary("{$base}/lang/ja.json") as $key => $value) {
+            $byValue[(string) $value][] = (string) $key;
+        }
+        $groups = array_filter($byValue, static fn (array $keys): bool => count($keys) > 1);
+
+        if ($groups === []) {
+            $this->info('No duplicate ja values.');
+
+            return;
+        }
+
+        $this->warn(sprintf('Keys sharing an identical ja value in lang/ja.json (%d groups) — informational, consolidation candidates:', count($groups)));
+        ksort($groups);
+        foreach ($groups as $value => $keys) {
+            sort($keys);
+            $rendered = implode(', ', array_map(
+                static fn (string $k) => json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                $keys,
+            ));
+            $this->line('  - '.json_encode((string) $value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).': '.$rendered);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadJsonDictionary(string $path): array
+    {
+        if (! is_file($path)) {
+            return [];
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+
+        return is_array($data) ? $data : [];
+    }
+
+    /**
+     * Only plain ASCII label keys take part in near-fold grouping — letters,
+     * spaces, and `/` (`Sender/Recipient`). This excludes sentences (which end
+     * in punctuation), `%name%` placeholders, `:count` strings, and the
+     * `(context)` markers, none of which are singular/plural label pairs.
+     */
+    public static function isNearFoldCandidate(string $key): bool
+    {
+        return (bool) preg_match('#^[A-Za-z][A-Za-z /]*$#', $key);
+    }
+
+    /**
+     * Closed homograph-marker vocabulary, kept small so it never collides with
+     * display parentheticals (`Caption (English)`, `Message (optional)`).
+     */
+    public static function isMarkerKey(string $key): bool
+    {
+        return (bool) preg_match('/\((?:noun|verb|adjective|adverb)\)$/', $key);
+    }
+
+    /**
+     * Singular/plural/derivation-insensitive stem for near-fold grouping. Uses
+     * Str::singular rather than naive suffix stripping so `Status`, `Address`,
+     * `News` keep a stable stem.
+     */
+    public static function nearFoldStem(string $key): string
+    {
+        return strtolower(Str::singular(trim($key)));
+    }
+
+    /**
+     * Marker keys that would leak the `(context)` tag: the value is missing
+     * (falls back to the key) or identity (equals the key) in ja or en. Checked
+     * against full key→value maps, not just key presence — an identity entry
+     * passes a presence check but still renders the tag.
+     *
+     * @param  array<string, string>  $ja
+     * @param  array<string, string>  $en
+     * @return list<string>
+     */
+    public static function markerKeysWithLeak(array $ja, array $en): array
+    {
+        $leaking = [];
+        foreach (array_unique([...array_keys($ja), ...array_keys($en)]) as $key) {
+            $key = (string) $key;
+            if (! self::isMarkerKey($key)) {
+                continue;
+            }
+            $jaLeaks = ! array_key_exists($key, $ja) || $ja[$key] === $key;
+            $enLeaks = ! array_key_exists($key, $en) || $en[$key] === $key;
+            if ($jaLeaks || $enLeaks) {
+                $leaking[] = $key;
+            }
+        }
+
+        return $leaking;
     }
 
     /**
