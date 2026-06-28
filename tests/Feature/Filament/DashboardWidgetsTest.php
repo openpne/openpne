@@ -45,7 +45,7 @@ class DashboardWidgetsTest extends TestCase
 
         Livewire::test(OverviewStatsWidget::class)
             ->assertSuccessful()
-            ->assertSee(__('Members'))
+            ->assertSee(__('Member count'))
             ->assertSee(__('New members this month'))
             ->assertSee(__('Diaries this month'));
     }

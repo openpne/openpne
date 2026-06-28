@@ -44,7 +44,7 @@ class BannerImagesTable
                     ->limit(40),
 
                 TextColumn::make('placements')
-                    ->label(__('Placements'))
+                    ->label(__('Banner placements'))
                     ->badge()
                     ->getStateUsing(fn (BannerImage $record): array => $record->banners
                         ->map(fn ($banner): string => BannerImageResource::placementLabel($banner->name))
