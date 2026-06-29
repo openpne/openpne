@@ -64,6 +64,8 @@ class MemberRouteParity extends RouteParity
             new RouteMap('member_config', '/member/config', 'member.config.diary', 'POST'),
             new RouteMap('member_config', '/member/config', 'member.config.age', 'POST'),
             new RouteMap('member_config', '/member/config', 'member.config.surface', 'POST'),
+            // OpenPNE 3 served the password change under member/config (?category=password); same URL.
+            new RouteMap('member_config', '/member/config', 'member.config.password', 'POST'),
             // Login — Fortify owns /login; the OpenPNE 3 /member/login/* URL is preserved by a static
             // redirect (compatRedirects), and the Classic body id stays page_member_login.
             new RouteMap('login', '/member/login/*', 'login', 'GET', op3Action: 'login'),

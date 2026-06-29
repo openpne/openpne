@@ -9,6 +9,7 @@ use App\Features\Profile\AgeVisibility;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\UpdateAgeVisibilityRequest;
 use App\Http\Requests\Member\UpdateDiaryDefaultRequest;
+use App\Http\Requests\Member\UpdatePasswordRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Models\Member;
 use App\Support\PreferenceKey;
@@ -16,6 +17,9 @@ use App\Support\Surface;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -78,6 +82,29 @@ class MemberConfigController extends Controller
         $this->viewer()->setPreference(PreferenceKey::AgeVisibility, $value);
 
         return $this->savedRedirect($request, MemberConfigCategory::PublicFlag);
+    }
+
+    public function updatePassword(UpdatePasswordRequest $request): RedirectResponse
+    {
+        $viewer = $this->viewer();
+        $newPassword = $request->validated('password');
+
+        // Set the new password and rotate remember_token so old "remember me" cookies die.
+        $viewer->forceFill([
+            'password' => Hash::make($newPassword),
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        // Keep this device, drop the others. The new hash makes every session's stored password hash
+        // stale; auth.session (AuthenticateSession) re-stores THIS session's hash after the response so
+        // the current device survives, and bounces the others on their next protected request.
+        // logoutOtherDevices re-hashes the just-set password and fires the other-device-logout event —
+        // it verifies against the current hash, so it runs after the save. Neither this nor auth.session
+        // deletes DB session rows; that is ResetMemberPassword's compromise-path behavior, not an
+        // in-session change's.
+        Auth::guard('member')->logoutOtherDevices($newPassword);
+
+        return $this->savedRedirect($request, MemberConfigCategory::Password);
     }
 
     public function updateSurface(UpdatePreferredSurfaceRequest $request): Response

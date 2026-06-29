@@ -28,6 +28,7 @@ export default function MemberConfig() {
     const age = useForm({ age_visibility: form.age.value });
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface.value });
+    const password = useForm({ current_password: '', password: '', password_confirmation: '' });
 
     return (
         <>
@@ -131,6 +132,43 @@ export default function MemberConfig() {
                     {surface.errors.preferred_surface && <p role="alert">{surface.errors.preferred_surface}</p>}
                     {/* Disabled until the choice differs from the current surface, so a casual save never pins. */}
                     <button type="submit" disabled={surface.processing || surface.data.preferred_surface === form.surface.value}>{t('Save')}</button>
+                </form>
+
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        password.post('/m/member/config/password', { onSuccess: () => password.reset() });
+                    }}
+                    className="space-y-2"
+                >
+                    <h2 className="font-semibold">{t('Password')}</h2>
+                    <label htmlFor="current_password">{t('Current password')}</label>
+                    <input
+                        id="current_password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={password.data.current_password}
+                        onChange={(e) => password.setData('current_password', e.target.value)}
+                    />
+                    {password.errors.current_password && <p role="alert">{password.errors.current_password}</p>}
+                    <label htmlFor="password">{t('New password')}</label>
+                    <input
+                        id="password"
+                        type="password"
+                        autoComplete="new-password"
+                        value={password.data.password}
+                        onChange={(e) => password.setData('password', e.target.value)}
+                    />
+                    {password.errors.password && <p role="alert">{password.errors.password}</p>}
+                    <label htmlFor="password_confirmation">{t('New password (confirm)')}</label>
+                    <input
+                        id="password_confirmation"
+                        type="password"
+                        autoComplete="new-password"
+                        value={password.data.password_confirmation}
+                        onChange={(e) => password.setData('password_confirmation', e.target.value)}
+                    />
+                    <button type="submit" disabled={password.processing}>{t('Save')}</button>
                 </form>
             </main>
         </>

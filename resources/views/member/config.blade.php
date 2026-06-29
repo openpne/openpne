@@ -129,6 +129,45 @@
             </div>
             @break
 
+        @case(MemberConfigCategory::Password)
+            {{-- In-session password change: re-auth with the current password, new password entered twice. --}}
+            <div class="dparts form" id="member_config_password">
+                <div class="partsHeading"><h3>{{ __('Password') }}</h3></div>
+                <div class="parts">
+                    <form method="POST" action="{{ route('member.config.password') }}">
+                        @csrf
+                        <table>
+                            <tr>
+                                <th><label for="current_password">{{ __('Current password') }}</label></th>
+                                <td>
+                                    <input type="password" id="current_password" name="current_password" autocomplete="current-password">
+                                    @error('current_password')<p class="error">{{ $message }}</p>@enderror
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><label for="password">{{ __('New password') }}</label></th>
+                                <td>
+                                    <input type="password" id="password" name="password" autocomplete="new-password">
+                                    @error('password')<p class="error">{{ $message }}</p>@enderror
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><label for="password_confirmation">{{ __('New password (confirm)') }}</label></th>
+                                <td>
+                                    <input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password">
+                                </td>
+                            </tr>
+                        </table>
+                        <div class="operation">
+                            <ul class="moreInfo button">
+                                <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            @break
+
         @default
             {{-- OpenPNE 3 landing (configInformation): no category selected, pick one from the nav.
                  id is an OpenPNE 4-side hook, not an OpenPNE 3 parity claim. --}}

@@ -15,6 +15,7 @@ enum MemberConfigCategory: string
     case PublicFlag = 'publicFlag';
     case Language = 'language';
     case General = 'general';
+    case Password = 'password';
 
     public function caption(): string
     {
@@ -23,6 +24,7 @@ enum MemberConfigCategory: string
             self::PublicFlag => __('Privacy'),
             self::Language => __('Language'),
             self::General => __('General'),
+            self::Password => __('Password'),
         };
     }
 }
