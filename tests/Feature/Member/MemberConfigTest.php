@@ -721,16 +721,21 @@ class MemberConfigTest extends TestCase
             'token' => hash('sha256', $raw), 'created_at' => now(),
         ]);
 
+        // Act as the other member ONCE, then chain the requests on that same session: a wrongful
+        // logout/invalidate in the reject path would then surface on the final protected request,
+        // rather than being masked by re-authenticating each call.
+        $this->actingAs($other);
+
         // POST is rejected — redirected away, nothing committed, token intact.
-        $this->actingAs($other)->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('home'));
+        $this->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('home'));
         $this->assertNotSame('a-new@example.com', $requester->fresh()->email);
         $this->assertDatabaseHas('email_change_requests', ['member_id' => $requester->id]);
 
         // GET is likewise turned away (the confirm page is not shown to a different member).
-        $this->actingAs($other)->get('/member/config/email/confirm/'.$raw)->assertRedirect(route('home'));
+        $this->get('/member/config/email/confirm/'.$raw)->assertRedirect(route('home'));
 
-        // The viewer's own session is untouched.
-        $this->actingAs($other)->get('/member/config')->assertOk();
+        // The viewer's session was never touched — still logged in on the same session.
+        $this->get('/member/config')->assertOk();
     }
 
     public function test_confirming_rejects_an_address_claimed_since_the_request(): void
