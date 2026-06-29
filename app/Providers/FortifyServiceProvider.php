@@ -125,6 +125,14 @@ class FortifyServiceProvider extends ServiceProvider
             ];
         });
 
+        // Email-change request, keyed by the authenticated member: bounds repeated change requests and
+        // the enumeration surface of the new-address uniqueness check.
+        RateLimiter::for('email-change', function (Request $request) {
+            $memberId = $request->user()?->getKey() ?? $request->ip();
+
+            return Limit::perMinute(5)->by('email-change|'.$memberId);
+        });
+
         // Per-IP cap on the credential-bearing password endpoints (the broker only throttles
         // per-email, leaving relay/guessing across addresses open). Applied to every Fortify route
         // via config, so the GET forms and the separately-limited login route pass through unlimited.

@@ -34,6 +34,9 @@ class MemberConfigSerializer
                     AgeVisibility::options(),
                 ),
             ],
+            'email' => [
+                'value' => (string) $member->email,
+            ],
             'locale' => [
                 'value' => app()->getLocale(),
                 'options' => [

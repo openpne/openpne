@@ -16,6 +16,7 @@ enum MemberConfigCategory: string
     case Language = 'language';
     case General = 'general';
     case Password = 'password';
+    case Email = 'email';
     case Withdrawal = 'withdrawal';
 
     public function caption(): string
@@ -26,6 +27,7 @@ enum MemberConfigCategory: string
             self::Language => __('Language'),
             self::General => __('General'),
             self::Password => __('Password'),
+            self::Email => __('Email address'),
             self::Withdrawal => __('Account withdrawal'),
         };
     }
