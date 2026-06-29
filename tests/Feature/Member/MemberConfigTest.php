@@ -8,6 +8,7 @@ use App\Support\SnsSettingKey;
 use App\Support\Surface;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -50,6 +51,7 @@ class MemberConfigTest extends TestCase
             ->assertSee('href="'.route('member.config', ['category' => 'language']).'"', false)
             ->assertSee('href="'.route('member.config', ['category' => 'general']).'"', false)
             ->assertSee('href="'.route('member.config', ['category' => 'password']).'"', false)
+            ->assertSee('href="'.route('member.config', ['category' => 'withdrawal']).'"', false)
             ->assertDontSee('href="'.route('member.config', ['category' => 'diary']).'"', false);
     }
 
@@ -63,6 +65,7 @@ class MemberConfigTest extends TestCase
             'language' => 'member_config_language',
             'general' => 'member_config_surface',
             'password' => 'member_config_password',
+            'withdrawal' => 'member_config_withdrawal',
         ];
         $member = Member::factory()->create();
 
@@ -459,5 +462,106 @@ class MemberConfigTest extends TestCase
         $member->forceFill(['password' => Hash::make('changed-elsewhere')])->save();
 
         $this->get('/member/config')->assertRedirect('/login');
+    }
+
+    public function test_a_guest_cannot_post_the_withdrawal(): void
+    {
+        $this->post('/member/config/withdrawal', ['password' => 'password', 'confirm' => '1'])
+            ->assertRedirect('/login');
+    }
+
+    public function test_withdrawing_deletes_the_member_and_logs_out(): void
+    {
+        Member::factory()->create(['id' => 1]); // reserve the un-withdrawable primary
+        $member = Member::factory()->create();
+        $this->actingAs($member);
+
+        $this->post('/member/config/withdrawal', ['password' => 'password', 'confirm' => '1'])
+            ->assertRedirect(route('login'));
+
+        $this->assertDatabaseMissing('members', ['id' => $member->id]);
+        $this->get('/member/config')->assertRedirect('/login'); // logged out
+    }
+
+    public function test_withdrawing_rejects_a_wrong_password(): void
+    {
+        Member::factory()->create(['id' => 1]);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/withdrawal', [
+            'password' => 'not-the-password',
+            'confirm' => '1',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertModelExists($member);
+    }
+
+    public function test_withdrawing_requires_the_confirmation_checkbox(): void
+    {
+        Member::factory()->create(['id' => 1]);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/withdrawal', ['password' => 'password'])
+            ->assertSessionHasErrors('confirm');
+
+        $this->assertModelExists($member);
+    }
+
+    public function test_the_primary_member_cannot_withdraw(): void
+    {
+        // id 1 is never withdrawable; rejected before the service so it is a 403, not a 500.
+        $primary = Member::factory()->create(['id' => 1]);
+
+        $this->actingAs($primary)->post('/member/config/withdrawal', [
+            'password' => 'password',
+            'confirm' => '1',
+        ])->assertForbidden();
+
+        $this->assertModelExists($primary);
+    }
+
+    public function test_the_leave_url_redirects_to_the_withdrawal_category(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/leave')
+            ->assertRedirect(route('member.config', ['category' => 'withdrawal']));
+    }
+
+    public function test_the_modern_withdrawal_route_deletes_the_member(): void
+    {
+        Member::factory()->create(['id' => 1]);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/m/member/config/withdrawal', [
+            'password' => 'password',
+            'confirm' => '1',
+        ])->assertRedirect(route('login'));
+
+        $this->assertDatabaseMissing('members', ['id' => $member->id]);
+    }
+
+    public function test_withdrawing_purges_the_members_database_sessions(): void
+    {
+        // sessions.user_id has no FK, so deleting the member leaves rows behind; on the database driver
+        // the withdrawal purges the member's other-device sessions outright.
+        config()->set('session.driver', 'database');
+        Member::factory()->create(['id' => 1]);
+        $member = Member::factory()->create();
+        DB::table('sessions')->insert([
+            'id' => 'other-device-session',
+            'user_id' => $member->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'agent',
+            'payload' => 'x',
+            'last_activity' => 1700000000,
+        ]);
+
+        $this->actingAs($member)->post('/member/config/withdrawal', [
+            'password' => 'password',
+            'confirm' => '1',
+        ])->assertRedirect(route('login'));
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
     }
 }
