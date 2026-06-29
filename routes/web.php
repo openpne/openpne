@@ -297,6 +297,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/diary', [MemberConfigController::class, 'updateDiary'])->name('member.config.diary');
     Route::post('/member/config/age', [MemberConfigController::class, 'updateAge'])->name('member.config.age');
     Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
+    Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])->name('member.config.password');
     Route::get('/m/member/config', [MemberConfigController::class, 'show'])
         ->defaults('surface', 'modern')->name('member.modern.config');
     Route::post('/m/member/config/diary', [MemberConfigController::class, 'updateDiary'])
@@ -305,6 +306,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->defaults('surface', 'modern')->name('member.modern.config.age');
     Route::post('/m/member/config/surface', [MemberConfigController::class, 'updateSurface'])
         ->defaults('surface', 'modern')->name('member.modern.config.surface');
+    Route::post('/m/member/config/password', [MemberConfigController::class, 'updatePassword'])
+        ->defaults('surface', 'modern')->name('member.modern.config.password');
 
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {
         Route::get('/avatar', 'edit')->name('member.avatar.edit');
