@@ -26,6 +26,8 @@ class ResetPasswordNotification extends ResetPassword implements ShouldQueue
 
     public function toMail($notifiable): MailMessage
     {
-        return parent::toMail($notifiable)->from(sns_admin_mail_address(), sns_name());
+        return parent::toMail($notifiable)
+            ->from(sns_admin_mail_address(), sns_name())
+            ->salutation('— '.sns_name());
     }
 }
