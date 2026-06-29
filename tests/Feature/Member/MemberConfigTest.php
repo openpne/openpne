@@ -741,4 +741,48 @@ class MemberConfigTest extends TestCase
 
         $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
     }
+
+    public function test_confirming_an_email_change_rotates_remember_token_and_purges_other_sessions(): void
+    {
+        // Email is the login identifier, so confirming it drops every device: remember_token is rotated
+        // (kills remember-me cookies) and the member's other database sessions are purged.
+        config()->set('session.driver', 'database');
+        $member = Member::factory()->create(['remember_token' => 'old-remember-token']);
+        DB::table('sessions')->insert([
+            'id' => 'other-device-session', 'user_id' => $member->id,
+            'ip_address' => '127.0.0.1', 'user_agent' => 'agent', 'payload' => 'x', 'last_activity' => 1700000000,
+        ]);
+        $raw = str_repeat('f', 40);
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'confirmed@example.com',
+            'token' => hash('sha256', $raw), 'created_at' => now(),
+        ]);
+
+        $this->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('login'));
+
+        $fresh = $member->fresh();
+        $this->assertSame('confirmed@example.com', $fresh->email);
+        $this->assertNotSame('old-remember-token', $fresh->remember_token);
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
+    }
+
+    public function test_an_expired_email_change_token_is_rejected(): void
+    {
+        // pendingEmailChange() rejects a token past its TTL; the confirm path leaves the dead row for
+        // the scheduled prune rather than burning it, and members.email is untouched.
+        $member = Member::factory()->create();
+        $old = $member->email;
+        $raw = str_repeat('g', 40);
+        $ttl = (int) config('openpne.email_change.token_ttl_minutes');
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'expired@example.com',
+            'token' => hash('sha256', $raw), 'created_at' => now()->subMinutes($ttl + 1),
+        ]);
+
+        $this->get('/member/config/email/confirm/'.$raw)->assertRedirect(route('login'));
+        $this->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('login'));
+
+        $this->assertSame($old, $member->fresh()->email);
+        $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id]); // left for prune
+    }
 }
