@@ -182,10 +182,13 @@ class MemberConfigController extends Controller
             return redirect()->route('login')->with('status', __('That email address is no longer available.'));
         }
 
-        // OWASP: the login identifier changed, so drop every device of THAT member. remember_token was
-        // rotated in the commit and the member's database sessions are purged here (honoring the
-        // configured table). The current session is torn down only if it belongs to that member — a
-        // different logged-in member, or a guest, who merely opened the confirmation link keeps theirs.
+        // OWASP: changing the login identifier should drop the member's other devices. remember_token
+        // is rotated in the commit (kills remember-me cookies everywhere); on the database session
+        // driver — the app's default — their server-side sessions are purged here too. An email change
+        // does not rotate the password hash, so auth.session alone would not evict other sessions on a
+        // non-database driver; this contract assumes database sessions (as withdrawal/reset do). The
+        // current session is torn down only if it belongs to that member — a different logged-in member,
+        // or a guest, who merely opened the confirmation link keeps theirs.
         if (config('session.driver') === 'database') {
             DB::table(config('session.table', 'sessions'))->where('user_id', $member->getKey())->delete();
         }

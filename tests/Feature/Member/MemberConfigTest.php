@@ -652,8 +652,11 @@ class MemberConfigTest extends TestCase
         ]);
 
         // Reachable without auth (the link may be opened anywhere); GET only renders, does not commit.
+        // Rendered in the Classic shell as a pre-login page (insecure_page), not a bare standalone page.
         $this->get('/member/config/email/confirm/'.$raw)
             ->assertOk()
+            ->assertSee('id="page_member_emailChangeConfirm"', false)
+            ->assertSee('class="insecure_page"', false)
             ->assertSee('new@example.com')
             ->assertSee(route('member.config.email.confirm.submit', ['token' => $raw]), false);
         $this->assertSame('new@example.com', EmailChangeRequest::firstWhere('member_id', $member->id)?->new_email);
