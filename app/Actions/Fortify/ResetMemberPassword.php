@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -42,5 +43,9 @@ class ResetMemberPassword implements ResetsUserPasswords
                 ->where('user_id', $member->getAuthIdentifier())
                 ->delete();
         }
+
+        // A reset answers a possible compromise, so void any pending email change too: otherwise an
+        // attacker who requested one before the reset still holds a live confirmation token.
+        EmailChangeRequest::where('member_id', $member->getKey())->delete();
     }
 }

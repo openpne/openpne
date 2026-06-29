@@ -11,6 +11,7 @@ interface Option {
 interface ConfigForm {
     diary: { value: string; options: Option[] };
     age: { value: string; options: Option[] };
+    email: { value: string };
     locale: { value: string; options: Option[] };
     surface: { value: string; options: Option[] };
 }
@@ -29,6 +30,7 @@ export default function MemberConfig() {
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface.value });
     const password = useForm({ current_password: '', password: '', password_confirmation: '' });
+    const email = useForm({ new_email: '', password: '' });
     const withdraw = useForm({ password: '', confirm: false });
 
     return (
@@ -170,6 +172,38 @@ export default function MemberConfig() {
                         onChange={(e) => password.setData('password_confirmation', e.target.value)}
                     />
                     <button type="submit" disabled={password.processing}>{t('Save')}</button>
+                </form>
+
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        email.post('/m/member/config/email', { onSuccess: () => email.reset() });
+                    }}
+                    className="space-y-2"
+                >
+                    <h2 className="font-semibold">{t('Email address')}</h2>
+                    <p>
+                        {t('Current email address')}: {form.email.value}
+                    </p>
+                    <label htmlFor="new_email">{t('New email address')}</label>
+                    <input
+                        id="new_email"
+                        type="email"
+                        value={email.data.new_email}
+                        onChange={(e) => email.setData('new_email', e.target.value)}
+                    />
+                    {email.errors.new_email && <p role="alert">{email.errors.new_email}</p>}
+                    <label htmlFor="email_password">{t('Current password')}</label>
+                    <input
+                        id="email_password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={email.data.password}
+                        onChange={(e) => email.setData('password', e.target.value)}
+                    />
+                    {email.errors.password && <p role="alert">{email.errors.password}</p>}
+                    <p>{t('A confirmation link will be sent to the new address. The change takes effect once you open it.')}</p>
+                    <button type="submit" disabled={email.processing}>{t('Send confirmation')}</button>
                 </form>
 
                 <form
