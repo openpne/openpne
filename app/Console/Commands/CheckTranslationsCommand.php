@@ -125,7 +125,8 @@ class CheckTranslationsCommand extends Command
         $boundary = $this->reportLangSubdirectories($base)
             + $this->reportNamespaceCollisions($base)
             + $this->reportUnknownGroups($base)
-            + $this->reportAppUiCoverage($base);
+            + $this->reportAppUiCoverage($base)
+            + $this->reportReactPhpGroupKeys($base);
         $this->reportCollisions($base);
         $this->reportNearFold($base);
 
@@ -639,6 +640,43 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
+     * Hard gate (temporary): a React `t()` call may not reference a key under a
+     * PHP namespace group. The React provider loads only `lang/*.json`, so PHP
+     * dotted keys are unreachable from the frontend and render raw — yet the
+     * coverage gate counts them as defined (they exist in `lang/{locale}/*.php`),
+     * so the miss would otherwise pass. Retire this gate once the laravel-react-i18n
+     * Vite plugin is wired to compile PHP namespaces into the React bundle.
+     *
+     * @return int number of unreachable React references
+     */
+    private function reportReactPhpGroupKeys(string $base): int
+    {
+        $groups = $this->phpGroupNames($base);
+        if ($groups === []) {
+            return 0;
+        }
+
+        $bad = self::jsonKeysUnderPhpGroups(array_keys($this->jsReferencedKeys), $groups);
+        if ($bad === []) {
+            return 0;
+        }
+
+        $this->error(sprintf(
+            'React t() references PHP-namespace keys (%d) — the React provider loads only lang/*.json, so PHP dotted keys render raw. Use a flat JSON key until the Vite PHP-namespace plugin is wired:',
+            count($bad),
+        ));
+        foreach ($bad as $key) {
+            $this->line(sprintf(
+                '  - %s  ← %s',
+                json_encode($key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                $this->jsReferencedKeys[$key],
+            ));
+        }
+
+        return count($bad);
+    }
+
+    /**
      * Sorted union of PHP group (file) names across both locales.
      *
      * @return list<string>
@@ -883,6 +921,14 @@ class CheckTranslationsCommand extends Command
      */
     private ?array $termNames = null;
 
+    /**
+     * Keys referenced from React `t()` (JS/TS), with one sample location, as
+     * populated by {@see extractUsedKeys}. Used by {@see reportReactPhpGroupKeys}.
+     *
+     * @var array<string, string> key => "file:line"
+     */
+    private array $jsReferencedKeys = [];
+
     private function pruneIdentityEntries(string $base): int
     {
         // en: every identity entry is redundant. ja: only pure-placeholder
@@ -946,7 +992,8 @@ class CheckTranslationsCommand extends Command
                 if (in_array($relPath, self::SELF_REFERENCE_FILES, true)) {
                     continue;
                 }
-                $patterns = match ($this->classify($file->getFilename())) {
+                $kind = $this->classify($file->getFilename());
+                $patterns = match ($kind) {
                     'js' => [$jsPattern],
                     'php' => [$phpPattern],
                     'blade' => [$phpPattern, $bladePattern],
@@ -963,7 +1010,11 @@ class CheckTranslationsCommand extends Command
                         if (preg_match_all($pat, $line, $m)) {
                             foreach ($m[2] as $key) {
                                 $key = stripcslashes($key);
-                                $found[$key][] = $relPath.':'.($i + 1);
+                                $location = $relPath.':'.($i + 1);
+                                $found[$key][] = $location;
+                                if ($kind === 'js') {
+                                    $this->jsReferencedKeys[$key] ??= $location;
+                                }
                             }
                         }
                     }
