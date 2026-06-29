@@ -24,18 +24,18 @@ export default function BlockList() {
 
     return (
         <>
-            <Head title={t("Blocked members")} />
+            <Head title={t("block.blocked_members")} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
                 {flash.status && <p role="status">{flash.status}</p>}
                 {flash.error && <p role="alert">{flash.error}</p>}
 
                 <section className="space-y-2">
                     <h1 className="text-2xl font-semibold">
-                        {t("Block a member")}
+                        {t("block.add_member")}
                     </h1>
                     <form onSubmit={add} className="flex items-center gap-2">
                         <label htmlFor="block_member_id">
-                            {t("Member ID")}
+                            {t("block.member_id")}
                         </label>
                         <input
                             id="block_member_id"
@@ -45,21 +45,19 @@ export default function BlockList() {
                             value={memberId}
                             onChange={(e) => setMemberId(e.target.value)}
                         />
-                        <button type="submit">{t("Block")}</button>
+                        <button type="submit">{t("block.block")}</button>
                     </form>
                     <p className="text-sm text-muted-foreground">
-                        {t(
-                            "The member ID is the number at the end of the member page URL.",
-                        )}
+                        {t("block.member_id_hint")}
                     </p>
                 </section>
 
                 <section className="space-y-2">
                     <h2 className="text-lg font-semibold">
-                        {t("Blocked members")}
+                        {t("block.blocked_members")}
                     </h2>
                     {blocks.data.length === 0 ? (
-                        <p>{t("No blocked members.")}</p>
+                        <p>{t("block.none")}</p>
                     ) : (
                         <>
                             <ul className="space-y-2">
@@ -73,7 +71,7 @@ export default function BlockList() {
                                             href={`/m/block/remove/${blocked.id}`}
                                             className="text-sm text-muted-foreground hover:underline"
                                         >
-                                            {t("Unblock")}
+                                            {t("block.unblock")}
                                         </Link>
                                     </li>
                                 ))}

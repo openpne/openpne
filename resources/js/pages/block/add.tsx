@@ -22,7 +22,7 @@ export default function BlockAdd() {
         );
     }
 
-    const title = t("Block");
+    const title = t("block.block");
 
     return (
         <>
@@ -32,7 +32,7 @@ export default function BlockAdd() {
 
                 {flash.error && <p role="alert">{flash.error}</p>}
 
-                <p>{t("Block :name?", { name: target.name })}</p>
+                <p>{t("block.confirm_block", { name: target.name })}</p>
 
                 <div className="space-x-2">
                     <button

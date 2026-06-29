@@ -22,7 +22,7 @@ export default function BlockRemove() {
         );
     }
 
-    const title = t("Unblock");
+    const title = t("block.unblock");
 
     return (
         <>
@@ -32,7 +32,7 @@ export default function BlockRemove() {
 
                 {flash.error && <p role="alert">{flash.error}</p>}
 
-                <p>{t("Unblock :name?", { name: target.name })}</p>
+                <p>{t("block.confirm_unblock", { name: target.name })}</p>
 
                 <div className="space-x-2">
                     <button

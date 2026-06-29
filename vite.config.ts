@@ -3,6 +3,10 @@ import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+// Compiles lang/{locale}/*.php into transient lang/php_{locale}.json (gitignored)
+// so the React provider's `import.meta.glob('/lang/*.json')` resolves PHP
+// namespace keys (`block.title`) alongside the flat JSON dictionary.
+import i18n from 'laravel-react-i18n/vite';
 import path from 'node:path';
 
 function resolveHmrHost(appUrl: string | undefined): string {
@@ -30,6 +34,7 @@ export default defineConfig(({ mode }) => {
             }),
             react(),
             tailwindcss(),
+            i18n(),
         ],
         resolve: {
             alias: {

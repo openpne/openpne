@@ -15,6 +15,7 @@
 /.zed
 /auth.json
 /docker-compose.override.yml
+/lang/php_*.json
 /node_modules
 /public/build
 /public/css/filament
