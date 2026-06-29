@@ -4,6 +4,7 @@ namespace App\Features\Member;
 
 use App\Compat\RouteParityRegistry;
 use App\Features\Diary\DiaryVisibility;
+use App\Features\Member\Actions\WithdrawMember;
 use App\Features\Member\Serializers\MemberConfigSerializer;
 use App\Features\Profile\AgeVisibility;
 use App\Http\Controllers\Controller;
@@ -11,6 +12,7 @@ use App\Http\Requests\Member\UpdateAgeVisibilityRequest;
 use App\Http\Requests\Member\UpdateDiaryDefaultRequest;
 use App\Http\Requests\Member\UpdatePasswordRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
+use App\Http\Requests\Member\WithdrawalRequest;
 use App\Models\Member;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
@@ -18,6 +20,7 @@ use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -105,6 +108,30 @@ class MemberConfigController extends Controller
         Auth::guard('member')->logoutOtherDevices($newPassword);
 
         return $this->savedRedirect($request, MemberConfigCategory::Password);
+    }
+
+    public function withdraw(WithdrawalRequest $request, WithdrawMember $withdraw): Response
+    {
+        $member = $this->viewer();
+
+        // Log out BEFORE deleting. A full logout cycles remember_token through the user provider (a
+        // save()); running it after the row is gone would re-insert the just-withdrawn member. Logging
+        // out first also nulls the guard user, so auth.session's post-response hook does nothing.
+        Auth::guard('member')->logout();
+
+        $withdraw($member);
+
+        // Drop the member's other devices too: sessions.user_id carries no FK to members, so deleting
+        // the member leaves its session rows behind — purge them explicitly (database driver). Then
+        // reset the now-orphaned current session.
+        DB::table('sessions')->where('user_id', $member->getKey())->delete();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        $request->session()->flash('status', __('Your account has been deleted.'));
+
+        $target = route('login');
+
+        return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
     }
 
     public function updateSurface(UpdatePreferredSurfaceRequest $request): Response
