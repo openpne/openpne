@@ -8,6 +8,7 @@ use App\Support\SnsSettingKey;
 use App\Support\Surface;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -48,6 +49,7 @@ class MemberConfigTest extends TestCase
             ->assertSee('href="'.route('member.config', ['category' => 'publicFlag']).'"', false)
             ->assertSee('href="'.route('member.config', ['category' => 'language']).'"', false)
             ->assertSee('href="'.route('member.config', ['category' => 'general']).'"', false)
+            ->assertSee('href="'.route('member.config', ['category' => 'password']).'"', false)
             ->assertDontSee('href="'.route('member.config', ['category' => 'diary']).'"', false);
     }
 
@@ -60,6 +62,7 @@ class MemberConfigTest extends TestCase
             'publicFlag' => 'member_config_age',
             'language' => 'member_config_language',
             'general' => 'member_config_surface',
+            'password' => 'member_config_password',
         ];
         $member = Member::factory()->create();
 
@@ -335,5 +338,98 @@ class MemberConfigTest extends TestCase
             ->from(route('member.config', ['category' => 'language']))
             ->post(route('locale.switch'), ['locale' => 'en'])
             ->assertRedirect(route('member.config', ['category' => 'language']));
+    }
+
+    public function test_a_guest_cannot_post_the_password_change(): void
+    {
+        $this->post('/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertRedirect('/login');
+    }
+
+    public function test_changing_the_password_with_the_correct_current_password(): void
+    {
+        // Factory password is 'password'.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertRedirect(route('member.config', ['category' => 'password']));
+
+        $this->assertTrue(Hash::check('new-secret-pass', $member->fresh()->password));
+    }
+
+    public function test_changing_the_password_rejects_a_wrong_current_password(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/password', [
+            'current_password' => 'not-the-password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertSessionHasErrors('current_password');
+
+        // Password unchanged.
+        $this->assertTrue(Hash::check('password', $member->fresh()->password));
+    }
+
+    public function test_changing_the_password_rejects_a_mismatched_confirmation(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'different-pass',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertTrue(Hash::check('password', $member->fresh()->password));
+    }
+
+    public function test_changing_the_password_rejects_a_too_short_password(): void
+    {
+        // Shared passwordRules() = Password::default() (min 8).
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'short',
+            'password_confirmation' => 'short',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertTrue(Hash::check('password', $member->fresh()->password));
+    }
+
+    public function test_the_current_session_survives_a_password_change(): void
+    {
+        // logoutOtherDevices re-syncs the current session's stored hash, so the acting session stays
+        // authenticated (other devices are rejected on their next protected request, not tested here).
+        $member = Member::factory()->create();
+        $this->actingAs($member);
+
+        $this->post('/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertRedirect(route('member.config', ['category' => 'password']));
+
+        $this->get('/member/config')->assertOk();
+    }
+
+    public function test_a_modern_password_save_redirects_to_the_modern_config(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/m/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertRedirect(route('member.modern.config'));
+
+        $this->assertTrue(Hash::check('new-secret-pass', $member->fresh()->password));
     }
 }

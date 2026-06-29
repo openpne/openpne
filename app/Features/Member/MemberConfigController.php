@@ -9,6 +9,7 @@ use App\Features\Profile\AgeVisibility;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\UpdateAgeVisibilityRequest;
 use App\Http\Requests\Member\UpdateDiaryDefaultRequest;
+use App\Http\Requests\Member\UpdatePasswordRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Models\Member;
 use App\Support\PreferenceKey;
@@ -16,6 +17,9 @@ use App\Support\Surface;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -78,6 +82,28 @@ class MemberConfigController extends Controller
         $this->viewer()->setPreference(PreferenceKey::AgeVisibility, $value);
 
         return $this->savedRedirect($request, MemberConfigCategory::PublicFlag);
+    }
+
+    public function updatePassword(UpdatePasswordRequest $request): RedirectResponse
+    {
+        $viewer = $this->viewer();
+        $newPassword = $request->validated('password');
+
+        // Set the new password and rotate remember_token so old "remember me" cookies die.
+        $viewer->forceFill([
+            'password' => Hash::make($newPassword),
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        // Keep this session, drop the member's other devices. logoutOtherDevices re-syncs the current
+        // session's stored password hash (so auth.session doesn't log us out too) and leaves the other
+        // sessions' hashes stale — auth.session rejects them on their next protected request. It does
+        // not delete their DB rows. Must run after the new password is saved (it verifies against the
+        // current hash). reset (ResetMemberPassword) purges all DB sessions; an in-session change keeps
+        // the current one.
+        Auth::guard('member')->logoutOtherDevices($newPassword);
+
+        return $this->savedRedirect($request, MemberConfigCategory::Password);
     }
 
     public function updateSurface(UpdatePreferredSurfaceRequest $request): Response
