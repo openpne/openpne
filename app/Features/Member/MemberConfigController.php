@@ -182,20 +182,24 @@ class MemberConfigController extends Controller
             return redirect()->route('login')->with('status', __('That email address is no longer available.'));
         }
 
-        // OWASP: the login identifier changed, so drop every device. remember_token was rotated in the
-        // commit; purge the member's database sessions (honoring the configured table) and reset the
-        // current session, then send them to sign in with the new address.
+        // OWASP: the login identifier changed, so drop every device of THAT member. remember_token was
+        // rotated in the commit and the member's database sessions are purged here (honoring the
+        // configured table). The current session is torn down only if it belongs to that member — a
+        // different logged-in member, or a guest, who merely opened the confirmation link keeps theirs.
         if (config('session.driver') === 'database') {
             DB::table(config('session.table', 'sessions'))->where('user_id', $member->getKey())->delete();
         }
+
         if (Auth::guard('member')->id() === $member->getKey()) {
             Auth::guard('member')->logout();
-        }
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
-        return redirect()->route('login')
-            ->with('status', __('Your email address has been changed. Please sign in with your new address.'));
+            return redirect()->route('login')
+                ->with('status', __('Your email address has been changed. Please sign in with your new address.'));
+        }
+
+        return redirect()->route('login')->with('status', __('Email address change confirmed.'));
     }
 
     /** The live pending email change for a raw token, or null when it is unknown or past its TTL. */

@@ -686,6 +686,29 @@ class MemberConfigTest extends TestCase
         $this->post('/member/config/email/confirm/'.str_repeat('z', 40))->assertRedirect(route('login'));
     }
 
+    public function test_confirming_another_members_change_does_not_disturb_the_current_session(): void
+    {
+        // The confirm link is token-gated and reachable in any session. The change applies to the
+        // requester (the token's member), never the viewer — and a DIFFERENT logged-in member who
+        // opens the link must keep their own session (only the changed member's devices are dropped).
+        Member::factory()->create(['id' => 1]);
+        $requester = Member::factory()->create();
+        $other = Member::factory()->create();
+        $raw = str_repeat('h', 40);
+        EmailChangeRequest::create([
+            'member_id' => $requester->id, 'new_email' => 'a-new@example.com',
+            'token' => hash('sha256', $raw), 'created_at' => now(),
+        ]);
+
+        $this->actingAs($other);
+        $this->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('login'));
+
+        // Requester's address changed; the viewer's account is untouched and still logged in.
+        $this->assertSame('a-new@example.com', $requester->fresh()->email);
+        $this->assertNotSame('a-new@example.com', $other->fresh()->email);
+        $this->get('/member/config')->assertOk();
+    }
+
     public function test_confirming_rejects_an_address_claimed_since_the_request(): void
     {
         $member = Member::factory()->create();
