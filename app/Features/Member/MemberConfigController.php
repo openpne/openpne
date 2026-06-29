@@ -122,9 +122,14 @@ class MemberConfigController extends Controller
         $withdraw($member);
 
         // Drop the member's other devices too: sessions.user_id carries no FK to members, so deleting
-        // the member leaves its session rows behind — purge them explicitly (database driver). Then
-        // reset the now-orphaned current session.
-        DB::table('sessions')->where('user_id', $member->getKey())->delete();
+        // the member leaves its session rows behind. On the database driver purge them outright, honoring
+        // the configured session table (mirror ResetMemberPassword); other drivers keep no central store,
+        // but a deleted member can't re-authenticate regardless. Then reset the current session.
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table', 'sessions'))
+                ->where('user_id', $member->getKey())
+                ->delete();
+        }
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         $request->session()->flash('status', __('Your account has been deleted.'));

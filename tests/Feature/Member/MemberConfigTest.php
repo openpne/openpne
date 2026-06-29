@@ -8,6 +8,7 @@ use App\Support\SnsSettingKey;
 use App\Support\Surface;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -538,5 +539,29 @@ class MemberConfigTest extends TestCase
         ])->assertRedirect(route('login'));
 
         $this->assertDatabaseMissing('members', ['id' => $member->id]);
+    }
+
+    public function test_withdrawing_purges_the_members_database_sessions(): void
+    {
+        // sessions.user_id has no FK, so deleting the member leaves rows behind; on the database driver
+        // the withdrawal purges the member's other-device sessions outright.
+        config()->set('session.driver', 'database');
+        Member::factory()->create(['id' => 1]);
+        $member = Member::factory()->create();
+        DB::table('sessions')->insert([
+            'id' => 'other-device-session',
+            'user_id' => $member->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'agent',
+            'payload' => 'x',
+            'last_activity' => 1700000000,
+        ]);
+
+        $this->actingAs($member)->post('/member/config/withdrawal', [
+            'password' => 'password',
+            'confirm' => '1',
+        ])->assertRedirect(route('login'));
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
     }
 }
