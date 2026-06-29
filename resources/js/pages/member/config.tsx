@@ -29,6 +29,7 @@ export default function MemberConfig() {
     const locale = useForm({ locale: form.locale.value });
     const surface = useForm({ preferred_surface: form.surface.value });
     const password = useForm({ current_password: '', password: '', password_confirmation: '' });
+    const withdraw = useForm({ password: '', confirm: false });
 
     return (
         <>
@@ -169,6 +170,36 @@ export default function MemberConfig() {
                         onChange={(e) => password.setData('password_confirmation', e.target.value)}
                     />
                     <button type="submit" disabled={password.processing}>{t('Save')}</button>
+                </form>
+
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        withdraw.post('/m/member/config/withdrawal');
+                    }}
+                    className="space-y-2"
+                >
+                    <h2 className="font-semibold">{t('Account withdrawal')}</h2>
+                    <p>{t('Withdrawing permanently deletes your account and cannot be undone.')}</p>
+                    <label htmlFor="withdraw_password">{t('Current password')}</label>
+                    <input
+                        id="withdraw_password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={withdraw.data.password}
+                        onChange={(e) => withdraw.setData('password', e.target.value)}
+                    />
+                    {withdraw.errors.password && <p role="alert">{withdraw.errors.password}</p>}
+                    <label className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={withdraw.data.confirm}
+                            onChange={(e) => withdraw.setData('confirm', e.target.checked)}
+                        />
+                        {t('Yes, delete my account.')}
+                    </label>
+                    {withdraw.errors.confirm && <p role="alert">{withdraw.errors.confirm}</p>}
+                    <button type="submit" disabled={withdraw.processing}>{t('Withdraw from this site')}</button>
                 </form>
             </main>
         </>

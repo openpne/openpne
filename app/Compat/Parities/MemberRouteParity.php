@@ -66,6 +66,11 @@ class MemberRouteParity extends RouteParity
             new RouteMap('member_config', '/member/config', 'member.config.surface', 'POST'),
             // OpenPNE 3 served the password change under member/config (?category=password); same URL.
             new RouteMap('member_config', '/member/config', 'member.config.password', 'POST'),
+            // Withdrawal — OpenPNE 3 member_delete was GET/POST /leave. OpenPNE 4 serves it as the
+            // member-config withdrawal category: the GET URL is kept by a redirect (URL/bookmark
+            // compatibility only), and the submit is the config-category POST (no POST /leave alias).
+            new RouteMap('member_delete', '/leave', 'member.leave_compat', 'GET', op3Action: 'delete'),
+            new RouteMap('member_delete', '/leave', 'member.config.withdrawal', 'POST'),
             // Login — Fortify owns /login; the OpenPNE 3 /member/login/* URL is preserved by a static
             // redirect (compatRedirects), and the Classic body id stays page_member_login.
             new RouteMap('login', '/member/login/*', 'login', 'GET', op3Action: 'login'),
@@ -80,7 +85,6 @@ class MemberRouteParity extends RouteParity
     {
         return [
             'member_logout' => 'Logout is served by Fortify at POST /logout (OpenPNE 3 also allowed GET).',
-            'member_delete' => 'Member withdrawal (/leave) is not ported.',
             'member_config_jsonapi' => 'The legacy config JSON API (/member/config/jsonapi) is not ported.',
             'global_changeLanguage' => 'Locale switching is POST /locale (locale.switch), not the OpenPNE 3 GET /language URL.',
         ];

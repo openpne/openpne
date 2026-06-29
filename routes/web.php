@@ -102,6 +102,12 @@ Route::get('/member/profile/id/{member}/{tail?}', fn (int $member) => redirect()
 Route::get('/member/login/{tail?}', fn () => redirect()->route('login'))
     ->where('tail', '.*')->name('member.login_compat');
 
+// OpenPNE 3 withdrawal lived at GET/POST /leave; OpenPNE 4 serves it as the member-config withdrawal
+// category. Preserve the bookmarkable GET URL with a redirect (the submit is member.config.withdrawal,
+// not POST /leave). Guest-reachable: the config target bounces a logged-out visitor to /login.
+Route::get('/leave', fn () => redirect()->route('member.config', ['category' => 'withdrawal']))
+    ->name('member.leave_compat');
+
 // OpenPNE 3 password recovery lived under the opAuthMailAddress plugin. Fortify owns the canonical
 // /forgot-password and /reset-password/{token}; the OpenPNE 3 token scheme (id + token) cannot be
 // honored by Fortify (email + path token), so both legacy entry points restart at the request form.
@@ -298,6 +304,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/age', [MemberConfigController::class, 'updateAge'])->name('member.config.age');
     Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
     Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])->name('member.config.password');
+    Route::post('/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])->name('member.config.withdrawal');
     Route::get('/m/member/config', [MemberConfigController::class, 'show'])
         ->defaults('surface', 'modern')->name('member.modern.config');
     Route::post('/m/member/config/diary', [MemberConfigController::class, 'updateDiary'])
@@ -308,6 +315,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->defaults('surface', 'modern')->name('member.modern.config.surface');
     Route::post('/m/member/config/password', [MemberConfigController::class, 'updatePassword'])
         ->defaults('surface', 'modern')->name('member.modern.config.password');
+    Route::post('/m/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])
+        ->defaults('surface', 'modern')->name('member.modern.config.withdrawal');
 
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {
         Route::get('/avatar', 'edit')->name('member.avatar.edit');

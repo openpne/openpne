@@ -168,6 +168,43 @@
             </div>
             @break
 
+        @case(MemberConfigCategory::Withdrawal)
+            {{-- Permanent account deletion: re-auth with the current password + an explicit confirm. --}}
+            <div class="dparts form" id="member_config_withdrawal">
+                <div class="partsHeading"><h3>{{ __('Account withdrawal') }}</h3></div>
+                <div class="parts">
+                    <form method="POST" action="{{ route('member.config.withdrawal') }}">
+                        @csrf
+                        <p>{{ __('Withdrawing permanently deletes your account and cannot be undone.') }}</p>
+                        <table>
+                            <tr>
+                                <th><label for="withdraw_password">{{ __('Current password') }}</label></th>
+                                <td>
+                                    <input type="password" id="withdraw_password" name="password" autocomplete="current-password">
+                                    @error('password')<p class="error">{{ $message }}</p>@enderror
+                                </td>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <td>
+                                    <label>
+                                        <input type="checkbox" name="confirm" value="1">
+                                        {{ __('Yes, delete my account.') }}
+                                    </label>
+                                    @error('confirm')<p class="error">{{ $message }}</p>@enderror
+                                </td>
+                            </tr>
+                        </table>
+                        <div class="operation">
+                            <ul class="moreInfo button">
+                                <li><input type="submit" class="input_submit" value="{{ __('Withdraw from this site') }}"></li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            @break
+
         @default
             {{-- OpenPNE 3 landing (configInformation): no category selected, pick one from the nav.
                  id is an OpenPNE 4-side hook, not an OpenPNE 3 parity claim. --}}
