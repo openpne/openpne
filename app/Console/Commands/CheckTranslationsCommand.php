@@ -851,8 +851,11 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Only reports JSON-side unused keys. PHP-namespace defaults shipped by
-     * laravel-lang/common are intentionally kept even when not referenced.
+     * Reports JSON keys not referenced by the app-code scan. Informational and NOT a deletion
+     * list: lang/*.json mixes app-authored keys with laravel-lang publisher keys that the
+     * framework/vendor renders at runtime (pagination "to"/"results", validation, http-statuses,
+     * ...) which this scan cannot see. PHP-namespace defaults are likewise kept. See
+     * docs/internals/i18n.md.
      *
      * @param  array<string, list<string>>  $found
      */
@@ -880,16 +883,22 @@ class CheckTranslationsCommand extends Command
 
         $total = count(array_unique([...$unused['ja'], ...$unused['en']]));
         if ($total === 0) {
-            $this->info('No unused JSON translation keys.');
+            $this->info('No unreferenced JSON translation keys.');
 
             return;
         }
+
+        $this->warn('JSON keys not referenced by the app-code scan (informational, never fails CI).');
+        $this->line('NOT a deletion list: lang/*.json also holds laravel-lang publisher keys rendered by');
+        $this->line('the framework/vendor (e.g. pagination "to"/"results", validation, http-statuses) that');
+        $this->line('this scan cannot see — removing them breaks framework output. See docs/internals/i18n.md.');
+        $this->line('');
 
         foreach (['ja', 'en'] as $lang) {
             if ($unused[$lang] === []) {
                 continue;
             }
-            $this->warn(sprintf('Unused in lang/%s.json (%d) — informational, not a CI failure:', $lang, count($unused[$lang])));
+            $this->warn(sprintf('Not referenced in app code — lang/%s.json (%d):', $lang, count($unused[$lang])));
             sort($unused[$lang]);
             foreach (array_slice($unused[$lang], 0, 50) as $k) {
                 $this->line('  - '.json_encode($k, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
