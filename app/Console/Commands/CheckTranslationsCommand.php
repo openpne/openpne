@@ -640,12 +640,14 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Hard gate (temporary): a React `t()` call may not reference a key under a
-     * PHP namespace group. The React provider loads only `lang/*.json`, so PHP
-     * dotted keys are unreachable from the frontend and render raw — yet the
-     * coverage gate counts them as defined (they exist in `lang/{locale}/*.php`),
-     * so the miss would otherwise pass. Retire this gate once the laravel-react-i18n
-     * Vite plugin is wired to compile PHP namespaces into the React bundle.
+     * Hard gate: a React `t()` call may not reference a key under a PHP namespace
+     * group. The React provider loads only `lang/*.json`, so PHP dotted keys are
+     * unreachable from the frontend and render raw — yet the coverage gate counts
+     * them as defined (they exist in `lang/{locale}/*.php`), so the miss would
+     * otherwise pass. This is a standing invariant: app UI strings live in the
+     * flat source-text JSON dictionary, and PHP namespaces are reserved for
+     * framework/reference groups the frontend does not consume — so the
+     * laravel-react-i18n Vite php-namespace plugin is intentionally not wired.
      *
      * @return int number of unreachable React references
      */
