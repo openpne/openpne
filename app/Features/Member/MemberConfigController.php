@@ -95,12 +95,13 @@ class MemberConfigController extends Controller
             'remember_token' => Str::random(60),
         ])->save();
 
-        // Keep this session, drop the member's other devices. logoutOtherDevices re-syncs the current
-        // session's stored password hash (so auth.session doesn't log us out too) and leaves the other
-        // sessions' hashes stale — auth.session rejects them on their next protected request. It does
-        // not delete their DB rows. Must run after the new password is saved (it verifies against the
-        // current hash). reset (ResetMemberPassword) purges all DB sessions; an in-session change keeps
-        // the current one.
+        // Keep this device, drop the others. The new hash makes every session's stored password hash
+        // stale; auth.session (AuthenticateSession) re-stores THIS session's hash after the response so
+        // the current device survives, and bounces the others on their next protected request.
+        // logoutOtherDevices re-hashes the just-set password and fires the other-device-logout event —
+        // it verifies against the current hash, so it runs after the save. Neither this nor auth.session
+        // deletes DB session rows; that is ResetMemberPassword's compromise-path behavior, not an
+        // in-session change's.
         Auth::guard('member')->logoutOtherDevices($newPassword);
 
         return $this->savedRedirect($request, MemberConfigCategory::Password);

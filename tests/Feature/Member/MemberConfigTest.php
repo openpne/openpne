@@ -432,4 +432,32 @@ class MemberConfigTest extends TestCase
 
         $this->assertTrue(Hash::check('new-secret-pass', $member->fresh()->password));
     }
+
+    public function test_changing_the_password_rotates_the_remember_token(): void
+    {
+        // Rotating remember_token kills "remember me" cookies on every device.
+        $member = Member::factory()->create(['remember_token' => 'old-remember-token']);
+
+        $this->actingAs($member)->post('/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertRedirect(route('member.config', ['category' => 'password']));
+
+        $this->assertNotSame('old-remember-token', $member->fresh()->remember_token);
+    }
+
+    public function test_a_device_with_a_stale_password_hash_is_logged_out(): void
+    {
+        // The contract behind "other devices are dropped": auth.session bounces any session whose
+        // stored password hash no longer matches the member's. Establish a session, change the hash
+        // out of band (stands in for another device's change), then the stale session must redirect
+        // to login on its next protected request.
+        $member = Member::factory()->create();
+        $this->actingAs($member)->get('/member/config')->assertOk();
+
+        $member->forceFill(['password' => Hash::make('changed-elsewhere')])->save();
+
+        $this->get('/member/config')->assertRedirect('/login');
+    }
 }
