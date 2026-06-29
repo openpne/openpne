@@ -151,7 +151,10 @@ class MemberConfigController extends Controller
             return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
         }
 
-        return view('member.email-change-confirm', ['token' => $token, 'newEmail' => $pending->new_email]);
+        // Rendered in the Classic shell (insecure_page, like register-complete) — reachable pre-login.
+        return view('member.email-change-confirm', ['token' => $token, 'newEmail' => $pending->new_email])
+            ->with('pageId', 'page_member_emailChangeConfirm')
+            ->with('pageClass', 'insecure_page');
     }
 
     public function confirmEmail(Request $request, string $token, ConfirmEmailChange $confirm): RedirectResponse
