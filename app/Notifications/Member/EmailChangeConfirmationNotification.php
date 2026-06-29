@@ -30,14 +30,14 @@ class EmailChangeConfirmationNotification extends Notification implements Should
 
     public function toMail(object $notifiable): MailMessage
     {
-        $hours = (int) ceil(config('openpne.email_change.token_ttl_minutes') / 60);
+        $minutes = (int) config('openpne.email_change.token_ttl_minutes');
 
         return (new MailMessage)
             ->from(sns_admin_mail_address(), sns_name())
             ->subject(__('Confirm your new email address'))
             ->line(__('Open the link below to confirm this address as your new :app email address.', ['app' => sns_name()]))
             ->action(__('Confirm email change'), url('/member/config/email/confirm/'.$this->rawToken))
-            ->line(__('This link expires in :hours hours.', ['hours' => $hours]))
+            ->line(__('This link expires in :minutes minutes.', ['minutes' => $minutes]))
             ->line(__('If you did not request this, you can ignore this email.'))
             ->salutation('— '.sns_name());
     }

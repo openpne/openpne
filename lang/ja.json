@@ -714,6 +714,7 @@
     "This gadget is not available for the selected placement.": "選択した配置ではこのガジェットを使用できません。",
     "This is already your email address.": "それは現在のメールアドレスです。",
     "This link expires in :hours hours.": "このリンクは :hours 時間で無効になります。",
+    "This link expires in :minutes minutes.": "このリンクは :minutes 分で無効になります。",
     "This member is already blocked.": "このメンバーはすでにブロックされています。",
     "This member is not blocked.": "このメンバーはブロックされていません。",
     "This member is unavailable.": "このメンバーは利用できません。",
