@@ -50,6 +50,29 @@ class CheckTranslationsCommand extends Command
     private const COLLISION_ALLOWLIST_FILE = 'lang/.i18n-collision-allowlist.json';
 
     /**
+     * PHP namespace groups laravel-lang's publisher (`lang:add` / `lang:update`)
+     * owns. The app must not author or edit these, nor reuse the names. A group
+     * outside the three lists fails {@see reportUnknownGroups} so a new
+     * publisher group (added by `lang:update`) or a misplaced app file gets a
+     * deliberate classification rather than silently joining the catalog.
+     */
+    private const PUBLISHER_GROUPS = ['validation', 'auth', 'passwords', 'pagination', 'http-statuses', 'actions'];
+
+    /**
+     * App-authored PHP groups whose keys must carry a real value in BOTH ja and
+     * en (structured keys have no "key === English text" omission fallback).
+     */
+    private const APP_UI_GROUPS = ['terms'];
+
+    /**
+     * App-authored PHP groups that tolerate source fallback / partial coverage
+     * (e.g. `regions`: `lang/en/regions.php` is empty and RegionListService
+     * falls back to the English source name). Boundary/collision checks still
+     * apply; the en+ja coverage requirement does not.
+     */
+    private const APP_REFERENCE_GROUPS = ['regions'];
+
+    /**
      * Pre-existing gaps recorded here are grandfathered; only NEW missing keys outside fail CI.
      */
     private const BASELINE_FILE = 'lang/.i18n-baseline.json';
@@ -99,6 +122,10 @@ class CheckTranslationsCommand extends Command
         $missing = $this->reportMissing($found, $defined, $baseline);
         $unordered = $this->reportOrder($base);
         $markerGaps = $this->reportMarkerLeaks($base);
+        $boundary = $this->reportLangSubdirectories($base)
+            + $this->reportNamespaceCollisions($base)
+            + $this->reportUnknownGroups($base)
+            + $this->reportAppUiCoverage($base);
         $this->reportCollisions($base);
         $this->reportNearFold($base);
 
@@ -109,7 +136,7 @@ class CheckTranslationsCommand extends Command
             $this->reportDuplicateValues($base);
         }
 
-        return ($missing > 0 || $unordered > 0 || $markerGaps > 0) ? 1 : 0;
+        return ($missing > 0 || $unordered > 0 || $markerGaps > 0 || $boundary > 0) ? 1 : 0;
     }
 
     /**
@@ -454,6 +481,262 @@ class CheckTranslationsCommand extends Command
             ));
             $this->line('  - '.json_encode((string) $value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).': '.$rendered);
         }
+    }
+
+    /**
+     * Hard gate: `lang/{locale}/` must hold flat `*.php` group files only. The
+     * laravel-react-i18n Vite parser recurses subdirectories into `dir.file.key`
+     * dotted keys, but Laravel's backend loader reads only `{group}.php` at the
+     * top level — so a subdirectory resolves on the frontend and 404s on the
+     * backend. Express hierarchy with nested PHP arrays, not directories.
+     *
+     * @return int number of offending subdirectories
+     */
+    private function reportLangSubdirectories(string $base): int
+    {
+        $violations = 0;
+        foreach (['ja', 'en'] as $lang) {
+            $dir = "{$base}/lang/{$lang}";
+            if (! is_dir($dir)) {
+                continue;
+            }
+            $subdirs = [];
+            foreach (scandir($dir) ?: [] as $entry) {
+                if ($entry === '.' || $entry === '..') {
+                    continue;
+                }
+                if (is_dir("{$dir}/{$entry}")) {
+                    $subdirs[] = $entry;
+                }
+            }
+            if ($subdirs === []) {
+                continue;
+            }
+            $violations += count($subdirs);
+            $this->error(sprintf(
+                'lang/%s/ has subdirectories (%s) — namespace files must be flat. The React parser recurses subdirs but the Laravel loader does not, so they diverge. Use nested PHP arrays, not directories.',
+                $lang,
+                implode(', ', $subdirs),
+            ));
+        }
+
+        return $violations;
+    }
+
+    /**
+     * Hard gate: a flat JSON key must not fall under a PHP namespace group.
+     * laravel-react-i18n merges `php_{locale}.json` AFTER `{locale}.json`, so a
+     * PHP-namespace key silently wins over a colliding JSON key — exactly the
+     * Laravel "Key/File" rule. `[overrides]` = the PHP key exists today (active
+     * silent override); `[shadows]` = the group exists but not (yet) this key
+     * (latent — adding it later would shadow the JSON entry).
+     *
+     * @return int number of colliding JSON keys
+     */
+    private function reportNamespaceCollisions(string $base): int
+    {
+        $groups = $this->phpGroupNames($base);
+        if ($groups === []) {
+            return 0;
+        }
+
+        $phpKeys = [];
+        foreach (['ja', 'en'] as $lang) {
+            foreach ($this->phpGroupKeys($base, $lang) as $keys) {
+                foreach ($keys as $key) {
+                    $phpKeys[$key] = true;
+                }
+            }
+        }
+
+        $violations = 0;
+        foreach (['ja', 'en'] as $lang) {
+            $json = $this->loadJsonDictionary("{$base}/lang/{$lang}.json");
+            $bad = self::jsonKeysUnderPhpGroups(array_map('strval', array_keys($json)), $groups);
+            if ($bad === []) {
+                continue;
+            }
+            $violations += count($bad);
+            $this->error(sprintf(
+                'lang/%s.json keys collide with PHP namespace groups (%d) — php_%s.json is merged last, so the PHP value silently wins:',
+                $lang,
+                count($bad),
+                $lang,
+            ));
+            foreach ($bad as $key) {
+                $tag = isset($phpKeys[$key]) ? 'overrides' : 'shadows';
+                $this->line(sprintf(
+                    '  - [%s] %s (group "%s")',
+                    $tag,
+                    json_encode($key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    explode('.', $key)[0],
+                ));
+            }
+        }
+
+        return $violations;
+    }
+
+    /**
+     * Hard gate: every PHP group must be classified as publisher, app-ui, or
+     * app-reference. An unrecognised group means `lang:update` published a new
+     * framework group (add to PUBLISHER_GROUPS) or an app file was added without
+     * a classification (add to APP_UI_GROUPS / APP_REFERENCE_GROUPS).
+     *
+     * @return int number of unrecognised groups
+     */
+    private function reportUnknownGroups(string $base): int
+    {
+        $unknown = self::unknownGroups($this->phpGroupNames($base), [
+            ...self::PUBLISHER_GROUPS,
+            ...self::APP_UI_GROUPS,
+            ...self::APP_REFERENCE_GROUPS,
+        ]);
+        if ($unknown === []) {
+            return 0;
+        }
+
+        $this->error(sprintf(
+            'Unrecognised PHP translation group(s): %s. Classify in CheckTranslationsCommand: APP_UI_GROUPS (en+ja required) or APP_REFERENCE_GROUPS (source fallback) if app-authored, or PUBLISHER_GROUPS if lang:update published it.',
+            implode(', ', $unknown),
+        ));
+
+        return count($unknown);
+    }
+
+    /**
+     * Hard gate: app-ui group keys must exist in BOTH ja and en (structured
+     * keys have no "key === English text" omission). app-reference groups are
+     * exempt (source fallback). A group absent from both locales is skipped.
+     *
+     * @return int number of one-sided keys across app-ui groups
+     */
+    private function reportAppUiCoverage(string $base): int
+    {
+        $ja = $this->phpGroupKeys($base, 'ja');
+        $en = $this->phpGroupKeys($base, 'en');
+
+        $violations = 0;
+        foreach (self::APP_UI_GROUPS as $group) {
+            $gaps = self::coverageGaps($ja[$group] ?? [], $en[$group] ?? []);
+            foreach (['en' => $gaps['missing_en'], 'ja' => $gaps['missing_ja']] as $lang => $missing) {
+                if ($missing === []) {
+                    continue;
+                }
+                $violations += count($missing);
+                $this->error(sprintf(
+                    'App-UI group "%s" missing from lang/%s/%s.php (%d): %s',
+                    $group,
+                    $lang,
+                    $group,
+                    count($missing),
+                    implode(', ', $missing),
+                ));
+            }
+        }
+
+        return $violations;
+    }
+
+    /**
+     * Sorted union of PHP group (file) names across both locales.
+     *
+     * @return list<string>
+     */
+    private function phpGroupNames(string $base): array
+    {
+        $groups = [];
+        foreach (['ja', 'en'] as $lang) {
+            $dir = "{$base}/lang/{$lang}";
+            if (! is_dir($dir)) {
+                continue;
+            }
+            foreach (glob($dir.'/*.php') ?: [] as $file) {
+                $groups[pathinfo($file, PATHINFO_FILENAME)] = true;
+            }
+        }
+        $names = array_keys($groups);
+        sort($names);
+
+        return $names;
+    }
+
+    /**
+     * Dotted keys per PHP group for one locale, as the Vite parser flattens
+     * them (`{group}.{nested.path}`).
+     *
+     * @return array<string, list<string>> group => dotted keys
+     */
+    private function phpGroupKeys(string $base, string $lang): array
+    {
+        $out = [];
+        $dir = "{$base}/lang/{$lang}";
+        if (! is_dir($dir)) {
+            return $out;
+        }
+        foreach (glob($dir.'/*.php') ?: [] as $file) {
+            $ns = pathinfo($file, PATHINFO_FILENAME);
+            /** @var array<string, mixed> $arr */
+            $arr = require $file;
+            $keys = [];
+            if (is_array($arr)) {
+                foreach (array_keys(Arr::dot($arr)) as $sub) {
+                    $keys[] = "{$ns}.".(string) $sub;
+                }
+            }
+            $out[$ns] = $keys;
+        }
+
+        return $out;
+    }
+
+    /**
+     * JSON keys whose first dot-segment is a PHP group name (`terms.x`, or the
+     * bare group `terms`). Sentence keys whose first segment is not a group
+     * (`%Community% deleted.`) are unaffected.
+     *
+     * @param  list<string>  $jsonKeys
+     * @param  list<string>  $groupNames
+     * @return list<string>
+     */
+    public static function jsonKeysUnderPhpGroups(array $jsonKeys, array $groupNames): array
+    {
+        $bad = [];
+        foreach ($jsonKeys as $key) {
+            if (in_array(explode('.', $key)[0], $groupNames, true)) {
+                $bad[] = $key;
+            }
+        }
+
+        return $bad;
+    }
+
+    /**
+     * PHP groups present on disk but not in the known classification.
+     *
+     * @param  list<string>  $present
+     * @param  list<string>  $known
+     * @return list<string>
+     */
+    public static function unknownGroups(array $present, array $known): array
+    {
+        return array_values(array_diff($present, $known));
+    }
+
+    /**
+     * One-sided keys between two locales of a group (each side's keys absent on
+     * the other).
+     *
+     * @param  list<string>  $jaKeys
+     * @param  list<string>  $enKeys
+     * @return array{missing_en: list<string>, missing_ja: list<string>}
+     */
+    public static function coverageGaps(array $jaKeys, array $enKeys): array
+    {
+        return [
+            'missing_en' => array_values(array_diff($jaKeys, $enKeys)),
+            'missing_ja' => array_values(array_diff($enKeys, $jaKeys)),
+        ];
     }
 
     /**
