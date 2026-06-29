@@ -151,6 +151,10 @@ class MemberConfigController extends Controller
             return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
         }
 
+        if ($wrongMember = $this->rejectIfDifferentMember($pending)) {
+            return $wrongMember;
+        }
+
         // Rendered in the Classic shell (insecure_page, like register-complete) — reachable pre-login.
         return view('member.email-change-confirm', ['token' => $token, 'newEmail' => $pending->new_email])
             ->with('pageId', 'page_member_emailChangeConfirm')
@@ -162,6 +166,10 @@ class MemberConfigController extends Controller
         $pending = $this->pendingEmailChange($token);
         if ($pending === null) {
             return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
+        }
+
+        if ($wrongMember = $this->rejectIfDifferentMember($pending)) {
+            return $wrongMember;
         }
 
         // The address was free when the change was requested, but may have been claimed since (admin
@@ -186,23 +194,39 @@ class MemberConfigController extends Controller
         // is rotated in the commit (kills remember-me cookies everywhere); on the database session
         // driver — the app's default — their server-side sessions are purged here too. An email change
         // does not rotate the password hash, so auth.session alone would not evict other sessions on a
-        // non-database driver; this contract assumes database sessions (as withdrawal/reset do). The
-        // current session is torn down only if it belongs to that member — a different logged-in member,
-        // or a guest, who merely opened the confirmation link keeps theirs.
+        // non-database driver; this contract assumes database sessions (as withdrawal/reset do).
         if (config('session.driver') === 'database') {
             DB::table(config('session.table', 'sessions'))->where('user_id', $member->getKey())->delete();
         }
 
+        // Only the changed member or a logged-out visitor reaches here (a different logged-in member is
+        // turned away above). If this is the changed member's own session, end it too, then everyone
+        // signs in afresh with the new address.
         if (Auth::guard('member')->id() === $member->getKey()) {
             Auth::guard('member')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-
-            return redirect()->route('login')
-                ->with('status', __('Your email address has been changed. Please sign in with your new address.'));
         }
 
-        return redirect()->route('login')->with('status', __('Email address change confirmed.'));
+        return redirect()->route('login')
+            ->with('status', __('Your email address has been changed. Please sign in with your new address.'));
+    }
+
+    /**
+     * A confirmation link is the changed member's action; completing it while logged in as a DIFFERENT
+     * member is an incoherent state (and would surface that member's identity in the shell). Turn them
+     * away with a clear message — they can sign out and reopen the link. A guest, or the member
+     * themselves, proceeds.
+     */
+    private function rejectIfDifferentMember(EmailChangeRequest $pending): ?RedirectResponse
+    {
+        $current = Auth::guard('member')->id();
+        if ($current !== null && (int) $current !== (int) $pending->member_id) {
+            return redirect()->route('home')
+                ->with('status', __('This confirmation link is for a different account. Please sign out and open it again.'));
+        }
+
+        return null;
     }
 
     /** The live pending email change for a raw token, or null when it is unknown or past its TTL. */

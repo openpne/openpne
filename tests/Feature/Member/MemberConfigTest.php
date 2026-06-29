@@ -689,11 +689,11 @@ class MemberConfigTest extends TestCase
         $this->post('/member/config/email/confirm/'.str_repeat('z', 40))->assertRedirect(route('login'));
     }
 
-    public function test_confirming_another_members_change_does_not_disturb_the_current_session(): void
+    public function test_confirming_while_logged_in_as_a_different_member_is_rejected(): void
     {
-        // The confirm link is token-gated and reachable in any session. The change applies to the
-        // requester (the token's member), never the viewer — and a DIFFERENT logged-in member who
-        // opens the link must keep their own session (only the changed member's devices are dropped).
+        // The confirm link is the requester's action; opening it while logged in as a DIFFERENT member
+        // is turned away (so a mismatched identity is never shown and nothing is changed) — they can
+        // sign out and reopen it. The pending change/token stay intact; the viewer keeps their session.
         Member::factory()->create(['id' => 1]);
         $requester = Member::factory()->create();
         $other = Member::factory()->create();
@@ -703,13 +703,16 @@ class MemberConfigTest extends TestCase
             'token' => hash('sha256', $raw), 'created_at' => now(),
         ]);
 
-        $this->actingAs($other);
-        $this->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('login'));
+        // POST is rejected — redirected away, nothing committed, token intact.
+        $this->actingAs($other)->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('home'));
+        $this->assertNotSame('a-new@example.com', $requester->fresh()->email);
+        $this->assertDatabaseHas('email_change_requests', ['member_id' => $requester->id]);
 
-        // Requester's address changed; the viewer's account is untouched and still logged in.
-        $this->assertSame('a-new@example.com', $requester->fresh()->email);
-        $this->assertNotSame('a-new@example.com', $other->fresh()->email);
-        $this->get('/member/config')->assertOk();
+        // GET is likewise turned away (the confirm page is not shown to a different member).
+        $this->actingAs($other)->get('/member/config/email/confirm/'.$raw)->assertRedirect(route('home'));
+
+        // The viewer's own session is untouched.
+        $this->actingAs($other)->get('/member/config')->assertOk();
     }
 
     public function test_confirming_rejects_an_address_claimed_since_the_request(): void
