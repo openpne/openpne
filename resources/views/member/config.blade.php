@@ -168,6 +168,45 @@
             </div>
             @break
 
+        @case(MemberConfigCategory::Email)
+            {{-- Email-address change: re-auth with the current password; a confirmation link is mailed
+                 to the new address and the change commits only when that link is confirmed. --}}
+            <div class="dparts form" id="member_config_email">
+                <div class="partsHeading"><h3>{{ __('Email address') }}</h3></div>
+                <div class="parts">
+                    <form method="POST" action="{{ route('member.config.email') }}">
+                        @csrf
+                        <table>
+                            <tr>
+                                <th>{{ __('Current email address') }}</th>
+                                <td>{{ $email }}</td>
+                            </tr>
+                            <tr>
+                                <th><label for="new_email">{{ __('New email address') }}</label></th>
+                                <td>
+                                    <input type="email" id="new_email" name="new_email" value="{{ old('new_email') }}">
+                                    @error('new_email')<p class="error">{{ $message }}</p>@enderror
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><label for="email_password">{{ __('Current password') }}</label></th>
+                                <td>
+                                    <input type="password" id="email_password" name="password" autocomplete="current-password">
+                                    @error('password')<p class="error">{{ $message }}</p>@enderror
+                                </td>
+                            </tr>
+                        </table>
+                        <p>{{ __('A confirmation link will be sent to the new address. The change takes effect once you open it.') }}</p>
+                        <div class="operation">
+                            <ul class="moreInfo button">
+                                <li><input type="submit" class="input_submit" value="{{ __('Send confirmation') }}"></li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            @break
+
         @case(MemberConfigCategory::Withdrawal)
             {{-- Permanent account deletion: re-auth with the current password + an explicit confirm. --}}
             <div class="dparts form" id="member_config_withdrawal">

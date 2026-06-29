@@ -100,6 +100,12 @@ return [
         'min_form_seconds' => (int) env('OPENPNE_REGISTRATION_MIN_FORM_SECONDS', 2),
     ],
 
+    'email_change' => [
+        // How long an emailed email-change confirmation link stays valid. Expiry is derived from
+        // email_change_requests.created_at against this value (mirrors the registration token TTL).
+        'token_ttl_minutes' => (int) env('OPENPNE_EMAIL_CHANGE_TOKEN_TTL_MINUTES', 1440),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Login abuse

@@ -4,19 +4,24 @@ namespace App\Features\Member;
 
 use App\Compat\RouteParityRegistry;
 use App\Features\Diary\DiaryVisibility;
+use App\Features\Member\Actions\ConfirmEmailChange;
+use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Features\Member\Serializers\MemberConfigSerializer;
 use App\Features\Profile\AgeVisibility;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Member\RequestEmailChangeRequest;
 use App\Http\Requests\Member\UpdateAgeVisibilityRequest;
 use App\Http\Requests\Member\UpdateDiaryDefaultRequest;
 use App\Http\Requests\Member\UpdatePasswordRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Http\Requests\Member\WithdrawalRequest;
+use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
 use App\Support\SurfaceResolver;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +49,12 @@ class MemberConfigController extends Controller
             return redirect()->route('block.list');
         }
 
+        // OpenPNE 3 split the mail-address change into pcAddress/mobileAddress; OpenPNE 4 has a single
+        // email category (no mobile email). Redirect the known legacy key so a bookmarked URL lands.
+        if ($request->query('category') === 'pcAddress') {
+            return redirect()->route('member.config', ['category' => MemberConfigCategory::Email->value]);
+        }
+
         $viewer = $this->viewer();
         $currentSurface = Surface::from(SurfaceResolver::canonicalSurface($request, 'member'));
 
@@ -63,6 +74,7 @@ class MemberConfigController extends Controller
                     'ageOptions' => AgeVisibility::options(),
                     'locale' => app()->getLocale(),
                     'currentSurface' => $currentSurface,
+                    'email' => $viewer->email,
                 ]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('member/config', [
@@ -107,7 +119,93 @@ class MemberConfigController extends Controller
         // in-session change's.
         Auth::guard('member')->logoutOtherDevices($newPassword);
 
+        // Compensating control for the notify-only email change: a stolen-password attacker could have
+        // requested an email change, so a password change must void any pending one — otherwise the
+        // attacker still holds a live confirmation token for the new address.
+        EmailChangeRequest::where('member_id', $viewer->getKey())->delete();
+
         return $this->savedRedirect($request, MemberConfigCategory::Password);
+    }
+
+    public function updateEmail(RequestEmailChangeRequest $request, RequestEmailChange $requestChange): RedirectResponse
+    {
+        $requestChange($this->viewer(), $request->validated('new_email'));
+
+        // members.email is unchanged until confirmation; tell the member to open the link just mailed.
+        $name = SurfaceResolver::redirectName($request, 'member.config');
+        $params = $name === 'member.config' ? ['category' => MemberConfigCategory::Email->value] : [];
+
+        return redirect()->route($name, $params)
+            ->with('status', __('We sent a confirmation link to your new email address. Open it to finish the change.'));
+    }
+
+    /**
+     * Confirmation landing for the emailed link (token-gated, reachable logged-in or out). GET only
+     * renders a confirm page — the actual change is the POST, so a mail scanner or link prefetch
+     * cannot consume the token and silently change the login identifier.
+     */
+    public function confirmEmailForm(string $token): View|RedirectResponse
+    {
+        $pending = $this->pendingEmailChange($token);
+        if ($pending === null) {
+            return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
+        }
+
+        return view('member.email-change-confirm', ['token' => $token, 'newEmail' => $pending->new_email]);
+    }
+
+    public function confirmEmail(Request $request, string $token, ConfirmEmailChange $confirm): RedirectResponse
+    {
+        $pending = $this->pendingEmailChange($token);
+        if ($pending === null) {
+            return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
+        }
+
+        // The address was free when the change was requested, but may have been claimed since (admin
+        // creation, a concurrent change). Check up front (case-insensitive, like the request step), and
+        // catch the members.email unique violation at commit as the final TOCTOU guard. Either way the
+        // dead token is burned.
+        if (Member::whereRaw('lower(email) = ?', [$pending->new_email])->exists()) {
+            EmailChangeRequest::whereKey($pending->getKey())->delete();
+
+            return redirect()->route('login')->with('status', __('That email address is no longer available.'));
+        }
+
+        try {
+            $member = $confirm($pending);
+        } catch (QueryException) {
+            EmailChangeRequest::whereKey($pending->getKey())->delete();
+
+            return redirect()->route('login')->with('status', __('That email address is no longer available.'));
+        }
+
+        // OWASP: the login identifier changed, so drop every device. remember_token was rotated in the
+        // commit; purge the member's database sessions (honoring the configured table) and reset the
+        // current session, then send them to sign in with the new address.
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table', 'sessions'))->where('user_id', $member->getKey())->delete();
+        }
+        if (Auth::guard('member')->id() === $member->getKey()) {
+            Auth::guard('member')->logout();
+        }
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login')
+            ->with('status', __('Your email address has been changed. Please sign in with your new address.'));
+    }
+
+    /** The live pending email change for a raw token, or null when it is unknown or past its TTL. */
+    private function pendingEmailChange(string $rawToken): ?EmailChangeRequest
+    {
+        $row = EmailChangeRequest::where('token', hash('sha256', $rawToken))->first();
+        if ($row === null || $row->created_at === null) {
+            return null;
+        }
+
+        $ttl = (int) config('openpne.email_change.token_ttl_minutes');
+
+        return $row->created_at->gt(now()->subMinutes($ttl)) ? $row : null;
     }
 
     public function withdraw(WithdrawalRequest $request, WithdrawMember $withdraw): Response

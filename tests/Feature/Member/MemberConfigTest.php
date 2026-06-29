@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Member;
 
+use App\Models\EmailChangeRequest;
 use App\Models\Member;
+use App\Notifications\Member\EmailChangeConfirmationNotification;
+use App\Notifications\Member\EmailChangeNoticeNotification;
 use App\Support\PreferenceKey;
 use App\Support\SnsSettingKey;
 use App\Support\Surface;
@@ -10,6 +13,7 @@ use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -51,6 +55,7 @@ class MemberConfigTest extends TestCase
             ->assertSee('href="'.route('member.config', ['category' => 'language']).'"', false)
             ->assertSee('href="'.route('member.config', ['category' => 'general']).'"', false)
             ->assertSee('href="'.route('member.config', ['category' => 'password']).'"', false)
+            ->assertSee('href="'.route('member.config', ['category' => 'email']).'"', false)
             ->assertSee('href="'.route('member.config', ['category' => 'withdrawal']).'"', false)
             ->assertDontSee('href="'.route('member.config', ['category' => 'diary']).'"', false);
     }
@@ -65,6 +70,7 @@ class MemberConfigTest extends TestCase
             'language' => 'member_config_language',
             'general' => 'member_config_surface',
             'password' => 'member_config_password',
+            'email' => 'member_config_email',
             'withdrawal' => 'member_config_withdrawal',
         ];
         $member = Member::factory()->create();
@@ -563,5 +569,176 @@ class MemberConfigTest extends TestCase
         ])->assertRedirect(route('login'));
 
         $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
+    }
+
+    public function test_a_guest_cannot_request_an_email_change(): void
+    {
+        $this->post('/member/config/email', ['password' => 'password', 'new_email' => 'new@example.com'])
+            ->assertRedirect('/login');
+    }
+
+    public function test_requesting_an_email_change_stores_a_pending_row_and_mails_both_addresses(): void
+    {
+        Notification::fake();
+        $member = Member::factory()->create();
+        $old = $member->email;
+
+        $this->actingAs($member)->post('/member/config/email', [
+            'password' => 'password',
+            'new_email' => 'new@example.com',
+        ])->assertRedirect(route('member.config', ['category' => 'email']));
+
+        $this->assertDatabaseHas('email_change_requests', [
+            'member_id' => $member->id, 'new_email' => 'new@example.com',
+        ]);
+        // The login email is not touched until confirmation.
+        $this->assertSame($old, $member->fresh()->email);
+
+        // Confirmation to the NEW address, notice to the OLD address (both pinned literals).
+        Notification::assertSentOnDemand(
+            EmailChangeConfirmationNotification::class,
+            fn ($n, $channels, $notifiable): bool => ($notifiable->routes['mail'] ?? null) === 'new@example.com',
+        );
+        Notification::assertSentOnDemand(
+            EmailChangeNoticeNotification::class,
+            fn ($n, $channels, $notifiable): bool => ($notifiable->routes['mail'] ?? null) === $old,
+        );
+    }
+
+    public function test_requesting_an_email_change_rejects_a_wrong_password(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/email', [
+            'password' => 'not-the-password',
+            'new_email' => 'new@example.com',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
+    }
+
+    public function test_requesting_an_email_change_rejects_the_current_address(): void
+    {
+        $member = Member::factory()->create(['email' => 'me@example.com']);
+
+        $this->actingAs($member)->post('/member/config/email', [
+            'password' => 'password',
+            'new_email' => 'ME@example.com', // case-insensitive match to the current address
+        ])->assertSessionHasErrors('new_email');
+
+        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
+    }
+
+    public function test_requesting_an_email_change_rejects_an_in_use_address(): void
+    {
+        Member::factory()->create(['email' => 'taken@example.com']);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/email', [
+            'password' => 'password',
+            'new_email' => 'TAKEN@example.com', // case-insensitive collision
+        ])->assertSessionHasErrors('new_email');
+
+        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
+    }
+
+    public function test_the_confirm_form_renders_for_a_valid_token(): void
+    {
+        $member = Member::factory()->create();
+        $raw = str_repeat('a', 40);
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'new@example.com',
+            'token' => hash('sha256', $raw), 'created_at' => now(),
+        ]);
+
+        // Reachable without auth (the link may be opened anywhere); GET only renders, does not commit.
+        $this->get('/member/config/email/confirm/'.$raw)
+            ->assertOk()
+            ->assertSee('new@example.com')
+            ->assertSee(route('member.config.email.confirm.submit', ['token' => $raw]), false);
+        $this->assertSame('new@example.com', EmailChangeRequest::firstWhere('member_id', $member->id)?->new_email);
+    }
+
+    public function test_the_confirm_form_redirects_for_an_invalid_token(): void
+    {
+        $this->get('/member/config/email/confirm/'.str_repeat('z', 40))->assertRedirect(route('login'));
+    }
+
+    public function test_confirming_changes_the_email_and_logs_out(): void
+    {
+        $member = Member::factory()->create();
+        $raw = str_repeat('b', 40);
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'changed@example.com',
+            'token' => hash('sha256', $raw), 'created_at' => now(),
+        ]);
+        $this->actingAs($member);
+
+        $this->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('login'));
+
+        $this->assertSame('changed@example.com', $member->fresh()->email);
+        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
+        $this->get('/member/config')->assertRedirect('/login'); // logged out
+    }
+
+    public function test_confirming_rejects_an_invalid_token(): void
+    {
+        $this->post('/member/config/email/confirm/'.str_repeat('z', 40))->assertRedirect(route('login'));
+    }
+
+    public function test_confirming_rejects_an_address_claimed_since_the_request(): void
+    {
+        $member = Member::factory()->create();
+        Member::factory()->create(['email' => 'grabbed@example.com']); // claimed after the request
+        $raw = str_repeat('c', 40);
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'grabbed@example.com',
+            'token' => hash('sha256', $raw), 'created_at' => now(),
+        ]);
+
+        $this->actingAs($member)->post('/member/config/email/confirm/'.$raw)->assertRedirect(route('login'));
+
+        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]); // dead token voided
+        $this->assertNotSame('grabbed@example.com', $member->fresh()->email); // unchanged
+    }
+
+    public function test_the_pc_address_category_redirects_to_email(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/member/config?category=pcAddress')
+            ->assertRedirect(route('member.config', ['category' => 'email']));
+    }
+
+    public function test_a_modern_email_change_request_redirects_to_the_modern_config(): void
+    {
+        Notification::fake();
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/m/member/config/email', [
+            'password' => 'password',
+            'new_email' => 'new@example.com',
+        ])->assertRedirect(route('member.modern.config'));
+
+        $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id, 'new_email' => 'new@example.com']);
+    }
+
+    public function test_a_password_change_voids_a_pending_email_change(): void
+    {
+        // Compensating control: a password change must drop any pending email change so a stolen-password
+        // attacker's confirmation token cannot be used after the owner changes their password.
+        $member = Member::factory()->create();
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'pending@example.com',
+            'token' => hash('sha256', str_repeat('d', 40)), 'created_at' => now(),
+        ]);
+
+        $this->actingAs($member)->post('/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertRedirect(route('member.config', ['category' => 'password']));
+
+        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
     }
 }

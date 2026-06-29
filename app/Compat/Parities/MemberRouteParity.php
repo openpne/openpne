@@ -66,6 +66,9 @@ class MemberRouteParity extends RouteParity
             new RouteMap('member_config', '/member/config', 'member.config.surface', 'POST'),
             // OpenPNE 3 served the password change under member/config (?category=password); same URL.
             new RouteMap('member_config', '/member/config', 'member.config.password', 'POST'),
+            // Email-address change request — OpenPNE 3 member/config ?category=pcAddress (mobileAddress
+            // dropped); the confirmation step is an OpenPNE 4-native URL (no inventory counterpart).
+            new RouteMap('member_config', '/member/config', 'member.config.email', 'POST'),
             // Withdrawal — OpenPNE 3 member_delete was GET/POST /leave. OpenPNE 4 serves it as the
             // member-config withdrawal category: the GET URL is kept by a redirect (URL/bookmark
             // compatibility only), and the submit is the config-category POST (no POST /leave alias).

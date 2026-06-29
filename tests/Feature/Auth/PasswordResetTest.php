@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Actions\Fortify\ResetMemberPassword;
+use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Notifications\Auth\ResetPasswordNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -175,5 +176,23 @@ class PasswordResetTest extends TestCase
         ])->assertSessionHasErrors('email');
 
         $this->assertSame($original, $member->fresh()->password);
+    }
+
+    public function test_reset_voids_a_pending_email_change(): void
+    {
+        // A reset answers a possible compromise, so it must also drop any pending email change (an
+        // attacker who requested one before the reset would otherwise still hold a live token).
+        $member = Member::factory()->create();
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'pending@example.com',
+            'token' => hash('sha256', str_repeat('e', 40)), 'created_at' => now(),
+        ]);
+
+        app(ResetMemberPassword::class)->reset($member, [
+            'password' => 'new-secret-password',
+            'password_confirmation' => 'new-secret-password',
+        ]);
+
+        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
     }
 }
