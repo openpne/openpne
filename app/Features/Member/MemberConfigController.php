@@ -155,10 +155,13 @@ class MemberConfigController extends Controller
             return $wrongMember;
         }
 
-        // Rendered in the Classic shell (insecure_page, like register-complete) — reachable pre-login.
+        // Rendered in the Classic shell. The body class tracks the actual auth state so it matches the
+        // shell's auth-driven nav/banner: the logged-in subject gets secure_page + member nav, a guest
+        // gets the pre-login insecure_page + guest nav — each a combination the OpenPNE 3 skin styles.
+        // (A different logged-in member was turned away above, so "logged in" here means the subject.)
         return view('member.email-change-confirm', ['token' => $token, 'newEmail' => $pending->new_email])
             ->with('pageId', 'page_member_emailChangeConfirm')
-            ->with('pageClass', 'insecure_page');
+            ->with('pageClass', auth()->check() ? 'secure_page' : 'insecure_page');
     }
 
     public function confirmEmail(Request $request, string $token, ConfirmEmailChange $confirm): RedirectResponse

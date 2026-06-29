@@ -662,6 +662,24 @@ class MemberConfigTest extends TestCase
         $this->assertSame('new@example.com', EmailChangeRequest::firstWhere('member_id', $member->id)?->new_email);
     }
 
+    public function test_the_confirm_form_uses_the_secure_shell_for_the_logged_in_subject(): void
+    {
+        // The subject opening their own link while logged in gets the secure shell, matching the
+        // logged-in nav/banner the Classic shell renders — so the OpenPNE 3 skin styles a coherent
+        // secure_page + member-nav combination, not insecure_page + member nav.
+        $member = Member::factory()->create();
+        $raw = str_repeat('i', 40);
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'new@example.com',
+            'token' => hash('sha256', $raw), 'created_at' => now(),
+        ]);
+
+        $this->actingAs($member)->get('/member/config/email/confirm/'.$raw)
+            ->assertOk()
+            ->assertSee('class="secure_page"', false)
+            ->assertSee('new@example.com');
+    }
+
     public function test_the_confirm_form_redirects_for_an_invalid_token(): void
     {
         $this->get('/member/config/email/confirm/'.str_repeat('z', 40))->assertRedirect(route('login'));
