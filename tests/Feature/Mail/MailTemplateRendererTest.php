@@ -37,6 +37,24 @@ class MailTemplateRendererTest extends TestCase
         $this->assertSame('fallback', $r->render('{{ missing|default("fallback") }}', []));
     }
 
+    public function test_date_filter_matches_openpne3_semantics(): void
+    {
+        $r = $this->renderer();
+        $this->assertSame('2023-11-14', $r->render('{{ ts|date("Y-m-d") }}', ['ts' => '1700000000']));
+        $this->assertSame('2024/05/15', $r->render('{{ d|date("Y/m/d") }}', ['d' => '2024-05-15']));
+        // OpenPNE 3 falls back to the epoch (not "now"/an exception) for empty/unparseable input.
+        $this->assertSame('1970-01-01', $r->render('{{ e|date("Y-m-d") }}', ['e' => '']));
+        $this->assertSame('1970-01-01', $r->render('{{ x|date("Y-m-d") }}', ['x' => 'not-a-date']));
+    }
+
+    public function test_constant_function_is_denied_but_the_constant_test_is_allowed(): void
+    {
+        // Documented: the sandbox does not filter Twig *tests* (`is constant` only compares a constant,
+        // it cannot read/exec), but the constant() *function* is denied by the allowlist.
+        $this->assertSame('yes', $this->renderer()->render('{% if 8 is constant("E_NOTICE") %}yes{% else %}no{% endif %}', []));
+        $this->assertRejected('{{ constant("E_NOTICE") }}');
+    }
+
     public function test_app_url_for_maps_to_canonical_urls_and_drops_id_type(): void
     {
         $r = $this->renderer();

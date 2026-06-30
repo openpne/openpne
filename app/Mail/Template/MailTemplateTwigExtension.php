@@ -26,15 +26,29 @@ final class MailTemplateTwigExtension extends AbstractExtension
 
     public function getFilters(): array
     {
-        // OpenPNE 3's mobile charset filter; OpenPNE 4 is UTF-8 throughout, so it is a passthrough kept
-        // only so a template that still pipes through `|encoding` renders unchanged.
-        return [new TwigFilter('encoding', [self::class, 'encoding'])];
+        return [
+            // Override Twig's built-in `date` with OpenPNE 3's semantics (opTwigCoreExtension): a
+            // non-numeric value is run through strtotime() first, and an empty/unparseable value falls to
+            // the epoch (not "now"/an exception) — so a migrated template formats dates identically.
+            new TwigFilter('date', [self::class, 'date']),
+            // OpenPNE 3's mobile charset filter; OpenPNE 4 is UTF-8 throughout, so it is a passthrough kept
+            // only so a template that still pipes through `|encoding` renders unchanged.
+            new TwigFilter('encoding', [self::class, 'encoding']),
+        ];
     }
 
     /** $application / $absolute are ignored: OpenPNE 4 URLs are always absolute and single-surface. */
     public static function appUrlFor(string $application, string $uri, bool $absolute = false): string
     {
         return MailUrlMapper::resolve($uri);
+    }
+
+    public static function date(mixed $value, string $format = 'Y-m-d H:i:s'): string
+    {
+        $string = (string) $value;
+        $timestamp = ctype_digit($string) ? (int) $string : strtotime($string);
+
+        return date($format, $timestamp === false ? 0 : $timestamp);
     }
 
     public static function encoding(mixed $value, mixed ...$ignored): mixed

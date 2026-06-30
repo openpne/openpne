@@ -126,11 +126,13 @@ class MailTemplateService
      */
     private function map(): array
     {
-        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function (): array {
-            if (! Schema::hasTable('mail_templates')) {
-                return ['enabled' => [], 'tx' => []];
-            }
+        // Outside the cache: a pre-migrate / pre-seed call must resolve to defaults WITHOUT caching the
+        // empty map (which would then hide the first rows until clearCache()).
+        if (! Schema::hasTable('mail_templates')) {
+            return ['enabled' => [], 'tx' => []];
+        }
 
+        return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function (): array {
             $byId = [];
             $enabled = [];
             foreach (DB::table('mail_templates')->get(['id', 'key', 'is_enabled']) as $row) {
