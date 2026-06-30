@@ -38,7 +38,7 @@ class MailTemplateRenderer
         // Opt into Twig 4 behaviour: without this, extends/use/block/parent and attribute() are implicitly
         // allowed for back-compat. (The sandbox does not filter *tests* in any mode, so e.g. `is constant`
         // stays allowed — low risk: a test only compares a constant, it cannot read or execute; the
-        // `constant()` function is denied by the empty allowedFunctions list.)
+        // `constant()` function is denied — it is not in the allowedFunctions allowlist (only app_url_for is).)
         $policy->setStrict(true);
 
         $this->twig = new Environment(new ArrayLoader, [

@@ -9,8 +9,9 @@ use Twig\TwigFilter;
 use Twig\TwigFunction;
 
 /**
- * The OpenPNE 3 compatibility surface for the mail-template sandbox: the `app_url_for` helper tag/function
- * and a no-op `encoding` filter. `date`/`default` are Twig built-ins (allowed by the SecurityPolicy).
+ * The OpenPNE 3 compatibility surface for the mail-template sandbox: the `app_url_for` helper tag/function,
+ * an OpenPNE-3-semantics `date` filter (overriding Twig's built-in), and a no-op `encoding` filter. The
+ * `default` filter is Twig's built-in (allowed by the SecurityPolicy).
  */
 final class MailTemplateTwigExtension extends AbstractExtension
 {
