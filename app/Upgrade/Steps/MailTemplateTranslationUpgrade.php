@@ -51,7 +51,11 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
         return ['id', 'created_at', 'updated_at'];
     }
 
-    /** OpenPNE 3 `lang` (ja_JP, en_US, …) folded to the OpenPNE 4 locale slug, matching MemberUpgrade. */
+    /**
+     * OpenPNE 3 `lang` (ja_JP, en_US, …) folded to the OpenPNE 4 locale slug, matching MemberUpgrade. An
+     * unrecognised lang is kept verbatim, not mis-folded into ja/en: it satisfies the NOT NULL column and
+     * stays inert (MailTemplateService only ever looks up ja/en), rather than silently mislabelling a row.
+     */
     private function localeExpr(): string
     {
         return "CASE WHEN `lang` LIKE 'ja%' THEN 'ja' WHEN `lang` LIKE 'en%' THEN 'en' ELSE `lang` END";

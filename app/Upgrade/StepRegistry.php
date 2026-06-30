@@ -236,8 +236,9 @@ final class StepRegistry
     /**
      * Disposition of each OpenPNE 3 `notification_mail` name. MailTemplateUpgrade copies the table but its
      * `name IN (…)` filter only carries the templates OpenPNE 4 sends, so the per-step column audit cannot
-     * show why the other names are dropped; this is that per-name coverage. The migrated set is derived
-     * from MailTemplate::importable(), so it cannot drift from the filter.
+     * show why the other names are dropped; this is that per-name coverage. The migrated entries are
+     * hand-written (each carries its own is_enabled / signature reason); a registry-consistency test pins
+     * them to MailTemplate::importable() so adding an import origin cannot leave this map behind.
      *
      * @return array<string, string> notification_mail name => where it goes / why it is dropped
      */
