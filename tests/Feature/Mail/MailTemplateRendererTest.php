@@ -75,6 +75,26 @@ class MailTemplateRendererTest extends TestCase
         $this->renderer()->render("{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}", ['id' => '1'], 'en');
     }
 
+    public function test_app_url_for_requires_a_token(): void
+    {
+        $this->expectException(UnsupportedMailTemplateSyntaxException::class);
+        $this->renderer()->render("{% app_url_for('pc_frontend', 'member/register?token='~token, true) %}", [], 'en');
+    }
+
+    public function test_malformed_variable_tag_is_rejected(): void
+    {
+        $this->expectException(UnsupportedMailTemplateSyntaxException::class);
+        $this->renderer()->render('Hello {{ member.name', ['member.name' => 'Bob'], 'en');
+    }
+
+    public function test_context_value_containing_braces_is_not_treated_as_syntax(): void
+    {
+        // The value has `{{ … }}`/`%}` of its own; validation runs pre-substitution so it stays literal.
+        $out = $this->renderer()->render('[{{ name }}]', ['name' => 'a {{ x }} %} b'], 'en');
+
+        $this->assertSame('[a {{ x }} %} b]', $out);
+    }
+
     public function test_op_term_resolves_via_term_service(): void
     {
         $this->assertSame('friend', $this->renderer()->render('{{ op_term.friend }}', [], 'en'));

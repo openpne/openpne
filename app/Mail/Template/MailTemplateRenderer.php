@@ -40,8 +40,10 @@ class MailTemplateRenderer
     {
         $text = $this->resolveUrls($template, $context);
         $text = $this->resolveConditionals($text, $context);
-        $text = $this->substituteTokens($text, $context);
+        // Validate the template structure BEFORE substituting context values, so a member-supplied value
+        // that happens to contain `{{` or `%}` is never mistaken for (or able to smuggle) template syntax.
         $this->assertNoUnsupportedSyntax($text);
+        $text = $this->substituteTokens($text, $context);
 
         return $this->terms->replace($text, $locale);
     }
@@ -85,13 +87,22 @@ class MailTemplateRenderer
      */
     private function urlMap(array $context): array
     {
-        $token = (string) ($context['token'] ?? '');
-
         return [
-            'member/register' => fn (): string => url('/register/'.$token),
+            'member/register' => fn (): string => url('/register/'.$this->requireToken($context)),
             // OpenPNE 3 carried token+id+type; OpenPNE 4's confirm route is token-only (id/type dropped).
-            'member/configComplete' => fn (): string => url('/member/config/email/confirm/'.$token),
+            'member/configComplete' => fn (): string => url('/member/config/email/confirm/'.$this->requireToken($context)),
         ];
+    }
+
+    /** The bounded-map routes are token URLs; a missing/empty token is a wiring/fixture bug, not a blank URL. */
+    private function requireToken(array $context): string
+    {
+        $token = (string) ($context['token'] ?? '');
+        if ($token === '') {
+            throw new UnsupportedMailTemplateSyntaxException('app_url_for requires a non-empty `token`');
+        }
+
+        return $token;
     }
 
     /** @param array<string, scalar|null> $context */
@@ -152,6 +163,13 @@ class MailTemplateRenderer
         // unbalanced if — none of which the in-scope set uses.
         if (preg_match('/\{%.*?%\}/s', $text, $m)) {
             throw new UnsupportedMailTemplateSyntaxException('unsupported tag: '.trim($m[0]));
+        }
+        // Strip well-formed `{{ … }}` tags; any leftover delimiter is a malformed/unclosed variable tag,
+        // a stray `{%`/`%}`, or a `{# comment #}` — reject it rather than send the raw markup. Runs before
+        // substitution, so this never trips on a context value that merely contains braces.
+        $stripped = preg_replace('/\{\{\s*.*?\s*\}\}/s', '', $text) ?? $text;
+        if (preg_match('/\{\{|\}\}|\{%|%\}|\{#|#\}/', $stripped)) {
+            throw new UnsupportedMailTemplateSyntaxException('malformed template delimiter');
         }
     }
 

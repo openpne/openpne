@@ -100,6 +100,24 @@ class MailTemplateServiceTest extends TestCase
         $this->assertStringContainsString('English only', $en->body);
     }
 
+    public function test_blank_signature_override_appends_no_signature(): void
+    {
+        $this->setSnsName('My Community');
+        $id = DB::table('mail_templates')->insertGetId([
+            'key' => MailTemplate::Signature->value,
+            'is_enabled' => true,
+        ]);
+        // An admin who blanks the signature wants no signature, not the default restored.
+        DB::table('mail_template_translations')->insert([
+            'mail_template_id' => $id, 'locale' => 'en', 'subject' => null, 'body' => '',
+        ]);
+
+        $rendered = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member.name' => 'Bob']);
+
+        $this->assertStringEndsWith('Bob accepted your friend link request.', $rendered->body);
+        $this->assertStringNotContainsString('ops@example.test', $rendered->body);
+    }
+
     public function test_required_mail_is_always_enabled_even_if_row_disabled(): void
     {
         DB::table('mail_templates')->insert([

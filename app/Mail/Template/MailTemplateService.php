@@ -90,15 +90,17 @@ class MailTemplateService
     }
 
     /**
-     * Stored override for a (template, locale, field), or null to use the default. Resolved per locale —
-     * a ja recipient never falls back to an en override (that would mail the wrong language); an unedited
-     * locale uses its own default, which the OpenPNE 3 import populates for both locales anyway.
+     * Stored override for a (template, locale, field), or null to use the default. "Use the default" is
+     * expressed by the row's ABSENCE, not by an empty value: a present row is honored as-is, including an
+     * empty body (e.g. an admin who blanked the signature wants no signature, not the default restored).
+     * Resolved per locale — a ja recipient never falls back to an en override (that would mail the wrong
+     * language); an unedited locale uses its own default, which the OpenPNE 3 import populates for both.
      */
     private function override(MailTemplate $template, string $locale, string $field): ?string
     {
-        $value = $this->map()['tx'][$template->value][$this->localeKey($locale)][$field] ?? null;
+        $row = $this->map()['tx'][$template->value][$this->localeKey($locale)] ?? null;
 
-        return $value === null || $value === '' ? null : $value;
+        return $row === null ? null : $row[$field];
     }
 
     private function localeKey(string $locale): string
