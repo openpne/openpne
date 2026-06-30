@@ -2,8 +2,10 @@
 
 namespace App\Notifications\Message;
 
+use App\Mail\Template\MailTemplate;
 use App\Models\Member;
 use App\Models\Message;
+use App\Notifications\Concerns\RendersMailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -18,6 +20,7 @@ use Illuminate\Notifications\Notification;
 class MessageReceivedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RendersMailTemplate;
 
     public function __construct(
         public readonly Member $sender,
@@ -32,13 +35,10 @@ class MessageReceivedNotification extends Notification implements ShouldQueue
 
     public function toMail(Member $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->from(sns_admin_mail_address(), sns_name())
-            ->subject('New message received')
-            ->greeting("Hi {$notifiable->name},")
-            ->line("{$this->sender->name} sent you a message.")
-            ->action('Read the message', route('message.receive.show', ['message' => $this->message->getKey()]))
-            ->salutation('— '.sns_name());
+        return $this->mailFromTemplate(MailTemplate::MessageReceived, [
+            'member' => ['name' => $this->sender->name],
+            'url' => route('message.receive.show', ['message' => $this->message->getKey()]),
+        ]);
     }
 
     /** @return array<string, mixed> */

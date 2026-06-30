@@ -2,7 +2,9 @@
 
 namespace App\Notifications\Friend;
 
+use App\Mail\Template\MailTemplate;
 use App\Models\Member;
+use App\Notifications\Concerns\RendersMailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -11,6 +13,7 @@ use Illuminate\Notifications\Notification;
 class FriendRequestedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RendersMailTemplate;
 
     public function __construct(public readonly Member $requester) {}
 
@@ -22,13 +25,10 @@ class FriendRequestedNotification extends Notification implements ShouldQueue
 
     public function toMail(Member $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->from(sns_admin_mail_address(), sns_name())
-            ->subject('Friend request received')
-            ->greeting("Hi {$notifiable->name},")
-            ->line("{$this->requester->name} sent you a friend request.")
-            ->action('Open pending requests', route('friend.manage'))
-            ->salutation('— '.sns_name());
+        return $this->mailFromTemplate(MailTemplate::FriendRequested, [
+            'member' => ['name' => $this->requester->name],
+            'url' => route('friend.manage'),
+        ]);
     }
 
     /** @return array<string, mixed> */
