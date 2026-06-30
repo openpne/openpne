@@ -91,6 +91,16 @@ class UpgradeMatrixCommand extends Command
         }
         $this->line('');
 
+        // notification_mail is stepped, but its name filter only carries the templates OpenPNE 4 sends;
+        // list why each other name is dropped so an excluded template is not an invisible omission.
+        $this->line('## `notification_mail` name coverage');
+        $this->line('');
+        $this->line('Per-name disposition of OpenPNE 3 `notification_mail`. Names not in the filter are dropped, with the reason here.');
+        foreach (StepRegistry::notificationMailDispositions() as $name => $disposition) {
+            $this->line("- `{$name}` — {$disposition}");
+        }
+        $this->line('');
+
         return self::SUCCESS;
     }
 }
