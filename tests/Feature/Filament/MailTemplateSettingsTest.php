@@ -107,4 +107,25 @@ class MailTemplateSettingsTest extends TestCase
             ->call('save')
             ->assertHasErrors('data.friend_accepted__ja__body');
     }
+
+    public function test_a_body_the_engine_cannot_send_is_rejected_and_not_stored(): void
+    {
+        // A sandbox-disallowed tag would throw at send time and break the mail; the editor must refuse it.
+        Livewire::test(MailTemplateSettings::class)
+            ->fillForm(['friend_accepted__ja__body' => '{% set x = 1 %}{{ x }}'])
+            ->call('save')
+            ->assertHasErrors('data.friend_accepted__ja__body');
+
+        $this->assertDatabaseMissing('mail_templates', ['key' => 'friend-accepted']);
+    }
+
+    public function test_a_subject_the_engine_cannot_send_is_rejected(): void
+    {
+        Livewire::test(MailTemplateSettings::class)
+            ->fillForm(['friend_accepted__ja__subject' => '{{ 1 | nonexistent_filter }}'])
+            ->call('save')
+            ->assertHasErrors('data.friend_accepted__ja__subject');
+
+        $this->assertDatabaseMissing('mail_templates', ['key' => 'friend-accepted']);
+    }
 }

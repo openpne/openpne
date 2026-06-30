@@ -735,6 +735,7 @@
     "This preset field takes its choices from the preset configuration.": "このプリセット項目の選択肢はプリセット設定から取得されます。",
     "This registration link is no longer valid. If you have already registered, please sign in; otherwise, ask to be invited again.": "この登録用リンクは使用できません。すでに登録がお済みの場合はログインしてください。まだの場合は、招待者に再度招待を依頼してください。",
     "This registration link is no longer valid. If you have already registered, please sign in; otherwise, enter your email again to get a new link.": "この登録用リンクは使用できません。すでに登録がお済みの場合はログインしてください。まだの場合は、もう一度メールアドレスを入力して新しいリンクを取得してください。",
+    "This template cannot be sent: :message": "このテンプレートは送信できません: :message",
     "This value is already in use.": "この値はすでに使われています。",
     "This zone is not available for the selected placement.": "選択した配置ではこのゾーンを使用できません。",
     "Thu": "木",

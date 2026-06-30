@@ -91,6 +91,28 @@ enum MailTemplate: string
         };
     }
 
+    /**
+     * Dummy values for this template's variables, enough to render it once for a syntax check: a token so
+     * `app_url_for` resolves (its absence would throw a missing-token error, not a template fault) and a
+     * value for each declared variable. Reused by the admin editor's save-time validation and available
+     * to the import preflight.
+     *
+     * @return array<string, mixed>
+     */
+    public function representativeContext(): array
+    {
+        return match ($this) {
+            self::RegistrationLink => ['name' => 'Example', 'message' => 'Example', 'token' => 'example-token', 'authMode' => 'MailAddress'],
+            self::PasswordReset => ['url' => 'https://example.test/reset'],
+            self::EmailChangeConfirm => ['token' => 'example-token', 'id' => 1, 'type' => 'pc_address'],
+            self::EmailChangeNotice => ['new_email' => 'new@example.test'],
+            self::FriendRequested => ['member' => ['name' => 'Example'], 'url' => 'https://example.test'],
+            self::FriendAccepted => ['member' => ['name' => 'Example']],
+            self::MessageReceived => ['member' => ['name' => 'Example'], 'url' => 'https://example.test'],
+            self::Signature => [],
+        };
+    }
+
     public function defaultSubject(string $locale): ?string
     {
         return self::defaults($this)[$this->localeKey($locale)]['subject'];

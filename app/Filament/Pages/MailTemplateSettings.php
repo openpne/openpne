@@ -7,6 +7,7 @@ namespace App\Filament\Pages;
 use App\Http\Middleware\SetLocale;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
+use App\Mail\Template\UnsupportedMailTemplateSyntaxException;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
@@ -243,13 +244,14 @@ class MailTemplateSettings extends Page
                 if ($template->isSendable()) {
                     $fields[] = TextInput::make($this->fieldKey($template, "{$locale}__subject"))
                         ->label(__('Subject'))
-                        ->maxLength(255);
+                        ->maxLength(255)
+                        ->rules([$this->syntaxRule($template, $locale, 'subject')]);
                 }
 
                 $fields[] = Textarea::make($this->fieldKey($template, "{$locale}__body"))
                     ->label(__('Body'))
                     ->rows(10)
-                    ->rules([$this->byteLimitRule()]);
+                    ->rules([$this->byteLimitRule(), $this->syntaxRule($template, $locale, 'body')]);
 
                 $components[] = Section::make($this->localeLabel($locale))->schema($fields);
             }
@@ -278,6 +280,25 @@ class MailTemplateSettings extends Page
         return fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
             if (strlen((string) $value) > self::BODY_MAX_BYTES) {
                 $fail(__('The body is too large.'));
+            }
+        };
+    }
+
+    /**
+     * Reject a subject/body the engine cannot send (parse error, sandbox-disallowed tag/filter, unmapped
+     * app_url_for route) at save time, so a broken edit never reaches the database and breaks the next
+     * mail — including the required ones the service always sends.
+     */
+    private function syntaxRule(MailTemplate $template, string $locale, string $field): Closure
+    {
+        return fn (): Closure => function (string $attribute, mixed $value, Closure $fail) use ($template, $locale, $field): void {
+            try {
+                $service = app(MailTemplateService::class);
+                $field === 'subject'
+                    ? $service->assertSubjectRenderable($template, $locale, (string) $value)
+                    : $service->assertBodyRenderable($template, $locale, (string) $value);
+            } catch (UnsupportedMailTemplateSyntaxException $e) {
+                $fail(__('This template cannot be sent: :message', ['message' => $e->getMessage()]));
             }
         };
     }
