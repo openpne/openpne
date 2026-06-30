@@ -55,6 +55,89 @@ enum MailTemplate: string
         return $this !== self::Signature;
     }
 
+    /** Admin-facing caption (the editor's section heading). */
+    public function caption(): string
+    {
+        return match ($this) {
+            self::RegistrationLink => __('Registration link'),
+            self::PasswordReset => __('Password reset'),
+            self::EmailChangeConfirm => __('Email address change (confirmation)'),
+            self::EmailChangeNotice => __('Email address change (notice)'),
+            self::FriendRequested => __('Friend request'),
+            self::FriendAccepted => __('Friend request accepted'),
+            self::MessageReceived => __('Message received'),
+            self::Signature => __('Signature'),
+        };
+    }
+
+    /**
+     * The template-specific variables a body/subject may reference, as the bare names the admin writes
+     * inside `{{ … }}`. Derived from variableHelp() so the hint and the name list cannot drift.
+     *
+     * @return list<string>
+     */
+    public function variables(): array
+    {
+        return array_keys($this->variableHelp());
+    }
+
+    /**
+     * Each template-specific variable with a short description, for the editor's help. The OpenPNE 3
+     * globals (op_config.sns_name, op_term.*) are available everywhere and are not repeated per template.
+     *
+     * @return array<string, string> `{{ name }}` token => description
+     */
+    public function variableHelp(): array
+    {
+        return match ($this) {
+            self::RegistrationLink => [
+                'name' => __('The inviter’s name (member or admin invitations).'),
+                'message' => __('The optional message from the inviter.'),
+                'token' => __('The registration token (used by the app_url_for link).'),
+                'authMode' => __('The authentication mode.'),
+            ],
+            self::PasswordReset => ['url' => __('The password reset URL.')],
+            self::EmailChangeConfirm => [
+                'token' => __('The confirmation token (used by the app_url_for link).'),
+                'id' => __('The member ID.'),
+                'type' => __('The address type.'),
+            ],
+            self::EmailChangeNotice => ['new_email' => __('The new email address.')],
+            self::FriendRequested => [
+                'member.name' => __('The requester’s name.'),
+                'url' => __('The friend management URL.'),
+            ],
+            self::FriendAccepted => ['member.name' => __('The name of the member who accepted.')],
+            self::MessageReceived => [
+                'member.name' => __('The sender’s name.'),
+                'url' => __('The message URL.'),
+            ],
+            self::Signature => [],
+        };
+    }
+
+    /**
+     * Dummy values for this template's variables, enough to render it once for a syntax check: a token so
+     * `app_url_for` resolves (its absence would throw a missing-token error, not a template fault) and a
+     * value for each declared variable. Reused by the admin editor's save-time validation and available
+     * to the import preflight.
+     *
+     * @return array<string, mixed>
+     */
+    public function representativeContext(): array
+    {
+        return match ($this) {
+            self::RegistrationLink => ['name' => 'Example', 'message' => 'Example', 'token' => 'example-token', 'authMode' => 'MailAddress'],
+            self::PasswordReset => ['url' => 'https://example.test/reset'],
+            self::EmailChangeConfirm => ['token' => 'example-token', 'id' => 1, 'type' => 'pc_address'],
+            self::EmailChangeNotice => ['new_email' => 'new@example.test'],
+            self::FriendRequested => ['member' => ['name' => 'Example'], 'url' => 'https://example.test'],
+            self::FriendAccepted => ['member' => ['name' => 'Example']],
+            self::MessageReceived => ['member' => ['name' => 'Example'], 'url' => 'https://example.test'],
+            self::Signature => [],
+        };
+    }
+
     public function defaultSubject(string $locale): ?string
     {
         return self::defaults($this)[$this->localeKey($locale)]['subject'];

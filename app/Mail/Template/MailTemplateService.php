@@ -48,6 +48,28 @@ class MailTemplateService
         return new RenderedMailTemplate($subject, $body);
     }
 
+    /**
+     * Render-test a subject the admin typed in the template's representative context. Throws
+     * UnsupportedMailTemplateSyntaxException on a parse error / sandbox violation / unmapped route, so the
+     * editor can reject it before it is stored and breaks the next send.
+     */
+    public function assertSubjectRenderable(MailTemplate $template, string $locale, string $subject): void
+    {
+        $this->renderer->renderSubject($subject, $this->validationContext($template, $locale));
+    }
+
+    /** As assertSubjectRenderable(), for a body. */
+    public function assertBodyRenderable(MailTemplate $template, string $locale, string $body): void
+    {
+        $this->renderer->render($body, $this->validationContext($template, $locale));
+    }
+
+    /** @return array<string, mixed> */
+    private function validationContext(MailTemplate $template, string $locale): array
+    {
+        return $this->baseContext($locale) + $template->representativeContext();
+    }
+
     /** Whether a template is sent. Non-configurable templates are always on; configurable ones honor the stored flag. */
     public function isEnabled(MailTemplate $template): bool
     {
