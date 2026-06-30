@@ -73,8 +73,10 @@ class SnsSettingWiringTest extends TestCase
         // The framework header injects laravel.com's logo image when the brand is literally "Laravel".
         $this->assertStringNotContainsString('notification-logo-v2.1.png', $html);
         $this->assertStringNotContainsString('Laravel Logo', $html);
-        // Header + footer (copyright) carry the per-site name, not config('app.name').
-        $this->assertStringContainsString('My Community', $html);
+        // Header, footer (copyright) and salutation each render the site name — proving the
+        // markdown.paths wiring and both layout overrides, not just the salutation.
+        $this->assertGreaterThanOrEqual(3, substr_count($html, 'My Community'));
+        $this->assertStringContainsString('My Community. ', $html); // footer copyright line
     }
 
     public function test_password_reset_mail_salutation_uses_sns_name(): void
