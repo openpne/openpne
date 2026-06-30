@@ -1,0 +1,5 @@
+Hello! This is information from {{ op_config.sns_name }}.
+
+{{ member.name }} sent you a message.
+
+{{ url }}
