@@ -30,7 +30,7 @@ class MessageReceivedNotification extends Notification implements ShouldQueue
     /** @return list<string> */
     public function via(Member $notifiable): array
     {
-        return ['mail', 'database'];
+        return $this->templateChannels(MailTemplate::MessageReceived, ['database']);
     }
 
     public function toMail(Member $notifiable): MailMessage

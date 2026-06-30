@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mail;
 
+use App\Mail\Template\MailTemplate;
+use App\Mail\Template\MailTemplateService;
 use App\Models\Member;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
@@ -12,6 +14,7 @@ use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /** The 7 notifications render through the mail-template engine + branded non-markdown view (PR2 wiring). */
@@ -86,6 +89,28 @@ class MailTemplateNotificationTest extends TestCase
         // OpenPNE 4 URL is token-only (id/type dropped from the link)...
         $this->assertStringContainsString('/member/config/email/confirm/the-token', $html);
         $this->assertStringNotContainsString('configComplete', $html);
+    }
+
+    public function test_disabling_a_configurable_template_drops_the_mail_channel_only(): void
+    {
+        $requester = Member::factory()->create();
+        $recipient = Member::factory()->create();
+
+        // Enabled by default (no row): mail + the in-app record.
+        $this->assertSame(['mail', 'database'], (new FriendRequestedNotification($requester))->via($recipient));
+
+        // Admin turns it off: the mail drops, the in-app record stays.
+        DB::table('mail_templates')->insert(['key' => MailTemplate::FriendRequested->value, 'is_enabled' => false]);
+        app(MailTemplateService::class)->clearCache();
+        $this->assertSame(['database'], (new FriendRequestedNotification($requester))->via($recipient));
+    }
+
+    public function test_a_required_mail_is_not_gated_by_a_disabled_row(): void
+    {
+        DB::table('mail_templates')->insert(['key' => MailTemplate::RegistrationLink->value, 'is_enabled' => false]);
+        app(MailTemplateService::class)->clearCache();
+
+        $this->assertSame(['mail'], (new RegistrationLinkNotification('t', 'en'))->via(new AnonymousNotifiable));
     }
 
     public function test_signature_is_appended_once_to_the_body(): void

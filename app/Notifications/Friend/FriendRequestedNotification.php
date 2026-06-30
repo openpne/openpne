@@ -20,7 +20,7 @@ class FriendRequestedNotification extends Notification implements ShouldQueue
     /** @return list<string> */
     public function via(Member $notifiable): array
     {
-        return ['mail', 'database'];
+        return $this->templateChannels(MailTemplate::FriendRequested, ['database']);
     }
 
     public function toMail(Member $notifiable): MailMessage

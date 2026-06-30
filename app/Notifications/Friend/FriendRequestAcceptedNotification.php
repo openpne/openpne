@@ -20,7 +20,7 @@ class FriendRequestAcceptedNotification extends Notification implements ShouldQu
     /** @return list<string> */
     public function via(Member $notifiable): array
     {
-        return ['mail', 'database'];
+        return $this->templateChannels(MailTemplate::FriendAccepted, ['database']);
     }
 
     public function toMail(Member $notifiable): MailMessage

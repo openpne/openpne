@@ -16,6 +16,22 @@ use Illuminate\Notifications\Messages\MailMessage;
  */
 trait RendersMailTemplate
 {
+    /**
+     * Channels for a template-bodied notification: 'mail' only while the template is enabled. A
+     * configurable template an admin turned off (mail_templates.is_enabled = 0) drops the mail; required
+     * templates are always enabled. $others (e.g. 'database') pass through unchanged so the in-app record
+     * survives even when the mail is off.
+     *
+     * @param  list<string>  $others
+     * @return list<string>
+     */
+    protected function templateChannels(MailTemplate $template, array $others = []): array
+    {
+        return app(MailTemplateService::class)->isEnabled($template)
+            ? ['mail', ...$others]
+            : $others;
+    }
+
     /** @param array<string, mixed> $context */
     protected function mailFromTemplate(MailTemplate $template, array $context = []): MailMessage
     {
