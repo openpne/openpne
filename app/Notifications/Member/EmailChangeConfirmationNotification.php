@@ -2,6 +2,8 @@
 
 namespace App\Notifications\Member;
 
+use App\Mail\Template\MailTemplate;
+use App\Notifications\Concerns\RendersMailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -16,9 +18,13 @@ use Illuminate\Notifications\Notification;
 class EmailChangeConfirmationNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RendersMailTemplate;
 
-    public function __construct(public readonly string $rawToken, string $locale)
-    {
+    public function __construct(
+        public readonly string $rawToken,
+        public readonly int $memberId,
+        string $locale,
+    ) {
         $this->locale($locale);
     }
 
@@ -30,15 +36,12 @@ class EmailChangeConfirmationNotification extends Notification implements Should
 
     public function toMail(object $notifiable): MailMessage
     {
-        $minutes = (int) config('openpne.email_change.token_ttl_minutes');
-
-        return (new MailMessage)
-            ->from(sns_admin_mail_address(), sns_name())
-            ->subject(__('Confirm your new email address'))
-            ->line(__('Open the link below to confirm this address as your new :app email address.', ['app' => sns_name()]))
-            ->action(__('Confirm email change'), url('/member/config/email/confirm/'.$this->rawToken))
-            ->line(__('This link expires in :minutes minutes.', ['minutes' => $minutes]))
-            ->line(__('If you did not request this, you can ignore this email.'))
-            ->salutation('— '.sns_name());
+        // id/type feed the OpenPNE 3 confirm URL params and stay available as body variables (the
+        // OpenPNE 3 changeMailAddress variable contract); the OpenPNE 4 URL keeps only the token.
+        return $this->mailFromTemplate(MailTemplate::EmailChangeConfirm, [
+            'token' => $this->rawToken,
+            'id' => $this->memberId,
+            'type' => 'pc_address',
+        ]);
     }
 }
