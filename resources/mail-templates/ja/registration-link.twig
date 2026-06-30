@@ -1,0 +1,16 @@
+こんにちは！{{ op_config.sns_name }} からのお知らせです。
+{% if name %}
+{{ name }} があなたを{{ op_config.sns_name }} へ招待しています。
+
+{% if message %}
+---------- < {{ name }} > からあなたへのメッセージ ----------
+---------------------------------------------------
+{{ message }}
+---------------------------------------------------
+{% endif %}
+{% endif %}
+下記のURLから、会員登録(無料)をおこなうと、
+{{ op_config.sns_name }} に参加できます。
+
+■ {{ op_config.sns_name }} に参加する
+{% app_url_for('pc_frontend', 'member/register?token='~token, true) %}

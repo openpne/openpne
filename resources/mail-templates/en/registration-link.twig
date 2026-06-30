@@ -1,0 +1,16 @@
+Hello! This is information from {{ op_config.sns_name }}.
+{% if name %}
+{{ name }} is inviting in {{ op_config.sns_name }} you.
+
+{% if message %}
+---------- The message to you from < {{ name }} > ----------
+---------------------------------------------------
+{{ message }}
+---------------------------------------------------
+{% endif %}
+{% endif %}
+If you register(free) of member by the following URL,
+you can participate in {{ op_config.sns_name }}.
+
+* Participate in {{ op_config.sns_name }}
+{% app_url_for('pc_frontend', 'member/register?token='~token, true) %}
