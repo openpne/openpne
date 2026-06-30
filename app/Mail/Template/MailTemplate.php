@@ -72,21 +72,46 @@ enum MailTemplate: string
 
     /**
      * The template-specific variables a body/subject may reference, as the bare names the admin writes
-     * inside `{{ … }}`. The OpenPNE 3 globals (op_config.sns_name, op_term.*) are available everywhere and
-     * are not repeated per template.
+     * inside `{{ … }}`. Derived from variableHelp() so the hint and the name list cannot drift.
      *
      * @return list<string>
      */
     public function variables(): array
     {
+        return array_keys($this->variableHelp());
+    }
+
+    /**
+     * Each template-specific variable with a short description, for the editor's help. The OpenPNE 3
+     * globals (op_config.sns_name, op_term.*) are available everywhere and are not repeated per template.
+     *
+     * @return array<string, string> `{{ name }}` token => description
+     */
+    public function variableHelp(): array
+    {
         return match ($this) {
-            self::RegistrationLink => ['name', 'message', 'token', 'authMode'],
-            self::PasswordReset => ['url'],
-            self::EmailChangeConfirm => ['token', 'id', 'type'],
-            self::EmailChangeNotice => ['new_email'],
-            self::FriendRequested => ['member.name', 'url'],
-            self::FriendAccepted => ['member.name'],
-            self::MessageReceived => ['member.name', 'url'],
+            self::RegistrationLink => [
+                'name' => __('The inviter’s name (member or admin invitations).'),
+                'message' => __('The optional message from the inviter.'),
+                'token' => __('The registration token (used by the app_url_for link).'),
+                'authMode' => __('The authentication mode.'),
+            ],
+            self::PasswordReset => ['url' => __('The password reset URL.')],
+            self::EmailChangeConfirm => [
+                'token' => __('The confirmation token (used by the app_url_for link).'),
+                'id' => __('The member ID.'),
+                'type' => __('The address type.'),
+            ],
+            self::EmailChangeNotice => ['new_email' => __('The new email address.')],
+            self::FriendRequested => [
+                'member.name' => __('The requester’s name.'),
+                'url' => __('The friend management URL.'),
+            ],
+            self::FriendAccepted => ['member.name' => __('The name of the member who accepted.')],
+            self::MessageReceived => [
+                'member.name' => __('The sender’s name.'),
+                'url' => __('The message URL.'),
+            ],
             self::Signature => [],
         };
     }

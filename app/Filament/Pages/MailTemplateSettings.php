@@ -17,35 +17,36 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Component;
-use Filament\Schemas\Components\EmbeddedSchema;
-use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\HtmlString;
 
 /**
- * Edit the system-mail templates (OpenPNE 3 NotificationMail): per-locale subject/body and, for the
- * configurable ones, an on/off switch. The built-in wording lives in the App\Mail\Template\MailTemplate
- * registry; this page only persists a row when a field diverges from that default (absence = default), so
- * an untouched template keeps tracking the built-in wording and the OpenPNE 3 import stays authoritative.
+ * Edit the system-mail templates (OpenPNE 3 NotificationMail). The templates are a fixed registry
+ * (App\Mail\Template\MailTemplate), not table rows, so this lists them from the registry and edits one at
+ * a time in a modal — each template saves on its own, which keeps the editing target obvious and isolates
+ * a change to a single template (a long single form made accidental edits easy to miss).
  *
+ * A row is persisted only when a field diverges from the built-in default (absence = default), so an
+ * untouched template keeps tracking the registry wording and the OpenPNE 3 import stays authoritative.
  * Required/security mails (registration, password, email change) have no toggle — the service always
- * sends them. The body is stored verbatim (line endings normalised to LF), like the design slots.
- *
- * @property-read Schema $form
+ * sends them. The body is stored verbatim (line endings normalised to LF).
  */
-class MailTemplateSettings extends Page
+class MailTemplateSettings extends Page implements HasTable
 {
+    use InteractsWithTable;
+
     private const BODY_MAX_BYTES = 65535;
 
-    /**
-     * @var array<string, mixed>|null
-     */
-    public ?array $data = [];
+    protected string $view = 'filament.pages.mail-template-settings';
 
     public static function getNavigationIcon(): string|BackedEnum|Htmlable|null
     {
@@ -67,74 +68,216 @@ class MailTemplateSettings extends Page
         return __('Mail templates');
     }
 
-    public function mount(): void
+    public function table(Table $table): Table
     {
-        $this->form->fill($this->currentValues());
+        return $table
+            ->records(fn (): array => $this->rows())
+            ->columns([
+                TextColumn::make('caption')->label(__('Template'))->weight(FontWeight::Bold),
+                TextColumn::make('kind')->label(__('Type'))->badge()->color('gray')
+                    ->formatStateUsing(fn (string $state): string => $this->kindLabel($state)),
+                TextColumn::make('state')->label(__('Status'))->badge()
+                    ->formatStateUsing(fn (string $state): string => $this->stateLabel($state))
+                    ->color(fn (string $state): string => match ($state) {
+                        'sending', 'always' => 'success',
+                        'stopped' => 'danger',
+                        default => 'gray',
+                    }),
+                TextColumn::make('content')->label(__('Content'))->badge()
+                    ->formatStateUsing(fn (string $state): string => $state === 'customized' ? __('Customized') : __('Default'))
+                    ->color(fn (string $state): string => $state === 'customized' ? 'info' : 'gray'),
+            ])
+            ->recordActions([
+                Action::make('edit')
+                    ->label(__('Edit'))
+                    ->icon(Heroicon::PencilSquare)
+                    ->modalHeading(fn (array $record): string => $record['caption'])
+                    ->modalSubmitActionLabel(__('Save'))
+                    ->fillForm(fn (array $record): array => $this->editFormData($this->template($record)))
+                    ->schema(fn (array $record): array => $this->editSchema($this->template($record)))
+                    ->action(fn (array $data, array $record): mixed => $this->persist($this->template($record), $data)),
+            ])
+            ->headerActions([
+                Action::make('syntaxHelp')
+                    ->label(__('Template format'))
+                    ->icon(Heroicon::QuestionMarkCircle)
+                    ->color('gray')
+                    ->modalHeading(__('Template format'))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel(__('Close'))
+                    ->schema([
+                        Placeholder::make('help')->hiddenLabel()->content(new HtmlString($this->syntaxHelpHtml())),
+                    ]),
+            ])
+            ->paginated(false);
     }
 
-    public function form(Schema $schema): Schema
+    private function template(array $record): MailTemplate
     {
-        return $schema
-            ->components($this->buildSections())
-            ->statePath('data');
+        return MailTemplate::from($record['__key']);
     }
 
-    public function content(Schema $schema): Schema
+    /** @return list<array<string, mixed>> one record per registry template, with its status. */
+    private function rows(): array
     {
-        return $schema->components([$this->getFormContentComponent()]);
+        $parents = DB::table('mail_templates')->get(['id', 'key', 'is_enabled'])->keyBy('key');
+        $customized = DB::table('mail_template_translations')->distinct()->pluck('mail_template_id')->flip();
+
+        $rows = [];
+        foreach (MailTemplate::cases() as $template) {
+            $parent = $parents[$template->value] ?? null;
+            $enabled = ! $template->isConfigurable() || $parent === null || (bool) $parent->is_enabled;
+
+            $rows[] = [
+                '__key' => $template->value,
+                'caption' => $template->caption(),
+                'kind' => $template->isConfigurable() ? 'optional' : ($template->isSendable() ? 'required' : 'signature'),
+                'state' => $template->isConfigurable()
+                    ? ($enabled ? 'sending' : 'stopped')
+                    : ($template->isSendable() ? 'always' : 'none'),
+                'content' => ($parent !== null && isset($customized[$parent->id])) ? 'customized' : 'default',
+            ];
+        }
+
+        return $rows;
     }
 
-    public function getFormContentComponent(): Component
+    private function kindLabel(string $kind): string
     {
-        return Form::make([EmbeddedSchema::make('form')])
-            ->id('form')
-            ->livewireSubmitHandler('save')
-            ->footer([
-                Actions::make([
-                    Action::make('save')
-                        ->label(__('Save'))
-                        ->submit('save')
-                        ->keyBindings(['mod+s']),
-                ]),
-            ]);
+        return match ($kind) {
+            'required' => __('Required'),
+            'optional' => __('Optional'),
+            default => __('Signature'),
+        };
     }
 
-    public function save(): void
+    private function stateLabel(string $state): string
     {
-        $data = $this->form->getState();
+        return match ($state) {
+            'sending' => __('Sending'),
+            'stopped' => __('Stopped'),
+            'always' => __('Always sent'),
+            default => '—',
+        };
+    }
 
-        DB::transaction(function () use ($data): void {
-            foreach (MailTemplate::cases() as $template) {
-                $this->saveTemplate($template, $data);
+    /** @return array<string, mixed> current values for the edit modal (enabled + per-locale subject/body). */
+    private function editFormData(MailTemplate $template): array
+    {
+        $parent = DB::table('mail_templates')->where('key', $template->value)->first();
+        $tx = [];
+        if ($parent !== null) {
+            foreach (DB::table('mail_template_translations')->where('mail_template_id', $parent->id)->get() as $row) {
+                $tx[$row->locale] = $row;
             }
-        });
+        }
+
+        $data = [];
+        if ($template->isConfigurable()) {
+            $data['enabled'] = $parent === null || (bool) $parent->is_enabled;
+        }
+
+        foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
+            $row = $tx[$locale] ?? null;
+            if ($template->isSendable()) {
+                $data["{$locale}__subject"] = ($row !== null && $row->subject !== null)
+                    ? $row->subject
+                    : (string) $template->defaultSubject($locale);
+            }
+            $data["{$locale}__body"] = $row !== null ? $row->body : $template->defaultBody($locale);
+        }
+
+        return $data;
+    }
+
+    /** @return list<Component> the edit-modal fields for one template. */
+    private function editSchema(MailTemplate $template): array
+    {
+        $components = [];
+
+        if ($template->isConfigurable()) {
+            $components[] = Toggle::make('enabled')->label(__('Send this mail'));
+        }
+
+        $components[] = $this->variableHelp($template);
+
+        foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
+            $fields = [];
+
+            if ($template->isSendable()) {
+                $fields[] = TextInput::make("{$locale}__subject")
+                    ->label(__('Subject'))
+                    ->maxLength(255)
+                    ->rules([$this->syntaxRule($template, $locale, 'subject')]);
+            }
+
+            $fields[] = Textarea::make("{$locale}__body")
+                ->label(__('Body'))
+                ->rows(12)
+                ->rules([$this->byteLimitRule(), $this->syntaxRule($template, $locale, 'body')]);
+
+            $components[] = Section::make($this->localeLabel($locale))->schema($fields);
+        }
+
+        return $components;
+    }
+
+    private function variableHelp(MailTemplate $template): Placeholder
+    {
+        $lines = [];
+        foreach ($template->variableHelp() as $token => $description) {
+            $lines[] = '<code>{{ '.e($token).' }}</code> — '.e($description);
+        }
+        $lines[] = '<code>{{ op_config.sns_name }}</code> — '.e(__('The SNS name (always available).'));
+
+        return Placeholder::make('variables')
+            ->label(__('Available variables'))
+            ->content(new HtmlString('<div style="line-height:1.8">'.implode('<br>', $lines).'</div>'));
+    }
+
+    private function syntaxHelpHtml(): string
+    {
+        $rows = [
+            ['{{ '.__('variable').' }}', __('Insert a value.')],
+            ['{% if x == "1" %}…{% endif %}', __('Show a part only when a condition holds (==, !=, <, >, and, or).')],
+            ['{% for x in items %}…{% endfor %}', __('Repeat a part for each item.')],
+            ["{{ x|date('Y-m-d') }}", __('Format a date.')],
+            ["{{ x|default('-') }}", __('Use a fallback when the value is empty.')],
+        ];
+
+        $items = array_map(
+            static fn (array $r): string => '<li style="margin:.35rem 0"><code>'.e($r[0]).'</code> — '.e($r[1]).'</li>',
+            $rows,
+        );
+
+        return '<div style="font-size:.875rem"><p>'.e(__('The following template syntax is available:')).'</p>'
+            .'<ul style="list-style:disc;padding-left:1.25rem">'.implode('', $items).'</ul></div>';
+    }
+
+    private function persist(MailTemplate $template, array $data): void
+    {
+        DB::transaction(fn () => $this->saveTemplate($template, $data));
 
         app(MailTemplateService::class)->clearCache();
 
-        Notification::make()
-            ->success()
-            ->title(__('Saved'))
-            ->send();
-
-        $this->form->fill($this->currentValues());
+        Notification::make()->success()->title(__('Saved'))->send();
     }
 
     /**
-     * Persist one template: keep a row only when it is off (configurable) or some locale diverges from the
-     * default; otherwise drop the row so the built-in wording is followed again.
+     * Keep a row only when the template is off (configurable) or some locale diverges from the default;
+     * otherwise drop it so the built-in wording is followed again.
      *
      * @param  array<string, mixed>  $data
      */
     private function saveTemplate(MailTemplate $template, array $data): void
     {
-        $enabled = ! $template->isConfigurable()
-            || (bool) ($data[$this->fieldKey($template, 'enabled')] ?? true);
+        $enabled = ! $template->isConfigurable() || (bool) ($data['enabled'] ?? true);
 
         $overrides = [];
         foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
-            $body = $this->normalize((string) ($data[$this->fieldKey($template, "{$locale}__body")] ?? ''));
+            $body = $this->normalize((string) ($data["{$locale}__body"] ?? ''));
             $subject = $template->isSendable()
-                ? trim((string) ($data[$this->fieldKey($template, "{$locale}__subject")] ?? ''))
+                ? trim((string) ($data["{$locale}__subject"] ?? ''))
                 : null;
 
             $isDefault = $body === $template->defaultBody($locale)
@@ -174,106 +317,6 @@ class MailTemplateSettings extends Page
         }
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function currentValues(): array
-    {
-        $parents = DB::table('mail_templates')->get(['id', 'key', 'is_enabled'])->keyBy('key');
-
-        $idToKey = [];
-        foreach ($parents as $parent) {
-            $idToKey[$parent->id] = $parent->key;
-        }
-
-        $tx = [];
-        if ($parents->isNotEmpty()) {
-            $rows = DB::table('mail_template_translations')
-                ->whereIn('mail_template_id', $parents->pluck('id')->all())
-                ->get(['mail_template_id', 'locale', 'subject', 'body']);
-            foreach ($rows as $row) {
-                $tx[$idToKey[$row->mail_template_id]][$row->locale] = $row;
-            }
-        }
-
-        $values = [];
-        foreach (MailTemplate::cases() as $template) {
-            if ($template->isConfigurable()) {
-                $parent = $parents[$template->value] ?? null;
-                $values[$this->fieldKey($template, 'enabled')] = $parent === null || (bool) $parent->is_enabled;
-            }
-
-            foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
-                $row = $tx[$template->value][$locale] ?? null;
-
-                if ($template->isSendable()) {
-                    $values[$this->fieldKey($template, "{$locale}__subject")] =
-                        ($row !== null && $row->subject !== null) ? $row->subject : (string) $template->defaultSubject($locale);
-                }
-
-                $values[$this->fieldKey($template, "{$locale}__body")] =
-                    $row !== null ? $row->body : $template->defaultBody($locale);
-            }
-        }
-
-        return $values;
-    }
-
-    /**
-     * @return list<Section>
-     */
-    private function buildSections(): array
-    {
-        $sections = [];
-
-        foreach (MailTemplate::cases() as $template) {
-            $components = [];
-
-            if ($template->isConfigurable()) {
-                $components[] = Toggle::make($this->fieldKey($template, 'enabled'))
-                    ->label(__('Send this mail'));
-            }
-
-            $components[] = Placeholder::make($this->fieldKey($template, 'variables'))
-                ->label(__('Available variables'))
-                ->content($this->variableHint($template));
-
-            foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
-                $fields = [];
-
-                if ($template->isSendable()) {
-                    $fields[] = TextInput::make($this->fieldKey($template, "{$locale}__subject"))
-                        ->label(__('Subject'))
-                        ->maxLength(255)
-                        ->rules([$this->syntaxRule($template, $locale, 'subject')]);
-                }
-
-                $fields[] = Textarea::make($this->fieldKey($template, "{$locale}__body"))
-                    ->label(__('Body'))
-                    ->rows(10)
-                    ->rules([$this->byteLimitRule(), $this->syntaxRule($template, $locale, 'body')]);
-
-                $components[] = Section::make($this->localeLabel($locale))->schema($fields);
-            }
-
-            $sections[] = Section::make($template->caption())
-                ->schema($components)
-                ->collapsible()
-                ->collapsed();
-        }
-
-        return $sections;
-    }
-
-    /** The `{{ … }}` tokens a template may use, with the always-available SNS name appended. */
-    private function variableHint(MailTemplate $template): string
-    {
-        $tokens = array_map(static fn (string $name): string => "{{ {$name} }}", $template->variables());
-        $tokens[] = '{{ op_config.sns_name }}';
-
-        return implode('   ', $tokens);
-    }
-
     /** Bounded by bytes, not characters: the body lives in a TEXT column (65535 bytes). */
     private function byteLimitRule(): Closure
     {
@@ -301,13 +344,6 @@ class MailTemplateSettings extends Page
                 $fail(__('This template cannot be sent: :message', ['message' => $e->getMessage()]));
             }
         };
-    }
-
-    private function fieldKey(MailTemplate $template, string $suffix): string
-    {
-        // The key value carries hyphens (friend-accepted); fold them so the field name is a safe Livewire
-        // statePath segment. Every read uses this helper, so the name is never reverse-parsed.
-        return str_replace('-', '_', $template->value)."__{$suffix}";
     }
 
     private function normalize(string $value): string
