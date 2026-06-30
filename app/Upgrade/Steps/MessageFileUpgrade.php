@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -13,9 +14,6 @@ use App\Upgrade\UpgradeStep;
  * column, so `number` is synthesized 1..N by id within the message (the order the attachments were
  * added). file.id is preserved by FileUpgrade, so file_id copies verbatim; OpenPNE 4's join row has
  * no timestamps, so the source ones are dropped.
- *
- * The subqueries name message / message_type / message_file unqualified (the fleet caveat shared with
- * the other correlated subqueries).
  */
 class MessageFileUpgrade extends UpgradeStep
 {
@@ -35,9 +33,9 @@ class MessageFileUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        return 'EXISTS (SELECT 1 FROM `message` `p` '
+        return 'EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `p` '
             .'WHERE `p`.`id` = `message_file`.`message_id` '
-            ."AND `p`.`message_type_id` IN (SELECT `id` FROM `message_type` WHERE `type_name` = 'message'))";
+            .'AND `p`.`message_type_id` IN (SELECT `id` FROM '.SourceRef::table('message_type')." WHERE `type_name` = 'message'))";
     }
 
     public function filterColumns(): array
@@ -56,7 +54,7 @@ class MessageFileUpgrade extends UpgradeStep
     /** 1..N slot per message, by id (OpenPNE 3 has no slot column; this is the order they were added). */
     private function numberExpr(): string
     {
-        return '(SELECT COUNT(*) FROM `message_file` `m2` '
+        return '(SELECT COUNT(*) FROM '.SourceRef::table('message_file').' `m2` '
             .'WHERE `m2`.`message_id` = `message_file`.`message_id` AND `m2`.`id` <= `message_file`.`id`)';
     }
 }

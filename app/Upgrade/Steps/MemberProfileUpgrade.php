@@ -4,6 +4,7 @@ namespace App\Upgrade\Steps;
 
 use App\Support\Visibility;
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -24,10 +25,6 @@ use App\Upgrade\UpgradeStep;
  * ("use the field default"). Effective resolution (is_edit_public_flag, NULL →
  * profiles.default_visibility) happens in the read layer — like OpenPNE 3's read-time
  * resolution — rather than baking it into stored data.
- *
- * The profile/self correlated subqueries name `profile`/`member_profile` unqualified, so
- * (like MemberUpgrade's member_config subqueries) they are not rewritten for a source
- * prefix or a separate source database — acceptable for the fleet (empty prefix, same DB).
  */
 class MemberProfileUpgrade extends UpgradeStep
 {
@@ -111,18 +108,18 @@ class MemberProfileUpgrade extends UpgradeStep
     private function rawPublicFlag(): string
     {
         return '(CASE WHEN `member_profile`.`tree_key` IS NOT NULL AND `member_profile`.`tree_key` <> `member_profile`.`id`'
-            .' THEN (SELECT `r`.`public_flag` FROM `member_profile` `r` WHERE `r`.`id` = `member_profile`.`tree_key`)'
+            .' THEN (SELECT `r`.`public_flag` FROM '.SourceRef::table('member_profile').' `r` WHERE `r`.`id` = `member_profile`.`tree_key`)'
             .' ELSE `member_profile`.`public_flag` END)';
     }
 
     private function profileFormType(): string
     {
-        return '(SELECT `p`.`form_type` FROM `profile` `p` WHERE `p`.`id` = `member_profile`.`profile_id`)';
+        return '(SELECT `p`.`form_type` FROM '.SourceRef::table('profile').' `p` WHERE `p`.`id` = `member_profile`.`profile_id`)';
     }
 
     private function profileName(): string
     {
-        return '(SELECT `p`.`name` FROM `profile` `p` WHERE `p`.`id` = `member_profile`.`profile_id`)';
+        return '(SELECT `p`.`name` FROM '.SourceRef::table('profile').' `p` WHERE `p`.`id` = `member_profile`.`profile_id`)';
     }
 
     private function isCustomDateRoot(): string
@@ -163,7 +160,7 @@ class MemberProfileUpgrade extends UpgradeStep
     private function dateChild(int $offset): string
     {
         return sprintf(
-            '(SELECT `c`.`value` FROM `member_profile` `c`'
+            '(SELECT `c`.`value` FROM '.SourceRef::table('member_profile').' `c`'
             .' WHERE `c`.`tree_key` = `member_profile`.`id` AND `c`.`id` <> `member_profile`.`id`'
             .' ORDER BY `c`.`lft` LIMIT 1 OFFSET %d)',
             $offset,

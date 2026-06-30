@@ -5,6 +5,7 @@ namespace App\Upgrade\Steps;
 use App\Support\PreferenceKey;
 use App\Support\Visibility;
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -18,10 +19,6 @@ use App\Upgrade\UpgradeStep;
  * Every PreferenceKey value is on the OpenPNE 3 public_flag scale (SNS=1, friend=2, private=3,
  * web=4), the same scale Visibility maps, so one value CASE serves all keys (the per-member
  * default carries no is_open companion, unlike a diary row).
- *
- * The correlated subquery names `member_config` unqualified, so (like MemberUpgrade's and
- * MemberProfileUpgrade's subqueries) it is not rewritten for a source prefix or separate source
- * database — acceptable for the fleet (empty prefix, same database).
  */
 class MemberPreferenceUpgrade extends UpgradeStep
 {
@@ -51,7 +48,7 @@ class MemberPreferenceUpgrade extends UpgradeStep
         // Latest row per (member_id, name): collapse any KV duplicates to the most recently
         // written one so the (member_id, key) unique target never sees two rows.
         return "`name` IN ({$names})"
-            .' AND `id` = (SELECT MAX(`m2`.`id`) FROM `member_config` `m2`'
+            .' AND `id` = (SELECT MAX(`m2`.`id`) FROM '.SourceRef::table('member_config').' `m2`'
             .' WHERE `m2`.`member_id` = `member_config`.`member_id` AND `m2`.`name` = `member_config`.`name`)';
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\StepRegistry;
 use Illuminate\Console\Command;
 
@@ -14,6 +15,10 @@ class UpgradeMatrixCommand extends Command
 
     public function handle(): int
     {
+        // Resolve SourceRef tokens to bare table names so the human matrix never shows the
+        // {{src:…}} placeholders the steps carry for prefix/database qualification.
+        $compiler = new InsertSelectCompiler;
+
         foreach (StepRegistry::all() as $step) {
             $this->line("## `{$step->sourceTable()}` → `{$step->targetTable()}`");
             $this->line('');
@@ -21,7 +26,7 @@ class UpgradeMatrixCommand extends Command
             $this->line('|---|---|');
 
             foreach ($step->columns() as $target => $column) {
-                $from = $column->source ?? '`'.str_replace("\n", ' ', (string) $column->expr).'`';
+                $from = $column->source ?? '`'.str_replace("\n", ' ', $compiler->resolveSourceRefs((string) $column->expr)).'`';
                 $this->line("| `{$target}` | {$from} |");
             }
 
@@ -29,7 +34,7 @@ class UpgradeMatrixCommand extends Command
                 // Without this the matrix reads as a full-table copy; the filter is what
                 // splits one source table across several targets.
                 $this->line('');
-                $this->line("Filter: `{$step->filter()}`");
+                $this->line('Filter: `'.$compiler->resolveSourceRefs($step->filter()).'`');
             }
 
             if ($step->pendingTargets() !== []) {

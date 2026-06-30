@@ -6,6 +6,7 @@ use App\Features\Community\JoinPolicy;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -32,10 +33,8 @@ use App\Upgrade\UpgradeStep;
  * file an owner — the community-image delivery surface is not built — so the owner is backfilled from
  * communities.file_id when it lands; the link is what makes that recoverable.
  *
- * The subqueries name community_config / community_member_position / community_category unqualified,
- * so (like MemberUpgrade's member_config subqueries) they are not rewritten for a source prefix or
- * separate source database — acceptable for the fleet (empty prefix, same database). They use the
- * latest row per name where the KV table has no uniqueness, so duplicates resolve deterministically.
+ * The subqueries use the latest row per name where the KV table has no uniqueness, so duplicates
+ * resolve deterministically.
  */
 class CommunityUpgrade extends UpgradeStep
 {
@@ -64,7 +63,7 @@ class CommunityUpgrade extends UpgradeStep
     /** The latest `community_config` value for a name (the KV table has no uniqueness), else NULL. */
     private function configValueLatest(string $name): string
     {
-        return "(SELECT `value` FROM `community_config` WHERE `community_id` = `community`.`id` AND `name` = '{$name}' ORDER BY `id` DESC LIMIT 1)";
+        return '(SELECT `value` FROM '.SourceRef::table('community_config')." WHERE `community_id` = `community`.`id` AND `name` = '{$name}' ORDER BY `id` DESC LIMIT 1)";
     }
 
     /**
@@ -128,7 +127,7 @@ class CommunityUpgrade extends UpgradeStep
     /** The pending admin-transfer target (community_member_position[name=admin_confirm]), else NULL. */
     private function pendingAdminExpr(): string
     {
-        return "(SELECT `member_id` FROM `community_member_position` WHERE `community_id` = `community`.`id` AND `name` = 'admin_confirm' ORDER BY `id` DESC LIMIT 1)";
+        return '(SELECT `member_id` FROM '.SourceRef::table('community_member_position')." WHERE `community_id` = `community`.`id` AND `name` = 'admin_confirm' ORDER BY `id` DESC LIMIT 1)";
     }
 
     /**
@@ -138,7 +137,7 @@ class CommunityUpgrade extends UpgradeStep
     private function categoryIdExpr(): string
     {
         return 'CASE WHEN EXISTS ('
-            .'SELECT 1 FROM `community_category` `c` '
+            .'SELECT 1 FROM '.SourceRef::table('community_category').' `c` '
             .'WHERE `c`.`id` = `community`.`community_category_id` AND `c`.`lft` > 1'
             .') THEN `community_category_id` ELSE NULL END';
     }

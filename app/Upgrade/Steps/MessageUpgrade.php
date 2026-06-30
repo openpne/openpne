@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -29,10 +30,6 @@ use App\Upgrade\UpgradeStep;
  * parent_id/thread_id (OpenPNE 3 return_message_id/thread_message_id) are null-normalized: a 0
  * (OpenPNE 3 default) or a reference outside the migrated personal-message set becomes NULL rather
  * than a dangling self reference. message_file is deferred to the file step (deferredSourceTables).
- *
- * The subqueries name message_send_list / deleted_message / message_type unqualified, so (like the
- * member_config subqueries) they are not rewritten for a source prefix or separate source database —
- * acceptable for the fleet (empty prefix, same database).
  */
 class MessageUpgrade extends UpgradeStep
 {
@@ -79,14 +76,14 @@ class MessageUpgrade extends UpgradeStep
     /** SQL boolean: the `<table>` row is a personal message (message_type.type_name = 'message'). */
     private function isPersonalMessage(string $table): string
     {
-        return "`{$table}`.`message_type_id` IN (SELECT `id` FROM `message_type` WHERE `type_name` = 'message')";
+        return "`{$table}`.`message_type_id` IN (SELECT `id` FROM ".SourceRef::table('message_type')." WHERE `type_name` = 'message')";
     }
 
     /** A draft's recipient, read from its (single) OpenPNE 3 send-list row; NULL for a sent message. */
     private function draftRecipientExpr(): string
     {
         return 'CASE WHEN `is_send` = 0 THEN '
-            .'(SELECT `msl`.`member_id` FROM `message_send_list` `msl` '
+            .'(SELECT `msl`.`member_id` FROM '.SourceRef::table('message_send_list').' `msl` '
             .'WHERE `msl`.`message_id` = `message`.`id` ORDER BY `msl`.`id` ASC LIMIT 1) '
             .'ELSE NULL END';
     }
@@ -95,7 +92,7 @@ class MessageUpgrade extends UpgradeStep
     private function portedRefExpr(string $column): string
     {
         return "CASE WHEN `{$column}` <> 0 AND EXISTS ("
-            .'SELECT 1 FROM `message` `p` '
+            .'SELECT 1 FROM '.SourceRef::table('message').' `p` '
             ."WHERE `p`.`id` = `message`.`{$column}` AND "
             .$this->isPersonalMessage('p')
             .") THEN `{$column}` ELSE NULL END";
@@ -123,7 +120,7 @@ class MessageUpgrade extends UpgradeStep
     /** A value read from this sender's deleted_message pointer (keyed by member_id + message_id). */
     private function pointerValue(string $select): string
     {
-        return "(SELECT {$select} FROM `deleted_message` `dm` "
+        return '(SELECT '.$select.' FROM '.SourceRef::table('deleted_message').' `dm` '
             .'WHERE `dm`.`member_id` = `message`.`member_id` AND `dm`.`message_id` = `message`.`id` '
             .'ORDER BY `dm`.`id` DESC LIMIT 1)';
     }

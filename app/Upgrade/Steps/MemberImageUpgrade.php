@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -14,9 +15,6 @@ use App\Upgrade\UpgradeStep;
  * avatar (member_images.member_id is unique), so the filter keeps exactly that row — replicating
  * OpenPNE 3's choice, with id ASC added as a deterministic tiebreak where OpenPNE 3 had none — and
  * drops the rest. file.id is preserved by FileUpgrade, so file_id copies verbatim.
- *
- * The filter subquery names `member_image` unqualified (like the other correlated subqueries), so it
- * is not rewritten for a source prefix or separate source database — acceptable for the fleet.
  */
 class MemberImageUpgrade extends UpgradeStep
 {
@@ -39,7 +37,7 @@ class MemberImageUpgrade extends UpgradeStep
     {
         // The row Member::getImage() would show as the avatar: is_primary DESC (1, then demoted 0,
         // then never-primary NULL), id ASC as a deterministic tiebreak. The rest drop.
-        return '`member_image`.`id` = (SELECT `m2`.`id` FROM `member_image` `m2` '
+        return '`member_image`.`id` = (SELECT `m2`.`id` FROM '.SourceRef::table('member_image').' `m2` '
             .'WHERE `m2`.`member_id` = `member_image`.`member_id` '
             .'ORDER BY `m2`.`is_primary` DESC, `m2`.`id` ASC LIMIT 1)';
     }

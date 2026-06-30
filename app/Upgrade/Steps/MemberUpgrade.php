@@ -4,6 +4,7 @@ namespace App\Upgrade\Steps;
 
 use App\Support\Visibility;
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -27,11 +28,8 @@ use App\Upgrade\UpgradeStep;
  *  - locale: member_config[language] (e.g. ja_JP) folded to a SUPPORTED_LOCALES slug, NULL for
  *    an unrecognised value (falls back to the session/Accept-Language chain at request time).
  *
- * The subqueries name `member_config` unqualified, so (unlike the FROM table) they are not
- * rewritten for a source prefix or a separate source database — acceptable for the fleet
- * (empty prefix, same database); see StepRegistry for the wider table-coverage gap. They use the
- * latest row per name (member_config has no (member_id, name) unique), so a duplicate resolves
- * deterministically rather than by storage order.
+ * The subqueries use the latest row per name (member_config has no (member_id, name) unique), so a
+ * duplicate resolves deterministically rather than by storage order.
  */
 class MemberUpgrade extends UpgradeStep
 {
@@ -82,7 +80,7 @@ class MemberUpgrade extends UpgradeStep
     /** The latest `member_config` value for a name (no (member_id, name) unique exists), else NULL. */
     private function memberConfigValueLatest(string $name): string
     {
-        return "(SELECT `value` FROM `member_config` WHERE `member_id` = `member`.`id` AND `name` = '{$name}' ORDER BY `id` DESC LIMIT 1)";
+        return '(SELECT `value` FROM '.SourceRef::table('member_config')." WHERE `member_id` = `member`.`id` AND `name` = '{$name}' ORDER BY `id` DESC LIMIT 1)";
     }
 
     /**
@@ -98,7 +96,7 @@ class MemberUpgrade extends UpgradeStep
 
     private function snsConfigValue(string $name): string
     {
-        return "(SELECT `value` FROM `sns_config` WHERE `name` = '{$name}' LIMIT 1)";
+        return '(SELECT `value` FROM '.SourceRef::table('sns_config')." WHERE `name` = '{$name}' LIMIT 1)";
     }
 
     /**
