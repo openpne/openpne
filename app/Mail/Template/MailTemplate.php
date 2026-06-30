@@ -55,6 +55,42 @@ enum MailTemplate: string
         return $this !== self::Signature;
     }
 
+    /** Admin-facing caption (the editor's section heading). */
+    public function caption(): string
+    {
+        return match ($this) {
+            self::RegistrationLink => __('Registration link'),
+            self::PasswordReset => __('Password reset'),
+            self::EmailChangeConfirm => __('Email address change (confirmation)'),
+            self::EmailChangeNotice => __('Email address change (notice)'),
+            self::FriendRequested => __('Friend request'),
+            self::FriendAccepted => __('Friend request accepted'),
+            self::MessageReceived => __('Message received'),
+            self::Signature => __('Signature'),
+        };
+    }
+
+    /**
+     * The template-specific variables a body/subject may reference, as the bare names the admin writes
+     * inside `{{ … }}`. The OpenPNE 3 globals (op_config.sns_name, op_term.*) are available everywhere and
+     * are not repeated per template.
+     *
+     * @return list<string>
+     */
+    public function variables(): array
+    {
+        return match ($this) {
+            self::RegistrationLink => ['name', 'message', 'token', 'authMode'],
+            self::PasswordReset => ['url'],
+            self::EmailChangeConfirm => ['token', 'id', 'type'],
+            self::EmailChangeNotice => ['new_email'],
+            self::FriendRequested => ['member.name', 'url'],
+            self::FriendAccepted => ['member.name'],
+            self::MessageReceived => ['member.name', 'url'],
+            self::Signature => [],
+        };
+    }
+
     public function defaultSubject(string $locale): ?string
     {
         return self::defaults($this)[$this->localeKey($locale)]['subject'];
