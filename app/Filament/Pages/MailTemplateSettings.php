@@ -260,6 +260,10 @@ class MailTemplateSettings extends Page implements HasTable
 
         app(MailTemplateService::class)->clearCache();
 
+        // The list reads its rows through a per-request cache; drop it so the Status / Content badges
+        // reflect this save in the same Livewire response instead of a stale snapshot.
+        $this->flushCachedTableRecords();
+
         Notification::make()->success()->title(__('Saved'))->send();
     }
 

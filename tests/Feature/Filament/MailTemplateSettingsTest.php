@@ -103,24 +103,26 @@ class MailTemplateSettingsTest extends TestCase
         $this->assertSame(0, DB::table('mail_template_translations')->count());
     }
 
-    public function test_an_oversized_body_is_not_saved(): void
+    public function test_an_oversized_body_is_rejected_and_not_saved(): void
     {
         Livewire::test(MailTemplateSettings::class)
             ->callAction(
                 TestAction::make('edit')->table('friend-accepted'),
                 data: ['ja__body' => str_repeat('x', 65536)],
-            );
+            )
+            ->assertHasActionErrors(['ja__body']);
 
         $this->assertDatabaseMissing('mail_templates', ['key' => 'friend-accepted']);
     }
 
-    public function test_a_body_the_engine_cannot_send_is_not_saved(): void
+    public function test_a_body_the_engine_cannot_send_is_rejected_and_not_saved(): void
     {
         Livewire::test(MailTemplateSettings::class)
             ->callAction(
                 TestAction::make('edit')->table('friend-accepted'),
                 data: ['ja__body' => '{% set x = 1 %}{{ x }}'],
-            );
+            )
+            ->assertHasActionErrors(['ja__body']);
 
         $this->assertDatabaseMissing('mail_templates', ['key' => 'friend-accepted']);
     }
