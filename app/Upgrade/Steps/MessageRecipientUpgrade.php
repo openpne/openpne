@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -19,8 +20,6 @@ use App\Upgrade\UpgradeStep;
  *    it was read. NULL = unread.
  *  - recipient_deleted_at / recipient_purged_at: the same trash model as the sender side, but the
  *    deleted_message pointer is keyed by message_send_list_id.
- *
- * The subqueries name deleted_message unqualified (same fleet caveat as the other config subqueries).
  */
 class MessageRecipientUpgrade extends UpgradeStep
 {
@@ -44,9 +43,9 @@ class MessageRecipientUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        return 'EXISTS (SELECT 1 FROM `message` `p` '
+        return 'EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `p` '
             .'WHERE `p`.`id` = `message_send_list`.`message_id` AND `p`.`is_send` = 1 AND '
-            ."`p`.`message_type_id` IN (SELECT `id` FROM `message_type` WHERE `type_name` = 'message'))";
+            .'`p`.`message_type_id` IN (SELECT `id` FROM '.SourceRef::table('message_type')." WHERE `type_name` = 'message'))";
     }
 
     public function filterColumns(): array
@@ -76,7 +75,7 @@ class MessageRecipientUpgrade extends UpgradeStep
     /** A value read from this recipient's deleted_message pointer (keyed by member_id + message_send_list_id). */
     private function pointerValue(string $select): string
     {
-        return "(SELECT {$select} FROM `deleted_message` `dm` "
+        return '(SELECT '.$select.' FROM '.SourceRef::table('deleted_message').' `dm` '
             .'WHERE `dm`.`member_id` = `message_send_list`.`member_id` AND `dm`.`message_send_list_id` = `message_send_list`.`id` '
             .'ORDER BY `dm`.`id` DESC LIMIT 1)';
     }

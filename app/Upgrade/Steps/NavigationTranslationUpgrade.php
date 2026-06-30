@@ -4,6 +4,7 @@ namespace App\Upgrade\Steps;
 
 use App\Models\Navigation;
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -28,9 +29,7 @@ class NavigationTranslationUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        // The sibling `navigation` is named unqualified (like MemberUpgrade's member_config
-        // subquery): correct for the fleet (no source prefix, same database).
-        return sprintf('`id` IN (SELECT `id` FROM `navigation` WHERE `type` IN (%s))', $this->typeList());
+        return sprintf('`id` IN (SELECT `id` FROM %s WHERE `type` IN (%s))', SourceRef::table('navigation'), $this->typeList());
     }
 
     public function filterColumns(): array

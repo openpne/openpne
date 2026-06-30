@@ -41,7 +41,10 @@ final class InsertSelectCompiler
             array_values($columns),
         ));
 
-        $source = $this->qualifiedName($sourceDatabase, $sourcePrefix, $step->sourceTable());
+        // The FROM table is aliased to its original name so a step's correlated subqueries can keep
+        // referencing the outer row by that bare name even when the physical table is prefixed / in
+        // another database; SourceRef tokens carry the same qualification into those subqueries.
+        $source = $this->qualifiedName($sourceDatabase, $sourcePrefix, $step->sourceTable())." AS `{$step->sourceTable()}`";
         $target = $this->qualifiedName($targetDatabase, $targetPrefix, $step->targetTable());
 
         $sql = "INSERT INTO {$target} ({$targetColumns})\nSELECT {$selectList}\nFROM {$source}";
@@ -50,7 +53,23 @@ final class InsertSelectCompiler
             $sql .= "\nWHERE {$step->filter()}";
         }
 
+        $sql = $this->resolveSourceRefs($sql, $sourcePrefix, $sourceDatabase);
+
+        if (str_contains($sql, '{{src:')) {
+            throw new LogicException(sprintf('Unresolved source-table token in compiled SQL for %s: %s', $step::class, $sql));
+        }
+
         return $sql;
+    }
+
+    /** Resolve SourceRef::table() placeholders to the prefixed / database-qualified source name. */
+    public function resolveSourceRefs(string $sql, string $sourcePrefix = '', ?string $sourceDatabase = null): string
+    {
+        return preg_replace_callback(
+            '/\{\{src:([a-z0-9_]+)\}\}/',
+            fn (array $m): string => $this->qualifiedName($sourceDatabase, $sourcePrefix, $m[1]),
+            $sql,
+        );
     }
 
     private function qualifiedName(?string $database, string $prefix, string $table): string

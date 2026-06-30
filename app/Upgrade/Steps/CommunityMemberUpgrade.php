@@ -4,6 +4,7 @@ namespace App\Upgrade\Steps;
 
 use App\Features\Community\CommunityRole;
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -15,8 +16,7 @@ use App\Upgrade\UpgradeStep;
  *
  * OpenPNE 3 modelled roles as separate community_member_position rows; the role column is recovered
  * with a correlated EXISTS per role, strongest first (admin beats sub_admin), driven by the runtime
- * CommunityRole enum so the mapping cannot drift. The position subquery names the table unqualified
- * (same fleet caveat as the other config subqueries).
+ * CommunityRole enum so the mapping cannot drift.
  */
 class CommunityMemberUpgrade extends UpgradeStep
 {
@@ -69,7 +69,7 @@ class CommunityMemberUpgrade extends UpgradeStep
 
         $whens = array_map(
             static fn (CommunityRole $role): string => sprintf(
-                'WHEN EXISTS (SELECT 1 FROM `community_member_position` `p` '
+                'WHEN EXISTS (SELECT 1 FROM '.SourceRef::table('community_member_position').' `p` '
                 ."WHERE `p`.`community_member_id` = `community_member`.`id` AND `p`.`name` = '%s') THEN %d",
                 $role->op3PositionName(),
                 $role->value,
