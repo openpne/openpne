@@ -40,7 +40,7 @@ class RequestEmailChange
         );
 
         Notification::route('mail', $newEmail)->notify(
-            new EmailChangeConfirmationNotification($raw, app()->getLocale()),
+            new EmailChangeConfirmationNotification($raw, (int) $member->getKey(), app()->getLocale()),
         );
 
         // Sent to the current address while members.email still holds it (captured here as a literal).

@@ -9,6 +9,9 @@ class NotifyFriendRequestAccepted
 {
     public function handle(FriendRequestAccepted $event): void
     {
-        $event->requester->notify(new FriendRequestAcceptedNotification($event->accepter));
+        $event->requester->notify(
+            (new FriendRequestAcceptedNotification($event->accepter))
+                ->locale($event->requester->locale ?? app()->getLocale()),
+        );
     }
 }

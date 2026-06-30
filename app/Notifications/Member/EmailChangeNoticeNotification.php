@@ -2,6 +2,8 @@
 
 namespace App\Notifications\Member;
 
+use App\Mail\Template\MailTemplate;
+use App\Notifications\Concerns\RendersMailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -17,6 +19,7 @@ use Illuminate\Notifications\Notification;
 class EmailChangeNoticeNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RendersMailTemplate;
 
     public function __construct(public readonly string $newEmail, string $locale)
     {
@@ -31,12 +34,8 @@ class EmailChangeNoticeNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->from(sns_admin_mail_address(), sns_name())
-            ->subject(__('Your email address change was requested'))
-            ->line(__('A request was made to change your :app email address to :email.', ['app' => sns_name(), 'email' => $this->newEmail]))
-            ->line(__('If this was you, open the confirmation link sent to the new address to finish.'))
-            ->line(__('If this was not you, change your password immediately or contact the administrator.'))
-            ->salutation('— '.sns_name());
+        return $this->mailFromTemplate(MailTemplate::EmailChangeNotice, [
+            'new_email' => $this->newEmail,
+        ]);
     }
 }

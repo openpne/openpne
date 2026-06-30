@@ -2,7 +2,9 @@
 
 namespace App\Notifications\Friend;
 
+use App\Mail\Template\MailTemplate;
 use App\Models\Member;
+use App\Notifications\Concerns\RendersMailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -11,24 +13,21 @@ use Illuminate\Notifications\Notification;
 class FriendRequestAcceptedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RendersMailTemplate;
 
     public function __construct(public readonly Member $accepter) {}
 
     /** @return list<string> */
     public function via(Member $notifiable): array
     {
-        return ['mail', 'database'];
+        return $this->templateChannels(MailTemplate::FriendAccepted, ['database']);
     }
 
     public function toMail(Member $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->from(sns_admin_mail_address(), sns_name())
-            ->subject('Friend request accepted')
-            ->greeting("Hi {$notifiable->name},")
-            ->line("{$this->accepter->name} accepted your friend request.")
-            ->action('See your friends', route('friend.list'))
-            ->salutation('— '.sns_name());
+        return $this->mailFromTemplate(MailTemplate::FriendAccepted, [
+            'member' => ['name' => $this->accepter->name],
+        ]);
     }
 
     /** @return array<string, mixed> */

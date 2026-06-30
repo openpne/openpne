@@ -6,6 +6,7 @@ use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -34,6 +35,18 @@ abstract class TestCase extends BaseTestCase
     private function usesRefreshDatabase(): bool
     {
         return in_array(RefreshDatabase::class, class_uses_recursive(static::class), true);
+    }
+
+    /** Render a templated notification mail's HTML body (the MailMessage delivers the mail.template views). */
+    protected function renderMailHtml(MailMessage $mail): string
+    {
+        return view($mail->view['html'], $mail->viewData)->render();
+    }
+
+    /** Render a templated notification mail's plain-text body. */
+    protected function renderMailText(MailMessage $mail): string
+    {
+        return view($mail->view['text'], $mail->viewData)->render();
     }
 
     /** Persist a global SNS setting for the test and refresh the cached map. */

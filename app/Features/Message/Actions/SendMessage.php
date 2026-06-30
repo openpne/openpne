@@ -61,7 +61,10 @@ class SendMessage
 
         if (! $asDraft) {
             // After the attach transaction commits, so the queued notification sees the rows.
-            $recipient->notify(new MessageReceivedNotification($sender, $message));
+            $recipient->notify(
+                (new MessageReceivedNotification($sender, $message))
+                    ->locale($recipient->locale ?? app()->getLocale()),
+            );
         }
 
         return $message;

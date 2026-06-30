@@ -9,6 +9,9 @@ class NotifyFriendRequested
 {
     public function handle(FriendRequested $event): void
     {
-        $event->target->notify(new FriendRequestedNotification($event->requester));
+        $event->target->notify(
+            (new FriendRequestedNotification($event->requester))
+                ->locale($event->target->locale ?? app()->getLocale()),
+        );
     }
 }

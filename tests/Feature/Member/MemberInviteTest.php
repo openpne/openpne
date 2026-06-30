@@ -136,23 +136,24 @@ class MemberInviteTest extends TestCase
         $this->assertDatabaseCount('friendships', 0);
     }
 
-    public function test_the_invite_email_neutralizes_markdown_in_the_name_and_message(): void
+    public function test_the_invite_email_does_not_turn_member_text_into_live_links(): void
     {
-        // A member must not be able to slip a live link or remote image into the branded invite mail
-        // through their display name or the personal note (both are markdown lines).
+        // The inviter's display name and personal note render as literal text, never Markdown/HTML, so a
+        // member cannot slip a live link, remote image, or script into the branded invite mail.
         $mail = (new RegistrationLinkNotification(
             Str::random(40),
             'en',
             RegistrationTokenSource::MemberInvite,
             '[evilname](http://evil.test)',
-            'see [here](http://evil.test) ![x](http://evil.test/p.png)',
+            'see [here](http://evil.test) ![x](http://evil.test/p.png) <script>alert(1)</script>',
         ))->toMail(new AnonymousNotifiable);
 
-        $lines = implode("\n", $mail->introLines);
+        $html = $this->renderMailHtml($mail);
 
-        $this->assertStringNotContainsString('](http://evil.test', $lines); // no markdown link/image syntax
-        $this->assertStringNotContainsString('![x]', $lines);
-        $this->assertStringContainsString('evilname', $lines); // text kept (escaped), not dropped
+        $this->assertStringContainsString('evilname', $html);                     // name kept as text
+        $this->assertStringNotContainsString('<a href="http://evil.test', $html); // no live link
+        $this->assertStringNotContainsString('<img', $html);                      // no remote image
+        $this->assertStringNotContainsString('<script>', $html);                  // script escaped
     }
 
     /** Create a live member-invite token for an address and return the raw token its link carries. */

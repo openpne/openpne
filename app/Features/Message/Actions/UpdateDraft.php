@@ -83,7 +83,10 @@ class UpdateDraft
         }
 
         if (! $asDraft && $recipient !== null) {
-            $recipient->notify(new MessageReceivedNotification($sender, $draft));
+            $recipient->notify(
+                (new MessageReceivedNotification($sender, $draft))
+                    ->locale($recipient->locale ?? app()->getLocale()),
+            );
         }
 
         return $draft;
