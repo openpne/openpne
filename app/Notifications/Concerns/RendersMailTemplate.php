@@ -9,10 +9,10 @@ use App\Mail\Template\MailTemplateService;
 use Illuminate\Notifications\Messages\MailMessage;
 
 /**
- * Builds a notification mail from an admin-editable MailTemplate: render the subject/body for the active
- * locale (Laravel's withLocale() makes app()->getLocale() the notification's locale during send), then
- * deliver through the dedicated `mail.template` views — NOT the markdown shell, so the OpenPNE 3 body text
- * is never re-interpreted as Markdown and a member-supplied value cannot inject a link/image.
+ * Builds a notification mail from an admin-editable MailTemplate: render the subject/body in the
+ * notification's captured locale, then deliver through the dedicated `mail.template` views — NOT the
+ * markdown shell, so the OpenPNE 3 body text is never re-interpreted as Markdown and a member-supplied
+ * value cannot inject a link/image.
  */
 trait RendersMailTemplate
 {
@@ -35,7 +35,11 @@ trait RendersMailTemplate
     /** @param array<string, mixed> $context */
     protected function mailFromTemplate(MailTemplate $template, array $context = []): MailMessage
     {
-        $rendered = app(MailTemplateService::class)->render($template, app()->getLocale(), $context);
+        // The notification's own locale, not the ambient one: a real send wraps render() in
+        // withLocale($this->locale) so the two already agree, but a direct toMail() (tests, preview) is
+        // not wrapped — reading $this->locale keeps the rendered language deterministic either way.
+        $locale = $this->locale ?? app()->getLocale();
+        $rendered = app(MailTemplateService::class)->render($template, $locale, $context);
 
         return (new MailMessage)
             ->from(sns_admin_mail_address(), sns_name())
