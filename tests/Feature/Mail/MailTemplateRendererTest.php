@@ -6,116 +6,107 @@ namespace Tests\Feature\Mail;
 
 use App\Mail\Template\MailTemplateRenderer;
 use App\Mail\Template\UnsupportedMailTemplateSyntaxException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use InvalidArgumentException;
 use Tests\TestCase;
 
-/** The OpenPNE 3 dialect subset: substitution, the `{% if %}` subset, app_url_for mapping, term resolution, and diagnostics. */
+/** The sandboxed Twig engine: OpenPNE 3 dialect fidelity, the sandbox allowlist, setStrict, and SSTI safety. */
 class MailTemplateRendererTest extends TestCase
 {
-    use RefreshDatabase;
-
     private function renderer(): MailTemplateRenderer
     {
-        return app(MailTemplateRenderer::class);
+        return new MailTemplateRenderer;
     }
 
-    public function test_substitutes_dotted_tokens(): void
+    public function test_substitutes_nested_and_bracket_access(): void
     {
-        $out = $this->renderer()->render('Hi {{ member.name }} from {{ op_config.sns_name }}', [
-            'member.name' => 'Bob',
-            'op_config.sns_name' => 'My Community',
-        ], 'en');
+        $out = $this->renderer()->render('{{ member.name }} / {{ member["name"] }}', ['member' => ['name' => 'Bob']]);
 
-        $this->assertSame('Hi Bob from My Community', $out);
+        $this->assertSame('Bob / Bob', $out);
     }
 
-    public function test_missing_token_renders_empty(): void
+    public function test_op_term_comes_from_context(): void
     {
-        $this->assertSame('A=[]', $this->renderer()->render('A=[{{ absent }}]', [], 'en'));
+        $this->assertSame('フレンド', $this->renderer()->render('{{ op_term.friend }}', ['op_term' => ['friend' => 'フレンド']]));
     }
 
-    public function test_nested_conditionals(): void
+    public function test_operator_if_and_for_and_filters(): void
     {
-        $tpl = '{% if name %}Hi {{ name }}{% if message %} says {{ message }}{% endif %}{% endif %}END';
-
-        $this->assertSame('Hi A says MEND', $this->renderer()->render($tpl, ['name' => 'A', 'message' => 'M'], 'en'));
-        $this->assertSame('Hi AEND', $this->renderer()->render($tpl, ['name' => 'A'], 'en'));
-        $this->assertSame('END', $this->renderer()->render($tpl, [], 'en'));
+        $r = $this->renderer();
+        $this->assertSame('admin', $r->render('{% if id == "1" %}admin{% else %}user{% endif %}', ['id' => '1']));
+        $this->assertSame('[a][b]', $r->render('{% for x in items %}[{{ x }}]{% endfor %}', ['items' => ['a', 'b']]));
+        $this->assertSame('fallback', $r->render('{{ missing|default("fallback") }}', []));
     }
 
-    public function test_if_else(): void
+    public function test_app_url_for_maps_to_canonical_urls_and_drops_id_type(): void
     {
-        $tpl = '{% if x %}Y{% else %}N{% endif %}';
-
-        $this->assertSame('Y', $this->renderer()->render($tpl, ['x' => '1'], 'en'));
-        $this->assertSame('N', $this->renderer()->render($tpl, [], 'en'));
-    }
-
-    public function test_app_url_for_maps_to_canonical_openpne4_urls(): void
-    {
-        $register = $this->renderer()->render(
-            "{% app_url_for('pc_frontend', 'member/register?token='~token, true) %}",
-            ['token' => 'abc'],
-            'en',
+        $r = $this->renderer();
+        $this->assertSame(
+            url('/register/ABC'),
+            $r->render("{% app_url_for('pc_frontend', 'member/register?token='~token, true) %}", ['token' => 'ABC']),
         );
-        $this->assertSame(url('/register/abc'), $register);
-
-        // OpenPNE 3 carried token+id+type; only the token survives in OpenPNE 4.
-        $confirm = $this->renderer()->render(
-            "{% app_url_for('pc_frontend', 'member/configComplete?token='~token~'&id='~id~'&type='~type, true) %}",
-            ['token' => 'xyz', 'id' => '9', 'type' => 'pc'],
-            'en',
+        $this->assertSame(
+            url('/member/config/email/confirm/T'),
+            $r->render(
+                "{% app_url_for('pc_frontend', 'member/configComplete?token='~token~'&id='~id~'&type='~type, true) %}",
+                ['token' => 'T', 'id' => '9', 'type' => 'pc_address'],
+            ),
         );
-        $this->assertSame(url('/member/config/email/confirm/xyz'), $confirm);
     }
 
-    public function test_unmapped_app_url_for_route_is_rejected(): void
+    public function test_app_url_for_requires_token_and_rejects_unmapped_route(): void
     {
-        $this->expectException(UnsupportedMailTemplateSyntaxException::class);
-        $this->renderer()->render("{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}", ['id' => '1'], 'en');
+        $this->assertRejected("{% app_url_for('pc_frontend', 'member/register', true) %}");
+        $this->assertRejected("{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}", ['id' => '1']);
     }
 
-    public function test_app_url_for_requires_a_token(): void
+    public function test_string_literal_containing_the_tag_text_is_not_rewritten(): void
     {
-        $this->expectException(UnsupportedMailTemplateSyntaxException::class);
-        $this->renderer()->render("{% app_url_for('pc_frontend', 'member/register?token='~token, true) %}", [], 'en');
+        // A real token parser (not a source rewrite): `{% app_url_for %}` inside a string literal is just
+        // string content and must survive verbatim.
+        $out = $this->renderer()->render('{{ "before {% app_url_for(1,2) %} after" }}', []);
+
+        $this->assertSame('before {% app_url_for(1,2) %} after', $out);
     }
 
-    public function test_malformed_variable_tag_is_rejected(): void
+    public function test_range_and_disallowed_filters_tags_are_rejected(): void
     {
-        $this->expectException(UnsupportedMailTemplateSyntaxException::class);
-        $this->renderer()->render('Hello {{ member.name', ['member.name' => 'Bob'], 'en');
+        foreach ([
+            '{% for i in 1..1000 %}{{ i }}{% endfor %}',   // range / `..`
+            '{{ x|upper }}',                                // disallowed filter
+            '{{ attribute(m, "name") }}',                   // setStrict: attribute()
+            '{% set y = 1 %}{{ y }}',                       // disallowed tag
+        ] as $template) {
+            $this->assertRejected($template, ['x' => 'a', 'm' => ['name' => 'n']]);
+        }
     }
 
-    public function test_context_value_containing_braces_is_not_treated_as_syntax(): void
+    /** @param array<string, mixed> $context */
+    private function assertRejected(string $template, array $context = []): void
     {
-        // The value has `{{ … }}`/`%}` of its own; validation runs pre-substitution so it stays literal.
-        $out = $this->renderer()->render('[{{ name }}]', ['name' => 'a {{ x }} %} b'], 'en');
-
-        $this->assertSame('[a {{ x }} %} b]', $out);
+        try {
+            $this->renderer()->render($template, $context);
+            $this->fail("expected rejection for: {$template}");
+        } catch (UnsupportedMailTemplateSyntaxException $e) {
+            $this->assertNotEmpty($e->getMessage());
+        }
     }
 
-    public function test_op_term_resolves_via_term_service(): void
+    public function test_member_value_is_not_re_rendered_ssti_safe(): void
     {
-        $this->assertSame('friend', $this->renderer()->render('{{ op_term.friend }}', [], 'en'));
-        $this->assertSame('フレンド', $this->renderer()->render('{{ op_term.friend }}', [], 'ja'));
+        $out = $this->renderer()->render('X={{ member.name }}', ['member' => ['name' => '{{ 7*7 }}']]);
+
+        $this->assertSame('X={{ 7*7 }}', $out);
     }
 
-    public function test_unsupported_for_loop_is_rejected(): void
+    public function test_object_in_context_is_rejected(): void
     {
-        $this->expectException(UnsupportedMailTemplateSyntaxException::class);
-        $this->renderer()->render('{% for x in items %}{{ x }}{% endfor %}', [], 'en');
-    }
-
-    public function test_unsupported_filter_is_rejected(): void
-    {
-        $this->expectException(UnsupportedMailTemplateSyntaxException::class);
-        $this->renderer()->render('{{ birthday|date("m/d") }}', ['birthday' => 'x'], 'en');
+        $this->expectException(InvalidArgumentException::class);
+        $this->renderer()->render('{{ x }}', ['x' => new \stdClass]);
     }
 
     public function test_render_subject_is_collapsed_to_one_line(): void
     {
-        $out = $this->renderer()->renderSubject("Hi\r\n{{ name }}", ['name' => "X\nY"], 'en');
+        $out = $this->renderer()->renderSubject("Hi\r\n{{ member.name }}", ['member' => ['name' => "X\nY"]]);
 
         $this->assertSame('Hi X Y', $out);
         $this->assertStringNotContainsString("\n", $out);

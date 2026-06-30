@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mail\Template;
 
+use App\Services\TermService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -23,19 +24,19 @@ class MailTemplateService
     public function __construct(private readonly MailTemplateRenderer $renderer) {}
 
     /**
-     * Render a template for a recipient. Base tokens (op_config.*, sf_config.op_base_url) are injected
-     * here so callers pass only the template-specific context; values resolve now (at send/render time),
-     * not lazily. The signature is appended to a sendable body.
+     * Render a template for a recipient. The OpenPNE 3 globals (op_config, op_term, sf_config) are
+     * injected here so callers pass only the template-specific context; values resolve now (at render
+     * time), not lazily. The signature is appended to a sendable body.
      *
-     * @param  array<string, scalar|null>  $context
+     * @param  array<string, mixed>  $context
      */
     public function render(MailTemplate $template, string $locale, array $context = []): RenderedMailTemplate
     {
-        $context = $this->baseContext() + $context;
+        $context = $this->baseContext($locale) + $context;
 
         $subjectTpl = $this->subjectTemplate($template, $locale);
-        $subject = $subjectTpl !== null ? $this->renderer->renderSubject($subjectTpl, $context, $locale) : '';
-        $body = $this->renderer->render($this->bodyTemplate($template, $locale), $context, $locale);
+        $subject = $subjectTpl !== null ? $this->renderer->renderSubject($subjectTpl, $context) : '';
+        $body = $this->renderer->render($this->bodyTemplate($template, $locale), $context);
 
         if ($template->isSendable()) {
             $signature = $this->renderSignature($locale);
@@ -66,16 +67,25 @@ class MailTemplateService
     {
         $body = $this->bodyTemplate(MailTemplate::Signature, $locale);
 
-        return $body === '' ? '' : $this->renderer->render($body, $this->baseContext(), $locale);
+        // OpenPNE 3 renders the signature with no body params — base context only.
+        return $body === '' ? '' : $this->renderer->render($body, $this->baseContext($locale));
     }
 
-    /** @return array<string, string> the op_config/sf_config tokens every template may reference. */
-    private function baseContext(): array
+    /**
+     * The OpenPNE 3 globals every template may reference, as nested arrays so `{{ op_config.sns_name }}`
+     * and `{{ op_term.friend }}` resolve. Resolved now (at render time), not lazily.
+     *
+     * @return array<string, mixed>
+     */
+    private function baseContext(string $locale): array
     {
         return [
-            'op_config.sns_name' => sns_name(),
-            'op_config.admin_mail_address' => sns_admin_mail_address(),
-            'sf_config.op_base_url' => url('/'),
+            'op_config' => [
+                'sns_name' => sns_name(),
+                'admin_mail_address' => sns_admin_mail_address(),
+            ],
+            'op_term' => app(TermService::class)->getTerms($locale),
+            'sf_config' => ['op_base_url' => url('/')],
         ];
     }
 

@@ -32,7 +32,7 @@ class MailTemplateServiceTest extends TestCase
     {
         $this->setSnsName('My Community');
 
-        $rendered = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member.name' => 'Bob']);
+        $rendered = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member' => ['name' => 'Bob']]);
 
         $this->assertSame('Bob accepted your friend link request', $rendered->subject);
         $this->assertStringContainsString('My Community', $rendered->body);
@@ -74,7 +74,7 @@ class MailTemplateServiceTest extends TestCase
             'body' => 'Custom {{ member.name }}',
         ]);
 
-        $rendered = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member.name' => 'Bob']);
+        $rendered = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member' => ['name' => 'Bob']]);
 
         $this->assertSame('Custom subject', $rendered->subject);
         $this->assertStringContainsString('Custom Bob', $rendered->body);
@@ -92,11 +92,11 @@ class MailTemplateServiceTest extends TestCase
         ]);
 
         // A ja recipient gets the ja default, never the en override.
-        $ja = $this->service()->render(MailTemplate::FriendAccepted, 'ja', ['member.name' => 'Bob']);
+        $ja = $this->service()->render(MailTemplate::FriendAccepted, 'ja', ['member' => ['name' => 'Bob']]);
         $this->assertStringNotContainsString('English only', $ja->body);
         $this->assertStringContainsString('承諾', $ja->body);
 
-        $en = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member.name' => 'Bob']);
+        $en = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member' => ['name' => 'Bob']]);
         $this->assertStringContainsString('English only', $en->body);
     }
 
@@ -112,7 +112,7 @@ class MailTemplateServiceTest extends TestCase
             'mail_template_id' => $id, 'locale' => 'en', 'subject' => null, 'body' => '',
         ]);
 
-        $rendered = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member.name' => 'Bob']);
+        $rendered = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member' => ['name' => 'Bob']]);
 
         $this->assertStringEndsWith('Bob accepted your friend link request.', $rendered->body);
         $this->assertStringNotContainsString('ops@example.test', $rendered->body);
@@ -144,7 +144,7 @@ class MailTemplateServiceTest extends TestCase
     {
         $this->setSnsName('My Community');
         $service = $this->service();
-        $first = $service->render(MailTemplate::FriendAccepted, 'en', ['member.name' => 'Bob']);
+        $first = $service->render(MailTemplate::FriendAccepted, 'en', ['member' => ['name' => 'Bob']]);
         $this->assertStringContainsString('accepted your friend link request', $first->body);
 
         $id = DB::table('mail_templates')->insertGetId([
@@ -156,7 +156,7 @@ class MailTemplateServiceTest extends TestCase
         ]);
         $service->clearCache();
 
-        $second = $service->render(MailTemplate::FriendAccepted, 'en', ['member.name' => 'Bob']);
+        $second = $service->render(MailTemplate::FriendAccepted, 'en', ['member' => ['name' => 'Bob']]);
         $this->assertStringContainsString('After clear', $second->body);
     }
 }

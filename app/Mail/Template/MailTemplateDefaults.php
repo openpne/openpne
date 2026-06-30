@@ -8,7 +8,7 @@ namespace App\Mail\Template;
  * Built-in default subject/body per template, per locale, in the renderer dialect — the fallback used
  * when no `mail_template_translations` row exists, so a fresh install (and any template an admin has not
  * edited) sends exactly this wording. Subjects are single lines kept here; bodies are read verbatim from
- * `resources/mail-templates/{locale}/{key}.txt` so the OpenPNE 3 text stays byte-exact (imported
+ * `resources/mail-templates/{locale}/{key}.twig` so the OpenPNE 3 text stays byte-exact (imported
  * templates and these defaults share one dialect). Subject is null only for the non-sendable signature.
  *
  * Templates with an OpenPNE 3 origin carry OpenPNE 3's `sample:` text verbatim
@@ -78,7 +78,7 @@ final class MailTemplateDefaults
         // Resolved relative to the package root (app/Mail/Template → base) rather than via resource_path()
         // so the registry resolves without booting the framework. Trim only the file's single trailing
         // newline; interior blank lines are part of the wording.
-        $path = dirname(__DIR__, 3)."/resources/mail-templates/{$locale}/{$key}.txt";
+        $path = dirname(__DIR__, 3)."/resources/mail-templates/{$locale}/{$key}.twig";
 
         return rtrim((string) file_get_contents($path), "\n");
     }

@@ -4,173 +4,92 @@ declare(strict_types=1);
 
 namespace App\Mail\Template;
 
-use App\Services\TermService;
+use InvalidArgumentException;
+use Twig\Environment;
+use Twig\Error\Error as TwigError;
+use Twig\Extension\SandboxExtension;
+use Twig\Loader\ArrayLoader;
+use Twig\Sandbox\SecurityPolicy;
 
 /**
- * Renders a mail-template string in OpenPNE 3's template dialect, restricted to the constructs the
- * in-scope (non-digest) NotificationMail templates actually use, so an imported OpenPNE 3 body renders
- * without rewriting ("same 文面"). Supported:
- *   - `{{ dotted.token }}`        — substitution from a flat context map (keys are the OpenPNE 3 token
- *                                   names verbatim, e.g. `op_config.sns_name`, `member.name`).
- *   - `{{ op_term.X }}`           — rewritten to `%X%` and resolved by the existing TermService (the
- *                                   admin-overridable, locale-aware term layer).
- *   - `{% if token %}…{% else %}…{% endif %}` — bare-token truthiness only (nesting allowed); the one
- *                                   construct `requestRegisterURL` needs for its optional inviter/message.
- *   - `{% app_url_for('app','route?…', abs) %}` — mapped to the canonical OpenPNE 4 URL via a bounded
- *                                   route map; OpenPNE 3 query params we no longer use (id/type) are dropped.
- * Anything else ({% for %}, filters, include_component, an unmapped route) raises
- * UnsupportedMailTemplateSyntaxException rather than rendering wrong or sending raw template markup.
+ * Renders a mail-template string with the SAME engine OpenPNE 3 used — sandboxed Twig — so an imported
+ * OpenPNE 3 template (incl. admin customizations using `for` / operator `if` / filters, which the
+ * OpenPNE 3 admin help documented) renders verbatim. The policy mirrors OpenPNE 3's
+ * opTwigSandboxSecurityPolicy, tightened to OpenPNE 4's object-free context.
  *
- * Context values are substituted RAW. HTML escaping is the view's responsibility
- * (`{!! nl2br(e($body)) !!}`) and the body is never run through Markdown, so a member-controlled value
- * cannot inject markup or links here. Subjects are additionally collapsed to a single line.
- *
- * @phpstan-type Context array<string, scalar|null>
+ * Security model — SSTI-safe only because all three hold together: (1) the sandbox allowlist is narrow,
+ * (2) `setStrict(true)` denies the BC-implicit tags/functions, (3) the context is normalized to
+ * arrays/scalars so no object reaches an allowed tag/filter. Twig never re-renders a variable's value, so
+ * member free text (`{{ 7*7 }}`, `[x](url)`, …) stays literal. HTML escaping is the mail view's job.
  */
 class MailTemplateRenderer
 {
-    public function __construct(private readonly TermService $terms) {}
+    private readonly Environment $twig;
 
-    /**
-     * Render a body (multi-line preserved).
-     *
-     * @param  array<string, scalar|null>  $context
-     */
-    public function render(string $template, array $context, string $locale): string
+    public function __construct()
     {
-        $text = $this->resolveUrls($template, $context);
-        $text = $this->resolveConditionals($text, $context);
-        // Validate the template structure BEFORE substituting context values, so a member-supplied value
-        // that happens to contain `{{` or `%}` is never mistaken for (or able to smuggle) template syntax.
-        $this->assertNoUnsupportedSyntax($text);
-        $text = $this->substituteTokens($text, $context);
+        $policy = new SecurityPolicy(
+            allowedTags: ['if', 'for', 'app_url_for'],
+            allowedFilters: ['date', 'default', 'encoding'],
+            allowedMethods: [],
+            allowedProperties: [],
+            allowedFunctions: ['app_url_for'],
+        );
+        // Opt into Twig 4 behaviour: without this, extends/use/block/parent, attribute(), the constant
+        // test, etc. are implicitly allowed for back-compat.
+        $policy->setStrict(true);
 
-        return $this->terms->replace($text, $locale);
+        $this->twig = new Environment(new ArrayLoader, [
+            'autoescape' => false,
+            'strict_variables' => false,
+            'cache' => false,
+        ]);
+        $this->twig->addExtension(new SandboxExtension($policy, true));
+        $this->twig->addExtension(new MailTemplateTwigExtension);
     }
 
-    /**
-     * Render a subject and collapse it to a single line — a CR/LF or control char from a member-supplied
-     * value or an admin template must not inject mail headers or break the transport encoder.
-     *
-     * @param  array<string, scalar|null>  $context
-     */
-    public function renderSubject(string $template, array $context, string $locale): string
+    /** @param array<string, mixed> $context */
+    public function render(string $template, array $context): string
     {
-        return $this->toSingleLine($this->render($template, $context, $locale));
+        $normalized = $this->normalize($context);
+
+        try {
+            return $this->twig->createTemplate($template)->render($normalized);
+        } catch (TwigError $e) {
+            // Parse error, sandbox violation (disallowed tag/filter/function, e.g. range/`..`), or an
+            // unmapped app_url_for route — all surfaced uniformly so the import preflight can list them.
+            throw new UnsupportedMailTemplateSyntaxException($e->getMessage(), previous: $e);
+        }
     }
 
-    /** @param array<string, scalar|null> $context */
-    private function resolveUrls(string $text, array $context): string
+    /** @param array<string, mixed> $context */
+    public function renderSubject(string $template, array $context): string
     {
-        $map = $this->urlMap($context);
-
-        return preg_replace_callback('/\{%\s*app_url_for\((.*?)\)\s*%\}/s', function (array $m) use ($map): string {
-            // The second argument is the internal uri; its path (before `?`) keys the bounded map.
-            if (! preg_match("/,\\s*'([^'?]+)/", $m[1], $route)) {
-                throw new UnsupportedMailTemplateSyntaxException('app_url_for: '.trim($m[0]));
-            }
-            $path = $route[1];
-            if (! isset($map[$path])) {
-                throw new UnsupportedMailTemplateSyntaxException('app_url_for has no OpenPNE 4 route mapping: '.$path);
-            }
-
-            return $map[$path]();
-        }, $text) ?? $text;
+        // Collapse to one line: a CR/LF or control char (from a member value or an admin template) must
+        // not inject mail headers or break the transport encoder.
+        return $this->toSingleLine($this->render($template, $context));
     }
 
     /**
-     * OpenPNE 3 internal-uri path → canonical OpenPNE 4 URL. Only the in-scope routes are mapped; an
-     * unmapped route is rejected (diagnosed) rather than guessed.
-     *
-     * @param  array<string, scalar|null>  $context
-     * @return array<string, callable(): string>
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
      */
-    private function urlMap(array $context): array
+    private function normalize(array $context): array
     {
-        return [
-            'member/register' => fn (): string => url('/register/'.$this->requireToken($context)),
-            // OpenPNE 3 carried token+id+type; OpenPNE 4's confirm route is token-only (id/type dropped).
-            'member/configComplete' => fn (): string => url('/member/config/email/confirm/'.$this->requireToken($context)),
-        ];
+        return array_map($this->normalizeValue(...), $context);
     }
 
-    /** The bounded-map routes are token URLs; a missing/empty token is a wiring/fixture bug, not a blank URL. */
-    private function requireToken(array $context): string
+    private function normalizeValue(mixed $value): mixed
     {
-        $token = (string) ($context['token'] ?? '');
-        if ($token === '') {
-            throw new UnsupportedMailTemplateSyntaxException('app_url_for requires a non-empty `token`');
+        if (is_array($value)) {
+            return array_map($this->normalizeValue(...), $value);
         }
-
-        return $token;
-    }
-
-    /** @param array<string, scalar|null> $context */
-    private function resolveConditionals(string $text, array $context): string
-    {
-        // Resolve innermost-first: the body pattern forbids a nested `{% if %}`, so each pass collapses
-        // the deepest blocks, and repeating handles the nesting `requestRegisterURL` uses.
-        $innermost = '/\{%\s*if\s+([\w.]+)\s*%\}((?:(?!\{%\s*if\b).)*?)\{%\s*endif\s*%\}/s';
-
-        for ($guard = 0; preg_match($innermost, $text); $guard++) {
-            if ($guard > 1000) {
-                throw new UnsupportedMailTemplateSyntaxException('unbalanced {% if %}/{% endif %}');
-            }
-            $text = preg_replace_callback($innermost, function (array $m) use ($context): string {
-                [$then, $else] = $this->splitElse($m[2]);
-
-                return $this->isTruthy($context, $m[1]) ? $then : $else;
-            }, $text, 1) ?? $text;
+        if (is_scalar($value) || $value === null) {
+            return $value;
         }
-
-        return $text;
-    }
-
-    /** @return array{0: string, 1: string} the then-branch and else-branch (empty when no else). */
-    private function splitElse(string $inner): array
-    {
-        $parts = preg_split('/\{%\s*else\s*%\}/', $inner, 2);
-
-        return [$parts[0], $parts[1] ?? ''];
-    }
-
-    /** @param array<string, scalar|null> $context */
-    private function isTruthy(array $context, string $token): bool
-    {
-        $value = $context[$token] ?? null;
-
-        return $value !== null && $value !== '' && $value !== false;
-    }
-
-    /** @param array<string, scalar|null> $context */
-    private function substituteTokens(string $text, array $context): string
-    {
-        return preg_replace_callback('/\{\{\s*(.*?)\s*\}\}/s', function (array $m) use ($context): string {
-            $expr = trim($m[1]);
-            if (preg_match('/^op_term\.(\w+)$/', $expr, $term)) {
-                return '%'.$term[1].'%';
-            }
-            if (preg_match('/^[\w.]+$/', $expr)) {
-                return (string) ($context[$expr] ?? '');
-            }
-            throw new UnsupportedMailTemplateSyntaxException('unsupported expression: {{ '.$expr.' }}');
-        }, $text) ?? $text;
-    }
-
-    private function assertNoUnsupportedSyntax(string $text): void
-    {
-        // After URL + conditional resolution, any remaining tag is `{% for %}`, include_component, or an
-        // unbalanced if — none of which the in-scope set uses.
-        if (preg_match('/\{%.*?%\}/s', $text, $m)) {
-            throw new UnsupportedMailTemplateSyntaxException('unsupported tag: '.trim($m[0]));
-        }
-        // Strip well-formed `{{ … }}` tags; any leftover delimiter is a malformed/unclosed variable tag,
-        // a stray `{%`/`%}`, or a `{# comment #}` — reject it rather than send the raw markup. Runs before
-        // substitution, so this never trips on a context value that merely contains braces.
-        $stripped = preg_replace('/\{\{\s*.*?\s*\}\}/s', '', $text) ?? $text;
-        if (preg_match('/\{\{|\}\}|\{%|%\}|\{#|#\}/', $stripped)) {
-            throw new UnsupportedMailTemplateSyntaxException('malformed template delimiter');
-        }
+        // Never hand an object to the sandbox (an allowed tag/filter could interact via
+        // Iterator/Countable/Stringable). Callers pass arrays/scalars — mirrors OpenPNE 3 filterParameters().
+        throw new InvalidArgumentException('Mail template context must be arrays/scalars, got '.get_debug_type($value));
     }
 
     private function toSingleLine(string $text): string
