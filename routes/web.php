@@ -108,6 +108,16 @@ Route::get('/member/login/{tail?}', fn () => redirect()->route('login'))
 Route::get('/leave', fn () => redirect()->route('member.config', ['category' => 'withdrawal']))
     ->name('member.leave_compat');
 
+// Email-change confirmation (OpenPNE 3 member/configComplete; OpenPNE 4-native URL). Token-gated and
+// reachable whether or not the visitor is logged in (the member may open the link on another device),
+// so it is neither guest- nor auth-restricted. GET renders a confirm page; the change happens on POST,
+// so a mail scanner / link prefetch cannot consume the token and flip the login identifier. Per-IP
+// throttled and length-pinned to the issued token shape.
+Route::get('/member/config/email/confirm/{token}', [MemberConfigController::class, 'confirmEmailForm'])
+    ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.confirm');
+Route::post('/member/config/email/confirm/{token}', [MemberConfigController::class, 'confirmEmail'])
+    ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.confirm.submit');
+
 // OpenPNE 3 password recovery lived under the opAuthMailAddress plugin. Fortify owns the canonical
 // /forgot-password and /reset-password/{token}; the OpenPNE 3 token scheme (id + token) cannot be
 // honored by Fortify (email + path token), so both legacy entry points restart at the request form.
@@ -305,6 +315,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
     Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])->name('member.config.password');
     Route::post('/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])->name('member.config.withdrawal');
+    Route::post('/member/config/email', [MemberConfigController::class, 'updateEmail'])
+        ->middleware('throttle:email-change')->name('member.config.email');
     Route::get('/m/member/config', [MemberConfigController::class, 'show'])
         ->defaults('surface', 'modern')->name('member.modern.config');
     Route::post('/m/member/config/diary', [MemberConfigController::class, 'updateDiary'])
@@ -317,6 +329,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->defaults('surface', 'modern')->name('member.modern.config.password');
     Route::post('/m/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])
         ->defaults('surface', 'modern')->name('member.modern.config.withdrawal');
+    Route::post('/m/member/config/email', [MemberConfigController::class, 'updateEmail'])
+        ->defaults('surface', 'modern')->middleware('throttle:email-change')->name('member.modern.config.email');
 
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {
         Route::get('/avatar', 'edit')->name('member.avatar.edit');

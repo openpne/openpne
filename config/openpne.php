@@ -100,6 +100,15 @@ return [
         'min_form_seconds' => (int) env('OPENPNE_REGISTRATION_MIN_FORM_SECONDS', 2),
     ],
 
+    'email_change' => [
+        // How long an emailed email-change confirmation link stays valid. Changing the login identifier
+        // is a sensitive operation, so this tracks the password-reset window (config/auth.php expire=60)
+        // and stays within OWASP's "rarely more than an hour" guidance for such links — deliberately not
+        // the 24h registration TTL (an onboarding/OpenPNE 3-parity case). Expiry is derived from
+        // email_change_requests.created_at against this value.
+        'token_ttl_minutes' => (int) env('OPENPNE_EMAIL_CHANGE_TOKEN_TTL_MINUTES', 60),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Login abuse
