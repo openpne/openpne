@@ -54,7 +54,8 @@ class UpgradeFromThreeCommand extends Command
             $runner->reset($out);
         }
 
-        if (! $options->dryRun && $options->sourcePrefix === '' && $options->sourceDatabase === null) {
+        // Shown on dry-run too, so planning a same-database cutover sees the engine-only caveat upfront.
+        if ($options->sourcePrefix === '' && $options->sourceDatabase === null) {
             $this->warn('Runner engine: relational data migrates, but file_bin BLOB rewire and admin_user are not handled yet — this is not a complete same-database cutover.');
         }
 
