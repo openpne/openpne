@@ -3,6 +3,7 @@
 namespace App\Upgrade\Steps;
 
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -25,9 +26,6 @@ use App\Upgrade\UpgradeStep;
  * (private). Those are the references this step does not own: activity / oauth-consumer images (no
  * successor surface) and attachments on non-personal messages (those messages are not migrated). All
  * `file` rows migrate regardless, so no binary is lost.
- *
- * The subqueries name the owning tables unqualified, so (like MessageUpgrade's) they are not rewritten
- * for a source prefix or separate source database — acceptable for the fleet (empty prefix, same DB).
  */
 class FileUpgrade extends UpgradeStep
 {
@@ -109,9 +107,11 @@ class FileUpgrade extends UpgradeStep
     /** @param array{table: string, file: string, extra?: string} $reference */
     private function ownerExists(array $reference): string
     {
+        // The owner table goes through SourceRef and is aliased to its original name, so the column
+        // qualifiers (and a message extra referencing it) resolve under a source prefix / database.
         return sprintf(
-            'EXISTS (SELECT 1 FROM `%1$s` WHERE `%1$s`.`%2$s` = `file`.`id`%3$s)',
-            $reference['table'], $reference['file'], $reference['extra'] ?? '',
+            'EXISTS (SELECT 1 FROM %1$s AS `%2$s` WHERE `%2$s`.`%3$s` = `file`.`id`%4$s)',
+            SourceRef::table($reference['table']), $reference['table'], $reference['file'], $reference['extra'] ?? '',
         );
     }
 
@@ -119,15 +119,15 @@ class FileUpgrade extends UpgradeStep
     private function ownerId(array $reference): string
     {
         return sprintf(
-            '(SELECT `%1$s`.`%2$s` FROM `%1$s` WHERE `%1$s`.`%3$s` = `file`.`id`%4$s ORDER BY `%1$s`.`id` LIMIT 1)',
-            $reference['table'], $reference['id'], $reference['file'], $reference['extra'] ?? '',
+            '(SELECT `%2$s`.`%3$s` FROM %1$s AS `%2$s` WHERE `%2$s`.`%4$s` = `file`.`id`%5$s ORDER BY `%2$s`.`id` LIMIT 1)',
+            SourceRef::table($reference['table']), $reference['table'], $reference['id'], $reference['file'], $reference['extra'] ?? '',
         );
     }
 
     /** Restricts a message attachment to one whose parent is a personal message (the migrated type). */
     private function personalMessageExtra(): string
     {
-        return ' AND EXISTS (SELECT 1 FROM `message` `p` WHERE `p`.`id` = `message_file`.`message_id` '
-            ."AND `p`.`message_type_id` IN (SELECT `id` FROM `message_type` WHERE `type_name` = 'message'))";
+        return ' AND EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `p` WHERE `p`.`id` = `message_file`.`message_id` '
+            .'AND `p`.`message_type_id` IN (SELECT `id` FROM '.SourceRef::table('message_type')." WHERE `type_name` = 'message'))";
     }
 }

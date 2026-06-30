@@ -4,6 +4,7 @@ namespace App\Upgrade\Steps;
 
 use App\Mail\Template\MailTemplate;
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -31,10 +32,9 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        // The sibling `notification_mail` is named unqualified (like NavigationTranslationUpgrade's
-        // navigation subquery): correct for the fleet (no source prefix, same database).
         return sprintf(
-            '`id` IN (SELECT `id` FROM `notification_mail` WHERE `name` IN (%s))',
+            '`id` IN (SELECT `id` FROM %s WHERE `name` IN (%s))',
+            SourceRef::table('notification_mail'),
             $this->sourceNameList(),
         );
     }

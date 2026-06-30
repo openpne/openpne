@@ -4,6 +4,7 @@ namespace App\Upgrade\Steps;
 
 use App\Gadgets\GadgetLayout;
 use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
@@ -28,9 +29,7 @@ class GadgetConfigUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        // The sibling `gadget` is named unqualified (like NavigationTranslationUpgrade's subquery):
-        // correct for the fleet (no source prefix, same database).
-        return sprintf('`gadget_id` IN (SELECT `id` FROM `gadget` WHERE `type` IN (%s))', $this->typeList());
+        return sprintf('`gadget_id` IN (SELECT `id` FROM %s WHERE `type` IN (%s))', SourceRef::table('gadget'), $this->typeList());
     }
 
     public function filterColumns(): array
