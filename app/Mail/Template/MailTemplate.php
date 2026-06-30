@@ -83,6 +83,17 @@ enum MailTemplate: string
         return array_values(array_filter(self::cases(), static fn (self $t): bool => $t->isSendable()));
     }
 
+    /**
+     * The templates the OpenPNE 3 import carries (those with a source name). The SSoT for the upgrade
+     * steps' name filter and key remap, so adding an import origin to a case is all it takes.
+     *
+     * @return list<self>
+     */
+    public static function importable(): array
+    {
+        return array_values(array_filter(self::cases(), static fn (self $t): bool => $t->op3SourceName() !== null));
+    }
+
     /** Resolve a template by its OpenPNE 3 source name, or null. */
     public static function fromOp3SourceName(string $name): ?self
     {

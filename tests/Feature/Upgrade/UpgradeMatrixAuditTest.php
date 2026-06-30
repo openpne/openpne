@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Upgrade;
 
+use App\Mail\Template\MailTemplate;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\FileUpgrade;
@@ -128,6 +129,19 @@ class UpgradeMatrixAuditTest extends TestCase
         foreach (array_merge($owned, $unowned) as $reference) {
             $this->assertContains($reference, $references,
                 "{$reference} is declared as a file reference but is not a `file` foreign key in the source schema");
+        }
+    }
+
+    public function test_every_imported_mail_template_has_a_disposition(): void
+    {
+        // notificationMailDispositions() is hand-written, but its migrated entries must track the registry:
+        // adding an import origin to a MailTemplate case (which the SQL filter follows automatically) must
+        // not silently leave the matrix disposition behind.
+        $documented = array_keys(StepRegistry::notificationMailDispositions());
+
+        foreach (MailTemplate::importable() as $template) {
+            $this->assertContains($template->op3SourceName(), $documented,
+                "notification_mail name '{$template->op3SourceName()}' is imported but has no disposition entry");
         }
     }
 

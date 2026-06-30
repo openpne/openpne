@@ -27,6 +27,8 @@ use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\GadgetConfigUpgrade;
 use App\Upgrade\Steps\GadgetUpgrade;
+use App\Upgrade\Steps\MailTemplateTranslationUpgrade;
+use App\Upgrade\Steps\MailTemplateUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberImageUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
@@ -90,6 +92,10 @@ final class StepRegistry
             GadgetConfigUpgrade::class,
             // sns_settings is independent (no FK); migrates the display + gadget-layout sns_config keys.
             SnsSettingUpgrade::class,
+            // mail_templates is independent (no FK); mail_template_translations references it, so the
+            // parent runs first.
+            MailTemplateUpgrade::class,
+            MailTemplateTranslationUpgrade::class,
             // messages reference members; message_recipients reference the messages, so messages run first.
             MessageUpgrade::class,
             MessageRecipientUpgrade::class,
@@ -224,6 +230,36 @@ final class StepRegistry
             // Owned by a later feature.
             'is_send_pc_joinCommunity_mail' => 'Per-community join-notification opt-in — lands with the notification feature.',
             'is_send_mobile_joinCommunity_mail' => 'Mobile join-notification opt-in — the mobile frontend is out of scope.',
+        ];
+    }
+
+    /**
+     * Disposition of each OpenPNE 3 `notification_mail` name. MailTemplateUpgrade copies the table but its
+     * `name IN (…)` filter only carries the templates OpenPNE 4 sends, so the per-step column audit cannot
+     * show why the other names are dropped; this is that per-name coverage. The migrated entries are
+     * hand-written (each carries its own is_enabled / signature reason); a registry-consistency test pins
+     * them to MailTemplate::importable() so adding an import origin cannot leave this map behind.
+     *
+     * @return array<string, string> notification_mail name => where it goes / why it is dropped
+     */
+    public static function notificationMailDispositions(): array
+    {
+        return [
+            // Migrated to mail_templates (+ mail_template_translations for the per-locale wording).
+            'pc_requestRegisterURL' => 'mail_templates[registration-link]. Required mail: is_enabled forced on.',
+            'pc_changeMailAddress' => 'mail_templates[email-change-confirm]. Required mail: is_enabled forced on.',
+            'pc_friendLinkComplete' => 'mail_templates[friend-accepted]. Configurable: is_enabled carried over.',
+            'pc_signature' => 'mail_templates[signature]. Appended to every sendable body; not itself toggleable.',
+            // Dropped: no OpenPNE 4 sender yet — the wording and a sender land together as a follow-up.
+            'pc_registerEnd' => 'Dropped: OpenPNE 4 has no registration-complete mail yet (follow-up adds wording + sender together).',
+            'pc_joinCommunity' => 'Dropped: OpenPNE 4 has no community-join mail yet (follow-up).',
+            'pc_leave' => 'Dropped: OpenPNE 4 has no withdrawal mail yet (follow-up).',
+            // Dropped: deliberately not carried.
+            'pc_reissuedPassword' => 'Dropped: OpenPNE 3 mailed a new plaintext password; OpenPNE 4 sends a reset link (password-reset) instead — a different mail with no OpenPNE 3 wording to carry.',
+            'pc_birthday' => 'Dropped: the birthday digest is a Phase 3 feature (needs the loop/filter renderer extensions).',
+            'pc_dailyNews' => 'Dropped: the daily-news digest is not in scope.',
+            // Dropped: the feature-phone frontend is out of scope; every mobile_ row is excluded by the name filter.
+            'mobile_*' => 'Dropped: the mobile (feature-phone) frontend is not in scope.',
         ];
     }
 }

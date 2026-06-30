@@ -42,6 +42,19 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('`community_member_position`');
     }
 
+    public function test_renders_notification_mail_coverage(): void
+    {
+        // notification_mail is stepped, but its name filter only carries the templates OpenPNE 4 sends, so
+        // the step + the per-name disposition (why each other name is dropped) must both be visible.
+        $this->artisan('openpne:upgrade-matrix')
+            ->assertSuccessful()
+            ->expectsOutputToContain('`notification_mail` → `mail_templates`')
+            ->expectsOutputToContain('`notification_mail` name coverage')
+            ->expectsOutputToContain('`pc_requestRegisterURL`')
+            ->expectsOutputToContain('`pc_reissuedPassword`')
+            ->expectsOutputToContain('`mobile_*`');
+    }
+
     public function test_renders_community_topic_steps_and_deferred_images(): void
     {
         // The topic board steps must appear (no silent drop) and the image tables they do not
