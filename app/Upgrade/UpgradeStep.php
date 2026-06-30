@@ -99,4 +99,26 @@ abstract class UpgradeStep
 
         return array_keys($used);
     }
+
+    /**
+     * @return list<string> distinct OpenPNE 3 source tables this step reads: the FROM table plus
+     *                      every SourceRef::table() subquery table in its mappings and filter. The
+     *                      source preflight checks these exist before the step runs.
+     */
+    public function readSourceTables(): array
+    {
+        $tables = [$this->sourceTable() => true];
+
+        foreach ($this->columns() as $column) {
+            foreach (SourceRef::tablesIn($column->expr ?? '') as $table) {
+                $tables[$table] = true;
+            }
+        }
+
+        foreach (SourceRef::tablesIn($this->filter() ?? '') as $table) {
+            $tables[$table] = true;
+        }
+
+        return array_keys($tables);
+    }
 }

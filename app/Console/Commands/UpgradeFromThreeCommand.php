@@ -16,6 +16,11 @@ use Illuminate\Support\Facades\Schema;
  *
  * PR1 of the runner: the relational steps only. file_bin BLOB rewire and admin_user are follow-ups,
  * so a plain same-database cutover is not complete here yet (see the engine-only notice).
+ *
+ * A source preflight runs first: a recognized optional source table (an uninstalled OpenPNE 3 plugin)
+ * is created empty and its step is skipped, but a missing required table/column aborts — upgrade the
+ * OpenPNE 3 source to a supported version (core >= 3.6.x) first, or use --source-database (a separate
+ * database) for a customised source whose tables would clash with OpenPNE 4's.
  */
 class UpgradeFromThreeCommand extends Command
 {

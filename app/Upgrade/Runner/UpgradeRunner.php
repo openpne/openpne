@@ -4,6 +4,7 @@ namespace App\Upgrade\Runner;
 
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
+use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\UpgradeStep;
 use Closure;
@@ -27,11 +28,48 @@ final class UpgradeRunner
         private readonly ?array $steps = null,
     ) {}
 
-    /** Runs every step; returns false if one failed (the run aborts there, resumable). */
+    /**
+     * Preflights the source, then walks every step; returns false on an aborting source error or a
+     * step failure (resumable). A missing required table/column aborts before any write (dry-run too);
+     * an absent optional plugin group is created empty so its steps no-op, and dropped afterwards.
+     */
     public function run(RunOptions $options, ?Closure $out = null): bool
     {
         $out ??= static fn (string $line): null => null;
 
+        $preflight = new SourcePreflight($this->steps(), SourceSchema::default());
+        $report = $preflight->inspect($options->sourcePrefix, $options->sourceDatabase);
+
+        foreach (array_merge($report->tableErrors, $report->columnErrors) as $error) {
+            $out("ERROR {$error}");
+        }
+
+        if ($report->hasErrors()) {
+            $out('Aborted: the OpenPNE 3 source is missing required tables/columns; nothing was migrated.');
+
+            return false;
+        }
+
+        if ($options->dryRun) {
+            foreach ($report->absentOptional as $table) {
+                $out("PLAN would create empty source table `{$table}` (".SourcePreflight::absentPluginMessage($table).')');
+            }
+
+            return $this->walk($options, $out);
+        }
+
+        $created = $preflight->ensureExists($report->absentOptional, $options->sourcePrefix, $options->sourceDatabase, $out);
+
+        try {
+            return $this->walk($options, $out);
+        } finally {
+            $preflight->drop($created, $options->sourcePrefix, $options->sourceDatabase);
+        }
+    }
+
+    /** The per-step loop: skip not-runnable / already-completed, else compile + (plan or run) each. */
+    private function walk(RunOptions $options, Closure $out): bool
+    {
         foreach ($this->steps() as $step) {
             $key = class_basename($step);
 
