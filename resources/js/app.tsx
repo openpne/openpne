@@ -4,7 +4,10 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import type { PageProps } from '@/types';
 
-const appName = import.meta.env.VITE_APP_NAME ?? 'OpenPNE';
+// Set at mount from the shared Inertia `name` prop (sns_name()) so Modern titles track the
+// per-site name like Classic. VITE_APP_NAME is only the pre-mount fallback; site name is
+// treated as site-invariant, so capturing the initial page's value is enough.
+let appName = import.meta.env.VITE_APP_NAME ?? 'OpenPNE';
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
@@ -14,6 +17,7 @@ void createInertiaApp({
             import.meta.glob<ResolvedComponent>('./pages/**/*.tsx'),
         ),
     setup({ el, App, props }) {
+        appName = (props.initialPage.props as PageProps).name || appName;
         // `fallbackLocale="en"` (not the app default `ja`) so that an en miss
         // surfaces as the raw English key — matching the "key === English
         // text" omission policy. ja-as-fallback would silently render Japanese

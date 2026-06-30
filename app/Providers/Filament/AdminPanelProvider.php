@@ -30,6 +30,10 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            // Closure, not eager: sns_name() reads the DB, and panel() boots on every console
+            // command (migrate included) where the settings table may not exist yet. Filament
+            // evaluates the brand name at render, so the DB read happens only per request.
+            ->brandName(fn (): string => sns_name())
             // Separate `admin` guard, entirely independent of the member-facing
             // guard: a logged-in member is never treated as an administrator
             // and vice versa.
