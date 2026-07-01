@@ -80,7 +80,9 @@ return [
         ],
 
         'admins' => [
-            'driver' => 'eloquent',
+            // legacy-eloquent (App\Auth\LegacyEloquentUserProvider) also accepts an OpenPNE 3 MD5
+            // password and rehashes it to bcrypt on login.
+            'driver' => 'legacy-eloquent',
             'model' => env('AUTH_ADMIN_MODEL', AdminUser::class),
         ],
     ],

@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\Schema;
  * The relational steps plus file_bin (the BLOBs) and admin_user. file_bin: in-place (same database, no
  * prefix) rewires its FK onto `files`; a --source-prefix / --source-database run instead RENAMEs the
  * source file_bin onto the app's (source-destructive — needs a disposable dump and DROP/RENAME rights
- * on the source). Admin accounts migrate with their OpenPNE 3 password hash; until the admin guard's
- * legacy-hash login lands, a migrated administrator must reset via `openpne:admin:reset-password`.
+ * on the source). Admin accounts migrate with their OpenPNE 3 password, which the admin guard accepts
+ * and rehashes to bcrypt on first login (App\Auth\LegacyEloquentUserProvider).
  *
  * A source preflight runs first: a recognized optional source table (an uninstalled OpenPNE 3 plugin)
  * is created empty and its step is skipped, but a missing required table/column aborts — upgrade the
@@ -60,10 +60,6 @@ class UpgradeFromThreeCommand extends Command
 
         // --force-restart is applied inside run(), only after the source preflight passes, so a bad
         // source cannot delete existing target rows before aborting.
-
-        // Every workflow migrates admin_user, but the admin guard's legacy-hash login is not in yet, so
-        // a migrated administrator's OpenPNE 3 password does not work until reset. Unconditional caveat.
-        $this->warn('Migrated administrators must reset their password (`openpne:admin:reset-password`) until the admin legacy-hash login lands.');
 
         return $runner->run($options, $out) ? self::SUCCESS : self::FAILURE;
     }
