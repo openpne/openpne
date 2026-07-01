@@ -337,6 +337,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/avatar', 'update')->name('member.avatar.update');
         Route::delete('/avatar', 'destroy')->name('member.avatar.destroy');
     });
+    Route::prefix('m/member')->controller(MemberAvatarController::class)->group(function () {
+        Route::get('/avatar', 'edit')->defaults('surface', 'modern')->name('member.modern.avatar.edit');
+        Route::post('/avatar', 'update')->defaults('surface', 'modern')->name('member.modern.avatar.update');
+        Route::delete('/avatar', 'destroy')->defaults('surface', 'modern')->name('member.modern.avatar.destroy');
+    });
 
     // OpenPNE 3 served the avatar editor at /member/image/config; preserve the URL.
     Route::get('/member/image/config', fn () => redirect()->route('member.avatar.edit'))
