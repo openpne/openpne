@@ -7,6 +7,8 @@ use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 /**
  * OpenPNE 3 diary "Recently Posted Diaries" feed (action `list`): every member's diaries
@@ -22,11 +24,28 @@ class ListRecentDiaries
     /** @return LengthAwarePaginator<int, Diary> */
     public function __invoke(Member $viewer, int $perPage = 20): LengthAwarePaginator
     {
+        return $this->query($viewer)->paginate($perPage);
+    }
+
+    /**
+     * First $limit diaries, unpaginated — for the home dashboard digest, which shows no pager and
+     * must not read the host page's ?page=.
+     *
+     * @return Collection<int, Diary>
+     */
+    public function take(Member $viewer, int $limit): Collection
+    {
+        return $this->query($viewer)->limit($limit)->get();
+    }
+
+    /** @return Builder<Diary> */
+    private function query(Member $viewer): Builder
+    {
         $query = Diary::with('member.avatar.file')->withCount(['comments', 'images'])
             ->where('visibility', '<=', Visibility::Members->value);
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'diaries.member_id');
 
-        return $query->orderByDesc('created_at')->paginate($perPage);
+        return $query->orderByDesc('created_at');
     }
 }
