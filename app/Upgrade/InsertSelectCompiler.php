@@ -44,8 +44,8 @@ final class InsertSelectCompiler
         // The FROM table is aliased to its original name so a step's correlated subqueries can keep
         // referencing the outer row by that bare name even when the physical table is prefixed / in
         // another database; SourceRef tokens carry the same qualification into those subqueries.
-        $source = $this->qualifiedName($sourceDatabase, $sourcePrefix, $step->sourceTable())." AS `{$step->sourceTable()}`";
-        $target = $this->qualifiedName($targetDatabase, $targetPrefix, $step->targetTable());
+        $source = self::qualify($sourceDatabase, $sourcePrefix, $step->sourceTable())." AS `{$step->sourceTable()}`";
+        $target = self::qualify($targetDatabase, $targetPrefix, $step->targetTable());
 
         $sql = "INSERT INTO {$target} ({$targetColumns})\nSELECT {$selectList}\nFROM {$source}";
 
@@ -66,13 +66,17 @@ final class InsertSelectCompiler
     public function resolveSourceRefs(string $sql, string $sourcePrefix = '', ?string $sourceDatabase = null): string
     {
         return preg_replace_callback(
-            '/\{\{src:([a-z0-9_]+)\}\}/',
-            fn (array $m): string => $this->qualifiedName($sourceDatabase, $sourcePrefix, $m[1]),
+            SourceRef::PATTERN,
+            static fn (array $m): string => self::qualify($sourceDatabase, $sourcePrefix, $m[1]),
             $sql,
         );
     }
 
-    private function qualifiedName(?string $database, string $prefix, string $table): string
+    /**
+     * The backtick-quoted source/target table name: `prefixtable`, or `db`.`prefixtable`. Public so
+     * the preflight creates/drops an ensure-exists table at exactly the name a compiled query reads.
+     */
+    public static function qualify(?string $database, string $prefix, string $table): string
     {
         $name = "`{$prefix}{$table}`";
 

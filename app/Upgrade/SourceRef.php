@@ -14,8 +14,19 @@ namespace App\Upgrade;
  */
 final class SourceRef
 {
+    /** Matches a SourceRef token; the capture group is the source-table name. */
+    public const PATTERN = '/\{\{src:([a-z0-9_]+)\}\}/';
+
     public static function table(string $name): string
     {
         return '{{src:'.$name.'}}';
+    }
+
+    /** @return list<string> the distinct source tables tokenised in a raw SQL fragment. */
+    public static function tablesIn(string $sql): array
+    {
+        preg_match_all(self::PATTERN, $sql, $matches);
+
+        return array_values(array_unique($matches[1]));
     }
 }

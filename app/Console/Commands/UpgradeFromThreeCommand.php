@@ -16,6 +16,11 @@ use Illuminate\Support\Facades\Schema;
  *
  * PR1 of the runner: the relational steps only. file_bin BLOB rewire and admin_user are follow-ups,
  * so a plain same-database cutover is not complete here yet (see the engine-only notice).
+ *
+ * A source preflight runs first: a recognized optional source table (an uninstalled OpenPNE 3 plugin)
+ * is created empty and its step is skipped, but a missing required table/column aborts — upgrade the
+ * OpenPNE 3 source to a supported version (core >= 3.6.x) first, or use --source-database (a separate
+ * database) for a customised source whose tables would clash with OpenPNE 4's.
  */
 class UpgradeFromThreeCommand extends Command
 {
@@ -50,9 +55,8 @@ class UpgradeFromThreeCommand extends Command
         $runner = app(UpgradeRunner::class);
         $out = fn (string $line) => $this->line($line);
 
-        if ($options->forceRestart && ! $options->dryRun) {
-            $runner->reset($out);
-        }
+        // --force-restart is applied inside run(), only after the source preflight passes, so a bad
+        // source cannot delete existing target rows before aborting.
 
         // Shown on dry-run too, so planning a same-database cutover sees the engine-only caveat upfront.
         if ($options->sourcePrefix === '' && $options->sourceDatabase === null) {

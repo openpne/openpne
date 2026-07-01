@@ -101,15 +101,14 @@ class UpgradeRunnerSqlTest extends TestCase
     {
         $this->seedGraph();
         $runner = $this->runner($this->relationSteps());
-        $runner->run(new RunOptions);
-
-        $runner->reset();
-        $this->assertDatabaseCount('friendships', 0);
-        $this->assertDatabaseCount('openpne4_upgrade_state', 0);
-
-        // A re-run after reset must not collide on the verbatim ids it re-inserts.
         $this->assertTrue($runner->run(new RunOptions));
         $this->assertDatabaseCount('friendships', 2);
+
+        // --force-restart clears the targets + checkpoints inside run() (after the preflight passes),
+        // then re-runs without colliding on the verbatim ids it re-inserts.
+        $this->assertTrue($runner->run(new RunOptions(forceRestart: true)));
+        $this->assertDatabaseCount('friendships', 2);
+        $this->assertDatabaseHas('openpne4_upgrade_state', ['step_key' => 'FriendshipUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);
     }
 
     public function test_a_not_runnable_step_is_skipped(): void
