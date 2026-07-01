@@ -2,9 +2,9 @@
 
 namespace App\Features\Member;
 
-use App\Compat\RouteParityRegistry;
 use App\Features\Member\Queries\SearchMembers;
 use App\Features\Member\Serializers\MemberSearchSerializer;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Models\Member;
 use App\Support\SurfaceResolver;
@@ -15,6 +15,8 @@ use Inertia\Response as InertiaResponse;
 
 class MemberSearchController extends Controller
 {
+    use RespondsWithSurface;
+
     public function search(Request $request, SearchMembers $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
@@ -30,7 +32,7 @@ class MemberSearchController extends Controller
         $profiles = $query->searchableProfiles();
         $birthdayName = $query->birthdayProfileName();
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.search', [
                 'members' => $members,
                 'profiles' => $profiles,
@@ -63,21 +65,6 @@ class MemberSearchController extends Controller
         $value = $request->query($key, []);
 
         return is_array($value) ? $value : [];
-    }
-
-    /**
-     * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
-     */
-    private function respondWith(Request $request, array $responders): View|InertiaResponse
-    {
-        $response = $responders[SurfaceResolver::resolve($request, 'member')]();
-
-        if ($response instanceof View) {
-            $name = SurfaceResolver::canonicalName($request->route()->getName());
-            $response->with('pageId', RouteParityRegistry::bodyId($name));
-        }
-
-        return $response;
     }
 
     private function viewer(): Member

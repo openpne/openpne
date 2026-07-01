@@ -2,13 +2,13 @@
 
 namespace App\Features\Block;
 
-use App\Compat\RouteParityRegistry;
 use App\Features\Block\Actions\BlockMember;
 use App\Features\Block\Actions\UnblockMember;
 use App\Features\Block\Exceptions\BlockActionException;
 use App\Features\Block\Exceptions\BlockActionFailure;
 use App\Features\Block\Queries\ListBlocks;
 use App\Features\Block\Serializers\BlockSerializer;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Block\BlockRequest;
 use App\Models\Member;
@@ -21,11 +21,13 @@ use Inertia\Response as InertiaResponse;
 
 class BlockController extends Controller
 {
+    use RespondsWithSurface;
+
     public function list(Request $request, ListBlocks $query): View|InertiaResponse
     {
         $blocks = $query($this->viewer());
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'block', [
             SurfaceResolver::CLASSIC => fn () => view('block.list', [
                 'blocks' => $blocks,
             ]),
@@ -44,7 +46,7 @@ class BlockController extends Controller
             abort(404);
         }
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'block', [
             SurfaceResolver::CLASSIC => fn () => view('block.add', [
                 'target' => $target,
             ]),
@@ -71,7 +73,7 @@ class BlockController extends Controller
             abort(404);
         }
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'block', [
             SurfaceResolver::CLASSIC => fn () => view('block.remove', [
                 'target' => $member,
             ]),
@@ -103,24 +105,6 @@ class BlockController extends Controller
         }
 
         return $redirect;
-    }
-
-    /**
-     * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
-     */
-    private function respondWith(Request $request, array $responders): View|InertiaResponse
-    {
-        $response = $responders[SurfaceResolver::resolve($request, 'block')]();
-
-        // Classic body id is the OpenPNE 3 page_{module}_{action} hook, derived from the route
-        // parity. Canonicalize first so a /m/* route that fell back to Classic (carrying the
-        // modern name) still resolves to the canonical parity key.
-        if ($response instanceof View) {
-            $name = SurfaceResolver::canonicalName($request->route()->getName());
-            $response->with('pageId', RouteParityRegistry::bodyId($name));
-        }
-
-        return $response;
     }
 
     private function viewer(): Member
