@@ -14,8 +14,11 @@ use Illuminate\Support\Facades\Schema;
  * separate database on the same MySQL instance via --source-database). The target is always the
  * app's own database; the running app reads those tables.
  *
- * PR1 of the runner: the relational steps only. file_bin BLOB rewire and admin_user are follow-ups,
- * so a plain same-database cutover is not complete here yet (see the engine-only notice).
+ * The relational steps plus file_bin (the BLOBs); admin_user is the remaining follow-up, so a plain
+ * same-database cutover is not fully complete here yet (see the engine-only notice). file_bin: in-place
+ * (same database, no prefix) rewires its FK onto `files`; a --source-prefix / --source-database run
+ * instead RENAMEs the source file_bin onto the app's (source-destructive — needs a disposable dump and
+ * DROP/RENAME rights on the source).
  *
  * A source preflight runs first: a recognized optional source table (an uninstalled OpenPNE 3 plugin)
  * is created empty and its step is skipped, but a missing required table/column aborts — upgrade the
@@ -60,7 +63,7 @@ class UpgradeFromThreeCommand extends Command
 
         // Shown on dry-run too, so planning a same-database cutover sees the engine-only caveat upfront.
         if ($options->sourcePrefix === '' && $options->sourceDatabase === null) {
-            $this->warn('Runner engine: relational data migrates, but file_bin BLOB rewire and admin_user are not handled yet — this is not a complete same-database cutover.');
+            $this->warn('Runner engine: relational data and file_bin migrate, but admin_user is not handled yet — this is not a complete same-database cutover.');
         }
 
         return $runner->run($options, $out) ? self::SUCCESS : self::FAILURE;

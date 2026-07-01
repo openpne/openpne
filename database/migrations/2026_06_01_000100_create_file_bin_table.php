@@ -31,6 +31,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // A same-database OpenPNE 3 upgrade restores the dump's own file_bin (LONGBLOB, schema-frozen
+        // equal, FK still onto the old `file`) before migrate runs; skip so we neither clash on CREATE
+        // nor rebuild it — the upgrade runner re-points its FK onto `files`. Fresh installs create it.
+        if (Schema::hasTable('file_bin')) {
+            return;
+        }
+
         Schema::create('file_bin', function (Blueprint $table) {
             // Signed INT PK matching files.id (file header: keeps the upgrade FK
             // rewire metadata-only). MySQL makes a PK column implicitly NOT NULL.
