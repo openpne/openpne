@@ -19,6 +19,7 @@ class RecentCommunityTopics
     {
         return $community->topics()
             ->withCount('comments')
+            ->with('member.avatar.file')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit($limit)
