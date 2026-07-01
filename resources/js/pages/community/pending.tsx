@@ -39,6 +39,7 @@ export default function CommunityPending() {
                 </h1>
 
                 {flash.status && <p role="status">{flash.status}</p>}
+                {flash.error && <p role="alert">{flash.error}</p>}
 
                 {applicants.data.length === 0 ? (
                     <p>{t('No pending requests.')}</p>
