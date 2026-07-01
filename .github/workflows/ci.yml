@@ -83,7 +83,7 @@ jobs:
         with:
           php-version: '8.3'
           coverage: none
-      - run: composer install --no-interaction --no-progress --prefer-dist
+      - uses: ramsey/composer-install@v3
       - run: php artisan --version
 
   # sqlite and mysql are separate jobs (not a strategy matrix) so the `if` gate produces stable,
@@ -104,7 +104,7 @@ jobs:
         with:
           php-version: '8.5'
           coverage: none
-      - run: composer install --no-interaction --no-progress --prefer-dist
+      - uses: ramsey/composer-install@v3
       - name: Prepare environment
         run: |
           cp .env.example .env
@@ -144,7 +144,7 @@ jobs:
         with:
           php-version: '8.5'
           coverage: none
-      - run: composer install --no-interaction --no-progress --prefer-dist
+      - uses: ramsey/composer-install@v3
       - name: Prepare environment
         run: |
           cp .env.example .env
@@ -164,7 +164,7 @@ jobs:
         with:
           php-version: '8.5'
           coverage: none
-      - run: composer install --no-interaction --no-progress --prefer-dist
+      - uses: ramsey/composer-install@v3
       - run: vendor/bin/pint --test
 
   frontend:
