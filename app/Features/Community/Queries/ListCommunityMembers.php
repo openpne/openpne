@@ -18,7 +18,7 @@ class ListCommunityMembers
     public function __invoke(Community $community, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
         return $community->members()
-            ->with('member')
+            ->with('member.avatar.file')
             ->orderByDesc('role') // Admin=3 > SubAdmin=2 > Member=1
             ->orderBy('id')
             ->paginate($perPage);

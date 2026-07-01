@@ -38,6 +38,7 @@ class ListMemberCommunities
     {
         return Community::query()
             ->whereHas('members', fn ($q) => $q->where('member_id', $member->getKey()))
+            ->with(['category', 'image'])
             ->withCount('members')
             ->orderByDesc('id');
     }

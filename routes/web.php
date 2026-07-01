@@ -382,9 +382,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ])
         ->name('image.show');
 
-    // Community core (Classic only; Modern is none in Phase A — no /m/community/*). The literal
-    // routes precede the /{community} wildcard, and {community} is digit-constrained, so a
-    // literal like /community/search can never be captured as a community id.
+    // Community core (canonical / Classic). The literal routes precede the /{community} wildcard,
+    // and {community} is digit-constrained, so a literal like /community/search can never be
+    // captured as a community id. The Modern twin (browse/join core) is the /m/community group below.
     Route::prefix('community')->controller(CommunityController::class)->group(function () {
         Route::get('/search', 'search')->name('community.search');
         Route::get('/joinList', 'listMine')->name('community.list_mine');
@@ -405,6 +405,18 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/delete/{community}', 'showDelete')->whereNumber('community')->name('community.delete.show');
         Route::post('/delete/{community}', 'delete')->whereNumber('community')->name('community.delete');
         Route::get('/{community}', 'show')->whereNumber('community')->name('community.show');
+    });
+
+    // Community core, Modern surface (/m/community/*): browse (search) + my communities + one
+    // community + its members, plus join/quit POST (Modern confirms client-side, so no GET confirm
+    // page). Literal routes precede the /{community} wildcard; every id is digit-constrained.
+    Route::prefix('m/community')->controller(CommunityController::class)->group(function () {
+        Route::get('/search', 'search')->defaults('surface', 'modern')->name('community.modern.search');
+        Route::get('/joined', 'listMine')->defaults('surface', 'modern')->name('community.modern.list_mine');
+        Route::get('/{community}/members', 'members')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members');
+        Route::post('/{community}/join', 'join')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.join');
+        Route::post('/{community}/quit', 'quit')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.quit');
+        Route::get('/{community}', 'show')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.show');
     });
 
     // Community topic board (Classic only; Modern is none). Literal-prefix routes precede the

@@ -24,6 +24,7 @@ class SearchCommunities
         return Community::query()
             ->when($keyword !== '', fn ($q) => $q->where('name', 'like', '%'.$keyword.'%'))
             ->when($categoryId !== null, fn ($q) => $q->where('community_category_id', $categoryId))
+            ->with(['category', 'image'])
             ->withCount('members')
             ->orderByDesc('id')
             ->paginate($perPage)

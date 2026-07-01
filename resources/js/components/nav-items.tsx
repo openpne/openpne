@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { Activity, BookOpen, Search, Settings, UserCircle2 } from 'lucide-react';
+import { Activity, BookOpen, Search, Settings, UserCircle2, Users } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 
 type Item = {
@@ -12,8 +12,8 @@ type Item = {
 
 /**
  * Shared nav list for LeftNav (desktop) and NavDrawer (mobile). Home is the brand row, so it is
- * omitted here. Only features with a live Modern surface are listed; Community and Messages join
- * when their Modern screens land.
+ * omitted here. Only features with a live Modern surface are listed; Messages joins when its
+ * Modern screens land.
  */
 export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
     const t = useT();
@@ -22,6 +22,7 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
     const items: Item[] = [
         { href: '/m/diary/list', icon: BookOpen, label: t('Diaries'), match: '/m/diary' },
         { href: '/m/timeline', icon: Activity, label: t('Timeline'), match: '/m/timeline' },
+        { href: '/m/community/search', icon: Users, label: t('%Communities%'), match: '/m/community' },
         { href: '/m/friend/list', icon: UserCircle2, label: t('%Friends%'), match: '/m/friend' },
         { href: '/m/member/search', icon: Search, label: t('Search members'), match: '/m/member/search' },
         { href: '/m/member/config', icon: Settings, label: t('Settings'), match: '/m/member/config' },
