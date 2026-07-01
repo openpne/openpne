@@ -86,10 +86,11 @@ jobs:
       - uses: ramsey/composer-install@v3
       - run: php artisan --version
 
-  # sqlite and mysql are separate jobs (not a strategy matrix) so the `if` gate produces stable,
-  # named "skipped" checks on a docs-only PR. A job-level `if` on a matrix job is evaluated before
-  # the matrix expands, so the per-combination check names may never be created — leaving a required
-  # check pending forever, the very thing the gate is meant to avoid.
+  # The sqlite lane and the mysql required check (its aggregator, below) are standalone jobs, not
+  # matrix combinations, so the `if` gate produces stable, named "skipped" checks on a docs-only PR.
+  # A job-level `if` on a matrix job is evaluated before the matrix expands, so the per-combination
+  # check names may never be created — leaving a required check pending forever. The mysql shards
+  # sidestep this by being non-required; see the aggregator note below.
   test-sqlite:
     name: Test (PHP 8.5, sqlite)
     needs: changes
@@ -113,11 +114,20 @@ jobs:
       - run: php artisan migrate --force
       - run: php artisan test --parallel
 
-  test-mysql:
-    name: Test (PHP 8.5, mysql)
+  # The mysql suite is the CI long-pole, so its work fans out across a matrix of internal shard jobs
+  # and a fixed-name aggregator reports the single required status. paratest's --functional splits
+  # work at the method level, making --shard=i/N a disjoint, complete partition; round-robin spreads
+  # the heavy Upgrade methods evenly across shards. The shard matrix is deliberately NOT a required
+  # check (see the per-combination trap above) — the aggregator below carries the required name.
+  mysql-shard:
+    name: mysql shard ${{ matrix.shard }}
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     services:
       mysql:
         image: mysql:8.4
@@ -138,6 +148,8 @@ jobs:
       DB_DATABASE: openpne_test
       DB_USERNAME: root
       DB_PASSWORD: secret
+      # laravel/pao rewrites test output when it detects an agent env; pin it off for deterministic CI.
+      PAO_DISABLE: '1'
     steps:
       - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
@@ -151,7 +163,36 @@ jobs:
           php artisan key:generate
           touch database/database.sqlite
       - run: php artisan migrate --force
-      - run: php artisan test --parallel
+      # --functional shards at the method level so --shard=i/N is a disjoint, complete split;
+      # --fail-on-empty-test-suite turns a mis-targeted shard (0 tests) into a failure, not a pass.
+      - run: >-
+          php artisan test --parallel --functional
+          --shard-test-distribution=round-robin
+          --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          --fail-on-empty-test-suite
+
+  # Fixed-name required check: the ruleset requires "Test (PHP 8.5, mysql)". Runs on every PR
+  # (if: always()) and reports the shard matrix's aggregate result; on a docs-only PR the shards are
+  # skipped and this still reports success. Fail-closed on any unexpected changes/shard state.
+  test-mysql:
+    name: Test (PHP 8.5, mysql)
+    needs: [changes, mysql-shard]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Aggregate mysql shard results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          SHARDS: ${{ needs.mysql-shard.result }}
+        run: |
+          set -euo pipefail
+          case "$CODE" in true | false) ;; *) echo "::error::invalid changes.code output '$CODE'"; exit 1 ;; esac
+          [ "$CHANGES" = success ] || { echo "::error::changes detector did not succeed ($CHANGES)"; exit 1; }
+          if [ "$CODE" != true ]; then echo "docs-only change; mysql shards skipped; reporting success"; exit 0; fi
+          [ "$SHARDS" = success ] || { echo "::error::mysql shard(s) did not succeed ($SHARDS)"; exit 1; }
+          echo "all mysql shards passed"
 
   lint:
     name: Lint (Pint)
