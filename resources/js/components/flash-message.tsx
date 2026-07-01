@@ -15,7 +15,10 @@ type Props = {
 
 export function FlashMessage({ children, variant = 'success' }: Props) {
     return (
-        <div className={`rounded-lg border px-4 py-2 text-sm ${variantClass[variant]}`} role="status">
+        <div
+            className={`rounded-lg border px-4 py-2 text-sm ${variantClass[variant]}`}
+            role={variant === 'error' ? 'alert' : 'status'}
+        >
             {children}
         </div>
     );
