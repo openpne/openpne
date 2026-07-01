@@ -55,9 +55,8 @@ class UpgradeFromThreeCommand extends Command
         $runner = app(UpgradeRunner::class);
         $out = fn (string $line) => $this->line($line);
 
-        if ($options->forceRestart && ! $options->dryRun) {
-            $runner->reset($out);
-        }
+        // --force-restart is applied inside run(), only after the source preflight passes, so a bad
+        // source cannot delete existing target rows before aborting.
 
         // Shown on dry-run too, so planning a same-database cutover sees the engine-only caveat upfront.
         if ($options->sourcePrefix === '' && $options->sourceDatabase === null) {

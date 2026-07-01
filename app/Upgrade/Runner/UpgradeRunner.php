@@ -58,6 +58,12 @@ final class UpgradeRunner
             return $this->walk($options, $out);
         }
 
+        // Only now that the source is verified do we clear targets for --force-restart — otherwise a
+        // bad source would let the restart delete existing data and then abort on the preflight.
+        if ($options->forceRestart) {
+            $this->reset($out);
+        }
+
         $created = $preflight->ensureExists($report->absentOptional, $options->sourcePrefix, $options->sourceDatabase, $out);
 
         try {

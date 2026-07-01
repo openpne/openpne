@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
+use App\Models\Member;
+use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
@@ -133,6 +135,27 @@ class SourcePreflightTest extends TestCase
         $this->assertStringContainsString('PLAN DiaryUpgrade:', $output);
         $this->assertFalse($this->sourceExists('diary'), 'dry-run must not create the table');
         $this->assertDatabaseCount('openpne4_upgrade_state', 0);
+    }
+
+    public function test_force_restart_with_a_bad_source_keeps_existing_data(): void
+    {
+        // Existing target rows + a checkpoint from an earlier run; --force-restart would normally clear both.
+        [$a, $b] = Member::factory()->count(2)->create()->all();
+        DB::table('friendships')->insert(['member_id' => $a->id, 'friend_id' => $b->id]);
+        UpgradeState::create(['step_key' => 'FriendshipUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);
+
+        $this->createSource('member_relationship');
+        DB::statement('ALTER TABLE `member_relationship` DROP COLUMN `is_access_block`'); // preflight will reject
+
+        [$ok] = $this->runSteps(
+            [new FriendshipUpgrade, new FriendRequestUpgrade, new MemberBlockUpgrade],
+            new RunOptions(forceRestart: true),
+        );
+
+        $this->assertFalse($ok);
+        // reset() (which clears the targets and the checkpoints) must not run before the preflight abort.
+        $this->assertDatabaseCount('friendships', 1);
+        $this->assertDatabaseCount('openpne4_upgrade_state', 1);
     }
 
     /**
