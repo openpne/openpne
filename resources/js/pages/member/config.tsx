@@ -1,6 +1,13 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useT } from '@/lib/i18n';
+import { useColorMode, type ColorMode } from '@/lib/color-mode';
 import type { PageProps } from '@/types';
+
+const APPEARANCE_OPTIONS: { value: ColorMode; label: string }[] = [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'Use system setting' },
+];
 
 interface Option {
     value: string;
@@ -32,6 +39,8 @@ export default function MemberConfig() {
     const password = useForm({ current_password: '', password: '', password_confirmation: '' });
     const email = useForm({ new_email: '', password: '' });
     const withdraw = useForm({ password: '', confirm: false });
+    // Appearance is a client-side display preference (localStorage), applied immediately — no server post.
+    const { preference, set: setColorMode } = useColorMode();
 
     return (
         <>
@@ -136,6 +145,25 @@ export default function MemberConfig() {
                     {/* Disabled until the choice differs from the current surface, so a casual save never pins. */}
                     <button type="submit" disabled={surface.processing || surface.data.preferred_surface === form.surface.value}>{t('Save')}</button>
                 </form>
+
+                <section className="space-y-2">
+                    <h2 className="font-semibold">{t('Appearance')}</h2>
+                    <p>{t('Choose a light or dark look. Use system setting follows your device automatically.')}</p>
+                    <fieldset className="space-y-1">
+                        {APPEARANCE_OPTIONS.map((opt) => (
+                            <label key={opt.value} className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    name="appearance"
+                                    value={opt.value}
+                                    checked={preference === opt.value}
+                                    onChange={() => setColorMode(opt.value)}
+                                />
+                                <span>{t(opt.label)}</span>
+                            </label>
+                        ))}
+                    </fieldset>
+                </section>
 
                 <form
                     onSubmit={(e) => {

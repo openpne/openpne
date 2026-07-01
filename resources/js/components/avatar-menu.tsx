@@ -16,7 +16,7 @@ const NATIVE_LOCALE_LABEL: Record<string, string> = { ja: '日本語', en: 'Engl
 /**
  * Account menu: profile, settings, language toggle, sign out. Radix DropdownMenu supplies the
  * keyboard/focus/ARIA behaviour. `compact` shows just the avatar (mobile top bar); the default
- * avatar+name row is used in the desktop sidebar footer.
+ * avatar+name row is used in the desktop sidebar footer. (Appearance lives on the settings page.)
  */
 export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?: boolean }) {
     const t = useT();
