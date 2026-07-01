@@ -30,7 +30,7 @@ class HandleInertiaRequests extends Middleware
                     'imageUrl' => $user->avatar?->file?->thumbnailUrl(76, 76, square: true),
                 ] : null,
             ],
-            // Modern brand mark: colour + optional logo URL; a null url renders a colour initial badge.
+            // Modern brand mark: color + optional logo URL; a null url renders a color initial badge.
             'snsLogo' => [
                 'color' => '#2563eb',
                 'url' => null,
