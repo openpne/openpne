@@ -12,8 +12,6 @@ interface ComposeProps extends PageProps {
     body: string; // prefilled on reply (the original quoted)
 }
 
-const MAX_IMAGES = 3;
-
 export default function MessageCompose() {
     const t = useT();
     const { recipient, parentId, threadId, subject, body, flash } = usePage<ComposeProps>().props;
@@ -92,7 +90,9 @@ export default function MessageCompose() {
                             type="file"
                             accept="image/jpeg,image/png,image/gif,image/webp"
                             multiple
-                            onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, MAX_IMAGES))}
+                            // Send every selection; the server caps the count and surfaces an error
+                            // (a silent client-side truncation would drop attachments without warning).
+                            onChange={(e) => form.setData('images', Array.from(e.target.files ?? []))}
                         />
                         {imageError && <p role="alert">{imageError}</p>}
                     </div>

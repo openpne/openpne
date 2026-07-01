@@ -533,9 +533,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     // Private messages. The four boxes plus a per-box show page. OpenPNE 3 keyed show by message id
     // with the box in the path (/message/read|check|checkDelete/:id); those URLs are preserved.
-    // /message and /message/index land on the inbox. The read pages (boxes + show) also serve Modern
-    // via the /m/message twins below; compose / reply / edit-draft and the trash write surface stay
-    // Classic-only for now.
+    // /message and /message/index land on the inbox. The read and compose pages (boxes, show, compose,
+    // reply) also serve Modern via the /m/message twins below; draft editing and the trash write
+    // surface stay Classic-only for now.
     Route::prefix('message')->controller(MessageController::class)->group(function () {
         Route::get('/', 'index')->name('message.index');
         Route::get('/index', 'index');

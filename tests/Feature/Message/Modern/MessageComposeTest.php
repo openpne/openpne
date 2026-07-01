@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\Message;
 use App\Notifications\Message\MessageReceivedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -126,6 +127,30 @@ class MessageComposeTest extends TestCase
             ])
             ->assertRedirect(route('message.modern.send'))
             ->assertSessionHas('error');
+
+        $this->assertSame(0, Message::count());
+    }
+
+    public function test_modern_store_surfaces_a_validation_error_past_the_image_cap(): void
+    {
+        // The Modern form sends every selected file (no silent client truncation); the server caps
+        // the count, so 4 attachments is a validation error rather than a quiet drop.
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+
+        $this->actingAs($sender)
+            ->post(route('message.modern.compose.store'), [
+                'to' => $recipient->getKey(),
+                'subject' => 'Too many',
+                'body' => 'Body',
+                'action' => 'send',
+                'images' => [
+                    UploadedFile::fake()->image('a.png', 20, 20),
+                    UploadedFile::fake()->image('b.png', 20, 20),
+                    UploadedFile::fake()->image('c.png', 20, 20),
+                    UploadedFile::fake()->image('d.png', 20, 20),
+                ],
+            ])
+            ->assertSessionHasErrors('images');
 
         $this->assertSame(0, Message::count());
     }
