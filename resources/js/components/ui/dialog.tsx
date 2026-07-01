@@ -10,7 +10,12 @@ export const DialogTitle = DialogPrimitive.Title;
 
 /** Dialog content rendered as a left-edge sheet (the mobile nav drawer). Radix supplies the focus
  *  trap, ESC/overlay dismissal, and scroll lock. */
-export function SheetContent({ className, children, ...props }: ComponentProps<typeof DialogPrimitive.Content>) {
+export function SheetContent({
+    className,
+    children,
+    closeLabel = 'Close',
+    ...props
+}: ComponentProps<typeof DialogPrimitive.Content> & { closeLabel?: string }) {
     return (
         <DialogPrimitive.Portal>
             <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
@@ -24,7 +29,7 @@ export function SheetContent({ className, children, ...props }: ComponentProps<t
                 {children}
                 <DialogPrimitive.Close
                     className="absolute right-3 top-3 rounded-full p-1 text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                    aria-label="Close"
+                    aria-label={closeLabel}
                 >
                     <X className="size-5" />
                 </DialogPrimitive.Close>
