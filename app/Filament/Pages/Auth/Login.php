@@ -11,7 +11,7 @@ use SensitiveParameter;
  * Administrators log in by username, not email (OpenPNE 3 has no administrator
  * email). The form keeps Filament's `email` field key but presents it as a
  * username input, and the credentials passed to the `admin` guard are keyed by
- * `username` so the provider looks up the `admin_user.username` column.
+ * `username` so the provider looks up the `admin_users.username` column.
  */
 class Login extends BaseLogin
 {

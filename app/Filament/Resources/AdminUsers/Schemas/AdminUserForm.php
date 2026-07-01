@@ -20,7 +20,7 @@ class AdminUserForm
                     ->required()
                     ->maxLength(64)
                     ->unique(
-                        table: 'admin_user',
+                        table: 'admin_users',
                         column: 'username',
                         ignoreRecord: true,
                     ),

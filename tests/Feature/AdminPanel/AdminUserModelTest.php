@@ -13,12 +13,12 @@ class AdminUserModelTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_user_uses_the_singular_table_name(): void
+    public function test_admin_user_uses_the_plural_table_name(): void
     {
-        // The model maps to OpenPNE 3's singular `admin_user`. Eloquent would
-        // pluralize to `admin_users` by default, which would silently fail at
-        // first query since the migration creates the singular name.
-        $this->assertSame('admin_user', (new AdminUser)->getTable());
+        // Eloquent infers `admin_users` from the model name; the singular OpenPNE 3
+        // `admin_user` is kept as the upgrade source so both coexist in a
+        // same-database upgrade.
+        $this->assertSame('admin_users', (new AdminUser)->getTable());
     }
 
     public function test_admin_username_is_unique_at_the_database_level(): void

@@ -26,7 +26,7 @@ class CreateAdminUserCommand extends Command
         $username = trim((string) ($this->argument('username') ?? $this->ask('Username')));
 
         $validator = Validator::make(['username' => $username], [
-            'username' => ['required', 'string', 'max:64', Rule::unique('admin_user', 'username')],
+            'username' => ['required', 'string', 'max:64', Rule::unique('admin_users', 'username')],
         ]);
 
         if ($validator->fails()) {

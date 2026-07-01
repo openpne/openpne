@@ -207,6 +207,6 @@ class AdminUserResourceTest extends TestCase
         Livewire::test(ListAdminUsers::class)
             ->callAction(TestAction::make('delete')->table($other));
 
-        $this->assertDatabaseMissing('admin_user', ['id' => $other->getKey()]);
+        $this->assertDatabaseMissing('admin_users', ['id' => $other->getKey()]);
     }
 }

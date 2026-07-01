@@ -23,13 +23,13 @@ class AdminUser extends Authenticatable implements FilamentUser, HasName
     /** @use HasFactory<AdminUserFactory> */
     use HasFactory;
 
-    // Preserve OpenPNE 3's singular `admin_user` table name.
-    protected $table = 'admin_user';
+    // Table is the inferred `admin_users` (plural). OpenPNE 3's own `admin_user`
+    // is the upgrade source, kept distinct so both coexist in a same-database upgrade.
 
     /**
      * Every administrator has full access to the operator panel: the MVP has
      * no administrator role split, so panel access is governed only by whether
-     * an `admin_user` row exists. Role-based restriction lands later.
+     * an `admin_users` row exists. Role-based restriction lands later.
      */
     public function canAccessPanel(Panel $panel): bool
     {

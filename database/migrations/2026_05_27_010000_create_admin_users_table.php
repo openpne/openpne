@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('admin_user', function (Blueprint $table) {
+        Schema::create('admin_users', function (Blueprint $table) {
             $table->id();
             // Administrators log in by username, not email — OpenPNE 3 has no
             // administrator email column. The unique constraint makes the
@@ -23,6 +23,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('admin_user');
+        Schema::dropIfExists('admin_users');
     }
 };
