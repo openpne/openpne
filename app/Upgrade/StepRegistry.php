@@ -2,6 +2,7 @@
 
 namespace App\Upgrade;
 
+use App\Upgrade\Steps\AdminUserUpgrade;
 use App\Upgrade\Steps\BannerImageUpgrade;
 use App\Upgrade\Steps\BannerUpgrade;
 use App\Upgrade\Steps\BannerUseImageUpgrade;
@@ -90,6 +91,8 @@ final class StepRegistry
             // gadget_configs.gadget_id references gadgets.id, so configs run after gadgets.
             GadgetUpgrade::class,
             GadgetConfigUpgrade::class,
+            // admin_user and sns_settings are independent (no FK).
+            AdminUserUpgrade::class,
             // sns_settings is independent (no FK); migrates the display + gadget-layout sns_config keys.
             SnsSettingUpgrade::class,
             // mail_templates is independent (no FK); mail_template_translations references it, so the

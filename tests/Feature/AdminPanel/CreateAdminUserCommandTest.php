@@ -39,6 +39,6 @@ class CreateAdminUserCommandTest extends TestCase
             ->expectsQuestion('Confirm password', 'short')
             ->assertFailed();
 
-        $this->assertDatabaseMissing('admin_user', ['username' => 'weak']);
+        $this->assertDatabaseMissing('admin_users', ['username' => 'weak']);
     }
 }
