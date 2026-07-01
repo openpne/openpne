@@ -4,6 +4,10 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppShell } from '@/components/app-shell';
+// Side-effect import: applies the saved color mode, keeps <meta name="theme-color"> in sync, and
+// installs the OS prefers-color-scheme listener on every Modern page (the useColorMode UI lives only
+// on the settings page, so without this the listener/sync would load lazily with that page).
+import '@/lib/color-mode';
 import type { PageProps } from '@/types';
 
 // Set at mount from the shared Inertia `name` prop (sns_name()) so Modern titles track the
