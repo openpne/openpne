@@ -20,6 +20,7 @@ class ListCommunityTopics
     {
         return $community->topics()
             ->withCount('comments')
+            ->with('member.avatar.file')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->paginate($perPage);

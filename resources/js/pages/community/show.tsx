@@ -5,7 +5,7 @@ import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug } from './types';
+import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, TopicSummary } from './types';
 
 interface ShowProps extends PageProps {
     community: CommunityDetail;
@@ -15,12 +15,15 @@ interface ShowProps extends PageProps {
     canJoin: boolean;
     canLeave: boolean;
     members: CommunityMemberRow[];
+    recentTopics: TopicSummary[] | null; // null → the viewer may not read the board
+    canPostTopic: boolean;
 }
 
 export default function CommunityShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { community, viewerRole, canManage, isPending, canJoin, canLeave, members, flash } = usePage<ShowProps>().props;
+    const { community, viewerRole, canManage, isPending, canJoin, canLeave, members, recentTopics, canPostTopic, flash } =
+        usePage<ShowProps>().props;
 
     const join = () => router.post(`/m/community/${community.id}/join`);
     const leave = async () => {
@@ -90,6 +93,39 @@ export default function CommunityShow() {
                 )}
 
                 {community.description && <div className="whitespace-pre-wrap">{community.description}</div>}
+
+                {recentTopics !== null && (
+                    <section className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <h2 className="text-lg font-semibold">{t('Recent %topics%')}</h2>
+                            {canPostTopic && (
+                                <Link href={`/m/community/${community.id}/topic/new`} className="shrink-0 text-sm hover:underline">
+                                    {t('Post a new %topic%')}
+                                </Link>
+                            )}
+                        </div>
+                        {recentTopics.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
+                        ) : (
+                            <ul className="divide-y">
+                                {recentTopics.map((topic) => (
+                                    <li key={topic.id}>
+                                        <Link
+                                            href={`/m/community/topic/${topic.id}`}
+                                            className="block truncate py-2 hover:bg-muted/40"
+                                        >
+                                            <span className="font-medium">{topic.name}</span>{' '}
+                                            <span className="text-sm text-muted-foreground">({topic.commentCount})</span>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        <Link href={`/m/community/${community.id}/topic`} className="text-sm hover:underline">
+                            {t('See all %topics%')}
+                        </Link>
+                    </section>
+                )}
 
                 {members.length > 0 && (
                     <section className="space-y-2">

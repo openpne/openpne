@@ -23,7 +23,7 @@ final class CommunityTopicCommentThread
     /** Fixed page size (OpenPNE 3 communityTopicComment list component). */
     public const SIZE = 20;
 
-    /** @param  Collection<int, CommunityTopicComment>  $comments  the current page, ascending by number */
+    /** @param  Collection<int, CommunityTopicComment>  $comments  the current page, ascending by id */
     private function __construct(
         public readonly CommunityTopic $topic,
         public readonly Collection $comments,
@@ -41,7 +41,7 @@ final class CommunityTopicCommentThread
         $lastPage = max(1, (int) ceil($total / self::SIZE));
         $page = max(1, min((int) ($page ?: 1), $lastPage));
 
-        $comments = $topic->comments()->with(['member', 'images.file'])
+        $comments = $topic->comments()->with(['member.avatar.file', 'images.file'])
             ->orderBy('id', $ascending ? 'asc' : 'desc')
             ->forPage($page, self::SIZE)
             ->get();

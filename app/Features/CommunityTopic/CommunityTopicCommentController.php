@@ -11,14 +11,16 @@ use App\Http\Requests\CommunityTopic\StoreTopicCommentRequest;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Member;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Classic-only adapter for topic comments. The action chokepoint (CommunityTopicAccess) enforces
- * who may comment and who may delete; the controller maps its refusals to 404 and redirects back to
- * the topic. Confirm pages render under page_communityTopicComment_* (the op3Module override).
+ * Topic comments, dual-surface for the write path. The action chokepoint (CommunityTopicAccess)
+ * enforces who may comment and who may delete; the controller maps its refusals to 404 and redirects
+ * back to the topic on the surface the request came from. showDelete stays a Classic-only GET confirm
+ * page (page_communityTopicComment_*) — Modern confirms delete inline (Radix AlertDialog).
  */
 class CommunityTopicCommentController extends Controller
 {
@@ -32,7 +34,7 @@ class CommunityTopicCommentController extends Controller
             abort(404);
         }
 
-        return redirect()->route('communityTopic.show', $found)->with('status', __('Comment posted.'));
+        return $this->redirectToTopic($request, $found)->with('status', __('Comment posted.'));
     }
 
     public function showDelete(Request $request, CommunityTopicComment $comment): View
@@ -55,7 +57,13 @@ class CommunityTopicCommentController extends Controller
             abort(404);
         }
 
-        return redirect()->route('communityTopic.show', $topic)->with('status', __('The comment was deleted.'));
+        return $this->redirectToTopic($request, $topic)->with('status', __('The comment was deleted.'));
+    }
+
+    /** Redirect to the topic show page on the surface the request came from (both key off {topic}). */
+    private function redirectToTopic(Request $request, CommunityTopic $topic): RedirectResponse
+    {
+        return redirect()->route(SurfaceResolver::redirectName($request, 'communityTopic.show'), $topic);
     }
 
     private function viewer(): Member
