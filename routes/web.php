@@ -89,7 +89,7 @@ Route::post('/locale/session', function (Request $request) {
 Route::get('/member/{member}', [ProfileController::class, 'show'])
     ->whereNumber('member')->name('member.profile.show');
 Route::get('/m/member/{member}', [ProfileController::class, 'show'])
-    ->whereNumber('member')->defaults('surface', 'modern')->name('member.profile.modern.show');
+    ->whereNumber('member')->defaults('surface', 'modern')->name('member.modern.profile.show');
 // OpenPNE 3 member_profile_raw alias (/member/profile/id/:id/*) → canonical /member/{id}.
 // OpenPNE 3's trailing splat matched extra path segments; capture and ignore them so the
 // whole legacy URL space redirects instead of 404ing past the id.
@@ -358,9 +358,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/member/edit/profile', [ProfileController::class, 'edit'])->name('member.profile.edit');
     Route::post('/member/edit/profile', [ProfileController::class, 'update'])->name('member.profile.update');
     Route::get('/m/member/edit/profile', [ProfileController::class, 'edit'])
-        ->defaults('surface', 'modern')->name('member.profile.modern.edit');
+        ->defaults('surface', 'modern')->name('member.modern.profile.edit');
     Route::post('/m/member/edit/profile', [ProfileController::class, 'update'])
-        ->defaults('surface', 'modern')->name('member.profile.modern.update');
+        ->defaults('surface', 'modern')->name('member.modern.profile.update');
 
     // File byte delivery, bound by the opaque `name` token. FileController gates every
     // fetch through FilePolicy, so disk backends stream through the app too (never a
