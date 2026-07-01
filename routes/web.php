@@ -503,6 +503,34 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/communityEvent/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityEvent.comment.delete');
     });
 
+    // Community events, Modern surface. Names are the canonical event names with a .modern. infix
+    // (ModernRouteConventionTest); no GET delete-confirm twin — Modern confirms inline. Each route
+    // carries a single route-model-bound id: the board keys off {community}, the event pages off
+    // {event}, never both in one path (implicit binding resolves a model param only as the sole one).
+    Route::prefix('m/community/{community}/event')->whereNumber('community')
+        ->controller(CommunityEventController::class)->group(function () {
+            Route::get('/new', 'new')->defaults('surface', 'modern')->name('communityEvent.modern.new');
+            Route::post('/', 'store')->defaults('surface', 'modern')->name('communityEvent.modern.store');
+            Route::get('/', 'index')->defaults('surface', 'modern')->name('communityEvent.modern.index');
+        });
+
+    Route::prefix('m/community/event')->whereNumber('event')
+        ->controller(CommunityEventController::class)->group(function () {
+            Route::get('/{event}/edit', 'edit')->defaults('surface', 'modern')->name('communityEvent.modern.edit');
+            Route::post('/{event}/edit', 'update')->defaults('surface', 'modern')->name('communityEvent.modern.update');
+            Route::post('/{event}/delete', 'delete')->defaults('surface', 'modern')->name('communityEvent.modern.delete');
+            Route::get('/{event}/members', 'memberList')->defaults('surface', 'modern')->name('communityEvent.modern.member_list');
+            Route::get('/{event}', 'show')->defaults('surface', 'modern')->name('communityEvent.modern.show');
+        });
+
+    // communityEventComment, Modern surface: comment/RSVP create keys off the event id, delete off the
+    // comment id (literal /comment/* never collides with the numeric event). No GET confirm twin.
+    Route::prefix('m/community/event')->whereNumber(['event', 'comment'])
+        ->controller(CommunityEventCommentController::class)->group(function () {
+            Route::post('/{event}/comment', 'store')->defaults('surface', 'modern')->name('communityEvent.modern.comment.store');
+            Route::post('/comment/{comment}/delete', 'delete')->defaults('surface', 'modern')->name('communityEvent.modern.comment.delete');
+        });
+
     // Private messages (Classic only; Modern is none). The four boxes plus a per-box show page.
     // OpenPNE 3 keyed show by message id with the box in the path (/message/read|check|checkDelete/:id);
     // those URLs are preserved. /message and /message/index land on the inbox. Compose / reply /

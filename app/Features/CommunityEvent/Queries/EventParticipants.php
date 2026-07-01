@@ -18,6 +18,7 @@ class EventParticipants
     public function __invoke(CommunityEvent $event, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
         return $event->participants()
+            ->with('avatar.file')
             ->orderBy('community_event_members.id')
             ->paginate($perPage);
     }

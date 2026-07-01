@@ -19,6 +19,7 @@ class RecentCommunityEvents
     {
         return $community->events()
             ->withCount('comments')
+            ->with('member.avatar.file')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit($limit)

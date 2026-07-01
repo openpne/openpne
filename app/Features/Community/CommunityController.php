@@ -20,6 +20,7 @@ use App\Features\Community\Queries\ShowCommunity;
 use App\Features\Community\Serializers\CommunitySerializer;
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityEvent\Queries\RecentCommunityEvents;
+use App\Features\CommunityEvent\Serializers\CommunityEventSerializer;
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\CommunityTopic\Queries\RecentCommunityTopics;
 use App\Features\CommunityTopic\Serializers\CommunityTopicSerializer;
@@ -88,10 +89,12 @@ class CommunityController extends Controller
                 // Only a non-admin member may leave (the sole admin must hand off first), matching showQuit.
                 'canLeave' => $role !== null && $role !== CommunityRole::Admin,
                 'members' => CommunitySerializer::members($sidebarMembers),
-                // The recent-topics box links into the board; null when the viewer may not read it,
-                // so the card is hidden (events stay omitted until that Modern surface lands).
+                // The recent-topics / recent-events boxes link into their boards; null when the viewer
+                // may not read them (events share the topic read gate), so the card is hidden.
                 'recentTopics' => $canViewBoard ? CommunityTopicSerializer::summaries($recentTopics($found)) : null,
                 'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
+                'recentEvents' => $canViewBoard ? CommunityEventSerializer::summaries($recentEvents($found)) : null,
+                'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
             ]),
         ]);
     }

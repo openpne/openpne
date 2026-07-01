@@ -20,6 +20,7 @@ class ListCommunityEvents
     {
         return $community->events()
             ->withCount('comments')
+            ->with('member.avatar.file')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->paginate($perPage);
