@@ -117,7 +117,10 @@ hook is derived from the route parity, not held in the controller — see
 
 **Modern** owns the new product experience, mobile UX, Inertia props, and React
 components. It does not have to cover every Classic feature at once; each carries
-a Modern status (above).
+a Modern status (above). Modern pages render inside a shared app shell — an Inertia
+persistent layout ([`resources/js/app.tsx`](../../resources/js/app.tsx)) that adds
+the sidebar / top-bar navigation. The shell is nav chrome only, so **each Modern
+page owns its own `<main>` and flash**; a page opts out by exporting its own `layout`.
 
 **Admin** (Filament) may use plain CRUD for simple, non-behavioral master data
 (labels, categories, basic config). For SNS-meaningful operations — anything with
