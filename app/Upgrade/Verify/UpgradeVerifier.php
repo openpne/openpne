@@ -12,6 +12,7 @@ use App\Upgrade\StepRegistry;
 use App\Upgrade\UpgradeStep;
 use Closure;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Post-migration integrity check for openpne:verify-upgrade — a read-only gate run before switchover.
@@ -126,6 +127,14 @@ final class UpgradeVerifier
 
     private function verifyFileBin(VerifyReport $report, Closure $out): void
     {
+        // A files-migrating run with no file_bin table is a broken/incomplete schema — report it as a
+        // failure rather than throwing on the DB::table('file_bin') calls below.
+        if (! Schema::hasTable('file_bin')) {
+            $this->record($report, $out, 'file_bin:count', false, 'file_bin table is missing');
+
+            return;
+        }
+
         $files = (int) DB::table('files')->count();
         $bins = (int) DB::table('file_bin')->count();
         $this->record($report, $out, 'file_bin:count', $files === $bins,

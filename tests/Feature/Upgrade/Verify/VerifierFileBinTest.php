@@ -83,6 +83,17 @@ class VerifierFileBinTest extends TestCase
         $this->assertStringContainsString('FAIL file_bin:count', $out);
     }
 
+    public function test_a_missing_file_bin_table_is_reported_not_thrown(): void
+    {
+        $this->seedConsistent();
+        DB::statement('DROP TABLE `file_bin`'); // a broken/incomplete schema
+
+        [$report, $out] = $this->verify();
+
+        $this->assertTrue($report->failed());
+        $this->assertStringContainsString('file_bin table is missing', $out);
+    }
+
     /** @return list<int> */
     private function seedConsistent(): array
     {
