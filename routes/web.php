@@ -413,10 +413,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::prefix('m/community')->controller(CommunityController::class)->group(function () {
         Route::get('/search', 'search')->defaults('surface', 'modern')->name('community.modern.search');
         Route::get('/joined', 'listMine')->defaults('surface', 'modern')->name('community.modern.list_mine');
-        Route::get('/new', 'edit')->defaults('surface', 'modern')->name('community.modern.new');
-        Route::post('/', 'save')->defaults('surface', 'modern')->name('community.modern.store');
-        Route::get('/{community}/edit', 'edit')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.edit');
-        Route::post('/{community}/edit', 'save')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.update');
+        // One edit form + submit for both create and edit (?id= switches), mirroring the canonical
+        // community.edit / community.save so the Modern names round-trip (ModernRouteConventionTest).
+        Route::get('/edit', 'edit')->defaults('surface', 'modern')->name('community.modern.edit');
+        Route::post('/edit', 'save')->defaults('surface', 'modern')->name('community.modern.save');
         Route::post('/{community}/delete', 'delete')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.delete');
         Route::get('/{community}/members', 'members')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members');
         Route::get('/{community}/pending', 'pendingMembers')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members.pending');

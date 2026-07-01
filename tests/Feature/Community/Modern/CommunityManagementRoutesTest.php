@@ -17,9 +17,8 @@ class CommunityManagementRoutesTest extends TestCase
     {
         $community = Community::factory()->create();
 
-        $this->get('/m/community/new')->assertRedirect('/login');
-        $this->post('/m/community')->assertRedirect('/login');
-        $this->get("/m/community/{$community->getKey()}/edit")->assertRedirect('/login');
+        $this->get('/m/community/edit')->assertRedirect('/login');
+        $this->post('/m/community/edit')->assertRedirect('/login');
         $this->post("/m/community/{$community->getKey()}/delete")->assertRedirect('/login');
         $this->get("/m/community/{$community->getKey()}/pending")->assertRedirect('/login');
     }
@@ -29,7 +28,7 @@ class CommunityManagementRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->get('/m/community/new')
+            ->get('/m/community/edit')
             ->assertInertia(fn ($page) => $page
                 ->component('community/edit')
                 ->where('community', null)
@@ -45,7 +44,7 @@ class CommunityManagementRoutesTest extends TestCase
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
         $this->actingAs($admin)
-            ->get("/m/community/{$community->getKey()}/edit")
+            ->get("/m/community/edit?id={$community->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->component('community/edit')
                 ->where('community.id', $community->getKey())
@@ -58,14 +57,14 @@ class CommunityManagementRoutesTest extends TestCase
         $stranger = Member::factory()->create();
         $community = Community::factory()->create();
 
-        $this->actingAs($stranger)->get("/m/community/{$community->getKey()}/edit")->assertNotFound();
+        $this->actingAs($stranger)->get("/m/community/edit?id={$community->getKey()}")->assertNotFound();
     }
 
     public function test_modern_create_stores_community_and_redirects_to_modern_show(): void
     {
         $member = Member::factory()->create();
 
-        $response = $this->actingAs($member)->post('/m/community', [
+        $response = $this->actingAs($member)->post('/m/community/edit', [
             'name' => 'Modern Community',
             'register_policy' => 1,
         ]);
@@ -88,7 +87,7 @@ class CommunityManagementRoutesTest extends TestCase
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
         $this->actingAs($admin)
-            ->post("/m/community/{$community->getKey()}/edit", ['name' => 'Steady Name', 'register_policy' => 2])
+            ->post("/m/community/edit?id={$community->getKey()}", ['name' => 'Steady Name', 'register_policy' => 2])
             ->assertRedirect(route('community.modern.show', $community));
 
         $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'register_policy' => 2]);

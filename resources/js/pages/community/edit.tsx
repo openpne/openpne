@@ -36,7 +36,7 @@ export default function CommunityEdit() {
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.post(isEdit ? `/m/community/${community.id}/edit` : '/m/community', { forceFormData: true });
+        form.post(isEdit ? `/m/community/edit?id=${community.id}` : '/m/community/edit', { forceFormData: true });
     };
 
     const destroy = async () => {

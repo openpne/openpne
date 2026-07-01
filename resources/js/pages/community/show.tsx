@@ -78,7 +78,7 @@ export default function CommunityShow() {
 
                 {canManage && (
                     <div className="flex gap-4 text-sm">
-                        <Link href={`/m/community/${community.id}/edit`} className="hover:underline">
+                        <Link href={`/m/community/edit?id=${community.id}`} className="hover:underline">
                             {t('Edit %community%')}
                         </Link>
                         {viewerRole === 'admin' && (
