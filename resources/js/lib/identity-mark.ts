@@ -1,8 +1,8 @@
 /**
  * Initial-badge fallback shown when a member or community has no image.
  *
- * The colour is derived from the entity id (id mod palette length), so the same entity keeps its
- * colour across reloads and renames. The 12-colour palette is mid-lightness so that either white
+ * The color is derived from the entity id (id mod palette length), so the same entity keeps its
+ * color across reloads and renames. The 12-color palette is mid-lightness so that either white
  * or slate-900 text can meet WCAG 4.5:1 — pickReadableTextColor chooses which. Shape (circle vs
  * rounded square) distinguishes a member from a community and is applied by the caller's className.
  */
@@ -44,7 +44,7 @@ const PALETTE: readonly string[] = [
     '#ec4899', // pink-500
 ];
 
-/** Maps a 1-based id to a palette colour. Non-finite/negative ids are guarded to the first colour. */
+/** Maps a 1-based id to a palette color. Non-finite/negative ids are guarded to the first color. */
 export function pickPaletteColor(id: number): string {
     if (!Number.isFinite(id)) return PALETTE[0]!;
     const index = Math.abs(Math.trunc(id)) % PALETTE.length;

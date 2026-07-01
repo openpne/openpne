@@ -17,16 +17,23 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $locale = app()->getLocale();
+        $user = $request->user();
 
         return [
             ...parent::share($request),
             'name' => sns_name(),
             'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'email' => $request->user()->email,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'imageUrl' => $user->avatar?->file?->thumbnailUrl(76, 76, square: true),
                 ] : null,
+            ],
+            // Modern brand mark: color + optional logo URL; a null url renders a color initial badge.
+            'snsLogo' => [
+                'color' => '#2563eb',
+                'url' => null,
             ],
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),

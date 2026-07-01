@@ -2,6 +2,12 @@ export interface AuthUser {
     id: number;
     name: string;
     email: string;
+    imageUrl: string | null;
+}
+
+export interface SnsLogo {
+    color: string;
+    url: string | null;
 }
 
 export interface PageProps {
@@ -9,6 +15,7 @@ export interface PageProps {
     auth: {
         user: AuthUser | null;
     };
+    snsLogo: SnsLogo;
     flash: {
         status: string | null;
         error: string | null;
