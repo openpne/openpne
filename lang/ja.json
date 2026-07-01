@@ -363,10 +363,12 @@
     "Label (Japanese)": "ラベル（日本語）",
     "Language": "言語",
     "Latest date that can be entered (YYYY-MM-DD).": "入力できる最も新しい日付（YYYY-MM-DD）。",
+    "Leave": "退会",
     "Leave :name?": ":nameから退会しますか？",
     "Leave a field blank to fall back to the default value.": "空欄にすると既定値に戻ります。",
     "Leave blank to keep current password": "変更しない場合は空欄にしてください",
     "Leave this %community%": "この%community%から退会",
+    "Leave this %community%?": "この%community%から退会しますか?",
     "length": "長さ",
     "Length Required": "長さが必要",
     "Light": "ライト",
@@ -598,6 +600,7 @@
     "Request declined.": "リクエストを却下しました。",
     "Request Header Fields Too Large": "要求ヘッダーフィールドが大きすぎます",
     "Request Timeout": "リクエストタイムアウト",
+    "Request to join": "参加をリクエスト",
     "Requests received": "受信した申請",
     "Requests sent": "送信した申請",
     "Require CAPTCHA": "CAPTCHA を使用する",
@@ -885,6 +888,7 @@
     "Your email address has been changed. Please sign in with your new address.": "メールアドレスを変更しました。新しいアドレスでサインインしてください。",
     "Your join request has been sent.": "参加リクエストを送信しました。",
     "Your join request is already pending.": "参加リクエストはすでに保留中です。",
+    "Your join request is awaiting approval.": "参加リクエストの承認待ちです。",
     "Your join request is pending.": "参加リクエストは保留中です。",
     "Zone": "ゾーン"
 }
