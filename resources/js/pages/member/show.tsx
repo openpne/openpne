@@ -29,9 +29,18 @@ export default function MemberShow() {
             <Head title={owner.name} />
 
             <div className="flex items-center gap-4">
-                {owner.avatarUrl && (
-                    <img src={owner.avatarUrl} alt={owner.name} className="size-20 rounded-md object-cover" />
-                )}
+                {/* For the viewer's own profile the avatar block also entry-points the image editor —
+                    shown even without an avatar yet, so a first image can be set. */}
+                <div className="flex flex-col items-center gap-1">
+                    {owner.avatarUrl && (
+                        <img src={owner.avatarUrl} alt={owner.name} className="size-20 rounded-md object-cover" />
+                    )}
+                    {isSelf && (
+                        <Link href="/m/member/avatar" className="text-xs text-blue-600 hover:underline">
+                            {t('Edit profile image')}
+                        </Link>
+                    )}
+                </div>
                 <h1 className="text-xl font-semibold text-foreground">{owner.name}</h1>
                 {isSelf ? (
                     <Link href="/m/member/edit/profile" className="text-sm text-blue-600">
