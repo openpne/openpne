@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Auth\LegacyEloquentUserProvider;
 use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
@@ -24,6 +25,7 @@ use App\Services\SnsSettingService;
 use App\Services\TermService;
 use App\Translation\TermTranslator;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -81,6 +83,10 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
             config(['session.secure' => true]);
         }
+
+        // The `admins` guard uses this so an administrator carried over from OpenPNE 3 can log in with
+        // their legacy MD5 password, which is then rehashed to bcrypt (see LegacyEloquentUserProvider).
+        Auth::provider('legacy-eloquent', fn ($app, array $config): LegacyEloquentUserProvider => new LegacyEloquentUserProvider($app['hash'], $config['model']));
 
         // Stable morph alias so a file's owner is stored as `member`, not the FQCN;
         // FilePolicy resolves the owning entity through this map.
