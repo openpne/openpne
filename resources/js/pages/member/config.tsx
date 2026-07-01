@@ -1,9 +1,9 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useT } from '@/lib/i18n';
-import { useTheme, type ThemePreference } from '@/lib/theme';
+import { useColorMode, type ColorMode } from '@/lib/color-mode';
 import type { PageProps } from '@/types';
 
-const APPEARANCE_OPTIONS: { value: ThemePreference; label: string }[] = [
+const APPEARANCE_OPTIONS: { value: ColorMode; label: string }[] = [
     { value: 'light', label: 'Light' },
     { value: 'dark', label: 'Dark' },
     { value: 'system', label: 'Use system setting' },
@@ -40,7 +40,7 @@ export default function MemberConfig() {
     const email = useForm({ new_email: '', password: '' });
     const withdraw = useForm({ password: '', confirm: false });
     // Appearance is a client-side display preference (localStorage), applied immediately — no server post.
-    const { preference, set: setTheme } = useTheme();
+    const { preference, set: setColorMode } = useColorMode();
 
     return (
         <>
@@ -157,7 +157,7 @@ export default function MemberConfig() {
                                     name="appearance"
                                     value={opt.value}
                                     checked={preference === opt.value}
-                                    onChange={() => setTheme(opt.value)}
+                                    onChange={() => setColorMode(opt.value)}
                                 />
                                 <span>{t(opt.label)}</span>
                             </label>

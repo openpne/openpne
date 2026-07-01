@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#2563eb">
-    {{-- Apply the saved theme before first paint so a dark-mode member never sees a light flash.
-         lib/theme.ts keeps the class in sync after mount. --}}
+    {{-- Apply the saved color mode before first paint so a dark-mode member never sees a light flash.
+         lib/color-mode.ts keeps the class in sync after mount. --}}
     <script>
         (function () {
             try {
-                var p = localStorage.getItem('openpne-theme');
+                var p = localStorage.getItem('openpne-color-mode');
                 if (p !== 'light' && p !== 'dark') p = 'system';
                 if (p === 'dark' || (p === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
                     document.documentElement.classList.add('dark');

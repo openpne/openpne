@@ -5,8 +5,8 @@
 @source '../**/*.blade.php';
 @source '../js/**/*.{ts,tsx}';
 
-/* Class-based dark mode: `dark:` responds to a `.dark` class on <html> (set by lib/theme.ts and the
-   pre-paint script in app.blade.php), not prefers-color-scheme, so a member can choose the theme. */
+/* Class-based dark mode: `dark:` responds to a `.dark` class on <html> (set by lib/color-mode.ts and
+   the pre-paint script in app.blade.php), not prefers-color-scheme, so a member can choose the mode. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
