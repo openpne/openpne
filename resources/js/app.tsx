@@ -20,11 +20,12 @@ void createInertiaApp({
         );
         // resolvePageComponent resolves to the page *module*; the component and its optional
         // persistent layout live on `.default` (the helper's return type says component, but at
-        // runtime it is the module). Wrap every authenticated page in the shell unless it is an auth
-        // page or already sets its own layout. Gate on `layout === undefined` (not null) — Inertia
-        // React treats a null layout as "use the default".
+        // runtime it is the module). The shell supplies the shared <main> + flash, so a page must
+        // drop its own before it can opt in — until each page is converted, only the dashboard uses
+        // the shell (widening this gate is the page-by-page rollout). Gate on `layout === undefined`
+        // (not null) — Inertia React treats a null layout as "use the default".
         const mod = page as unknown as { default: { layout?: (el: ReactNode) => ReactNode } };
-        if (mod.default.layout === undefined && !name.startsWith('auth/')) {
+        if (mod.default.layout === undefined && name === 'dashboard') {
             mod.default.layout = (pageEl: ReactNode) => <AppShell>{pageEl}</AppShell>;
         }
         return page;
