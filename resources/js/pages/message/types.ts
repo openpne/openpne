@@ -32,6 +32,14 @@ export interface MessageImage {
     thumbnailUrl: string; // 120px square
 }
 
+export interface MessageDraftForm {
+    id: number;
+    subject: string;
+    body: string;
+    recipient: MessageMember | null; // fixed when the draft was created; null → withdrawn
+    images: MessageImage[]; // current attachments, each removable by id
+}
+
 export interface MessageDetail {
     id: number;
     subject: string;
