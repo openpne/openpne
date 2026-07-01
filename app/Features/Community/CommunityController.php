@@ -105,7 +105,8 @@ class CommunityController extends Controller
         }
 
         $categoryRaw = $params['community_category_id'] ?? $request->query('category_id');
-        $categoryId = is_numeric($categoryRaw) ? (int) $categoryRaw : null;
+        // 0 / negative is the Modern form's "all categories" sentinel, not a real category id.
+        $categoryId = is_numeric($categoryRaw) && (int) $categoryRaw > 0 ? (int) $categoryRaw : null;
 
         $communities = $query($keyword, $categoryId);
 
