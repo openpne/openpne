@@ -1,7 +1,7 @@
 import { computeInitial, pickPaletteColor, pickReadableTextColor } from '@/lib/identity-mark';
 
 /**
- * Circular member avatar. Renders the image when `src` is set, otherwise an initial badge coloured
+ * Circular member avatar. Renders the image when `src` is set, otherwise an initial badge colored
  * by member id (stable across renames). The circle shape distinguishes it from a community image.
  */
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg';
@@ -21,8 +21,8 @@ const textSizeClass: Record<AvatarSize, string> = {
 };
 
 type Props = {
-    /** Member id, hashed to the badge colour. Pass `0` (e.g. `author?.id ?? 0`) for a withdrawn
-     *  member so it renders a neutral placeholder instead of a coloured badge. */
+    /** Member id, hashed to the badge color. Pass `0` (e.g. `author?.id ?? 0`) for a withdrawn
+     *  member so it renders a neutral placeholder instead of a colored badge. */
     id: number;
     name: string;
     /** Image URL, or null to fall back to the initial badge. */
