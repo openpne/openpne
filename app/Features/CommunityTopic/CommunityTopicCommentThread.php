@@ -23,7 +23,7 @@ final class CommunityTopicCommentThread
     /** Fixed page size (OpenPNE 3 communityTopicComment list component). */
     public const SIZE = 20;
 
-    /** @param  Collection<int, CommunityTopicComment>  $comments  the current page, ascending by number */
+    /** @param  Collection<int, CommunityTopicComment>  $comments  the current page, ascending by id */
     private function __construct(
         public readonly CommunityTopic $topic,
         public readonly Collection $comments,
