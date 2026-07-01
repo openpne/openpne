@@ -18,11 +18,14 @@ void createInertiaApp({
             `./pages/${name}.tsx`,
             import.meta.glob<ResolvedComponent>('./pages/**/*.tsx'),
         );
-        // Wrap every authenticated Modern page in the app shell. Auth pages keep their own
-        // AuthLayout; a page can opt out by exporting its own `layout`. Gate on `layout === undefined`
-        // (not null) — Inertia React treats a null layout as "use the default".
-        if (page.layout === undefined && !name.startsWith('auth/')) {
-            page.layout = (pageEl: ReactNode) => <AppShell>{pageEl}</AppShell>;
+        // resolvePageComponent resolves to the page *module*; the component and its optional
+        // persistent layout live on `.default` (the helper's return type says component, but at
+        // runtime it is the module). Wrap every authenticated page in the shell unless it is an auth
+        // page or already sets its own layout. Gate on `layout === undefined` (not null) — Inertia
+        // React treats a null layout as "use the default".
+        const mod = page as unknown as { default: { layout?: (el: ReactNode) => ReactNode } };
+        if (mod.default.layout === undefined && !name.startsWith('auth/')) {
+            mod.default.layout = (pageEl: ReactNode) => <AppShell>{pageEl}</AppShell>;
         }
         return page;
     },
