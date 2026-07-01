@@ -55,7 +55,7 @@ export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel>{t('Theme')}</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('Appearance')}</DropdownMenuLabel>
                 <DropdownMenuRadioGroup value={preference} onValueChange={(v) => setTheme(v as ThemePreference)}>
                     <DropdownMenuRadioItem value="light">
                         <Sun className="size-4 shrink-0 text-slate-500 dark:text-slate-400" />
