@@ -109,8 +109,8 @@ export interface EventSummary {
     name: string;
     commentCount: number;
     author: TopicAuthor | null;
-    updatedAt: string;
-    openDate: string; // ISO 8601 (rendered as a date)
+    updatedAt: string; // ISO 8601 datetime
+    openDate: string; // Y-m-d (date only, no timezone — format with formatDateOnly)
 }
 
 export interface EventDetail {
@@ -119,11 +119,11 @@ export interface EventDetail {
     body: string;
     images: TopicImage[];
     author: TopicAuthor | null;
-    createdAt: string;
-    openDate: string;
+    createdAt: string; // ISO 8601 datetime
+    openDate: string; // Y-m-d (date only)
     openDateComment: string;
     area: string;
-    applicationDeadline: string | null;
+    applicationDeadline: string | null; // Y-m-d (date only) or null
     capacity: number | null;
     participantCount: number;
 }

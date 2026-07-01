@@ -24,6 +24,9 @@ class CommunityEventSerializer
      * A board row / recent-events card: the title, comment count, author, last-activity time, and
      * the open date (shown alongside the title). Callers eager-load comments_count and member.
      *
+     * openDate is a date-only Y-m-d string, not an ISO datetime: rendering an ISO midnight with the
+     * browser's timezone would shift the date a day west of UTC (Classic renders the stored date).
+     *
      * @return array{id: int, name: string, commentCount: int, author: array{id: int, name: string, imageUrl: string|null}|null, updatedAt: string, openDate: string}
      */
     public static function summary(CommunityEvent $event): array
@@ -34,13 +37,14 @@ class CommunityEventSerializer
             'commentCount' => $event->comments_count ?? $event->loadCount('comments')->comments_count,
             'author' => self::author($event->member),
             'updatedAt' => $event->updated_at->toIso8601String(),
-            'openDate' => $event->open_date->toIso8601String(),
+            'openDate' => $event->open_date->format('Y-m-d'),
         ];
     }
 
     /**
      * The event show shape: the full body, images, and the event schedule fields. participantCount is
-     * the current roster size (the RSVP button state is computed by the controller).
+     * the current roster size (the RSVP button state is computed by the controller). openDate and
+     * applicationDeadline are date-only Y-m-d strings (see summary()); createdAt is a real datetime.
      *
      * @return array{id: int, name: string, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
@@ -53,10 +57,10 @@ class CommunityEventSerializer
             'images' => $event->images->map([self::class, 'image'])->all(),
             'author' => self::author($event->member),
             'createdAt' => $event->created_at->toIso8601String(),
-            'openDate' => $event->open_date->toIso8601String(),
+            'openDate' => $event->open_date->format('Y-m-d'),
             'openDateComment' => $event->open_date_comment ?? '',
             'area' => $event->area ?? '',
-            'applicationDeadline' => $event->application_deadline?->toIso8601String(),
+            'applicationDeadline' => $event->application_deadline?->format('Y-m-d'),
             'capacity' => $event->capacity,
             'participantCount' => $event->participantCount(),
         ];

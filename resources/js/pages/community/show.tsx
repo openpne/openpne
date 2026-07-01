@@ -3,6 +3,7 @@ import { Avatar } from '@/components/avatar';
 import { Card, CardBody } from '@/components/card';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
+import { formatDateOnly } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
@@ -150,7 +151,7 @@ export default function CommunityShow() {
                                         <Link href={`/m/community/event/${event.id}`} className="block truncate py-2 hover:bg-muted/40">
                                             <span className="font-medium">{event.name}</span>{' '}
                                             <span className="text-sm text-muted-foreground">
-                                                ({event.commentCount}) &middot; {new Date(event.openDate).toLocaleDateString()}
+                                                ({event.commentCount}) &middot; {formatDateOnly(event.openDate)}
                                             </span>
                                         </Link>
                                     </li>

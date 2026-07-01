@@ -1,6 +1,7 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { formatDateOnly } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, EventDetail, EventThread, TopicImage } from '../types';
@@ -104,7 +105,7 @@ export default function CommunityEventShow() {
                     <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
                         <dt className="text-muted-foreground">{t('Open date')}</dt>
                         <dd>
-                            {new Date(event.openDate).toLocaleDateString()}
+                            {formatDateOnly(event.openDate)}
                             {event.openDateComment && <span className="text-muted-foreground"> ({event.openDateComment})</span>}
                         </dd>
                         {event.area && (
@@ -116,7 +117,7 @@ export default function CommunityEventShow() {
                         {event.applicationDeadline && (
                             <>
                                 <dt className="text-muted-foreground">{t('Application deadline')}</dt>
-                                <dd>{new Date(event.applicationDeadline).toLocaleDateString()}</dd>
+                                <dd>{formatDateOnly(event.applicationDeadline)}</dd>
                             </>
                         )}
                         <dt className="text-muted-foreground">{t('Count of Member')}</dt>

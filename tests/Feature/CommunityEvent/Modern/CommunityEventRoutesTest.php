@@ -222,6 +222,38 @@ class CommunityEventRoutesTest extends TestCase
             );
     }
 
+    public function test_date_only_event_fields_are_serialized_as_ymd(): void
+    {
+        // Date-only fields must be Y-m-d, not an ISO midnight a browser would render a day early west
+        // of UTC. Assert the show, board, and community recent-events props all carry the plain date.
+        $community = Community::factory()->create();
+        $member = $this->joined($community);
+        $openDate = now()->addMonth()->startOfDay();
+        $event = CommunityEvent::factory()->create([
+            'community_id' => $community->getKey(),
+            'member_id' => $member->getKey(),
+            'open_date' => $openDate,
+            'application_deadline' => $openDate->copy()->subDay(),
+        ]);
+        $openYmd = $openDate->format('Y-m-d');
+        $deadlineYmd = $openDate->copy()->subDay()->format('Y-m-d');
+
+        $this->actingAs($member)
+            ->get(route('communityEvent.modern.show', $event))
+            ->assertInertia(fn ($page) => $page
+                ->where('event.openDate', $openYmd)
+                ->where('event.applicationDeadline', $deadlineYmd)
+            );
+
+        $this->actingAs($member)
+            ->get(route('communityEvent.modern.index', $community))
+            ->assertInertia(fn ($page) => $page->where('events.data.0.openDate', $openYmd));
+
+        $this->actingAs($member)
+            ->get(route('community.modern.show', $community))
+            ->assertInertia(fn ($page) => $page->where('recentEvents.0.openDate', $openYmd));
+    }
+
     public function test_modern_only_serves_the_canonical_event_board_as_inertia(): void
     {
         config()->set('openpne.tenant_mode', 'modern_only');

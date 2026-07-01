@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { Pagination } from '@/components/pagination';
+import { formatDateOnly } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, PaginatedEvents } from '../types';
@@ -50,7 +51,7 @@ export default function CommunityEventIndex() {
                                                 {event.name} ({event.commentCount})
                                             </p>
                                             <p className="truncate text-xs text-muted-foreground">
-                                                {t('Open date')}: {new Date(event.openDate).toLocaleDateString()}
+                                                {t('Open date')}: {formatDateOnly(event.openDate)}
                                                 {' · '}
                                                 {event.author?.name ?? t('Withdrawn member')}
                                             </p>
