@@ -1,5 +1,6 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
+import { useConfirm } from '@/components/confirm-dialog';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, MessageDetail, MessageImage } from './types';
@@ -43,12 +44,20 @@ function ImageGrid({ images }: { images: MessageImage[] }) {
 
 export default function MessageShow() {
     const t = useT();
+    const confirm = useConfirm();
     const { message, flash } = usePage<ShowProps>().props;
     const showPath = SHOW_PATH[message.box];
     const box = BOX[message.box];
     const counterpartyHeading = message.viewerIsSender ? t('Recipient') : t('Sender');
     // OpenPNE 3 offers Reply on a received message whose sender still exists (the inbox counterparty).
     const canReply = message.box === 'receive' && message.counterparties.length > 0;
+
+    const trash = (path: string) => router.post(path);
+    const purge = async () => {
+        if (await confirm({ title: t('Delete this message permanently?'), confirmLabel: t('Delete'), danger: true })) {
+            router.post(`/m/message/deleteComplete/${message.id}`);
+        }
+    };
 
     return (
         <>
@@ -111,14 +120,36 @@ export default function MessageShow() {
 
                     <div className="whitespace-pre-wrap break-words">{message.body}</div>
 
-                    {canReply && (
-                        <Link
-                            href={`/m/message/reply/${message.id}`}
-                            className="inline-block min-h-11 rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-                        >
-                            {t('Reply')}
-                        </Link>
-                    )}
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                        {canReply && (
+                            <Link
+                                href={`/m/message/reply/${message.id}`}
+                                className="inline-block min-h-11 rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                            >
+                                {t('Reply')}
+                            </Link>
+                        )}
+                        {message.box === 'receive' && (
+                            <button type="button" onClick={() => trash(`/m/message/deleteReceiveMessage/${message.id}`)} className="text-sm text-red-600 hover:underline">
+                                {t('Delete')}
+                            </button>
+                        )}
+                        {message.box === 'sent' && (
+                            <button type="button" onClick={() => trash(`/m/message/deleteSendMessage/${message.id}`)} className="text-sm text-red-600 hover:underline">
+                                {t('Delete')}
+                            </button>
+                        )}
+                        {message.box === 'trash' && (
+                            <>
+                                <button type="button" onClick={() => trash(`/m/message/restore/${message.id}`)} className="text-sm hover:underline">
+                                    {t('Restore')}
+                                </button>
+                                <button type="button" onClick={purge} className="text-sm text-red-600 hover:underline">
+                                    {t('Delete permanently')}
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </article>
             </main>
         </>
