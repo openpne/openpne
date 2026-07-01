@@ -564,9 +564,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/bulk', 'bulk')->name('message.bulk');
     });
 
-    // Modern twins for the message read + compose + single-message management surfaces. Same
-    // controller, same OpenPNE 3 path shapes under /m/message; the bulk action and the GET purge
-    // confirms remain Classic-only (Modern confirms inline).
+    // Modern twins for the message read + compose + management surfaces (single-message and bulk).
+    // Same controller, same OpenPNE 3 path shapes under /m/message; only the GET purge-confirm pages
+    // remain Classic-only (Modern confirms inline).
     Route::prefix('m/message')->controller(MessageController::class)->group(function () {
         Route::get('/', 'index')->defaults('surface', 'modern')->name('message.modern.index');
         Route::get('/receiveList', 'receive')->defaults('surface', 'modern')->name('message.modern.receive');
@@ -585,5 +585,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/deleteSendMessage/{message}', 'trashSent')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.send.trash');
         Route::post('/restore/{message}', 'restore')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.trash.restore');
         Route::post('/deleteComplete/{message}', 'purge')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.trash.purge');
+        Route::post('/bulk', 'bulk')->defaults('surface', 'modern')->name('message.modern.bulk');
     });
 });

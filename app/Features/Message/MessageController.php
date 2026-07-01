@@ -30,10 +30,10 @@ use Inertia\Response as InertiaResponse;
 
 /**
  * Private messages (OpenPNE 3 message module), dual-surface across the read pages (the four boxes and
- * the per-message show), composing (compose/reply/send), draft editing, and the single-message trash
- * actions (trash/restore/purge): each serves Classic Blade or Modern Inertia per SurfaceResolver, and
- * a submit redirects on the surface it came from. Modern confirms a purge inline, so the GET confirm
- * pages (purgeConfirm, bulk purge) and the bulk action stay Classic-only, rendered through the
+ * the per-message show), composing (compose/reply/send), draft editing, and the trash actions
+ * (single-message and bulk trash/restore/purge): each serves Classic Blade or Modern Inertia per
+ * SurfaceResolver, and a submit redirects on the surface it came from. Modern confirms a purge inline,
+ * so only the GET confirm pages (purgeConfirm, bulk purge) stay Classic-only, rendered through the
  * classic() helper with the OpenPNE 3 page_message_* body id.
  */
 class MessageController extends Controller
@@ -201,38 +201,46 @@ class MessageController extends Controller
 
     /**
      * Bulk action over a list's checked rows (OpenPNE 3 MessageDeleteForm): trash from the
-     * receive/send/draft boxes, restore or purge from the trash box. Purge is gated behind a
-     * confirmation page, so the first submit renders it and the confirmed submit carries it out.
+     * receive/send/draft boxes, restore or purge from the trash box. Classic gates a purge behind a
+     * confirmation page (first submit renders it, confirmed submit carries it out); Modern confirms
+     * inline, so its purge always arrives confirmed. Every redirect stays on the request's surface.
      */
     public function bulk(BulkMessageRequest $request, TrashMessages $trash, RestoreMessages $restore, PurgeMessages $purge): View|RedirectResponse
     {
         $viewer = $this->viewer();
         $box = $request->box();
         $ids = $request->ids();
+        $trashList = SurfaceResolver::redirectName($request, 'message.trash');
 
         if ($ids === []) {
-            return redirect()->route($box->listRoute());
+            return redirect()->route(SurfaceResolver::redirectName($request, $box->listRoute()));
         }
 
         if ($box !== MessageBox::Trash) {
             $trash($viewer, $box, $ids);
 
-            return redirect()->route($box->listRoute())->with('status', __('The message was moved to the trash.'));
+            return redirect()->route(SurfaceResolver::redirectName($request, $box->listRoute()))->with('status', __('The message was moved to the trash.'));
         }
 
         if ($request->action() === 'restore') {
             $restore($viewer, $ids);
 
-            return redirect()->route('message.trash')->with('status', __('The message was restored.'));
+            return redirect()->route($trashList)->with('status', __('The message was restored.'));
         }
 
         if (! $request->confirmed()) {
-            return $this->classic('message.bulk_purge_confirm', ['ids' => $ids]);
+            // Classic renders the confirm page; a Modern purge is always confirmed, so an unconfirmed
+            // one here is a client error — nothing is purged.
+            if (SurfaceResolver::resolve($request, 'message') === SurfaceResolver::CLASSIC) {
+                return $this->classic('message.bulk_purge_confirm', ['ids' => $ids]);
+            }
+
+            return redirect()->route($trashList);
         }
 
         $purge($viewer, $ids);
 
-        return redirect()->route('message.trash')->with('status', __('The message was deleted.'));
+        return redirect()->route($trashList)->with('status', __('The message was deleted.'));
     }
 
     private function composeForm(Request $request, Member $recipient, ?int $parentId = null, ?int $threadId = null, string $subject = '', string $body = ''): View|InertiaResponse
