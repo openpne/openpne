@@ -17,97 +17,154 @@ use App\Features\Community\Queries\ListMemberCommunities;
 use App\Features\Community\Queries\ListPendingMembers;
 use App\Features\Community\Queries\SearchCommunities;
 use App\Features\Community\Queries\ShowCommunity;
+use App\Features\Community\Serializers\CommunitySerializer;
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityEvent\Queries\RecentCommunityEvents;
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\CommunityTopic\Queries\RecentCommunityTopics;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\CommunityRequest;
 use App\Models\Community;
 use App\Models\CommunityCategory;
 use App\Models\Member;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 /**
- * Classic-only adapter for the community core. Modern is status `none` in Phase A — no /m/*
- * routes, no Inertia — so this renders Blade directly and injects the OpenPNE 3 body id, rather
- * than carrying the dual-surface respondWith() the Diary/Friend controllers use.
+ * Community core. The browse/join actions (show, search, listMine, members, join, quit) serve
+ * Classic Blade or Modern Inertia per SurfaceResolver; the management actions below still render
+ * Classic only (a follow-up adds their Modern surface). The Classic body id and the community
+ * localNav side effect are preserved in the Classic branch of each dual-surface action.
  */
 class CommunityController extends Controller
 {
-    public function show(Request $request, int $community, ShowCommunity $query, RecentCommunityTopics $recentTopics, RecentCommunityEvents $recentEvents): View
+    use RespondsWithSurface;
+
+    public function show(Request $request, int $community, ShowCommunity $query, RecentCommunityTopics $recentTopics, RecentCommunityEvents $recentEvents): View|InertiaResponse
     {
         $found = $query($community);
         abort_if($found === null, 404);
         $found->loadMissing('category', 'image');
         $viewer = $this->viewer();
-
+        $role = CommunityMembership::roleOf($found, $viewer);
+        $isPending = CommunityMembership::isPending($found, $viewer);
+        // The sidemenu member grid (OpenPNE 3 nineTable, 3×3), admins first like ListCommunityMembers.
+        // Shared by the Classic grid and the Modern member preview.
+        $sidebarMembers = $found->members()->with('member.avatar.file')
+            ->orderByDesc('role')->orderBy('id')->limit(9)->get();
         // The recent-topics / recent-events boxes (OpenPNE 3 community home) only show when the viewer
-        // may read that board; the "post" link only when they may post. Events share the topic read
-        // gate, so one canViewBoard check covers both.
+        // may read that board; events share the topic read gate, so one check covers both. Modern
+        // omits these until the board/event surfaces land (a follow-up), so no unlinkable content.
         $canViewBoard = CommunityTopicAccess::canViewBoard($found, $viewer);
 
-        return $this->classic('community.show', [
-            'community' => $found,
-            // The sidemenu member grid (OpenPNE 3 nineTable, 3×3), admins first like ListCommunityMembers.
-            'sidebarMembers' => $found->members()->with('member.avatar.file')
-                ->orderByDesc('role')->orderBy('id')->limit(9)->get(),
-            'role' => CommunityMembership::roleOf($found, $viewer),
-            'isPending' => CommunityMembership::isPending($found, $viewer),
-            'recentTopics' => $canViewBoard ? $recentTopics($found) : null,
-            'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
-            'recentEvents' => $canViewBoard ? $recentEvents($found) : null,
-            'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
+        return $this->respondWith($request, 'community', [
+            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $sidebarMembers, $canViewBoard, $recentTopics, $recentEvents) {
+                $this->markLocalNavCommunity($found);
+
+                return view('community.show', [
+                    'community' => $found,
+                    'sidebarMembers' => $sidebarMembers,
+                    'role' => $role,
+                    'isPending' => $isPending,
+                    'recentTopics' => $canViewBoard ? $recentTopics($found) : null,
+                    'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
+                    'recentEvents' => $canViewBoard ? $recentEvents($found) : null,
+                    'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
+                ]);
+            },
+            SurfaceResolver::MODERN => fn () => Inertia::render('community/show', [
+                'community' => CommunitySerializer::detail($found),
+                'viewerRole' => $role?->slug(),
+                'isPending' => $isPending,
+                'canManage' => $role?->canManage() ?? false,
+                'canJoin' => $role === null && ! $isPending,
+                // Only a non-admin member may leave (the sole admin must hand off first), matching showQuit.
+                'canLeave' => $role !== null && $role !== CommunityRole::Admin,
+                'members' => CommunitySerializer::members($sidebarMembers),
+            ]),
         ]);
     }
 
-    public function search(Request $request, SearchCommunities $query): View
+    public function search(Request $request, SearchCommunities $query): View|InertiaResponse
     {
         // OpenPNE 3 query shape: community[name] / community[community_category_id], with a
         // search_query alias for the name (preserved so a bookmarked OpenPNE 3 search URL works).
+        // The Modern search form uses flat keyword / category_id, accepted here as a fallback.
         $params = $request->query('community');
         $params = is_array($params) ? $params : [];
 
         $keyword = $this->stringValue($params['name'] ?? null);
-        if ($keyword === '' && $request->filled('search_query')) {
-            $keyword = $this->stringValue($request->query('search_query'));
+        if ($keyword === '') {
+            $keyword = $this->stringValue($request->query('search_query') ?? $request->query('keyword'));
         }
 
-        $categoryRaw = $params['community_category_id'] ?? null;
+        $categoryRaw = $params['community_category_id'] ?? $request->query('category_id');
         $categoryId = is_numeric($categoryRaw) ? (int) $categoryRaw : null;
 
-        return $this->classic('community.search', [
-            'keyword' => $keyword,
-            'categoryId' => $categoryId,
-            // Search spans every category (OpenPNE 3 CommunityFormFilter), not just the
-            // member-creatable set the create form offers.
-            'categories' => $this->allCategories(),
-            'communities' => $query($keyword, $categoryId),
+        $communities = $query($keyword, $categoryId);
+
+        return $this->respondWith($request, 'community', [
+            SurfaceResolver::CLASSIC => fn () => view('community.search', [
+                'keyword' => $keyword,
+                'categoryId' => $categoryId,
+                // Search spans every category (OpenPNE 3 CommunityFormFilter), not just the
+                // member-creatable set the create form offers.
+                'categories' => $this->allCategories(),
+                'communities' => $communities,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('community/search', [
+                'keyword' => $keyword,
+                'categoryId' => $categoryId,
+                'categories' => $this->categoryOptions(),
+                'communities' => CommunitySerializer::paginator($communities),
+            ]),
         ]);
     }
 
-    public function listMine(Request $request, ListMemberCommunities $query): View
+    public function listMine(Request $request, ListMemberCommunities $query): View|InertiaResponse
     {
         $owner = $this->memberSubject($request->filled('id')
             ? Member::findOrFail($request->integer('id'))
             : null);
+        $communities = $query($owner);
 
-        return $this->classic('community.list', [
-            'owner' => $owner,
-            'communities' => $query($owner),
+        return $this->respondWith($request, 'community', [
+            SurfaceResolver::CLASSIC => fn () => view('community.list', [
+                'owner' => $owner,
+                'communities' => $communities,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('community/list', [
+                'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
+                'isOwner' => $this->viewer()->is($owner),
+                'communities' => CommunitySerializer::paginator($communities),
+            ]),
         ]);
     }
 
-    public function members(Request $request, ListCommunityMembers $query): View
+    public function members(Request $request, ListCommunityMembers $query): View|InertiaResponse
     {
-        $community = $this->communityFromQuery($request);
+        $community = $this->communityFrom($request);
+        $members = $query($community);
 
-        return $this->classic('community.members', [
-            'community' => $community,
-            'members' => $query($community),
+        return $this->respondWith($request, 'community', [
+            SurfaceResolver::CLASSIC => function () use ($community, $members) {
+                $this->markLocalNavCommunity($community);
+
+                return view('community.members', [
+                    'community' => $community,
+                    'members' => $members,
+                ]);
+            },
+            SurfaceResolver::MODERN => fn () => Inertia::render('community/members', [
+                'community' => CommunitySerializer::summary($community),
+                'members' => CommunitySerializer::memberPaginator($members),
+            ]),
         ]);
     }
 
@@ -147,7 +204,7 @@ class CommunityController extends Controller
 
     public function showJoin(Request $request): View|RedirectResponse
     {
-        $community = $this->communityFromQuery($request);
+        $community = $this->communityFrom($request);
         $viewer = $this->viewer();
         // Already in the community or awaiting approval: nothing to confirm.
         if (CommunityMembership::isMember($community, $viewer) || CommunityMembership::isPending($community, $viewer)) {
@@ -159,24 +216,24 @@ class CommunityController extends Controller
 
     public function join(Request $request, JoinCommunity $action): RedirectResponse
     {
-        $community = $this->communityFromQuery($request);
+        $community = $this->communityFrom($request);
 
         try {
             $action($this->viewer(), $community);
         } catch (CommunityActionException $e) {
-            return redirect()->route('community.show', $community)->with('error', $this->messageFor($e->reason));
+            return $this->redirectToShow($request, $community)->with('error', $this->messageFor($e->reason));
         }
 
         $status = $community->register_policy === JoinPolicy::Approval
             ? __('Your join request has been sent.')
             : __('You have joined this %community%.');
 
-        return redirect()->route('community.show', $community)->with('status', $status);
+        return $this->redirectToShow($request, $community)->with('status', $status);
     }
 
     public function showQuit(Request $request): View|RedirectResponse
     {
-        $community = $this->communityFromQuery($request);
+        $community = $this->communityFrom($request);
         $viewer = $this->viewer();
         // Only a non-admin member can quit (the sole admin must hand off first).
         if (! CommunityMembership::isMember($community, $viewer) || CommunityMembership::isAdmin($community, $viewer)) {
@@ -188,15 +245,15 @@ class CommunityController extends Controller
 
     public function quit(Request $request, QuitCommunity $action): RedirectResponse
     {
-        $community = $this->communityFromQuery($request);
+        $community = $this->communityFrom($request);
 
         try {
             $action($this->viewer(), $community);
         } catch (CommunityActionException $e) {
-            return redirect()->route('community.show', $community)->with('error', $this->messageFor($e->reason));
+            return $this->redirectToShow($request, $community)->with('error', $this->messageFor($e->reason));
         }
 
-        return redirect()->route('community.show', $community)->with('status', __('You have left this %community%.'));
+        return $this->redirectToShow($request, $community)->with('status', __('You have left this %community%.'));
     }
 
     public function showDelete(Request $request, Community $community): View
@@ -216,7 +273,7 @@ class CommunityController extends Controller
 
     public function pendingMembers(Request $request, ListPendingMembers $query): View
     {
-        $community = $this->communityFromQuery($request);
+        $community = $this->communityFrom($request);
         abort_unless(Gate::allows('manageMembers', $community), 404);
 
         return $this->classic('community.pending', [
@@ -238,7 +295,7 @@ class CommunityController extends Controller
     /** Shared approve/decline body: gate on admin, resolve the applicant, run, redirect to pending. */
     private function moderate(Request $request, callable $run, string $status): RedirectResponse
     {
-        $community = $this->communityFromQuery($request);
+        $community = $this->communityFrom($request);
         abort_unless(Gate::allows('manageMembers', $community), 404);
         $applicant = Member::findOrFail($request->integer('member_id'));
 
@@ -256,10 +313,22 @@ class CommunityController extends Controller
         return redirect()->route('community.members.pending', ['id' => $community->getKey()]);
     }
 
-    /** Resolve the community a `?id=`-scoped page is about (join/quit/members/pending), or 404. */
-    private function communityFromQuery(Request $request): Community
+    /** Redirect to the community top page on the surface the request came from (Modern -> /m/*). */
+    private function redirectToShow(Request $request, Community $community): RedirectResponse
     {
-        return Community::findOrFail($request->integer('id'));
+        return redirect()->route(SurfaceResolver::redirectName($request, 'community.show'), $community);
+    }
+
+    /**
+     * Resolve the community a page is about. /m/* routes carry it in the path ({community});
+     * canonical Classic routes (join/quit/members/pending) use ?id=. 404 when neither resolves.
+     */
+    private function communityFrom(Request $request): Community
+    {
+        $routeId = $request->route('community');
+        $id = $routeId !== null ? (int) $routeId : $request->integer('id');
+
+        return Community::findOrFail($id);
     }
 
     /** Categories an ordinary member may create in — the OpenPNE 3 create-form set. */
@@ -279,6 +348,21 @@ class CommunityController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * The search filter's category options for the Modern surface: {id, name} for every category.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    private function categoryOptions(): array
+    {
+        return $this->allCategories()
+            ->map(fn (CommunityCategory $category): array => [
+                'id' => $category->getKey(),
+                'name' => $category->name,
+            ])
+            ->all();
     }
 
     /**
