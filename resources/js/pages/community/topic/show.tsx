@@ -3,12 +3,12 @@ import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunitySummary, TopicComment, TopicDetail, TopicImage } from '../types';
+import type { CommunitySummary, TopicDetail, TopicImage, TopicThread } from '../types';
 
 interface ShowProps extends PageProps {
     community: CommunitySummary;
     topic: TopicDetail;
-    comments: TopicComment[];
+    thread: TopicThread;
     canComment: boolean;
     canEdit: boolean;
 }
@@ -34,7 +34,16 @@ function ImageGrid({ images }: { images: TopicImage[] }) {
 export default function CommunityTopicShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { community, topic, comments, canComment, canEdit, flash } = usePage<ShowProps>().props;
+    const { community, topic, thread, canComment, canEdit, flash } = usePage<ShowProps>().props;
+
+    // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
+    const threadLink = (page: number, ascending: boolean) => {
+        const params = new URLSearchParams();
+        if (ascending) params.set('order', 'asc');
+        if (page > 1) params.set('page', String(page));
+        const qs = params.toString();
+        return `/m/community/topic/${topic.id}${qs ? `?${qs}` : ''}`;
+    };
 
     const form = useForm({ body: '', images: [] as File[] });
     const submitComment = (e: React.FormEvent) => {
@@ -101,12 +110,35 @@ export default function CommunityTopicShow() {
                 </article>
 
                 <section className="space-y-3">
-                    <h2 className="text-lg font-semibold">{t(':count comments', { count: comments.length })}</h2>
-                    {comments.length === 0 ? (
+                    <h2 className="text-lg font-semibold">{t(':count comments', { count: thread.total })}</h2>
+
+                    {thread.lastPage > 1 && (
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                            {thread.hasOlder && thread.olderPage !== null ? (
+                                <Link href={threadLink(thread.olderPage, thread.ascending)} preserveScroll className="hover:underline">
+                                    {t('Older')}
+                                </Link>
+                            ) : (
+                                <span />
+                            )}
+                            <Link href={threadLink(1, !thread.ascending)} preserveScroll className="hover:underline">
+                                {thread.ascending ? t('View Latest') : t('View Oldest First')}
+                            </Link>
+                            {thread.hasNewer && thread.newerPage !== null ? (
+                                <Link href={threadLink(thread.newerPage, thread.ascending)} preserveScroll className="hover:underline">
+                                    {t('Newer')}
+                                </Link>
+                            ) : (
+                                <span />
+                            )}
+                        </div>
+                    )}
+
+                    {thread.comments.length === 0 ? (
                         <p className="text-sm text-muted-foreground">{t('No comments yet.')}</p>
                     ) : (
                         <ul className="space-y-3">
-                            {comments.map((comment) => (
+                            {thread.comments.map((comment) => (
                                 <li key={comment.id} className="border-t pt-3">
                                     <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
                                         <span className="font-medium">#{comment.number}</span>

@@ -74,11 +74,56 @@ class CommunityTopicRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('community/topic/show')
                 ->where('topic.id', $topic->getKey())
-                ->has('comments', 1)
-                ->where('comments.0.deletable', true)
+                ->where('thread.total', 1)
+                ->has('thread.comments', 1)
+                ->where('thread.comments.0.deletable', true)
                 ->where('canComment', true)
                 ->where('canEdit', true)
             );
+    }
+
+    public function test_modern_show_orders_comments_by_id_not_number(): void
+    {
+        // number is a racy label on migrated data; the thread pager orders by id, so Modern must
+        // list comments in insertion order regardless of number (matching Classic).
+        $community = Community::factory()->create();
+        $author = $this->joined($community);
+        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $first = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => 3]);
+        $second = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => 1]);
+        $third = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => 2]);
+
+        $this->actingAs($author)
+            ->get(route('communityTopic.modern.show', $topic))
+            ->assertInertia(fn ($page) => $page
+                ->where('thread.comments.0.id', $first->getKey())
+                ->where('thread.comments.1.id', $second->getKey())
+                ->where('thread.comments.2.id', $third->getKey())
+            );
+    }
+
+    public function test_modern_show_paginates_the_comment_thread(): void
+    {
+        // Large threads must not serialize every comment: the pager caps a page at 20.
+        $community = Community::factory()->create();
+        $author = $this->joined($community);
+        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        foreach (range(1, 25) as $n) {
+            CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => $n]);
+        }
+
+        $this->actingAs($author)
+            ->get(route('communityTopic.modern.show', $topic))
+            ->assertInertia(fn ($page) => $page
+                ->where('thread.total', 25)
+                ->where('thread.lastPage', 2)
+                ->where('thread.ascending', false)
+                ->has('thread.comments', 20)
+            );
+
+        $this->actingAs($author)
+            ->get(route('communityTopic.modern.show', ['topic' => $topic, 'page' => 2]))
+            ->assertInertia(fn ($page) => $page->has('thread.comments', 5));
     }
 
     public function test_modern_show_returns_404_when_the_board_is_members_only_and_the_viewer_is_a_stranger(): void

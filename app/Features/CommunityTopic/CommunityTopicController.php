@@ -81,14 +81,17 @@ class CommunityTopicController extends Controller
                     'canEdit' => CommunityTopicAccess::canEditTopic($found, $viewer),
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($found, $viewer) {
+            SurfaceResolver::MODERN => function () use ($request, $found, $viewer) {
                 $found->loadMissing('member.avatar.file');
-                $comments = $found->comments()->with(['member.avatar.file', 'images.file'])->orderBy('number')->get();
+                // Reuse the Classic thread pager (id-ordered, size 20, reversible) so Modern shows
+                // comments in the same order as Classic — number is racy on migrated data — and never
+                // serializes an unbounded thread in one response.
+                $thread = CommunityTopicCommentThread::paginate($found, $request->query('order'), $request->query('page'));
 
                 return Inertia::render('community/topic/show', [
                     'community' => CommunitySerializer::summary($found->community),
                     'topic' => CommunityTopicSerializer::detail($found),
-                    'comments' => CommunityTopicSerializer::comments($comments, $viewer),
+                    'thread' => CommunityTopicSerializer::thread($thread, $viewer),
                     'canComment' => CommunityTopicAccess::canComment($found, $viewer),
                     'canEdit' => CommunityTopicAccess::canEditTopic($found, $viewer),
                 ]);

@@ -3,6 +3,7 @@
 namespace App\Features\CommunityTopic\Serializers;
 
 use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Features\CommunityTopic\CommunityTopicCommentThread;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\CommunityTopicCommentImage;
@@ -78,6 +79,28 @@ class CommunityTopicSerializer
     public static function comments(Collection $comments, Member $viewer): array
     {
         return $comments->map(fn (CommunityTopicComment $comment): array => self::comment($comment, $viewer))->all();
+    }
+
+    /**
+     * The paged comment thread (OpenPNE 3 pager): the current page ascending, plus the reversible
+     * paging state the React page needs to build Older/Newer/oldest-first links. Ordering is by id,
+     * not number (the pager's contract), so Modern matches Classic even on migrated data.
+     *
+     * @return array{comments: list<array>, total: int, page: int, lastPage: int, ascending: bool, hasOlder: bool, hasNewer: bool, olderPage: int|null, newerPage: int|null}
+     */
+    public static function thread(CommunityTopicCommentThread $thread, Member $viewer): array
+    {
+        return [
+            'comments' => self::comments($thread->comments, $viewer),
+            'total' => $thread->total,
+            'page' => $thread->page,
+            'lastPage' => $thread->lastPage,
+            'ascending' => $thread->ascending,
+            'hasOlder' => $thread->hasOlder(),
+            'hasNewer' => $thread->hasNewer(),
+            'olderPage' => $thread->hasOlder() ? $thread->olderPage() : null,
+            'newerPage' => $thread->hasNewer() ? $thread->newerPage() : null,
+        ];
     }
 
     /**
