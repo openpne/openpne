@@ -12,6 +12,7 @@ use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\ParallelTesting;
 use Tests\TestCase;
 
 /**
@@ -23,8 +24,6 @@ class FileBinMigrationTest extends TestCase
     use DatabaseMigrations;
 
     private const BLOB = "\x00\x01\x02\xff\xfeGIF89a binary\x00payload\xed";
-
-    private const SOURCE_DB = 'op3_filebin_src';
 
     protected function setUp(): void
     {
@@ -141,17 +140,17 @@ class FileBinMigrationTest extends TestCase
         $ids = $this->seedSeparateDatabase();
         $migration = new FileBinMigration;
 
-        $migration->move('', self::SOURCE_DB, $this->out($lines));
+        $migration->move('', $this->sourceDb(), $this->out($lines));
         $migration->rewire($this->out($ignore));
 
         $this->assertStringContainsString('DONE file_bin_move', implode("\n", $lines));
-        $this->assertFalse($this->tableExists(self::SOURCE_DB, 'file_bin'), 'the source file_bin is moved out');
+        $this->assertFalse($this->tableExists($this->sourceDb(), 'file_bin'), 'the source file_bin is moved out');
         $this->assertSame(count($ids), (int) DB::scalar('SELECT COUNT(*) FROM `file_bin`'));
         $this->assertSame(self::BLOB, DB::table('file_bin')->where('file_id', $ids[0])->value('bin'));
         $this->assertSame('files', $this->fkReferencedTable('file_bin'));
 
         // Idempotent: a second move finds the source gone and leaves the app BLOBs untouched.
-        $migration->move('', self::SOURCE_DB, $this->out($second));
+        $migration->move('', $this->sourceDb(), $this->out($second));
         $this->assertStringContainsString('SKIP file_bin_move', implode("\n", $second));
         $this->assertSame(count($ids), (int) DB::scalar('SELECT COUNT(*) FROM `file_bin`'));
     }
@@ -292,8 +291,8 @@ class FileBinMigrationTest extends TestCase
     {
         $ids = File::factory()->count(2)->create()->pluck('id')->all();
 
-        DB::statement('CREATE DATABASE IF NOT EXISTS `'.self::SOURCE_DB.'`');
-        $src = '`'.self::SOURCE_DB.'`';
+        DB::statement('CREATE DATABASE IF NOT EXISTS `'.$this->sourceDb().'`');
+        $src = '`'.$this->sourceDb().'`';
         $this->createOp3File("{$src}.`file`");
         $this->createOp3FileBin("{$src}.`file_bin`", "{$src}.`file`", 'src_file_bin_fk');
         foreach ($ids as $id) {
@@ -372,6 +371,15 @@ class FileBinMigrationTest extends TestCase
         return DB::connection()->getDatabaseName();
     }
 
+    // Per-worker source database: --functional spreads a class's methods across paratest workers, so a
+    // shared fixed name would let concurrent methods create/drop each other's source DB (a real race).
+    private function sourceDb(): string
+    {
+        $token = ParallelTesting::token();
+
+        return 'op3_filebin_src'.($token ? '_'.$token : '');
+    }
+
     /** @param  mixed  $lines  populated with the captured output lines */
     private function out(&$lines): \Closure
     {
@@ -391,6 +399,6 @@ class FileBinMigrationTest extends TestCase
             DB::statement("DROP TABLE IF EXISTS {$table}");
         }
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
-        DB::statement('DROP DATABASE IF EXISTS `'.self::SOURCE_DB.'`');
+        DB::statement('DROP DATABASE IF EXISTS `'.$this->sourceDb().'`');
     }
 }
