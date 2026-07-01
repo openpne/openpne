@@ -37,10 +37,10 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Community core. The browse/join actions (show, search, listMine, members, join, quit) serve
- * Classic Blade or Modern Inertia per SurfaceResolver; the management actions below still render
- * Classic only (a follow-up adds their Modern surface). The Classic body id and the community
- * localNav side effect are preserved in the Classic branch of each dual-surface action.
+ * Community core and management, both dual-surface: each action serves Classic Blade or Modern
+ * Inertia per SurfaceResolver, preserving the Classic body id and the community localNav side
+ * effect in the Classic branch. showJoin/showQuit/showDelete stay Classic-only GET confirm pages —
+ * Modern confirms join/quit/delete inline (Radix AlertDialog) and POSTs directly.
  */
 class CommunityController extends Controller
 {
@@ -169,24 +169,52 @@ class CommunityController extends Controller
         ]);
     }
 
-    public function edit(Request $request): View
+    public function edit(Request $request): View|InertiaResponse
     {
-        $community = $request->filled('id') ? Community::findOrFail($request->integer('id')) : null;
+        $community = $this->optionalCommunityFrom($request);
         if ($community !== null) {
             abort_unless(Gate::allows('update', $community), 404);
-            $community->loadMissing('category');
+            $community->loadMissing('category', 'image');
         }
+        $categories = $this->editableCategories($community);
 
-        return $this->classic('community.edit', [
-            'community' => $community,
-            'categories' => $this->editableCategories($community),
-            'policies' => JoinPolicy::cases(),
+        return $this->respondWith($request, 'community', [
+            SurfaceResolver::CLASSIC => function () use ($community, $categories) {
+                if ($community !== null) {
+                    $this->markLocalNavCommunity($community);
+                }
+
+                return view('community.edit', [
+                    'community' => $community,
+                    'categories' => $categories,
+                    'policies' => JoinPolicy::cases(),
+                ]);
+            },
+            SurfaceResolver::MODERN => fn () => Inertia::render('community/edit', [
+                'community' => $community === null ? null : [
+                    'id' => $community->getKey(),
+                    'name' => $community->name,
+                    'description' => $community->description ?? '',
+                    'registerPolicy' => $community->register_policy->value,
+                    'categoryId' => $community->community_category_id,
+                    'imageUrl' => $community->image?->thumbnailUrl(180, 180, square: true),
+                ],
+                'categories' => $categories->map(fn (CommunityCategory $category): array => [
+                    'id' => $category->getKey(),
+                    'name' => $category->name,
+                ])->values()->all(),
+                'policies' => array_map(fn (JoinPolicy $policy): array => [
+                    'value' => $policy->value,
+                    'label' => $policy->label(),
+                ], JoinPolicy::cases()),
+                'canDelete' => $community !== null && Gate::allows('delete', $community),
+            ]),
         ]);
     }
 
     public function save(CommunityRequest $request, CreateCommunity $create, UpdateCommunity $update): RedirectResponse
     {
-        $community = $request->filled('id') ? Community::findOrFail($request->integer('id')) : null;
+        $community = $this->optionalCommunityFrom($request);
 
         try {
             if ($community === null) {
@@ -199,7 +227,7 @@ class CommunityController extends Controller
             return back()->withInput()->with('error', $this->messageFor($e->reason));
         }
 
-        return redirect()->route('community.show', $community)
+        return $this->redirectToShow($request, $community)
             ->with('status', __('%Community% settings saved.'));
     }
 
@@ -269,17 +297,29 @@ class CommunityController extends Controller
         abort_unless(Gate::allows('delete', $community), 404);
         $action($this->viewer(), $community);
 
-        return redirect()->route('community.search')->with('status', __('%Community% deleted.'));
+        return redirect()->route(SurfaceResolver::redirectName($request, 'community.search'))
+            ->with('status', __('%Community% deleted.'));
     }
 
-    public function pendingMembers(Request $request, ListPendingMembers $query): View
+    public function pendingMembers(Request $request, ListPendingMembers $query): View|InertiaResponse
     {
         $community = $this->communityFrom($request);
         abort_unless(Gate::allows('manageMembers', $community), 404);
+        $applicants = $query($community);
 
-        return $this->classic('community.pending', [
-            'community' => $community,
-            'applicants' => $query($community),
+        return $this->respondWith($request, 'community', [
+            SurfaceResolver::CLASSIC => function () use ($community, $applicants) {
+                $this->markLocalNavCommunity($community);
+
+                return view('community.pending', [
+                    'community' => $community,
+                    'applicants' => $applicants,
+                ]);
+            },
+            SurfaceResolver::MODERN => fn () => Inertia::render('community/pending', [
+                'community' => CommunitySerializer::summary($community),
+                'applicants' => CommunitySerializer::applicantPaginator($applicants),
+            ]),
         ]);
     }
 
@@ -303,14 +343,19 @@ class CommunityController extends Controller
         try {
             $run($community, $applicant);
         } catch (CommunityActionException $e) {
-            return $this->redirectToPending($community)->with('error', $this->messageFor($e->reason));
+            return $this->redirectToPending($request, $community)->with('error', $this->messageFor($e->reason));
         }
 
-        return $this->redirectToPending($community)->with('status', $status);
+        return $this->redirectToPending($request, $community)->with('status', $status);
     }
 
-    private function redirectToPending(Community $community): RedirectResponse
+    private function redirectToPending(Request $request, Community $community): RedirectResponse
     {
+        // Modern keys the community off the path; canonical Classic keys it off ?id=.
+        if ($request->route('surface') === SurfaceResolver::MODERN) {
+            return redirect()->route('community.modern.members.pending', $community);
+        }
+
         return redirect()->route('community.members.pending', ['id' => $community->getKey()]);
     }
 
@@ -330,6 +375,18 @@ class CommunityController extends Controller
         $id = $routeId !== null ? (int) $routeId : $request->integer('id');
 
         return Community::findOrFail($id);
+    }
+
+    /**
+     * Like communityFrom, but null when no community is identified — the create form/submit carries
+     * neither a path {community} nor ?id=. Used by edit/save, which serve both new and existing.
+     */
+    private function optionalCommunityFrom(Request $request): ?Community
+    {
+        $routeId = $request->route('community');
+        $id = $routeId !== null ? (int) $routeId : ($request->filled('id') ? $request->integer('id') : null);
+
+        return $id !== null ? Community::findOrFail($id) : null;
     }
 
     /** Categories an ordinary member may create in — the OpenPNE 3 create-form set. */

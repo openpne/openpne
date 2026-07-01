@@ -18,6 +18,7 @@ class ListPendingMembers
     public function __invoke(Community $community, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
         return $community->applicants()
+            ->with('avatar.file')
             ->orderByPivot('created_at')
             ->paginate($perPage);
     }

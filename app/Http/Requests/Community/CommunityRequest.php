@@ -18,7 +18,8 @@ class CommunityRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        $id = $this->query('id');
+        // Modern update routes carry the community in the path ({community}); Classic uses ?id=.
+        $id = $this->route('community') ?? $this->query('id');
 
         return [
             // OpenPNE 3 community.name is varchar(64) UNIQUE.

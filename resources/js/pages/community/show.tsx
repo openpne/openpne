@@ -20,7 +20,7 @@ interface ShowProps extends PageProps {
 export default function CommunityShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { community, isPending, canJoin, canLeave, members, flash } = usePage<ShowProps>().props;
+    const { community, viewerRole, canManage, isPending, canJoin, canLeave, members, flash } = usePage<ShowProps>().props;
 
     const join = () => router.post(`/m/community/${community.id}/join`);
     const leave = async () => {
@@ -72,6 +72,19 @@ export default function CommunityShow() {
                             >
                                 {t('Leave')}
                             </button>
+                        )}
+                    </div>
+                )}
+
+                {canManage && (
+                    <div className="flex gap-4 text-sm">
+                        <Link href={`/m/community/edit?id=${community.id}`} className="hover:underline">
+                            {t('Edit %community%')}
+                        </Link>
+                        {viewerRole === 'admin' && (
+                            <Link href={`/m/community/${community.id}/pending`} className="hover:underline">
+                                {t('Pending members')}
+                            </Link>
                         )}
                     </div>
                 )}
