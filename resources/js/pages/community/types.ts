@@ -99,3 +99,47 @@ export interface TopicThread {
     olderPage: number | null;
     newerPage: number | null;
 }
+
+// Event comment / thread shapes are identical to the topic board's.
+export type EventComment = TopicComment;
+export type EventThread = TopicThread;
+
+export interface EventSummary {
+    id: number;
+    name: string;
+    commentCount: number;
+    author: TopicAuthor | null;
+    updatedAt: string;
+    openDate: string; // ISO 8601 (rendered as a date)
+}
+
+export interface EventDetail {
+    id: number;
+    name: string;
+    body: string;
+    images: TopicImage[];
+    author: TopicAuthor | null;
+    createdAt: string;
+    openDate: string;
+    openDateComment: string;
+    area: string;
+    applicationDeadline: string | null;
+    capacity: number | null;
+    participantCount: number;
+}
+
+export interface EventParticipant {
+    id: number;
+    name: string;
+    imageUrl: string | null;
+}
+
+export interface PaginatedEvents {
+    data: EventSummary[];
+    meta: PaginationMeta;
+}
+
+export interface PaginatedEventParticipants {
+    data: EventParticipant[];
+    meta: PaginationMeta;
+}

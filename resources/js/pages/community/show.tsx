@@ -5,7 +5,7 @@ import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, TopicSummary } from './types';
+import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
 
 interface ShowProps extends PageProps {
     community: CommunityDetail;
@@ -15,15 +15,19 @@ interface ShowProps extends PageProps {
     canJoin: boolean;
     canLeave: boolean;
     members: CommunityMemberRow[];
-    recentTopics: TopicSummary[] | null; // null → the viewer may not read the board
+    recentTopics: TopicSummary[] | null; // null → the viewer may not read the boards
     canPostTopic: boolean;
+    recentEvents: EventSummary[] | null;
+    canPostEvent: boolean;
 }
 
 export default function CommunityShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { community, viewerRole, canManage, isPending, canJoin, canLeave, members, recentTopics, canPostTopic, flash } =
-        usePage<ShowProps>().props;
+    const {
+        community, viewerRole, canManage, isPending, canJoin, canLeave, members,
+        recentTopics, canPostTopic, recentEvents, canPostEvent, flash,
+    } = usePage<ShowProps>().props;
 
     const join = () => router.post(`/m/community/${community.id}/join`);
     const leave = async () => {
@@ -123,6 +127,38 @@ export default function CommunityShow() {
                         )}
                         <Link href={`/m/community/${community.id}/topic`} className="text-sm hover:underline">
                             {t('See all %topics%')}
+                        </Link>
+                    </section>
+                )}
+
+                {recentEvents !== null && (
+                    <section className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <h2 className="text-lg font-semibold">{t('Recent events')}</h2>
+                            {canPostEvent && (
+                                <Link href={`/m/community/${community.id}/event/new`} className="shrink-0 text-sm hover:underline">
+                                    {t('Post a new event')}
+                                </Link>
+                            )}
+                        </div>
+                        {recentEvents.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
+                        ) : (
+                            <ul className="divide-y">
+                                {recentEvents.map((event) => (
+                                    <li key={event.id}>
+                                        <Link href={`/m/community/event/${event.id}`} className="block truncate py-2 hover:bg-muted/40">
+                                            <span className="font-medium">{event.name}</span>{' '}
+                                            <span className="text-sm text-muted-foreground">
+                                                ({event.commentCount}) &middot; {new Date(event.openDate).toLocaleDateString()}
+                                            </span>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        <Link href={`/m/community/${community.id}/event`} className="text-sm hover:underline">
+                            {t('See all events')}
                         </Link>
                     </section>
                 )}
