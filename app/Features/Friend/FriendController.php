@@ -2,7 +2,6 @@
 
 namespace App\Features\Friend;
 
-use App\Compat\RouteParityRegistry;
 use App\Features\Block\BlockLookup;
 use App\Features\Friend\Actions\AcceptFriendRequest;
 use App\Features\Friend\Actions\RejectFriendRequest;
@@ -14,6 +13,7 @@ use App\Features\Friend\Queries\ListFriends;
 use App\Features\Friend\Queries\ListPendingRequests;
 use App\Features\Friend\Queries\PendingRequestDirection;
 use App\Features\Friend\Serializers\FriendSerializer;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Friend\AcceptRequest;
 use App\Http\Requests\Friend\LinkRequest;
@@ -28,6 +28,8 @@ use Inertia\Response as InertiaResponse;
 
 class FriendController extends Controller
 {
+    use RespondsWithSurface;
+
     private const SURFACE_CLASSIC = 'classic';
 
     private const SURFACE_MODERN = 'modern';
@@ -40,7 +42,7 @@ class FriendController extends Controller
             : null);
         $friends = $query($viewer, $owner);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'friend', [
             self::SURFACE_CLASSIC => fn () => view('friend.list', [
                 'owner' => $owner,
                 'friends' => $friends,
@@ -59,7 +61,7 @@ class FriendController extends Controller
         $received = $query($viewer, PendingRequestDirection::Received, pageName: 'received_page');
         $sent = $query($viewer, PendingRequestDirection::Sent, pageName: 'sent_page');
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'friend', [
             self::SURFACE_CLASSIC => fn () => view('friend.manage', [
                 'received' => $received,
                 'sent' => $sent,
@@ -87,7 +89,7 @@ class FriendController extends Controller
             return redirect()->route('friend.manage');
         }
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'friend', [
             self::SURFACE_CLASSIC => fn () => view('friend.link', [
                 'target' => $target,
             ]),
@@ -138,7 +140,7 @@ class FriendController extends Controller
         }
         $this->markLocalNavSubject($member); // OpenPNE 3 friend module: the target's friend localNav
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'friend', [
             self::SURFACE_CLASSIC => fn () => view('friend.unlink', [
                 'target' => $member,
             ]),
@@ -172,24 +174,6 @@ class FriendController extends Controller
         }
 
         return $redirect;
-    }
-
-    /**
-     * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
-     */
-    private function respondWith(Request $request, array $responders): View|InertiaResponse
-    {
-        $response = $responders[SurfaceResolver::resolve($request, 'friend')]();
-
-        // Classic body id is the OpenPNE 3 page_{module}_{action} hook, derived from the route
-        // parity. Canonicalize first so a /m/* route that fell back to Classic (carrying the
-        // modern name) still resolves to the canonical parity key.
-        if ($response instanceof View) {
-            $name = SurfaceResolver::canonicalName($request->route()->getName());
-            $response->with('pageId', RouteParityRegistry::bodyId($name));
-        }
-
-        return $response;
     }
 
     private function viewer(): Member

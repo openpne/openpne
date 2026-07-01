@@ -2,13 +2,13 @@
 
 namespace App\Features\Member;
 
-use App\Compat\RouteParityRegistry;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\Member\Actions\ConfirmEmailChange;
 use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Features\Member\Serializers\MemberConfigSerializer;
 use App\Features\Profile\AgeVisibility;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\RequestEmailChangeRequest;
 use App\Http\Requests\Member\UpdateAgeVisibilityRequest;
@@ -41,6 +41,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class MemberConfigController extends Controller
 {
+    use RespondsWithSurface;
+
     public function show(Request $request): View|InertiaResponse|RedirectResponse
     {
         // OpenPNE 3 access-block lived at /member/config?category=accessBlock; preserve that URL by
@@ -58,7 +60,7 @@ class MemberConfigController extends Controller
         $viewer = $this->viewer();
         $currentSurface = Surface::from(SurfaceResolver::canonicalSurface($request, 'member'));
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'member', [
             // Classic paginates by ?category= (OpenPNE 3 member/config). An absent / non-string /
             // unrecognized value resolves to null = the "select an item" landing (no 404 — OpenPNE 4
             // keeps unknown categories renderable; only accessBlock redirects, handled above). Resolved
@@ -319,20 +321,5 @@ class MemberConfigController extends Controller
         assert($viewer instanceof Member);
 
         return $viewer;
-    }
-
-    /**
-     * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
-     */
-    private function respondWith(Request $request, array $responders): View|InertiaResponse
-    {
-        $response = $responders[SurfaceResolver::resolve($request, 'member')]();
-
-        if ($response instanceof View) {
-            $name = SurfaceResolver::canonicalName($request->route()->getName());
-            $response->with('pageId', RouteParityRegistry::bodyId($name));
-        }
-
-        return $response;
     }
 }

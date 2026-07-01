@@ -2,13 +2,13 @@
 
 namespace App\Features\Profile;
 
-use App\Compat\RouteParityRegistry;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Queries\EditProfileFields;
 use App\Features\Profile\Queries\ShowProfile;
 use App\Features\Profile\Queries\VisibleAge;
 use App\Features\Profile\Serializers\ProfileFormSerializer;
 use App\Features\Profile\Serializers\ProfileSerializer;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Models\Member;
@@ -23,6 +23,8 @@ use Inertia\Response as InertiaResponse;
 
 class ProfileController extends Controller
 {
+    use RespondsWithSurface;
+
     public function show(Request $request, Member $member, ShowProfile $query, GadgetService $gadgets, VisibleAge $visibleAge): View|InertiaResponse|RedirectResponse
     {
         /** @var Member|null $viewer */
@@ -44,7 +46,7 @@ class ProfileController extends Controller
         // covers the Modern surface and the no-gadget fixed box.
         $age = $visibleAge($viewer, $member);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.show', [
                 'owner' => $member,
                 'fields' => $fields,
@@ -66,7 +68,7 @@ class ProfileController extends Controller
         $lang = $this->translationLang();
         $fields = $query($viewer);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.edit-profile', [
                 'member' => $viewer,
                 'fields' => $fields,
@@ -99,20 +101,5 @@ class ProfileController extends Controller
         assert($viewer instanceof Member);
 
         return $viewer;
-    }
-
-    /**
-     * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
-     */
-    private function respondWith(Request $request, array $responders): View|InertiaResponse
-    {
-        $response = $responders[SurfaceResolver::resolve($request, 'member')]();
-
-        if ($response instanceof View) {
-            $name = SurfaceResolver::canonicalName($request->route()->getName());
-            $response->with('pageId', RouteParityRegistry::bodyId($name));
-        }
-
-        return $response;
     }
 }

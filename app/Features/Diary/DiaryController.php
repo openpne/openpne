@@ -2,7 +2,6 @@
 
 namespace App\Features\Diary;
 
-use App\Compat\RouteParityRegistry;
 use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Actions\DeleteDiary;
 use App\Features\Diary\Actions\UpdateDiary;
@@ -14,6 +13,7 @@ use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\SearchDiaries;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\DiarySerializer;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Diary\StoreDiaryRequest;
 use App\Http\Requests\Diary\UpdateDiaryRequest;
@@ -30,13 +30,15 @@ use Inertia\Response as InertiaResponse;
 
 class DiaryController extends Controller
 {
+    use RespondsWithSurface;
+
     public function listMember(Request $request, ListDiaries $query, ?Member $member = null): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $owner = $this->memberSubject($member);
         $diaries = $query($viewer, $owner);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.list', [
                 'owner' => $owner,
                 'diaries' => $diaries,
@@ -65,7 +67,7 @@ class DiaryController extends Controller
         $member = $this->memberSubject($member);
         $diaries = $query($viewer, $member, period: $period);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.list', [
                 'owner' => $member,
                 'diaries' => $diaries,
@@ -126,7 +128,7 @@ class DiaryController extends Controller
      */
     private function feed(Request $request, string $variant, LengthAwarePaginator $diaries, string $keyword = '', bool $hasKeyword = false, ?string $bodyIdRoute = null): View|InertiaResponse
     {
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.feed', [
                 'variant' => $variant,
                 'keyword' => $keyword,
@@ -151,7 +153,7 @@ class DiaryController extends Controller
         // Classic friend localNav when viewing someone else's diary.
         $this->markLocalNavSubject($found->member);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer, $adjacent) {
                 ['previous' => $previous, 'next' => $next] = $adjacent($viewer, $found);
 
@@ -184,7 +186,7 @@ class DiaryController extends Controller
     {
         $default = DiaryVisibility::defaultFor($this->viewer());
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.new', [
                 'visibilityOptions' => DiaryVisibility::options(),
                 'defaultVisibility' => $default,
@@ -218,7 +220,7 @@ class DiaryController extends Controller
         // Render the current images (and let the Modern serializer read them) without an N+1.
         $diary->load('images.file');
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.edit', [
                 'diary' => $diary,
                 'visibilityOptions' => DiaryVisibility::options(),
@@ -253,7 +255,7 @@ class DiaryController extends Controller
         $viewer = $this->viewer();
         abort_unless($viewer->is($diary->member), 404);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.delete', [
                 'diary' => $diary,
             ]),
@@ -286,28 +288,6 @@ class DiaryController extends Controller
         }
 
         return $redirect;
-    }
-
-    /**
-     * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
-     * @param  string|null  $bodyIdRoute  Derive the Classic body id from this canonical route name
-     *                                    instead of the current one (e.g. empty search renders the
-     *                                    list page id). Still parity-derived, so no literal copy.
-     */
-    private function respondWith(Request $request, array $responders, ?string $bodyIdRoute = null): View|InertiaResponse
-    {
-        $response = $responders[SurfaceResolver::resolve($request, 'diary')]();
-
-        // Classic body id is the OpenPNE 3 page_{module}_{action} hook, derived from the
-        // route parity so it stays faithful to OpenPNE 3 (the controller holds no copy).
-        // Canonicalize first: a /m/* route that fell back to Classic carries the modern
-        // name (diary.modern.*), which the parity keys by canonical name.
-        if ($response instanceof View) {
-            $name = SurfaceResolver::canonicalName($bodyIdRoute ?? $request->route()->getName());
-            $response->with('pageId', RouteParityRegistry::bodyId($name));
-        }
-
-        return $response;
     }
 
     private function viewer(): Member
