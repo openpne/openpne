@@ -22,7 +22,7 @@ export function NavDrawer() {
             >
                 <Menu className="size-6" />
             </DialogTrigger>
-            <SheetContent>
+            <SheetContent closeLabel={t('Close')}>
                 <DialogTitle asChild>
                     <Link
                         href="/dashboard"

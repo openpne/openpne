@@ -14,14 +14,16 @@ export default function Dashboard() {
     return (
         <>
             <Head title={t('Home')} />
-            <Card>
-                <CardBody>
-                    <h1 className="text-xl font-semibold">{t('Hello, :name', { name: user.name })}</h1>
-                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                        {t('You are signed in as :email.', { email: user.email })}
-                    </p>
-                </CardBody>
-            </Card>
+            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
+                <Card>
+                    <CardBody>
+                        <h1 className="text-xl font-semibold">{t('Hello, :name', { name: user.name })}</h1>
+                        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                            {t('You are signed in as :email.', { email: user.email })}
+                        </p>
+                    </CardBody>
+                </Card>
+            </main>
         </>
     );
 }
