@@ -407,13 +407,21 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/{community}', 'show')->whereNumber('community')->name('community.show');
     });
 
-    // Community core, Modern surface (/m/community/*): browse (search) + my communities + one
-    // community + its members, plus join/quit POST (Modern confirms client-side, so no GET confirm
+    // Community, Modern surface (/m/community/*): the browse/join core plus management — create/edit,
+    // delete, and the pending-member approval queue. join/quit/delete confirm inline (no GET confirm
     // page). Literal routes precede the /{community} wildcard; every id is digit-constrained.
     Route::prefix('m/community')->controller(CommunityController::class)->group(function () {
         Route::get('/search', 'search')->defaults('surface', 'modern')->name('community.modern.search');
         Route::get('/joined', 'listMine')->defaults('surface', 'modern')->name('community.modern.list_mine');
+        Route::get('/new', 'edit')->defaults('surface', 'modern')->name('community.modern.new');
+        Route::post('/', 'save')->defaults('surface', 'modern')->name('community.modern.store');
+        Route::get('/{community}/edit', 'edit')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.edit');
+        Route::post('/{community}/edit', 'save')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.update');
+        Route::post('/{community}/delete', 'delete')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.delete');
         Route::get('/{community}/members', 'members')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members');
+        Route::get('/{community}/pending', 'pendingMembers')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members.pending');
+        Route::post('/{community}/approve', 'approve')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members.approve');
+        Route::post('/{community}/decline', 'decline')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members.decline');
         Route::post('/{community}/join', 'join')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.join');
         Route::post('/{community}/quit', 'quit')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.quit');
         Route::get('/{community}', 'show')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.show');
