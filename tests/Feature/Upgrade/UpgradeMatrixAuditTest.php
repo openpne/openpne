@@ -157,4 +157,40 @@ class UpgradeMatrixAuditTest extends TestCase
                 "FileUpgrade owns {$reference} as morph alias '{$spec['type']}', which is not in the morph map");
         }
     }
+
+    public function test_every_read_source_table_exists_in_the_fixture(): void
+    {
+        // The preflight materialises an absent optional source table from the fixture, so every table a
+        // step reads (FROM + subquery) must be a real fixture table — else a new step's SourceRef token
+        // would throw at run time instead of failing here.
+        $schema = SourceSchema::default();
+
+        foreach (StepRegistry::all() as $step) {
+            foreach ($step->readSourceTables() as $table) {
+                $this->assertNotEmpty($schema->columns($table),
+                    "{$step->sourceTable()} reads source table `{$table}`, which is absent from the source schema fixture");
+            }
+        }
+    }
+
+    public function test_optional_plugin_tables_are_read_tables_and_disjoint(): void
+    {
+        $readTables = [];
+        foreach (StepRegistry::all() as $step) {
+            foreach ($step->readSourceTables() as $table) {
+                $readTables[$table] = true;
+            }
+        }
+
+        $seen = [];
+        foreach (StepRegistry::optionalPluginSources() as $plugin => $meta) {
+            foreach ($meta['tables'] as $table) {
+                $this->assertArrayHasKey($table, $readTables,
+                    "{$plugin} lists optional source table `{$table}`, which no step reads");
+                $this->assertArrayNotHasKey($table, $seen,
+                    "optional source table `{$table}` is listed by two plugins");
+                $seen[$table] = true;
+            }
+        }
+    }
 }

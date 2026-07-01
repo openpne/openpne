@@ -150,6 +150,38 @@ final class StepRegistry
     }
 
     /**
+     * OpenPNE 3 plugins whose source tables the upgrade reads but which are legitimately absent when
+     * the plugin is not installed, each with the minimum plugin version that has all those tables.
+     * The source preflight treats a fully-absent group as "plugin not installed" (it ensure-exists's
+     * the tables empty so the steps no-op), and a partially-present group as an old/corrupt plugin (a
+     * hard error naming the floor). Every other read source table is core and required.
+     *
+     * @return array<string, array{floor: string, tables: list<string>}>
+     */
+    public static function optionalPluginSources(): array
+    {
+        return [
+            'opDiaryPlugin' => [
+                'floor' => '1.1.1',
+                'tables' => ['diary', 'diary_comment', 'diary_image', 'diary_comment_image'],
+            ],
+            'opMessagePlugin' => [
+                'floor' => '0.8.2',
+                'tables' => ['message', 'message_file', 'message_send_list', 'message_type', 'deleted_message'],
+            ],
+            'opCommunityTopicPlugin' => [
+                'floor' => '1.0.0',
+                // The *_image tables arrived in opCommunityTopic 1.0.0, so an older plugin is a partial group.
+                'tables' => [
+                    'community_topic', 'community_topic_comment', 'community_event', 'community_event_comment',
+                    'community_event_member', 'community_topic_image', 'community_topic_comment_image',
+                    'community_event_image', 'community_event_comment_image',
+                ],
+            ],
+        ];
+    }
+
+    /**
      * file_id columns that sit on an otherwise-migrated table but are intentionally left without a
      * file owner, with the reason. Distinct from deferredSourceTables() (whole tables with no step):
      * the table migrates, but FileUpgrade assigns its file no related_entity yet. The matrix coverage
