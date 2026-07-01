@@ -40,12 +40,21 @@ final class UpgradeRunner
         $preflight = new SourcePreflight($this->steps(), SourceSchema::default());
         $report = $preflight->inspect($options->sourcePrefix, $options->sourceDatabase);
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors) as $error) {
+        // file_bin (the BLOBs) has no step, so its bytes-complete check rides alongside the step
+        // preflight — but only once the step preflight is clean, since it COUNTs the source `file` the
+        // latter guards. Runs only when this run migrates files at all (the whole registry does).
+        $fileBin = new FileBinMigration;
+        $migratesFiles = in_array('files', $this->targetTables(), true);
+        $fileBinError = $migratesFiles && ! $report->hasErrors()
+            ? $fileBin->preflight($options->sourcePrefix, $options->sourceDatabase)
+            : null;
+
+        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : []) as $error) {
             $out("ERROR {$error}");
         }
 
-        if ($report->hasErrors()) {
-            $out('Aborted: the OpenPNE 3 source is missing required tables/columns; nothing was migrated.');
+        if ($report->hasErrors() || $fileBinError !== null) {
+            $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;
         }
@@ -53,6 +62,9 @@ final class UpgradeRunner
         if ($options->dryRun) {
             foreach ($report->absentOptional as $table) {
                 $out("PLAN would create empty source table `{$table}` (".SourcePreflight::absentPluginMessage($table).')');
+            }
+            if ($migratesFiles) {
+                $fileBin->plan($options->sourcePrefix, $options->sourceDatabase, $out);
             }
 
             return $this->walk($options, $out);
@@ -67,7 +79,20 @@ final class UpgradeRunner
         $created = $preflight->ensureExists($report->absentOptional, $options->sourcePrefix, $options->sourceDatabase, $out);
 
         try {
-            return $this->walk($options, $out);
+            if ($migratesFiles) {
+                $fileBin->snapshot($options->sourcePrefix, $options->sourceDatabase, $out);
+            }
+
+            $walked = $this->walk($options, $out);
+
+            // Migrate the BLOBs only after the walk: FileUpgrade (first step) has populated `files`, so
+            // the move + the FK rewire's existing-row validation resolve. No later step touches file_bin.
+            if ($walked && $migratesFiles) {
+                $fileBin->move($options->sourcePrefix, $options->sourceDatabase, $out);
+                $fileBin->rewire($out);
+            }
+
+            return $walked;
         } finally {
             $preflight->drop($created, $options->sourcePrefix, $options->sourceDatabase);
         }
@@ -112,13 +137,18 @@ final class UpgradeRunner
      * Resets for --force-restart: clears the upgrade-owned target tables (verbatim ids would otherwise
      * collide on re-insert) and the checkpoints. DELETE, not TRUNCATE — a FK-referenced table like
      * `files` refuses TRUNCATE even with checks off (error 1701). file_bin is no step's target and
-     * holds the OpenPNE 3 BLOBs, so it is never cleared here.
+     * holds the OpenPNE 3 BLOBs, so it is never cleared here — but its FK onto `files` is dropped first,
+     * so DELETEing `files` cannot cascade into those BLOBs; the re-run's rewire re-adds it.
      */
     public function reset(?Closure $out = null): void
     {
         $out ??= static fn (string $line): null => null;
 
         $mysql = DB::connection()->getDriverName() === 'mysql';
+
+        if ($mysql && in_array('files', $this->targetTables(), true)) {
+            (new FileBinMigration)->dropForeignKey();
+        }
 
         if ($mysql) {
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
