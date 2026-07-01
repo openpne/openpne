@@ -6,6 +6,7 @@ use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
+use App\Upgrade\SourceRef;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\UpgradeStep;
@@ -49,6 +50,12 @@ final class UpgradeVerifier
             $this->record($report, $out, 'source', false, $error);
         }
 
+        // A missing required table / column (or a partial plugin) means the step COUNTs below would hit
+        // the missing table — so a broken source fails the gate here and does not proceed to Check A/B.
+        if ($preflight->hasErrors()) {
+            return $report;
+        }
+
         foreach ($steps as $step) {
             if ($step->pendingTargets() !== []) {
                 continue;
@@ -76,9 +83,13 @@ final class UpgradeVerifier
             return;
         }
 
-        // A step whose source (FROM or a subquery table) is an absent optional plugin migrated nothing;
-        // COUNTing it would hit the missing table, so treat it as 0 — 0 == 0 == 0 then passes.
-        $sourceN = array_intersect($step->readSourceTables(), $absent) !== []
+        // The COUNT reads only the FROM table and the filter (not the columns' subqueries — those feed
+        // the INSERT's SELECT, not this count). So a step migrated nothing, and its COUNT would hit a
+        // missing table, only when its FROM table or a filter subquery table is an absent optional
+        // plugin — treat that as 0 (0 == 0 == 0 then passes). A core FROM whose columns merely read an
+        // absent optional owner (e.g. FileUpgrade) still counts normally.
+        $countTables = array_merge([$step->sourceTable()], SourceRef::tablesIn($step->filter() ?? ''));
+        $sourceN = array_intersect($countTables, $absent) !== []
             ? 0
             : $this->sourceCount($step, $options);
         $targetN = (int) DB::table($step->targetTable())->count();
@@ -90,7 +101,14 @@ final class UpgradeVerifier
             return;
         }
 
-        $this->record($report, $out, $key, false, "source={$sourceN} rows_affected={$affectedN} target={$targetN}");
+        $diagnosis = [];
+        if ($sourceN !== $affectedN) {
+            $diagnosis[] = 'source drift';
+        }
+        if ($targetN !== $affectedN) {
+            $diagnosis[] = 'target mismatch';
+        }
+        $this->record($report, $out, $key, false, implode(' + ', $diagnosis).": source={$sourceN} rows_affected={$affectedN} target={$targetN}");
     }
 
     private function sourceCount(UpgradeStep $step, RunOptions $options): int

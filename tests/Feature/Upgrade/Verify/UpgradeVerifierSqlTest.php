@@ -90,6 +90,18 @@ class UpgradeVerifierSqlTest extends TestCase
         $this->assertStringContainsString('not completed', $out);
     }
 
+    public function test_a_missing_required_source_is_reported_not_thrown(): void
+    {
+        // The completed state survives but the required source table is gone: verify must fail on the
+        // source preflight, not throw `SELECT COUNT(*) FROM member_relationship` at the missing table.
+        DB::statement('DROP TABLE `member_relationship`');
+
+        [$report, $out] = $this->verify();
+
+        $this->assertTrue($report->failed());
+        $this->assertStringContainsString('FAIL source', $out);
+    }
+
     /** @return array{0: VerifyReport, 1: string} */
     private function verify(): array
     {
