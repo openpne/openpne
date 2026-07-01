@@ -33,9 +33,13 @@ export default function MemberShow() {
                     <img src={owner.avatarUrl} alt={owner.name} className="size-20 rounded-md object-cover" />
                 )}
                 <h1 className="text-xl font-semibold text-foreground">{owner.name}</h1>
-                {isSelf && (
+                {isSelf ? (
                     <Link href="/m/member/edit/profile" className="text-sm text-blue-600">
                         {t('Edit Profile')}
+                    </Link>
+                ) : (
+                    <Link href={`/m/message/sendToFriend?id=${owner.id}`} className="text-sm text-blue-600">
+                        {t('Send a message')}
                     </Link>
                 )}
             </div>

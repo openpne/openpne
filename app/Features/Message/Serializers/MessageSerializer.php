@@ -94,10 +94,12 @@ class MessageSerializer
     /** @return array{id: int, name: string, imageUrl: string|null}|null */
     private static function member(?Member $member): ?array
     {
-        if ($member === null) {
-            return null;
-        }
+        return $member === null ? null : self::memberRef($member);
+    }
 
+    /** A present member (e.g. a compose recipient), always non-null. @return array{id: int, name: string, imageUrl: string|null} */
+    public static function memberRef(Member $member): array
+    {
         return [
             'id' => $member->getKey(),
             'name' => $member->name,
