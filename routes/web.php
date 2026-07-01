@@ -450,6 +450,35 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/communityTopic/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityTopic.comment.delete');
     });
 
+    // Community topic board, Modern surface. Names are the canonical topic names with a .modern.
+    // infix (ModernRouteConventionTest); no GET delete-confirm twin — Modern confirms inline. Each
+    // route carries a single route-model-bound id: implicit binding only resolves a model param when
+    // it is the sole one, so the board list keys off {community} and the topic pages off {topic},
+    // never both in one path (matching the Classic split of listCommunity/new by community vs the
+    // rest by topic).
+    Route::prefix('m/community/{community}/topic')->whereNumber('community')
+        ->controller(CommunityTopicController::class)->group(function () {
+            Route::get('/new', 'new')->defaults('surface', 'modern')->name('communityTopic.modern.new');
+            Route::post('/', 'store')->defaults('surface', 'modern')->name('communityTopic.modern.store');
+            Route::get('/', 'index')->defaults('surface', 'modern')->name('communityTopic.modern.index');
+        });
+
+    Route::prefix('m/community/topic')->whereNumber('topic')
+        ->controller(CommunityTopicController::class)->group(function () {
+            Route::get('/{topic}/edit', 'edit')->defaults('surface', 'modern')->name('communityTopic.modern.edit');
+            Route::post('/{topic}/edit', 'update')->defaults('surface', 'modern')->name('communityTopic.modern.update');
+            Route::post('/{topic}/delete', 'delete')->defaults('surface', 'modern')->name('communityTopic.modern.delete');
+            Route::get('/{topic}', 'show')->defaults('surface', 'modern')->name('communityTopic.modern.show');
+        });
+
+    // communityTopicComment, Modern surface: comment create keys off the topic id, delete off the
+    // comment id (literal /comment/* never collides with the numeric topic). No GET confirm twin.
+    Route::prefix('m/community/topic')->whereNumber(['topic', 'comment'])
+        ->controller(CommunityTopicCommentController::class)->group(function () {
+            Route::post('/{topic}/comment', 'store')->defaults('surface', 'modern')->name('communityTopic.modern.comment.store');
+            Route::post('/comment/{comment}/delete', 'delete')->defaults('surface', 'modern')->name('communityTopic.modern.comment.delete');
+        });
+
     // Community events (Classic only; Modern is none). Same literal-before-wildcard rule as the topic
     // board: listCommunity/new/create take a community id, the rest an event id, and {event} is
     // digit-constrained, so /communityEvent/memberList-style literals can never be read as an event id.
