@@ -47,6 +47,8 @@ export default function MessageShow() {
     const showPath = SHOW_PATH[message.box];
     const box = BOX[message.box];
     const counterpartyHeading = message.viewerIsSender ? t('Recipient') : t('Sender');
+    // OpenPNE 3 offers Reply on a received message whose sender still exists (the inbox counterparty).
+    const canReply = message.box === 'receive' && message.counterparties.length > 0;
 
     return (
         <>
@@ -108,6 +110,15 @@ export default function MessageShow() {
                     <ImageGrid images={message.images} />
 
                     <div className="whitespace-pre-wrap break-words">{message.body}</div>
+
+                    {canReply && (
+                        <Link
+                            href={`/m/message/reply/${message.id}`}
+                            className="inline-block min-h-11 rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                        >
+                            {t('Reply')}
+                        </Link>
+                    )}
                 </article>
             </main>
         </>
