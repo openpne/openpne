@@ -1,6 +1,5 @@
 import type { ComponentProps } from 'react';
 import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui';
-import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const DropdownMenu = DropdownMenuPrimitive.Root;
@@ -39,38 +38,4 @@ export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof 
 
 export function DropdownMenuSeparator({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
     return <DropdownMenuPrimitive.Separator className={cn('my-1 h-px bg-slate-100 dark:bg-slate-700', className)} {...props} />;
-}
-
-export function DropdownMenuLabel({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Label>) {
-    return (
-        <DropdownMenuPrimitive.Label
-            className={cn('px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400', className)}
-            {...props}
-        />
-    );
-}
-
-export const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
-
-export function DropdownMenuRadioItem({
-    className,
-    children,
-    ...props
-}: ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
-    return (
-        <DropdownMenuPrimitive.RadioItem
-            className={cn(
-                'relative flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg pl-3 pr-8 text-sm text-slate-700 outline-none transition focus:bg-slate-100 dark:text-slate-200 dark:focus:bg-slate-700/60',
-                className,
-            )}
-            {...props}
-        >
-            {children}
-            <span className="absolute right-2 flex items-center">
-                <DropdownMenuPrimitive.ItemIndicator>
-                    <Check className="size-4" />
-                </DropdownMenuPrimitive.ItemIndicator>
-            </span>
-        </DropdownMenuPrimitive.RadioItem>
-    );
 }
