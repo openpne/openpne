@@ -183,7 +183,7 @@ Route::middleware(['auth', 'auth.session', EnsureMemberInviteAllowed::class])->c
 // the member's password hash changes — a best-effort cross-driver fallback; the reset itself purges
 // database-driver sessions outright (see ResetMemberPassword).
 Route::middleware(['auth', 'auth.session'])->group(function () {
-    Route::get('/dashboard', fn () => Inertia::render('dashboard'))->name('dashboard');
+    Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
 
     Route::prefix('friend')->controller(FriendController::class)->group(function () {
         Route::get('/list', 'list')->name('friend.list');
