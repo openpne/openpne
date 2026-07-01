@@ -14,9 +14,10 @@ use Illuminate\Support\Collection;
 
 /**
  * Modern surface shapes for community events. author is null for a withdrawn member; comment
- * `deletable` is the viewer-specific permission, computed server-side. Dates are ISO strings (the
- * client formats them). RSVP state (isParticipant/isClosed/isExpired/isFull/canParticipate) is a
- * top-level controller prop, not part of these shapes.
+ * `deletable` is the viewer-specific permission, computed server-side. Datetimes are ISO strings;
+ * the date-only open_date/application_deadline are Y-m-d (the client formats them). RSVP state
+ * (isParticipant/isClosed/isExpired/isFull/canParticipate) is a top-level controller prop, not part
+ * of these shapes.
  */
 class CommunityEventSerializer
 {
