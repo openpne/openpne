@@ -41,7 +41,7 @@ class ListMessages
             ->ofDelivered()
             ->recipientLive()
             ->where('recipient_id', $viewer->getKey())
-            ->with('message.sender')
+            ->with('message.sender.avatar.file')
             // OpenPNE 3 dates the inbox by the receipt (MessageSendList.created_at), not the message,
             // so a message delivered later sorts by its delivery time, not its authoring time.
             ->orderByDesc('created_at')
@@ -67,7 +67,7 @@ class ListMessages
             ->where('sender_id', $viewer->getKey())
             ->where('is_draft', $draft)
             ->senderLive()
-            ->with($draft ? 'draftRecipient' : 'recipients.recipient')
+            ->with($draft ? 'draftRecipient.avatar.file' : 'recipients.recipient.avatar.file')
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->through(fn (Message $m): MessageListItem => new MessageListItem(
@@ -109,7 +109,7 @@ class ListMessages
         /** @var array<int, \stdClass> $rows */
         $rows = $page->items();
         $messages = Message::query()
-            ->with(['sender', 'recipients.recipient', 'draftRecipient'])
+            ->with(['sender.avatar.file', 'recipients.recipient.avatar.file', 'draftRecipient.avatar.file'])
             ->whereIn('id', array_map(static fn ($r): int => (int) $r->message_id, $rows))
             ->get()
             ->keyBy('id');
