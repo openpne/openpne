@@ -10,7 +10,8 @@
     <script>
         (function () {
             try {
-                var p = localStorage.getItem('openpne-theme') || 'system';
+                var p = localStorage.getItem('openpne-theme');
+                if (p !== 'light' && p !== 'dark') p = 'system';
                 if (p === 'dark' || (p === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
                     document.documentElement.classList.add('dark');
                 }
