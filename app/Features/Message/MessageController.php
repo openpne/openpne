@@ -30,9 +30,10 @@ use Inertia\Response as InertiaResponse;
 
 /**
  * Private messages (OpenPNE 3 message module), dual-surface for the read pages (the four boxes and
- * the per-message show): each serves Classic Blade or Modern Inertia per SurfaceResolver. The write
- * pages (compose/reply/edit) and the trash/bulk confirms stay Classic-only for now, rendered through
- * the classic() helper with the OpenPNE 3 page_message_* body id.
+ * the per-message show) and for composing (compose/reply/send): each serves Classic Blade or Modern
+ * Inertia per SurfaceResolver, and a submit redirects on the surface it came from. Draft editing and
+ * the trash/bulk confirms stay Classic-only for now, rendered through the classic() helper with the
+ * OpenPNE 3 page_message_* body id.
  */
 class MessageController extends Controller
 {
@@ -80,12 +81,12 @@ class MessageController extends Controller
     }
 
     /** Compose a new message to a member (OpenPNE 3 sendToFriend?id=). */
-    public function compose(Request $request): View
+    public function compose(Request $request): View|InertiaResponse
     {
         $recipient = Member::find((int) $request->query('id'));
         abort_if($recipient === null || $this->viewer()->is($recipient), 404);
 
-        return $this->composeForm($recipient);
+        return $this->composeForm($request, $recipient);
     }
 
     public function store(ComposeMessageRequest $request, SendMessage $action): RedirectResponse
@@ -93,14 +94,14 @@ class MessageController extends Controller
         try {
             $message = $action($this->viewer(), $request->toData(), $request->asDraft(), $request->file('images', []));
         } catch (MessageActionException $e) {
-            return $this->failed($e);
+            return $this->failed($request, $e);
         }
 
-        return $this->afterWrite($message->is_draft);
+        return $this->afterWrite($request, $message->is_draft);
     }
 
     /** Reply to a received message: compose to its sender, carrying the thread links (OpenPNE 3 reply). */
-    public function reply(int $message): View
+    public function reply(Request $request, int $message): View|InertiaResponse
     {
         $original = Message::with('recipients')->findOrFail($message);
         $viewer = $this->viewer();
@@ -110,6 +111,7 @@ class MessageController extends Controller
         abort_if($original->sender === null, 404); // a withdrawn sender cannot be replied to
 
         return $this->composeForm(
+            $request,
             $original->sender,
             parentId: (int) $original->getKey(),
             threadId: $original->thread_id !== null ? (int) $original->thread_id : (int) $original->getKey(),
@@ -142,10 +144,10 @@ class MessageController extends Controller
                 $request->asDraft(), $request->file('images', []), $request->input('remove_images', []),
             );
         } catch (MessageActionException $e) {
-            return $this->failed($e);
+            return $this->failed($request, $e);
         }
 
-        return $this->afterWrite($draft->is_draft);
+        return $this->afterWrite($request, $draft->is_draft);
     }
 
     /** Move a received message to the trash (OpenPNE 3 deleteReceiveMessage). */
@@ -225,14 +227,27 @@ class MessageController extends Controller
         return redirect()->route('message.trash')->with('status', __('The message was deleted.'));
     }
 
-    private function composeForm(Member $recipient, ?int $parentId = null, ?int $threadId = null, string $subject = '', string $body = ''): View
+    private function composeForm(Request $request, Member $recipient, ?int $parentId = null, ?int $threadId = null, string $subject = '', string $body = ''): View|InertiaResponse
     {
-        return $this->classic('message.compose', [
-            'recipient' => $recipient,
-            'parentId' => $parentId,
-            'threadId' => $threadId,
-            'subject' => $subject,
-            'body' => $body,
+        return $this->respondWith($request, 'message', [
+            SurfaceResolver::CLASSIC => fn () => view('message.compose', [
+                'recipient' => $recipient,
+                'parentId' => $parentId,
+                'threadId' => $threadId,
+                'subject' => $subject,
+                'body' => $body,
+            ]),
+            SurfaceResolver::MODERN => function () use ($recipient, $parentId, $threadId, $subject, $body) {
+                $recipient->loadMissing('avatar.file');
+
+                return Inertia::render('message/compose', [
+                    'recipient' => MessageSerializer::memberRef($recipient),
+                    'parentId' => $parentId,
+                    'threadId' => $threadId,
+                    'subject' => $subject,
+                    'body' => $body,
+                ]);
+            },
         ]);
     }
 
@@ -251,19 +266,19 @@ class MessageController extends Controller
             && $draft->sender_purged_at === null;
     }
 
-    /** After a write: the sent box for a sent message, the draft box for a saved draft. */
-    private function afterWrite(bool $isDraft): RedirectResponse
+    /** After a write: the sent box for a sent message, the draft box for a saved draft (same surface). */
+    private function afterWrite(Request $request, bool $isDraft): RedirectResponse
     {
         return $isDraft
-            ? redirect()->route('message.draft')->with('status', __('The message was saved successfully.'))
-            : redirect()->route('message.send')->with('status', __('The message was sent successfully.'));
+            ? redirect()->route(SurfaceResolver::redirectName($request, 'message.draft'))->with('status', __('The message was saved successfully.'))
+            : redirect()->route(SurfaceResolver::redirectName($request, 'message.send'))->with('status', __('The message was sent successfully.'));
     }
 
     /** OpenPNE 3 flashes an error and returns to the sent box when a send is blocked. */
-    private function failed(MessageActionException $e): RedirectResponse
+    private function failed(Request $request, MessageActionException $e): RedirectResponse
     {
         if ($e->reason === MessageActionFailure::CannotSend) {
-            return redirect()->route('message.send')->with('error', __('Cannot send the message.'));
+            return redirect()->route(SurfaceResolver::redirectName($request, 'message.send'))->with('error', __('Cannot send the message.'));
         }
 
         abort(404); // too many images: a payload past the cross-field cap
