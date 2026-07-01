@@ -29,11 +29,12 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Private messages (OpenPNE 3 message module), dual-surface for the read pages (the four boxes and
- * the per-message show) and for composing (compose/reply/send): each serves Classic Blade or Modern
- * Inertia per SurfaceResolver, and a submit redirects on the surface it came from. Draft editing and
- * the trash/bulk confirms stay Classic-only for now, rendered through the classic() helper with the
- * OpenPNE 3 page_message_* body id.
+ * Private messages (OpenPNE 3 message module), dual-surface across the read pages (the four boxes and
+ * the per-message show), composing (compose/reply/send), draft editing, and the single-message trash
+ * actions (trash/restore/purge): each serves Classic Blade or Modern Inertia per SurfaceResolver, and
+ * a submit redirects on the surface it came from. Modern confirms a purge inline, so the GET confirm
+ * pages (purgeConfirm, bulk purge) and the bulk action stay Classic-only, rendered through the
+ * classic() helper with the OpenPNE 3 page_message_* body id.
  */
 class MessageController extends Controller
 {
@@ -122,14 +123,21 @@ class MessageController extends Controller
     }
 
     /** Edit one of the viewer's own drafts (OpenPNE 3 edit). */
-    public function edit(int $message): View
+    public function edit(Request $request, int $message): View|InertiaResponse
     {
         $draft = Message::with(['files.file', 'draftRecipient'])->findOrFail($message);
         abort_unless($this->ownsLiveDraft($draft), 404);
 
-        return $this->classic('message.edit', [
-            'draft' => $draft,
-            'recipient' => $draft->draftRecipient,
+        return $this->respondWith($request, 'message', [
+            SurfaceResolver::CLASSIC => fn () => view('message.edit', [
+                'draft' => $draft,
+                'recipient' => $draft->draftRecipient,
+            ]),
+            SurfaceResolver::MODERN => function () use ($draft) {
+                $draft->loadMissing('draftRecipient.avatar.file');
+
+                return Inertia::render('message/edit', ['draft' => MessageSerializer::draftForm($draft)]);
+            },
         ]);
     }
 
@@ -151,30 +159,30 @@ class MessageController extends Controller
     }
 
     /** Move a received message to the trash (OpenPNE 3 deleteReceiveMessage). */
-    public function trashReceived(int $message, TrashMessages $action): RedirectResponse
+    public function trashReceived(Request $request, int $message, TrashMessages $action): RedirectResponse
     {
         abort_if($action($this->viewer(), MessageBox::Receive, [$message]) === 0, 404);
 
-        return redirect()->route('message.receive')->with('status', __('The message was moved to the trash.'));
+        return redirect()->route(SurfaceResolver::redirectName($request, 'message.receive'))->with('status', __('The message was moved to the trash.'));
     }
 
     /** Move a sent message to the trash (OpenPNE 3 deleteSendMessage). */
-    public function trashSent(int $message, TrashMessages $action): RedirectResponse
+    public function trashSent(Request $request, int $message, TrashMessages $action): RedirectResponse
     {
         abort_if($action($this->viewer(), MessageBox::Sent, [$message]) === 0, 404);
 
-        return redirect()->route('message.send')->with('status', __('The message was moved to the trash.'));
+        return redirect()->route(SurfaceResolver::redirectName($request, 'message.send'))->with('status', __('The message was moved to the trash.'));
     }
 
     /** Restore a trashed message to its box (OpenPNE 3 restore). */
-    public function restore(int $message, RestoreMessages $action): RedirectResponse
+    public function restore(Request $request, int $message, RestoreMessages $action): RedirectResponse
     {
         abort_if($action($this->viewer(), [$message]) === 0, 404);
 
-        return redirect()->route('message.trash')->with('status', __('The message was restored.'));
+        return redirect()->route(SurfaceResolver::redirectName($request, 'message.trash'))->with('status', __('The message was restored.'));
     }
 
-    /** Confirm purging a single trashed message (OpenPNE 3 deleteConfirmDustMessage). */
+    /** Confirm purging a single trashed message (OpenPNE 3 deleteConfirmDustMessage). Classic-only — Modern confirms inline. */
     public function purgeConfirm(int $message, ShowMessage $query): View
     {
         $view = $query($this->viewer(), MessageBox::Trash, $message);
@@ -184,11 +192,11 @@ class MessageController extends Controller
     }
 
     /** Purge a single trashed message (OpenPNE 3 deleteDustMessage). */
-    public function purge(int $message, PurgeMessages $action): RedirectResponse
+    public function purge(Request $request, int $message, PurgeMessages $action): RedirectResponse
     {
         abort_if($action($this->viewer(), [$message]) === 0, 404);
 
-        return redirect()->route('message.trash')->with('status', __('The message was deleted.'));
+        return redirect()->route(SurfaceResolver::redirectName($request, 'message.trash'))->with('status', __('The message was deleted.'));
     }
 
     /**

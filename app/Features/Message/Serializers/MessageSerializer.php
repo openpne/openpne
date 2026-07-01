@@ -5,6 +5,7 @@ namespace App\Features\Message\Serializers;
 use App\Features\Message\MessageListItem;
 use App\Features\Message\MessageView;
 use App\Models\Member;
+use App\Models\Message;
 use App\Models\MessageFile;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -54,6 +55,23 @@ class MessageSerializer
             'box' => $view->box->value,
             'previousId' => $view->previousId,
             'nextId' => $view->nextId,
+        ];
+    }
+
+    /**
+     * The draft edit-form shape: the editable text, the fixed recipient (null if withdrawn), and the
+     * current images (each removable by id). Callers eager-load files.file and draftRecipient.
+     *
+     * @return array{id: int, subject: string, body: string, recipient: array{id: int, name: string, imageUrl: string|null}|null, images: list<array{id: int, url: string, thumbnailUrl: string}>}
+     */
+    public static function draftForm(Message $draft): array
+    {
+        return [
+            'id' => $draft->getKey(),
+            'subject' => (string) $draft->subject,
+            'body' => (string) $draft->body,
+            'recipient' => self::member($draft->draftRecipient),
+            'images' => $draft->files->map([self::class, 'image'])->all(),
         ];
     }
 

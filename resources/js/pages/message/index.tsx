@@ -19,13 +19,13 @@ const BOX: Record<MessageBoxSlug, { label: string; path: string }> = {
 
 const ORDER: MessageBoxSlug[] = ['receive', 'sent', 'draft', 'trash'];
 
-// The per-box show route (OpenPNE 3 paths). A draft opens in the edit form (Classic-only for now),
-// so a draft row has no Modern show link yet.
-const SHOW_PATH: Record<MessageBoxSlug, ((id: number) => string) | null> = {
+// The per-box row destination (OpenPNE 3 paths): the show page for a sent/received/trashed message,
+// the edit form for a draft.
+const SHOW_PATH: Record<MessageBoxSlug, (id: number) => string> = {
     receive: (id) => `/m/message/read/${id}`,
     sent: (id) => `/m/message/check/${id}`,
     trash: (id) => `/m/message/checkDelete/${id}`,
-    draft: null,
+    draft: (id) => `/m/message/edit/${id}`,
 };
 
 export default function MessageIndex() {
@@ -74,13 +74,9 @@ export default function MessageIndex() {
                                     />
                                     <div className="min-w-0 flex-1">
                                         <p className={m.unread ? 'truncate font-semibold' : 'truncate'}>
-                                            {showPath ? (
-                                                <Link href={showPath(m.id)} className="hover:underline">
-                                                    {m.subject || t('(No subject)')}
-                                                </Link>
-                                            ) : (
-                                                (m.subject || t('(No subject)'))
-                                            )}
+                                            <Link href={showPath(m.id)} className="hover:underline">
+                                                {m.subject || t('(No subject)')}
+                                            </Link>
                                         </p>
                                         <p className="truncate text-xs text-muted-foreground">
                                             {m.counterparty?.name ?? t('Withdrawn member')} &mdash;{' '}
