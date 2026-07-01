@@ -12,6 +12,8 @@ use App\Features\Message\Exceptions\MessageActionException;
 use App\Features\Message\Exceptions\MessageActionFailure;
 use App\Features\Message\Queries\ListMessages;
 use App\Features\Message\Queries\ShowMessage;
+use App\Features\Message\Serializers\MessageSerializer;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Message\BulkMessageRequest;
 use App\Http\Requests\Message\ComposeMessageRequest;
@@ -19,57 +21,62 @@ use App\Http\Requests\Message\UpdateDraftRequest;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 /**
- * Classic-only adapter for private messages (OpenPNE 3 message module). Modern is status `none` —
- * no /m/* routes, no Inertia — so this renders Blade directly with the OpenPNE 3 page_message_*
- * body id. PR1 is the read surface (the four boxes + show); compose/reply/delete are the write
- * surface (PR2).
+ * Private messages (OpenPNE 3 message module), dual-surface for the read pages (the four boxes and
+ * the per-message show): each serves Classic Blade or Modern Inertia per SurfaceResolver. The write
+ * pages (compose/reply/edit) and the trash/bulk confirms stay Classic-only for now, rendered through
+ * the classic() helper with the OpenPNE 3 page_message_* body id.
  */
 class MessageController extends Controller
 {
-    /** OpenPNE 3 message/index forwards to the inbox. */
-    public function index(): RedirectResponse
+    use RespondsWithSurface;
+
+    /** OpenPNE 3 message/index forwards to the inbox (staying on the request's surface). */
+    public function index(Request $request): RedirectResponse
     {
-        return redirect()->route('message.receive');
+        return redirect()->route(SurfaceResolver::redirectName($request, 'message.receive'));
     }
 
-    public function receive(ListMessages $query): View
+    public function receive(Request $request, ListMessages $query): View|InertiaResponse
     {
-        return $this->list(MessageBox::Receive, $query);
+        return $this->list($request, MessageBox::Receive, $query);
     }
 
-    public function send(ListMessages $query): View
+    public function send(Request $request, ListMessages $query): View|InertiaResponse
     {
-        return $this->list(MessageBox::Sent, $query);
+        return $this->list($request, MessageBox::Sent, $query);
     }
 
-    public function draft(ListMessages $query): View
+    public function draft(Request $request, ListMessages $query): View|InertiaResponse
     {
-        return $this->list(MessageBox::Draft, $query);
+        return $this->list($request, MessageBox::Draft, $query);
     }
 
-    public function trash(ListMessages $query): View
+    public function trash(Request $request, ListMessages $query): View|InertiaResponse
     {
-        return $this->list(MessageBox::Trash, $query);
+        return $this->list($request, MessageBox::Trash, $query);
     }
 
-    public function showReceived(int $message, ShowMessage $query): View
+    public function showReceived(Request $request, int $message, ShowMessage $query): View|InertiaResponse
     {
-        return $this->show(MessageBox::Receive, $message, $query);
+        return $this->show($request, MessageBox::Receive, $message, $query);
     }
 
-    public function showSent(int $message, ShowMessage $query): View
+    public function showSent(Request $request, int $message, ShowMessage $query): View|InertiaResponse
     {
-        return $this->show(MessageBox::Sent, $message, $query);
+        return $this->show($request, MessageBox::Sent, $message, $query);
     }
 
-    public function showTrashed(int $message, ShowMessage $query): View
+    public function showTrashed(Request $request, int $message, ShowMessage $query): View|InertiaResponse
     {
-        return $this->show(MessageBox::Trash, $message, $query);
+        return $this->show($request, MessageBox::Trash, $message, $query);
     }
 
     /** Compose a new message to a member (OpenPNE 3 sendToFriend?id=). */
@@ -272,20 +279,34 @@ class MessageController extends Controller
         );
     }
 
-    private function list(MessageBox $box, ListMessages $query): View
+    private function list(Request $request, MessageBox $box, ListMessages $query): View|InertiaResponse
     {
-        return $this->classic('message.list', [
-            'box' => $box,
-            'messages' => $query($this->viewer(), $box),
+        $messages = $query($this->viewer(), $box);
+
+        return $this->respondWith($request, 'message', [
+            SurfaceResolver::CLASSIC => fn () => view('message.list', ['box' => $box, 'messages' => $messages]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('message/index', [
+                'box' => $box->value,
+                'messages' => MessageSerializer::paginator($messages),
+            ]),
         ]);
     }
 
-    private function show(MessageBox $box, int $messageId, ShowMessage $query): View
+    private function show(Request $request, MessageBox $box, int $messageId, ShowMessage $query): View|InertiaResponse
     {
         $view = $query($this->viewer(), $box, $messageId);
         abort_if($view === null, 404);
 
-        return $this->classic('message.show', ['view' => $view]);
+        return $this->respondWith($request, 'message', [
+            SurfaceResolver::CLASSIC => fn () => view('message.show', ['view' => $view]),
+            SurfaceResolver::MODERN => function () use ($view) {
+                // Avatars aren't loaded by ShowMessage (Classic renders none); hydrate the same From/To
+                // instances the view holds before serializing so the Modern shape has them N+1-free.
+                $view->message->loadMissing('sender.avatar.file', 'recipients.recipient.avatar.file', 'draftRecipient.avatar.file');
+
+                return Inertia::render('message/show', ['message' => MessageSerializer::view($view)]);
+            },
+        ]);
     }
 
     /** Render a Classic view with the OpenPNE 3 page_{module}_{action} body id from the parity. */

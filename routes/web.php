@@ -531,10 +531,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             Route::post('/comment/{comment}/delete', 'delete')->defaults('surface', 'modern')->name('communityEvent.modern.comment.delete');
         });
 
-    // Private messages (Classic only; Modern is none). The four boxes plus a per-box show page.
-    // OpenPNE 3 keyed show by message id with the box in the path (/message/read|check|checkDelete/:id);
-    // those URLs are preserved. /message and /message/index land on the inbox. Compose / reply /
-    // edit-draft and the trash surface (delete / restore / purge) follow.
+    // Private messages. The four boxes plus a per-box show page. OpenPNE 3 keyed show by message id
+    // with the box in the path (/message/read|check|checkDelete/:id); those URLs are preserved.
+    // /message and /message/index land on the inbox. The read pages (boxes + show) also serve Modern
+    // via the /m/message twins below; compose / reply / edit-draft and the trash write surface stay
+    // Classic-only for now.
     Route::prefix('message')->controller(MessageController::class)->group(function () {
         Route::get('/', 'index')->name('message.index');
         Route::get('/index', 'index');
@@ -561,5 +562,18 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/deleteConfirm/{message}', 'purgeConfirm')->whereNumber('message')->name('message.trash.purge.confirm');
         Route::post('/deleteComplete/{message}', 'purge')->whereNumber('message')->name('message.trash.purge');
         Route::post('/bulk', 'bulk')->name('message.bulk');
+    });
+
+    // Modern twins for the message read surface (boxes + show). Same controller, same OpenPNE 3 path
+    // shapes under /m/message; the write pages remain Classic-only.
+    Route::prefix('m/message')->controller(MessageController::class)->group(function () {
+        Route::get('/', 'index')->defaults('surface', 'modern')->name('message.modern.index');
+        Route::get('/receiveList', 'receive')->defaults('surface', 'modern')->name('message.modern.receive');
+        Route::get('/sendList', 'send')->defaults('surface', 'modern')->name('message.modern.send');
+        Route::get('/draftList', 'draft')->defaults('surface', 'modern')->name('message.modern.draft');
+        Route::get('/dustList', 'trash')->defaults('surface', 'modern')->name('message.modern.trash');
+        Route::get('/read/{message}', 'showReceived')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.receive.show');
+        Route::get('/check/{message}', 'showSent')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.send.show');
+        Route::get('/checkDelete/{message}', 'showTrashed')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.trash.show');
     });
 });
