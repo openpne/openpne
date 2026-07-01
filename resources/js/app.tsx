@@ -1,7 +1,9 @@
 import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react';
 import { LaravelReactI18nProvider } from 'laravel-react-i18n';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AppShell } from '@/components/app-shell';
 import type { PageProps } from '@/types';
 
 // Set at mount from the shared Inertia `name` prop (sns_name()) so Modern titles track the
@@ -11,11 +13,23 @@ let appName = import.meta.env.VITE_APP_NAME ?? 'OpenPNE';
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name) =>
-        resolvePageComponent<ResolvedComponent>(
+    resolve: async (name) => {
+        const page = await resolvePageComponent<ResolvedComponent>(
             `./pages/${name}.tsx`,
             import.meta.glob<ResolvedComponent>('./pages/**/*.tsx'),
-        ),
+        );
+        // resolvePageComponent resolves to the page *module*; the component and its optional
+        // persistent layout live on `.default` (the helper's return type says component, but at
+        // runtime it is the module). The shell supplies the shared <main> + flash, so a page must
+        // drop its own before it can opt in — until each page is converted, only the dashboard uses
+        // the shell (widening this gate is the page-by-page rollout). Gate on `layout === undefined`
+        // (not null) — Inertia React treats a null layout as "use the default".
+        const mod = page as unknown as { default: { layout?: (el: ReactNode) => ReactNode } };
+        if (mod.default.layout === undefined && name === 'dashboard') {
+            mod.default.layout = (pageEl: ReactNode) => <AppShell>{pageEl}</AppShell>;
+        }
+        return page;
+    },
     setup({ el, App, props }) {
         appName = (props.initialPage.props as PageProps).name || appName;
         // `fallbackLocale="en"` (not the app default `ja`) so that an en miss
