@@ -32,7 +32,12 @@ export default function CommunitySearch() {
         <>
             <Head title={t('%Communities%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{t('%Communities%')}</h1>
+                <div className="flex items-center justify-between gap-3">
+                    <h1 className="text-2xl font-semibold">{t('%Communities%')}</h1>
+                    <Link href="/m/community/edit" className="shrink-0 text-sm hover:underline">
+                        {t('Create a %community%')}
+                    </Link>
+                </div>
 
                 <form onSubmit={submit} className="flex flex-wrap gap-2">
                     <label htmlFor="community_keyword" className="sr-only">
