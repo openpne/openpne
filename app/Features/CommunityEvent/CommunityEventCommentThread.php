@@ -23,7 +23,7 @@ final class CommunityEventCommentThread
     /** Fixed page size (OpenPNE 3 communityEventComment list component). */
     public const SIZE = 20;
 
-    /** @param  Collection<int, CommunityEventComment>  $comments  the current page, ascending by number */
+    /** @param  Collection<int, CommunityEventComment>  $comments  the current page, ascending by id */
     private function __construct(
         public readonly CommunityEvent $event,
         public readonly Collection $comments,
@@ -41,7 +41,7 @@ final class CommunityEventCommentThread
         $lastPage = max(1, (int) ceil($total / self::SIZE));
         $page = max(1, min((int) ($page ?: 1), $lastPage));
 
-        $comments = $event->comments()->with(['member', 'images.file'])
+        $comments = $event->comments()->with(['member.avatar.file', 'images.file'])
             ->orderBy('id', $ascending ? 'asc' : 'desc')
             ->forPage($page, self::SIZE)
             ->get();

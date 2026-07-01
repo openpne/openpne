@@ -12,17 +12,19 @@ use App\Http\Requests\CommunityEvent\StoreEventCommentRequest;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\Member;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Classic-only adapter for event comments and the merged RSVP form. OpenPNE 3 posts participation
- * through the same comment-create endpoint: the participate/cancel buttons toggle the roster and then
- * save the (required) comment, while the "comment only" button just saves it. SubmitEventComment runs
- * the toggle, the comment and its images in one compensating transaction, so a closed/expired/full
- * guard aborts the whole submission (the comment is not saved either, matching OpenPNE 3). A guard
- * failure is an in-app error (flash + back), not a 404; the 404s are reserved for the membership gate.
+ * Event comments and the merged RSVP form, dual-surface for the write path. OpenPNE 3 posts
+ * participation through the same comment-create endpoint: the participate/cancel buttons toggle the
+ * roster and then save the (required) comment, while the "comment only" button just saves it.
+ * SubmitEventComment runs the toggle, the comment and its images in one compensating transaction, so
+ * a closed/expired/full guard aborts the whole submission. A guard failure is an in-app error (flash
+ * + back), not a 404; the 404s are reserved for the membership gate. showDelete stays a Classic-only
+ * GET confirm page — Modern confirms delete inline.
  */
 class CommunityEventCommentController extends Controller
 {
@@ -40,12 +42,12 @@ class CommunityEventCommentController extends Controller
         } catch (CommunityEventActionException $e) {
             // A roster guard (closed / expired / full) is shown in place; the comment is rolled back.
             if ($this->isRosterGuard($e->reason)) {
-                return redirect()->route('communityEvent.show', $found)->with('error', $this->rosterError($e->reason));
+                return $this->redirectToEvent($request, $found)->with('error', $this->rosterError($e->reason));
             }
             abort(404); // membership gate (defensive; the request already enforces it)
         }
 
-        return redirect()->route('communityEvent.show', $found)->with('status', $this->postedMessage($joined));
+        return $this->redirectToEvent($request, $found)->with('status', $this->postedMessage($joined));
     }
 
     public function showDelete(Request $request, CommunityEventComment $comment): View
@@ -68,7 +70,13 @@ class CommunityEventCommentController extends Controller
             abort(404);
         }
 
-        return redirect()->route('communityEvent.show', $event)->with('status', __('The comment was deleted.'));
+        return $this->redirectToEvent($request, $event)->with('status', __('The comment was deleted.'));
+    }
+
+    /** Redirect to the event show page on the surface the request came from (both key off {event}). */
+    private function redirectToEvent(Request $request, CommunityEvent $event): RedirectResponse
+    {
+        return redirect()->route(SurfaceResolver::redirectName($request, 'communityEvent.show'), $event);
     }
 
     private function isRosterGuard(CommunityEventActionFailure $reason): bool
