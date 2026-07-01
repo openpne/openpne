@@ -2,7 +2,6 @@
 
 namespace App\Features\Timeline;
 
-use App\Compat\RouteParityRegistry;
 use App\Features\Timeline\Actions\CreateReply;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
@@ -10,6 +9,7 @@ use App\Features\Timeline\Queries\HomeFeed;
 use App\Features\Timeline\Queries\MemberTimeline;
 use App\Features\Timeline\Queries\ShowTimelinePost;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
+use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Timeline\StoreReplyRequest;
 use App\Http\Requests\Timeline\StoreTimelinePostRequest;
@@ -25,12 +25,14 @@ use Inertia\Response as InertiaResponse;
 
 class TimelineController extends Controller
 {
+    use RespondsWithSurface;
+
     public function index(Request $request, HomeFeed $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $posts = $query($viewer);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.index', [
                 'viewer' => $viewer,
                 'posts' => $posts,
@@ -48,7 +50,7 @@ class TimelineController extends Controller
         $owner = $this->memberSubject($member);
         $posts = $query($viewer, $owner);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.member', [
                 'owner' => $owner,
                 'posts' => $posts,
@@ -81,7 +83,7 @@ class TimelineController extends Controller
         // only replies.member would lazy-load one (empty, by the no-image contract) query per reply.
         $post->load(['replies.member', 'replies.images.file']);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [
                 'post' => $post,
                 'viewer' => $viewer,
@@ -96,7 +98,7 @@ class TimelineController extends Controller
 
     public function new(Request $request): View|InertiaResponse
     {
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.new', [
                 'visibilityOptions' => TimelineVisibility::options(),
                 'defaultVisibility' => Visibility::Members,
@@ -142,7 +144,7 @@ class TimelineController extends Controller
     {
         abort_unless($this->viewer()->is($timelinePost->member), 404);
 
-        return $this->respondWith($request, [
+        return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.delete', ['post' => $timelinePost]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/delete', [
                 'post' => TimelinePostSerializer::entry($timelinePost->load(['member', 'images.file'])),
@@ -168,24 +170,6 @@ class TimelineController extends Controller
         return redirect()
             ->route(SurfaceResolver::redirectName($request, 'timeline.member'), ['member' => $viewer->getKey()])
             ->with('status', __('Post deleted.'));
-    }
-
-    /**
-     * @param  array{classic: callable(): (View|InertiaResponse), modern: callable(): (View|InertiaResponse)}  $responders
-     */
-    private function respondWith(Request $request, array $responders): View|InertiaResponse
-    {
-        $response = $responders[SurfaceResolver::resolve($request, 'timeline')]();
-
-        // Classic body id is the OpenPNE 3 page_{module}_{action} hook, derived from the route
-        // parity so it stays faithful to OpenPNE 3 (the controller holds no copy). Canonicalize
-        // first: a /m/* route that fell back to Classic carries the modern name.
-        if ($response instanceof View) {
-            $name = SurfaceResolver::canonicalName($request->route()->getName());
-            $response->with('pageId', RouteParityRegistry::bodyId($name));
-        }
-
-        return $response;
     }
 
     private function viewer(): Member
