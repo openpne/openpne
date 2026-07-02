@@ -1,5 +1,13 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { type FormEvent } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -34,7 +42,7 @@ export default function CommunityEdit() {
         remove_image: false,
     });
 
-    const submit = (e: React.FormEvent) => {
+    const submit = (e: FormEvent) => {
         e.preventDefault();
         form.post(isEdit ? `/m/community/edit?id=${community.id}` : '/m/community/edit', { forceFormData: true });
     };
@@ -59,59 +67,50 @@ export default function CommunityEdit() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{title}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
 
-                {flash.error && <p role="alert">{flash.error}</p>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 <form onSubmit={submit} className="space-y-4">
-                    <div className="space-y-1">
-                        <label htmlFor="name">{t('Name')}</label>
-                        <input
+                    <Field label={t('Name')} htmlFor="name" error={form.errors.name}>
+                        <Input
                             id="name"
                             type="text"
                             maxLength={64}
                             required
                             value={form.data.name}
                             onChange={(e) => form.setData('name', e.target.value)}
-                            className="w-full rounded border px-2 py-1"
                         />
-                        {form.errors.name && <p role="alert">{form.errors.name}</p>}
-                    </div>
+                    </Field>
 
-                    <div className="space-y-1">
-                        <label htmlFor="description">{t('Description')}</label>
-                        <textarea
+                    <Field label={t('Description')} htmlFor="description">
+                        <Textarea
                             id="description"
                             rows={5}
                             value={form.data.description}
                             onChange={(e) => form.setData('description', e.target.value)}
-                            className="w-full rounded border px-2 py-1"
                         />
-                    </div>
+                    </Field>
 
-                    <div className="space-y-1">
-                        <label htmlFor="register_policy">{t('Join policy')}</label>
-                        <select
+                    <Field label={t('Join policy')} htmlFor="register_policy">
+                        <Select
                             id="register_policy"
                             value={form.data.register_policy}
                             onChange={(e) => form.setData('register_policy', Number(e.target.value))}
-                            className="block rounded border px-2 py-1"
                         >
                             {policies.map((policy) => (
                                 <option key={policy.value} value={policy.value}>
                                     {t(policy.label)}
                                 </option>
                             ))}
-                        </select>
-                    </div>
+                        </Select>
+                    </Field>
 
-                    <div className="space-y-1">
-                        <label htmlFor="community_category_id">{t('Category')}</label>
-                        <select
+                    <Field label={t('Category')} htmlFor="community_category_id">
+                        <Select
                             id="community_category_id"
                             value={form.data.community_category_id}
                             onChange={(e) => form.setData('community_category_id', e.target.value)}
-                            className="block rounded border px-2 py-1"
                         >
                             <option value="">{t('No category')}</option>
                             {categories.map((category) => (
@@ -119,17 +118,15 @@ export default function CommunityEdit() {
                                     {category.name}
                                 </option>
                             ))}
-                        </select>
-                    </div>
+                        </Select>
+                    </Field>
 
-                    <div className="space-y-1">
-                        <label htmlFor="image">{t('Image')}</label>
+                    <Field label={t('Image')} htmlFor="image" error={form.errors.image}>
                         {community?.imageUrl && (
-                            <div className="flex items-center gap-3">
-                                <img src={community.imageUrl} alt="" className="size-20 rounded-lg object-cover" />
-                                <label className="flex items-center gap-1 text-sm">
-                                    <input
-                                        type="checkbox"
+                            <div className="mb-2 flex items-center gap-3">
+                                <img src={community.imageUrl} alt="" className="size-20 rounded-md object-cover" />
+                                <label className="flex items-center gap-1 text-sm text-foreground">
+                                    <Checkbox
                                         checked={form.data.remove_image}
                                         onChange={(e) => form.setData('remove_image', e.target.checked)}
                                     />
@@ -142,28 +139,20 @@ export default function CommunityEdit() {
                             type="file"
                             accept="image/jpeg,image/png,image/gif,image/webp"
                             onChange={(e) => form.setData('image', e.target.files?.[0] ?? null)}
+                            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
                         />
-                        {form.errors.image && <p role="alert">{form.errors.image}</p>}
-                    </div>
+                    </Field>
 
-                    <button
-                        type="submit"
-                        disabled={form.processing}
-                        className="min-h-11 rounded-full bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700"
-                    >
+                    <Button type="submit" loading={form.processing}>
                         {t('Save')}
-                    </button>
+                    </Button>
                 </form>
 
                 {isEdit && canDelete && (
-                    <div className="border-t border-slate-200 pt-4 dark:border-slate-700">
-                        <button
-                            type="button"
-                            onClick={destroy}
-                            className="min-h-11 rounded-full bg-red-50 px-5 text-sm font-medium text-red-700 transition hover:bg-red-100 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900"
-                        >
+                    <div className="border-t border-border pt-4">
+                        <Button type="button" variant="destructive" onClick={destroy}>
                             {t('Delete this %community%')}
-                        </button>
+                        </Button>
                     </div>
                 )}
             </main>
