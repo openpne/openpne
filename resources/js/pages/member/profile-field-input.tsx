@@ -37,7 +37,7 @@ export function ProfileFieldInput({ field, value, onChange, error }: Props) {
         const isRadio = field.form_type === 'radio';
         const errorId = error ? `${id}-error` : undefined;
         return (
-            <fieldset className="space-y-2" aria-invalid={error ? true : undefined} aria-describedby={errorId}>
+            <fieldset className="space-y-2" aria-required={field.is_required || undefined} aria-invalid={error ? true : undefined} aria-describedby={errorId}>
                 <legend className="text-sm font-medium text-foreground">
                     {field.caption}
                     {field.is_required && <span className="text-destructive"> *</span>}
