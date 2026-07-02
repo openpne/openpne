@@ -1,5 +1,7 @@
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useState } from "react";
+import { FlashMessage } from "@/components/flash-message";
+import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n";
 import type { PageProps } from "@/types";
 import type { BlockMember } from "./types";
@@ -28,21 +30,19 @@ export default function BlockAdd() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-md space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{title}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
 
-                {flash.error && <p role="alert">{flash.error}</p>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <p>{t("Block :name?", { name: target.name })}</p>
+                <p className="text-foreground">{t("Block :name?", { name: target.name })}</p>
 
-                <div className="space-x-2">
-                    <button
-                        type="button"
-                        onClick={submit}
-                        disabled={submitting}
-                    >
+                <div className="flex items-center gap-3">
+                    <Button type="button" variant="destructive" onClick={submit} loading={submitting}>
                         {title}
-                    </button>
-                    <Link href="/m/block/list">{t("Cancel")}</Link>
+                    </Button>
+                    <Link href="/m/block/list" className="text-sm text-link hover:underline">
+                        {t("Cancel")}
+                    </Link>
                 </div>
             </main>
         </>
