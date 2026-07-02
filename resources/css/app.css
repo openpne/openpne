@@ -135,3 +135,18 @@
         border-color: var(--color-border);
     }
 }
+
+/* Reserve the scrollbar gutter permanently so the mx-auto shell (and its sidebar) doesn't shift
+   between pages with/without a page scrollbar. */
+html {
+    scrollbar-gutter: stable;
+}
+
+/* Cancel react-remove-scroll's compensating margin (Radix overlays add it on lock to offset the
+   hidden page scrollbar). scrollbar-gutter: stable above already reserves that width, so the margin
+   double-counts and shifts the shell while an overlay is open. overflow:hidden and the JS
+   wheel/touch lock still hold. Specificity (0,1,2) + !important beats RRS's own
+   body[data-scroll-locked] rule, which is injected at runtime so source order can't be relied on. */
+html body[data-scroll-locked] {
+    margin-right: 0 !important;
+}
