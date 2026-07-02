@@ -4,6 +4,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDateOnly } from '@/lib/date';
 import { useT } from '@/lib/i18n';
@@ -95,10 +96,11 @@ export default function CommunityEventShow() {
                     </Link>
                 </p>
 
-                <article className="space-y-3">
-                    <h1 className="text-xl font-semibold">{event.name}</h1>
+                <h1 className="text-xl font-semibold">{event.name}</h1>
+
+                <Panel bodyClassName="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" />
+                        <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" decorative />
                         {event.author ? (
                             <Link href={`/m/member/${event.author.id}`} className="text-link hover:underline">
                                 {event.author.name}
@@ -150,13 +152,11 @@ export default function CommunityEventShow() {
                             </button>
                         </div>
                     )}
-                </article>
+                </Panel>
 
-                <section className="space-y-3">
-                    <h2 className="text-lg font-semibold">{t(':count comments', { count: thread.total })}</h2>
-
+                <Panel title={t(':count comments', { count: thread.total })} flush>
                     {thread.lastPage > 1 && (
-                        <div className="flex items-center justify-between gap-2 text-sm">
+                        <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-2.5 text-sm">
                             {thread.hasOlder && thread.olderPage !== null ? (
                                 <Link href={threadLink(thread.olderPage, thread.ascending)} preserveScroll className="text-link hover:underline">
                                     {t('Older')}
@@ -178,11 +178,11 @@ export default function CommunityEventShow() {
                     )}
 
                     {thread.comments.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t('No comments yet.')}</p>
+                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No comments yet.')}</p>
                     ) : (
-                        <ul className="space-y-3">
+                        <List>
                             {thread.comments.map((comment) => (
-                                <li key={comment.id} className="border-t border-border pt-3">
+                                <li key={comment.id} className="px-5 py-4">
                                     <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
                                         <span className="font-medium">#{comment.number}</span>
                                         {comment.author ? (
@@ -203,46 +203,47 @@ export default function CommunityEventShow() {
                                     <ImageGrid images={comment.images} />
                                 </li>
                             ))}
-                        </ul>
+                        </List>
                     )}
-                </section>
+                </Panel>
 
                 {canComment && (
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
-                        <h2 className="text-lg font-semibold">{t('Post a new event comment')}</h2>
-                        <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
-                            <Textarea id="comment_body" required rows={5} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
-                        </Field>
-                        <Field label={t('Images')} htmlFor="comment_images" error={form.errors.images}>
-                            <input
-                                id="comment_images"
-                                type="file"
-                                accept="image/jpeg,image/png,image/gif,image/webp"
-                                multiple
-                                onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
-                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
-                            />
-                        </Field>
+                    <Panel title={t('Post a new event comment')}>
+                        <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
+                            <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
+                                <Textarea id="comment_body" required rows={5} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
+                            </Field>
+                            <Field label={t('Images')} htmlFor="comment_images" error={form.errors.images}>
+                                <input
+                                    id="comment_images"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/gif,image/webp"
+                                    multiple
+                                    onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
+                                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
+                                />
+                            </Field>
 
-                        {/* RSVP + comment share one form (OpenPNE 3): participate/cancel toggle the roster,
-                            comment-only skips it. A comment is required for every submit. */}
-                        <div className="flex flex-wrap items-center gap-3">
-                            {rosterOpen && isParticipant && (
-                                <Button type="button" variant="secondary" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
-                                    {t('Cancel to join')}
+                            {/* RSVP + comment share one form (OpenPNE 3): participate/cancel toggle the roster,
+                                comment-only skips it. A comment is required for every submit. */}
+                            <div className="flex flex-wrap items-center gap-3">
+                                {rosterOpen && isParticipant && (
+                                    <Button type="button" variant="secondary" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
+                                        {t('Cancel to join')}
+                                    </Button>
+                                )}
+                                {rosterOpen && !isParticipant && !isFull && (
+                                    <Button type="button" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
+                                        {t('Participate in this event')}
+                                    </Button>
+                                )}
+                                {rosterOpen && !isParticipant && isFull && <p className="self-center text-sm text-destructive">{t('This event is full.')}</p>}
+                                <Button type="button" variant="outline" onClick={() => submit(true)} disabled={form.processing || bodyEmpty}>
+                                    {t('Add a comment only')}
                                 </Button>
-                            )}
-                            {rosterOpen && !isParticipant && !isFull && (
-                                <Button type="button" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
-                                    {t('Participate in this event')}
-                                </Button>
-                            )}
-                            {rosterOpen && !isParticipant && isFull && <p className="self-center text-sm text-destructive">{t('This event is full.')}</p>}
-                            <Button type="button" variant="outline" onClick={() => submit(true)} disabled={form.processing || bodyEmpty}>
-                                {t('Add a comment only')}
-                            </Button>
-                        </div>
-                    </form>
+                            </div>
+                        </form>
+                    </Panel>
                 )}
             </main>
         </>
