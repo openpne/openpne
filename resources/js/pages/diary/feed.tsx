@@ -1,5 +1,9 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { type FormEvent } from 'react';
+import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { PaginatedDiaries } from './types';
@@ -23,7 +27,7 @@ export default function DiaryFeed() {
               : t('Recently Posted %Diaries%');
     const form = useForm({ keyword });
 
-    const submit = (e: React.FormEvent) => {
+    const submit = (e: FormEvent) => {
         e.preventDefault();
         form.get('/m/diary/search', { preserveState: true });
     };
@@ -32,36 +36,37 @@ export default function DiaryFeed() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{title}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
 
                 {searchable && (
                     <form onSubmit={submit} className="flex gap-2">
                         <label htmlFor="diary_search_keyword" className="sr-only">
                             {t('Keyword')}
                         </label>
-                        <input
-                            id="diary_search_keyword"
-                            type="text"
-                            value={form.data.keyword}
-                            onChange={(e) => form.setData('keyword', e.target.value)}
-                            className="flex-1 rounded border px-2 py-1"
-                        />
-                        <button type="submit" disabled={form.processing}>
+                        <div className="flex-1">
+                            <Input
+                                id="diary_search_keyword"
+                                type="text"
+                                value={form.data.keyword}
+                                onChange={(e) => form.setData('keyword', e.target.value)}
+                            />
+                        </div>
+                        <Button type="submit" loading={form.processing}>
                             {t('Search')}
-                        </button>
+                        </Button>
                     </form>
                 )}
 
-                {flash.status && <p role="status">{flash.status}</p>}
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
                 {diaries.data.length === 0 ? (
-                    <p>{t('No %diary% entries to show.')}</p>
+                    <p className="text-sm text-muted-foreground">{t('No %diary% entries to show.')}</p>
                 ) : (
                     <>
                         <ul className="space-y-2">
                             {diaries.data.map((entry) => (
-                                <li key={entry.id} className="flex items-center justify-between">
-                                    <Link href={`/m/diary/${entry.id}`} className="hover:underline">
+                                <li key={entry.id} className="flex items-center justify-between gap-3">
+                                    <Link href={`/m/diary/${entry.id}`} className="truncate text-foreground hover:underline">
                                         {entry.title}
                                         {entry.hasImages && (
                                             <span className="imageIcon" title={t('This entry has photos')} aria-label={t('This entry has photos')}>
