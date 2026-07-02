@@ -68,11 +68,11 @@ export default function DiaryEdit() {
                         <fieldset className="space-y-2">
                             <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
                             <ul className="flex flex-wrap gap-3">
-                                {diary.images.map((image) => (
+                                {diary.images.map((image, i) => (
                                     <li key={image.id} className="space-y-1 text-center">
                                         <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
                                         <label className="flex items-center justify-center gap-1 text-sm text-foreground">
-                                            <Checkbox onChange={(e) => toggleRemove(image.id, e.target.checked)} />
+                                            <Checkbox aria-label={`${t('Delete')} ${t('Image')} ${i + 1}`} onChange={(e) => toggleRemove(image.id, e.target.checked)} />
                                             {t('Delete')}
                                         </label>
                                     </li>
