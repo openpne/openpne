@@ -24,8 +24,12 @@ class RawPaletteGuardTest extends TestCase
     /** Numbered palette shades (bg-blue-600, slate-200/50, …). */
     private const PALETTE_NUMBERED = '/\b(?:bg|text|border|ring|from|via|to|divide|fill|stroke|outline|placeholder|caret|accent|decoration|ring-offset)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|100|200|300|400|500|600|700|800|900|950)\b/';
 
-    /** Bare white/black classes (text-white, bg-white, bg-black); an opacity variant (bg-black/50) is a scrim/overlay and is allowed. */
-    private const PALETTE_WHITEBLACK = '/\b(?:bg|text|border|ring|from|via|to|divide|fill|stroke|outline|placeholder|caret|accent|decoration|ring-offset)-(?:white|black)\b(?!\/)/';
+    /**
+     * White/black classes (text-white, bg-white, bg-black). The only allowed form is a translucent
+     * background (bg-black/50 scrim, overlays) — an opacity exception scoped to bg only, so a raw
+     * text-white/90 or border-white/20 is still caught.
+     */
+    private const PALETTE_WHITEBLACK = '/\b(?:(?:text|border|ring|from|via|to|divide|fill|stroke|outline|placeholder|caret|accent|decoration|ring-offset)-(?:white|black)\b|bg-(?:white|black)\b(?!\/))/';
 
     private function hasRawPalette(string $contents): bool
     {
