@@ -2,6 +2,10 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { CommunityImage } from '@/components/community-image';
 import { Pagination } from '@/components/pagination';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunityCategory, PaginatedCommunities } from './types';
@@ -34,61 +38,65 @@ export default function CommunitySearch() {
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <div className="flex items-center justify-between gap-3">
                     <h1 className="text-2xl font-semibold">{t('%Communities%')}</h1>
-                    <Link href="/m/community/edit" className="shrink-0 text-sm hover:underline">
+                    <Link href="/m/community/edit" className="shrink-0 text-sm text-link hover:underline">
                         {t('Create a %community%')}
                     </Link>
                 </div>
 
-                <form onSubmit={submit} className="flex flex-wrap gap-2">
-                    <label htmlFor="community_keyword" className="sr-only">
-                        {t('Keyword')}
-                    </label>
-                    <input
-                        id="community_keyword"
-                        type="text"
-                        value={form.keyword}
-                        onChange={(e) => setForm((f) => ({ ...f, keyword: e.target.value }))}
-                        className="min-w-0 flex-1 rounded border px-2 py-1"
-                    />
-                    <label htmlFor="community_category" className="sr-only">
-                        {t('Category')}
-                    </label>
-                    <select
-                        id="community_category"
-                        value={form.categoryId}
-                        onChange={(e) => setForm((f) => ({ ...f, categoryId: Number(e.target.value) }))}
-                        className="rounded border px-2 py-1"
-                    >
-                        <option value={0}>{t('All categories')}</option>
-                        {categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                                {category.name}
-                            </option>
-                        ))}
-                    </select>
-                    <button type="submit">{t('Search')}</button>
-                </form>
+                <Panel>
+                    <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+                        <label htmlFor="community_keyword" className="sr-only">
+                            {t('Keyword')}
+                        </label>
+                        <Input
+                            id="community_keyword"
+                            type="text"
+                            value={form.keyword}
+                            onChange={(e) => setForm((f) => ({ ...f, keyword: e.target.value }))}
+                            className="w-auto min-w-[12rem] flex-1"
+                        />
+                        <label htmlFor="community_category" className="sr-only">
+                            {t('Category')}
+                        </label>
+                        <Select
+                            id="community_category"
+                            value={form.categoryId}
+                            onChange={(e) => setForm((f) => ({ ...f, categoryId: Number(e.target.value) }))}
+                            className="w-auto"
+                        >
+                            <option value={0}>{t('All categories')}</option>
+                            {categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                    {category.name}
+                                </option>
+                            ))}
+                        </Select>
+                        <Button type="submit">{t('Search')}</Button>
+                    </form>
+                </Panel>
 
                 {communities.data.length === 0 ? (
-                    <p>{t('No %communities% found.')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('No %communities% found.')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <ul className="space-y-3">
-                            {communities.data.map((community) => (
-                                <li key={community.id}>
-                                    <Link href={`/m/community/${community.id}`} className="flex gap-3">
-                                        <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-14" />
+                        <Panel flush>
+                            <List>
+                                {communities.data.map((community) => (
+                                    <ListRow key={community.id} href={`/m/community/${community.id}`} chevron>
+                                        <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-12" />
                                         <div className="min-w-0 flex-1">
-                                            <p className="font-medium">{community.name}</p>
+                                            <p className="font-medium text-foreground">{community.name}</p>
                                             {community.category && <p className="text-xs text-muted-foreground">{community.category.name}</p>}
                                             {community.description && (
                                                 <p className="line-clamp-2 text-sm text-muted-foreground">{community.description}</p>
                                             )}
                                         </div>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+                                    </ListRow>
+                                ))}
+                            </List>
+                        </Panel>
                         <Pagination meta={communities.meta} />
                     </>
                 )}
