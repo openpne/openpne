@@ -1,5 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { DiaryAuthor, PaginatedDiaries } from './types';
@@ -20,48 +22,53 @@ export default function DiaryList() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">
-                    {title}
-                    {period && <span className="ml-2 text-base font-normal text-muted-foreground">{period}</span>}
-                </h1>
+                <div className="flex items-center justify-between gap-3">
+                    <h1 className="text-2xl font-semibold">
+                        {title}
+                        {period && <span className="ml-2 text-base font-normal text-muted-foreground">{period}</span>}
+                    </h1>
+                    {isOwner && (
+                        <Link href="/m/diary/new" className="shrink-0 text-sm text-link hover:underline">
+                            {t('Write a %diary%')}
+                        </Link>
+                    )}
+                </div>
 
-                {flash.status && <p role="status">{flash.status}</p>}
-                {flash.error && <p role="alert">{flash.error}</p>}
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 {diaries.data.length === 0 ? (
-                    <p>{t('No %diary% entries to show.')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('No %diary% entries to show.')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <ul className="space-y-2">
-                            {diaries.data.map((entry) => (
-                                <li key={entry.id} className="flex items-center justify-between">
-                                    <Link href={`/m/diary/${entry.id}`} className="hover:underline">
-                                        {entry.title}
-                                    </Link>
-                                    <span className="text-sm text-muted-foreground">
-                                        {new Date(entry.createdAt).toLocaleDateString()}
-                                    </span>
-                                    {isOwner && (
-                                        <span className="space-x-2 text-sm">
-                                            <Link href={`/m/diary/edit/${entry.id}`} className="hover:underline">
-                                                {t('Edit')}
-                                            </Link>
-                                            <Link href={`/m/diary/deleteConfirm/${entry.id}`} className="hover:underline">
-                                                {t('Delete')}
-                                            </Link>
+                        <Panel flush>
+                            <List>
+                                {diaries.data.map((entry) => (
+                                    <ListRow key={entry.id}>
+                                        <Link href={`/m/diary/${entry.id}`} className="min-w-0 flex-1 truncate font-medium text-foreground hover:underline">
+                                            {entry.title}
+                                        </Link>
+                                        <span className="shrink-0 text-sm text-muted-foreground">
+                                            {new Date(entry.createdAt).toLocaleDateString()}
                                         </span>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
+                                        {isOwner && (
+                                            <span className="flex shrink-0 gap-3 text-sm">
+                                                <Link href={`/m/diary/edit/${entry.id}`} className="text-muted-foreground hover:text-foreground">
+                                                    {t('Edit')}
+                                                </Link>
+                                                <Link href={`/m/diary/deleteConfirm/${entry.id}`} className="text-muted-foreground hover:text-foreground">
+                                                    {t('Delete')}
+                                                </Link>
+                                            </span>
+                                        )}
+                                    </ListRow>
+                                ))}
+                            </List>
+                        </Panel>
                         <Pagination meta={diaries.meta} />
                     </>
-                )}
-
-                {isOwner && (
-                    <Link href="/m/diary/new" className="hover:underline">
-                        {t('Write a %diary%')}
-                    </Link>
                 )}
             </main>
         </>
