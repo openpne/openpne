@@ -2,10 +2,11 @@ import type { ReactNode } from 'react';
 
 export type FlashVariant = 'success' | 'error';
 
+// A colored left border + tint carries the status hue; the body stays text-foreground so contrast is
+// AA in both modes (a mid success/destructive color as text on its own /10 tint fails AA).
 const variantClass: Record<FlashVariant, string> = {
-    success:
-        'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200',
-    error: 'border-red-200 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200',
+    success: 'border-success/30 border-l-4 border-l-success bg-success/10',
+    error: 'border-destructive/30 border-l-4 border-l-destructive bg-destructive/10',
 };
 
 type Props = {
@@ -16,7 +17,7 @@ type Props = {
 export function FlashMessage({ children, variant = 'success' }: Props) {
     return (
         <div
-            className={`rounded-lg border px-4 py-2 text-sm ${variantClass[variant]}`}
+            className={`rounded-md border px-4 py-2 text-sm text-foreground ${variantClass[variant]}`}
             role={variant === 'error' ? 'alert' : 'status'}
         >
             {children}
