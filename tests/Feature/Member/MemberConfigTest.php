@@ -259,18 +259,20 @@ class MemberConfigTest extends TestCase
         ]);
     }
 
-    public function test_modern_only_shows_modern_and_does_not_false_pin(): void
+    public function test_modern_only_hides_the_surface_picker_and_rejects_a_posted_choice(): void
     {
-        // The "current surface" must honour the modern_only hard gate, not just the mode's default.
-        // Otherwise an unset member on a modern_only install sees Modern, but the form would call the
-        // current surface Classic and selecting Modern would wrongly pin them.
+        // Under modern_only the Classic/Modern picker is not served (serializer omits it) and a crafted
+        // POST is rejected, so no latent preferred_surface row can be written that would fire if the
+        // site later switched to a coexistence mode.
         config(['openpne.surface_mode' => 'modern_only']);
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/m/member/config')
-            ->assertInertia(fn (Assert $page) => $page->where('form.surface.value', 'modern'));
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->missing('form.surface'));
 
-        $this->actingAs($member)->post('/member/config/surface', ['preferred_surface' => 'modern']);
+        $this->actingAs($member)->post('/member/config/surface', ['preferred_surface' => 'classic'])
+            ->assertForbidden();
 
         $this->assertDatabaseMissing('member_preferences', [
             'member_id' => $member->id, 'key' => 'preferred_surface',
