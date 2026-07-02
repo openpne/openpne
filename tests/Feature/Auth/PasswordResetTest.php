@@ -30,7 +30,7 @@ class PasswordResetTest extends TestCase
 
     public function test_forgot_password_screen_renders_the_modern_surface_when_selected(): void
     {
-        config()->set('openpne.tenant_default_surface', 'modern');
+        config()->set('openpne.surface_mode', 'modern_default');
 
         $this->get('/forgot-password')
             ->assertStatus(200)
@@ -48,7 +48,7 @@ class PasswordResetTest extends TestCase
 
     public function test_reset_password_screen_renders_the_modern_surface_when_selected(): void
     {
-        config()->set('openpne.tenant_default_surface', 'modern');
+        config()->set('openpne.surface_mode', 'modern_default');
 
         $this->get('/reset-password/the-token?email=member@example.com')
             ->assertStatus(200)

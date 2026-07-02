@@ -17,8 +17,7 @@ class BlockRoutesTest extends TestCase
         parent::setUp();
         config([
             'features.block.modern_status' => 'native',
-            'openpne.tenant_mode' => 'mixed',
-            'openpne.tenant_default_surface' => 'classic',
+            'openpne.surface_mode' => 'classic_default',
         ]);
     }
 
@@ -185,9 +184,9 @@ class BlockRoutesTest extends TestCase
         $response->assertInertia(fn (AssertableInertia $page) => $page->component('block/list'));
     }
 
-    public function test_canonical_block_list_returns_modern_when_tenant_default_is_modern(): void
+    public function test_canonical_block_list_returns_modern_when_surface_mode_is_modern_default(): void
     {
-        config(['openpne.tenant_default_surface' => 'modern']);
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
         $response = $this->actingAs($member)->get('/block/list');
@@ -196,9 +195,9 @@ class BlockRoutesTest extends TestCase
         $response->assertInertia(fn (AssertableInertia $page) => $page->component('block/list'));
     }
 
-    public function test_session_override_is_ignored_when_tenant_mode_is_modern_only(): void
+    public function test_session_override_is_ignored_when_surface_mode_is_modern_only(): void
     {
-        config(['openpne.tenant_mode' => 'modern_only']);
+        config(['openpne.surface_mode' => 'modern_only']);
         $member = Member::factory()->create();
 
         $response = $this->actingAs($member)

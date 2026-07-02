@@ -51,7 +51,7 @@ class RegistrationCompletionTest extends TestCase
 
     public function test_the_form_renders_the_modern_surface_when_selected(): void
     {
-        config()->set('openpne.tenant_default_surface', 'modern');
+        config()->set('openpne.surface_mode', 'modern_default');
         $token = $this->issueToken('newcomer@example.com');
 
         $this->get("/register/{$token}")

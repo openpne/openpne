@@ -38,7 +38,7 @@ class RegistrationRequestTest extends TestCase
 
     public function test_email_entry_screen_renders_the_modern_surface_when_selected(): void
     {
-        config()->set('openpne.tenant_default_surface', 'modern');
+        config()->set('openpne.surface_mode', 'modern_default');
 
         $this->get('/register')
             ->assertStatus(200)

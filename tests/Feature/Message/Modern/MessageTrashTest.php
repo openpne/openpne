@@ -160,7 +160,7 @@ class MessageTrashTest extends TestCase
 
     public function test_modern_only_serves_the_canonical_draft_edit_as_inertia(): void
     {
-        config()->set('openpne.tenant_mode', 'modern_only');
+        config()->set('openpne.surface_mode', 'modern_only');
         [$sender, $recipient] = Member::factory()->count(2)->create();
         $draft = $this->draftTo($sender, $recipient);
 

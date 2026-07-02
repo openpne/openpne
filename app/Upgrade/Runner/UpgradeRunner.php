@@ -3,6 +3,9 @@
 namespace App\Upgrade\Runner;
 
 use App\Models\UpgradeState;
+use App\Services\SnsSettingService;
+use App\Support\SnsSettingKey;
+use App\Support\SurfaceMode;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
@@ -66,6 +69,7 @@ final class UpgradeRunner
             if ($migratesFiles) {
                 $fileBin->plan($options->sourcePrefix, $options->sourceDatabase, $out);
             }
+            $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
 
             return $this->walk($options, $out);
         }
@@ -92,9 +96,34 @@ final class UpgradeRunner
                 $fileBin->rewire($out);
             }
 
+            // Only after a full success (walk + BLOBs) so a post-walk failure never leaves the mode
+            // stamped without the data behind it.
+            if ($walked) {
+                $this->stampSurfaceMode($out);
+            }
+
             return $walked;
         } finally {
             $preflight->drop($created, $options->sourcePrefix, $options->sourceDatabase);
+        }
+    }
+
+    /**
+     * Establish the Classic-default surface for the migrated site. Insert-if-absent so a resume /
+     * re-run never clobbers a later operator switch (openpne:surface-mode). surface_mode has no
+     * OpenPNE 3 source column, so it is set here rather than copied by a step.
+     */
+    private function stampSurfaceMode(Closure $out): void
+    {
+        $inserted = DB::table('sns_settings')->insertOrIgnore([
+            'key' => SnsSettingKey::SurfaceMode->value,
+            'value' => SnsSettingKey::SurfaceMode->encode(SurfaceMode::ClassicDefault),
+        ]);
+
+        app(SnsSettingService::class)->clearCache();
+
+        if ($inserted > 0) {
+            $out('Surface set to classic_default; switch to modern_only with `php artisan openpne:surface-mode modern_only` once the Modern migration is complete.');
         }
     }
 
