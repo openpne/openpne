@@ -121,9 +121,20 @@ export default function CommunityEdit() {
                         </Select>
                     </Field>
 
-                    <Field label={t('Image')} htmlFor="image" error={form.errors.image}>
+                    {/* Field wraps only the file input (single control) so its id/aria wiring reaches it;
+                        the existing-image + remove control is a sibling below, not a second child. */}
+                    <div className="space-y-2">
+                        <Field label={t('Image')} htmlFor="image" error={form.errors.image}>
+                            <input
+                                id="image"
+                                type="file"
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                onChange={(e) => form.setData('image', e.target.files?.[0] ?? null)}
+                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
+                            />
+                        </Field>
                         {community?.imageUrl && (
-                            <div className="mb-2 flex items-center gap-3">
+                            <div className="flex items-center gap-3">
                                 <img src={community.imageUrl} alt="" className="size-20 rounded-md object-cover" />
                                 <label className="flex items-center gap-1 text-sm text-foreground">
                                     <Checkbox
@@ -134,14 +145,7 @@ export default function CommunityEdit() {
                                 </label>
                             </div>
                         )}
-                        <input
-                            id="image"
-                            type="file"
-                            accept="image/jpeg,image/png,image/gif,image/webp"
-                            onChange={(e) => form.setData('image', e.target.files?.[0] ?? null)}
-                            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
-                        />
-                    </Field>
+                    </div>
 
                     <Button type="submit" loading={form.processing}>
                         {t('Save')}
