@@ -1,5 +1,9 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
+import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 import { ProfileFieldInput } from '@/pages/member/profile-field-input';
@@ -45,60 +49,21 @@ export default function RegisterComplete() {
 
             <form onSubmit={submit} className="space-y-4">
                 <div className="space-y-1">
-                    <span className="block text-sm font-medium">{t('Mail Address')}</span>
+                    <span className="block text-sm font-medium text-foreground">{t('Mail Address')}</span>
                     <p className="text-sm text-muted-foreground">{email}</p>
                 </div>
 
-                <div className="space-y-1">
-                    <label htmlFor="name" className="block text-sm font-medium">
-                        {t('Name')}
-                    </label>
-                    <input
-                        id="name"
-                        type="text"
-                        name="name"
-                        autoComplete="name"
-                        autoFocus
-                        required
-                        value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-                </div>
+                <Field label={t('Name')} htmlFor="name" error={errors.name}>
+                    <Input id="name" type="text" name="name" autoComplete="name" autoFocus required value={data.name} onChange={(e) => setData('name', e.target.value)} />
+                </Field>
 
-                <div className="space-y-1">
-                    <label htmlFor="password" className="block text-sm font-medium">
-                        {t('Password')}
-                    </label>
-                    <input
-                        id="password"
-                        type="password"
-                        name="password"
-                        autoComplete="new-password"
-                        required
-                        value={data.password}
-                        onChange={(e) => setData('password', e.target.value)}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                </div>
+                <Field label={t('Password')} htmlFor="password" error={errors.password}>
+                    <Input id="password" type="password" name="password" autoComplete="new-password" required value={data.password} onChange={(e) => setData('password', e.target.value)} />
+                </Field>
 
-                <div className="space-y-1">
-                    <label htmlFor="password_confirmation" className="block text-sm font-medium">
-                        {t('Confirm password')}
-                    </label>
-                    <input
-                        id="password_confirmation"
-                        type="password"
-                        name="password_confirmation"
-                        autoComplete="new-password"
-                        required
-                        value={data.password_confirmation}
-                        onChange={(e) => setData('password_confirmation', e.target.value)}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                </div>
+                <Field label={t('Confirm password')} htmlFor="password_confirmation">
+                    <Input id="password_confirmation" type="password" name="password_confirmation" autoComplete="new-password" required value={data.password_confirmation} onChange={(e) => setData('password_confirmation', e.target.value)} />
+                </Field>
 
                 {fields.map((field) => (
                     <div key={field.id} className="space-y-1">
@@ -109,7 +74,7 @@ export default function RegisterComplete() {
                             error={(errors as Record<string, string>)[`profile.${field.id}`]}
                         />
                         {field.is_edit_public_flag && (
-                            <select
+                            <Select
                                 aria-label={t('Visibility')}
                                 value={data.visibility[field.id]}
                                 onChange={(e) => setVisibility(field.id, Number(e.target.value))}
@@ -117,18 +82,14 @@ export default function RegisterComplete() {
                                 {field.visibilityOptions.map((opt) => (
                                     <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
                                 ))}
-                            </select>
+                            </Select>
                         )}
                     </div>
                 ))}
 
-                <button
-                    type="submit"
-                    disabled={processing}
-                    className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                >
+                <Button type="submit" loading={processing} className="w-full">
                     {title}
-                </button>
+                </Button>
             </form>
         </AuthLayout>
     );
