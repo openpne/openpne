@@ -12,7 +12,7 @@ export function TopNav() {
     const { name, auth } = usePage<PageProps>().props;
 
     return (
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-slate-200 bg-white/90 px-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/90 lg:hidden">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-background/90 px-3 backdrop-blur lg:hidden">
             {auth.user && <NavDrawer />}
             <Link href="/dashboard" className="flex min-w-0 flex-1 items-center gap-2">
                 <BrandMark size="sm" />
@@ -23,7 +23,7 @@ export function TopNav() {
             ) : (
                 <Link
                     href="/login"
-                    className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-blue-600 transition hover:bg-slate-100 dark:text-blue-400 dark:hover:bg-slate-800"
+                    className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-link transition hover:bg-accent"
                 >
                     {t('Log In')}
                 </Link>

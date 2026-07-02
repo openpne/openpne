@@ -15,7 +15,7 @@ export function DropdownMenuContent({
             <DropdownMenuPrimitive.Content
                 sideOffset={sideOffset}
                 className={cn(
-                    'z-50 min-w-56 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-800',
+                    'z-50 min-w-56 overflow-hidden rounded-xl border border-border bg-card p-1 shadow-lg',
                     className,
                 )}
                 {...props}
@@ -28,7 +28,7 @@ export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof 
     return (
         <DropdownMenuPrimitive.Item
             className={cn(
-                'flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg px-3 text-sm text-slate-700 outline-none transition focus:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:text-slate-200 dark:focus:bg-slate-700/60',
+                'flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg px-3 text-sm text-foreground outline-none transition focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
                 className,
             )}
             {...props}
@@ -37,5 +37,5 @@ export function DropdownMenuItem({ className, ...props }: ComponentProps<typeof 
 }
 
 export function DropdownMenuSeparator({ className, ...props }: ComponentProps<typeof DropdownMenuPrimitive.Separator>) {
-    return <DropdownMenuPrimitive.Separator className={cn('my-1 h-px bg-slate-100 dark:bg-slate-700', className)} {...props} />;
+    return <DropdownMenuPrimitive.Separator className={cn('my-1 h-px bg-border', className)} {...props} />;
 }

@@ -18,7 +18,7 @@ export function NavDrawer() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger
                 aria-label={t('Menu')}
-                className="-ml-1 inline-flex size-10 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                className="-ml-1 inline-flex size-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent"
             >
                 <Menu className="size-6" />
             </DialogTrigger>
@@ -27,7 +27,7 @@ export function NavDrawer() {
                     <Link
                         href="/dashboard"
                         onClick={() => setOpen(false)}
-                        className="mb-2 flex min-h-11 items-center gap-3 rounded-full px-2 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+                        className="mb-2 flex min-h-11 items-center gap-3 rounded-full px-2 transition hover:bg-accent"
                     >
                         <BrandMark size="sm" />
                         <span className="truncate text-lg font-bold">{name}</span>

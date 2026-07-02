@@ -29,8 +29,8 @@ export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?
                 aria-label={t('Account menu')}
                 className={
                     compact
-                        ? 'shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-slate-400'
-                        : 'flex min-h-11 w-full items-center gap-3 rounded-full px-2 outline-none transition hover:bg-slate-100 focus-visible:bg-slate-100 dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800'
+                        ? 'shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                        : 'flex min-h-11 w-full items-center gap-3 rounded-full px-2 outline-none transition hover:bg-accent focus-visible:bg-accent'
                 }
             >
                 <Avatar id={user.id} name={user.name} src={user.imageUrl} size="sm" />
@@ -39,23 +39,23 @@ export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?
             <DropdownMenuContent align="start" side="top" className="w-64">
                 <DropdownMenuItem asChild>
                     <Link href={`/m/member/${user.id}`}>
-                        <User className="size-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                        <User className="size-4 shrink-0 text-muted-foreground" />
                         <span className="flex-1">{t('View my profile')}</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                     <Link href="/m/member/config">
-                        <Settings className="size-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                        <Settings className="size-4 shrink-0 text-muted-foreground" />
                         <span className="flex-1">{t('Settings')}</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => router.post('/locale', { locale: nextLocale })}>
-                    <Globe className="size-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                    <Globe className="size-4 shrink-0 text-muted-foreground" />
                     <span className="flex-1">{NATIVE_LOCALE_LABEL[nextLocale]}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => router.post('/logout')}>
-                    <LogOut className="size-4 shrink-0 text-slate-500 dark:text-slate-400" />
+                    <LogOut className="size-4 shrink-0 text-muted-foreground" />
                     <span className="flex-1">{t('Sign out')}</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>
