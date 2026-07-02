@@ -37,10 +37,9 @@ class RawPaletteGuardTest extends TestCase
             || preg_match(self::PALETTE_WHITEBLACK, $contents) === 1;
     }
 
-    /** Screens still on raw palette. Remove each as it is tokenized. */
-    private const ALLOWLIST = [
-        'pages/dashboard.tsx',
-    ];
+    /** Screens still on raw palette. Now empty: every Modern page is tokenized. Add an entry only to
+     * consciously exempt a new screen, and remove it once it is tokenized. */
+    private const ALLOWLIST = [];
 
     /** @return list<string> */
     private function tsxFiles(): array
