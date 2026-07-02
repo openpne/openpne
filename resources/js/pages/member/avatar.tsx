@@ -1,4 +1,7 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -22,14 +25,14 @@ export default function MemberAvatar() {
         <>
             <Head title={t('Profile image')} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <h1 className="text-xl font-semibold">{t('Profile image')}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t('Profile image')}</h1>
 
-                {flash.status && <p role="status">{flash.status}</p>}
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
                 {avatar ? (
-                    <img src={avatar.thumbnailUrl} alt={t('Profile image')} className="size-32 rounded-lg object-cover" />
+                    <img src={avatar.thumbnailUrl} alt={t('Profile image')} className="size-32 rounded-md object-cover" />
                 ) : (
-                    <p>{t('No profile image set.')}</p>
+                    <p className="text-sm text-muted-foreground">{t('No profile image set.')}</p>
                 )}
 
                 <form
@@ -37,17 +40,22 @@ export default function MemberAvatar() {
                         e.preventDefault();
                         upload.post('/m/member/avatar', { onSuccess: () => upload.reset() });
                     }}
-                    className="space-y-2"
+                    className="space-y-3"
                 >
-                    <input
-                        type="file"
-                        name="image"
-                        accept="image/jpeg,image/png,image/gif,image/webp"
-                        onChange={(e) => upload.setData('image', e.target.files?.[0] ?? null)}
-                        required
-                    />
-                    {upload.errors.image && <p role="alert">{upload.errors.image}</p>}
-                    <button type="submit" disabled={upload.processing}>{t('Upload')}</button>
+                    <Field label={t('Choose Image')} htmlFor="avatar_image" error={upload.errors.image}>
+                        <input
+                            id="avatar_image"
+                            type="file"
+                            name="image"
+                            accept="image/jpeg,image/png,image/gif,image/webp"
+                            onChange={(e) => upload.setData('image', e.target.files?.[0] ?? null)}
+                            required
+                            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
+                        />
+                    </Field>
+                    <Button type="submit" loading={upload.processing}>
+                        {t('Upload')}
+                    </Button>
                 </form>
 
                 {avatar && (
@@ -57,7 +65,11 @@ export default function MemberAvatar() {
                             remove.delete('/m/member/avatar', { preserveScroll: true });
                         }}
                     >
-                        <button type="submit" disabled={remove.processing} className="text-red-600 hover:underline">
+                        <button
+                            type="submit"
+                            disabled={remove.processing}
+                            className="rounded-md text-sm text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        >
                             {t('Remove')}
                         </button>
                     </form>
