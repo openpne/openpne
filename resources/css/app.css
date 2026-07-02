@@ -38,18 +38,34 @@
     --color-info: var(--info);
     --color-info-foreground: var(--info-foreground);
     --color-link: var(--link);
+    /* Form-field surface: bg-field is the recessed control fill (background-only — no text-field),
+       border-field-border is one step darker than the card border so a control reads as a distinct
+       well. Asymmetric by mode: light = near-white raised, dark = darker-than-card recessed. */
+    --color-field: var(--field);
+    --color-field-border: var(--field-border);
+    /* Named radius scale (additive — leaves the raw rounded-md the rest of the app uses untouched). */
+    --radius-field: 0.5rem;
+    --radius-card: 0.875rem;
+    /* Mode-aware elevation via the var() indirection (values live in :root / .dark). */
+    --shadow-card: var(--card-shadow);
+    --shadow-elevated: var(--elevated-shadow);
 }
 
 :root {
     /* Neutral ramp with a faint warm tint (hue 83, tiny chroma) instead of pure gray, and a page
        background a touch below pure white so white cards lift — reads as "designed", not stark. */
-    --background: oklch(0.98 0.004 83);
+    --background: oklch(0.977 0.004 83);
     --foreground: oklch(0.26 0.006 83);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.26 0.006 83);
-    --border: oklch(0.915 0.005 83);
-    --input: oklch(0.915 0.005 83);
-    --ring: oklch(0.72 0.01 83);
+    --border: oklch(0.90 0.005 83);
+    /* Split from --border and darker (~slate-300): the control boundary reads clearly against both
+       the page and a white card. Resting borders are perceptual separation, not an SC 1.4.11 3:1
+       indicator — the hard focus/invalid affordances (below) carry that. */
+    --input: oklch(0.845 0.01 83);
+    /* Faint-blue focus ring (the one chromatic accent; brand color stays deferred). Used solid so it
+       clears 3:1 on the field/page; a /50 opacity would drop to ~1.9:1. */
+    --ring: oklch(0.58 0.10 256);
     --primary: oklch(0.25 0.01 83);
     --primary-foreground: oklch(0.985 0.004 83);
     --muted: oklch(0.965 0.004 83);
@@ -69,17 +85,22 @@
     --info: oklch(0.6 0.13 244);
     --info-foreground: oklch(0.985 0 0);
     --link: oklch(0.52 0.19 256);
+    /* Field fill: near-white so it lifts on the page (0.977) and reads as a faint well in a white card. */
+    --field: oklch(0.995 0.002 83);
+    --field-border: oklch(0.845 0.01 83);
+    --card-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.04), 0 1px 3px 0 oklch(0 0 0 / 0.07);
+    --elevated-shadow: 0 10px 25px -5px oklch(0 0 0 / 0.12), 0 4px 10px -6px oklch(0 0 0 / 0.1);
 }
 
 .dark {
     /* Dark ramp: a very dark warm gray instead of pure black, cards lifted above it. */
     --background: oklch(0.17 0.004 83);
     --foreground: oklch(0.965 0.003 83);
-    --card: oklch(0.212 0.005 83);
+    --card: oklch(0.216 0.005 83);
     --card-foreground: oklch(0.965 0.003 83);
-    --border: oklch(1 0 0 / 9%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.55 0.01 83);
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 22%);
+    --ring: oklch(0.64 0.11 256);
     --primary: oklch(0.92 0.004 83);
     --primary-foreground: oklch(0.25 0.01 83);
     --muted: oklch(0.27 0.005 83);
@@ -99,6 +120,12 @@
     --info: oklch(0.68 0.12 244);
     --info-foreground: oklch(0.205 0 0);
     --link: oklch(0.72 0.15 256);
+    /* Recessed well: darker than the card (0.216) so a field looks inset in dark. */
+    --field: oklch(0.185 0.004 83);
+    --field-border: oklch(1 0 0 / 22%);
+    /* Shadows do little on dark; the lighter border carries elevation. */
+    --card-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.4), 0 1px 3px 0 oklch(0 0 0 / 0.3);
+    --elevated-shadow: 0 10px 30px -5px oklch(0 0 0 / 0.6);
 }
 
 @layer base {
