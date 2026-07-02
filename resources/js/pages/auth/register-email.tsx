@@ -1,6 +1,10 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useRef, type FormEvent } from 'react';
 import 'altcha';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -43,7 +47,7 @@ export default function RegisterEmail({ honeypot, captcha, challengeUrl }: Props
                 {t('Enter your email and we will send you a registration link.')}
             </p>
 
-            {status && <p className="text-sm font-medium text-foreground">{status}</p>}
+            {status && <FlashMessage>{status}</FlashMessage>}
 
             <form onSubmit={submit} className="space-y-4">
                 {/* Honeypot: off-screen and not announced; a person never fills it, a bot does and
@@ -59,23 +63,9 @@ export default function RegisterEmail({ honeypot, captcha, challengeUrl }: Props
                     style={{ position: 'absolute', left: '-9999px' }}
                 />
 
-                <div className="space-y-1">
-                    <label htmlFor="email" className="block text-sm font-medium">
-                        {t('Email')}
-                    </label>
-                    <input
-                        id="email"
-                        type="email"
-                        name="email"
-                        autoComplete="email"
-                        autoFocus
-                        required
-                        value={data.email}
-                        onChange={(e) => setData('email', e.target.value)}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                </div>
+                <Field label={t('Email')} htmlFor="email" error={errors.email}>
+                    <Input id="email" type="email" name="email" autoComplete="email" autoFocus required value={data.email} onChange={(e) => setData('email', e.target.value)} />
+                </Field>
 
                 {captcha && (
                     <div className="space-y-1">
@@ -84,16 +74,12 @@ export default function RegisterEmail({ honeypot, captcha, challengeUrl }: Props
                     </div>
                 )}
 
-                <button
-                    type="submit"
-                    disabled={processing}
-                    className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                >
+                <Button type="submit" loading={processing} className="w-full">
                     {t('Send')}
-                </button>
+                </Button>
 
                 <p className="text-center text-sm text-muted-foreground">
-                    <Link href="/login" className="underline">
+                    <Link href="/login" className="text-link hover:underline">
                         {t('Back to login')}
                     </Link>
                 </p>
