@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Modern;
 
+use App\Models\Community;
+use App\Models\CommunityMember;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -34,6 +37,19 @@ class ModernOnlyCoverageTest extends TestCase
         'communityTopic.comment.delete.show',   // CommunityTopicCommentController::showDelete
         'message.trash.purge.confirm',          // MessageController::purgeConfirm      -> message.purge_confirm
         'member.config.email.confirm',          // MemberConfigController::confirmEmailForm -> member.email-change-confirm
+    ];
+
+    /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */
+    private const COVERED = [
+        'home', 'dashboard',
+        'diary.list', 'diary.list_friend', 'diary.search', 'diary.new',
+        'timeline.index', 'timeline.new',
+        'friend.list', 'friend.manage', 'friend.link.show',
+        'block.list', 'block.add.show',
+        'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
+        'community.search', 'community.list_mine', 'community.edit', 'community.members', 'community.members.pending',
+        'message.index', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
+        'member.invite',
     ];
 
     protected function setUp(): void
@@ -77,6 +93,8 @@ class ModernOnlyCoverageTest extends TestCase
             'member avatar' => ['/member/avatar'],
             'community search' => ['/community/search'],
             'community joined' => ['/community/joinList'],
+            'community create form' => ['/community/edit'],
+            'invite' => ['/invite'],
             'message index' => ['/message'],
             'message inbox' => ['/message/receiveList'],
             'message sent' => ['/message/sendList'],
@@ -93,11 +111,80 @@ class ModernOnlyCoverageTest extends TestCase
     {
         [$viewer, $target] = Member::factory()->count(2)->create();
 
-        foreach (["/friend/link?id={$target->getKey()}", "/block/add?id={$target->getKey()}"] as $uri) {
+        $uris = [
+            "/friend/link?id={$target->getKey()}",
+            "/block/add?id={$target->getKey()}",
+            "/message/sendToFriend?id={$target->getKey()}",
+        ];
+        foreach ($uris as $uri) {
             $this->actingAs($viewer)->get($uri)
                 ->assertOk()
                 ->assertInertia(fn (AssertableInertia $page) => $page);
         }
+    }
+
+    /**
+     * Community management pages target a community via ?id= and require the viewer to be its admin
+     * (the member roster and the pending-approval queue). Both go through respondWith → Inertia.
+     */
+    public function test_community_management_pages_render_modern_under_modern_only(): void
+    {
+        $admin = Member::factory()->create();
+        $community = Community::factory()->create();
+        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+
+        foreach (["/community/member/list?id={$community->getKey()}", "/community/member/pending?id={$community->getKey()}"] as $uri) {
+            $this->actingAs($admin)->get($uri)
+                ->assertOk()
+                ->assertInertia(fn (AssertableInertia $page) => $page);
+        }
+    }
+
+    /**
+     * Keeps the allowlist honest (Codex): every parameterless member-facing canonical GET must be
+     * classified — either page-covered above (COVERED) or an explicit KNOWN_LEAK. A newly added
+     * Classic-only page therefore fails here until it is Modernized (added to COVERED) or consciously
+     * allowlisted. Parameterized routes are covered case-by-case, not by this enumeration.
+     */
+    public function test_every_parameterless_member_canonical_get_is_classified(): void
+    {
+        $unclassified = [];
+
+        foreach (Route::getRoutes() as $route) {
+            $name = $route->getName();
+            $uri = $route->uri();
+
+            if ($name === null) {
+                continue;
+            }
+            if (! in_array('GET', $route->methods(), true)) {
+                continue;
+            }
+            if (str_contains($name, '.modern.') || str_contains($uri, '{') || str_starts_with($uri, 'admin')) {
+                continue;
+            }
+            // Member-guarded only.
+            $mw = $route->gatherMiddleware();
+            $memberGuarded = (bool) array_filter($mw, fn ($m) => $m === 'auth' || str_contains((string) $m, 'Authenticate'));
+            if (! $memberGuarded) {
+                continue;
+            }
+            // Out of scope: Fortify/guest auth (separate modern_only concern) and Closure compat
+            // redirects (aliases that only redirect, not surface-rendering pages).
+            if (str_starts_with($name, 'password.') || in_array($name, ['login', 'register', 'register.sent', 'register.form', 'logout'], true)) {
+                continue;
+            }
+            if ($route->getActionName() === 'Closure') {
+                continue;
+            }
+            if (in_array($name, self::COVERED, true) || in_array($name, self::KNOWN_LEAKS, true)) {
+                continue;
+            }
+
+            $unclassified[] = "{$name} ({$uri})";
+        }
+
+        $this->assertSame([], $unclassified, 'Unclassified parameterless modern_only pages (add to COVERED once Modernized, or to KNOWN_LEAKS): '.implode(', ', $unclassified));
     }
 
     /**
