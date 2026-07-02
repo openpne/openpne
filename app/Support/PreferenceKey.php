@@ -54,7 +54,7 @@ enum PreferenceKey: string
     /**
      * Value used when the member has no stored row (an absent row means "follow this default").
      * Visibility keys carry a concrete fallback; PreferredSurface is tri-state, so its default is
-     * null — "no member choice, defer to SurfaceResolver's session/tenant fallback".
+     * null — "no member choice, defer to SurfaceResolver's session override / mode default".
      */
     public function default(): Visibility|Surface|null
     {

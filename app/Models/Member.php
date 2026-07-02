@@ -157,7 +157,7 @@ class Member extends Authenticatable
 
     /**
      * The member's durable surface choice, or null when unset (an absent row means "no choice —
-     * defer to SurfaceResolver's session/tenant fallback"). Separate from preference() so the
+     * defer to SurfaceResolver's session override / mode default"). Separate from preference() so the
      * Surface value type stays type-safe at the call site.
      */
     public function preferredSurface(): ?Surface
@@ -173,7 +173,7 @@ class Member extends Authenticatable
         $this->writePreference(PreferenceKey::PreferredSurface, $surface);
     }
 
-    /** Drop the surface choice so resolution falls back to the session/tenant default. */
+    /** Drop the surface choice so resolution falls back to the session override / the mode's default surface. */
     public function resetPreferredSurface(): void
     {
         $this->resetPreference(PreferenceKey::PreferredSurface);
