@@ -1,6 +1,8 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
+import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { formatDateOnly } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -20,8 +22,6 @@ export default function CommunityEventIndex() {
         <>
             <Head title={t('Events')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                {flash.status && <p role="status">{flash.status}</p>}
-
                 <div className="flex items-center justify-between gap-3">
                     <h1 className="min-w-0 text-2xl font-semibold">
                         <Link href={`/m/community/${community.id}`} className="hover:underline">
@@ -31,24 +31,28 @@ export default function CommunityEventIndex() {
                         {t('Events')}
                     </h1>
                     {canPost && (
-                        <Link href={`/m/community/${community.id}/event/new`} className="shrink-0 text-sm hover:underline">
+                        <Link href={`/m/community/${community.id}/event/new`} className="shrink-0 text-sm text-link hover:underline">
                             {t('Post a new event')}
                         </Link>
                     )}
                 </div>
 
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
+
                 {events.data.length === 0 ? (
-                    <p>{t('No events to show.')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <ul className="divide-y">
-                            {events.data.map((event) => (
-                                <li key={event.id}>
-                                    <Link href={`/m/community/event/${event.id}`} className="flex items-start gap-3 py-3 hover:bg-muted/40">
-                                        <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" />
+                        <Panel flush>
+                            <List>
+                                {events.data.map((event) => (
+                                    <ListRow key={event.id} href={`/m/community/event/${event.id}`} chevron>
+                                        <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" decorative />
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate font-medium">
-                                                {event.name} ({event.commentCount})
+                                                {event.name} <span className="text-sm font-normal text-muted-foreground">({event.commentCount})</span>
                                             </p>
                                             <p className="truncate text-xs text-muted-foreground">
                                                 {t('Open date')}: {formatDateOnly(event.openDate)}
@@ -56,10 +60,10 @@ export default function CommunityEventIndex() {
                                                 {event.author?.name ?? t('Withdrawn member')}
                                             </p>
                                         </div>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+                                    </ListRow>
+                                ))}
+                            </List>
+                        </Panel>
                         <Pagination meta={events.meta} />
                     </>
                 )}
