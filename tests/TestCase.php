@@ -37,13 +37,7 @@ abstract class TestCase extends BaseTestCase
         return in_array(RefreshDatabase::class, class_uses_recursive(static::class), true);
     }
 
-    /** Render a templated notification mail's HTML body (the MailMessage delivers the mail.template views). */
-    protected function renderMailHtml(MailMessage $mail): string
-    {
-        return view($mail->view['html'], $mail->viewData)->render();
-    }
-
-    /** Render a templated notification mail's plain-text body. */
+    /** Render a templated notification mail's plain-text body (the MailMessage delivers text/plain only). */
     protected function renderMailText(MailMessage $mail): string
     {
         return view($mail->view['text'], $mail->viewData)->render();

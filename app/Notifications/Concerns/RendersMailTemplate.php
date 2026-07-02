@@ -10,9 +10,10 @@ use Illuminate\Notifications\Messages\MailMessage;
 
 /**
  * Builds a notification mail from an admin-editable MailTemplate: render the subject/body in the
- * notification's captured locale, then deliver through the dedicated `mail.template` views — NOT the
- * markdown shell, so the OpenPNE 3 body text is never re-interpreted as Markdown and a member-supplied
- * value cannot inject a link/image.
+ * notification's captured locale, then deliver as a single text/plain part (the `mail.template-text`
+ * view). No HTML/markdown shell — matching OpenPNE 3 — so the body is never re-interpreted and a
+ * member-supplied value cannot become a live link. Linkifying bare URLs/emails is left to the
+ * receiving mail client, exactly as OpenPNE 3 did.
  */
 trait RendersMailTemplate
 {
@@ -44,6 +45,6 @@ trait RendersMailTemplate
         return (new MailMessage)
             ->from(sns_admin_mail_address(), sns_name())
             ->subject($rendered->subject)
-            ->view(['html' => 'mail.template', 'text' => 'mail.template-text'], ['body' => $rendered->body]);
+            ->view(['text' => 'mail.template-text'], ['body' => $rendered->body]);
     }
 }
