@@ -4,8 +4,10 @@ namespace Tests\Feature\Modern;
 
 use App\Models\Community;
 use App\Models\CommunityMember;
+use App\Models\Diary;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
+use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia;
@@ -137,6 +139,38 @@ class ModernOnlyCoverageTest extends TestCase
             $this->actingAs($admin)->get($uri)
                 ->assertOk()
                 ->assertInertia(fn (AssertableInertia $page) => $page);
+        }
+    }
+
+    /**
+     * The core parameterized canonical show pages (profile / diary / community) — the classification
+     * guard only covers parameterless routes, so these are asserted explicitly (Codex). Under
+     * modern_only each must render its Inertia component.
+     */
+    public function test_parameterized_member_show_pages_render_modern_under_modern_only(): void
+    {
+        $viewer = Member::factory()->create();
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['visibility' => Visibility::Members]);
+        $community = Community::factory()->create();
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('member/show'));
+        $this->actingAs($viewer)->get("/diary/{$diary->getKey()}")
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('diary/show'));
+        $this->actingAs($viewer)->get("/community/{$community->getKey()}")
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('community/show'));
+    }
+
+    /**
+     * Keeps KNOWN_LEAKS from going stale (Codex): every allowlisted name must still be a registered
+     * route. A leak that is Modernized/renamed but left here — or a typo — fails, so the Phase 3
+     * "shrink the allowlist to zero" cleanup cannot be silently forgotten.
+     */
+    public function test_known_leaks_are_registered_routes(): void
+    {
+        foreach (self::KNOWN_LEAKS as $name) {
+            $this->assertTrue(Route::has($name), "KNOWN_LEAKS route [{$name}] no longer exists — remove it (Modernized?) or fix the name.");
         }
     }
 
