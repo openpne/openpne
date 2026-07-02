@@ -106,7 +106,7 @@ export default function MessageShow() {
                                     {message.counterparties.map((m) => (
                                         <li key={m.id} className="flex items-center gap-1">
                                             <Avatar id={m.id} name={m.name} src={m.imageUrl} size="sm" />
-                                            <Link href={`/m/member/${m.id}`} className="hover:underline">
+                                            <Link href={`/m/member/${m.id}`} className="text-link hover:underline">
                                                 {m.name}
                                             </Link>
                                         </li>
