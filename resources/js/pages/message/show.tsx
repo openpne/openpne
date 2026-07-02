@@ -34,9 +34,9 @@ function ImageGrid({ images }: { images: MessageImage[] }) {
 
     return (
         <ul className="flex flex-wrap gap-2">
-            {images.map((image) => (
+            {images.map((image, i) => (
                 <li key={image.id}>
-                    <a href={image.url} target="_blank" rel="noopener noreferrer" aria-label={t('Image')}>
+                    <a href={image.url} target="_blank" rel="noopener noreferrer" aria-label={`${t('Image')} ${i + 1}`}>
                         <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
                     </a>
                 </li>
