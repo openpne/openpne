@@ -157,8 +157,8 @@ enum SnsSettingKey: string
             self::SnsName => (string) config('app.name'),
             self::SnsTitle => '',
             self::AdminMailAddress => (string) config('mail.from.address'),
-            // Install fallback (no row): the shipped config default is modern_only for a fresh site.
-            // The upgrade writes a classic_default row (SnsSettingService is the authoritative tier).
+            // Install fallback (no row): the fresh-site default set in config/openpne.php. The upgrade
+            // writes a classic_default row, so SnsSettingService is the authoritative tier.
             self::SurfaceMode => SurfaceMode::tryFrom((string) config('openpne.surface_mode')) ?? SurfaceMode::ModernOnly,
             // Fail-closed, hardcoded (no env tier): a missing row must never open registration or
             // disable the bot challenge.
