@@ -1,10 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
-import { Card, CardBody } from '@/components/card';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { formatDateOnly } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -46,129 +46,134 @@ export default function CommunityShow() {
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <div className="flex items-start gap-4">
-                    <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
-                    <div className="min-w-0 flex-1">
-                        <h1 className="text-xl font-semibold">{community.name}</h1>
-                        {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}
-                        <Link href={`/m/community/${community.id}/members`} className="text-sm text-link hover:underline">
-                            {t(':count members', { count: community.memberCount })}
-                        </Link>
-                    </div>
-                </div>
-
-                {isPending && (
-                    <Card>
-                        <CardBody>{t('Your join request is awaiting approval.')}</CardBody>
-                    </Card>
-                )}
-
-                {(canJoin || canLeave) && (
-                    <div className="flex gap-3">
-                        {canJoin && (
-                            <Button type="button" onClick={join}>
-                                {community.registerPolicy === 'approval' ? t('Request to join') : t('Join')}
-                            </Button>
-                        )}
-                        {canLeave && (
-                            <Button type="button" variant="secondary" onClick={leave}>
-                                {t('Leave')}
-                            </Button>
-                        )}
-                    </div>
-                )}
-
-                {canManage && (
-                    <div className="flex gap-4 text-sm">
-                        <Link href={`/m/community/edit?id=${community.id}`} className="text-link hover:underline">
-                            {t('Edit %community%')}
-                        </Link>
-                        {viewerRole === 'admin' && (
-                            <Link href={`/m/community/${community.id}/pending`} className="text-link hover:underline">
-                                {t('Pending members')}
+                <Panel bodyClassName="space-y-4">
+                    <div className="flex items-start gap-4">
+                        <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
+                        <div className="min-w-0 flex-1">
+                            <h1 className="text-xl font-semibold">{community.name}</h1>
+                            {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}
+                            <Link href={`/m/community/${community.id}/members`} className="text-sm text-link hover:underline">
+                                {t(':count members', { count: community.memberCount })}
                             </Link>
-                        )}
+                        </div>
                     </div>
-                )}
 
-                {community.description && <div className="whitespace-pre-wrap">{community.description}</div>}
+                    {isPending && <p className="text-sm text-muted-foreground">{t('Your join request is awaiting approval.')}</p>}
+
+                    {(canJoin || canLeave) && (
+                        <div className="flex gap-3">
+                            {canJoin && (
+                                <Button type="button" onClick={join}>
+                                    {community.registerPolicy === 'approval' ? t('Request to join') : t('Join')}
+                                </Button>
+                            )}
+                            {canLeave && (
+                                <Button type="button" variant="secondary" onClick={leave}>
+                                    {t('Leave')}
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                    {canManage && (
+                        <div className="flex gap-4 text-sm">
+                            <Link href={`/m/community/edit?id=${community.id}`} className="text-link hover:underline">
+                                {t('Edit %community%')}
+                            </Link>
+                            {viewerRole === 'admin' && (
+                                <Link href={`/m/community/${community.id}/pending`} className="text-link hover:underline">
+                                    {t('Pending members')}
+                                </Link>
+                            )}
+                        </div>
+                    )}
+
+                    {community.description && <div className="whitespace-pre-wrap">{community.description}</div>}
+                </Panel>
 
                 {recentTopics !== null && (
-                    <section className="space-y-2">
-                        <div className="flex items-center justify-between gap-3">
-                            <h2 className="text-lg font-semibold">{t('Recent %topics%')}</h2>
-                            {canPostTopic && (
+                    <Panel
+                        flush
+                        title={t('Recent %topics%')}
+                        right={
+                            canPostTopic && (
                                 <Link href={`/m/community/${community.id}/topic/new`} className="shrink-0 text-sm text-link hover:underline">
                                     {t('Post a new %topic%')}
                                 </Link>
-                            )}
-                        </div>
+                            )
+                        }
+                    >
                         {recentTopics.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
+                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
                         ) : (
-                            <ul className="divide-y divide-border">
+                            <List>
                                 {recentTopics.map((topic) => (
-                                    <li key={topic.id}>
-                                        <Link href={`/m/community/topic/${topic.id}`} className="block truncate rounded-md py-2 hover:bg-muted/40">
+                                    <ListRow key={topic.id} href={`/m/community/topic/${topic.id}`} chevron>
+                                        <span className="min-w-0 flex-1 truncate">
                                             <span className="font-medium">{topic.name}</span>{' '}
                                             <span className="text-sm text-muted-foreground">({topic.commentCount})</span>
-                                        </Link>
-                                    </li>
+                                        </span>
+                                    </ListRow>
                                 ))}
-                            </ul>
+                            </List>
                         )}
-                        <Link href={`/m/community/${community.id}/topic`} className="text-sm text-link hover:underline">
-                            {t('See all %topics%')}
-                        </Link>
-                    </section>
+                        <div className="border-t border-border px-5 py-2.5">
+                            <Link href={`/m/community/${community.id}/topic`} className="text-sm text-link hover:underline">
+                                {t('See all %topics%')}
+                            </Link>
+                        </div>
+                    </Panel>
                 )}
 
                 {recentEvents !== null && (
-                    <section className="space-y-2">
-                        <div className="flex items-center justify-between gap-3">
-                            <h2 className="text-lg font-semibold">{t('Recent events')}</h2>
-                            {canPostEvent && (
+                    <Panel
+                        flush
+                        title={t('Recent events')}
+                        right={
+                            canPostEvent && (
                                 <Link href={`/m/community/${community.id}/event/new`} className="shrink-0 text-sm text-link hover:underline">
                                     {t('Post a new event')}
                                 </Link>
-                            )}
-                        </div>
+                            )
+                        }
+                    >
                         {recentEvents.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
+                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No events to show.')}</p>
                         ) : (
-                            <ul className="divide-y divide-border">
+                            <List>
                                 {recentEvents.map((event) => (
-                                    <li key={event.id}>
-                                        <Link href={`/m/community/event/${event.id}`} className="block truncate rounded-md py-2 hover:bg-muted/40">
+                                    <ListRow key={event.id} href={`/m/community/event/${event.id}`} chevron>
+                                        <span className="min-w-0 flex-1 truncate">
                                             <span className="font-medium">{event.name}</span>{' '}
                                             <span className="text-sm text-muted-foreground">
                                                 ({event.commentCount}) &middot; {formatDateOnly(event.openDate)}
                                             </span>
-                                        </Link>
-                                    </li>
+                                        </span>
+                                    </ListRow>
                                 ))}
-                            </ul>
+                            </List>
                         )}
-                        <Link href={`/m/community/${community.id}/event`} className="text-sm text-link hover:underline">
-                            {t('See all events')}
-                        </Link>
-                    </section>
+                        <div className="border-t border-border px-5 py-2.5">
+                            <Link href={`/m/community/${community.id}/event`} className="text-sm text-link hover:underline">
+                                {t('See all events')}
+                            </Link>
+                        </div>
+                    </Panel>
                 )}
 
                 {members.length > 0 && (
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold">{t('Members')}</h2>
+                    <Panel title={t('Members')}>
                         <ul className="flex flex-wrap gap-4">
                             {members.map((member) => (
                                 <li key={member.id} className="w-16">
                                     <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
-                                        <Avatar id={member.id} name={member.name} src={member.imageUrl} size="lg" />
+                                        <Avatar id={member.id} name={member.name} src={member.imageUrl} size="lg" decorative />
                                         <span className="w-full truncate text-center text-xs">{member.name}</span>
                                     </Link>
                                 </li>
                             ))}
                         </ul>
-                    </section>
+                    </Panel>
                 )}
             </main>
         </>
