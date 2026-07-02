@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-{{-- scrollbar-gutter: stable reserves the gutter so the mx-auto shell (and its sidebar) doesn't shift between pages with/without a scrollbar. --}}
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" style="scrollbar-gutter: stable;">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
