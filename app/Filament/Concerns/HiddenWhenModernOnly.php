@@ -17,6 +17,8 @@ trait HiddenWhenModernOnly
 {
     public static function canAccess(): bool
     {
-        return SurfaceResolver::classicAvailable();
+        // Compose with the base authorization rather than replace it, so a future policy / role gate on
+        // the screen still applies — this trait only ADDS the modern_only restriction.
+        return parent::canAccess() && SurfaceResolver::classicAvailable();
     }
 }
