@@ -39,7 +39,7 @@ export function Avatar({ id, name, src, size = 'md' }: Props) {
 
     if (id === 0) {
         // `<span>` is inline by default, so `size-*` needs `inline-block` to take effect.
-        return <span className={`${baseCls} inline-block bg-slate-200 dark:bg-slate-700`} role="img" aria-label={name} />;
+        return <span className={`${baseCls} inline-block bg-muted`} role="img" aria-label={name} />;
     }
 
     const bgColor = pickPaletteColor(id);
