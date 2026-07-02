@@ -9,17 +9,29 @@ use Tests\TestCase;
 
 /**
  * Guards the Modern surface against raw Tailwind palette classes: numbered shades (slate-200,
- * blue-600, …) are banned in favor of the semantic design tokens (bg-background / bg-card /
- * text-foreground / text-muted-foreground / border-border / bg-primary / …), so a component is
- * dark-correct and re-themeable by construction.
+ * blue-600, …) and the bare white/black classes (text-white, bg-white, bg-black) are banned in favor
+ * of the semantic design tokens (bg-background / bg-card / text-foreground / text-muted-foreground /
+ * border-border / bg-primary / text-primary-foreground / …), so a component is dark-correct and
+ * re-themeable by construction. Catching white/black too matters because a converted button can drop
+ * its numbered bg but keep a raw `text-white` that should be a `-foreground` token.
  *
- * ALLOWLIST holds the screens not yet migrated to tokens; it must only shrink. Intentional exceptions
- * are not matched by the pattern at all: the bg-black/50 dialog scrims (no numeric shade) and the
- * identity-mark hashed colors (inline styles, not classes).
+ * ALLOWLIST holds the screens not yet migrated to tokens; it must only shrink. Exceptions: an
+ * opacity black/white (bg-black/50 dialog scrims, overlays) is allowed, and the identity-mark hashed
+ * colors are inline styles, not classes.
  */
 class RawPaletteGuardTest extends TestCase
 {
-    private const PALETTE = '/\b(?:bg|text|border|ring|from|via|to|divide|fill|stroke|outline|placeholder|caret|accent|decoration|ring-offset)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|100|200|300|400|500|600|700|800|900|950)\b/';
+    /** Numbered palette shades (bg-blue-600, slate-200/50, …). */
+    private const PALETTE_NUMBERED = '/\b(?:bg|text|border|ring|from|via|to|divide|fill|stroke|outline|placeholder|caret|accent|decoration|ring-offset)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|100|200|300|400|500|600|700|800|900|950)\b/';
+
+    /** Bare white/black classes (text-white, bg-white, bg-black); an opacity variant (bg-black/50) is a scrim/overlay and is allowed. */
+    private const PALETTE_WHITEBLACK = '/\b(?:bg|text|border|ring|from|via|to|divide|fill|stroke|outline|placeholder|caret|accent|decoration|ring-offset)-(?:white|black)\b(?!\/)/';
+
+    private function hasRawPalette(string $contents): bool
+    {
+        return preg_match(self::PALETTE_NUMBERED, $contents) === 1
+            || preg_match(self::PALETTE_WHITEBLACK, $contents) === 1;
+    }
 
     /** Screens still on raw palette. Remove each as it is tokenized. */
     private const ALLOWLIST = [
@@ -60,7 +72,7 @@ class RawPaletteGuardTest extends TestCase
         $offenders = [];
         foreach ($this->tsxFiles() as $rel) {
             $contents = (string) file_get_contents(resource_path('js/'.$rel));
-            if (preg_match(self::PALETTE, $contents) === 1 && ! in_array($rel, self::ALLOWLIST, true)) {
+            if ($this->hasRawPalette($contents) && ! in_array($rel, self::ALLOWLIST, true)) {
                 $offenders[] = $rel;
             }
         }
@@ -73,7 +85,7 @@ class RawPaletteGuardTest extends TestCase
         $stale = [];
         foreach (self::ALLOWLIST as $rel) {
             $path = resource_path('js/'.$rel);
-            if (! is_file($path) || preg_match(self::PALETTE, (string) file_get_contents($path)) !== 1) {
+            if (! is_file($path) || ! $this->hasRawPalette((string) file_get_contents($path))) {
                 $stale[] = $rel;
             }
         }
