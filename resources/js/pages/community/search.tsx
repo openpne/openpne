@@ -52,6 +52,7 @@ export default function CommunitySearch() {
                             id="community_keyword"
                             type="search"
                             enterKeyHint="search"
+                            placeholder={t('Search by %community% name')}
                             value={form.keyword}
                             onChange={(e) => setForm((f) => ({ ...f, keyword: e.target.value }))}
                             className="rounded-full pr-11"
