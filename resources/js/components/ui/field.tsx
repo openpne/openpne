@@ -24,14 +24,17 @@ type FieldProps = {
  */
 export function Field({ label, htmlFor, help, error, required, className, children }: FieldProps) {
     const generatedId = useId();
-    const id = htmlFor ?? generatedId;
+    // Canonical id: prefer the caller's htmlFor, else the child's own id, else a generated one — then
+    // stamp that same id on both the label and the control so they can never desynchronize.
+    const childId = isValidElement(children) ? ((children.props as Record<string, unknown>).id as string | undefined) : undefined;
+    const id = htmlFor ?? childId ?? generatedId;
     const helpId = help ? `${id}-help` : undefined;
     const errorId = error ? `${id}-error` : undefined;
     const describedBy = error ? errorId : helpId;
 
     const control = isValidElement(children)
         ? cloneElement(children as ReactElement<Record<string, unknown>>, {
-              id: (children.props as Record<string, unknown>).id ?? id,
+              id,
               'aria-invalid': error ? true : (children.props as Record<string, unknown>)['aria-invalid'],
               'aria-describedby':
                   [(children.props as Record<string, unknown>)['aria-describedby'], describedBy].filter(Boolean).join(' ') || undefined,
