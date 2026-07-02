@@ -121,6 +121,11 @@ a Modern status (above). Modern pages render inside a shared app shell — an In
 persistent layout ([`resources/js/app.tsx`](../../resources/js/app.tsx)) that adds
 the sidebar / top-bar navigation. The shell is nav chrome only, so **each Modern
 page owns its own `<main>` and flash**; a page opts out by exporting its own `layout`.
+Modern pages build on the shared primitives in
+[`components/ui/`](../../resources/js/components/ui) (Button, Input, Field, …) and the
+semantic design tokens in [`app.css`](../../resources/css/app.css), not bare controls or
+raw Tailwind palette — `RawPaletteGuardTest` enforces the no-raw-palette rule, so a page is
+dark-correct and re-themeable by construction.
 
 **Admin** (Filament) may use plain CRUD for simple, non-behavioral master data
 (labels, categories, basic config). For SNS-meaningful operations — anything with
