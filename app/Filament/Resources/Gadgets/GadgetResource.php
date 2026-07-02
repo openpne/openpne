@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Gadgets;
 
+use App\Filament\Concerns\HiddenWhenModernOnly;
 use App\Filament\Resources\Gadgets\Pages\CreateGadget;
 use App\Filament\Resources\Gadgets\Pages\EditGadget;
 use App\Filament\Resources\Gadgets\Pages\ListGadgets;
@@ -18,6 +19,8 @@ use Filament\Tables\Table;
 
 class GadgetResource extends Resource
 {
+    use HiddenWhenModernOnly;
+
     protected static ?string $model = Gadget::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;

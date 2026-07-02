@@ -58,14 +58,14 @@ return [
     |
     | This value is only the ABSENT-ROW fallback: sns_settings is the authoritative
     | store (SnsSettingKey::SurfaceMode), not a competing env tier. A fresh install
-    | has no row and resolves to this; the OpenPNE 3 -> 4 upgrade writes a
-    | classic_default row so a migrated site keeps its Classic look. Change a live
-    | site with `php artisan openpne:surface-mode`. See
-    | docs/internals/classic-compatibility.md.
+    | has no row and resolves to this — modern_only, since a new OpenPNE 4 site has no
+    | Classic heritage. The OpenPNE 3 -> 4 upgrade instead writes a classic_default row
+    | so a migrated site keeps its Classic look. Change a live site with
+    | `php artisan openpne:surface-mode`. See docs/internals/classic-compatibility.md.
     |
     */
 
-    'surface_mode' => env('OPENPNE_SURFACE_MODE', 'classic_default'), // modern_only | classic_default | modern_default
+    'surface_mode' => env('OPENPNE_SURFACE_MODE', 'modern_only'), // modern_only | classic_default | modern_default
 
     /*
     |--------------------------------------------------------------------------

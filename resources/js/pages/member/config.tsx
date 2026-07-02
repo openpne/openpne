@@ -28,7 +28,8 @@ interface ConfigForm {
     age: { value: string; options: Option[] };
     email: { value: string };
     locale: { value: string; options: Option[] };
-    surface: { value: string; options: Option[] };
+    // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
+    surface?: { value: string; options: Option[] };
 }
 
 interface ConfigProps extends PageProps {
@@ -51,12 +52,16 @@ export default function MemberConfig() {
     const diary = useForm({ diary_default_visibility: form.diary.value });
     const age = useForm({ age_visibility: form.age.value });
     const locale = useForm({ locale: form.locale.value });
-    const surface = useForm({ preferred_surface: form.surface.value });
+    // Hooks run unconditionally; the fallback is inert since the surface section renders only when
+    // form.surface is present (Classic available).
+    const surface = useForm({ preferred_surface: form.surface?.value ?? '' });
     const password = useForm({ current_password: '', password: '', password_confirmation: '' });
     const email = useForm({ new_email: '', password: '' });
     const withdraw = useForm({ password: '', confirm: false });
     // Appearance is a client-side display preference (localStorage), applied immediately — no server post.
     const { preference, set: setColorMode } = useColorMode();
+    // Const so the truthiness narrowing holds inside the options .map closure below.
+    const surfaceField = form.surface;
 
     return (
         <>
@@ -162,40 +167,42 @@ export default function MemberConfig() {
                     </form>
                 </SectionCard>
 
-                <SectionCard>
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            surface.post('/m/member/config/surface');
-                        }}
-                    >
-                        <FormSection title={t('Display')}>
-                            <RadioCardGroup legend={t('Display')} error={surface.errors.preferred_surface}>
-                                {form.surface.options.map((opt) => (
-                                    <RadioCard
-                                        key={opt.value}
-                                        name="preferred_surface"
-                                        value={opt.value}
-                                        checked={surface.data.preferred_surface === opt.value}
-                                        onChange={(e) => surface.setData('preferred_surface', e.target.value)}
-                                        label={t(opt.label)}
-                                        description={opt.description ? t(opt.description) : undefined}
-                                    />
-                                ))}
-                            </RadioCardGroup>
-                            <FormActions>
-                                {/* Disabled until the choice differs from the current surface, so a casual save never pins. */}
-                                <Button
-                                    type="submit"
-                                    loading={surface.processing}
-                                    disabled={surface.data.preferred_surface === form.surface.value}
-                                >
-                                    {t('Save')}
-                                </Button>
-                            </FormActions>
-                        </FormSection>
-                    </form>
-                </SectionCard>
+                {surfaceField && (
+                    <SectionCard>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                surface.post('/m/member/config/surface');
+                            }}
+                        >
+                            <FormSection title={t('Display')}>
+                                <RadioCardGroup legend={t('Display')} error={surface.errors.preferred_surface}>
+                                    {surfaceField.options.map((opt) => (
+                                        <RadioCard
+                                            key={opt.value}
+                                            name="preferred_surface"
+                                            value={opt.value}
+                                            checked={surface.data.preferred_surface === opt.value}
+                                            onChange={(e) => surface.setData('preferred_surface', e.target.value)}
+                                            label={t(opt.label)}
+                                            description={opt.description ? t(opt.description) : undefined}
+                                        />
+                                    ))}
+                                </RadioCardGroup>
+                                <FormActions>
+                                    {/* Disabled until the choice differs from the current surface, so a casual save never pins. */}
+                                    <Button
+                                        type="submit"
+                                        loading={surface.processing}
+                                        disabled={surface.data.preferred_surface === surfaceField.value}
+                                    >
+                                        {t('Save')}
+                                    </Button>
+                                </FormActions>
+                            </FormSection>
+                        </form>
+                    </SectionCard>
+                )}
 
                 <SectionCard>
                     <FormSection

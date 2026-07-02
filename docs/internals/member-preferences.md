@@ -70,7 +70,9 @@ out of the write path.
   script-free). After a real change the controller lands the member on the chosen surface's own
   config URL — Modern → `/m/member/config`, Classic → canonical `/member/config` — because an
   explicit `/m/*` URL outranks the member preference in resolution, so a Classic choice **must**
-  leave `/m/*` or the page would stay Modern.
+  leave `/m/*` or the page would stay Modern. Under `modern_only` the section is not served at all —
+  the serializer omits it and `updateSurface()` 403s a crafted POST — so no latent Classic
+  preference can be pinned while Classic is unavailable.
 
 The OpenPNE 3 `/member/config?category=accessBlock` URL is preserved: `show()` redirects just
 that category to the Block list. The seeded config nav link renders because `/member/config` is a
