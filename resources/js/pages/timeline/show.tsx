@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -33,7 +34,7 @@ export default function TimelineShow() {
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
-                <article className="space-y-2 border-b border-border pb-4">
+                <Panel bodyClassName="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                         <Link href={`/m/member/${post.author.id}/timeline`} className="font-medium text-link hover:underline">
                             {post.author.name}
@@ -53,37 +54,41 @@ export default function TimelineShow() {
                             {t('Delete')}
                         </Link>
                     )}
-                </article>
+                </Panel>
 
                 {replies.length > 0 && (
-                    <ul className="space-y-3">
-                        {replies.map((reply) => (
-                            <li key={reply.id} className="space-y-1 border-b border-border pb-3">
-                                <div className="flex items-center justify-between text-sm">
-                                    <Link href={`/m/member/${reply.author.id}/timeline`} className="font-medium text-link hover:underline">
-                                        {reply.author.name}
-                                    </Link>
-                                    <span className="text-muted-foreground">{new Date(reply.createdAt).toLocaleString()}</span>
-                                </div>
-                                <p className="whitespace-pre-wrap break-words">{reply.body}</p>
-                                {reply.author.id === viewerId && (
-                                    <Link href={`/m/timeline/deleteConfirm/${reply.id}`} className="text-sm text-link hover:underline">
-                                        {t('Delete')}
-                                    </Link>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
+                    <Panel flush>
+                        <List>
+                            {replies.map((reply) => (
+                                <li key={reply.id} className="space-y-1 px-5 py-3">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <Link href={`/m/member/${reply.author.id}/timeline`} className="font-medium text-link hover:underline">
+                                            {reply.author.name}
+                                        </Link>
+                                        <span className="text-muted-foreground">{new Date(reply.createdAt).toLocaleString()}</span>
+                                    </div>
+                                    <p className="whitespace-pre-wrap break-words">{reply.body}</p>
+                                    {reply.author.id === viewerId && (
+                                        <Link href={`/m/timeline/deleteConfirm/${reply.id}`} className="text-sm text-link hover:underline">
+                                            {t('Delete')}
+                                        </Link>
+                                    )}
+                                </li>
+                            ))}
+                        </List>
+                    </Panel>
                 )}
 
-                <form onSubmit={submitReply} className="space-y-2">
-                    <Field label={t('Reply')} htmlFor="reply_body" error={form.errors.body}>
-                        <Textarea id="reply_body" required maxLength={140} rows={3} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
-                    </Field>
-                    <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
-                        {t('Reply')}
-                    </Button>
-                </form>
+                <Panel>
+                    <form onSubmit={submitReply} className="space-y-2">
+                        <Field label={t('Reply')} htmlFor="reply_body" error={form.errors.body}>
+                            <Textarea id="reply_body" required maxLength={140} rows={3} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
+                        </Field>
+                        <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
+                            {t('Reply')}
+                        </Button>
+                    </form>
+                </Panel>
 
                 <Link href={`/m/member/${post.author.id}/timeline`} className="text-sm text-link hover:underline">
                     {t(":name's %activity%", { name: post.author.name })}
