@@ -28,18 +28,24 @@ type Props = {
     /** Image URL, or null to fall back to the initial badge. */
     src: string | null;
     size?: AvatarSize;
+    /** Set when the name is already shown as adjacent text (list rows, rosters): the avatar becomes
+     *  decorative so it isn't announced twice (avoids the image-redundant-alt a11y warning). */
+    decorative?: boolean;
 };
 
-export function Avatar({ id, name, src, size = 'md' }: Props) {
+export function Avatar({ id, name, src, size = 'md', decorative = false }: Props) {
     const baseCls = `${sizeClass[size]} shrink-0 rounded-full`;
+    // Decorative: hide from the a11y tree (the adjacent text names the member). Otherwise expose the
+    // name via alt / aria-label so a standalone avatar still has an accessible name.
+    const semantics = decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': name };
 
     if (src) {
-        return <img src={src} alt={name} className={`${baseCls} object-cover`} />;
+        return <img src={src} alt={decorative ? '' : name} className={`${baseCls} object-cover`} />;
     }
 
     if (id === 0) {
         // `<span>` is inline by default, so `size-*` needs `inline-block` to take effect.
-        return <span className={`${baseCls} inline-block bg-muted`} role="img" aria-label={name} />;
+        return <span className={`${baseCls} inline-block bg-muted`} {...semantics} />;
     }
 
     const bgColor = pickPaletteColor(id);
@@ -49,8 +55,7 @@ export function Avatar({ id, name, src, size = 'md' }: Props) {
         <span
             className={`${baseCls} inline-flex items-center justify-center font-bold leading-none ${textColorClass} ${textSizeClass[size]}`}
             style={{ backgroundColor: bgColor }}
-            role="img"
-            aria-label={name}
+            {...semantics}
         >
             {computeInitial(name)}
         </span>
