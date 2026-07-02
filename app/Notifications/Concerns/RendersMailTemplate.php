@@ -11,9 +11,9 @@ use Illuminate\Notifications\Messages\MailMessage;
 /**
  * Builds a notification mail from an admin-editable MailTemplate: render the subject/body in the
  * notification's captured locale, then deliver as a single text/plain part (the `mail.template-text`
- * view). No HTML/markdown shell — matching OpenPNE 3 — so the body is never re-interpreted and a
- * member-supplied value cannot become a live link. Linkifying bare URLs/emails is left to the
- * receiving mail client, exactly as OpenPNE 3 did.
+ * view). No HTML/markdown shell — matching OpenPNE 3 — so the body is never re-interpreted and the
+ * app never emits an HTML/Markdown link, image, or script from a member-supplied value. Any
+ * linkifying of bare URLs/emails is the receiving mail client's own doing, exactly as in OpenPNE 3.
  */
 trait RendersMailTemplate
 {

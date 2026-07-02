@@ -66,7 +66,7 @@ class MailTemplateNotificationTest extends TestCase
         $this->assertStringContainsString('Bob sent you a friend request', $en);
     }
 
-    public function test_member_name_renders_verbatim_and_is_never_linkified(): void
+    public function test_member_name_renders_verbatim_without_app_generated_html(): void
     {
         $requester = Member::factory()->create(['name' => '[x](http://evil.test) <script>alert(1)</script>']);
         $recipient = Member::factory()->create();
@@ -74,7 +74,7 @@ class MailTemplateNotificationTest extends TestCase
         $text = $this->renderMailText((new FriendRequestedNotification($requester))->toMail($recipient));
 
         // text/plain: the name is emitted verbatim (no markdown re-render) and the app never wraps it in
-        // a live <a> link — any clickability is the receiving client's own doing.
+        // an <a> link — a receiving client may still auto-link a bare URL, but that is its choice, not ours.
         $this->assertStringContainsString('[x](http://evil.test) <script>alert(1)</script>', $text);
         $this->assertStringNotContainsString('<a href="http://evil.test', $text);
     }

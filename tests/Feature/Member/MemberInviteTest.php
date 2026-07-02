@@ -136,10 +136,11 @@ class MemberInviteTest extends TestCase
         $this->assertDatabaseCount('friendships', 0);
     }
 
-    public function test_the_invite_email_does_not_turn_member_text_into_live_links(): void
+    public function test_the_invite_email_never_emits_html_from_member_text(): void
     {
-        // The inviter's display name and personal note render as literal text, never Markdown/HTML, so a
-        // member cannot slip a live link, remote image, or script into the plain-text invite mail.
+        // The inviter's display name and personal note render as literal text, never Markdown/HTML, so the
+        // app never emits a live link, remote image, or script from member text into the plain-text invite
+        // mail. (A receiving client may still auto-link a bare URL — that is its choice, not ours.)
         $note = 'see [here](http://evil.test) ![x](http://evil.test/p.png) <script>alert(1)</script>';
         $mail = (new RegistrationLinkNotification(
             Str::random(40),
