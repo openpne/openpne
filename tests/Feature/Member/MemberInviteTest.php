@@ -136,24 +136,26 @@ class MemberInviteTest extends TestCase
         $this->assertDatabaseCount('friendships', 0);
     }
 
-    public function test_the_invite_email_does_not_turn_member_text_into_live_links(): void
+    public function test_the_invite_email_never_emits_html_from_member_text(): void
     {
-        // The inviter's display name and personal note render as literal text, never Markdown/HTML, so a
-        // member cannot slip a live link, remote image, or script into the branded invite mail.
+        // The inviter's display name and personal note render as literal text, never Markdown/HTML, so the
+        // app never emits a live link, remote image, or script from member text into the plain-text invite
+        // mail. (A receiving client may still auto-link a bare URL — that is its choice, not ours.)
+        $note = 'see [here](http://evil.test) ![x](http://evil.test/p.png) <script>alert(1)</script>';
         $mail = (new RegistrationLinkNotification(
             Str::random(40),
             'en',
             RegistrationTokenSource::MemberInvite,
             '[evilname](http://evil.test)',
-            'see [here](http://evil.test) ![x](http://evil.test/p.png) <script>alert(1)</script>',
+            $note,
         ))->toMail(new AnonymousNotifiable);
 
-        $html = $this->renderMailHtml($mail);
+        $text = $this->renderMailText($mail);
 
-        $this->assertStringContainsString('evilname', $html);                     // name kept as text
-        $this->assertStringNotContainsString('<a href="http://evil.test', $html); // no live link
-        $this->assertStringNotContainsString('<img', $html);                      // no remote image
-        $this->assertStringNotContainsString('<script>', $html);                  // script escaped
+        $this->assertStringContainsString('[evilname](http://evil.test)', $text);  // name kept verbatim
+        $this->assertStringContainsString($note, $text);                           // note kept verbatim
+        $this->assertStringNotContainsString('<a href="http://evil.test', $text);  // no live link
+        $this->assertStringNotContainsString('<img', $text);                       // no remote image
     }
 
     /** Create a live member-invite token for an address and return the raw token its link carries. */
