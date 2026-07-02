@@ -47,7 +47,7 @@ class SnsSettingWiringTest extends TestCase
     public function test_classic_document_title_reflects_sns_title(): void
     {
         // The Classic <title> suffix follows OpenPNE 3's frontend rule: sns_title, or sns_name when
-        // unset. (/login renders the Classic surface under the default tenant config.)
+        // unset. (/login renders the Classic surface under the default config.)
         DB::table('sns_settings')->insert(['key' => 'sns_title', 'value' => 'My Community Portal']);
 
         $this->get('/login')

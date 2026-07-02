@@ -28,7 +28,7 @@ class ClassicHomeTest extends TestCase
 
     public function test_root_redirects_to_the_dashboard_when_the_default_surface_is_modern(): void
     {
-        config(['openpne.tenant_default_surface' => 'modern']);
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/')->assertRedirect('/dashboard');

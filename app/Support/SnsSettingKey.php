@@ -36,6 +36,9 @@ enum SnsSettingKey: string
     /** From-address for system mail / administrator contact (general.admin_mail_address). */
     case AdminMailAddress = 'admin_mail_address';
 
+    /** How the install serves the Classic/Modern surfaces (App\Support\SurfaceMode): modern_only|classic_default|modern_default. */
+    case SurfaceMode = 'surface_mode';
+
     /** Who may create an account (App\Features\Auth\RegistrationMode value): open|invite|admin_only|closed. */
     case RegistrationMode = 'registration_mode';
 
@@ -85,6 +88,7 @@ enum SnsSettingKey: string
     {
         return match ($this) {
             self::SnsName, self::SnsTitle, self::AdminMailAddress => SettingGroup::Base,
+            self::SurfaceMode => SettingGroup::Surface,
             self::RegistrationMode, self::CaptchaEnabled => SettingGroup::Auth,
             self::AllowWebPublicAge => SettingGroup::Privacy,
             self::TimelineAllowWebPublic => SettingGroup::Timeline,
@@ -107,6 +111,9 @@ enum SnsSettingKey: string
             self::SnsName => 'sns_name',
             self::SnsTitle => 'sns_title',
             self::AdminMailAddress => 'admin_mail_address',
+            // OpenPNE 4-native: no OpenPNE 3 sns_config column. The upgrade establishes classic_default
+            // out of band (App\Upgrade\Runner\UpgradeRunner), not as a copied setting.
+            self::SurfaceMode => null,
             self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',
             self::AllowWebPublicAge => 'is_allow_web_public_flag_age',
@@ -135,7 +142,7 @@ enum SnsSettingKey: string
     {
         return match ($this->group()) {
             SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy => $this->op3SourceName() !== null,
-            SettingGroup::Auth, SettingGroup::Timeline => false,
+            SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface => false,
         };
     }
 
@@ -150,6 +157,9 @@ enum SnsSettingKey: string
             self::SnsName => (string) config('app.name'),
             self::SnsTitle => '',
             self::AdminMailAddress => (string) config('mail.from.address'),
+            // Install fallback (no row): the shipped config default is modern_only for a fresh site.
+            // The upgrade writes a classic_default row (SnsSettingService is the authoritative tier).
+            self::SurfaceMode => SurfaceMode::tryFrom((string) config('openpne.surface_mode')) ?? SurfaceMode::ModernOnly,
             // Fail-closed, hardcoded (no env tier): a missing row must never open registration or
             // disable the bot challenge.
             self::RegistrationMode => 'invite',
@@ -180,6 +190,8 @@ enum SnsSettingKey: string
 
         return match ($this) {
             self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
+            // Normalize to the typed enum; an unknown value fails safe to the install default.
+            self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             default => is_string($value) ? trim($value) : (string) $value,
         };
     }
@@ -189,6 +201,8 @@ enum SnsSettingKey: string
     {
         return match ($this) {
             self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic => $value ? '1' : '0',
+            // A backed enum cannot be cast with (string); store its backing value.
+            self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
             default => (string) $value,
         };
     }
@@ -201,6 +215,8 @@ enum SnsSettingKey: string
         }
 
         return match ($this) {
+            // Stored string → typed SurfaceMode; an unknown value fails safe to the install default.
+            self::SurfaceMode => SurfaceMode::tryFrom($value) ?? $this->default(),
             // Fail-closed: only an explicit '0' disables the challenge; any other stored value keeps
             // it on, mirroring RegistrationMode::current()'s restrictive fallback on a bad value.
             self::CaptchaEnabled => $value !== '0',
@@ -217,6 +233,7 @@ enum SnsSettingKey: string
             self::SnsName => __('SNS name'),
             self::SnsTitle => __('SNS title'),
             self::AdminMailAddress => __('Administrator email address'),
+            self::SurfaceMode => __('Surface mode'),
             self::RegistrationMode => __('Registration mode'),
             self::CaptchaEnabled => __('Require CAPTCHA'),
             self::AllowWebPublicAge => __('Allow members to make their age public to the web'),
@@ -241,7 +258,7 @@ enum SnsSettingKey: string
     {
         return match ($this) {
             self::SnsName, self::AdminMailAddress => true,
-            self::SnsTitle, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge,
+            self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge,
             self::TimelineAllowWebPublic,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,

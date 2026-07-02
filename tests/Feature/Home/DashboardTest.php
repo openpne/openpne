@@ -51,7 +51,7 @@ class DashboardTest extends TestCase
 
     public function test_dashboard_renders_inertia_under_modern_only(): void
     {
-        config()->set('openpne.tenant_mode', 'modern_only');
+        config()->set('openpne.surface_mode', 'modern_only');
         $viewer = Member::factory()->create();
 
         $this->actingAs($viewer)

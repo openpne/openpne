@@ -81,21 +81,29 @@ return $this->respondWith($request, [
 
 1. the feature's `modern_status` (anything other than `native` forces Classic);
 2. an explicit `/m/*` route (`route('surface') === 'modern'`);
-3. a per-install `tenant_mode` of `modern_only`;
+3. the install's [`surface_mode`](../../app/Support/SurfaceMode.php) when it is `modern_only` (Classic is not served);
 4. a member's **durable** surface choice
    ([`PreferenceKey::PreferredSurface`](../../app/Support/PreferenceKey.php), see
    [member-preferences.md](member-preferences.md));
 5. a per-member `migration_ui_override` held in the session;
-6. the per-install `tenant_default_surface`.
+6. the `surface_mode`'s default surface (`classic_default` → Classic, `modern_default` → Modern).
 
-The selection logic is wired into every dual-surface controller. Several inputs
-still fall back to built-in defaults: there is no `config/features.php` (so
-`modern_status` defaults to `native`), `config/openpne.php` carries no `tenant_mode`
-/ `tenant_default_surface` (defaulting to `mixed` / `classic`), and nothing writes
-the session `migration_ui_override`. The durable member choice (4) **is** writable —
-the member config page sets it — so a member can opt into Modern persistently;
-absent that choice the effective behavior is: a canonical route renders Classic, its
-`/m/*` sibling renders Modern.
+`surface_mode` is a single [`SurfaceMode`](../../app/Support/SurfaceMode.php) value
+(`modern_only` | `classic_default` | `modern_default`) that folds "is Classic served?"
+and "which surface is the default?" into one setting. It is **DB-authoritative**:
+[`SnsSettingKey::SurfaceMode`](../../app/Support/SnsSettingKey.php) in `sns_settings`,
+read through [`SnsSettingService`](../../app/Services/SnsSettingService.php), with
+`config('openpne.surface_mode')` as the absent-row fallback only (not a competing env
+tier). A fresh install has no row and resolves to the config default; the OpenPNE 3 → 4
+upgrade writes a `classic_default` row so a migrated site keeps its Classic look
+([`UpgradeRunner`](../../app/Upgrade/Runner/UpgradeRunner.php)), and `openpne:surface-mode`
+switches a live site.
+
+The selection logic is wired into every dual-surface controller. Two inputs still
+fall back to built-in defaults: there is no `config/features.php` (so `modern_status`
+defaults to `native`), and nothing writes the session `migration_ui_override`. The
+durable member choice (4) **is** writable — the member config page sets it — so a
+member can opt into Modern persistently.
 
 `SurfaceResolver::redirectName()` keeps a post-submit redirect on the surface it
 came from by mapping `friend.list` ⇄ `friend.modern.list`; `canonicalName()` is

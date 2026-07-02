@@ -59,7 +59,7 @@ class RegistrationGateTest extends TestCase
 
     public function test_the_modern_login_passes_registration_open_to_the_page(): void
     {
-        config()->set('openpne.tenant_default_surface', 'modern');
+        config()->set('openpne.surface_mode', 'modern_default');
 
         $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'invite');
         $this->get('/login')->assertInertia(
