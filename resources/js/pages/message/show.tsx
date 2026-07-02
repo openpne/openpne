@@ -3,6 +3,7 @@ import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
 import { ActionLink } from '@/components/ui/action-link';
+import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, MessageDetail, MessageImage } from './types';
@@ -94,9 +95,9 @@ export default function MessageShow() {
                     </nav>
                 )}
 
-                <article className="space-y-3 text-foreground">
-                    <h1 className="text-xl font-semibold">{message.subject}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{message.subject}</h1>
 
+                <Panel bodyClassName="space-y-3 text-foreground">
                     <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
                         <dt className="font-medium text-muted-foreground">{counterpartyHeading}</dt>
                         <dd>
@@ -106,7 +107,7 @@ export default function MessageShow() {
                                 <ul className="flex flex-wrap gap-x-4 gap-y-1">
                                     {message.counterparties.map((m) => (
                                         <li key={m.id} className="flex items-center gap-1">
-                                            <Avatar id={m.id} name={m.name} src={m.imageUrl} size="sm" />
+                                            <Avatar id={m.id} name={m.name} src={m.imageUrl} size="sm" decorative />
                                             <Link href={`/m/member/${m.id}`} className="text-link hover:underline">
                                                 {m.name}
                                             </Link>
@@ -146,7 +147,7 @@ export default function MessageShow() {
                             </>
                         )}
                     </div>
-                </article>
+                </Panel>
             </main>
         </>
     );
