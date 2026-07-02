@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { AgeRange, MemberRow, MonthDayRange, SearchCriteria, SearchFormField } from './types';
@@ -43,70 +44,71 @@ export default function MemberSearch() {
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
                 <h1 className="text-xl font-semibold text-foreground">{t('Member search')}</h1>
 
-                <form onSubmit={submit} className="space-y-4">
-                    <Field label={t('%nickname%')} htmlFor="search_name">
-                        <Input id="search_name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
-                    </Field>
+                <Panel>
+                    <form onSubmit={submit} className="space-y-4">
+                        <Field label={t('%nickname%')} htmlFor="search_name">
+                            <Input id="search_name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+                        </Field>
 
-                    {profiles.map((field) => (
-                        <SearchField
-                            key={field.id}
-                            field={field}
-                            value={profile[field.id]}
-                            range={date[field.id]}
-                            monthDay={monthday[field.id]}
-                            onValue={(v) => setField(field.id, v)}
-                            onRange={(k, v) => setRange(field.id, k, v)}
-                            onMonthDay={(k, v) => setMonthDay(field.id, k, v)}
-                        />
-                    ))}
-
-                    {/* Derived age, gated by AgeVisibility (separate from the birthday field). */}
-                    <fieldset className="space-y-1.5">
-                        <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
-                        <div className="flex items-center gap-2">
-                            <Input
-                                type="number"
-                                min={0}
-                                className="w-24"
-                                aria-label={`${t('Age')} ${t('Start')}`}
-                                value={age.min ?? ''}
-                                onChange={(e) => setAge((a) => ({ ...a, min: e.target.value }))}
+                        {profiles.map((field) => (
+                            <SearchField
+                                key={field.id}
+                                field={field}
+                                value={profile[field.id]}
+                                range={date[field.id]}
+                                monthDay={monthday[field.id]}
+                                onValue={(v) => setField(field.id, v)}
+                                onRange={(k, v) => setRange(field.id, k, v)}
+                                onMonthDay={(k, v) => setMonthDay(field.id, k, v)}
                             />
-                            <span className="text-muted-foreground">–</span>
-                            <Input
-                                type="number"
-                                min={0}
-                                className="w-24"
-                                aria-label={`${t('Age')} ${t('End')}`}
-                                value={age.max ?? ''}
-                                onChange={(e) => setAge((a) => ({ ...a, max: e.target.value }))}
-                            />
-                        </div>
-                    </fieldset>
+                        ))}
 
-                    <Button type="submit">{t('Search')}</Button>
-                </form>
+                        {/* Derived age, gated by AgeVisibility (separate from the birthday field). */}
+                        <fieldset className="space-y-1.5">
+                            <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    className="w-24"
+                                    aria-label={`${t('Age')} ${t('Start')}`}
+                                    value={age.min ?? ''}
+                                    onChange={(e) => setAge((a) => ({ ...a, min: e.target.value }))}
+                                />
+                                <span className="text-muted-foreground">–</span>
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    className="w-24"
+                                    aria-label={`${t('Age')} ${t('End')}`}
+                                    value={age.max ?? ''}
+                                    onChange={(e) => setAge((a) => ({ ...a, max: e.target.value }))}
+                                />
+                            </div>
+                        </fieldset>
+
+                        <Button type="submit">{t('Search')}</Button>
+                    </form>
+                </Panel>
 
                 <section className="space-y-3">
-                    <h2 className="text-lg font-medium text-foreground">{t('Search Results')}</h2>
-                    {members.data.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t('No members found.')}</p>
-                    ) : (
-                        <ul className="divide-y divide-border">
-                            {members.data.map((member) => (
-                                <li key={member.id} className="py-2">
-                                    <Link href={`/m/member/${member.id}`} className="flex items-center gap-3 text-foreground hover:underline">
+                    <Panel flush title={t('Search Results')}>
+                        {members.data.length === 0 ? (
+                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No members found.')}</p>
+                        ) : (
+                            <List>
+                                {members.data.map((member) => (
+                                    <ListRow key={member.id} href={`/m/member/${member.id}`} chevron>
                                         {member.avatarUrl && (
                                             <img src={member.avatarUrl} alt="" className="size-10 rounded-md object-cover" />
                                         )}
-                                        <span className="truncate">{member.name}</span>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                    <Pagination meta={members.meta} />
+                                        <span className="min-w-0 flex-1 truncate text-foreground">{member.name}</span>
+                                    </ListRow>
+                                ))}
+                            </List>
+                        )}
+                    </Panel>
+                    {members.data.length > 0 && <Pagination meta={members.meta} />}
                 </section>
             </main>
         </>
