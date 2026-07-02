@@ -27,15 +27,16 @@ const BOX: Record<MessageBoxSlug, { label: string; path: string }> = {
 };
 
 function ImageGrid({ images }: { images: MessageImage[] }) {
+    const t = useT();
     if (images.length === 0) {
         return null;
     }
 
     return (
         <ul className="flex flex-wrap gap-2">
-            {images.map((image) => (
+            {images.map((image, i) => (
                 <li key={image.id}>
-                    <a href={image.url} target="_blank" rel="noopener noreferrer">
+                    <a href={image.url} target="_blank" rel="noopener noreferrer" aria-label={`${t('Image')} ${i + 1}`}>
                         <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
                     </a>
                 </li>

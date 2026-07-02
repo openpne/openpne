@@ -1,6 +1,10 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { Textarea } from '@/components/ui/textarea';
 import { formatDateOnly } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -18,22 +22,25 @@ interface ShowProps extends PageProps {
 }
 
 function ImageGrid({ images }: { images: TopicImage[] }) {
+    const t = useT();
     if (images.length === 0) {
         return null;
     }
 
     return (
         <ul className="mt-2 flex flex-wrap gap-2">
-            {images.map((image) => (
+            {images.map((image, i) => (
                 <li key={image.id}>
-                    <a href={image.url} target="_blank" rel="noopener noreferrer">
-                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded object-cover" />
+                    <a href={image.url} target="_blank" rel="noopener noreferrer" aria-label={`${t('Image')} ${i + 1}`}>
+                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
                     </a>
                 </li>
             ))}
         </ul>
     );
 }
+
+const deleteAction = 'rounded-md text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring';
 
 export default function CommunityEventShow() {
     const t = useT();
@@ -78,22 +85,22 @@ export default function CommunityEventShow() {
     return (
         <>
             <Head title={event.name} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                {flash.status && <p role="status">{flash.status}</p>}
-                {flash.error && <p role="alert">{flash.error}</p>}
+            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8 text-foreground">
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 <p className="text-sm">
-                    <Link href={`/m/community/${community.id}/event`} className="text-muted-foreground hover:underline">
+                    <Link href={`/m/community/${community.id}/event`} className="text-muted-foreground hover:text-foreground hover:underline">
                         {community.name} &mdash; {t('Events')}
                     </Link>
                 </p>
 
                 <article className="space-y-3">
-                    <h1 className="text-2xl font-semibold">{event.name}</h1>
+                    <h1 className="text-xl font-semibold">{event.name}</h1>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" />
                         {event.author ? (
-                            <Link href={`/m/member/${event.author.id}`} className="hover:underline">
+                            <Link href={`/m/member/${event.author.id}`} className="text-link hover:underline">
                                 {event.author.name}
                             </Link>
                         ) : (
@@ -124,7 +131,7 @@ export default function CommunityEventShow() {
                         <dd>
                             {event.capacity != null ? `${event.participantCount} / ${event.capacity}` : event.participantCount}
                             {' '}
-                            <Link href={`/m/community/event/${event.id}/members`} className="hover:underline">
+                            <Link href={`/m/community/event/${event.id}/members`} className="text-link hover:underline">
                                 {t('See Member List')}
                             </Link>
                         </dd>
@@ -135,10 +142,10 @@ export default function CommunityEventShow() {
 
                     {canEdit && (
                         <div className="flex gap-4 text-sm">
-                            <Link href={`/m/community/event/${event.id}/edit`} className="hover:underline">
+                            <Link href={`/m/community/event/${event.id}/edit`} className="text-link hover:underline">
                                 {t('Edit')}
                             </Link>
-                            <button type="button" onClick={deleteEvent} className="text-red-600 hover:underline">
+                            <button type="button" onClick={deleteEvent} className={deleteAction}>
                                 {t('Delete')}
                             </button>
                         </div>
@@ -151,17 +158,17 @@ export default function CommunityEventShow() {
                     {thread.lastPage > 1 && (
                         <div className="flex items-center justify-between gap-2 text-sm">
                             {thread.hasOlder && thread.olderPage !== null ? (
-                                <Link href={threadLink(thread.olderPage, thread.ascending)} preserveScroll className="hover:underline">
+                                <Link href={threadLink(thread.olderPage, thread.ascending)} preserveScroll className="text-link hover:underline">
                                     {t('Older')}
                                 </Link>
                             ) : (
                                 <span />
                             )}
-                            <Link href={threadLink(1, !thread.ascending)} preserveScroll className="hover:underline">
+                            <Link href={threadLink(1, !thread.ascending)} preserveScroll className="text-link hover:underline">
                                 {thread.ascending ? t('View Latest') : t('View Oldest First')}
                             </Link>
                             {thread.hasNewer && thread.newerPage !== null ? (
-                                <Link href={threadLink(thread.newerPage, thread.ascending)} preserveScroll className="hover:underline">
+                                <Link href={threadLink(thread.newerPage, thread.ascending)} preserveScroll className="text-link hover:underline">
                                     {t('Newer')}
                                 </Link>
                             ) : (
@@ -175,11 +182,11 @@ export default function CommunityEventShow() {
                     ) : (
                         <ul className="space-y-3">
                             {thread.comments.map((comment) => (
-                                <li key={comment.id} className="border-t pt-3">
+                                <li key={comment.id} className="border-t border-border pt-3">
                                     <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
                                         <span className="font-medium">#{comment.number}</span>
                                         {comment.author ? (
-                                            <Link href={`/m/member/${comment.author.id}`} className="hover:underline">
+                                            <Link href={`/m/member/${comment.author.id}`} className="text-link hover:underline">
                                                 {comment.author.name}
                                             </Link>
                                         ) : (
@@ -187,7 +194,7 @@ export default function CommunityEventShow() {
                                         )}
                                         <span className="ml-auto">{new Date(comment.createdAt).toLocaleString()}</span>
                                         {comment.deletable && (
-                                            <button type="button" onClick={() => deleteComment(comment.id)} className="text-red-600 hover:underline">
+                                            <button type="button" onClick={() => deleteComment(comment.id)} className={deleteAction}>
                                                 {t('Delete')}
                                             </button>
                                         )}
@@ -201,62 +208,39 @@ export default function CommunityEventShow() {
                 </section>
 
                 {canComment && (
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-2">
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
                         <h2 className="text-lg font-semibold">{t('Post a new event comment')}</h2>
-                        <label htmlFor="comment_body">{t('Comment')}</label>
-                        <textarea
-                            id="comment_body"
-                            value={form.data.body}
-                            onChange={(e) => form.setData('body', e.target.value)}
-                            required
-                            rows={5}
-                            className="w-full rounded border px-2 py-1"
-                        />
-                        {form.errors.body && <p role="alert">{form.errors.body}</p>}
-                        <div>
-                            <label htmlFor="comment_images">{t('Images')}</label>
+                        <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
+                            <Textarea id="comment_body" required rows={5} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
+                        </Field>
+                        <Field label={t('Images')} htmlFor="comment_images" error={form.errors.images}>
                             <input
                                 id="comment_images"
                                 type="file"
                                 accept="image/jpeg,image/png,image/gif,image/webp"
                                 multiple
                                 onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
+                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
                             />
-                            {form.errors.images && <p role="alert">{form.errors.images}</p>}
-                        </div>
+                        </Field>
 
                         {/* RSVP + comment share one form (OpenPNE 3): participate/cancel toggle the roster,
                             comment-only skips it. A comment is required for every submit. */}
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                             {rosterOpen && isParticipant && (
-                                <button
-                                    type="button"
-                                    onClick={() => submit(false)}
-                                    disabled={form.processing || bodyEmpty}
-                                    className="min-h-11 rounded-full bg-slate-100 px-5 text-sm font-medium text-slate-700 transition hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-                                >
+                                <Button type="button" variant="secondary" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
                                     {t('Cancel to join')}
-                                </button>
+                                </Button>
                             )}
                             {rosterOpen && !isParticipant && !isFull && (
-                                <button
-                                    type="button"
-                                    onClick={() => submit(false)}
-                                    disabled={form.processing || bodyEmpty}
-                                    className="min-h-11 rounded-full bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
-                                >
+                                <Button type="button" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
                                     {t('Participate in this event')}
-                                </button>
+                                </Button>
                             )}
-                            {rosterOpen && !isParticipant && isFull && <p className="self-center text-sm text-red-600">{t('This event is full.')}</p>}
-                            <button
-                                type="button"
-                                onClick={() => submit(true)}
-                                disabled={form.processing || bodyEmpty}
-                                className="min-h-11 rounded-full border px-5 text-sm font-medium transition hover:bg-muted/50 disabled:opacity-50"
-                            >
+                            {rosterOpen && !isParticipant && isFull && <p className="self-center text-sm text-destructive">{t('This event is full.')}</p>}
+                            <Button type="button" variant="outline" onClick={() => submit(true)} disabled={form.processing || bodyEmpty}>
                                 {t('Add a comment only')}
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 )}

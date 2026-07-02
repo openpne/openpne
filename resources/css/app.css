@@ -58,7 +58,9 @@
     --accent-foreground: oklch(0.25 0.01 83);
     --secondary: oklch(0.955 0.006 83);
     --secondary-foreground: oklch(0.25 0.01 83);
-    --destructive: oklch(0.577 0.245 27.325);
+    /* Dark enough that text-destructive (small danger actions/errors) clears AA on the light surface,
+       while white text still reads on the solid destructive button. */
+    --destructive: oklch(0.505 0.21 27.3);
     --destructive-foreground: oklch(0.985 0 0);
     --success: oklch(0.63 0.16 149);
     --success-foreground: oklch(0.985 0 0);

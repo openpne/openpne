@@ -3,6 +3,8 @@ import { Avatar } from '@/components/avatar';
 import { Card, CardBody } from '@/components/card';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
 import { formatDateOnly } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -40,16 +42,16 @@ export default function CommunityShow() {
     return (
         <>
             <Head title={community.name} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                {flash.status && <p role="status">{flash.status}</p>}
-                {flash.error && <p role="alert">{flash.error}</p>}
+            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8 text-foreground">
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 <div className="flex items-start gap-4">
                     <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
                     <div className="min-w-0 flex-1">
-                        <h1 className="text-2xl font-semibold">{community.name}</h1>
+                        <h1 className="text-xl font-semibold">{community.name}</h1>
                         {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}
-                        <Link href={`/m/community/${community.id}/members`} className="text-sm hover:underline">
+                        <Link href={`/m/community/${community.id}/members`} className="text-sm text-link hover:underline">
                             {t(':count members', { count: community.memberCount })}
                         </Link>
                     </div>
@@ -64,33 +66,25 @@ export default function CommunityShow() {
                 {(canJoin || canLeave) && (
                     <div className="flex gap-3">
                         {canJoin && (
-                            <button
-                                type="button"
-                                onClick={join}
-                                className="min-h-11 rounded-full bg-blue-600 px-5 text-sm font-medium text-white transition hover:bg-blue-700"
-                            >
+                            <Button type="button" onClick={join}>
                                 {community.registerPolicy === 'approval' ? t('Request to join') : t('Join')}
-                            </button>
+                            </Button>
                         )}
                         {canLeave && (
-                            <button
-                                type="button"
-                                onClick={leave}
-                                className="min-h-11 rounded-full bg-slate-100 px-5 text-sm font-medium text-slate-700 transition hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-                            >
+                            <Button type="button" variant="secondary" onClick={leave}>
                                 {t('Leave')}
-                            </button>
+                            </Button>
                         )}
                     </div>
                 )}
 
                 {canManage && (
                     <div className="flex gap-4 text-sm">
-                        <Link href={`/m/community/edit?id=${community.id}`} className="hover:underline">
+                        <Link href={`/m/community/edit?id=${community.id}`} className="text-link hover:underline">
                             {t('Edit %community%')}
                         </Link>
                         {viewerRole === 'admin' && (
-                            <Link href={`/m/community/${community.id}/pending`} className="hover:underline">
+                            <Link href={`/m/community/${community.id}/pending`} className="text-link hover:underline">
                                 {t('Pending members')}
                             </Link>
                         )}
@@ -104,7 +98,7 @@ export default function CommunityShow() {
                         <div className="flex items-center justify-between gap-3">
                             <h2 className="text-lg font-semibold">{t('Recent %topics%')}</h2>
                             {canPostTopic && (
-                                <Link href={`/m/community/${community.id}/topic/new`} className="shrink-0 text-sm hover:underline">
+                                <Link href={`/m/community/${community.id}/topic/new`} className="shrink-0 text-sm text-link hover:underline">
                                     {t('Post a new %topic%')}
                                 </Link>
                             )}
@@ -112,13 +106,10 @@ export default function CommunityShow() {
                         {recentTopics.length === 0 ? (
                             <p className="text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
                         ) : (
-                            <ul className="divide-y">
+                            <ul className="divide-y divide-border">
                                 {recentTopics.map((topic) => (
                                     <li key={topic.id}>
-                                        <Link
-                                            href={`/m/community/topic/${topic.id}`}
-                                            className="block truncate py-2 hover:bg-muted/40"
-                                        >
+                                        <Link href={`/m/community/topic/${topic.id}`} className="block truncate rounded-md py-2 hover:bg-muted/40">
                                             <span className="font-medium">{topic.name}</span>{' '}
                                             <span className="text-sm text-muted-foreground">({topic.commentCount})</span>
                                         </Link>
@@ -126,7 +117,7 @@ export default function CommunityShow() {
                                 ))}
                             </ul>
                         )}
-                        <Link href={`/m/community/${community.id}/topic`} className="text-sm hover:underline">
+                        <Link href={`/m/community/${community.id}/topic`} className="text-sm text-link hover:underline">
                             {t('See all %topics%')}
                         </Link>
                     </section>
@@ -137,7 +128,7 @@ export default function CommunityShow() {
                         <div className="flex items-center justify-between gap-3">
                             <h2 className="text-lg font-semibold">{t('Recent events')}</h2>
                             {canPostEvent && (
-                                <Link href={`/m/community/${community.id}/event/new`} className="shrink-0 text-sm hover:underline">
+                                <Link href={`/m/community/${community.id}/event/new`} className="shrink-0 text-sm text-link hover:underline">
                                     {t('Post a new event')}
                                 </Link>
                             )}
@@ -145,10 +136,10 @@ export default function CommunityShow() {
                         {recentEvents.length === 0 ? (
                             <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
                         ) : (
-                            <ul className="divide-y">
+                            <ul className="divide-y divide-border">
                                 {recentEvents.map((event) => (
                                     <li key={event.id}>
-                                        <Link href={`/m/community/event/${event.id}`} className="block truncate py-2 hover:bg-muted/40">
+                                        <Link href={`/m/community/event/${event.id}`} className="block truncate rounded-md py-2 hover:bg-muted/40">
                                             <span className="font-medium">{event.name}</span>{' '}
                                             <span className="text-sm text-muted-foreground">
                                                 ({event.commentCount}) &middot; {formatDateOnly(event.openDate)}
@@ -158,7 +149,7 @@ export default function CommunityShow() {
                                 ))}
                             </ul>
                         )}
-                        <Link href={`/m/community/${community.id}/event`} className="text-sm hover:underline">
+                        <Link href={`/m/community/${community.id}/event`} className="text-sm text-link hover:underline">
                             {t('See all events')}
                         </Link>
                     </section>
