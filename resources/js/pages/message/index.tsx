@@ -5,6 +5,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, PaginatedMessages } from './types';
@@ -104,62 +105,67 @@ export default function MessageIndex() {
                 </nav>
 
                 {messages.data.length === 0 ? (
-                    <p>{t('There are no messages')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('There are no messages')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <div className="flex flex-wrap items-center gap-4 text-sm">
-                            <label className="flex items-center gap-2 text-foreground">
-                                <Checkbox checked={allSelected} onChange={toggleAll} />
-                                {t('Select All')}
-                            </label>
-                            {selected.length > 0 && <span className="text-muted-foreground">{t(':count selected', { count: selected.length })}</span>}
-                            <div className="ml-auto flex gap-3">
-                                {BULK[box].map((a) => (
-                                    <button
-                                        key={a.action}
-                                        type="button"
-                                        onClick={() => runBulk(a)}
-                                        disabled={selected.length === 0}
-                                        className={`rounded-md outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 ${a.danger ? 'text-destructive' : 'text-link'}`}
-                                    >
-                                        {t(a.label)}
-                                    </button>
-                                ))}
+                        <Panel flush>
+                            <div className="flex flex-wrap items-center gap-4 border-b border-border px-5 py-3 text-sm">
+                                <label className="flex items-center gap-2 text-foreground">
+                                    <Checkbox checked={allSelected} onChange={toggleAll} />
+                                    {t('Select All')}
+                                </label>
+                                {selected.length > 0 && <span className="text-muted-foreground">{t(':count selected', { count: selected.length })}</span>}
+                                <div className="ml-auto flex gap-3">
+                                    {BULK[box].map((a) => (
+                                        <button
+                                            key={a.action}
+                                            type="button"
+                                            onClick={() => runBulk(a)}
+                                            disabled={selected.length === 0}
+                                            className={`rounded-md outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 ${a.danger ? 'text-destructive' : 'text-link'}`}
+                                        >
+                                            {t(a.label)}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
 
-                        <ul className="divide-y divide-border">
-                            {messages.data.map((m) => (
-                                <li key={m.id} className="flex items-start gap-3 py-3">
-                                    <Checkbox
-                                        checked={selected.includes(m.id)}
-                                        onChange={() => toggle(m.id)}
-                                        aria-label={m.subject || t('(No subject)')}
-                                        className="mt-1"
-                                    />
-                                    <Avatar
-                                        id={m.counterparty?.id ?? 0}
-                                        name={m.counterparty?.name ?? ''}
-                                        src={m.counterparty?.imageUrl ?? null}
-                                        size="sm"
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                        <p className={m.unread ? 'truncate font-semibold text-foreground' : 'truncate text-foreground'}>
-                                            <Link href={showPath(m.id)} className="hover:underline">
-                                                {m.subject || t('(No subject)')}
-                                            </Link>
-                                        </p>
-                                        <p className="truncate text-xs text-muted-foreground">
-                                            {m.counterparty?.name ?? t('Withdrawn member')} &mdash;{' '}
-                                            {new Date(m.date).toLocaleString()}
-                                        </p>
-                                    </div>
-                                    {m.unread && (
-                                        <span role="img" aria-label={t('Unread')} className="mt-1 size-2 shrink-0 rounded-full bg-primary" />
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
+                            <List>
+                                {messages.data.map((m) => (
+                                    <ListRow key={m.id} className="items-start">
+                                        <Checkbox
+                                            checked={selected.includes(m.id)}
+                                            onChange={() => toggle(m.id)}
+                                            aria-label={m.subject || t('(No subject)')}
+                                            className="mt-1"
+                                        />
+                                        <Avatar
+                                            id={m.counterparty?.id ?? 0}
+                                            name={m.counterparty?.name ?? ''}
+                                            src={m.counterparty?.imageUrl ?? null}
+                                            size="sm"
+                                            decorative
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                            <p className={m.unread ? 'truncate font-semibold text-foreground' : 'truncate text-foreground'}>
+                                                <Link href={showPath(m.id)} className="hover:underline">
+                                                    {m.subject || t('(No subject)')}
+                                                </Link>
+                                            </p>
+                                            <p className="truncate text-xs text-muted-foreground">
+                                                {m.counterparty?.name ?? t('Withdrawn member')} &mdash;{' '}
+                                                {new Date(m.date).toLocaleString()}
+                                            </p>
+                                        </div>
+                                        {m.unread && (
+                                            <span role="img" aria-label={t('Unread')} className="mt-1 size-2 shrink-0 rounded-full bg-primary" />
+                                        )}
+                                    </ListRow>
+                                ))}
+                            </List>
+                        </Panel>
                         <Pagination meta={messages.meta} />
                     </>
                 )}
