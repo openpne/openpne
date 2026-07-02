@@ -3,7 +3,6 @@ import { Search } from 'lucide-react';
 import { useState } from 'react';
 import { CommunityImage } from '@/components/community-image';
 import { Pagination } from '@/components/pagination';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -46,20 +45,24 @@ export default function CommunitySearch() {
 
                 <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
                     <div className="relative min-w-[12rem] flex-1">
-                        <Search
-                            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                            aria-hidden
-                        />
                         <label htmlFor="community_keyword" className="sr-only">
                             {t('Keyword')}
                         </label>
                         <Input
                             id="community_keyword"
-                            type="text"
+                            type="search"
+                            enterKeyHint="search"
                             value={form.keyword}
                             onChange={(e) => setForm((f) => ({ ...f, keyword: e.target.value }))}
-                            className="pl-9"
+                            className="rounded-full pr-11"
                         />
+                        <button
+                            type="submit"
+                            aria-label={t('Search')}
+                            className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <Search className="size-4" aria-hidden />
+                        </button>
                     </div>
                     <label htmlFor="community_category" className="sr-only">
                         {t('Category')}
@@ -68,7 +71,7 @@ export default function CommunitySearch() {
                         id="community_category"
                         value={form.categoryId}
                         onChange={(e) => setForm((f) => ({ ...f, categoryId: Number(e.target.value) }))}
-                        className="w-auto"
+                        className="w-auto rounded-full"
                     >
                         <option value={0}>{t('All categories')}</option>
                         {categories.map((category) => (
@@ -77,9 +80,6 @@ export default function CommunitySearch() {
                             </option>
                         ))}
                     </Select>
-                    <Button type="submit" variant="outline">
-                        {t('Search')}
-                    </Button>
                 </form>
 
                 {communities.data.length === 0 ? (
