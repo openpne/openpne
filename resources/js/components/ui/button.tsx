@@ -29,10 +29,14 @@ const buttonVariants = cva(
 
 type Props = ComponentProps<'button'> & VariantProps<typeof buttonVariants> & { loading?: boolean };
 
-/** Token-based button. `loading` shows a spinner and disables the control. */
-export function Button({ className, variant, size, loading = false, disabled, children, ...props }: Props) {
+/**
+ * Token-based button. `loading` shows a spinner and disables the control. Defaults to
+ * `type="button"` so a design-system button inside a form never submits by accident — callers opt
+ * into submission with `type="submit"`.
+ */
+export function Button({ className, variant, size, loading = false, disabled, type = 'button', children, ...props }: Props) {
     return (
-        <button className={cn(buttonVariants({ variant, size }), className)} disabled={disabled || loading} {...props}>
+        <button type={type} className={cn(buttonVariants({ variant, size }), className)} disabled={disabled || loading} {...props}>
             {loading && <Spinner size={4} />}
             {children}
         </button>

@@ -3,8 +3,7 @@ import type { ReactNode } from 'react';
 import { Card, CardBody } from '@/components/card';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Field, FormActions, FormSection } from '@/components/ui/field';
+import { CheckboxField, Field, FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { RadioCard } from '@/components/ui/radio-card';
 import { Select } from '@/components/ui/select';
@@ -83,7 +82,6 @@ export default function MemberConfig() {
                             >
                                 <Select
                                     id="diary_default_visibility"
-                                    aria-invalid={!!diary.errors.diary_default_visibility}
                                     value={diary.data.diary_default_visibility}
                                     onChange={(e) => diary.setData('diary_default_visibility', e.target.value)}
                                 >
@@ -114,7 +112,6 @@ export default function MemberConfig() {
                             <Field label={t('Who can see your age')} htmlFor="age_visibility" error={age.errors.age_visibility}>
                                 <Select
                                     id="age_visibility"
-                                    aria-invalid={!!age.errors.age_visibility}
                                     value={age.data.age_visibility}
                                     onChange={(e) => age.setData('age_visibility', e.target.value)}
                                 >
@@ -173,7 +170,7 @@ export default function MemberConfig() {
                         }}
                     >
                         <FormSection title={t('Display')}>
-                            <fieldset className="space-y-2">
+                            <RadioCardGroup legend={t('Display')} error={surface.errors.preferred_surface}>
                                 {form.surface.options.map((opt) => (
                                     <RadioCard
                                         key={opt.value}
@@ -185,12 +182,7 @@ export default function MemberConfig() {
                                         description={opt.description ? t(opt.description) : undefined}
                                     />
                                 ))}
-                            </fieldset>
-                            {surface.errors.preferred_surface && (
-                                <p role="alert" className="text-xs text-destructive">
-                                    {surface.errors.preferred_surface}
-                                </p>
-                            )}
+                            </RadioCardGroup>
                             <FormActions>
                                 {/* Disabled until the choice differs from the current surface, so a casual save never pins. */}
                                 <Button
@@ -210,7 +202,7 @@ export default function MemberConfig() {
                         title={t('Appearance')}
                         description={t('Choose a light or dark look. Use system setting follows your device automatically.')}
                     >
-                        <fieldset className="space-y-2">
+                        <RadioCardGroup legend={t('Appearance')}>
                             {APPEARANCE_OPTIONS.map((opt) => (
                                 <RadioCard
                                     key={opt.value}
@@ -221,7 +213,7 @@ export default function MemberConfig() {
                                     label={t(opt.label)}
                                 />
                             ))}
-                        </fieldset>
+                        </RadioCardGroup>
                     </FormSection>
                 </SectionCard>
 
@@ -238,7 +230,6 @@ export default function MemberConfig() {
                                     id="current_password"
                                     type="password"
                                     autoComplete="current-password"
-                                    aria-invalid={!!password.errors.current_password}
                                     value={password.data.current_password}
                                     onChange={(e) => password.setData('current_password', e.target.value)}
                                 />
@@ -248,7 +239,6 @@ export default function MemberConfig() {
                                     id="password"
                                     type="password"
                                     autoComplete="new-password"
-                                    aria-invalid={!!password.errors.password}
                                     value={password.data.password}
                                     onChange={(e) => password.setData('password', e.target.value)}
                                 />
@@ -283,7 +273,6 @@ export default function MemberConfig() {
                                 <Input
                                     id="new_email"
                                     type="email"
-                                    aria-invalid={!!email.errors.new_email}
                                     value={email.data.new_email}
                                     onChange={(e) => email.setData('new_email', e.target.value)}
                                 />
@@ -298,7 +287,6 @@ export default function MemberConfig() {
                                     id="email_password"
                                     type="password"
                                     autoComplete="current-password"
-                                    aria-invalid={!!email.errors.password}
                                     value={email.data.password}
                                     onChange={(e) => email.setData('password', e.target.value)}
                                 />
@@ -328,23 +316,16 @@ export default function MemberConfig() {
                                     id="withdraw_password"
                                     type="password"
                                     autoComplete="current-password"
-                                    aria-invalid={!!withdraw.errors.password}
                                     value={withdraw.data.password}
                                     onChange={(e) => withdraw.setData('password', e.target.value)}
                                 />
                             </Field>
-                            <label className="flex items-center gap-2 text-sm text-foreground">
-                                <Checkbox
-                                    checked={withdraw.data.confirm}
-                                    onChange={(e) => withdraw.setData('confirm', e.target.checked)}
-                                />
-                                {t('Yes, delete my account.')}
-                            </label>
-                            {withdraw.errors.confirm && (
-                                <p role="alert" className="text-xs text-destructive">
-                                    {withdraw.errors.confirm}
-                                </p>
-                            )}
+                            <CheckboxField
+                                label={t('Yes, delete my account.')}
+                                checked={withdraw.data.confirm}
+                                onChange={(e) => withdraw.setData('confirm', e.target.checked)}
+                                error={withdraw.errors.confirm}
+                            />
                             <FormActions>
                                 <Button type="submit" variant="destructive" loading={withdraw.processing}>
                                     {t('Withdraw from this site')}
