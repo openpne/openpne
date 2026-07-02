@@ -35,8 +35,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Canonical OpenPNE 3 homepage (member/home). Resolves by surface: a Classic-default install
-// renders the Classic home, a Modern-default one redirects to the Inertia dashboard.
+// Canonical OpenPNE 3 homepage (member/home). Resolves by surface: a Modern surface redirects to
+// the Inertia dashboard, Classic renders the OpenPNE 3 gadget home.
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // OpenPNE 3 member_index alias (/member) for the same member/home portal.
