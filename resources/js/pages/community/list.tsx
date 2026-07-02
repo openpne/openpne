@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { CommunityImage } from '@/components/community-image';
 import { Pagination } from '@/components/pagination';
+import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { PaginatedCommunities } from './types';
@@ -23,19 +24,23 @@ export default function CommunityList() {
                 <h1 className="text-2xl font-semibold">{title}</h1>
 
                 {communities.data.length === 0 ? (
-                    <p>{t('No %communities% to show.')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('No %communities% to show.')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-                            {communities.data.map((community) => (
-                                <li key={community.id}>
-                                    <Link href={`/m/community/${community.id}`} className="flex flex-col gap-1">
-                                        <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="aspect-square w-full" textClassName="text-2xl" />
-                                        <span className="truncate text-sm">{community.name}</span>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+                        <Panel>
+                            <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+                                {communities.data.map((community) => (
+                                    <li key={community.id}>
+                                        <Link href={`/m/community/${community.id}`} className="flex flex-col gap-1">
+                                            <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="aspect-square w-full" textClassName="text-2xl" />
+                                            <span className="truncate text-sm">{community.name}</span>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </Panel>
                         <Pagination meta={communities.meta} />
                     </>
                 )}

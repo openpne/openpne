@@ -3,6 +3,7 @@ import { Avatar } from '@/components/avatar';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary } from './types';
@@ -44,25 +45,29 @@ export default function CommunityPending() {
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 {applicants.data.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t('No pending requests.')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('No pending requests.')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <ul className="space-y-2">
-                            {applicants.data.map((applicant) => (
-                                <li key={applicant.id} className="flex items-center gap-3">
-                                    <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} size="md" />
-                                    <Link href={`/m/member/${applicant.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
-                                        {applicant.name}
-                                    </Link>
-                                    <Button type="button" size="sm" onClick={() => act('approve', applicant.id)}>
-                                        {t('Approve')}
-                                    </Button>
-                                    <Button type="button" size="sm" variant="secondary" onClick={() => act('decline', applicant.id)}>
-                                        {t('Decline')}
-                                    </Button>
-                                </li>
-                            ))}
-                        </ul>
+                        <Panel flush>
+                            <List>
+                                {applicants.data.map((applicant) => (
+                                    <ListRow key={applicant.id}>
+                                        <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} size="md" decorative />
+                                        <Link href={`/m/member/${applicant.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
+                                            {applicant.name}
+                                        </Link>
+                                        <Button type="button" size="sm" onClick={() => act('approve', applicant.id)}>
+                                            {t('Approve')}
+                                        </Button>
+                                        <Button type="button" size="sm" variant="secondary" onClick={() => act('decline', applicant.id)}>
+                                            {t('Decline')}
+                                        </Button>
+                                    </ListRow>
+                                ))}
+                            </List>
+                        </Panel>
                         <Pagination meta={applicants.meta} />
                     </>
                 )}

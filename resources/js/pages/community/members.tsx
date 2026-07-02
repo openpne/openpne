@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { Pagination } from '@/components/pagination';
+import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, PaginatedCommunityMembers } from './types';
@@ -26,16 +27,18 @@ export default function CommunityMembers() {
                     {t('Members')}
                 </h1>
 
-                <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-                    {members.data.map((member) => (
-                        <li key={member.id}>
-                            <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
-                                <Avatar id={member.id} name={member.name} src={member.imageUrl} size="lg" />
-                                <span className="w-full truncate text-center text-sm">{member.name}</span>
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
+                <Panel>
+                    <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+                        {members.data.map((member) => (
+                            <li key={member.id}>
+                                <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
+                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} size="lg" decorative />
+                                    <span className="w-full truncate text-center text-sm">{member.name}</span>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                </Panel>
                 <Pagination meta={members.meta} />
             </main>
         </>
