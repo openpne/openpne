@@ -13,15 +13,15 @@ use Tests\TestCase;
  * text-foreground / text-muted-foreground / border-border / bg-primary / …), so a component is
  * dark-correct and re-themeable by construction.
  *
- * ALLOWLIST holds the screens not yet migrated (the phase-2 uplift); it must only shrink. Intentional
- * exceptions are not matched by the pattern at all: the bg-black/50 dialog scrims (no numeric shade)
- * and the identity-mark hashed colors (inline styles, not classes).
+ * ALLOWLIST holds the screens not yet migrated to tokens; it must only shrink. Intentional exceptions
+ * are not matched by the pattern at all: the bg-black/50 dialog scrims (no numeric shade) and the
+ * identity-mark hashed colors (inline styles, not classes).
  */
 class RawPaletteGuardTest extends TestCase
 {
     private const PALETTE = '/\b(?:bg|text|border|ring|from|via|to|divide|fill|stroke|outline|placeholder|caret|accent|decoration|ring-offset)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|100|200|300|400|500|600|700|800|900|950)\b/';
 
-    /** Screens still on raw palette, pending the phase-2 uplift. Remove each as it is tokenized. */
+    /** Screens still on raw palette. Remove each as it is tokenized. */
     private const ALLOWLIST = [
         'pages/community/edit.tsx',
         'pages/community/event/edit.tsx',
