@@ -2,7 +2,9 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, PaginatedMessages } from './types';
@@ -80,11 +82,11 @@ export default function MessageIndex() {
         <>
             <Head title={t(current.label)} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                {flash.status && <p role="status">{flash.status}</p>}
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
-                <h1 className="text-2xl font-semibold">{t(current.label)}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t(current.label)}</h1>
 
-                <nav className="flex flex-wrap gap-4 border-b text-sm" aria-label={t('Message boxes')}>
+                <nav className="flex flex-wrap gap-4 border-b border-border text-sm" aria-label={t('Message boxes')}>
                     {ORDER.map((slug) => (
                         <Link
                             key={slug}
@@ -92,8 +94,8 @@ export default function MessageIndex() {
                             aria-current={slug === box ? 'page' : undefined}
                             className={
                                 slug === box
-                                    ? 'border-b-2 border-blue-600 pb-2 font-medium'
-                                    : 'pb-2 text-muted-foreground hover:underline'
+                                    ? 'border-b-2 border-primary pb-2 font-medium text-foreground'
+                                    : 'pb-2 text-muted-foreground hover:text-foreground hover:underline'
                             }
                         >
                             {t(BOX[slug].label)}
@@ -106,8 +108,8 @@ export default function MessageIndex() {
                 ) : (
                     <>
                         <div className="flex flex-wrap items-center gap-4 text-sm">
-                            <label className="flex items-center gap-2">
-                                <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+                            <label className="flex items-center gap-2 text-foreground">
+                                <Checkbox checked={allSelected} onChange={toggleAll} />
                                 {t('Select All')}
                             </label>
                             {selected.length > 0 && <span className="text-muted-foreground">{t(':count selected', { count: selected.length })}</span>}
@@ -118,7 +120,7 @@ export default function MessageIndex() {
                                         type="button"
                                         onClick={() => runBulk(a)}
                                         disabled={selected.length === 0}
-                                        className={`hover:underline disabled:opacity-40 ${a.danger ? 'text-red-600' : ''}`}
+                                        className={`rounded-md outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 ${a.danger ? 'text-destructive' : 'text-link'}`}
                                     >
                                         {t(a.label)}
                                     </button>
@@ -126,11 +128,10 @@ export default function MessageIndex() {
                             </div>
                         </div>
 
-                        <ul className="divide-y">
+                        <ul className="divide-y divide-border">
                             {messages.data.map((m) => (
                                 <li key={m.id} className="flex items-start gap-3 py-3">
-                                    <input
-                                        type="checkbox"
+                                    <Checkbox
                                         checked={selected.includes(m.id)}
                                         onChange={() => toggle(m.id)}
                                         aria-label={m.subject || t('(No subject)')}
@@ -143,7 +144,7 @@ export default function MessageIndex() {
                                         size="sm"
                                     />
                                     <div className="min-w-0 flex-1">
-                                        <p className={m.unread ? 'truncate font-semibold' : 'truncate'}>
+                                        <p className={m.unread ? 'truncate font-semibold text-foreground' : 'truncate text-foreground'}>
                                             <Link href={showPath(m.id)} className="hover:underline">
                                                 {m.subject || t('(No subject)')}
                                             </Link>
@@ -154,7 +155,7 @@ export default function MessageIndex() {
                                         </p>
                                     </div>
                                     {m.unread && (
-                                        <span className="mt-1 size-2 shrink-0 rounded-full bg-blue-600" aria-label={t('Unread')} />
+                                        <span className="mt-1 size-2 shrink-0 rounded-full bg-primary" aria-label={t('Unread')} />
                                     )}
                                 </li>
                             ))}

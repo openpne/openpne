@@ -49,10 +49,6 @@ class RawPaletteGuardTest extends TestCase
         'pages/dashboard.tsx',
         'pages/member/avatar.tsx',
         'pages/member/show.tsx',
-        'pages/message/compose.tsx',
-        'pages/message/edit.tsx',
-        'pages/message/index.tsx',
-        'pages/message/show.tsx',
     ];
 
     /** @return list<string> */
