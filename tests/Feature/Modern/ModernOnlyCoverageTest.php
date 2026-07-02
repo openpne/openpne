@@ -20,15 +20,14 @@ use Tests\TestCase;
  * tenant_mode=modern_only.
  *
  * KNOWN_LEAKS are the canonical GETs that still fall back to Classic — the OpenPNE 3 delete/join/quit
- * confirm pages (Modern confirms inline instead) plus the email-change confirm. The Modern UX
- * campaign Modernizes or blocks them in phase 3 and empties this list. See
- * worklog/current/modern-ux-campaign.md.
+ * confirm pages (Modern confirms inline instead) plus the email-change confirm. Each is Modernized or
+ * blocked as its Modern surface lands, emptying this list.
  */
 class ModernOnlyCoverageTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Canonical GET route names that STILL render Classic under modern_only (to close in phase 3). */
+    /** Canonical GET route names that STILL render Classic under modern_only (to be closed). */
     private const KNOWN_LEAKS = [
         'community.join.show',                  // CommunityController::showJoin        -> community.join
         'community.quit.show',                  // CommunityController::showQuit        -> community.quit
@@ -163,9 +162,9 @@ class ModernOnlyCoverageTest extends TestCase
     }
 
     /**
-     * Keeps KNOWN_LEAKS from going stale (Codex): every allowlisted name must still be a registered
-     * route. A leak that is Modernized/renamed but left here — or a typo — fails, so the Phase 3
-     * "shrink the allowlist to zero" cleanup cannot be silently forgotten.
+     * Keeps KNOWN_LEAKS from going stale: every allowlisted name must still be a registered route. A
+     * leak that is Modernized/renamed but left here — or a typo — fails, so shrinking the allowlist to
+     * zero cannot be silently forgotten.
      */
     public function test_known_leaks_are_registered_routes(): void
     {
@@ -222,9 +221,9 @@ class ModernOnlyCoverageTest extends TestCase
     }
 
     /**
-     * Codex asked to assert the VALID-token render, not only the invalid-token redirect — otherwise the
-     * leak hides behind the redirect. Today the valid-token confirm renders a Classic Blade
-     * (allowlisted); phase 3 turns it Inertia and drops it from KNOWN_LEAKS.
+     * Asserts the VALID-token render, not only the invalid-token redirect — otherwise the leak hides
+     * behind the redirect. Today the valid-token confirm renders a Classic Blade (allowlisted); it
+     * turns Inertia and drops out of KNOWN_LEAKS once Modernized.
      */
     public function test_valid_token_email_change_confirm_is_a_known_classic_leak(): void
     {
@@ -241,8 +240,8 @@ class ModernOnlyCoverageTest extends TestCase
 
         $response = $this->actingAs($member)->get("/member/config/email/confirm/{$raw}");
 
-        // Renders 200 but as Classic (the OP3 body id proves it is Blade, not Inertia) — the leak the
-        // campaign closes in phase 3.
+        // Renders 200 but as Classic (the OP3 body id proves it is Blade, not Inertia) — the leak to
+        // close by Modernizing this confirm.
         $response->assertOk();
         $this->assertStringContainsString('page_member_emailChangeConfirm', $response->getContent());
     }
