@@ -39,13 +39,14 @@ export function ProfileFieldInput({ field, value, onChange, error }: Props) {
         return (
             <fieldset className="space-y-2" aria-invalid={error ? true : undefined} aria-describedby={errorId}>
                 {/* aria-required is not valid on a group/fieldset, so the required cue rides the legend's
-                    accessible name via the marker's aria-label. */}
+                    text: the visual star is decorative and the translated word is sr-only. */}
                 <legend className="text-sm font-medium text-foreground">
                     {field.caption}
                     {field.is_required && (
-                        <span className="text-destructive" aria-label={t('Required')}>
-                            {' '}*
-                        </span>
+                        <>
+                            <span aria-hidden="true" className="text-destructive"> *</span>
+                            <span className="sr-only"> {t('Required')}</span>
+                        </>
                     )}
                 </legend>
                 <div className="space-y-1.5">
