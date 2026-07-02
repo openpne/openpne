@@ -35,6 +35,9 @@ export function Field({ label, htmlFor, help, error, required, className, childr
     const control = isValidElement(children)
         ? cloneElement(children as ReactElement<Record<string, unknown>>, {
               id,
+              // These controls generally omit the native required attribute (validation is server-side),
+              // so mirror the visual "*" to assistive tech via aria-required.
+              'aria-required': required ? true : (children.props as Record<string, unknown>)['aria-required'],
               'aria-invalid': error ? true : (children.props as Record<string, unknown>)['aria-invalid'],
               'aria-describedby':
                   [(children.props as Record<string, unknown>)['aria-describedby'], describedBy].filter(Boolean).join(' ') || undefined,

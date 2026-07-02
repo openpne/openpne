@@ -1,4 +1,9 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import { ProfileFieldInput } from './profile-field-input';
@@ -29,9 +34,9 @@ export default function MemberEditProfile() {
         <>
             <Head title={t('Edit Profile')} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <h1 className="text-xl font-semibold">{t('Edit Profile')}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t('Edit Profile')}</h1>
 
-                {flash.status && <p role="status">{flash.status}</p>}
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
                 <form
                     onSubmit={(e) => {
@@ -40,21 +45,12 @@ export default function MemberEditProfile() {
                     }}
                     className="space-y-5"
                 >
-                    <div>
-                        <label htmlFor="member_name">{t('%nickname%')}</label>
-                        <input
-                            id="member_name"
-                            type="text"
-                            value={data.name}
-                            onChange={(e) => setData('name', e.target.value)}
-                            maxLength={255}
-                            required
-                        />
-                        {errors.name && <p role="alert">{errors.name}</p>}
-                    </div>
+                    <Field label={t('%nickname%')} htmlFor="member_name" required error={errors.name}>
+                        <Input id="member_name" type="text" maxLength={255} required value={data.name} onChange={(e) => setData('name', e.target.value)} />
+                    </Field>
 
                     {form.fields.map((field) => (
-                        <div key={field.id} className="space-y-1">
+                        <div key={field.id} className="space-y-1.5">
                             <ProfileFieldInput
                                 field={field}
                                 value={data.profile[field.id] ?? ''}
@@ -62,20 +58,21 @@ export default function MemberEditProfile() {
                                 error={(errors as Record<string, string>)[`profile.${field.id}`]}
                             />
                             {field.is_edit_public_flag && (
-                                <select
+                                <Select
                                     aria-label={t('Visibility')}
+                                    className="max-w-xs"
                                     value={data.visibility[field.id]}
                                     onChange={(e) => setVisibility(field.id, Number(e.target.value))}
                                 >
                                     {field.visibilityOptions.map((opt) => (
                                         <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
                                     ))}
-                                </select>
+                                </Select>
                             )}
                         </div>
                     ))}
 
-                    <button type="submit" disabled={processing}>{t('Update')}</button>
+                    <Button type="submit" loading={processing}>{t('Update')}</Button>
                 </form>
             </main>
         </>

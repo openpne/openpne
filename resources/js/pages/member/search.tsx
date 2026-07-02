@@ -1,6 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { AgeRange, MemberRow, MonthDayRange, SearchCriteria, SearchFormField } from './types';
@@ -27,7 +32,7 @@ export default function MemberSearch() {
     const setMonthDay = (id: number, key: keyof MonthDayRange, value: string) =>
         setMonthday((m) => ({ ...m, [id]: { ...m[id], [key]: value } }));
 
-    const submit = (e: React.FormEvent) => {
+    const submit = (e: FormEvent) => {
         e.preventDefault();
         router.get('/m/member/search', { name, profile, date, monthday, age }, { preserveState: false });
     };
@@ -36,13 +41,12 @@ export default function MemberSearch() {
         <>
             <Head title={t('Member search')} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <h1 className="text-xl font-semibold">{t('Member search')}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t('Member search')}</h1>
 
                 <form onSubmit={submit} className="space-y-4">
-                    <div>
-                        <label htmlFor="search_name">{t('%nickname%')}</label>
-                        <input id="search_name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
-                    </div>
+                    <Field label={t('%nickname%')} htmlFor="search_name">
+                        <Input id="search_name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+                    </Field>
 
                     {profiles.map((field) => (
                         <SearchField
@@ -58,42 +62,45 @@ export default function MemberSearch() {
                     ))}
 
                     {/* Derived age, gated by AgeVisibility (separate from the birthday field). */}
-                    <div>
-                        <label htmlFor="age_min">{t('Age')}</label>
-                        <span className="flex items-center gap-2">
-                            <input
-                                id="age_min"
+                    <fieldset className="space-y-1.5">
+                        <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
+                        <div className="flex items-center gap-2">
+                            <Input
                                 type="number"
                                 min={0}
+                                className="w-24"
+                                aria-label={`${t('Age')} ${t('Start')}`}
                                 value={age.min ?? ''}
                                 onChange={(e) => setAge((a) => ({ ...a, min: e.target.value }))}
                             />
-                            <span>–</span>
-                            <input
+                            <span className="text-muted-foreground">–</span>
+                            <Input
                                 type="number"
                                 min={0}
+                                className="w-24"
+                                aria-label={`${t('Age')} ${t('End')}`}
                                 value={age.max ?? ''}
                                 onChange={(e) => setAge((a) => ({ ...a, max: e.target.value }))}
                             />
-                        </span>
-                    </div>
+                        </div>
+                    </fieldset>
 
-                    <button type="submit">{t('Search')}</button>
+                    <Button type="submit">{t('Search')}</Button>
                 </form>
 
                 <section className="space-y-3">
-                    <h2 className="text-lg font-medium">{t('Search Results')}</h2>
+                    <h2 className="text-lg font-medium text-foreground">{t('Search Results')}</h2>
                     {members.data.length === 0 ? (
                         <p className="text-sm text-muted-foreground">{t('No members found.')}</p>
                     ) : (
                         <ul className="divide-y divide-border">
                             {members.data.map((member) => (
                                 <li key={member.id} className="py-2">
-                                    <Link href={`/m/member/${member.id}`} className="flex items-center gap-3">
+                                    <Link href={`/m/member/${member.id}`} className="flex items-center gap-3 text-foreground hover:underline">
                                         {member.avatarUrl && (
-                                            <img src={member.avatarUrl} alt={member.name} className="size-10 rounded object-cover" />
+                                            <img src={member.avatarUrl} alt="" className="size-10 rounded-md object-cover" />
                                         )}
-                                        <span>{member.name}</span>
+                                        <span className="truncate">{member.name}</span>
                                     </Link>
                                 </li>
                             ))}
@@ -120,17 +127,22 @@ function SearchField({ field, value, range, monthDay, onValue, onRange, onMonthD
     const t = useT();
     const scalar = typeof value === 'string' ? value : '';
     const selected = Array.isArray(value) ? value : [];
+    const id = `search-${field.id}`;
 
-    const render = () => {
-        switch (field.formType) {
-            case 'birthday':
-                // Month/day only; the birth year (= age) is searched via the Age field.
-                return (
-                    <span className="flex items-center gap-2">
+    // Multi-control fields (birthday/date ranges, a checkbox set) are a fieldset with a legend and
+    // per-control names; single-control fields are one control that the caption labels via Field.
+    switch (field.formType) {
+        case 'birthday':
+            // Month/day only; the birth year (= age) is searched via the Age field.
+            return (
+                <fieldset className="space-y-1.5">
+                    <legend className="text-sm font-medium text-foreground">{field.caption}</legend>
+                    <div className="flex flex-wrap items-center gap-2">
                         {(['from', 'to'] as const).map((bound) => (
-                            <span key={bound} className="flex gap-1">
-                                <select
-                                    aria-label={`${t(bound === 'from' ? 'Start' : 'End')} ${t('Month')}`}
+                            <span key={bound} className="flex items-center gap-1">
+                                <Select
+                                    className="w-auto"
+                                    aria-label={`${field.caption} ${t(bound === 'from' ? 'Start' : 'End')} ${t('Month')}`}
                                     value={monthDay?.[`${bound}_month`] ?? ''}
                                     onChange={(e) => onMonthDay(`${bound}_month`, e.target.value)}
                                 >
@@ -138,9 +150,10 @@ function SearchField({ field, value, range, monthDay, onValue, onRange, onMonthD
                                     {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                                         <option key={m} value={m}>{m}</option>
                                     ))}
-                                </select>
-                                <select
-                                    aria-label={`${t(bound === 'from' ? 'Start' : 'End')} ${t('Day')}`}
+                                </Select>
+                                <Select
+                                    className="w-auto"
+                                    aria-label={`${field.caption} ${t(bound === 'from' ? 'Start' : 'End')} ${t('Day')}`}
                                     value={monthDay?.[`${bound}_day`] ?? ''}
                                     onChange={(e) => onMonthDay(`${bound}_day`, e.target.value)}
                                 >
@@ -148,62 +161,77 @@ function SearchField({ field, value, range, monthDay, onValue, onRange, onMonthD
                                     {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                                         <option key={d} value={d}>{d}</option>
                                     ))}
-                                </select>
-                                {bound === 'from' && <span>–</span>}
+                                </Select>
+                                {bound === 'from' && <span className="text-muted-foreground">–</span>}
                             </span>
                         ))}
-                    </span>
-                );
+                    </div>
+                </fieldset>
+            );
 
-            case 'select':
-            case 'radio':
-                return (
-                    <select value={scalar} onChange={(e) => onValue(e.target.value)}>
+        case 'checkbox':
+            return (
+                <fieldset className="space-y-1.5">
+                    <legend className="text-sm font-medium text-foreground">{field.caption}</legend>
+                    <div className="space-y-1.5">
+                        {field.options.map((opt) => (
+                            <label key={opt.id} className="flex items-center gap-2 text-sm text-foreground">
+                                <Checkbox
+                                    checked={selected.includes(opt.id)}
+                                    onChange={() =>
+                                        onValue(selected.includes(opt.id) ? selected.filter((v) => v !== opt.id) : [...selected, opt.id])
+                                    }
+                                />
+                                {opt.caption}
+                            </label>
+                        ))}
+                    </div>
+                </fieldset>
+            );
+
+        case 'date':
+            return (
+                <fieldset className="space-y-1.5">
+                    <legend className="text-sm font-medium text-foreground">{field.caption}</legend>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Input type="date" className="w-auto" aria-label={`${field.caption} ${t('Start')}`} value={range?.from ?? ''} onChange={(e) => onRange('from', e.target.value)} />
+                        <span className="text-muted-foreground">–</span>
+                        <Input type="date" className="w-auto" aria-label={`${field.caption} ${t('End')}`} value={range?.to ?? ''} onChange={(e) => onRange('to', e.target.value)} />
+                    </div>
+                </fieldset>
+            );
+
+        case 'select':
+        case 'radio':
+            return (
+                <Field label={field.caption} htmlFor={id}>
+                    <Select value={scalar} onChange={(e) => onValue(e.target.value)}>
                         <option value="">{t('Any')}</option>
                         {field.options.map((opt) => (
                             <option key={opt.id} value={opt.id}>{opt.caption}</option>
                         ))}
-                    </select>
-                );
+                    </Select>
+                </Field>
+            );
 
-            case 'checkbox':
-                return field.options.map((opt) => (
-                    <label key={opt.id}>
-                        <input
-                            type="checkbox"
-                            checked={selected.includes(opt.id)}
-                            onChange={() =>
-                                onValue(selected.includes(opt.id) ? selected.filter((v) => v !== opt.id) : [...selected, opt.id])
-                            }
-                        />
-                        {opt.caption}
-                    </label>
-                ));
-
-            case 'date':
-                return (
-                    <span className="flex items-center gap-2">
-                        <input type="date" value={range?.from ?? ''} onChange={(e) => onRange('from', e.target.value)} />
-                        <span>–</span>
-                        <input type="date" value={range?.to ?? ''} onChange={(e) => onRange('to', e.target.value)} />
-                    </span>
-                );
-
-            case 'country_select':
-                return (
-                    <select value={scalar} onChange={(e) => onValue(e.target.value)}>
+        case 'country_select':
+            return (
+                <Field label={field.caption} htmlFor={id}>
+                    <Select value={scalar} onChange={(e) => onValue(e.target.value)}>
                         <option value="">{t('Any')}</option>
                         {field.countries?.map((c) => (
                             <option key={c.value} value={c.value}>{c.label}</option>
                         ))}
-                    </select>
-                );
+                    </Select>
+                </Field>
+            );
 
-            case 'region_select': {
-                const groups = field.regions ?? [];
-                const grouped = (groups[0]?.country ?? '') !== '';
-                return (
-                    <select value={scalar} onChange={(e) => onValue(e.target.value)}>
+        case 'region_select': {
+            const groups = field.regions ?? [];
+            const grouped = (groups[0]?.country ?? '') !== '';
+            return (
+                <Field label={field.caption} htmlFor={id}>
+                    <Select value={scalar} onChange={(e) => onValue(e.target.value)}>
                         <option value="">{t('Any')}</option>
                         {grouped
                             ? groups.map((g) => (
@@ -216,19 +244,16 @@ function SearchField({ field, value, range, monthDay, onValue, onRange, onMonthD
                             : groups[0]?.options.map((o) => (
                                 <option key={o.value} value={o.value}>{o.label}</option>
                             ))}
-                    </select>
-                );
-            }
-
-            default:
-                return <input type="text" value={scalar} onChange={(e) => onValue(e.target.value)} />;
+                    </Select>
+                </Field>
+            );
         }
-    };
 
-    return (
-        <div>
-            <label>{field.caption}</label>
-            {render()}
-        </div>
-    );
+        default:
+            return (
+                <Field label={field.caption} htmlFor={id}>
+                    <Input type="text" value={scalar} onChange={(e) => onValue(e.target.value)} />
+                </Field>
+            );
+    }
 }
