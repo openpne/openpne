@@ -1,6 +1,8 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
+import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, PaginatedTopics } from '../types';
@@ -19,8 +21,6 @@ export default function CommunityTopicIndex() {
         <>
             <Head title={t('%Topics%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                {flash.status && <p role="status">{flash.status}</p>}
-
                 <div className="flex items-center justify-between gap-3">
                     <h1 className="min-w-0 text-2xl font-semibold">
                         <Link href={`/m/community/${community.id}`} className="hover:underline">
@@ -30,36 +30,37 @@ export default function CommunityTopicIndex() {
                         {t('%Topics%')}
                     </h1>
                     {canPost && (
-                        <Link href={`/m/community/${community.id}/topic/new`} className="shrink-0 text-sm hover:underline">
+                        <Link href={`/m/community/${community.id}/topic/new`} className="shrink-0 text-sm text-link hover:underline">
                             {t('Post a new %topic%')}
                         </Link>
                     )}
                 </div>
 
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
+
                 {topics.data.length === 0 ? (
-                    <p>{t('No %topics% to show.')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <ul className="divide-y">
-                            {topics.data.map((topic) => (
-                                <li key={topic.id}>
-                                    <Link
-                                        href={`/m/community/topic/${topic.id}`}
-                                        className="flex items-start gap-3 py-3 hover:bg-muted/40"
-                                    >
-                                        <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} size="sm" />
+                        <Panel flush>
+                            <List>
+                                {topics.data.map((topic) => (
+                                    <ListRow key={topic.id} href={`/m/community/topic/${topic.id}`} chevron>
+                                        <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} size="sm" decorative />
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate font-medium">
-                                                {topic.name} ({topic.commentCount})
+                                                {topic.name} <span className="text-sm font-normal text-muted-foreground">({topic.commentCount})</span>
                                             </p>
                                             <p className="truncate text-xs text-muted-foreground">
                                                 {topic.author?.name ?? t('Withdrawn member')} &mdash; {new Date(topic.updatedAt).toLocaleString()}
                                             </p>
                                         </div>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+                                    </ListRow>
+                                ))}
+                            </List>
+                        </Panel>
                         <Pagination meta={topics.meta} />
                     </>
                 )}

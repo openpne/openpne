@@ -5,6 +5,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -88,10 +89,11 @@ export default function CommunityTopicShow() {
                     </Link>
                 </p>
 
-                <article className="space-y-3">
-                    <h1 className="text-xl font-semibold">{topic.name}</h1>
+                <h1 className="text-xl font-semibold">{topic.name}</h1>
+
+                <Panel bodyClassName="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} size="sm" />
+                        <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} size="sm" decorative />
                         {topic.author ? (
                             <Link href={`/m/member/${topic.author.id}`} className="text-link hover:underline">
                                 {topic.author.name}
@@ -115,13 +117,11 @@ export default function CommunityTopicShow() {
                             </button>
                         </div>
                     )}
-                </article>
+                </Panel>
 
-                <section className="space-y-3">
-                    <h2 className="text-lg font-semibold">{t(':count comments', { count: thread.total })}</h2>
-
+                <Panel title={t(':count comments', { count: thread.total })} flush>
                     {thread.lastPage > 1 && (
-                        <div className="flex items-center justify-between gap-2 text-sm">
+                        <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-2.5 text-sm">
                             {thread.hasOlder && thread.olderPage !== null ? (
                                 <Link href={threadLink(thread.olderPage, thread.ascending)} preserveScroll className="text-link hover:underline">
                                     {t('Older')}
@@ -143,11 +143,11 @@ export default function CommunityTopicShow() {
                     )}
 
                     {thread.comments.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">{t('No comments yet.')}</p>
+                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No comments yet.')}</p>
                     ) : (
-                        <ul className="space-y-3">
+                        <List>
                             {thread.comments.map((comment) => (
-                                <li key={comment.id} className="border-t border-border pt-3">
+                                <li key={comment.id} className="px-5 py-4">
                                     <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
                                         <span className="font-medium">#{comment.number}</span>
                                         {comment.author ? (
@@ -168,30 +168,31 @@ export default function CommunityTopicShow() {
                                     <ImageGrid images={comment.images} />
                                 </li>
                             ))}
-                        </ul>
+                        </List>
                     )}
-                </section>
+                </Panel>
 
                 {canComment && (
-                    <form onSubmit={submitComment} className="space-y-3">
-                        <h2 className="text-lg font-semibold">{t('Post a comment')}</h2>
-                        <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
-                            <Textarea id="comment_body" required rows={5} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
-                        </Field>
-                        <Field label={t('Images')} htmlFor="comment_images" error={form.errors.images}>
-                            <input
-                                id="comment_images"
-                                type="file"
-                                accept="image/jpeg,image/png,image/gif,image/webp"
-                                multiple
-                                onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
-                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
-                            />
-                        </Field>
-                        <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
-                            {t('Post comment')}
-                        </Button>
-                    </form>
+                    <Panel title={t('Post a comment')}>
+                        <form onSubmit={submitComment} className="space-y-3">
+                            <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
+                                <Textarea id="comment_body" required rows={5} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
+                            </Field>
+                            <Field label={t('Images')} htmlFor="comment_images" error={form.errors.images}>
+                                <input
+                                    id="comment_images"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/gif,image/webp"
+                                    multiple
+                                    onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
+                                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
+                                />
+                            </Field>
+                            <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
+                                {t('Post comment')}
+                            </Button>
+                        </form>
+                    </Panel>
                 )}
             </main>
         </>
