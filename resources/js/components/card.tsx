@@ -11,7 +11,7 @@ export function Card({ children, className }: Props) {
     return (
         <div
             className={cn(
-                'overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800',
+                'overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm',
                 className,
             )}
         >
@@ -21,9 +21,9 @@ export function Card({ children, className }: Props) {
 }
 
 export function CardHeader({ children, className }: Props) {
-    return <div className={cn('border-b border-slate-100 px-5 py-3 dark:border-slate-700', className)}>{children}</div>;
+    return <div className={cn('border-b border-border px-5 py-3', className)}>{children}</div>;
 }
 
 export function CardBody({ children, className }: Props) {
-    return <div className={cn('px-5 py-4', className)}>{children}</div>;
+    return <div className={cn('px-6 py-5', className)}>{children}</div>;
 }

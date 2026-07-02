@@ -24,40 +24,79 @@
     --color-primary-foreground: var(--primary-foreground);
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
+    /* Semantic status + link tokens (used by FlashMessage, badges, links). */
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+    --color-link: var(--link);
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    /* Neutral ramp with a faint warm tint (hue 83, tiny chroma) instead of pure gray, and a page
+       background a touch below pure white so white cards lift — reads as "designed", not stark. */
+    --background: oklch(0.98 0.004 83);
+    --foreground: oklch(0.26 0.006 83);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
+    --card-foreground: oklch(0.26 0.006 83);
+    --border: oklch(0.915 0.005 83);
+    --input: oklch(0.915 0.005 83);
+    --ring: oklch(0.72 0.01 83);
+    --primary: oklch(0.25 0.01 83);
+    --primary-foreground: oklch(0.985 0.004 83);
+    --muted: oklch(0.965 0.004 83);
+    --muted-foreground: oklch(0.505 0.012 83);
+    --accent: oklch(0.955 0.006 83);
+    --accent-foreground: oklch(0.25 0.01 83);
+    --secondary: oklch(0.955 0.006 83);
+    --secondary-foreground: oklch(0.25 0.01 83);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(0.985 0 0);
+    --success: oklch(0.63 0.16 149);
+    --success-foreground: oklch(0.985 0 0);
+    --warning: oklch(0.79 0.16 78);
+    --warning-foreground: oklch(0.205 0 0);
+    --info: oklch(0.6 0.13 244);
+    --info-foreground: oklch(0.985 0 0);
+    --link: oklch(0.52 0.19 256);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --border: oklch(1 0 0 / 10%);
+    /* Dark ramp: a very dark warm gray instead of pure black, cards lifted above it. */
+    --background: oklch(0.17 0.004 83);
+    --foreground: oklch(0.965 0.003 83);
+    --card: oklch(0.212 0.005 83);
+    --card-foreground: oklch(0.965 0.003 83);
+    --border: oklch(1 0 0 / 9%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
+    --ring: oklch(0.55 0.01 83);
+    --primary: oklch(0.92 0.004 83);
+    --primary-foreground: oklch(0.25 0.01 83);
+    --muted: oklch(0.27 0.005 83);
+    --muted-foreground: oklch(0.715 0.008 83);
+    --accent: oklch(0.275 0.006 83);
+    --accent-foreground: oklch(0.965 0.003 83);
+    --secondary: oklch(0.275 0.006 83);
+    --secondary-foreground: oklch(0.965 0.003 83);
     --destructive: oklch(0.704 0.191 22.216);
-    --destructive-foreground: oklch(0.985 0 0);
+    /* Dark destructive is a light coral, so its solid-button text is dark for AA contrast; error
+       *text* uses text-destructive (the coral) on the dark surface, which stays readable. */
+    --destructive-foreground: oklch(0.205 0 0);
+    --success: oklch(0.7 0.15 149);
+    --success-foreground: oklch(0.205 0 0);
+    --warning: oklch(0.82 0.15 78);
+    --warning-foreground: oklch(0.205 0 0);
+    --info: oklch(0.68 0.12 244);
+    --info-foreground: oklch(0.205 0 0);
+    --link: oklch(0.72 0.15 256);
 }
 
 @layer base {

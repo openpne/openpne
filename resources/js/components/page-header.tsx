@@ -17,14 +17,14 @@ type Props = {
 export function PageHeader({ backHref, backLabel, title, right }: Props) {
     return (
         <div
-            className="sticky z-10 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-700 dark:bg-slate-900/80"
+            className="sticky z-10 border-b border-border bg-background/80 backdrop-blur"
             style={{ top: 'var(--modern-top-offset, 0px)' }}
         >
             <div className="mx-auto flex min-h-11 max-w-2xl items-center gap-3 px-4 py-2">
                 {backHref && (
                     <Link
                         href={backHref}
-                        className="-ml-2 inline-flex min-h-11 items-center px-2 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                        className="-ml-2 inline-flex min-h-11 items-center px-2 text-sm text-muted-foreground hover:text-foreground"
                     >
                         ← {backLabel ?? ''}
                     </Link>

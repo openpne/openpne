@@ -1,6 +1,14 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
+import type { ReactNode } from 'react';
+import { Card, CardBody } from '@/components/card';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
+import { CheckboxField, Field, FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { RadioCard } from '@/components/ui/radio-card';
+import { Select } from '@/components/ui/select';
+import { type ColorMode, useColorMode } from '@/lib/color-mode';
 import { useT } from '@/lib/i18n';
-import { useColorMode, type ColorMode } from '@/lib/color-mode';
 import type { PageProps } from '@/types';
 
 const APPEARANCE_OPTIONS: { value: ColorMode; label: string }[] = [
@@ -27,6 +35,14 @@ interface ConfigProps extends PageProps {
     form: ConfigForm;
 }
 
+function SectionCard({ children }: { children: ReactNode }) {
+    return (
+        <Card>
+            <CardBody>{children}</CardBody>
+        </Card>
+    );
+}
+
 export default function MemberConfig() {
     const t = useT();
     const { form, flash } = usePage<ConfigProps>().props;
@@ -45,224 +61,279 @@ export default function MemberConfig() {
     return (
         <>
             <Head title={t('Settings')} />
-            <main className="mx-auto max-w-2xl space-y-8 px-4 py-8">
-                <h1 className="text-xl font-semibold">{t('Settings')}</h1>
+            <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+                <h1 className="text-xl font-semibold text-foreground">{t('Settings')}</h1>
 
-                {flash.status && <p role="status">{flash.status}</p>}
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        diary.post('/m/member/config/diary');
-                    }}
-                    className="space-y-2"
-                >
-                    <h2 className="font-semibold">{t('Diary')}</h2>
-                    <label htmlFor="diary_default_visibility">{t('Default audience for new diaries')}</label>
-                    <select
-                        id="diary_default_visibility"
-                        value={diary.data.diary_default_visibility}
-                        onChange={(e) => diary.setData('diary_default_visibility', e.target.value)}
+                <SectionCard>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            diary.post('/m/member/config/diary');
+                        }}
                     >
-                        {form.diary.options.map((opt) => (
-                            <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
-                        ))}
-                    </select>
-                    {diary.errors.diary_default_visibility && <p role="alert">{diary.errors.diary_default_visibility}</p>}
-                    <button type="submit" disabled={diary.processing}>{t('Save')}</button>
-                </form>
+                        <FormSection title={t('Diary')}>
+                            <Field
+                                label={t('Default audience for new diaries')}
+                                htmlFor="diary_default_visibility"
+                                error={diary.errors.diary_default_visibility}
+                            >
+                                <Select
+                                    id="diary_default_visibility"
+                                    value={diary.data.diary_default_visibility}
+                                    onChange={(e) => diary.setData('diary_default_visibility', e.target.value)}
+                                >
+                                    {form.diary.options.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                            {t(opt.label)}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </Field>
+                            <FormActions>
+                                <Button type="submit" loading={diary.processing}>
+                                    {t('Save')}
+                                </Button>
+                            </FormActions>
+                        </FormSection>
+                    </form>
+                </SectionCard>
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        age.post('/m/member/config/age');
-                    }}
-                    className="space-y-2"
-                >
-                    <h2 className="font-semibold">{t('Age')}</h2>
-                    <label htmlFor="age_visibility">{t('Who can see your age')}</label>
-                    <select
-                        id="age_visibility"
-                        value={age.data.age_visibility}
-                        onChange={(e) => age.setData('age_visibility', e.target.value)}
+                <SectionCard>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            age.post('/m/member/config/age');
+                        }}
                     >
-                        {form.age.options.map((opt) => (
-                            <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
-                        ))}
-                    </select>
-                    {age.errors.age_visibility && <p role="alert">{age.errors.age_visibility}</p>}
-                    <button type="submit" disabled={age.processing}>{t('Save')}</button>
-                </form>
+                        <FormSection title={t('Age')}>
+                            <Field label={t('Who can see your age')} htmlFor="age_visibility" error={age.errors.age_visibility}>
+                                <Select
+                                    id="age_visibility"
+                                    value={age.data.age_visibility}
+                                    onChange={(e) => age.setData('age_visibility', e.target.value)}
+                                >
+                                    {form.age.options.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                            {t(opt.label)}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </Field>
+                            <FormActions>
+                                <Button type="submit" loading={age.processing}>
+                                    {t('Save')}
+                                </Button>
+                            </FormActions>
+                        </FormSection>
+                    </form>
+                </SectionCard>
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        locale.post('/locale');
-                    }}
-                    className="space-y-2"
-                >
-                    <h2 className="font-semibold">{t('Language')}</h2>
-                    <label htmlFor="locale">{t('Language')}</label>
-                    {/* Locale labels are language autonyms, rendered verbatim (not translation keys). */}
-                    <select
-                        id="locale"
-                        value={locale.data.locale}
-                        onChange={(e) => locale.setData('locale', e.target.value)}
+                <SectionCard>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            locale.post('/locale');
+                        }}
                     >
-                        {form.locale.options.map((opt) => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                    </select>
-                    <button type="submit" disabled={locale.processing}>{t('Save')}</button>
-                </form>
+                        <FormSection title={t('Language')}>
+                            <Field label={t('Language')} htmlFor="locale">
+                                {/* Locale labels are language autonyms, rendered verbatim (not translation keys). */}
+                                <Select
+                                    id="locale"
+                                    value={locale.data.locale}
+                                    onChange={(e) => locale.setData('locale', e.target.value)}
+                                >
+                                    {form.locale.options.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                            {opt.label}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </Field>
+                            <FormActions>
+                                <Button type="submit" loading={locale.processing}>
+                                    {t('Save')}
+                                </Button>
+                            </FormActions>
+                        </FormSection>
+                    </form>
+                </SectionCard>
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        surface.post('/m/member/config/surface');
-                    }}
-                    className="space-y-2"
-                >
-                    <h2 className="font-semibold">{t('Display')}</h2>
-                    <fieldset className="space-y-1">
-                        {form.surface.options.map((opt) => (
-                            <label key={opt.value} className="flex items-start gap-2">
-                                <input
-                                    type="radio"
-                                    name="preferred_surface"
-                                    value={opt.value}
-                                    checked={surface.data.preferred_surface === opt.value}
-                                    onChange={(e) => surface.setData('preferred_surface', e.target.value)}
-                                />
-                                <span>
-                                    <strong>{t(opt.label)}</strong>
-                                    {opt.description && <span> — {t(opt.description)}</span>}
-                                </span>
-                            </label>
-                        ))}
-                    </fieldset>
-                    {surface.errors.preferred_surface && <p role="alert">{surface.errors.preferred_surface}</p>}
-                    {/* Disabled until the choice differs from the current surface, so a casual save never pins. */}
-                    <button type="submit" disabled={surface.processing || surface.data.preferred_surface === form.surface.value}>{t('Save')}</button>
-                </form>
+                <SectionCard>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            surface.post('/m/member/config/surface');
+                        }}
+                    >
+                        <FormSection title={t('Display')}>
+                            <RadioCardGroup legend={t('Display')} error={surface.errors.preferred_surface}>
+                                {form.surface.options.map((opt) => (
+                                    <RadioCard
+                                        key={opt.value}
+                                        name="preferred_surface"
+                                        value={opt.value}
+                                        checked={surface.data.preferred_surface === opt.value}
+                                        onChange={(e) => surface.setData('preferred_surface', e.target.value)}
+                                        label={t(opt.label)}
+                                        description={opt.description ? t(opt.description) : undefined}
+                                    />
+                                ))}
+                            </RadioCardGroup>
+                            <FormActions>
+                                {/* Disabled until the choice differs from the current surface, so a casual save never pins. */}
+                                <Button
+                                    type="submit"
+                                    loading={surface.processing}
+                                    disabled={surface.data.preferred_surface === form.surface.value}
+                                >
+                                    {t('Save')}
+                                </Button>
+                            </FormActions>
+                        </FormSection>
+                    </form>
+                </SectionCard>
 
-                <section className="space-y-2">
-                    <h2 className="font-semibold">{t('Appearance')}</h2>
-                    <p>{t('Choose a light or dark look. Use system setting follows your device automatically.')}</p>
-                    <fieldset className="space-y-1">
-                        {APPEARANCE_OPTIONS.map((opt) => (
-                            <label key={opt.value} className="flex items-center gap-2">
-                                <input
-                                    type="radio"
+                <SectionCard>
+                    <FormSection
+                        title={t('Appearance')}
+                        description={t('Choose a light or dark look. Use system setting follows your device automatically.')}
+                    >
+                        <RadioCardGroup legend={t('Appearance')}>
+                            {APPEARANCE_OPTIONS.map((opt) => (
+                                <RadioCard
+                                    key={opt.value}
                                     name="appearance"
                                     value={opt.value}
                                     checked={preference === opt.value}
                                     onChange={() => setColorMode(opt.value)}
+                                    label={t(opt.label)}
                                 />
-                                <span>{t(opt.label)}</span>
-                            </label>
-                        ))}
-                    </fieldset>
-                </section>
+                            ))}
+                        </RadioCardGroup>
+                    </FormSection>
+                </SectionCard>
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        password.post('/m/member/config/password', { onSuccess: () => password.reset() });
-                    }}
-                    className="space-y-2"
-                >
-                    <h2 className="font-semibold">{t('Password')}</h2>
-                    <label htmlFor="current_password">{t('Current password')}</label>
-                    <input
-                        id="current_password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={password.data.current_password}
-                        onChange={(e) => password.setData('current_password', e.target.value)}
-                    />
-                    {password.errors.current_password && <p role="alert">{password.errors.current_password}</p>}
-                    <label htmlFor="password">{t('New password')}</label>
-                    <input
-                        id="password"
-                        type="password"
-                        autoComplete="new-password"
-                        value={password.data.password}
-                        onChange={(e) => password.setData('password', e.target.value)}
-                    />
-                    {password.errors.password && <p role="alert">{password.errors.password}</p>}
-                    <label htmlFor="password_confirmation">{t('New password (confirm)')}</label>
-                    <input
-                        id="password_confirmation"
-                        type="password"
-                        autoComplete="new-password"
-                        value={password.data.password_confirmation}
-                        onChange={(e) => password.setData('password_confirmation', e.target.value)}
-                    />
-                    <button type="submit" disabled={password.processing}>{t('Save')}</button>
-                </form>
+                <SectionCard>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            password.post('/m/member/config/password', { onSuccess: () => password.reset() });
+                        }}
+                    >
+                        <FormSection title={t('Password')}>
+                            <Field label={t('Current password')} htmlFor="current_password" error={password.errors.current_password}>
+                                <Input
+                                    id="current_password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    value={password.data.current_password}
+                                    onChange={(e) => password.setData('current_password', e.target.value)}
+                                />
+                            </Field>
+                            <Field label={t('New password')} htmlFor="password" error={password.errors.password}>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    value={password.data.password}
+                                    onChange={(e) => password.setData('password', e.target.value)}
+                                />
+                            </Field>
+                            <Field label={t('New password (confirm)')} htmlFor="password_confirmation">
+                                <Input
+                                    id="password_confirmation"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    value={password.data.password_confirmation}
+                                    onChange={(e) => password.setData('password_confirmation', e.target.value)}
+                                />
+                            </Field>
+                            <FormActions>
+                                <Button type="submit" loading={password.processing}>
+                                    {t('Save')}
+                                </Button>
+                            </FormActions>
+                        </FormSection>
+                    </form>
+                </SectionCard>
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        email.post('/m/member/config/email', { onSuccess: () => email.reset() });
-                    }}
-                    className="space-y-2"
-                >
-                    <h2 className="font-semibold">{t('Email address')}</h2>
-                    <p>
-                        {t('Current email address')}: {form.email.value}
-                    </p>
-                    <label htmlFor="new_email">{t('New email address')}</label>
-                    <input
-                        id="new_email"
-                        type="email"
-                        value={email.data.new_email}
-                        onChange={(e) => email.setData('new_email', e.target.value)}
-                    />
-                    {email.errors.new_email && <p role="alert">{email.errors.new_email}</p>}
-                    <label htmlFor="email_password">{t('Current password')}</label>
-                    <input
-                        id="email_password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={email.data.password}
-                        onChange={(e) => email.setData('password', e.target.value)}
-                    />
-                    {email.errors.password && <p role="alert">{email.errors.password}</p>}
-                    <p>{t('A confirmation link will be sent to the new address. The change takes effect once you open it.')}</p>
-                    <button type="submit" disabled={email.processing}>{t('Send confirmation')}</button>
-                </form>
+                <SectionCard>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            email.post('/m/member/config/email', { onSuccess: () => email.reset() });
+                        }}
+                    >
+                        <FormSection title={t('Email address')} description={`${t('Current email address')}: ${form.email.value}`}>
+                            <Field label={t('New email address')} htmlFor="new_email" error={email.errors.new_email}>
+                                <Input
+                                    id="new_email"
+                                    type="email"
+                                    value={email.data.new_email}
+                                    onChange={(e) => email.setData('new_email', e.target.value)}
+                                />
+                            </Field>
+                            <Field
+                                label={t('Current password')}
+                                htmlFor="email_password"
+                                error={email.errors.password}
+                                help={t('A confirmation link will be sent to the new address. The change takes effect once you open it.')}
+                            >
+                                <Input
+                                    id="email_password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    value={email.data.password}
+                                    onChange={(e) => email.setData('password', e.target.value)}
+                                />
+                            </Field>
+                            <FormActions>
+                                <Button type="submit" loading={email.processing}>
+                                    {t('Send confirmation')}
+                                </Button>
+                            </FormActions>
+                        </FormSection>
+                    </form>
+                </SectionCard>
 
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        withdraw.post('/m/member/config/withdrawal');
-                    }}
-                    className="space-y-2"
-                >
-                    <h2 className="font-semibold">{t('Account withdrawal')}</h2>
-                    <p>{t('Withdrawing permanently deletes your account and cannot be undone.')}</p>
-                    <label htmlFor="withdraw_password">{t('Current password')}</label>
-                    <input
-                        id="withdraw_password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={withdraw.data.password}
-                        onChange={(e) => withdraw.setData('password', e.target.value)}
-                    />
-                    {withdraw.errors.password && <p role="alert">{withdraw.errors.password}</p>}
-                    <label className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            checked={withdraw.data.confirm}
-                            onChange={(e) => withdraw.setData('confirm', e.target.checked)}
-                        />
-                        {t('Yes, delete my account.')}
-                    </label>
-                    {withdraw.errors.confirm && <p role="alert">{withdraw.errors.confirm}</p>}
-                    <button type="submit" disabled={withdraw.processing}>{t('Withdraw from this site')}</button>
-                </form>
+                <SectionCard>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            withdraw.post('/m/member/config/withdrawal');
+                        }}
+                    >
+                        <FormSection
+                            title={t('Account withdrawal')}
+                            description={t('Withdrawing permanently deletes your account and cannot be undone.')}
+                        >
+                            <Field label={t('Current password')} htmlFor="withdraw_password" error={withdraw.errors.password}>
+                                <Input
+                                    id="withdraw_password"
+                                    type="password"
+                                    autoComplete="current-password"
+                                    value={withdraw.data.password}
+                                    onChange={(e) => withdraw.setData('password', e.target.value)}
+                                />
+                            </Field>
+                            <CheckboxField
+                                label={t('Yes, delete my account.')}
+                                checked={withdraw.data.confirm}
+                                onChange={(e) => withdraw.setData('confirm', e.target.checked)}
+                                error={withdraw.errors.confirm}
+                            />
+                            <FormActions>
+                                <Button type="submit" variant="destructive" loading={withdraw.processing}>
+                                    {t('Withdraw from this site')}
+                                </Button>
+                            </FormActions>
+                        </FormSection>
+                    </form>
+                </SectionCard>
             </main>
         </>
     );
