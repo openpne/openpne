@@ -36,18 +36,18 @@ export default function MemberShow() {
                         <img src={owner.avatarUrl} alt={owner.name} className="size-20 rounded-md object-cover" />
                     )}
                     {isSelf && (
-                        <Link href="/m/member/avatar" className="text-xs text-blue-600 hover:underline">
+                        <Link href="/m/member/avatar" className="text-xs text-link hover:underline">
                             {t('Edit profile image')}
                         </Link>
                     )}
                 </div>
                 <h1 className="text-xl font-semibold text-foreground">{owner.name}</h1>
                 {isSelf ? (
-                    <Link href="/m/member/edit/profile" className="text-sm text-blue-600">
+                    <Link href="/m/member/edit/profile" className="text-sm text-link hover:underline">
                         {t('Edit Profile')}
                     </Link>
                 ) : (
-                    <Link href={`/m/message/sendToFriend?id=${owner.id}`} className="text-sm text-blue-600">
+                    <Link href={`/m/message/sendToFriend?id=${owner.id}`} className="text-sm text-link hover:underline">
                         {t('Send a message')}
                     </Link>
                 )}
@@ -59,13 +59,13 @@ export default function MemberShow() {
                 <dl className="divide-y divide-border">
                     {age !== null && (
                         <div className="flex gap-4 py-2 text-sm">
-                            <dt className="w-40 shrink-0 font-medium">{t('Age')}</dt>
+                            <dt className="w-40 shrink-0 font-medium text-muted-foreground">{t('Age')}</dt>
                             <dd className="text-foreground">{t(':age years old', { age })}</dd>
                         </div>
                     )}
                     {fields.map((field) => (
                         <div key={field.name} className="flex gap-4 py-2 text-sm">
-                            <dt className="w-40 shrink-0 font-medium">{field.caption}</dt>
+                            <dt className="w-40 shrink-0 font-medium text-muted-foreground">{field.caption}</dt>
                             <dd className="text-foreground">{field.value}</dd>
                         </div>
                     ))}
