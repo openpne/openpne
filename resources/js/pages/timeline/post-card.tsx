@@ -14,7 +14,7 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
     const isOwn = post.author.id === viewerId;
 
     return (
-        <li className="space-y-2 border-b border-border pb-4 text-foreground">
+        <li className="space-y-2 px-5 py-4 text-foreground">
             <div className="flex items-center justify-between text-sm">
                 <Link href={`/m/member/${post.author.id}/timeline`} className="font-medium text-link hover:underline">
                     {post.author.name}

@@ -2,6 +2,7 @@ import { Head, usePage } from '@inertiajs/react';
 import { Pagination } from '@/components/pagination';
 import { ActionLink } from '@/components/ui/action-link';
 import { FlashMessage } from '@/components/flash-message';
+import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import { TimelinePostCard } from './post-card';
@@ -31,14 +32,18 @@ export default function TimelineIndex() {
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 {posts.data.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t('No %activity% posts to show.')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('No %activity% posts to show.')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <ul className="space-y-4">
-                            {posts.data.map((post) => (
-                                <TimelinePostCard key={post.id} post={post} viewerId={viewerId} />
-                            ))}
-                        </ul>
+                        <Panel flush>
+                            <List>
+                                {posts.data.map((post) => (
+                                    <TimelinePostCard key={post.id} post={post} viewerId={viewerId} />
+                                ))}
+                            </List>
+                        </Panel>
                         <Pagination meta={posts.meta} />
                     </>
                 )}
