@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Search } from 'lucide-react';
 import { useState } from 'react';
 import { CommunityImage } from '@/components/community-image';
 import { Pagination } from '@/components/pagination';
@@ -43,8 +44,12 @@ export default function CommunitySearch() {
                     </Link>
                 </div>
 
-                <Panel>
-                    <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+                <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+                    <div className="relative min-w-[12rem] flex-1">
+                        <Search
+                            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                            aria-hidden
+                        />
                         <label htmlFor="community_keyword" className="sr-only">
                             {t('Keyword')}
                         </label>
@@ -53,27 +58,29 @@ export default function CommunitySearch() {
                             type="text"
                             value={form.keyword}
                             onChange={(e) => setForm((f) => ({ ...f, keyword: e.target.value }))}
-                            className="w-auto min-w-[12rem] flex-1"
+                            className="pl-9"
                         />
-                        <label htmlFor="community_category" className="sr-only">
-                            {t('Category')}
-                        </label>
-                        <Select
-                            id="community_category"
-                            value={form.categoryId}
-                            onChange={(e) => setForm((f) => ({ ...f, categoryId: Number(e.target.value) }))}
-                            className="w-auto"
-                        >
-                            <option value={0}>{t('All categories')}</option>
-                            {categories.map((category) => (
-                                <option key={category.id} value={category.id}>
-                                    {category.name}
-                                </option>
-                            ))}
-                        </Select>
-                        <Button type="submit">{t('Search')}</Button>
-                    </form>
-                </Panel>
+                    </div>
+                    <label htmlFor="community_category" className="sr-only">
+                        {t('Category')}
+                    </label>
+                    <Select
+                        id="community_category"
+                        value={form.categoryId}
+                        onChange={(e) => setForm((f) => ({ ...f, categoryId: Number(e.target.value) }))}
+                        className="w-auto"
+                    >
+                        <option value={0}>{t('All categories')}</option>
+                        {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                                {category.name}
+                            </option>
+                        ))}
+                    </Select>
+                    <Button type="submit" variant="outline">
+                        {t('Search')}
+                    </Button>
+                </form>
 
                 {communities.data.length === 0 ? (
                     <Panel>
