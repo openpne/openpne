@@ -52,26 +52,27 @@ export default function MemberEditProfile() {
                         </Field>
 
                         {form.fields.map((field) => (
-                            <div key={field.id} className="space-y-1.5">
-                                <ProfileFieldInput
-                                    field={field}
-                                    value={data.profile[field.id] ?? ''}
-                                    onChange={(next) => setProfile(field.id, next)}
-                                    error={(errors as Record<string, string>)[`profile.${field.id}`]}
-                                />
-                                {field.is_edit_public_flag && (
-                                    <Select
-                                        aria-label={t('Visibility')}
-                                        className="max-w-xs"
-                                        value={data.visibility[field.id]}
-                                        onChange={(e) => setVisibility(field.id, Number(e.target.value))}
-                                    >
-                                        {field.visibilityOptions.map((opt) => (
-                                            <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
-                                        ))}
-                                    </Select>
-                                )}
-                            </div>
+                            <ProfileFieldInput
+                                key={field.id}
+                                field={field}
+                                value={data.profile[field.id] ?? ''}
+                                onChange={(next) => setProfile(field.id, next)}
+                                error={(errors as Record<string, string>)[`profile.${field.id}`]}
+                                labelRight={
+                                    field.is_edit_public_flag ? (
+                                        <Select
+                                            aria-label={`${field.caption} ${t('Visibility')}`}
+                                            className="w-auto shrink-0 text-sm"
+                                            value={data.visibility[field.id]}
+                                            onChange={(e) => setVisibility(field.id, Number(e.target.value))}
+                                        >
+                                            {field.visibilityOptions.map((opt) => (
+                                                <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
+                                            ))}
+                                        </Select>
+                                    ) : undefined
+                                }
+                            />
                         ))}
 
                         <Button type="submit" loading={processing}>{t('Update')}</Button>

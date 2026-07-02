@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,8 @@ interface Props {
     value: string | string[];
     onChange: (next: string | string[]) => void;
     error?: string;
+    /** Trailing content on the caption row (the per-field visibility control). */
+    labelRight?: ReactNode;
 }
 
 // Native radio matching the Checkbox primitive's token styling (there is no separate Radio primitive).
@@ -23,7 +26,7 @@ const radioClass =
  * Option ids are strings throughout (a custom field's option id, a preset's choice key, or a
  * country/region code), so a single string comparison drives selection state.
  */
-export function ProfileFieldInput({ field, value, onChange, error }: Props) {
+export function ProfileFieldInput({ field, value, onChange, error, labelRight }: Props) {
     const t = useT();
     const id = `profile-${field.id}`;
     const scalar = typeof value === 'string' ? value : '';
@@ -39,15 +42,20 @@ export function ProfileFieldInput({ field, value, onChange, error }: Props) {
         return (
             <fieldset className="space-y-2" aria-invalid={error ? true : undefined} aria-describedby={errorId}>
                 {/* aria-required is not valid on a group/fieldset, so the required cue rides the legend's
-                    text: the visual star is decorative and the translated word is sr-only. */}
-                <legend className="text-sm font-medium text-foreground">
-                    {field.caption}
-                    {field.is_required && (
-                        <>
-                            <span aria-hidden="true" className="text-destructive"> *</span>
-                            <span className="sr-only"> {t('Required')}</span>
-                        </>
-                    )}
+                    text: the visual star is decorative and the translated word is sr-only. The legend is
+                    a flex row so the visibility control sits on the caption line (staying a direct child
+                    of the fieldset keeps the group's accessible name intact). */}
+                <legend className="flex w-full items-center justify-between gap-2 text-sm font-medium text-foreground">
+                    <span>
+                        {field.caption}
+                        {field.is_required && (
+                            <>
+                                <span aria-hidden="true" className="text-destructive"> *</span>
+                                <span className="sr-only"> {t('Required')}</span>
+                            </>
+                        )}
+                    </span>
+                    {labelRight}
                 </legend>
                 <div className="space-y-1.5">
                     {field.options.map((opt) => (
@@ -127,7 +135,7 @@ export function ProfileFieldInput({ field, value, onChange, error }: Props) {
     })();
 
     return (
-        <Field label={field.caption} htmlFor={id} required={field.is_required} help={field.info || undefined} error={error}>
+        <Field label={field.caption} htmlFor={id} required={field.is_required} help={field.info || undefined} error={error} labelRight={labelRight}>
             {control}
         </Field>
     );
