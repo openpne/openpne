@@ -1,6 +1,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
+import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
+import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary } from './types';
@@ -30,7 +32,7 @@ export default function CommunityPending() {
         <>
             <Head title={t('Pending members')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">
+                <h1 className="text-xl font-semibold text-foreground">
                     <Link href={`/m/community/${community.id}`} className="hover:underline">
                         {community.name}
                     </Link>
@@ -38,34 +40,26 @@ export default function CommunityPending() {
                     {t('Pending members')}
                 </h1>
 
-                {flash.status && <p role="status">{flash.status}</p>}
-                {flash.error && <p role="alert">{flash.error}</p>}
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 {applicants.data.length === 0 ? (
-                    <p>{t('No pending requests.')}</p>
+                    <p className="text-sm text-muted-foreground">{t('No pending requests.')}</p>
                 ) : (
                     <>
                         <ul className="space-y-2">
                             {applicants.data.map((applicant) => (
                                 <li key={applicant.id} className="flex items-center gap-3">
                                     <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} size="md" />
-                                    <Link href={`/m/member/${applicant.id}`} className="min-w-0 flex-1 truncate hover:underline">
+                                    <Link href={`/m/member/${applicant.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
                                         {applicant.name}
                                     </Link>
-                                    <button
-                                        type="button"
-                                        onClick={() => act('approve', applicant.id)}
-                                        className="min-h-9 rounded-full bg-blue-600 px-4 text-sm font-medium text-white transition hover:bg-blue-700"
-                                    >
+                                    <Button type="button" size="sm" onClick={() => act('approve', applicant.id)}>
                                         {t('Approve')}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => act('decline', applicant.id)}
-                                        className="min-h-9 rounded-full bg-slate-100 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-                                    >
+                                    </Button>
+                                    <Button type="button" size="sm" variant="secondary" onClick={() => act('decline', applicant.id)}>
                                         {t('Decline')}
-                                    </button>
+                                    </Button>
                                 </li>
                             ))}
                         </ul>

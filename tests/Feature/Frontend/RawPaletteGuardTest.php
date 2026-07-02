@@ -39,12 +39,8 @@ class RawPaletteGuardTest extends TestCase
 
     /** Screens still on raw palette. Remove each as it is tokenized. */
     private const ALLOWLIST = [
-        'pages/community/edit.tsx',
-        'pages/community/event/edit.tsx',
         'pages/community/event/show.tsx',
-        'pages/community/pending.tsx',
         'pages/community/show.tsx',
-        'pages/community/topic/edit.tsx',
         'pages/community/topic/show.tsx',
         'pages/dashboard.tsx',
     ];
