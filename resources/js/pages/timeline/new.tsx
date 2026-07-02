@@ -1,4 +1,9 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -23,9 +28,9 @@ export default function TimelineNew({
         <>
             <Head title={t('%Post_activity%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{t('%Post_activity%')}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t('%Post_activity%')}</h1>
 
-                {flash.error && <p role="alert">{flash.error}</p>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 <form
                     onSubmit={(e) => {
@@ -36,46 +41,33 @@ export default function TimelineNew({
                     }}
                     className="space-y-4"
                 >
-                    <div>
-                        <label htmlFor="timeline_body">{t('Body')}</label>
-                        <textarea
-                            id="timeline_body"
-                            value={data.body}
-                            onChange={(e) => setData('body', e.target.value)}
-                            required
-                            maxLength={140}
-                            rows={4}
-                        />
-                        {errors.body && <p role="alert">{errors.body}</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="timeline_visibility">{t('Visibility')}</label>
-                        <select
-                            id="timeline_visibility"
-                            value={data.visibility}
-                            onChange={(e) => setData('visibility', e.target.value)}
-                        >
+                    <Field label={t('Body')} htmlFor="timeline_body" error={errors.body}>
+                        <Textarea id="timeline_body" required maxLength={140} rows={4} value={data.body} onChange={(e) => setData('body', e.target.value)} />
+                    </Field>
+
+                    <Field label={t('Visibility')} htmlFor="timeline_visibility" error={errors.visibility}>
+                        <Select id="timeline_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
                             {visibilityOptions.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {t(option.label)}
                                 </option>
                             ))}
-                        </select>
-                        {errors.visibility && <p role="alert">{errors.visibility}</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="timeline_image">{t('Image')}</label>
+                        </Select>
+                    </Field>
+
+                    <Field label={t('Image')} htmlFor="timeline_image" error={errors.image}>
                         <input
                             id="timeline_image"
                             type="file"
                             accept="image/jpeg,image/png,image/gif,image/webp"
                             onChange={(e) => setData('image', e.target.files?.[0] ?? null)}
+                            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
                         />
-                        {errors.image && <p role="alert">{errors.image}</p>}
-                    </div>
-                    <button type="submit" disabled={processing}>
+                    </Field>
+
+                    <Button type="submit" loading={processing}>
                         {t('%Post_activity%')}
-                    </button>
+                    </Button>
                 </form>
             </main>
         </>

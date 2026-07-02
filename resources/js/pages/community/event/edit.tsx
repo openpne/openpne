@@ -101,11 +101,12 @@ export default function CommunityEventEdit() {
                         <fieldset className="space-y-2">
                             <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
                             <ul className="flex flex-wrap gap-3">
-                                {event.images.map((image) => (
+                                {event.images.map((image, i) => (
                                     <li key={image.id} className="space-y-1 text-center">
                                         <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
                                         <label className="flex items-center justify-center gap-1 text-sm text-foreground">
                                             <Checkbox
+                                                aria-label={`${t('Delete')} ${t('Image')} ${i + 1}`}
                                                 checked={form.data.remove_images.includes(image.id)}
                                                 onChange={(e) => toggleRemove(image.id, e.target.checked)}
                                             />
