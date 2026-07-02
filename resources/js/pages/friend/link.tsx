@@ -1,5 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { FriendMember } from './types';
@@ -28,17 +30,19 @@ export default function FriendLink() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-md space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{title}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
 
-                {flash.error && <p role="alert">{flash.error}</p>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <p>{t('Send a %friend% request to :name?', { name: target.name })}</p>
+                <p className="text-foreground">{t('Send a %friend% request to :name?', { name: target.name })}</p>
 
-                <div className="space-x-2">
-                    <button type="button" onClick={submit} disabled={submitting}>
+                <div className="flex items-center gap-3">
+                    <Button type="button" onClick={submit} loading={submitting}>
                         {t('Send request')}
-                    </button>
-                    <Link href="/m/friend/list">{t('Cancel')}</Link>
+                    </Button>
+                    <Link href="/m/friend/list" className="text-sm text-link hover:underline">
+                        {t('Cancel')}
+                    </Link>
                 </div>
             </main>
         </>

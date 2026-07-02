@@ -1,6 +1,9 @@
 import { Head, Link, router, usePage } from "@inertiajs/react";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { FlashMessage } from "@/components/flash-message";
 import { Pagination } from "@/components/pagination";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n";
 import type { PageProps } from "@/types";
 import type { PaginatedBlocks } from "./types";
@@ -14,7 +17,7 @@ export default function BlockList() {
     const { blocks, flash } = usePage<ListProps>().props;
     const [memberId, setMemberId] = useState("");
 
-    function add(e: React.FormEvent) {
+    function add(e: FormEvent) {
         e.preventDefault();
         if (memberId === "") {
             return;
@@ -26,26 +29,27 @@ export default function BlockList() {
         <>
             <Head title={t("Blocked members")} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                {flash.status && <p role="status">{flash.status}</p>}
-                {flash.error && <p role="alert">{flash.error}</p>}
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 <section className="space-y-2">
-                    <h1 className="text-2xl font-semibold">
+                    <h1 className="text-xl font-semibold text-foreground">
                         {t("Block a member")}
                     </h1>
                     <form onSubmit={add} className="flex items-center gap-2">
-                        <label htmlFor="block_member_id">
+                        <label htmlFor="block_member_id" className="text-sm font-medium text-foreground">
                             {t("Member ID")}
                         </label>
-                        <input
+                        <Input
                             id="block_member_id"
                             type="number"
                             min="1"
                             required
+                            className="w-32"
                             value={memberId}
                             onChange={(e) => setMemberId(e.target.value)}
                         />
-                        <button type="submit">{t("Block")}</button>
+                        <Button type="submit">{t("Block")}</Button>
                     </form>
                     <p className="text-sm text-muted-foreground">
                         {t(
@@ -55,23 +59,23 @@ export default function BlockList() {
                 </section>
 
                 <section className="space-y-2">
-                    <h2 className="text-lg font-semibold">
+                    <h2 className="text-lg font-semibold text-foreground">
                         {t("Blocked members")}
                     </h2>
                     {blocks.data.length === 0 ? (
-                        <p>{t("No blocked members.")}</p>
+                        <p className="text-sm text-muted-foreground">{t("No blocked members.")}</p>
                     ) : (
                         <>
                             <ul className="space-y-2">
                                 {blocks.data.map((blocked) => (
                                     <li
                                         key={blocked.id}
-                                        className="flex items-center justify-between"
+                                        className="flex items-center justify-between gap-3"
                                     >
-                                        <span>{blocked.name}</span>
+                                        <span className="min-w-0 truncate text-foreground">{blocked.name}</span>
                                         <Link
                                             href={`/m/block/remove/${blocked.id}`}
-                                            className="text-sm text-muted-foreground hover:underline"
+                                            className="shrink-0 text-sm text-muted-foreground hover:text-foreground hover:underline"
                                         >
                                             {t("Unblock")}
                                         </Link>
