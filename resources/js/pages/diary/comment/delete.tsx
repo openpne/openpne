@@ -1,4 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { DiaryComment } from '../types';
@@ -17,25 +18,27 @@ export default function DiaryCommentDelete() {
         <>
             <Head title={t('Delete the comment')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{t('Delete the comment')}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t('Delete the comment')}</h1>
 
-                <p>{t('Do you really want to delete this comment?')}</p>
-                <blockquote className="whitespace-pre-wrap border-l-2 pl-3 text-muted-foreground">
+                <p className="text-foreground">{t('Do you really want to delete this comment?')}</p>
+                <blockquote className="whitespace-pre-wrap border-l-2 border-border pl-3 text-muted-foreground">
                     {comment.body}
                 </blockquote>
 
-                <div className="flex gap-4">
+                <div className="flex items-center gap-4">
                     <form
                         onSubmit={(e) => {
                             e.preventDefault();
                             post(`/m/diary/comment/delete/${comment.id}`);
                         }}
                     >
-                        <button type="submit" disabled={processing}>
+                        <Button type="submit" variant="destructive" loading={processing}>
                             {t('Delete')}
-                        </button>
+                        </Button>
                     </form>
-                    <Link href={`/m/diary/${diaryId}`}>{t('Cancel')}</Link>
+                    <Link href={`/m/diary/${diaryId}`} className="text-sm text-link hover:underline">
+                        {t('Cancel')}
+                    </Link>
                 </div>
             </main>
         </>
