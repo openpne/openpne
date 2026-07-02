@@ -1,6 +1,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { FlashMessage } from '@/components/flash-message';
+import { ActionLink } from '@/components/ui/action-link';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, MessageDetail, MessageImage } from './types';
@@ -34,7 +36,7 @@ function ImageGrid({ images }: { images: MessageImage[] }) {
             {images.map((image) => (
                 <li key={image.id}>
                     <a href={image.url} target="_blank" rel="noopener noreferrer">
-                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded object-cover" />
+                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
                     </a>
                 </li>
             ))}
@@ -63,11 +65,11 @@ export default function MessageShow() {
         <>
             <Head title={message.subject || t('(No subject)')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                {flash.status && <p role="status">{flash.status}</p>}
-                {flash.error && <p role="alert">{flash.error}</p>}
+                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 <p className="text-sm">
-                    <Link href={box.path} className="text-muted-foreground hover:underline">
+                    <Link href={box.path} className="text-muted-foreground hover:text-foreground hover:underline">
                         &larr; {t(box.label)}
                     </Link>
                 </p>
@@ -75,14 +77,14 @@ export default function MessageShow() {
                 {(message.previousId !== null || message.nextId !== null) && (
                     <nav className="flex justify-between text-sm" aria-label={t('Message navigation')}>
                         {message.previousId !== null ? (
-                            <Link href={showPath(message.previousId)} className="hover:underline">
+                            <Link href={showPath(message.previousId)} className="text-link hover:underline">
                                 {t('Previous')}
                             </Link>
                         ) : (
                             <span />
                         )}
                         {message.nextId !== null ? (
-                            <Link href={showPath(message.nextId)} className="hover:underline">
+                            <Link href={showPath(message.nextId)} className="text-link hover:underline">
                                 {t('Next')}
                             </Link>
                         ) : (
@@ -91,8 +93,8 @@ export default function MessageShow() {
                     </nav>
                 )}
 
-                <article className="space-y-3">
-                    <h1 className="text-2xl font-semibold">{message.subject}</h1>
+                <article className="space-y-3 text-foreground">
+                    <h1 className="text-xl font-semibold">{message.subject}</h1>
 
                     <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
                         <dt className="font-medium text-muted-foreground">{counterpartyHeading}</dt>
@@ -104,7 +106,7 @@ export default function MessageShow() {
                                     {message.counterparties.map((m) => (
                                         <li key={m.id} className="flex items-center gap-1">
                                             <Avatar id={m.id} name={m.name} src={m.imageUrl} size="sm" />
-                                            <Link href={`/m/member/${m.id}`} className="hover:underline">
+                                            <Link href={`/m/member/${m.id}`} className="text-link hover:underline">
                                                 {m.name}
                                             </Link>
                                         </li>
@@ -120,31 +122,24 @@ export default function MessageShow() {
 
                     <div className="whitespace-pre-wrap break-words">{message.body}</div>
 
-                    <div className="flex flex-wrap items-center gap-3 pt-2">
-                        {canReply && (
-                            <Link
-                                href={`/m/message/reply/${message.id}`}
-                                className="inline-block min-h-11 rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
-                            >
-                                {t('Reply')}
-                            </Link>
-                        )}
+                    <div className="flex flex-wrap items-center gap-4 pt-2">
+                        {canReply && <ActionLink href={`/m/message/reply/${message.id}`}>{t('Reply')}</ActionLink>}
                         {message.box === 'receive' && (
-                            <button type="button" onClick={() => trash(`/m/message/deleteReceiveMessage/${message.id}`)} className="text-sm text-red-600 hover:underline">
+                            <button type="button" onClick={() => trash(`/m/message/deleteReceiveMessage/${message.id}`)} className="rounded-md text-sm text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
                                 {t('Delete')}
                             </button>
                         )}
                         {message.box === 'sent' && (
-                            <button type="button" onClick={() => trash(`/m/message/deleteSendMessage/${message.id}`)} className="text-sm text-red-600 hover:underline">
+                            <button type="button" onClick={() => trash(`/m/message/deleteSendMessage/${message.id}`)} className="rounded-md text-sm text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
                                 {t('Delete')}
                             </button>
                         )}
                         {message.box === 'trash' && (
                             <>
-                                <button type="button" onClick={() => trash(`/m/message/restore/${message.id}`)} className="text-sm hover:underline">
+                                <button type="button" onClick={() => trash(`/m/message/restore/${message.id}`)} className="rounded-md text-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
                                     {t('Restore')}
                                 </button>
-                                <button type="button" onClick={purge} className="text-sm text-red-600 hover:underline">
+                                <button type="button" onClick={purge} className="rounded-md text-sm text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
                                     {t('Delete permanently')}
                                 </button>
                             </>
