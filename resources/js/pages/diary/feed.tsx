@@ -1,9 +1,10 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Search } from 'lucide-react';
 import { type FormEvent } from 'react';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { PaginatedDiaries } from './types';
@@ -39,47 +40,61 @@ export default function DiaryFeed() {
                 <h1 className="text-xl font-semibold text-foreground">{title}</h1>
 
                 {searchable && (
-                    <form onSubmit={submit} className="flex gap-2">
-                        <label htmlFor="diary_search_keyword" className="sr-only">
-                            {t('Keyword')}
-                        </label>
-                        <div className="flex-1">
+                    <form onSubmit={submit}>
+                        <div className="relative">
+                            <label htmlFor="diary_search_keyword" className="sr-only">
+                                {t('Keyword')}
+                            </label>
                             <Input
                                 id="diary_search_keyword"
-                                type="text"
+                                type="search"
+                                enterKeyHint="search"
+                                placeholder={t('Search by keyword')}
                                 value={form.data.keyword}
                                 onChange={(e) => form.setData('keyword', e.target.value)}
+                                className="rounded-full pr-11 pl-5"
                             />
+                            <button
+                                type="submit"
+                                aria-label={t('Search')}
+                                className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                                <Search className="size-4" aria-hidden />
+                            </button>
                         </div>
-                        <Button type="submit" loading={form.processing}>
-                            {t('Search')}
-                        </Button>
                     </form>
                 )}
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
                 {diaries.data.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t('No %diary% entries to show.')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('No %diary% entries to show.')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <ul className="space-y-2">
-                            {diaries.data.map((entry) => (
-                                <li key={entry.id} className="flex items-center justify-between gap-3">
-                                    <Link href={`/m/diary/${entry.id}`} className="truncate text-foreground hover:underline">
-                                        {entry.title}
-                                        {entry.hasImages && (
-                                            <span className="imageIcon" title={t('This entry has photos')} aria-label={t('This entry has photos')}>
-                                                {' '}📷
-                                            </span>
-                                        )}
-                                    </Link>
-                                    <span className="text-sm text-muted-foreground">
-                                        {entry.author.name} &mdash; {new Date(entry.createdAt).toLocaleDateString()}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
+                        <Panel flush>
+                            <List>
+                                {diaries.data.map((entry) => (
+                                    <ListRow key={entry.id} href={`/m/diary/${entry.id}`} chevron>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate font-medium text-foreground">
+                                                {entry.title}
+                                                {entry.hasImages && (
+                                                    <span title={t('This entry has photos')} aria-label={t('This entry has photos')}>
+                                                        {' '}
+                                                        📷
+                                                    </span>
+                                                )}
+                                            </p>
+                                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                                {entry.author.name} &mdash; {new Date(entry.createdAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                    </ListRow>
+                                ))}
+                            </List>
+                        </Panel>
                         <Pagination meta={diaries.meta} />
                     </>
                 )}

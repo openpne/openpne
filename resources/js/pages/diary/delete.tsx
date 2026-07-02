@@ -1,6 +1,7 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
+import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { DiarySummary } from './types';
@@ -20,23 +21,25 @@ export default function DiaryDelete() {
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <h1 className="text-xl font-semibold text-foreground">{t('Delete %diary%')}</h1>
 
-                <p className="text-foreground">{t('Delete ":title"?', { title: diary.title })}</p>
+                <Panel bodyClassName="space-y-4">
+                    <p className="text-foreground">{t('Delete ":title"?', { title: diary.title })}</p>
 
-                <div className="flex items-center gap-4">
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            post(`/m/diary/delete/${diary.id}`);
-                        }}
-                    >
-                        <Button type="submit" variant="destructive" loading={processing}>
-                            {t('Delete')}
-                        </Button>
-                    </form>
-                    <Link href={`/m/diary/${diary.id}`} className="text-sm text-link hover:underline">
-                        {t('Cancel')}
-                    </Link>
-                </div>
+                    <div className="flex items-center gap-4">
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                post(`/m/diary/delete/${diary.id}`);
+                            }}
+                        >
+                            <Button type="submit" variant="destructive" loading={processing}>
+                                {t('Delete')}
+                            </Button>
+                        </form>
+                        <Link href={`/m/diary/${diary.id}`} className="text-sm text-link hover:underline">
+                            {t('Cancel')}
+                        </Link>
+                    </div>
+                </Panel>
             </main>
         </>
     );

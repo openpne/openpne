@@ -3,6 +3,7 @@ import { type FormEvent } from 'react';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -57,31 +58,32 @@ export default function DiaryShow() {
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <p className="text-sm text-muted-foreground">
-                    {diary.author.name} &mdash; {new Date(diary.createdAt).toLocaleString()}
-                </p>
+                <Panel bodyClassName="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        {diary.author.name} &mdash; {new Date(diary.createdAt).toLocaleString()}
+                    </p>
 
-                <div className="whitespace-pre-wrap break-words">{diary.body}</div>
+                    <div className="whitespace-pre-wrap break-words">{diary.body}</div>
 
-                <ImageGrid images={diary.images} size="size-28" />
+                    <ImageGrid images={diary.images} size="size-28" />
 
-                {isOwner && (
-                    <div className="flex gap-4 text-sm">
-                        <Link href={`/m/diary/edit/${diary.id}`} className="text-link hover:underline">
-                            {t('Edit')}
-                        </Link>
-                        <Link href={`/m/diary/deleteConfirm/${diary.id}`} className="text-link hover:underline">
-                            {t('Delete')}
-                        </Link>
-                    </div>
-                )}
+                    {isOwner && (
+                        <div className="flex gap-4 text-sm">
+                            <Link href={`/m/diary/edit/${diary.id}`} className="text-link hover:underline">
+                                {t('Edit')}
+                            </Link>
+                            <Link href={`/m/diary/deleteConfirm/${diary.id}`} className="text-link hover:underline">
+                                {t('Delete')}
+                            </Link>
+                        </div>
+                    )}
+                </Panel>
 
                 {comments.length > 0 && (
-                    <section className="space-y-3">
-                        <h2 className="text-lg font-semibold">{t('Comments')}</h2>
-                        <ul className="space-y-3">
+                    <Panel title={t('Comments')} flush>
+                        <List>
                             {comments.map((comment) => (
-                                <li key={comment.id} className="border-t border-border pt-3">
+                                <li key={comment.id} className="space-y-2 px-5 py-4">
                                     <p className="text-sm text-muted-foreground">
                                         <strong>{comment.number}</strong>:{' '}
                                         {comment.author ? (
@@ -105,32 +107,33 @@ export default function DiaryShow() {
                                     <ImageGrid images={comment.images} size="size-20" />
                                 </li>
                             ))}
-                        </ul>
-                    </section>
+                        </List>
+                    </Panel>
                 )}
 
-                <form onSubmit={submitComment} className="space-y-3">
-                    <h2 className="text-lg font-semibold">{t('Post a comment')}</h2>
-                    {diary.visibility === 'open' && (
-                        <p className="text-sm text-muted-foreground">{t('Your comment is visible to everyone on the web.')}</p>
-                    )}
-                    <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
-                        <Textarea id="comment_body" required rows={8} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
-                    </Field>
-                    <Field label={t('Images')} htmlFor="comment_images" error={form.errors.images}>
-                        <input
-                            id="comment_images"
-                            type="file"
-                            accept="image/jpeg,image/png,image/gif,image/webp"
-                            multiple
-                            onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
-                            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
-                        />
-                    </Field>
-                    <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
-                        {t('Save')}
-                    </Button>
-                </form>
+                <Panel title={t('Post a comment')}>
+                    <form onSubmit={submitComment} className="space-y-3">
+                        {diary.visibility === 'open' && (
+                            <p className="text-sm text-muted-foreground">{t('Your comment is visible to everyone on the web.')}</p>
+                        )}
+                        <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
+                            <Textarea id="comment_body" required rows={8} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
+                        </Field>
+                        <Field label={t('Images')} htmlFor="comment_images" error={form.errors.images}>
+                            <input
+                                id="comment_images"
+                                type="file"
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                multiple
+                                onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
+                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
+                            />
+                        </Field>
+                        <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
+                            {t('Save')}
+                        </Button>
+                    </form>
+                </Panel>
             </main>
         </>
     );
