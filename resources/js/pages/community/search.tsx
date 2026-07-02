@@ -55,7 +55,7 @@ export default function CommunitySearch() {
                             placeholder={t('Search by %community% name')}
                             value={form.keyword}
                             onChange={(e) => setForm((f) => ({ ...f, keyword: e.target.value }))}
-                            className="rounded-full pr-11"
+                            className="rounded-full pr-11 pl-5"
                         />
                         <button
                             type="submit"
@@ -72,7 +72,7 @@ export default function CommunitySearch() {
                         id="community_category"
                         value={form.categoryId}
                         onChange={(e) => setForm((f) => ({ ...f, categoryId: Number(e.target.value) }))}
-                        className="w-auto rounded-full"
+                        className="w-auto rounded-full pl-5"
                     >
                         <option value={0}>{t('All categories')}</option>
                         {categories.map((category) => (
