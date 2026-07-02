@@ -6,6 +6,7 @@ use App\Features\Diary\DiaryVisibility;
 use App\Features\Profile\AgeVisibility;
 use App\Models\Member;
 use App\Support\Surface;
+use App\Support\SurfaceResolver;
 use App\Support\Visibility;
 
 /**
@@ -19,7 +20,7 @@ class MemberConfigSerializer
     /** @return array<string, mixed> */
     public static function form(Member $member, Surface $currentSurface): array
     {
-        return [
+        $form = [
             'diary' => [
                 'value' => (string) DiaryVisibility::defaultFor($member)->value,
                 'options' => array_map(
@@ -44,13 +45,21 @@ class MemberConfigSerializer
                     ['value' => 'en', 'label' => 'English'],
                 ],
             ],
-            'surface' => [
+        ];
+
+        // The Classic/Modern picker is meaningful only where Classic is served; under modern_only it is
+        // omitted so a member is never offered a surface they cannot get. The client hides the section
+        // when this key is absent.
+        if (SurfaceResolver::classicAvailable()) {
+            $form['surface'] = [
                 'value' => $currentSurface->value,
                 'options' => [
                     ['value' => Surface::Classic->value, 'label' => Surface::Classic->label(), 'description' => Surface::Classic->description()],
                     ['value' => Surface::Modern->value, 'label' => Surface::Modern->label(), 'description' => Surface::Modern->description()],
                 ],
-            ],
-        ];
+            ];
+        }
+
+        return $form;
     }
 }

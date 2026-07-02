@@ -278,6 +278,11 @@ class MemberConfigController extends Controller
 
     public function updateSurface(UpdatePreferredSurfaceRequest $request): Response
     {
+        // Hard gate, not just a hidden picker: under modern_only a crafted POST could otherwise write a
+        // latent preferred_surface=classic row that would fire if the site later switches to a coexistence
+        // mode. Classic is unavailable, so there is no surface to pin.
+        abort_unless(SurfaceResolver::classicAvailable(), 403);
+
         $chosen = Surface::from($request->validated('preferred_surface'));
         $viewer = $this->viewer();
 
