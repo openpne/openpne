@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
+import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { FriendMember } from './types';
@@ -30,16 +31,18 @@ export default function FriendUnlink() {
 
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <p className="text-foreground">{t('Remove :name from your %friends%?', { name: target.name })}</p>
+                <Panel bodyClassName="space-y-4">
+                    <p className="text-foreground">{t('Remove :name from your %friends%?', { name: target.name })}</p>
 
-                <div className="flex items-center gap-3">
-                    <Button type="button" variant="destructive" onClick={submit} loading={submitting}>
-                        {title}
-                    </Button>
-                    <Link href="/m/friend/list" className="text-sm text-link hover:underline">
-                        {t('Cancel')}
-                    </Link>
-                </div>
+                    <div className="flex items-center gap-3">
+                        <Button type="button" variant="destructive" onClick={submit} loading={submitting}>
+                            {title}
+                        </Button>
+                        <Link href="/m/friend/list" className="text-sm text-link hover:underline">
+                            {t('Cancel')}
+                        </Link>
+                    </div>
+                </Panel>
             </main>
         </>
     );
