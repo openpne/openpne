@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { FriendMember, PaginatedFriends } from './types';
@@ -26,24 +27,28 @@ export default function FriendList() {
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 {friends.data.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t('No %friends% to show.')}</p>
+                    <Panel>
+                        <p className="text-sm text-muted-foreground">{t('No %friends% to show.')}</p>
+                    </Panel>
                 ) : (
                     <>
-                        <ul className="space-y-2">
-                            {friends.data.map((friend) => (
-                                <li key={friend.id} className="flex items-center justify-between gap-3">
-                                    <span className="min-w-0 truncate text-foreground">{friend.name}</span>
-                                    {isOwner && (
-                                        <Link
-                                            href={`/m/friend/unlink/${friend.id}`}
-                                            className="shrink-0 text-sm text-muted-foreground hover:text-foreground hover:underline"
-                                        >
-                                            {t('Remove %friend%')}
-                                        </Link>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
+                        <Panel flush>
+                            <List>
+                                {friends.data.map((friend) => (
+                                    <ListRow key={friend.id}>
+                                        <span className="min-w-0 flex-1 truncate text-foreground">{friend.name}</span>
+                                        {isOwner && (
+                                            <Link
+                                                href={`/m/friend/unlink/${friend.id}`}
+                                                className="shrink-0 text-sm text-muted-foreground hover:text-foreground hover:underline"
+                                            >
+                                                {t('Remove %friend%')}
+                                            </Link>
+                                        )}
+                                    </ListRow>
+                                ))}
+                            </List>
+                        </Panel>
                         <Pagination meta={friends.meta} />
                     </>
                 )}
