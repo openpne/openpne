@@ -41,8 +41,8 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
                             className={
                                 'flex min-h-11 items-center gap-3 rounded-full px-3 text-base transition ' +
                                 (active
-                                    ? 'bg-slate-100 font-semibold text-slate-900 dark:bg-slate-800 dark:text-slate-100'
-                                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800')
+                                    ? 'bg-accent font-semibold text-foreground'
+                                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground')
                             }
                         >
                             <Icon className="size-5 shrink-0" strokeWidth={active ? 2.25 : 2} />

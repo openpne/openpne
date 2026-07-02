@@ -21,14 +21,14 @@ export function SheetContent({
             <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
             <DialogPrimitive.Content
                 className={cn(
-                    'fixed inset-y-0 left-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-white p-4 shadow-xl outline-none dark:bg-slate-900',
+                    'fixed inset-y-0 left-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 shadow-xl outline-none',
                     className,
                 )}
                 {...props}
             >
                 {children}
                 <DialogPrimitive.Close
-                    className="absolute right-3 top-3 rounded-full p-1 text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                    className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground transition hover:bg-accent"
                     aria-label={closeLabel}
                 >
                     <X className="size-5" />
