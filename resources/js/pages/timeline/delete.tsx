@@ -1,4 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { TimelinePostEntry } from './types';
@@ -16,22 +17,24 @@ export default function TimelineDelete() {
         <>
             <Head title={t('Delete post')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{t('Delete post')}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t('Delete post')}</h1>
 
-                <p>{t('Delete this post?')}</p>
+                <p className="text-foreground">{t('Delete this post?')}</p>
 
-                <div className="flex gap-4">
+                <div className="flex items-center gap-4">
                     <form
                         onSubmit={(e) => {
                             e.preventDefault();
                             post(`/m/timeline/delete/${timelinePost.id}`);
                         }}
                     >
-                        <button type="submit" disabled={processing}>
+                        <Button type="submit" variant="destructive" loading={processing}>
                             {t('Delete')}
-                        </button>
+                        </Button>
                     </form>
-                    <Link href={`/m/timeline/${timelinePost.id}`}>{t('Cancel')}</Link>
+                    <Link href={`/m/timeline/${timelinePost.id}`} className="text-sm text-link hover:underline">
+                        {t('Cancel')}
+                    </Link>
                 </div>
             </main>
         </>
