@@ -1,4 +1,10 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
+import { FlashMessage } from '@/components/flash-message';
+import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -24,9 +30,9 @@ export default function DiaryNew({
         <>
             <Head title={t('Write a %diary%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{t('Write a %diary%')}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
 
-                {flash.error && <p role="alert">{flash.error}</p>}
+                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 <form
                     onSubmit={(e) => {
@@ -37,57 +43,38 @@ export default function DiaryNew({
                     }}
                     className="space-y-4"
                 >
-                    <div>
-                        <label htmlFor="diary_title">{t('Title')}</label>
-                        <input
-                            id="diary_title"
-                            type="text"
-                            value={data.title}
-                            onChange={(e) => setData('title', e.target.value)}
-                            required
-                        />
-                        {errors.title && <p role="alert">{errors.title}</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="diary_body">{t('Body')}</label>
-                        <textarea
-                            id="diary_body"
-                            value={data.body}
-                            onChange={(e) => setData('body', e.target.value)}
-                            required
-                            rows={10}
-                        />
-                        {errors.body && <p role="alert">{errors.body}</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="diary_visibility">{t('Visibility')}</label>
-                        <select
-                            id="diary_visibility"
-                            value={data.visibility}
-                            onChange={(e) => setData('visibility', e.target.value)}
-                        >
+                    <Field label={t('Title')} htmlFor="diary_title" error={errors.title}>
+                        <Input id="diary_title" type="text" required value={data.title} onChange={(e) => setData('title', e.target.value)} />
+                    </Field>
+
+                    <Field label={t('Body')} htmlFor="diary_body" error={errors.body}>
+                        <Textarea id="diary_body" required rows={10} value={data.body} onChange={(e) => setData('body', e.target.value)} />
+                    </Field>
+
+                    <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
+                        <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
                             {visibilityOptions.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {t(option.label)}
                                 </option>
                             ))}
-                        </select>
-                        {errors.visibility && <p role="alert">{errors.visibility}</p>}
-                    </div>
-                    <div>
-                        <label htmlFor="diary_images">{t('Images')}</label>
+                        </Select>
+                    </Field>
+
+                    <Field label={t('Images')} htmlFor="diary_images" error={errors.images}>
                         <input
                             id="diary_images"
                             type="file"
                             accept="image/jpeg,image/png,image/gif,image/webp"
                             multiple
                             onChange={(e) => setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
+                            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
                         />
-                        {errors.images && <p role="alert">{errors.images}</p>}
-                    </div>
-                    <button type="submit" disabled={processing}>
+                    </Field>
+
+                    <Button type="submit" loading={processing}>
                         {t('Post')}
-                    </button>
+                    </Button>
                 </form>
             </main>
         </>
