@@ -106,7 +106,7 @@ class MemberConfigTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('member/config')
-                ->where('form.surface.value', 'classic') // preselected to the current surface (tenant default)
+                ->where('form.surface.value', 'classic') // preselected to the current surface (mode default)
                 ->where('form.surface.options', fn ($options) => count($options) === 2) // binary: no "default" option
                 ->has('form.diary.options')
                 ->where('form.age.value', '3') // default Private
@@ -230,7 +230,7 @@ class MemberConfigTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        // Default tenant surface is Classic; choosing Modern flips a canonical feature route to Modern.
+        // Default surface is Classic; choosing Modern flips a canonical feature route to Modern.
         $this->actingAs($member)->post('/member/config/surface', ['preferred_surface' => 'modern']);
         $this->assertDatabaseHas('member_preferences', [
             'member_id' => $member->id, 'key' => 'preferred_surface', 'value' => 'modern',
@@ -259,12 +259,12 @@ class MemberConfigTest extends TestCase
         ]);
     }
 
-    public function test_modern_only_tenant_shows_modern_and_does_not_false_pin(): void
+    public function test_modern_only_shows_modern_and_does_not_false_pin(): void
     {
-        // The "current surface" must honour the modern_only hard gate, not just the tenant default.
-        // Otherwise an unset member on a modern_only tenant (default Classic) sees Modern, but the
-        // form would call the current surface Classic and selecting Modern would wrongly pin them.
-        config(['openpne.tenant_mode' => 'modern_only', 'openpne.tenant_default_surface' => 'classic']);
+        // The "current surface" must honour the modern_only hard gate, not just the mode's default.
+        // Otherwise an unset member on a modern_only install sees Modern, but the form would call the
+        // current surface Classic and selecting Modern would wrongly pin them.
+        config(['openpne.surface_mode' => 'modern_only']);
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/m/member/config')
@@ -282,7 +282,7 @@ class MemberConfigTest extends TestCase
         // Binary UI has no "follow default" option; instead, saving the surface the member is already
         // on never pins them, so the operator can still move unset members later. Default is Modern
         // here; an unset member saving Modern stays unset and keeps following the default.
-        config(['openpne.tenant_default_surface' => 'modern']);
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/member/config/surface', ['preferred_surface' => 'modern']);

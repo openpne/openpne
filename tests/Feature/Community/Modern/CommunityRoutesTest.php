@@ -126,7 +126,7 @@ class CommunityRoutesTest extends TestCase
     public function test_modern_only_serves_inertia_on_the_canonical_show_route(): void
     {
         // With no /m opt-in, modern_only still resolves the canonical community route to Modern.
-        config()->set('openpne.tenant_mode', 'modern_only');
+        config()->set('openpne.surface_mode', 'modern_only');
         $member = Member::factory()->create();
         $community = Community::factory()->create();
 

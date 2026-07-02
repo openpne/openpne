@@ -187,7 +187,7 @@ class MessageRoutesTest extends TestCase
 
     public function test_modern_only_serves_the_canonical_message_boxes_as_inertia(): void
     {
-        config()->set('openpne.tenant_mode', 'modern_only');
+        config()->set('openpne.surface_mode', 'modern_only');
         $member = Member::factory()->create();
 
         $this->actingAs($member)

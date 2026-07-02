@@ -65,7 +65,7 @@ class AvatarRoutesTest extends TestCase
 
     public function test_canonical_editor_renders_inertia_under_modern_only(): void
     {
-        config()->set('openpne.tenant_mode', 'modern_only');
+        config()->set('openpne.surface_mode', 'modern_only');
 
         $this->actingAs(Member::factory()->create())
             ->get(route('member.avatar.edit'))

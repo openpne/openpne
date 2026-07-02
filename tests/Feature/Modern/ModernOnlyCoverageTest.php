@@ -15,9 +15,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * modern_only contract guard: a member browsing a Modern-only tenant must never land on a Classic
+ * modern_only contract guard: a member browsing a Modern-only install must never land on a Classic
  * Blade page. Each member-facing canonical GET below is asserted to render Inertia under
- * tenant_mode=modern_only.
+ * surface_mode=modern_only.
  *
  * KNOWN_LEAKS are the canonical GETs that still fall back to Classic — the OpenPNE 3 delete/join/quit
  * confirm pages (Modern confirms inline instead) plus the email-change confirm. Each is Modernized or
@@ -56,7 +56,7 @@ class ModernOnlyCoverageTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config()->set('openpne.tenant_mode', 'modern_only');
+        config()->set('openpne.surface_mode', 'modern_only');
     }
 
     /**

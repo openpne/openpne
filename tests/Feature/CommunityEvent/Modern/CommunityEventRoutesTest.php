@@ -256,7 +256,7 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_only_serves_the_canonical_event_board_as_inertia(): void
     {
-        config()->set('openpne.tenant_mode', 'modern_only');
+        config()->set('openpne.surface_mode', 'modern_only');
         $community = Community::factory()->create();
         $member = $this->joined($community);
 

@@ -37,12 +37,15 @@ change when the surface does.
 ## Response selection
 
 `SurfaceResolver::resolve()` chooses Classic or Modern for a canonical route in
-priority order: the feature's `modern_status` → an explicit `/m/*` route → a
-per-install `modern_only` mode → a member's durable surface choice → a per-member
-session override → the per-install default surface. The full chain is documented in
-[feature-modules.md](feature-modules.md#surface-selection); absent a member choice
-the effective behavior is that a canonical route renders Classic and `/m/*` renders
-Modern.
+priority order: the feature's `modern_status` → an explicit `/m/*` route → the
+install's [`surface_mode`](../../app/Support/SurfaceMode.php) when `modern_only` → a
+member's durable surface choice → a per-member session override → the `surface_mode`
+default surface. The full chain is documented in
+[feature-modules.md](feature-modules.md#surface-selection). `surface_mode` is
+DB-authoritative (`SnsSettingKey::SurfaceMode`, config as the absent-row fallback): a
+fresh install resolves to the config default, and the OpenPNE 3 → 4 upgrade writes a
+`classic_default` row so a migrated site keeps its Classic look. Under `classic_default`,
+absent a member choice a canonical route renders Classic and its `/m/*` sibling renders Modern.
 
 The root (`/`) is the canonical OpenPNE 3 `member/home`: the same resolver renders the
 Classic home or redirects to the Modern dashboard, and it is where login and registration

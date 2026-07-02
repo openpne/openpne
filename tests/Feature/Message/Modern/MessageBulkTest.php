@@ -102,7 +102,7 @@ class MessageBulkTest extends TestCase
 
     public function test_modern_only_canonical_bulk_purge_without_confirm_does_not_render_a_blade(): void
     {
-        config()->set('openpne.tenant_mode', 'modern_only');
+        config()->set('openpne.surface_mode', 'modern_only');
         [$sender, $recipient] = Member::factory()->count(2)->create();
         [$message, $receipt] = $this->delivered($sender, $recipient, ['recipient_deleted_at' => now()]);
 

@@ -44,19 +44,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Surface (Classic / Modern) selection
+    | Surface mode (Classic / Modern)
     |--------------------------------------------------------------------------
     |
-    | Read by App\Support\SurfaceResolver. 'tenant_mode' = 'modern_only' forces
-    | every canonical route to Modern; 'mixed' (the default) serves Classic on a
-    | canonical route and Modern under /m/*. 'tenant_default_surface' picks which
-    | a canonical route renders in 'mixed' mode, and which surface the root (/)
-    | landing uses. See docs/internals/classic-compatibility.md.
+    | How this install serves the two surfaces (App\Support\SurfaceMode), read via
+    | App\Support\SurfaceResolver:
+    |
+    |   modern_only     Modern only; the Classic surface and its admin / member
+    |                   settings are hidden.
+    |   classic_default Classic and Modern coexist; an undecided viewer (and the
+    |                   root landing) gets Classic — the OpenPNE 3 -> 4 default.
+    |   modern_default  Classic and Modern coexist; an undecided viewer gets Modern.
+    |
+    | This value is only the ABSENT-ROW fallback: sns_settings is the authoritative
+    | store (SnsSettingKey::SurfaceMode), not a competing env tier. A fresh install
+    | has no row and resolves to this; the OpenPNE 3 -> 4 upgrade writes a
+    | classic_default row so a migrated site keeps its Classic look. Change a live
+    | site with `php artisan openpne:surface-mode`. See
+    | docs/internals/classic-compatibility.md.
     |
     */
 
-    'tenant_mode' => env('OPENPNE_TENANT_MODE', 'mixed'), // mixed | modern_only
-    'tenant_default_surface' => env('OPENPNE_TENANT_DEFAULT_SURFACE', 'classic'), // classic | modern
+    'surface_mode' => env('OPENPNE_SURFACE_MODE', 'classic_default'), // modern_only | classic_default | modern_default
 
     /*
     |--------------------------------------------------------------------------

@@ -13,8 +13,8 @@ class AuthenticationTest extends TestCase
 
     public function test_login_screen_renders_the_classic_surface_by_default(): void
     {
-        // tenant_default_surface is 'classic', so a guest gets the OpenPNE 3 Blade shell with the
-        // page_member_login body id and the pre-login insecure_page class.
+        // surface_mode is classic_default in the test env, so a guest gets the OpenPNE 3 Blade shell
+        // with the page_member_login body id and the pre-login insecure_page class.
         $response = $this->get('/login');
 
         $response->assertStatus(200);
@@ -25,7 +25,7 @@ class AuthenticationTest extends TestCase
 
     public function test_login_screen_renders_the_modern_surface_when_selected(): void
     {
-        config()->set('openpne.tenant_default_surface', 'modern');
+        config()->set('openpne.surface_mode', 'modern_default');
 
         $this->get('/login')
             ->assertStatus(200)

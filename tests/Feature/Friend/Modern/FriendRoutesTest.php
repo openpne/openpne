@@ -17,8 +17,7 @@ class FriendRoutesTest extends TestCase
         parent::setUp();
         config([
             'features.friend.modern_status' => 'native',
-            'openpne.tenant_mode' => 'mixed',
-            'openpne.tenant_default_surface' => 'classic',
+            'openpne.surface_mode' => 'classic_default',
         ]);
     }
 
@@ -318,9 +317,9 @@ class FriendRoutesTest extends TestCase
         $response->assertSee('id="page_friend_list"', false);
     }
 
-    public function test_canonical_friend_list_returns_modern_when_tenant_default_is_modern(): void
+    public function test_canonical_friend_list_returns_modern_when_surface_mode_is_modern_default(): void
     {
-        config(['openpne.tenant_default_surface' => 'modern']);
+        config(['openpne.surface_mode' => 'modern_default']);
         $alice = Member::factory()->create();
 
         $response = $this->actingAs($alice)->get('/friend/list');
@@ -329,9 +328,9 @@ class FriendRoutesTest extends TestCase
         $response->assertInertia(fn (AssertableInertia $page) => $page->component('friend/list'));
     }
 
-    public function test_session_override_is_ignored_when_tenant_mode_is_modern_only(): void
+    public function test_session_override_is_ignored_when_surface_mode_is_modern_only(): void
     {
-        config(['openpne.tenant_mode' => 'modern_only']);
+        config(['openpne.surface_mode' => 'modern_only']);
         $alice = Member::factory()->create();
 
         $response = $this->actingAs($alice)

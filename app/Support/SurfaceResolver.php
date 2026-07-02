@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Member;
+use App\Services\SnsSettingService;
 use Illuminate\Http\Request;
 
 /**
@@ -33,10 +34,10 @@ class SurfaceResolver
     /**
      * The surface a member gets on a CANONICAL route — resolve() minus the explicit /m/* opt-in.
      * Still honours the hard gates (a non-native feature is Classic, modern_only is Modern) before
-     * the member's durable choice / session toggle / tenant default. The member config page uses
-     * this both for the surface it preselects and for its "saving the current surface is a no-op"
-     * check, so the form reflects what the member actually sees when browsing normally — not the /m
-     * URL the page itself may be on, and not the bare tenant default when a hard gate overrides it.
+     * the member's durable choice / session toggle / the mode's default surface. The member config
+     * page uses this both for the surface it preselects and for its "saving the current surface is a
+     * no-op" check, so the form reflects what the member actually sees when browsing normally — not
+     * the /m URL the page itself may be on, and not the bare default when a hard gate overrides it.
      */
     public static function canonicalSurface(Request $request, string $feature): string
     {
@@ -44,12 +45,13 @@ class SurfaceResolver
             return self::CLASSIC;
         }
 
-        if (config('openpne.tenant_mode', 'mixed') === 'modern_only') {
+        $mode = self::surfaceMode();
+        if (! $mode->classicAvailable()) {
             return self::MODERN;
         }
 
         // A member's durable choice (member_preferences) outranks the transient session toggle and
-        // the tenant default.
+        // the mode's default surface.
         $member = $request->user('member');
         if ($member instanceof Member && ($preferred = $member->preferredSurface()) !== null) {
             return $preferred->value;
@@ -60,7 +62,19 @@ class SurfaceResolver
             return $override;
         }
 
-        return config('openpne.tenant_default_surface', self::CLASSIC);
+        return $mode->defaultSurface()->value;
+    }
+
+    /** Whether the Classic surface is served on this install (false only under modern_only). */
+    public static function classicAvailable(): bool
+    {
+        return self::surfaceMode()->classicAvailable();
+    }
+
+    /** The install's surface mode — DB-authoritative (sns_settings), config as the absent-row fallback. */
+    private static function surfaceMode(): SurfaceMode
+    {
+        return app(SnsSettingService::class)->get(SnsSettingKey::SurfaceMode);
     }
 
     /**

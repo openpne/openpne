@@ -27,7 +27,7 @@
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
-        <env name="OPENPNE_TENANT_DEFAULT_SURFACE" value="classic"/>
+        <env name="OPENPNE_SURFACE_MODE" value="classic_default"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

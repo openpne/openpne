@@ -249,8 +249,8 @@ class CommunityTopicRoutesTest extends TestCase
 
     public function test_modern_only_serves_the_canonical_board_as_inertia(): void
     {
-        // A modern_only tenant must not fall through to Classic Blade on the canonical route.
-        config()->set('openpne.tenant_mode', 'modern_only');
+        // A modern_only install must not fall through to Classic Blade on the canonical route.
+        config()->set('openpne.surface_mode', 'modern_only');
         $community = Community::factory()->create();
         $member = $this->joined($community);
 
