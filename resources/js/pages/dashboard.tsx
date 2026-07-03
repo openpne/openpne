@@ -45,21 +45,21 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
             <List>
                 {friendRequests > 0 && (
                     <ListRow href="/m/friend/manage" chevron>
-                        <span className="flex-1 text-sm text-foreground">
+                        <span className="min-w-0 flex-1 text-sm text-foreground">
                             {t(':count pending %friend% requests', { count: friendRequests })}
                         </span>
                     </ListRow>
                 )}
                 {unreadMessages > 0 && (
                     <ListRow href="/m/message" chevron>
-                        <span className="flex-1 text-sm text-foreground">
+                        <span className="min-w-0 flex-1 text-sm text-foreground">
                             {t(':count unread messages', { count: unreadMessages })}
                         </span>
                     </ListRow>
                 )}
                 {communityApprovals.map((approval) => (
                     <ListRow key={approval.communityId} href={`/m/community/${approval.communityId}/pending`} chevron>
-                        <span className="flex-1 text-sm text-foreground">
+                        <span className="min-w-0 flex-1 text-sm text-foreground">
                             {t(':count join requests for :community', { count: approval.count, community: approval.communityName })}
                         </span>
                     </ListRow>
@@ -173,13 +173,13 @@ export default function Dashboard() {
                         <div className="mt-4">
                             <List>
                                 <ListRow href="/m/member/search" chevron>
-                                    <span className="flex-1 text-sm text-foreground">{t('Search members')}</span>
+                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search members')}</span>
                                 </ListRow>
                                 <ListRow href="/m/community/search" chevron>
-                                    <span className="flex-1 text-sm text-foreground">{t('Search %communities%')}</span>
+                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search %communities%')}</span>
                                 </ListRow>
                                 <ListRow href="/m/diary/new" chevron>
-                                    <span className="flex-1 text-sm text-foreground">{t('Post %diary%')}</span>
+                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Post %diary%')}</span>
                                 </ListRow>
                             </List>
                         </div>

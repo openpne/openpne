@@ -8,7 +8,6 @@ use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\Home\Queries\JoinedCommunityActivity;
 use App\Features\Home\Serializers\HomeSerializer;
-use App\Features\Home\UnreadCounts;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Http\Controllers\Controller;
 use App\Models\Member;
