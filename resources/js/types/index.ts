@@ -15,6 +15,18 @@ export interface UnreadCounts {
     unreadMessages: number;
 }
 
+export interface RightRailItem {
+    id: number;
+    name: string;
+    imageUrl: string | null;
+    href: string;
+}
+
+export interface RightRail {
+    friends: RightRailItem[];
+    joinedCommunities: RightRailItem[];
+}
+
 export interface PageProps {
     name: string;
     auth: {
@@ -22,6 +34,7 @@ export interface PageProps {
     };
     snsLogo: SnsLogo;
     unread: UnreadCounts | null;
+    rightRail: RightRail | null;
     flash: {
         status: string | null;
         error: string | null;
