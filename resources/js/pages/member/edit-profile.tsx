@@ -65,12 +65,13 @@ export default function MemberEditProfile() {
                                         error={(errors as Record<string, string>)[`profile.${field.id}`]}
                                         labelRight={
                                             field.is_edit_public_flag ? (
-                                                // Subordinate to the caption: compact height (≈ the label line, not the
-                                                // 44px input target) + no shadow, so it doesn't outweigh or vertically
-                                                // drag the field name it annotates.
+                                                // Subordinate to the caption: a compact min-height (≈ the label line, not
+                                                // the 44px input target — 28px still clears WCAG 2.2 SC 2.5.8's 24px) plus
+                                                // no shadow, so it doesn't outweigh or vertically drag the field name it
+                                                // annotates. min-h (not a fixed height) lets it grow with zoom/text spacing.
                                                 <Select
                                                     aria-label={`${field.caption} ${t('Visibility')}`}
-                                                    className="h-7 min-h-0 w-auto shrink-0 px-2 py-0 text-sm shadow-none"
+                                                    className="min-h-7 w-auto shrink-0 px-2 py-0.5 text-sm shadow-none"
                                                     value={data.visibility[field.id]}
                                                     onChange={(e) => setVisibility(field.id, Number(e.target.value))}
                                                 >
