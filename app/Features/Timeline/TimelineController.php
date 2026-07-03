@@ -81,7 +81,7 @@ class TimelineController extends Controller
         $this->markLocalNavSubject($post->member);
         // Eager-load the replies' images too: the serializer reads each post's images, so loading
         // only replies.member would lazy-load one (empty, by the no-image contract) query per reply.
-        $post->load(['replies.member', 'replies.images.file']);
+        $post->load(['member.avatar.file', 'replies.member.avatar.file', 'replies.images.file']);
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [
@@ -147,7 +147,7 @@ class TimelineController extends Controller
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.delete', ['post' => $timelinePost]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/delete', [
-                'post' => TimelinePostSerializer::entry($timelinePost->load(['member', 'images.file'])),
+                'post' => TimelinePostSerializer::entry($timelinePost->load(['member.avatar.file', 'images.file'])),
             ]),
         ]);
     }
