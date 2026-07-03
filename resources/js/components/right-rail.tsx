@@ -1,7 +1,7 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
-import { Search } from 'lucide-react';
 import { type FormEvent, type ReactNode } from 'react';
 import { NineTable } from '@/components/nine-table';
+import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Input } from '@/components/ui/input';
 import { useT } from '@/lib/i18n';
 import type { PageProps, RightRailItem } from '@/types';
@@ -84,13 +84,7 @@ function SearchBox() {
                 onChange={(e) => form.setData('name', e.target.value)}
                 className="rounded-full pr-11 pl-5"
             />
-            <button
-                type="submit"
-                aria-label={t('Search')}
-                className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-                <Search className="size-4" aria-hidden />
-            </button>
+            <SearchSubmitButton loading={form.processing} />
         </form>
     );
 }
