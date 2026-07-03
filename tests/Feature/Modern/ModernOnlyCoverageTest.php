@@ -49,6 +49,7 @@ class ModernOnlyCoverageTest extends TestCase
         'block.list', 'block.add.show',
         'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
         'community.search', 'community.list_mine', 'community.edit', 'community.members', 'community.members.pending',
+        'community.recent',
         'message.index', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
         'member.invite',
     ];
@@ -94,6 +95,7 @@ class ModernOnlyCoverageTest extends TestCase
             'member avatar' => ['/member/avatar'],
             'community search' => ['/community/search'],
             'community joined' => ['/community/joinList'],
+            'community recent activity' => ['/m/community/recent'],
             'community create form' => ['/community/edit'],
             'invite' => ['/invite'],
             'message index' => ['/message'],

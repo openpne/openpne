@@ -184,6 +184,9 @@ Route::middleware(['auth', 'auth.session', EnsureMemberInviteAllowed::class])->c
 // database-driver sessions outright (see ResetMemberPassword).
 Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+    // The dashboard's community activity section, expanded. Modern-only (no OpenPNE 3 equivalent),
+    // so it renders Inertia directly like /dashboard — not a surface twin.
+    Route::get('/m/community/recent', [HomeController::class, 'communityActivity'])->name('community.recent');
 
     Route::prefix('friend')->controller(FriendController::class)->group(function () {
         Route::get('/list', 'list')->name('friend.list');

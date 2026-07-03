@@ -16,6 +16,24 @@ interface FeedProps extends PageProps {
     diaries: PaginatedDiaries;
 }
 
+/** All / Friends switch between the two diary feeds (OpenPNE 3 list vs listFriend). */
+function FeedTab({ href, label, active }: { href: string; label: string; active: boolean }) {
+    return (
+        <Link
+            href={href}
+            aria-current={active ? 'page' : undefined}
+            className={
+                'min-h-11 border-b-2 px-4 py-2 text-sm font-medium transition-colors ' +
+                (active
+                    ? 'border-foreground text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground')
+            }
+        >
+            {label}
+        </Link>
+    );
+}
+
 export default function DiaryFeed() {
     const t = useT();
     const { variant, keyword, hasKeyword, diaries, flash } = usePage<FeedProps>().props;
@@ -38,6 +56,11 @@ export default function DiaryFeed() {
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+
+                <nav className="flex gap-1 border-b border-border" aria-label={title}>
+                    <FeedTab href="/m/diary/list" label={t('All')} active={variant !== 'friends'} />
+                    <FeedTab href="/m/diary/listFriend" label={t('%Friends%')} active={variant === 'friends'} />
+                </nav>
 
                 {searchable && (
                     <form onSubmit={submit}>
