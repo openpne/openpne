@@ -142,9 +142,16 @@ export default function MemberSearch() {
                         ) : (
                             <List>
                                 {members.data.map((member) => (
-                                    <ListRow key={member.id} href={`/m/member/${member.id}`} chevron>
-                                        <Avatar id={member.id} name={member.name} src={member.avatarUrl} size="md" decorative />
-                                        <span className="min-w-0 flex-1 truncate text-foreground">{member.name}</span>
+                                    <ListRow key={member.id} href={`/m/member/${member.id}`} chevron className="items-start">
+                                        <Avatar id={member.id} name={member.name} src={member.imageUrl} size="md" decorative />
+                                        <div className="min-w-0 flex-1">
+                                            <span className="block truncate text-foreground">{member.name}</span>
+                                            {member.selfIntroduction && (
+                                                <span className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                                                    {member.selfIntroduction}
+                                                </span>
+                                            )}
+                                        </div>
                                     </ListRow>
                                 ))}
                             </List>

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Member;
 
 use App\Features\Member\Queries\SearchMembers;
+use App\Features\Member\Queries\VisibleSelfIntroductions;
 use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
@@ -225,6 +226,132 @@ class MemberSearchTest extends TestCase
         $names = app(SearchMembers::class)->searchableProfiles()->pluck('id')->all();
         $this->assertNotContains($forced->getKey(), $names);
         $this->assertContains($normal->getKey(), $names);
+    }
+
+    // --- Self-introduction column (gated by the same field visibility as the profile page) ---
+
+    public function test_members_visible_self_introduction_is_returned_to_any_logged_in_member(): void
+    {
+        $viewer = Member::factory()->create();
+        $owner = $this->memberWithIntro($this->selfIntroProfile(), 'Hello there', Visibility::Members);
+
+        $this->assertSame([$owner->getKey() => 'Hello there'], $this->visibleIntros($viewer, $owner));
+    }
+
+    public function test_friends_only_self_introduction_is_returned_only_to_a_friend(): void
+    {
+        $profile = $this->selfIntroProfile();
+        $owner = $this->memberWithIntro($profile, 'Friends only', Visibility::Friends);
+        $friend = Member::factory()->create();
+        $stranger = Member::factory()->create();
+        $this->makeFriends($owner, $friend);
+
+        $this->assertSame([$owner->getKey() => 'Friends only'], $this->visibleIntros($friend, $owner));
+        $this->assertSame([], $this->visibleIntros($stranger, $owner));
+    }
+
+    public function test_private_self_introduction_is_returned_only_to_the_owner(): void
+    {
+        $owner = $this->memberWithIntro($this->selfIntroProfile(), 'Just me', Visibility::Private);
+        $other = Member::factory()->create();
+
+        $this->assertSame([$owner->getKey() => 'Just me'], $this->visibleIntros($owner, $owner));
+        $this->assertSame([], $this->visibleIntros($other, $owner));
+    }
+
+    public function test_self_introduction_uses_the_field_default_when_not_per_value_editable(): void
+    {
+        // Field forced Private and not member-editable: the per-row visibility flag is ignored, so even a
+        // Members-flagged value stays hidden from a non-owner — mirrors ShowProfile's effective visibility.
+        $profile = Profile::factory()->preset('self_introduction')->create([
+            'form_type' => 'textarea', 'is_edit_public_flag' => false, 'default_visibility' => Visibility::Private,
+        ]);
+        $owner = $this->memberWithIntro($profile, 'Forced private', Visibility::Members);
+        $viewer = Member::factory()->create();
+
+        $this->assertSame([], $this->visibleIntros($viewer, $owner));
+        $this->assertSame([$owner->getKey() => 'Forced private'], $this->visibleIntros($owner, $owner));
+    }
+
+    public function test_self_introduction_of_a_blocking_owner_is_hidden(): void
+    {
+        $viewer = Member::factory()->create();
+        $owner = $this->memberWithIntro($this->selfIntroProfile(), 'Blocked', Visibility::Members);
+        DB::table('member_blocks')->insert(['blocker_id' => $owner->getKey(), 'blocked_id' => $viewer->getKey()]);
+
+        $this->assertSame([], $this->visibleIntros($viewer, $owner));
+    }
+
+    public function test_self_introduction_is_absent_when_the_field_is_not_registered(): void
+    {
+        // No op_preset_self_introduction profile → fail-closed to empty, not an error.
+        $viewer = Member::factory()->create();
+        $owner = Member::factory()->create();
+
+        $this->assertSame([], $this->visibleIntros($viewer, $owner));
+    }
+
+    public function test_an_empty_self_introduction_is_absent(): void
+    {
+        $viewer = Member::factory()->create();
+        $owner = $this->memberWithIntro($this->selfIntroProfile(), '', Visibility::Members);
+
+        $this->assertSame([], $this->visibleIntros($viewer, $owner));
+    }
+
+    public function test_modern_search_carries_the_visible_self_introduction(): void
+    {
+        $viewer = Member::factory()->create(['created_at' => now()->subMinute()]); // older, so the owner sorts first
+        $owner = $this->memberWithIntro($this->selfIntroProfile(), 'Nice to meet you', Visibility::Members);
+
+        $this->actingAs($viewer)->get('/m/member/search')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('member/search')
+                ->where('members.data.0.id', $owner->getKey())
+                ->where('members.data.0.selfIntroduction', 'Nice to meet you'));
+    }
+
+    public function test_self_introduction_column_does_not_scale_queries_with_result_count(): void
+    {
+        $viewer = Member::factory()->create();
+        $profile = $this->selfIntroProfile();
+        foreach (range(1, 8) as $i) {
+            $this->memberWithIntro($profile, "Intro {$i}", Visibility::Members);
+        }
+
+        DB::enableQueryLog();
+        $this->actingAs($viewer)->get('/m/member/search')->assertOk();
+        $queries = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // The intro column resolves for the whole page in one query (plus one field lookup), so adding
+        // result rows must not add queries. Bounded below the eight-member steady state + a per-row
+        // read (which would push it to 24), so a lapsed batch resolve trips this instead of hiding.
+        $this->assertLessThan(20, $queries, "member search ran {$queries} queries — the self-introduction is likely resolving per row");
+    }
+
+    private function selfIntroProfile(): Profile
+    {
+        return Profile::factory()->preset('self_introduction')->create(['form_type' => 'textarea']);
+    }
+
+    private function memberWithIntro(Profile $profile, string $text, Visibility $visibility = Visibility::Members): Member
+    {
+        $member = Member::factory()->create();
+        MemberProfile::factory()->create([
+            'member_id' => $member->getKey(),
+            'profile_id' => $profile->getKey(),
+            'value' => $text,
+            'visibility' => $visibility,
+        ]);
+
+        return $member;
+    }
+
+    /** @return array<int, string> */
+    private function visibleIntros(Member $viewer, Member ...$members): array
+    {
+        return app(VisibleSelfIntroductions::class)($viewer, array_map(fn (Member $m): int => $m->getKey(), $members));
     }
 
     /**
