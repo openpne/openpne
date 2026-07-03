@@ -142,7 +142,13 @@ export default function MemberSearch() {
                         ) : (
                             <List>
                                 {members.data.map((member) => (
-                                    <ListRow key={member.id} href={`/m/member/${member.id}`} chevron className="items-start">
+                                    <ListRow
+                                        key={member.id}
+                                        href={`/m/member/${member.id}`}
+                                        chevron
+                                        // Top-align only when a self-introduction adds a second line; single-line rows stay centered.
+                                        className={member.selfIntroduction ? 'items-start' : undefined}
+                                    >
                                         <Avatar id={member.id} name={member.name} src={member.imageUrl} size="md" decorative />
                                         <div className="min-w-0 flex-1">
                                             <span className="block truncate text-foreground">{member.name}</span>
