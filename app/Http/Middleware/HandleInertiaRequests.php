@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Features\Home\UnreadCounts;
 use App\Services\TermService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -30,6 +31,9 @@ class HandleInertiaRequests extends Middleware
                     'imageUrl' => $user->avatar?->file?->thumbnailUrl(76, 76, square: true),
                 ] : null,
             ],
+            // Shell nav badges: attention counts for the signed-in member, memoized per request so the
+            // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
+            'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
             // Modern brand mark: color + optional logo URL; a null url renders a color initial badge.
             'snsLogo' => [
                 'color' => '#2563eb',

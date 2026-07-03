@@ -10,12 +10,18 @@ export interface SnsLogo {
     url: string | null;
 }
 
+export interface UnreadCounts {
+    friendRequests: number;
+    unreadMessages: number;
+}
+
 export interface PageProps {
     name: string;
     auth: {
         user: AuthUser | null;
     };
     snsLogo: SnsLogo;
+    unread: UnreadCounts | null;
     flash: {
         status: string | null;
         error: string | null;

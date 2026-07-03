@@ -1,8 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LogIn } from 'lucide-react';
+import { LogIn, Pencil } from 'lucide-react';
 import { AvatarMenu } from '@/components/avatar-menu';
 import { BrandMark } from '@/components/brand-mark';
 import { NavItems } from '@/components/nav-items';
+import { ActionLink } from '@/components/ui/action-link';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -26,6 +27,10 @@ export function LeftNav() {
                     <nav className="flex-1 overflow-y-auto">
                         <NavItems />
                     </nav>
+                    <ActionLink href="/m/diary/new" className="rounded-full">
+                        <Pencil className="size-5" strokeWidth={2.25} />
+                        {t('Post %diary%')}
+                    </ActionLink>
                     <div className="border-t border-border pt-2">
                         <AvatarMenu user={auth.user} />
                     </div>
