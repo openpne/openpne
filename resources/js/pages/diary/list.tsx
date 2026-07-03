@@ -25,7 +25,7 @@ export default function DiaryList() {
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <div className="flex items-center justify-between gap-3">
-                    <h1 className="text-2xl font-semibold">
+                    <h1 className="text-xl font-semibold text-foreground">
                         {title}
                         {period && <span className="ml-2 text-base font-normal text-muted-foreground">{period}</span>}
                     </h1>

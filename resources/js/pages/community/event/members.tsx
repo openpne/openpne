@@ -19,7 +19,7 @@ export default function CommunityEventMembers() {
         <>
             <Head title={t('Count of Member')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-2xl font-semibold">
+                <h1 className="text-xl font-semibold text-foreground">
                     <Link href={`/m/community/event/${event.id}`} className="hover:underline">
                         {event.name}
                     </Link>

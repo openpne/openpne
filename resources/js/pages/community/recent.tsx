@@ -3,6 +3,7 @@ import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import { ActivityRow, type CommunityActivityEntry } from './activity-row';
+import { CommunityTabs } from './community-tabs';
 
 interface RecentProps extends PageProps {
     activity: CommunityActivityEntry[];
@@ -20,6 +21,8 @@ export default function CommunityRecent() {
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+
+                <CommunityTabs active="recent" />
 
                 {activity.length === 0 ? (
                     <Panel>

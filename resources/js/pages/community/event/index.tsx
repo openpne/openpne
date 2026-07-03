@@ -24,7 +24,7 @@ export default function CommunityEventIndex() {
             <Head title={t('Events')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <div className="flex items-center justify-between gap-3">
-                    <h1 className="min-w-0 text-2xl font-semibold">
+                    <h1 className="min-w-0 text-xl font-semibold text-foreground">
                         <Link href={`/m/community/${community.id}`} className="hover:underline">
                             {community.name}
                         </Link>
