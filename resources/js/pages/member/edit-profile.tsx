@@ -47,32 +47,44 @@ export default function MemberEditProfile() {
                         }}
                         className="space-y-5"
                     >
-                        <Field label={t('%nickname%')} htmlFor="member_name" required error={errors.name}>
-                            <Input id="member_name" type="text" maxLength={255} required value={data.name} onChange={(e) => setData('name', e.target.value)} />
-                        </Field>
-
-                        {form.fields.map((field) => (
-                            <div key={field.id} className="space-y-1.5">
-                                <ProfileFieldInput
-                                    field={field}
-                                    value={data.profile[field.id] ?? ''}
-                                    onChange={(next) => setProfile(field.id, next)}
-                                    error={(errors as Record<string, string>)[`profile.${field.id}`]}
-                                />
-                                {field.is_edit_public_flag && (
-                                    <Select
-                                        aria-label={t('Visibility')}
-                                        className="max-w-xs"
-                                        value={data.visibility[field.id]}
-                                        onChange={(e) => setVisibility(field.id, Number(e.target.value))}
-                                    >
-                                        {field.visibilityOptions.map((opt) => (
-                                            <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
-                                        ))}
-                                    </Select>
-                                )}
+                        {/* Hairline between field blocks so the trailing visibility control on each caption
+                            row is unambiguously tied to the field it sits above (not the one below it). */}
+                        <div className="divide-y divide-border">
+                            <div className="pb-5">
+                                <Field label={t('%nickname%')} htmlFor="member_name" required error={errors.name}>
+                                    <Input id="member_name" type="text" maxLength={255} required value={data.name} onChange={(e) => setData('name', e.target.value)} />
+                                </Field>
                             </div>
-                        ))}
+
+                            {form.fields.map((field) => (
+                                <div key={field.id} className="py-5 last:pb-0">
+                                    <ProfileFieldInput
+                                        field={field}
+                                        value={data.profile[field.id] ?? ''}
+                                        onChange={(next) => setProfile(field.id, next)}
+                                        error={(errors as Record<string, string>)[`profile.${field.id}`]}
+                                        labelRight={
+                                            field.is_edit_public_flag ? (
+                                                // Subordinate to the caption: a compact min-height (≈ the label line, not
+                                                // the 44px input target — 28px still clears WCAG 2.2 SC 2.5.8's 24px) plus
+                                                // no shadow, so it doesn't outweigh or vertically drag the field name it
+                                                // annotates. min-h (not a fixed height) lets it grow with zoom/text spacing.
+                                                <Select
+                                                    aria-label={`${field.caption} ${t('Visibility')}`}
+                                                    className="min-h-7 w-auto shrink-0 px-2 py-0.5 text-sm shadow-none"
+                                                    value={data.visibility[field.id]}
+                                                    onChange={(e) => setVisibility(field.id, Number(e.target.value))}
+                                                >
+                                                    {field.visibilityOptions.map((opt) => (
+                                                        <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
+                                                    ))}
+                                                </Select>
+                                            ) : undefined
+                                        }
+                                    />
+                                </div>
+                            ))}
+                        </div>
 
                         <Button type="submit" loading={processing}>{t('Update')}</Button>
                     </form>
