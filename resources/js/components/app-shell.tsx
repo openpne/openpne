@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ConfirmDialogHost } from '@/components/confirm-dialog';
 import { LeftNav } from '@/components/left-nav';
+import { PostFab } from '@/components/post-fab';
 import { TopNav } from '@/components/top-nav';
 
 /**
@@ -18,6 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {children}
             </div>
             <ConfirmDialogHost />
+            <PostFab />
         </div>
     );
 }
