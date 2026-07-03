@@ -40,13 +40,15 @@ export function ProfileFieldInput({ field, value, onChange, error, labelRight }:
         const isRadio = field.form_type === 'radio';
         const errorId = error ? `${id}-error` : undefined;
         return (
-            <fieldset className="space-y-2" aria-invalid={error ? true : undefined} aria-describedby={errorId}>
+            // aria-labelledby pins the group's accessible name to the caption span, so the trailing
+            // visibility control living in the legend flex row does not leak into it (a bare fieldset
+            // would fold the select's value into the group name, e.g. "血液型 全会員").
+            <fieldset className="space-y-2" aria-labelledby={`${id}-legend`} aria-invalid={error ? true : undefined} aria-describedby={errorId}>
                 {/* aria-required is not valid on a group/fieldset, so the required cue rides the legend's
                     text: the visual star is decorative and the translated word is sr-only. The legend is
-                    a flex row so the visibility control sits on the caption line (staying a direct child
-                    of the fieldset keeps the group's accessible name intact). */}
+                    a flex row so the visibility control sits on the caption line. */}
                 <legend className="flex w-full items-center justify-between gap-2 text-sm font-medium text-foreground">
-                    <span>
+                    <span id={`${id}-legend`}>
                         {field.caption}
                         {field.is_required && (
                             <>
