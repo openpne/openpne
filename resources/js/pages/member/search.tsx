@@ -1,4 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
+import { ChevronRight, Search } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { AgeRange, MemberRow, MonthDayRange, SearchCriteria, SearchFormField } from './types';
 
@@ -27,6 +29,15 @@ export default function MemberSearch() {
     const [monthday, setMonthday] = useState<Record<string, MonthDayRange>>(criteria.monthday ?? {});
     const [age, setAge] = useState<AgeRange>(criteria.age ?? {});
 
+    // Land with the detailed criteria expanded only when the applied search actually used one, so the
+    // filters that produced the current results stay visible while the common name-only case stays lean.
+    const hasAdvancedCriteria =
+        Object.values(criteria.profile ?? {}).some((v) => (Array.isArray(v) ? v.length > 0 : Boolean(v))) ||
+        Object.values(criteria.date ?? {}).some((r) => Boolean(r?.from || r?.to)) ||
+        Object.values(criteria.monthday ?? {}).some((m) => Boolean(m) && Object.values(m).some(Boolean)) ||
+        Boolean(criteria.age?.min || criteria.age?.max);
+    const [advancedOpen, setAdvancedOpen] = useState(hasAdvancedCriteria);
+
     const setField = (id: number, value: string | string[]) => setProfile((p) => ({ ...p, [id]: value }));
     const setRange = (id: number, key: 'from' | 'to', value: string) =>
         setDate((d) => ({ ...d, [id]: { ...d[id], [key]: value } }));
@@ -44,52 +55,84 @@ export default function MemberSearch() {
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
                 <h1 className="text-xl font-semibold text-foreground">{t('Member search')}</h1>
 
-                <Panel>
-                    <form onSubmit={submit} className="space-y-4">
-                        <Field label={t('%nickname%')} htmlFor="search_name">
-                            <Input id="search_name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
-                        </Field>
+                <form onSubmit={submit} className="space-y-3">
+                    {/* Card-less pill: the common case is a quick name lookup, so the search stays
+                        subordinate to the results list below. The magnifier submits the whole form. */}
+                    <div className="relative">
+                        <label htmlFor="search_name" className="sr-only">
+                            {t('%nickname%')}
+                        </label>
+                        <Input
+                            id="search_name"
+                            type="search"
+                            enterKeyHint="search"
+                            placeholder={t('Search by %nickname%')}
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="rounded-full pr-11 pl-5"
+                        />
+                        <button
+                            type="submit"
+                            aria-label={t('Search')}
+                            className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <Search className="size-4" aria-hidden />
+                        </button>
+                    </div>
 
-                        {profiles.map((field) => (
-                            <SearchField
-                                key={field.id}
-                                field={field}
-                                value={profile[field.id]}
-                                range={date[field.id]}
-                                monthDay={monthday[field.id]}
-                                onValue={(v) => setField(field.id, v)}
-                                onRange={(k, v) => setRange(field.id, k, v)}
-                                onMonthDay={(k, v) => setMonthDay(field.id, k, v)}
-                            />
-                        ))}
+                    <button
+                        type="button"
+                        onClick={() => setAdvancedOpen((o) => !o)}
+                        aria-expanded={advancedOpen}
+                        className="flex items-center gap-1 text-sm text-link hover:underline"
+                    >
+                        <ChevronRight className={cn('size-4 transition-transform', advancedOpen && 'rotate-90')} aria-hidden />
+                        {t('Advanced search')}
+                    </button>
 
-                        {/* Derived age, gated by AgeVisibility (separate from the birthday field). */}
-                        <fieldset className="space-y-1.5">
-                            <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
-                            <div className="flex items-center gap-2">
-                                <Input
-                                    type="number"
-                                    min={0}
-                                    className="w-24"
-                                    aria-label={`${t('Age')} ${t('Start')}`}
-                                    value={age.min ?? ''}
-                                    onChange={(e) => setAge((a) => ({ ...a, min: e.target.value }))}
+                    {advancedOpen && (
+                        <Panel bodyClassName="space-y-4">
+                            {profiles.map((field) => (
+                                <SearchField
+                                    key={field.id}
+                                    field={field}
+                                    value={profile[field.id]}
+                                    range={date[field.id]}
+                                    monthDay={monthday[field.id]}
+                                    onValue={(v) => setField(field.id, v)}
+                                    onRange={(k, v) => setRange(field.id, k, v)}
+                                    onMonthDay={(k, v) => setMonthDay(field.id, k, v)}
                                 />
-                                <span className="text-muted-foreground">–</span>
-                                <Input
-                                    type="number"
-                                    min={0}
-                                    className="w-24"
-                                    aria-label={`${t('Age')} ${t('End')}`}
-                                    value={age.max ?? ''}
-                                    onChange={(e) => setAge((a) => ({ ...a, max: e.target.value }))}
-                                />
-                            </div>
-                        </fieldset>
+                            ))}
 
-                        <Button type="submit">{t('Search')}</Button>
-                    </form>
-                </Panel>
+                            {/* Derived age, gated by AgeVisibility (separate from the birthday field). */}
+                            <fieldset className="space-y-1.5">
+                                <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        className="w-24"
+                                        aria-label={`${t('Age')} ${t('Start')}`}
+                                        value={age.min ?? ''}
+                                        onChange={(e) => setAge((a) => ({ ...a, min: e.target.value }))}
+                                    />
+                                    <span className="text-muted-foreground">–</span>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        className="w-24"
+                                        aria-label={`${t('Age')} ${t('End')}`}
+                                        value={age.max ?? ''}
+                                        onChange={(e) => setAge((a) => ({ ...a, max: e.target.value }))}
+                                    />
+                                </div>
+                            </fieldset>
+
+                            <Button type="submit">{t('Search')}</Button>
+                        </Panel>
+                    )}
+                </form>
 
                 <section className="space-y-3">
                     <Panel flush title={t('Search Results')}>
