@@ -25,4 +25,17 @@ class DiarySerializerTest extends TestCase
 
         $this->assertSame(2, DiarySerializer::summary($fresh)['commentCount']);
     }
+
+    public function test_detail_carries_the_comment_count(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+        DiaryComment::factory()->for($diary)->create(['number' => 1]);
+
+        // detail() is a superset of summary() (DiaryDetail extends DiarySummary), so it must expose
+        // commentCount too; a route-bound diary lazy-loads it.
+        $fresh = Diary::findOrFail($diary->getKey());
+
+        $this->assertSame(1, DiarySerializer::detail($fresh)['commentCount']);
+    }
 }

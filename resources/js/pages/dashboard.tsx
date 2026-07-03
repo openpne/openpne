@@ -1,20 +1,15 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/avatar';
+import { EntryRow } from '@/components/entry-row';
 import { List, ListRow, Panel } from '@/components/ui/surface';
+import { formatDate } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
+import { ActivityRow, type CommunityActivityEntry } from './community/activity-row';
+import { DiaryRow } from './diary/diary-row';
 import type { DiarySummary } from './diary/types';
 import type { TimelinePostEntry } from './timeline/types';
-
-interface CommunityActivityEntry {
-    kind: 'topic' | 'event';
-    id: number;
-    name: string;
-    commentCount: number;
-    community: { id: number; name: string };
-    updatedAt: string;
-}
 
 interface Announcements {
     friendRequests: number;
@@ -90,60 +85,16 @@ function DigestSection({ title, viewAllHref, extra, children }: { title: string;
     );
 }
 
-function DiaryRow({ diary, showAuthor }: { diary: DiarySummary; showAuthor: boolean }) {
-    const t = useT();
-    return (
-        <ListRow href={`/m/diary/${diary.id}`} chevron>
-            {showAuthor && <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} size="sm" decorative />}
-            <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-foreground">
-                    {diary.title}
-                    {diary.hasImages && (
-                        <span title={t('This entry has photos')} aria-label={t('This entry has photos')}>
-                            {' '}
-                            📷
-                        </span>
-                    )}
-                </p>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {showAuthor ? `${diary.author.name} — ` : ''}
-                    {new Date(diary.createdAt).toLocaleDateString()}
-                </p>
-            </div>
-        </ListRow>
-    );
-}
-
 function TimelineRow({ post }: { post: TimelinePostEntry }) {
     return (
-        <ListRow href={`/m/timeline/${post.id}`} chevron className="items-start">
-            <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} size="sm" decorative />
-            <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 text-sm text-foreground">{post.body}</p>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {post.author.name} &mdash; {new Date(post.createdAt).toLocaleDateString()}
-                </p>
-            </div>
-        </ListRow>
-    );
-}
-
-function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
-    const t = useT();
-    const href = entry.kind === 'topic' ? `/m/community/topic/${entry.id}` : `/m/community/event/${entry.id}`;
-    return (
-        <ListRow href={href} chevron>
-            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                {entry.kind === 'topic' ? t('%Topic%') : t('Event')}
-            </span>
-            <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-foreground">{entry.name}</p>
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {entry.community.name}
-                    {entry.commentCount > 0 && ` · ${t(':count comments', { count: entry.commentCount })}`}
-                </p>
-            </div>
-        </ListRow>
+        <EntryRow
+            href={`/m/timeline/${post.id}`}
+            leading={<Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} size="sm" decorative />}
+            title={post.body}
+            titleClassName="line-clamp-2 text-sm text-foreground"
+            meta={[post.author.name, formatDate(post.createdAt)]}
+            className="items-start"
+        />
     );
 }
 

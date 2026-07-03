@@ -2,10 +2,11 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
+import { EntryRow } from '@/components/entry-row';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
-import { List, ListRow, Panel } from '@/components/ui/surface';
-import { formatDateOnly } from '@/lib/date';
+import { List, Panel } from '@/components/ui/surface';
+import { formatDate } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
@@ -108,12 +109,13 @@ export default function CommunityShow() {
                         ) : (
                             <List>
                                 {recentTopics.map((topic) => (
-                                    <ListRow key={topic.id} href={`/m/community/topic/${topic.id}`} chevron>
-                                        <span className="min-w-0 flex-1 truncate">
-                                            <span className="font-medium">{topic.name}</span>{' '}
-                                            <span className="text-sm text-muted-foreground">({topic.commentCount})</span>
-                                        </span>
-                                    </ListRow>
+                                    <EntryRow
+                                        key={topic.id}
+                                        href={`/m/community/topic/${topic.id}`}
+                                        title={topic.name}
+                                        meta={[formatDate(topic.updatedAt)]}
+                                        commentCount={topic.commentCount}
+                                    />
                                 ))}
                             </List>
                         )}
@@ -142,14 +144,13 @@ export default function CommunityShow() {
                         ) : (
                             <List>
                                 {recentEvents.map((event) => (
-                                    <ListRow key={event.id} href={`/m/community/event/${event.id}`} chevron>
-                                        <span className="min-w-0 flex-1 truncate">
-                                            <span className="font-medium">{event.name}</span>{' '}
-                                            <span className="text-sm text-muted-foreground">
-                                                ({event.commentCount}) &middot; {formatDateOnly(event.openDate)}
-                                            </span>
-                                        </span>
-                                    </ListRow>
+                                    <EntryRow
+                                        key={event.id}
+                                        href={`/m/community/event/${event.id}`}
+                                        title={event.name}
+                                        meta={[`${t('Open date')}: ${formatDate(event.openDate)}`]}
+                                        commentCount={event.commentCount}
+                                    />
                                 ))}
                             </List>
                         )}
