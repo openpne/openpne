@@ -1,5 +1,7 @@
 import { Link } from '@inertiajs/react';
+import { MessageCircle } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
+import { CountBadge } from '@/components/entry-row';
 import { DangerLink } from '@/components/ui/danger-link';
 import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
@@ -23,9 +25,12 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
                     <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} size="sm" decorative />
                     <span className="truncate">{post.author.name}</span>
                 </Link>
-                <Link href={`/m/timeline/${post.id}`} className="shrink-0 text-muted-foreground hover:text-foreground hover:underline">
-                    {formatDateTime(post.createdAt)}
-                </Link>
+                <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                    <CountBadge icon={MessageCircle} count={post.replyCount} srLabel={t(':count replies', { count: post.replyCount })} />
+                    <Link href={`/m/timeline/${post.id}`} className="hover:text-foreground hover:underline">
+                        {formatDateTime(post.createdAt)}
+                    </Link>
+                </div>
             </div>
             <p className="whitespace-pre-wrap break-words">{post.body}</p>
             {post.images.length > 0 && (

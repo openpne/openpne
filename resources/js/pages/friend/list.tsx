@@ -1,4 +1,5 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { Avatar } from '@/components/avatar';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
 import { DangerLink } from '@/components/ui/danger-link';
@@ -37,7 +38,10 @@ export default function FriendList() {
                             <List>
                                 {friends.data.map((friend) => (
                                     <ListRow key={friend.id}>
-                                        <span className="min-w-0 flex-1 truncate text-foreground">{friend.name}</span>
+                                        <Link href={`/m/member/${friend.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
+                                            <Avatar id={friend.id} name={friend.name} src={friend.imageUrl} size="sm" decorative />
+                                            <span className="min-w-0 flex-1 truncate">{friend.name}</span>
+                                        </Link>
                                         {isOwner && (
                                             <DangerLink href={`/m/friend/unlink/${friend.id}`} className="shrink-0 text-sm">
                                                 {t('Remove %friend%')}

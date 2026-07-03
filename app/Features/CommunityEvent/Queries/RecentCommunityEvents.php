@@ -18,7 +18,7 @@ class RecentCommunityEvents
     public function __invoke(Community $community, int $limit = self::LIMIT): Collection
     {
         return $community->events()
-            ->withCount('comments')
+            ->withCount(['comments', 'participants'])
             ->with('member.avatar.file')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')

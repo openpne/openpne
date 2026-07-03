@@ -3,6 +3,7 @@
 namespace Tests\Feature\Block\Modern;
 
 use App\Models\Member;
+use App\Models\MemberImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
@@ -35,6 +36,21 @@ class BlockRoutesTest extends TestCase
             ->where('blocks.meta.total', 1)
             ->where('blocks.data.0.name', 'Mallory')
         );
+    }
+
+    public function test_modern_list_serializes_the_blocked_member_avatar_url(): void
+    {
+        $member = Member::factory()->create();
+        $blocked = Member::factory()->create();
+        MemberImage::factory()->create(['member_id' => $blocked->getKey()]);
+        $this->block($member, $blocked);
+        $expected = $blocked->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+
+        $this->actingAs($member)->get('/m/block/list')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('blocks.data.0.id', $blocked->getKey())
+                ->where('blocks.data.0.imageUrl', $expected)
+            );
     }
 
     public function test_modern_add_show_returns_inertia_component_with_target(): void

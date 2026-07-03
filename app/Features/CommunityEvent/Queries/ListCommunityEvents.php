@@ -19,7 +19,7 @@ class ListCommunityEvents
     public function __invoke(Community $community, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
         return $community->events()
-            ->withCount('comments')
+            ->withCount(['comments', 'participants'])
             ->with('member.avatar.file')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')

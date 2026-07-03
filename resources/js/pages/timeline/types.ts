@@ -17,6 +17,7 @@ export interface TimelinePostEntry {
     body: string;
     visibility: TimelinePostVisibility;
     hasImages: boolean;
+    replyCount: number; // 0 on replies and single route-bound posts (see TimelinePostSerializer)
     images: TimelinePostImage[];
     author: TimelinePostAuthor;
     createdAt: string;

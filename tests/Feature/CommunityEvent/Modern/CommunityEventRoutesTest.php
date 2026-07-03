@@ -254,6 +254,22 @@ class CommunityEventRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('recentEvents.0.openDate', $openYmd));
     }
 
+    public function test_participant_count_is_serialized_on_the_board_and_community_show(): void
+    {
+        $community = Community::factory()->create();
+        $author = $this->joined($community);
+        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $event->participants()->attach([$author->getKey(), $this->joined($community)->getKey()]);
+
+        $this->actingAs($author)
+            ->get(route('communityEvent.modern.index', $community))
+            ->assertInertia(fn ($page) => $page->where('events.data.0.participantCount', 2));
+
+        $this->actingAs($author)
+            ->get(route('community.modern.show', $community))
+            ->assertInertia(fn ($page) => $page->where('recentEvents.0.participantCount', 2));
+    }
+
     public function test_modern_only_serves_the_canonical_event_board_as_inertia(): void
     {
         config()->set('openpne.surface_mode', 'modern_only');

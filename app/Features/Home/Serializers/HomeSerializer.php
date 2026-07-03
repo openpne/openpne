@@ -55,9 +55,10 @@ class HomeSerializer
 
     /**
      * One community activity row — a topic or an event — flattened for the digest: the community it
-     * belongs to plus its comment count. `kind` drives the client's badge and its link target.
+     * belongs to, its comment count, and (events only) its participant count. `kind` drives the
+     * client's badge and its link target.
      *
-     * @return array{kind: 'topic'|'event', id: int, name: string, commentCount: int, community: array{id: int, name: string}, updatedAt: string}
+     * @return array{kind: 'topic'|'event', id: int, name: string, commentCount: int, participantCount: int|null, community: array{id: int, name: string}, updatedAt: string}
      */
     public static function activityEntry(CommunityTopic|CommunityEvent $row): array
     {
@@ -66,6 +67,8 @@ class HomeSerializer
             'id' => $row->getKey(),
             'name' => $row->name,
             'commentCount' => $row->comments_count ?? 0,
+            // Topics have no roster; only events carry a participant count (null suppresses the badge).
+            'participantCount' => $row instanceof CommunityEvent ? ($row->participants_count ?? 0) : null,
             'community' => [
                 'id' => $row->community->getKey(),
                 'name' => $row->community->name,

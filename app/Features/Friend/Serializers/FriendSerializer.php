@@ -12,18 +12,19 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
  */
 class FriendSerializer
 {
-    /** @return array{id: int, name: string} */
+    /** @return array{id: int, name: string, imageUrl: string|null} */
     public static function member(Member $member): array
     {
         return [
             'id' => $member->getKey(),
             'name' => $member->name,
+            'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
         ];
     }
 
     /**
      * @param  LengthAwarePaginator<int, Member>  $paginator
-     * @return array{data: list<array{id: int, name: string}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @return array{data: list<array{id: int, name: string, imageUrl: string|null}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
     public static function paginator(LengthAwarePaginator $paginator): array
     {

@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Camera, MessageCircle, type LucideIcon } from 'lucide-react';
+import { Camera, MessageCircle, Users, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { ListRow } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -28,6 +28,10 @@ type EntryRowProps = {
     /** Meta-line text parts joined with '·'; the first part truncates, the rest keep their width. */
     meta?: (string | false | null | undefined)[];
     commentCount?: number;
+    /** Timeline reply count; renders the same speech-bubble icon as comments, with a replies label. */
+    replyCount?: number;
+    /** Event roster size; renders a people icon + count after the comment count. */
+    participantCount?: number;
     hasImages?: boolean;
     /** Trailing action links. Nested links are invalid inside a linked row, so with actions the
      *  title carries the link and the chevron is dropped. */
@@ -41,7 +45,7 @@ type EntryRowProps = {
  * leading visual + title line + one meta line of author · date · counts. Person/action rows
  * (friend, block, message boxes) keep their own layouts — this is not for them.
  */
-export function EntryRow({ href, leading, title, titleClassName, meta = [], commentCount = 0, hasImages = false, actions, className }: EntryRowProps) {
+export function EntryRow({ href, leading, title, titleClassName, meta = [], commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, actions, className }: EntryRowProps) {
     const t = useT();
 
     const items: ReactNode[] = meta
@@ -54,6 +58,16 @@ export function EntryRow({ href, leading, title, titleClassName, meta = [], comm
     if (commentCount > 0) {
         items.push(
             <CountBadge key="comments" icon={MessageCircle} count={commentCount} srLabel={t(':count comments', { count: commentCount })} />,
+        );
+    }
+    if (replyCount > 0) {
+        items.push(
+            <CountBadge key="replies" icon={MessageCircle} count={replyCount} srLabel={t(':count replies', { count: replyCount })} />,
+        );
+    }
+    if (participantCount > 0) {
+        items.push(
+            <CountBadge key="participants" icon={Users} count={participantCount} srLabel={t(':count participants', { count: participantCount })} />,
         );
     }
     if (hasImages) {

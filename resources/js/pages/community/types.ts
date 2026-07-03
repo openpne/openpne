@@ -108,6 +108,7 @@ export interface EventSummary {
     id: number;
     name: string;
     commentCount: number;
+    participantCount: number;
     author: TopicAuthor | null;
     updatedAt: string; // ISO 8601 datetime
     openDate: string; // Y-m-d (date only, no timezone — format with formatDate)

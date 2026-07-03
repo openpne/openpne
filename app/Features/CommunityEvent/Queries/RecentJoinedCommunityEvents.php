@@ -23,7 +23,7 @@ class RecentJoinedCommunityEvents
             ->whereIn('community_id', CommunityMember::query()
                 ->where('member_id', $viewer->getKey())
                 ->select('community_id'))
-            ->withCount('comments')
+            ->withCount(['comments', 'participants'])
             ->with('community')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')

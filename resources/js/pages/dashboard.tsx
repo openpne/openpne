@@ -93,6 +93,7 @@ function TimelineRow({ post }: { post: TimelinePostEntry }) {
             title={post.body}
             titleClassName="line-clamp-2 text-sm text-foreground"
             meta={[post.author.name, formatDate(post.createdAt)]}
+            replyCount={post.replyCount}
             className="items-start"
         />
     );
