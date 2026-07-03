@@ -4,9 +4,10 @@ import { type FormEvent } from 'react';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
 import { Input } from '@/components/ui/input';
-import { List, ListRow, Panel } from '@/components/ui/surface';
+import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
+import { DiaryRow } from './diary-row';
 import type { PaginatedDiaries } from './types';
 
 interface FeedProps extends PageProps {
@@ -99,22 +100,7 @@ export default function DiaryFeed() {
                         <Panel flush>
                             <List>
                                 {diaries.data.map((entry) => (
-                                    <ListRow key={entry.id} href={`/m/diary/${entry.id}`} chevron>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate font-medium text-foreground">
-                                                {entry.title}
-                                                {entry.hasImages && (
-                                                    <span title={t('This entry has photos')} aria-label={t('This entry has photos')}>
-                                                        {' '}
-                                                        📷
-                                                    </span>
-                                                )}
-                                            </p>
-                                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                                {entry.author.name} &mdash; {new Date(entry.createdAt).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                    </ListRow>
+                                    <DiaryRow key={entry.id} diary={entry} showAuthor />
                                 ))}
                             </List>
                         </Panel>

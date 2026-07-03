@@ -5,8 +5,10 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { dangerActionClass } from '@/components/ui/danger-link';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, TopicDetail, TopicImage, TopicThread } from '../types';
@@ -37,8 +39,6 @@ function ImageGrid({ images }: { images: TopicImage[] }) {
         </ul>
     );
 }
-
-const deleteAction = 'rounded-md text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring';
 
 export default function CommunityTopicShow() {
     const t = useT();
@@ -101,7 +101,7 @@ export default function CommunityTopicShow() {
                         ) : (
                             <span>{t('Withdrawn member')}</span>
                         )}
-                        <span>&mdash; {new Date(topic.createdAt).toLocaleString()}</span>
+                        <span>&mdash; {formatDateTime(topic.createdAt)}</span>
                     </div>
 
                     <div className="whitespace-pre-wrap break-words">{topic.body}</div>
@@ -112,7 +112,7 @@ export default function CommunityTopicShow() {
                             <Link href={`/m/community/topic/${topic.id}/edit`} className="text-link hover:underline">
                                 {t('Edit')}
                             </Link>
-                            <button type="button" onClick={deleteTopic} className={deleteAction}>
+                            <button type="button" onClick={deleteTopic} className={dangerActionClass}>
                                 {t('Delete')}
                             </button>
                         </div>
@@ -157,9 +157,9 @@ export default function CommunityTopicShow() {
                                         ) : (
                                             <span>{t('Withdrawn member')}</span>
                                         )}
-                                        <span className="ml-auto">{new Date(comment.createdAt).toLocaleString()}</span>
+                                        <span className="ml-auto">{formatDateTime(comment.createdAt)}</span>
                                         {comment.deletable && (
-                                            <button type="button" onClick={() => deleteComment(comment.id)} className={deleteAction}>
+                                            <button type="button" onClick={() => deleteComment(comment.id)} className={dangerActionClass}>
                                                 {t('Delete')}
                                             </button>
                                         )}

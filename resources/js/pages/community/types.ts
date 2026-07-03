@@ -110,7 +110,7 @@ export interface EventSummary {
     commentCount: number;
     author: TopicAuthor | null;
     updatedAt: string; // ISO 8601 datetime
-    openDate: string; // Y-m-d (date only, no timezone — format with formatDateOnly)
+    openDate: string; // Y-m-d (date only, no timezone — format with formatDate)
 }
 
 export interface EventDetail {

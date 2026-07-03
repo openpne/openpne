@@ -34,7 +34,7 @@ export default function CommunityList() {
                                 {communities.data.map((community) => (
                                     <li key={community.id}>
                                         <Link href={`/m/community/${community.id}`} className="flex flex-col gap-1">
-                                            <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="aspect-square w-full" textClassName="text-2xl" />
+                                            <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="aspect-square w-full" textClassName="text-2xl" decorative />
                                             <span className="truncate text-sm">{community.name}</span>
                                         </Link>
                                     </li>

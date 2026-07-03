@@ -1,4 +1,7 @@
 import { Link } from '@inertiajs/react';
+import { Avatar } from '@/components/avatar';
+import { DangerLink } from '@/components/ui/danger-link';
+import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { TimelinePostEntry } from './types';
 
@@ -15,12 +18,13 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
 
     return (
         <li className="space-y-2 px-5 py-4 text-foreground">
-            <div className="flex items-center justify-between text-sm">
-                <Link href={`/m/member/${post.author.id}/timeline`} className="font-medium text-link hover:underline">
-                    {post.author.name}
+            <div className="flex items-center justify-between gap-3 text-sm">
+                <Link href={`/m/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 font-medium text-link hover:underline">
+                    <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} size="sm" decorative />
+                    <span className="truncate">{post.author.name}</span>
                 </Link>
-                <Link href={`/m/timeline/${post.id}`} className="text-muted-foreground hover:text-foreground hover:underline">
-                    {new Date(post.createdAt).toLocaleString()}
+                <Link href={`/m/timeline/${post.id}`} className="shrink-0 text-muted-foreground hover:text-foreground hover:underline">
+                    {formatDateTime(post.createdAt)}
                 </Link>
             </div>
             <p className="whitespace-pre-wrap break-words">{post.body}</p>
@@ -32,9 +36,9 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
                 </div>
             )}
             {isOwn && (
-                <Link href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm text-link hover:underline">
+                <DangerLink href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm">
                     {t('Delete')}
-                </Link>
+                </DangerLink>
             )}
         </li>
     );

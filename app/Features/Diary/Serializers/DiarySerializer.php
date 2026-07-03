@@ -44,7 +44,7 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, body: string, visibility: string, hasImages: bool, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}, createdAt: string}
+     * @return array{id: int, title: string, body: string, visibility: string, commentCount: int, hasImages: bool, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
@@ -55,6 +55,7 @@ class DiarySerializer
             'title' => $diary->title,
             'body' => $diary->body,
             'visibility' => $diary->visibility->slug(),
+            'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
             'hasImages' => $images !== [],
             'images' => $images,
             'author' => [

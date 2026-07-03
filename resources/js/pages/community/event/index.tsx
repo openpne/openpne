@@ -1,9 +1,10 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
+import { EntryRow } from '@/components/entry-row';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
-import { List, ListRow, Panel } from '@/components/ui/surface';
-import { formatDateOnly } from '@/lib/date';
+import { List, Panel } from '@/components/ui/surface';
+import { formatDate } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, PaginatedEvents } from '../types';
@@ -48,19 +49,14 @@ export default function CommunityEventIndex() {
                         <Panel flush>
                             <List>
                                 {events.data.map((event) => (
-                                    <ListRow key={event.id} href={`/m/community/event/${event.id}`} chevron>
-                                        <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" decorative />
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate font-medium">
-                                                {event.name} <span className="text-sm font-normal text-muted-foreground">({event.commentCount})</span>
-                                            </p>
-                                            <p className="truncate text-xs text-muted-foreground">
-                                                {t('Open date')}: {formatDateOnly(event.openDate)}
-                                                {' · '}
-                                                {event.author?.name ?? t('Withdrawn member')}
-                                            </p>
-                                        </div>
-                                    </ListRow>
+                                    <EntryRow
+                                        key={event.id}
+                                        href={`/m/community/event/${event.id}`}
+                                        leading={<Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" decorative />}
+                                        title={event.name}
+                                        meta={[event.author?.name ?? t('Withdrawn member'), `${t('Open date')}: ${formatDate(event.openDate)}`]}
+                                        commentCount={event.commentCount}
+                                    />
                                 ))}
                             </List>
                         </Panel>

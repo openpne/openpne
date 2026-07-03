@@ -70,10 +70,8 @@ export default function BlockList() {
                                 {blocks.data.map((blocked) => (
                                     <ListRow key={blocked.id}>
                                         <span className="min-w-0 flex-1 truncate text-foreground">{blocked.name}</span>
-                                        <Link
-                                            href={`/m/block/remove/${blocked.id}`}
-                                            className="shrink-0 text-sm text-muted-foreground hover:text-foreground hover:underline"
-                                        >
+                                        {/* Unblock restores access (non-destructive), so it stays text-link, not destructive red. */}
+                                        <Link href={`/m/block/remove/${blocked.id}`} className="shrink-0 text-sm text-link hover:underline">
                                             {t("Unblock")}
                                         </Link>
                                     </ListRow>

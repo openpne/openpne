@@ -3,10 +3,11 @@ import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
+import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
-import { formatDateOnly } from '@/lib/date';
+import { formatDate, formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, EventDetail, EventThread, TopicImage } from '../types';
@@ -40,8 +41,6 @@ function ImageGrid({ images }: { images: TopicImage[] }) {
         </ul>
     );
 }
-
-const deleteAction = 'rounded-md text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring';
 
 export default function CommunityEventShow() {
     const t = useT();
@@ -108,13 +107,13 @@ export default function CommunityEventShow() {
                         ) : (
                             <span>{t('Withdrawn member')}</span>
                         )}
-                        <span>&mdash; {new Date(event.createdAt).toLocaleString()}</span>
+                        <span>&mdash; {formatDateTime(event.createdAt)}</span>
                     </div>
 
                     <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
                         <dt className="text-muted-foreground">{t('Open date')}</dt>
                         <dd>
-                            {formatDateOnly(event.openDate)}
+                            {formatDate(event.openDate)}
                             {event.openDateComment && <span className="text-muted-foreground"> ({event.openDateComment})</span>}
                         </dd>
                         {event.area && (
@@ -126,7 +125,7 @@ export default function CommunityEventShow() {
                         {event.applicationDeadline && (
                             <>
                                 <dt className="text-muted-foreground">{t('Application deadline')}</dt>
-                                <dd>{formatDateOnly(event.applicationDeadline)}</dd>
+                                <dd>{formatDate(event.applicationDeadline)}</dd>
                             </>
                         )}
                         <dt className="text-muted-foreground">{t('Count of Member')}</dt>
@@ -147,7 +146,7 @@ export default function CommunityEventShow() {
                             <Link href={`/m/community/event/${event.id}/edit`} className="text-link hover:underline">
                                 {t('Edit')}
                             </Link>
-                            <button type="button" onClick={deleteEvent} className={deleteAction}>
+                            <button type="button" onClick={deleteEvent} className={dangerActionClass}>
                                 {t('Delete')}
                             </button>
                         </div>
@@ -192,9 +191,9 @@ export default function CommunityEventShow() {
                                         ) : (
                                             <span>{t('Withdrawn member')}</span>
                                         )}
-                                        <span className="ml-auto">{new Date(comment.createdAt).toLocaleString()}</span>
+                                        <span className="ml-auto">{formatDateTime(comment.createdAt)}</span>
                                         {comment.deletable && (
-                                            <button type="button" onClick={() => deleteComment(comment.id)} className={deleteAction}>
+                                            <button type="button" onClick={() => deleteComment(comment.id)} className={dangerActionClass}>
                                                 {t('Delete')}
                                             </button>
                                         )}
