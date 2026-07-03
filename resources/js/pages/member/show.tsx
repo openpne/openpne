@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Panel } from '@/components/ui/surface';
+import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -54,6 +54,25 @@ export default function MemberShow() {
                         </Link>
                     )}
                 </div>
+            </Panel>
+
+            {/* Jump to the owner's own content — same links whether the profile is the viewer's or not
+                (OpenPNE 3 profile parity). The list/joined routes accept ?id so they scope to this owner. */}
+            <Panel flush>
+                <List>
+                    <ListRow href={`/m/diary/listMember/${owner.id}`} chevron>
+                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Diary%')}</span>
+                    </ListRow>
+                    <ListRow href={`/m/member/${owner.id}/timeline`} chevron>
+                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('Timeline')}</span>
+                    </ListRow>
+                    <ListRow href={`/m/friend/list?id=${owner.id}`} chevron>
+                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Friends%')}</span>
+                    </ListRow>
+                    <ListRow href={`/m/community/joined?id=${owner.id}`} chevron>
+                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Communities%')}</span>
+                    </ListRow>
+                </List>
             </Panel>
 
             {age === null && fields.length === 0 ? (

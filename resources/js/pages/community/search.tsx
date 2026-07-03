@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
+import { CommunityTabs } from './community-tabs';
 import type { CommunityCategory, PaginatedCommunities } from './types';
 
 interface SearchProps extends PageProps {
@@ -43,6 +44,8 @@ export default function CommunitySearch() {
                         {t('Create a %community%')}
                     </Link>
                 </div>
+
+                <CommunityTabs active="browse" />
 
                 <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
                     <div className="relative min-w-[12rem] flex-1">

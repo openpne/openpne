@@ -4,6 +4,7 @@ import { Pagination } from '@/components/pagination';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
+import { CommunityTabs } from './community-tabs';
 import type { PaginatedCommunities } from './types';
 
 interface ListProps extends PageProps {
@@ -22,6 +23,9 @@ export default function CommunityList() {
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <h1 className="text-2xl font-semibold">{title}</h1>
+
+                {/* Tabs only in the viewer's own hub; another member's list (via ?id) is not viewer-scoped. */}
+                {isOwner && <CommunityTabs active="joined" />}
 
                 {communities.data.length === 0 ? (
                     <Panel>
