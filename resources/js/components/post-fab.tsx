@@ -4,9 +4,16 @@ import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
 /**
+ * A page is a compose/edit/settings form when its path carries one of these verbs. The FAB — a
+ * shortcut to *start* a diary — is out of place on such a page: it invites abandoning a half-filled
+ * form and floats over the form's own controls. Fragments (not full paths) so new form routes under
+ * the same verbs need no upkeep here.
+ */
+const FORM_URL_FRAGMENTS = ['/new', '/edit', '/config', '/sendToFriend', '/reply/'];
+
+/**
  * Mobile (< lg) primary action: a floating "write a diary" button. The desktop sidebar carries the
- * same action as a pill, so this is hidden at lg+. Hidden on the diary compose/edit pages, where it
- * would link to the current page and overlap the form's own actions.
+ * same action as a pill, so this is hidden at lg+. Hidden on compose/edit/settings pages (see above).
  */
 export function PostFab() {
     const t = useT();
@@ -15,8 +22,7 @@ export function PostFab() {
     if (!props.auth.user) {
         return null;
     }
-    // On the compose surfaces the FAB is redundant and collides with the form controls.
-    if (url.startsWith('/m/diary/new') || url.startsWith('/m/diary/edit')) {
+    if (FORM_URL_FRAGMENTS.some((fragment) => url.includes(fragment))) {
         return null;
     }
 
