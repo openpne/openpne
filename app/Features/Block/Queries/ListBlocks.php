@@ -10,6 +10,7 @@ class ListBlocks
     /** @return LengthAwarePaginator<int, Member> */
     public function __invoke(Member $blocker, int $perPage = 20): LengthAwarePaginator
     {
-        return $blocker->blocksMade()->paginate($perPage);
+        // The Modern block list renders each blocked member's avatar; eager-load it to avoid N+1.
+        return $blocker->blocksMade()->with('avatar.file')->paginate($perPage);
     }
 }

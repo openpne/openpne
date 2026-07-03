@@ -7,6 +7,7 @@ export interface CommunityActivityEntry {
     id: number;
     name: string;
     commentCount: number;
+    participantCount: number | null; // event roster size; null on topics (no roster)
     community: { id: number; name: string };
     updatedAt: string;
 }
@@ -25,6 +26,7 @@ export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
             title={entry.name}
             meta={[entry.community.name, formatDate(entry.updatedAt)]}
             commentCount={entry.commentCount}
+            participantCount={entry.participantCount ?? 0}
         />
     );
 }

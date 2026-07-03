@@ -1,5 +1,6 @@
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useState, type FormEvent } from "react";
+import { Avatar } from "@/components/avatar";
 import { FlashMessage } from "@/components/flash-message";
 import { Pagination } from "@/components/pagination";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,9 @@ export default function BlockList() {
                             <List>
                                 {blocks.data.map((blocked) => (
                                     <ListRow key={blocked.id}>
+                                        {/* Avatar identifies the member, but the name is not linked to their profile:
+                                            the viewer chose to block them, so we don't surface a path back to it. */}
+                                        <Avatar id={blocked.id} name={blocked.name} src={blocked.imageUrl} size="sm" decorative />
                                         <span className="min-w-0 flex-1 truncate text-foreground">{blocked.name}</span>
                                         {/* Unblock restores access (non-destructive), so it stays text-link, not destructive red. */}
                                         <Link href={`/m/block/remove/${blocked.id}`} className="shrink-0 text-sm text-link hover:underline">

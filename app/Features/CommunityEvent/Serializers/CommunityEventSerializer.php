@@ -22,13 +22,14 @@ use Illuminate\Support\Collection;
 class CommunityEventSerializer
 {
     /**
-     * A board row / recent-events card: the title, comment count, author, last-activity time, and
-     * the open date (shown alongside the title). Callers eager-load comments_count and member.
+     * A board row / recent-events card: the title, comment count, participant count, author,
+     * last-activity time, and the open date (shown alongside the title). Callers eager-load
+     * comments_count, participants_count, and member.
      *
      * openDate is a date-only Y-m-d string, not an ISO datetime: rendering an ISO midnight with the
      * browser's timezone would shift the date a day west of UTC (Classic renders the stored date).
      *
-     * @return array{id: int, name: string, commentCount: int, author: array{id: int, name: string, imageUrl: string|null}|null, updatedAt: string, openDate: string}
+     * @return array{id: int, name: string, commentCount: int, participantCount: int, author: array{id: int, name: string, imageUrl: string|null}|null, updatedAt: string, openDate: string}
      */
     public static function summary(CommunityEvent $event): array
     {
@@ -36,6 +37,7 @@ class CommunityEventSerializer
             'id' => $event->getKey(),
             'name' => $event->name,
             'commentCount' => $event->comments_count ?? $event->loadCount('comments')->comments_count,
+            'participantCount' => $event->participants_count ?? $event->loadCount('participants')->participants_count,
             'author' => self::author($event->member),
             'updatedAt' => $event->updated_at->toIso8601String(),
             'openDate' => $event->open_date->format('Y-m-d'),

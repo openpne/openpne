@@ -56,6 +56,7 @@ export default function CommunityEventIndex() {
                                         title={event.name}
                                         meta={[event.author?.name ?? t('Withdrawn member'), `${t('Open date')}: ${formatDate(event.openDate)}`]}
                                         commentCount={event.commentCount}
+                                        participantCount={event.participantCount}
                                     />
                                 ))}
                             </List>

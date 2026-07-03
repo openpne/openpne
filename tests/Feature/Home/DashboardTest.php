@@ -3,9 +3,11 @@
 namespace Tests\Feature\Home;
 
 use App\Models\Community;
+use App\Models\CommunityEvent;
 use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\DiaryImage;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
@@ -43,8 +45,61 @@ class DashboardTest extends TestCase
                 ->has('communityActivity', 1)
                 ->where('communityActivity.0.kind', 'topic')
                 ->where('communityActivity.0.id', $topic->getKey())
+                ->where('communityActivity.0.participantCount', null) // topics have no roster
                 ->has('myDiaries', 1)
                 ->missing('communities')
+            );
+    }
+
+    public function test_dashboard_timeline_digest_carries_reply_counts(): void
+    {
+        $viewer = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $viewer->getKey(), 'visibility' => Visibility::Members]);
+        TimelinePost::factory()->count(2)->create([
+            'member_id' => $viewer->getKey(),
+            'in_reply_to_id' => $post->getKey(),
+            'visibility' => Visibility::Members,
+        ]);
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->where('timeline.0.id', $post->getKey())
+                ->where('timeline.0.replyCount', 2)
+            );
+    }
+
+    public function test_dashboard_community_activity_carries_event_participant_counts(): void
+    {
+        $viewer = Member::factory()->create();
+        $community = Community::factory()->create();
+        CommunityMember::factory()->member()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $event->participants()->attach([$viewer->getKey(), Member::factory()->create()->getKey()]);
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->where('communityActivity.0.kind', 'event')
+                ->where('communityActivity.0.id', $event->getKey())
+                ->where('communityActivity.0.participantCount', 2)
+            );
+    }
+
+    public function test_community_recent_carries_event_participant_counts(): void
+    {
+        $viewer = Member::factory()->create();
+        $community = Community::factory()->create();
+        CommunityMember::factory()->member()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $event->participants()->attach([$viewer->getKey(), Member::factory()->create()->getKey()]);
+
+        $this->actingAs($viewer)
+            ->get('/m/community/recent')
+            ->assertInertia(fn ($page) => $page
+                ->component('community/recent')
+                ->where('activity.0.kind', 'event')
+                ->where('activity.0.participantCount', 2)
             );
     }
 
@@ -68,13 +123,31 @@ class DashboardTest extends TestCase
             TimelinePost::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Open]);
         }
 
+        // The viewer's own diaries, each with an image: the my-diaries digest reads a per-row
+        // images_count, so a missing withCount('images') would lazy-load one query per diary.
+        foreach (Diary::factory()->count(4)->create(['member_id' => $viewer->getKey(), 'visibility' => Visibility::Private]) as $diary) {
+            DiaryImage::factory()->create(['diary_id' => $diary->getKey()]);
+        }
+
+        // Joined-community events with rosters: the activity digest reads a per-event participant
+        // count, so a missing withCount('participants') would lazy-load one query per event.
+        $community = Community::factory()->create();
+        CommunityMember::factory()->member()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        foreach (CommunityEvent::factory()->count(4)->create(['community_id' => $community->getKey()]) as $event) {
+            $event->participants()->attach(Member::factory()->create()->getKey());
+        }
+
         DB::enableQueryLog();
         $this->actingAs($viewer)->get('/dashboard')->assertOk();
         $queries = count(DB::getQueryLog());
         DB::disableQueryLog();
 
-        // Bounded by the number of feeds + their eager loads, not by the number of rows.
-        $this->assertLessThan(40, $queries, "dashboard ran {$queries} queries — an author avatar is likely lazy-loading");
+        // Bounded by the number of feeds + their eager loads, not by the number of rows: every digest
+        // eager-loads its avatars and counts, so adding rows must not add queries. Kept tight (the
+        // steady state is ~22, four rows per digest) so dropping any single digest's eager load —
+        // e.g. the my-diaries image count, which would lazy-load one query per row (+4) — trips it
+        // instead of hiding under a loose ceiling.
+        $this->assertLessThan(26, $queries, "dashboard ran {$queries} queries — a per-row avatar/count is likely lazy-loading");
     }
 
     public function test_announcements_are_zeroed_when_nothing_needs_attention(): void

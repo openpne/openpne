@@ -1,6 +1,7 @@
 export interface FriendMember {
     id: number;
     name: string;
+    imageUrl: string | null; // null → Avatar renders the id-colored initial badge
 }
 
 export interface PaginatedFriends {
