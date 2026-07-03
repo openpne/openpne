@@ -22,7 +22,7 @@ export default function TimelineIndex() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                <h1 className="text-2xl font-semibold">{title}</h1>
 
                 <div>
                     <ActionLink href="/m/timeline/new">{t('%Post_activity%')}</ActionLink>

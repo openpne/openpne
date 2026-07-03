@@ -56,7 +56,7 @@ export default function DiaryFeed() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                <h1 className="text-2xl font-semibold">{title}</h1>
 
                 <nav className="flex gap-1 border-b border-border" aria-label={title}>
                     <FeedTab href="/m/diary/list" label={t('All')} active={variant !== 'friends'} />
