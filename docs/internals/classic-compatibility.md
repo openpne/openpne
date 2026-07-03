@@ -113,8 +113,8 @@ Top / Topics / Events / Join / Leave links), the `friend` set (the subject membe
 on a page about another member, and the `default` set on the viewer's own pages — switching on the
 community / subject a controller records via `Controller::markLocalNavCommunity` /
 `markLocalNavSubject` (OpenPNE 3 `sf_nav_type`/`sf_nav_id`), community winning as its module's
-default_nav does; guests get an empty hook. The table is seeded with OpenPNE 3's default set (a later
-admin editor and the upgrade tool populate it); navigation settings are Classic-only — Modern's nav
+default_nav does; guests get an empty hook. The table is seeded with OpenPNE 3's default set (an admin
+editor and the upgrade tool populate it); navigation settings are Classic-only — Modern's nav
 is component-driven, not data-driven from this table. A stored `uri` is a normalized internal path
 (with an optional `:id` slot threaded with the context id, else `?id=` appended) or an http(s) URL;
 the renderer hides any item whose path matches no route or an OpenPNE 3 compatibility shim, and
