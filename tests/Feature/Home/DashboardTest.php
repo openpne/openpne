@@ -7,6 +7,8 @@ use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Models\Message;
+use App\Models\MessageRecipient;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -73,6 +75,43 @@ class DashboardTest extends TestCase
 
         // Bounded by the number of feeds + their eager loads, not by the number of rows.
         $this->assertLessThan(40, $queries, "dashboard ran {$queries} queries — an author avatar is likely lazy-loading");
+    }
+
+    public function test_announcements_are_zeroed_when_nothing_needs_attention(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->where('announcements.friendRequests', 0)
+                ->where('announcements.unreadMessages', 0)
+                ->where('announcements.communityApprovals', [])
+            );
+    }
+
+    public function test_announcements_report_pending_requests_unread_and_approvals(): void
+    {
+        $viewer = Member::factory()->create();
+        $requester = Member::factory()->create();
+        DB::table('friend_requests')->insert(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey()]);
+
+        $message = Message::factory()->create(['sender_id' => $requester->getKey()]);
+        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+
+        $community = Community::factory()->create();
+        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $community->applicants()->attach(Member::factory()->create()->getKey());
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->where('announcements.friendRequests', 1)
+                ->where('announcements.unreadMessages', 1)
+                ->has('announcements.communityApprovals', 1)
+                ->where('announcements.communityApprovals.0.communityId', $community->getKey())
+                ->where('announcements.communityApprovals.0.count', 1)
+            );
     }
 
     public function test_dashboard_renders_inertia_under_modern_only(): void
