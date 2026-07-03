@@ -1,36 +1,52 @@
 import type { ComponentType } from 'react';
 import { Link, usePage } from '@inertiajs/react';
-import { Activity, BookOpen, Search, Settings, UserCircle2, Users } from 'lucide-react';
+import { Activity, BookOpen, Mail, Search, Settings, UserCircle2, Users } from 'lucide-react';
 import { useT } from '@/lib/i18n';
+import type { PageProps } from '@/types';
 
 type Item = {
     href: string;
     icon: ComponentType<{ className?: string; strokeWidth?: number }>;
     label: string;
     match: string;
+    badge?: number;
 };
 
 /**
  * Shared nav list for LeftNav (desktop) and NavDrawer (mobile). Home is the brand row, so it is
- * omitted here. Only features with a live Modern surface are listed; Messages joins when its
- * Modern screens land.
+ * omitted here. Friends and Messages carry an attention badge (pending requests / unread) from the
+ * shared `unread` counts.
  */
 export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
     const t = useT();
-    const url = usePage().url;
+    const { url, props } = usePage<PageProps>();
+    const unread = props.unread;
 
     const items: Item[] = [
         { href: '/m/diary/list', icon: BookOpen, label: t('Diaries'), match: '/m/diary' },
-        { href: '/m/timeline', icon: Activity, label: t('Timeline'), match: '/m/timeline' },
         { href: '/m/community/search', icon: Users, label: t('%Communities%'), match: '/m/community' },
-        { href: '/m/friend/list', icon: UserCircle2, label: t('%Friends%'), match: '/m/friend' },
+        { href: '/m/timeline', icon: Activity, label: t('Timeline'), match: '/m/timeline' },
+        {
+            href: '/m/friend/list',
+            icon: UserCircle2,
+            label: t('%Friends%'),
+            match: '/m/friend',
+            badge: unread?.friendRequests ?? 0,
+        },
+        {
+            href: '/m/message',
+            icon: Mail,
+            label: t('Messages'),
+            match: '/m/message',
+            badge: unread?.unreadMessages ?? 0,
+        },
         { href: '/m/member/search', icon: Search, label: t('Search members'), match: '/m/member/search' },
         { href: '/m/member/config', icon: Settings, label: t('Settings'), match: '/m/member/config' },
     ];
 
     return (
         <ul className="flex flex-col gap-1">
-            {items.map(({ href, icon: Icon, label, match }) => {
+            {items.map(({ href, icon: Icon, label, match, badge = 0 }) => {
                 const active = url.startsWith(match);
                 return (
                     <li key={href}>
@@ -47,6 +63,14 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
                         >
                             <Icon className="size-5 shrink-0" strokeWidth={active ? 2.25 : 2} />
                             <span className="flex-1 truncate">{label}</span>
+                            {badge > 0 && (
+                                <span
+                                    className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold leading-none text-primary-foreground"
+                                    aria-label={t(':count unread', { count: badge })}
+                                >
+                                    {badge > 99 ? '99+' : badge}
+                                </span>
+                            )}
                         </Link>
                     </li>
                 );
