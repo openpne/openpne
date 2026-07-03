@@ -1,8 +1,9 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { ChevronRight, Search } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Avatar } from '@/components/avatar';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
+import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
@@ -38,6 +39,7 @@ export default function MemberSearch() {
         Object.values(criteria.monthday ?? {}).some((m) => Boolean(m) && Object.values(m).some(Boolean)) ||
         Boolean(criteria.age?.min || criteria.age?.max);
     const [advancedOpen, setAdvancedOpen] = useState(hasAdvancedCriteria);
+    const [searching, setSearching] = useState(false);
 
     const setField = (id: number, value: string | string[]) => setProfile((p) => ({ ...p, [id]: value }));
     const setRange = (id: number, key: 'from' | 'to', value: string) =>
@@ -47,7 +49,11 @@ export default function MemberSearch() {
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        router.get('/m/member/search', { name, profile, date, monthday, age }, { preserveState: false });
+        router.get('/m/member/search', { name, profile, date, monthday, age }, {
+            preserveState: false,
+            onStart: () => setSearching(true),
+            onFinish: () => setSearching(false),
+        });
     };
 
     return (
@@ -72,13 +78,7 @@ export default function MemberSearch() {
                             onChange={(e) => setName(e.target.value)}
                             className="rounded-full pr-11 pl-5"
                         />
-                        <button
-                            type="submit"
-                            aria-label={t('Search')}
-                            className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                            <Search className="size-4" aria-hidden />
-                        </button>
+                        <SearchSubmitButton loading={searching} />
                     </div>
 
                     <button
@@ -130,7 +130,7 @@ export default function MemberSearch() {
                                 </div>
                             </fieldset>
 
-                            <Button type="submit">{t('Search')}</Button>
+                            <Button type="submit" loading={searching}>{t('Search')}</Button>
                         </Panel>
                     )}
                 </form>

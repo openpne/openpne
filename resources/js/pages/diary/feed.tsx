@@ -1,8 +1,8 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { Search } from 'lucide-react';
 import { type FormEvent } from 'react';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
+import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Input } from '@/components/ui/input';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -78,13 +78,7 @@ export default function DiaryFeed() {
                                 onChange={(e) => form.setData('keyword', e.target.value)}
                                 className="rounded-full pr-11 pl-5"
                             />
-                            <button
-                                type="submit"
-                                aria-label={t('Search')}
-                                className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                                <Search className="size-4" aria-hidden />
-                            </button>
+                            <SearchSubmitButton loading={form.processing} />
                         </div>
                     </form>
                 )}
