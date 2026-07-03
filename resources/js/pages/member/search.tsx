@@ -54,7 +54,7 @@ export default function MemberSearch() {
         <>
             <Head title={t('Member search')} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <h1 className="text-2xl font-semibold">{t('Member search')}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t('Member search')}</h1>
 
                 <form onSubmit={submit} className="space-y-3">
                     {/* Card-less pill: the common case is a quick name lookup, so the search stays

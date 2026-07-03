@@ -86,7 +86,7 @@ export default function MessageIndex() {
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
-                <h1 className="text-2xl font-semibold">{t(current.label)}</h1>
+                <h1 className="text-xl font-semibold text-foreground">{t(current.label)}</h1>
 
                 <nav className="flex flex-wrap gap-4 border-b border-border text-sm" aria-label={t('Message boxes')}>
                     {ORDER.map((slug) => (
