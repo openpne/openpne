@@ -3,6 +3,7 @@
 namespace App\Features\Member;
 
 use App\Features\Member\Queries\SearchMembers;
+use App\Features\Member\Queries\VisibleSelfIntroductions;
 use App\Features\Member\Serializers\MemberSearchSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -17,7 +18,7 @@ class MemberSearchController extends Controller
 {
     use RespondsWithSurface;
 
-    public function search(Request $request, SearchMembers $query): View|InertiaResponse
+    public function search(Request $request, SearchMembers $query, VisibleSelfIntroductions $selfIntroductions): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $nameParam = $request->query('name', '');
@@ -45,7 +46,10 @@ class MemberSearchController extends Controller
                 'lang' => $lang,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/search', [
-                'members' => MemberSearchSerializer::paginator($members),
+                'members' => MemberSearchSerializer::paginator(
+                    $members,
+                    $selfIntroductions($viewer, array_map(fn (Member $m): int => $m->getKey(), $members->items())),
+                ),
                 'profiles' => MemberSearchSerializer::formFields($profiles, $lang, $birthdayName),
                 // Cast to object so an empty filter set serialises as {} (a keyed map), not [].
                 'criteria' => [

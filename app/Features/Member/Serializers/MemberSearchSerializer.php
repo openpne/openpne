@@ -14,12 +14,16 @@ class MemberSearchSerializer
 {
     /**
      * @param  LengthAwarePaginator<int, Member>  $members
-     * @return array{data: list<array{id: int, name: string, avatarUrl: ?string}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @param  array<int, string>  $introductions  member id => self-introduction visible to the viewer
+     * @return array{data: list<array{id: int, name: string, imageUrl: ?string, selfIntroduction: ?string}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
-    public static function paginator(LengthAwarePaginator $members): array
+    public static function paginator(LengthAwarePaginator $members, array $introductions = []): array
     {
         return [
-            'data' => array_map([self::class, 'memberRow'], $members->items()),
+            'data' => array_map(
+                fn (Member $member): array => self::memberRow($member, $introductions[$member->getKey()] ?? null),
+                $members->items(),
+            ),
             'meta' => [
                 'currentPage' => $members->currentPage(),
                 'lastPage' => $members->lastPage(),
@@ -48,13 +52,14 @@ class MemberSearchSerializer
         ])->values()->all();
     }
 
-    /** @return array{id: int, name: string, avatarUrl: ?string} */
-    private static function memberRow(Member $member): array
+    /** @return array{id: int, name: string, imageUrl: ?string, selfIntroduction: ?string} */
+    private static function memberRow(Member $member, ?string $selfIntroduction): array
     {
         return [
             'id' => $member->getKey(),
             'name' => $member->name,
-            'avatarUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'selfIntroduction' => $selfIntroduction,
         ];
     }
 
