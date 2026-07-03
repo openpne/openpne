@@ -40,9 +40,9 @@ abstract class TestCase extends BaseTestCase
     /**
      * Simulate the next HTTP request arriving on a fresh worker: forget every cached
      * object that captured the previous request's session store (guards, the session
-     * manager's built driver, the redirector), so UseAdminSessionStore's per-surface
+     * manager's built driver, the redirector), so UseAdminSessionStore's per-realm
      * pin can take effect. Required between requests in any test that crosses the
-     * member/admin surface boundary within one test method.
+     * member/admin realm boundary within one test method.
      */
     protected function freshRequestState(): void
     {

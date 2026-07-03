@@ -8,10 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Mirror of `sessions` (0001_01_01_000000): the admin surface keeps its own
+        // Mirror of `sessions` (0001_01_01_000000): the admin realm keeps its own
         // session store (UseAdminSessionStore). `user_id` holds admin_users ids — the
         // database handler stamps the container's default guard, which the middleware
-        // pins to `admin` on admin-surface requests. Framework column name, no FK.
+        // pins to `admin` on admin-realm requests. Framework column name, no FK.
         Schema::create('admin_sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();

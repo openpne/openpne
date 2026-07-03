@@ -14,9 +14,9 @@ use Tests\TestCase;
 
 /**
  * P0 regression coverage for the dual-guard session cross-bleed: the member and admin
- * surfaces keep separate session stores (UseAdminSessionStore), so `url.intended`
- * cannot redirect a login across surfaces and either side's logout leaves the other
- * side signed in — OpenPNE 3 parity, where pc_frontend/pc_backend each had a cookie.
+ * realms keep separate session stores (UseAdminSessionStore), so `url.intended`
+ * cannot redirect a login across realms and either side's logout leaves the other
+ * side signed in.
  *
  * Requests run on the database driver and carry both cookies at once (withCookie
  * persists within a test), modelling one browser's cookie jar. freshRequestState()
@@ -35,13 +35,13 @@ class AdminSessionIsolationTest extends TestCase
         parent::setUp();
 
         config(['session.driver' => 'database']);
-        // Read once up front: the middleware's surface pin rewrites session.cookie
-        // during each admin-surface request, so later config() re-reads would follow it.
+        // Read once up front: the middleware's realm pin rewrites session.cookie
+        // during each admin-realm request, so later config() re-reads would follow it.
         $this->memberCookie = config('session.cookie');
         $this->adminCookie = config('session.admin_cookie');
     }
 
-    public function test_intended_urls_do_not_cross_between_surfaces(): void
+    public function test_intended_urls_do_not_cross_between_realms(): void
     {
         $response = $this->get('/admin');
         $response->assertRedirect('/admin/login');
@@ -111,7 +111,7 @@ class AdminSessionIsolationTest extends TestCase
         $this->assertSame(0, DB::table('sessions')->count());
     }
 
-    public function test_admin_surface_requests_stamp_the_admin_user_id(): void
+    public function test_admin_realm_requests_stamp_the_admin_user_id(): void
     {
         // Regression for the default-guard pin: this route never runs Filament's
         // Authenticate (which would shouldUse the admin guard), so without the pin the

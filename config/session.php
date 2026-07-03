@@ -88,7 +88,7 @@ return [
 
     'table' => env('SESSION_TABLE', 'sessions'),
 
-    // Session rows for the admin surface (see App\Http\Middleware\UseAdminSessionStore).
+    // Session rows for the admin realm (see App\Http\Middleware\UseAdminSessionStore).
     // A separate table keeps the member session-purge pattern — delete from
     // config('session.table') by user_id — member-only, and gives the future admin
     // purge an unambiguous target.
@@ -138,9 +138,9 @@ return [
         Str::slug((string) env('APP_NAME', 'laravel')).'-session'
     ),
 
-    // Cookie for the admin surface's own session (OpenPNE 3 parity: pc_backend had its
-    // own cookie, so admin and member logins coexist in one browser and logging out of
-    // one never destroys the other). See App\Http\Middleware\UseAdminSessionStore.
+    // Cookie for the admin realm's own session: admin and member logins coexist in one
+    // browser, and logging out of one never destroys the other. See
+    // App\Http\Middleware\UseAdminSessionStore.
     'admin_cookie' => env(
         'SESSION_ADMIN_COOKIE',
         Str::slug((string) env('APP_NAME', 'laravel')).'-admin-session'

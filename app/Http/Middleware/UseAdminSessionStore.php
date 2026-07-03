@@ -9,10 +9,10 @@ use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Give the admin surface its own session store, separate from the member surface
- * (OpenPNE 3 parity: pc_frontend and pc_backend each had their own session cookie).
- * Separate stores fix both dual-guard cross-bleed bugs at the root: `url.intended`
- * cannot leak a redirect across surfaces, and either side's logout
+ * Give the admin realm its own session store, separate from the member realm.
+ * ("Realm" is the member/admin split; "surface" is reserved for Classic/Modern.)
+ * With separate stores an operator stays signed in to both in one browser,
+ * `url.intended` cannot leak a redirect across realms, and either side's logout
  * (`session()->invalidate()`) destroys only its own store.
  *
  * This must be GLOBAL middleware, keyed by request path: Livewire endpoints — which
@@ -20,8 +20,8 @@ use Symfony\Component\HttpFoundation\Response;
  * group, not the panel middleware stack, and Livewire's persistent middleware is
  * re-applied only after StartSession has already resolved the store.
  *
- * The default auth guard is pinned to the same surface so the database session
- * handler stamps `user_id` from the matching guard even on admin-surface requests
+ * The default auth guard is pinned to the same realm so the database session
+ * handler stamps `user_id` from the matching guard even on admin-realm requests
  * where Filament's Authenticate never runs (login-screen Livewire updates, file
  * uploads, the locale switch). Without the pin those writes null the column and the
  * row would escape a future purge-by-admin-id.
@@ -34,7 +34,7 @@ class UseAdminSessionStore
 
     private readonly string $memberGuard;
 
-    // Bound as a container singleton: the member-surface base values are captured
+    // Bound as a container singleton: the member-realm base values are captured
     // once per process, before any request's pin mutates them.
     public function __construct()
     {
@@ -48,7 +48,7 @@ class UseAdminSessionStore
         // Pin both branches on every request: config() and shouldUse() mutations
         // outlive the request wherever one process serves several (tests, any
         // future long-lived runtime), so the member branch must restore, not assume.
-        $admin = $this->isAdminSurface($request);
+        $admin = $this->isAdminRealm($request);
 
         config([
             'session.cookie' => $admin ? config('session.admin_cookie') : $this->memberCookie,
@@ -59,9 +59,9 @@ class UseAdminSessionStore
         $response = $next($request);
 
         if ($admin) {
-            // The XSRF-TOKEN cookie is one global name, so whichever surface responds
-            // last would overwrite the other's token and 419 the member surface's next
-            // Inertia/axios POST. Nothing on the admin surface reads it (Livewire sends
+            // The XSRF-TOKEN cookie is one global name, so whichever realm responds
+            // last would overwrite the other's token and 419 the member realm's next
+            // Inertia/axios POST. Nothing on the admin realm reads it (Livewire sends
             // its page-embedded data-csrf token) — drop it from admin responses instead.
             // removeCookie only matches an exact name/path/domain triple, which must
             // mirror how PreventRequestForgery queued it.
@@ -75,12 +75,12 @@ class UseAdminSessionStore
         return $response;
     }
 
-    private function isAdminSurface(Request $request): bool
+    private function isAdminRealm(Request $request): bool
     {
         // 'admin' mirrors AdminPanelProvider->path('admin'); the Livewire and Filament
         // prefixes come from the same resolvers those packages register routes with.
         // All three are pinned against the real routes by AdminSessionStoreTest.
-        // Livewire endpoints belong to the admin surface: nothing outside app/Filament
+        // Livewire endpoints belong to the admin realm: nothing outside app/Filament
         // renders Livewire (architecture-test enforced), and the Filament system routes
         // (export/import downloads) authenticate against the admin guard.
         $livewire = ltrim(EndpointResolver::prefix(), '/');

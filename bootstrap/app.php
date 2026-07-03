@@ -40,9 +40,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         );
 
         // Global, ahead of every group: it must pin the session store (cookie + table)
-        // and default guard for the request's surface before anything resolves the
+        // and default guard for the request's realm before anything resolves the
         // session driver — including the web group's StartSession, which also serves
-        // the admin surface's Livewire endpoints.
+        // the admin realm's Livewire endpoints.
         $middleware->prepend(UseAdminSessionStore::class);
 
         $middleware->web(append: [

@@ -17,9 +17,10 @@ use Tests\TestCase;
 
 /**
  * UseAdminSessionStore pins the session store (cookie + table) and default guard to
- * the request's surface, and keeps the XSRF-TOKEN cookie member-only. These tests pin
- * the predicate against the real routes so a Filament/Livewire upgrade that moves an
- * endpoint fails here instead of silently splitting a surface across two stores.
+ * the request's realm (the member/admin split), and keeps the XSRF-TOKEN cookie
+ * member-only. These tests pin the predicate against the real routes so a
+ * Filament/Livewire upgrade that moves an endpoint fails here instead of silently
+ * splitting a realm across two stores.
  */
 class AdminSessionStoreTest extends TestCase
 {
@@ -71,10 +72,10 @@ class AdminSessionStoreTest extends TestCase
         $this->assertStringStartsWith(config('filament.system_route_prefix', 'filament').'/', $export->uri());
     }
 
-    public function test_each_surface_sets_its_own_session_cookie(): void
+    public function test_each_realm_sets_its_own_session_cookie(): void
     {
         config(['session.driver' => 'database']);
-        // Read once up front: the middleware's surface pin rewrites session.cookie
+        // Read once up front: the middleware's realm pin rewrites session.cookie
         // during each request, so config() re-reads here would follow the pin.
         $memberCookie = config('session.cookie');
         $adminCookie = config('session.admin_cookie');
@@ -109,7 +110,7 @@ class AdminSessionStoreTest extends TestCase
         )));
     }
 
-    public function test_no_livewire_renders_outside_the_admin_surface(): void
+    public function test_no_livewire_renders_outside_the_admin_realm(): void
     {
         $offenders = [];
 
@@ -133,8 +134,8 @@ class AdminSessionStoreTest extends TestCase
         }
 
         $this->assertSame([], $offenders,
-            'Livewire belongs to the admin surface: UseAdminSessionStore routes every Livewire '
-            .'endpoint to the admin session store, so a member-surface Livewire component would '
-            .'run on the wrong session. Extend the surface predicate before adding one.');
+            'Livewire belongs to the admin realm: UseAdminSessionStore routes every Livewire '
+            .'endpoint to the admin session store, so a member-realm Livewire component would '
+            .'run on the wrong session. Extend the realm predicate before adding one.');
     }
 }
