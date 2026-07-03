@@ -1,15 +1,26 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Avatar } from '@/components/avatar';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { PaginatedFriends } from './types';
+import type { FriendMember, PaginatedFriends } from './types';
 
 interface ManageProps extends PageProps {
     received: PaginatedFriends;
     sent: PaginatedFriends;
+}
+
+/** Avatar + name linking to the member's profile — the shared leading cell of a pending-request row. */
+function MemberCell({ member }: { member: FriendMember }) {
+    return (
+        <Link href={`/m/member/${member.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
+            <Avatar id={member.id} name={member.name} src={member.imageUrl} size="sm" decorative />
+            <span className="min-w-0 flex-1 truncate">{member.name}</span>
+        </Link>
+    );
 }
 
 export default function FriendManage() {
@@ -43,7 +54,7 @@ export default function FriendManage() {
                             <List>
                                 {received.data.map((requester) => (
                                     <ListRow key={requester.id}>
-                                        <span className="min-w-0 flex-1 truncate text-foreground">{requester.name}</span>
+                                        <MemberCell member={requester} />
                                         <div className="flex shrink-0 gap-2">
                                             <Button type="button" size="sm" onClick={() => accept(requester.id)}>
                                                 {t('Accept')}
@@ -68,7 +79,7 @@ export default function FriendManage() {
                             <List>
                                 {sent.data.map((target) => (
                                     <ListRow key={target.id}>
-                                        <span className="min-w-0 flex-1 truncate text-foreground">{target.name}</span>
+                                        <MemberCell member={target} />
                                     </ListRow>
                                 ))}
                             </List>

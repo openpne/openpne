@@ -150,6 +150,7 @@ export default function CommunityShow() {
                                         title={event.name}
                                         meta={[`${t('Open date')}: ${formatDate(event.openDate)}`]}
                                         commentCount={event.commentCount}
+                                        participantCount={event.participantCount}
                                     />
                                 ))}
                             </List>

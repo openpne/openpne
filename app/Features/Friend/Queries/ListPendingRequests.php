@@ -15,8 +15,8 @@ class ListPendingRequests
         string $pageName = 'page',
     ): LengthAwarePaginator {
         return match ($direction) {
-            PendingRequestDirection::Sent => $viewer->friendRequestsSent()->paginate($perPage, ['*'], $pageName),
-            PendingRequestDirection::Received => $viewer->friendRequestsReceived()->paginate($perPage, ['*'], $pageName),
+            PendingRequestDirection::Sent => $viewer->friendRequestsSent()->with('avatar.file')->paginate($perPage, ['*'], $pageName),
+            PendingRequestDirection::Received => $viewer->friendRequestsReceived()->with('avatar.file')->paginate($perPage, ['*'], $pageName),
         };
     }
 }

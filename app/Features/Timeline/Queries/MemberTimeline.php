@@ -23,7 +23,8 @@ class MemberTimeline
         $query = TimelinePost::query()
             ->where('member_id', $owner->getKey())
             ->whereNull('in_reply_to_id')
-            ->with(['member.avatar.file', 'images.file']);
+            ->with(['member.avatar.file', 'images.file'])
+            ->withCount('replies');
 
         if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
             $query->whereRaw('1 = 0');

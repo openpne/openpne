@@ -14,7 +14,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class TimelinePostSerializer
 {
     /**
-     * @return array{id: int, body: string, visibility: string, hasImages: bool, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}, createdAt: string}
+     * @return array{id: int, body: string, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}, createdAt: string}
      */
     public static function entry(TimelinePost $post): array
     {
@@ -25,6 +25,10 @@ class TimelinePostSerializer
             'body' => $post->body,
             'visibility' => $post->visibility->slug(),
             'hasImages' => $images !== [],
+            // Top-level list queries eager-load withCount('replies'); a reply (never shown with a
+            // count — the thread is flat) or a single route-bound post reports 0 rather than firing
+            // a per-row loadCount.
+            'replyCount' => $post->replies_count ?? 0,
             'images' => $images,
             'author' => [
                 'id' => $post->member->getKey(),

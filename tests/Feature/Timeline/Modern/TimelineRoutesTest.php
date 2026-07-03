@@ -29,6 +29,21 @@ class TimelineRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page->component('timeline/member'));
     }
 
+    public function test_modern_member_timeline_carries_the_reply_count(): void
+    {
+        $member = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+        TimelinePost::factory()->count(3)->create(['member_id' => $member->getKey(), 'in_reply_to_id' => $post->getKey()]);
+
+        $this->actingAs($member)
+            ->get("/m/member/{$member->getKey()}/timeline")
+            ->assertInertia(fn ($page) => $page
+                ->has('posts.data', 1) // replies are not separate rows
+                ->where('posts.data.0.id', $post->getKey())
+                ->where('posts.data.0.replyCount', 3)
+            );
+    }
+
     public function test_modern_member_falls_back_to_classic_with_op3_body_id(): void
     {
         // When timeline is not native, a /m/* route falls back to Classic; the body id must

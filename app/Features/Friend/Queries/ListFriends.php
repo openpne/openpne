@@ -30,7 +30,9 @@ class ListFriends
     /** @return BelongsToMany<Member, Member> */
     private function query(Member $viewer, Member $owner): BelongsToMany
     {
-        $query = $owner->friendships();
+        // Both callers render the friend's avatar (Modern list rows, Classic FriendListBox gadget),
+        // so eager-load it here to keep the row count from turning into an N+1.
+        $query = $owner->friendships()->with('avatar.file');
 
         if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
             $query->whereRaw('1 = 0');

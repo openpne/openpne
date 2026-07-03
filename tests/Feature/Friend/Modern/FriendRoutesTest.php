@@ -3,6 +3,7 @@
 namespace Tests\Feature\Friend\Modern;
 
 use App\Models\Member;
+use App\Models\MemberImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
@@ -55,6 +56,50 @@ class FriendRoutesTest extends TestCase
             ->where('isOwner', false)
             ->where('friends.meta.total', 1)
         );
+    }
+
+    public function test_modern_list_serializes_the_friend_avatar_url(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        MemberImage::factory()->create(['member_id' => $bob->getKey()]);
+        $this->makeFriends($alice, $bob);
+        $expected = $bob->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+
+        $this->actingAs($alice)->get('/m/friend/list')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('friends.data.0.id', $bob->getKey())
+                ->where('friends.data.0.imageUrl', $expected)
+            );
+    }
+
+    public function test_modern_list_serializes_a_null_avatar_url_for_a_member_without_one(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        $this->makeFriends($alice, $bob);
+
+        $this->actingAs($alice)->get('/m/friend/list')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('friends.data.0.imageUrl', null));
+    }
+
+    public function test_modern_manage_serializes_avatar_urls_for_pending_requesters_and_targets(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+        $carol = Member::factory()->create();
+        MemberImage::factory()->create(['member_id' => $bob->getKey()]);
+        MemberImage::factory()->create(['member_id' => $carol->getKey()]);
+        DB::table('friend_requests')->insert([
+            ['requester_id' => $bob->getKey(), 'target_id' => $alice->getKey()],
+            ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey()],
+        ]);
+
+        $this->actingAs($alice)->get('/m/friend/manage')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('received.data.0.imageUrl', $bob->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true))
+                ->where('sent.data.0.imageUrl', $carol->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true))
+            );
     }
 
     public function test_modern_manage_returns_inertia_component_with_received_and_sent(): void
