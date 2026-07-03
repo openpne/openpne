@@ -21,7 +21,9 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $locale = app()->getLocale();
-        $user = $request->user();
+        // Explicit guard: these are member-surface props, and the web group also runs
+        // on admin-surface Livewire requests where the default guard is `admin`.
+        $user = $request->user('member');
 
         return [
             ...parent::share($request),

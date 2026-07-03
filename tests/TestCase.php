@@ -37,6 +37,21 @@ abstract class TestCase extends BaseTestCase
         return in_array(RefreshDatabase::class, class_uses_recursive(static::class), true);
     }
 
+    /**
+     * Simulate the next HTTP request arriving on a fresh worker: forget every cached
+     * object that captured the previous request's session store (guards, the session
+     * manager's built driver, the redirector), so UseAdminSessionStore's per-surface
+     * pin can take effect. Required between requests in any test that crosses the
+     * member/admin surface boundary within one test method.
+     */
+    protected function freshRequestState(): void
+    {
+        $this->app['auth']->forgetGuards();
+        $this->app['session']->forgetDrivers();
+        $this->app->forgetInstance('session.store');
+        $this->app->forgetInstance('redirect');
+    }
+
     /** Render a templated notification mail's plain-text body (the MailMessage delivers text/plain only). */
     protected function renderMailText(MailMessage $mail): string
     {
