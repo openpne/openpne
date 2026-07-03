@@ -68,7 +68,9 @@ export type AgeRange = {
 export interface MemberRow {
     id: number;
     name: string;
-    avatarUrl: string | null;
+    imageUrl: string | null;
+    /** Visible only when the viewer's clearance covers the field's visibility; null otherwise. */
+    selfIntroduction: string | null;
 }
 
 export interface SearchCriteria {
