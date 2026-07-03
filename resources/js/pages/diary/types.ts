@@ -5,6 +5,11 @@ export interface DiaryAuthor {
     name: string;
 }
 
+/** A diary's own author (feed/detail) carries an avatar; comment authors (DiaryAuthor) do not. */
+export interface DiaryFeedAuthor extends DiaryAuthor {
+    imageUrl: string | null;
+}
+
 export interface DiaryImage {
     id: number;
     url: string; // full bytes (FilePolicy-gated)
@@ -16,7 +21,7 @@ export interface DiarySummary {
     title: string;
     visibility: DiaryVisibility;
     hasImages: boolean; // drives the feed's has-photos marker
-    author: DiaryAuthor;
+    author: DiaryFeedAuthor;
     createdAt: string;
 }
 

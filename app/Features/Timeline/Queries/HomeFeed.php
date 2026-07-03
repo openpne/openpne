@@ -38,7 +38,7 @@ class HomeFeed
     {
         $query = TimelinePost::query()
             ->whereNull('in_reply_to_id')
-            ->with(['member', 'images.file']);
+            ->with(['member.avatar.file', 'images.file']);
 
         TimelineFeedScope::apply($query, $viewer);
 

@@ -17,7 +17,7 @@ use Illuminate\Support\Collection;
 class DiarySerializer
 {
     /**
-     * @return array{id: int, title: string, visibility: string, commentCount: int, hasImages: bool, author: array{id: int, name: string}, createdAt: string}
+     * @return array{id: int, title: string, visibility: string, commentCount: int, hasImages: bool, author: array{id: int, name: string, imageUrl: string|null}, createdAt: string}
      */
     public static function summary(Diary $diary): array
     {
@@ -34,6 +34,7 @@ class DiarySerializer
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
+                'imageUrl' => $diary->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
             ],
             'createdAt' => $diary->created_at->toIso8601String(),
         ];
@@ -43,7 +44,7 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, body: string, visibility: string, hasImages: bool, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string}, createdAt: string}
+     * @return array{id: int, title: string, body: string, visibility: string, hasImages: bool, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
@@ -59,6 +60,7 @@ class DiarySerializer
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
+                'imageUrl' => $diary->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
             ],
             'createdAt' => $diary->created_at->toIso8601String(),
         ];

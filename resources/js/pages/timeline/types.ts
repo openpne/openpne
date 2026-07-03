@@ -3,6 +3,7 @@ export type TimelinePostVisibility = 'open' | 'members' | 'friends' | 'private';
 export interface TimelinePostAuthor {
     id: number;
     name: string;
+    imageUrl: string | null;
 }
 
 export interface TimelinePostImage {
