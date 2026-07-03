@@ -59,11 +59,12 @@ function RailSection({ title, viewAllHref, children }: { title: string; viewAllH
 
 function SearchBox() {
     const t = useT();
-    const form = useForm({ keyword: '' });
+    // Member search filters by ?name= (see MemberSearchController), not ?keyword= like the diary feed.
+    const form = useForm({ name: '' });
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        if (form.data.keyword.trim() === '') {
+        if (form.data.name.trim() === '') {
             return;
         }
         form.get('/m/member/search', { preserveScroll: true });
@@ -79,8 +80,8 @@ function SearchBox() {
                 type="search"
                 enterKeyHint="search"
                 placeholder={t('Search members')}
-                value={form.data.keyword}
-                onChange={(e) => form.setData('keyword', e.target.value)}
+                value={form.data.name}
+                onChange={(e) => form.setData('name', e.target.value)}
                 className="rounded-full pr-11 pl-5"
             />
             <button
