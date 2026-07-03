@@ -46,10 +46,11 @@ class JoinedCommunityActivityTest extends TestCase
         $viewer = Member::factory()->create();
         $community = $this->joinedCommunity($viewer);
 
-        // Topics and events have separate id sequences, so the first of each collides at id 1. A keyed
-        // Eloquent merge would collapse them into one; toBase()->concat() keeps both.
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        // Force a topic and an event onto the same primary-key value (topics and events are separate
+        // tables, so a shared id is legal). A keyed Eloquent merge would collapse them into one;
+        // toBase()->concat() keeps both. Explicit ids so it holds regardless of AUTO_INCREMENT state.
+        $topic = CommunityTopic::factory()->create(['id' => 4242, 'community_id' => $community->getKey()]);
+        $event = CommunityEvent::factory()->create(['id' => 4242, 'community_id' => $community->getKey()]);
         $this->assertSame($topic->getKey(), $event->getKey(), 'test precondition: the ids collide');
 
         $result = app(JoinedCommunityActivity::class)($viewer);

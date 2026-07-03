@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Features\Community\Queries\RandomJoinedCommunities;
+use App\Features\Friend\Queries\RandomFriends;
+use App\Features\Home\Serializers\RightRailSerializer;
 use App\Features\Home\UnreadCounts;
 use App\Services\TermService;
 use Illuminate\Http\Request;
@@ -34,6 +37,13 @@ class HandleInertiaRequests extends Middleware
             // Shell nav badges: attention counts for the signed-in member, memoized per request so the
             // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
+            // Right rail (xl+ only): the viewer's friends and joined communities as thumbnail grids.
+            // Evaluated per request for a member; a plain closure (not Inertia::optional) so it is
+            // present on first render, which is where the rail shows.
+            'rightRail' => $user ? fn () => RightRailSerializer::rail(
+                (new RandomFriends)($user),
+                (new RandomJoinedCommunities)($user),
+            ) : null,
             // Modern brand mark: color + optional logo URL; a null url renders a color initial badge.
             'snsLogo' => [
                 'color' => '#2563eb',
