@@ -3,10 +3,12 @@
 namespace App\Features\Home;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Community\Queries\PendingJoinRequestCounts;
 use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\Home\Queries\JoinedCommunityActivity;
 use App\Features\Home\Serializers\HomeSerializer;
+use App\Features\Home\UnreadCounts;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Http\Controllers\Controller;
 use App\Models\Member;
@@ -51,8 +53,12 @@ class HomeController extends Controller
      * all-members diary feed, the timeline, the viewer's joined-community activity, and their own
      * recent diaries.
      */
-    public function dashboard(Request $request, JoinedCommunityActivity $communityActivity): Response
-    {
+    public function dashboard(
+        Request $request,
+        JoinedCommunityActivity $communityActivity,
+        UnreadCounts $unread,
+        PendingJoinRequestCounts $pendingApprovals,
+    ): Response {
         /** @var Member $viewer */
         $viewer = $request->user();
 
@@ -61,6 +67,8 @@ class HomeController extends Controller
             (new HomeFeed)->take($viewer, self::PREVIEW),
             $communityActivity($viewer, self::PREVIEW),
             (new RecentMemberDiaries)($viewer, $viewer, self::PREVIEW),
+            $unread->for($viewer),
+            $pendingApprovals($viewer),
         ));
     }
 

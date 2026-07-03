@@ -4,6 +4,7 @@ namespace App\Features\Home\Serializers;
 
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
+use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
@@ -23,15 +24,28 @@ class HomeSerializer
      * @param  Collection<int, TimelinePost>  $timeline  home timeline feed
      * @param  Collection<int, CommunityTopic|CommunityEvent>  $communityActivity  joined-community activity
      * @param  Collection<int, Diary>  $myDiaries  the viewer's own recent diaries
-     * @return array{diaries: list<array>, timeline: list<array>, communityActivity: list<array>, myDiaries: list<array>}
+     * @param  array{friendRequests: int, unreadMessages: int}  $unread  shell attention counts
+     * @param  Collection<int, Community>  $pendingApprovals  admin communities with applicants_count
+     * @return array{announcements: array, diaries: list<array>, timeline: list<array>, communityActivity: list<array>, myDiaries: list<array>}
      */
     public static function dashboard(
         Collection $diaries,
         Collection $timeline,
         Collection $communityActivity,
         Collection $myDiaries,
+        array $unread,
+        Collection $pendingApprovals,
     ): array {
         return [
+            'announcements' => [
+                'friendRequests' => $unread['friendRequests'],
+                'unreadMessages' => $unread['unreadMessages'],
+                'communityApprovals' => $pendingApprovals->map(fn (Community $c): array => [
+                    'communityId' => $c->getKey(),
+                    'communityName' => $c->name,
+                    'count' => $c->applicants_count,
+                ])->all(),
+            ],
             'diaries' => $diaries->map([DiarySerializer::class, 'summary'])->all(),
             'timeline' => $timeline->map([TimelinePostSerializer::class, 'entry'])->all(),
             'communityActivity' => $communityActivity->map([self::class, 'activityEntry'])->all(),

@@ -16,11 +16,57 @@ interface CommunityActivityEntry {
     updatedAt: string;
 }
 
+interface Announcements {
+    friendRequests: number;
+    unreadMessages: number;
+    communityApprovals: { communityId: number; communityName: string; count: number }[];
+}
+
 interface DashboardProps extends PageProps {
+    announcements: Announcements;
     diaries: DiarySummary[];
     timeline: TimelinePostEntry[];
     communityActivity: CommunityActivityEntry[];
     myDiaries: DiarySummary[];
+}
+
+/** Attention notices — pending friend requests, unread messages, and join requests awaiting the
+ *  viewer's approval. Rendered only when something needs attention. */
+function AnnouncementsPanel({ announcements }: { announcements: Announcements }) {
+    const t = useT();
+    const { friendRequests, unreadMessages, communityApprovals } = announcements;
+
+    if (friendRequests === 0 && unreadMessages === 0 && communityApprovals.length === 0) {
+        return null;
+    }
+
+    return (
+        <Panel flush title={t('Notices')}>
+            <List>
+                {friendRequests > 0 && (
+                    <ListRow href="/m/friend/manage" chevron>
+                        <span className="flex-1 text-sm text-foreground">
+                            {t(':count pending %friend% requests', { count: friendRequests })}
+                        </span>
+                    </ListRow>
+                )}
+                {unreadMessages > 0 && (
+                    <ListRow href="/m/message" chevron>
+                        <span className="flex-1 text-sm text-foreground">
+                            {t(':count unread messages', { count: unreadMessages })}
+                        </span>
+                    </ListRow>
+                )}
+                {communityApprovals.map((approval) => (
+                    <ListRow key={approval.communityId} href={`/m/community/${approval.communityId}/pending`} chevron>
+                        <span className="flex-1 text-sm text-foreground">
+                            {t(':count join requests for :community', { count: approval.count, community: approval.communityName })}
+                        </span>
+                    </ListRow>
+                ))}
+            </List>
+        </Panel>
+    );
 }
 
 /** A section shown only when it has rows: title band with a "View all" (and optional extra) link. */
@@ -103,7 +149,7 @@ function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
 
 export default function Dashboard() {
     const t = useT();
-    const { auth, diaries, timeline, communityActivity, myDiaries } = usePage<DashboardProps>().props;
+    const { auth, announcements, diaries, timeline, communityActivity, myDiaries } = usePage<DashboardProps>().props;
     const user = auth.user;
 
     if (!user) {
@@ -118,6 +164,8 @@ export default function Dashboard() {
             <Head title={t('Home')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <h1 className="sr-only">{t('Home')}</h1>
+
+                <AnnouncementsPanel announcements={announcements} />
 
                 {everythingEmpty ? (
                     <Panel title={t('Welcome, :name.', { name: user.name })}>
