@@ -23,7 +23,14 @@ export default function FriendList() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                <div className="flex items-center justify-between gap-3">
+                    <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                    {isOwner && (
+                        <Link href="/m/friend/manage" className="shrink-0 text-sm text-link hover:underline">
+                            {t('Pending %friend% requests')}
+                        </Link>
+                    )}
+                </div>
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}

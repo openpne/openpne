@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
+import { CommunityTabs } from './community-tabs';
 import type { CommunityCategory, PaginatedCommunities } from './types';
 
 interface SearchProps extends PageProps {
@@ -38,11 +39,13 @@ export default function CommunitySearch() {
             <Head title={t('%Communities%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <div className="flex items-center justify-between gap-3">
-                    <h1 className="text-2xl font-semibold">{t('%Communities%')}</h1>
+                    <h1 className="text-xl font-semibold text-foreground">{t('%Communities%')}</h1>
                     <Link href="/m/community/edit" className="shrink-0 text-sm text-link hover:underline">
                         {t('Create a %community%')}
                     </Link>
                 </div>
+
+                <CommunityTabs active="browse" />
 
                 <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
                     <div className="relative min-w-[12rem] flex-1">
