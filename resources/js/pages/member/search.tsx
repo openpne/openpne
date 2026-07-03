@@ -1,6 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { ChevronRight, Search } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { Avatar } from '@/components/avatar';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -142,9 +143,7 @@ export default function MemberSearch() {
                             <List>
                                 {members.data.map((member) => (
                                     <ListRow key={member.id} href={`/m/member/${member.id}`} chevron>
-                                        {member.avatarUrl && (
-                                            <img src={member.avatarUrl} alt="" className="size-10 rounded-md object-cover" />
-                                        )}
+                                        <Avatar id={member.id} name={member.name} src={member.avatarUrl} size="md" decorative />
                                         <span className="min-w-0 flex-1 truncate text-foreground">{member.name}</span>
                                     </ListRow>
                                 ))}

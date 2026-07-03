@@ -1,6 +1,7 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
+import { DangerLink } from '@/components/ui/danger-link';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -38,12 +39,9 @@ export default function FriendList() {
                                     <ListRow key={friend.id}>
                                         <span className="min-w-0 flex-1 truncate text-foreground">{friend.name}</span>
                                         {isOwner && (
-                                            <Link
-                                                href={`/m/friend/unlink/${friend.id}`}
-                                                className="shrink-0 text-sm text-muted-foreground hover:text-foreground hover:underline"
-                                            >
+                                            <DangerLink href={`/m/friend/unlink/${friend.id}`} className="shrink-0 text-sm">
                                                 {t('Remove %friend%')}
-                                            </Link>
+                                            </DangerLink>
                                         )}
                                     </ListRow>
                                 ))}

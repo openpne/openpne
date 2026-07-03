@@ -6,6 +6,7 @@ import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
 import { List, ListRow, Panel } from '@/components/ui/surface';
+import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, PaginatedMessages } from './types';
@@ -156,7 +157,7 @@ export default function MessageIndex() {
                                             </p>
                                             <p className="truncate text-xs text-muted-foreground">
                                                 {m.counterparty?.name ?? t('Withdrawn member')} &mdash;{' '}
-                                                {new Date(m.date).toLocaleString()}
+                                                {formatDateTime(m.date)}
                                             </p>
                                         </div>
                                         {m.unread && (

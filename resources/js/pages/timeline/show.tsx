@@ -1,10 +1,13 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
+import { Avatar } from '@/components/avatar';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
+import { DangerLink } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { TimelinePostEntry } from './types';
@@ -35,11 +38,12 @@ export default function TimelineShow() {
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
                 <Panel bodyClassName="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                        <Link href={`/m/member/${post.author.id}/timeline`} className="font-medium text-link hover:underline">
-                            {post.author.name}
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                        <Link href={`/m/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 font-medium text-link hover:underline">
+                            <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} size="sm" decorative />
+                            <span className="truncate">{post.author.name}</span>
                         </Link>
-                        <span className="text-muted-foreground">{new Date(post.createdAt).toLocaleString()}</span>
+                        <span className="shrink-0 text-muted-foreground">{formatDateTime(post.createdAt)}</span>
                     </div>
                     <p className="whitespace-pre-wrap break-words">{post.body}</p>
                     {post.images.length > 0 && (
@@ -50,9 +54,9 @@ export default function TimelineShow() {
                         </div>
                     )}
                     {post.author.id === viewerId && (
-                        <Link href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm text-link hover:underline">
+                        <DangerLink href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm">
                             {t('Delete')}
-                        </Link>
+                        </DangerLink>
                     )}
                 </Panel>
 
@@ -65,13 +69,13 @@ export default function TimelineShow() {
                                         <Link href={`/m/member/${reply.author.id}/timeline`} className="font-medium text-link hover:underline">
                                             {reply.author.name}
                                         </Link>
-                                        <span className="text-muted-foreground">{new Date(reply.createdAt).toLocaleString()}</span>
+                                        <span className="text-muted-foreground">{formatDateTime(reply.createdAt)}</span>
                                     </div>
                                     <p className="whitespace-pre-wrap break-words">{reply.body}</p>
                                     {reply.author.id === viewerId && (
-                                        <Link href={`/m/timeline/deleteConfirm/${reply.id}`} className="text-sm text-link hover:underline">
+                                        <DangerLink href={`/m/timeline/deleteConfirm/${reply.id}`} className="text-sm">
                                             {t('Delete')}
-                                        </Link>
+                                        </DangerLink>
                                     )}
                                 </li>
                             ))}

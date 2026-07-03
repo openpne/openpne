@@ -1,9 +1,11 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
-import { List, ListRow, Panel } from '@/components/ui/surface';
+import { DangerLink } from '@/components/ui/danger-link';
+import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
+import { DiaryRow } from './diary-row';
 import type { DiaryAuthor, PaginatedDiaries } from './types';
 
 interface ListProps extends PageProps {
@@ -46,24 +48,20 @@ export default function DiaryList() {
                         <Panel flush>
                             <List>
                                 {diaries.data.map((entry) => (
-                                    <ListRow key={entry.id}>
-                                        <Link href={`/m/diary/${entry.id}`} className="min-w-0 flex-1 truncate font-medium text-foreground hover:underline">
-                                            {entry.title}
-                                        </Link>
-                                        <span className="shrink-0 text-sm text-muted-foreground">
-                                            {new Date(entry.createdAt).toLocaleDateString()}
-                                        </span>
-                                        {isOwner && (
-                                            <span className="flex shrink-0 gap-3 text-sm">
-                                                <Link href={`/m/diary/edit/${entry.id}`} className="text-muted-foreground hover:text-foreground">
-                                                    {t('Edit')}
-                                                </Link>
-                                                <Link href={`/m/diary/deleteConfirm/${entry.id}`} className="text-muted-foreground hover:text-foreground">
-                                                    {t('Delete')}
-                                                </Link>
-                                            </span>
-                                        )}
-                                    </ListRow>
+                                    <DiaryRow
+                                        key={entry.id}
+                                        diary={entry}
+                                        actions={
+                                            isOwner && (
+                                                <>
+                                                    <Link href={`/m/diary/edit/${entry.id}`} className="text-muted-foreground hover:text-foreground">
+                                                        {t('Edit')}
+                                                    </Link>
+                                                    <DangerLink href={`/m/diary/deleteConfirm/${entry.id}`}>{t('Delete')}</DangerLink>
+                                                </>
+                                            )
+                                        }
+                                    />
                                 ))}
                             </List>
                         </Panel>

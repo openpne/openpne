@@ -1,7 +1,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Search } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import { useState } from 'react';
 import { CommunityImage } from '@/components/community-image';
+import { CountBadge } from '@/components/entry-row';
 import { Pagination } from '@/components/pagination';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -93,10 +94,22 @@ export default function CommunitySearch() {
                             <List>
                                 {communities.data.map((community) => (
                                     <ListRow key={community.id} href={`/m/community/${community.id}`} chevron>
-                                        <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-12" />
+                                        <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-12" decorative />
                                         <div className="min-w-0 flex-1">
                                             <p className="font-medium text-foreground">{community.name}</p>
-                                            {community.category && <p className="text-xs text-muted-foreground">{community.category.name}</p>}
+                                            <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                                                {community.category && (
+                                                    <>
+                                                        <span className="truncate">{community.category.name}</span>
+                                                        <span aria-hidden>·</span>
+                                                    </>
+                                                )}
+                                                <CountBadge
+                                                    icon={Users}
+                                                    count={community.memberCount}
+                                                    srLabel={t(':count members', { count: community.memberCount })}
+                                                />
+                                            </p>
                                             {community.description && (
                                                 <p className="line-clamp-2 text-sm text-muted-foreground">{community.description}</p>
                                             )}

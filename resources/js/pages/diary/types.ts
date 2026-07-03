@@ -20,6 +20,7 @@ export interface DiarySummary {
     id: number;
     title: string;
     visibility: DiaryVisibility;
+    commentCount: number;
     hasImages: boolean; // drives the feed's has-photos marker
     author: DiaryFeedAuthor;
     createdAt: string;

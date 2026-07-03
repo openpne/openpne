@@ -2,9 +2,11 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
+import { DangerLink } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { DiaryComment, DiaryDetail } from './types';
@@ -60,7 +62,7 @@ export default function DiaryShow() {
 
                 <Panel bodyClassName="space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        {diary.author.name} &mdash; {new Date(diary.createdAt).toLocaleString()}
+                        {diary.author.name} &mdash; {formatDateTime(diary.createdAt)}
                     </p>
 
                     <div className="whitespace-pre-wrap break-words">{diary.body}</div>
@@ -72,9 +74,7 @@ export default function DiaryShow() {
                             <Link href={`/m/diary/edit/${diary.id}`} className="text-link hover:underline">
                                 {t('Edit')}
                             </Link>
-                            <Link href={`/m/diary/deleteConfirm/${diary.id}`} className="text-link hover:underline">
-                                {t('Delete')}
-                            </Link>
+                            <DangerLink href={`/m/diary/deleteConfirm/${diary.id}`}>{t('Delete')}</DangerLink>
                         </div>
                     )}
                 </Panel>
@@ -84,25 +84,25 @@ export default function DiaryShow() {
                         <List>
                             {comments.map((comment) => (
                                 <li key={comment.id} className="space-y-2 px-5 py-4">
-                                    <p className="text-sm text-muted-foreground">
-                                        <strong>{comment.number}</strong>:{' '}
+                                    {/* Flex header (not inline prose) — inline text-link inside a muted
+                                        text block trips axe link-in-text-block; this also matches the
+                                        topic/event comment header shape. */}
+                                    <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
+                                        <span className="font-medium">#{comment.number}</span>
                                         {comment.author ? (
-                                            <Link href={`/m/member/${comment.author.id}`} className="text-link hover:underline">
+                                            <Link href={`/m/member/${comment.author.id}`} className="truncate text-link hover:underline">
                                                 {comment.author.name}
                                             </Link>
                                         ) : (
-                                            t('Withdrawn member')
-                                        )}{' '}
-                                        &mdash; {new Date(comment.createdAt).toLocaleString()}
-                                        {comment.deletable && (
-                                            <>
-                                                {' '}
-                                                <Link href={`/m/diary/comment/deleteConfirm/${comment.id}`} className="text-link hover:underline">
-                                                    {t('Delete')}
-                                                </Link>
-                                            </>
+                                            <span>{t('Withdrawn member')}</span>
                                         )}
-                                    </p>
+                                        <span className="ml-auto shrink-0">{formatDateTime(comment.createdAt)}</span>
+                                        {comment.deletable && (
+                                            <DangerLink href={`/m/diary/comment/deleteConfirm/${comment.id}`} className="shrink-0">
+                                                {t('Delete')}
+                                            </DangerLink>
+                                        )}
+                                    </div>
                                     <p className="whitespace-pre-wrap break-words">{comment.body}</p>
                                     <ImageGrid images={comment.images} size="size-20" />
                                 </li>

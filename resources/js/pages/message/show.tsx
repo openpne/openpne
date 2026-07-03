@@ -4,6 +4,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
 import { ActionLink } from '@/components/ui/action-link';
 import { Panel } from '@/components/ui/surface';
+import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, MessageDetail, MessageImage } from './types';
@@ -117,7 +118,7 @@ export default function MessageShow() {
                             )}
                         </dd>
                         <dt className="font-medium text-muted-foreground">{t('Created At')}</dt>
-                        <dd>{new Date(message.createdAt).toLocaleString()}</dd>
+                        <dd>{formatDateTime(message.createdAt)}</dd>
                     </dl>
 
                     <ImageGrid images={message.images} />

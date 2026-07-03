@@ -1,8 +1,10 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
+import { EntryRow } from '@/components/entry-row';
 import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
-import { List, ListRow, Panel } from '@/components/ui/surface';
+import { List, Panel } from '@/components/ui/surface';
+import { formatDate } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, PaginatedTopics } from '../types';
@@ -47,17 +49,14 @@ export default function CommunityTopicIndex() {
                         <Panel flush>
                             <List>
                                 {topics.data.map((topic) => (
-                                    <ListRow key={topic.id} href={`/m/community/topic/${topic.id}`} chevron>
-                                        <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} size="sm" decorative />
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate font-medium">
-                                                {topic.name} <span className="text-sm font-normal text-muted-foreground">({topic.commentCount})</span>
-                                            </p>
-                                            <p className="truncate text-xs text-muted-foreground">
-                                                {topic.author?.name ?? t('Withdrawn member')} &mdash; {new Date(topic.updatedAt).toLocaleString()}
-                                            </p>
-                                        </div>
-                                    </ListRow>
+                                    <EntryRow
+                                        key={topic.id}
+                                        href={`/m/community/topic/${topic.id}`}
+                                        leading={<Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} size="sm" decorative />}
+                                        title={topic.name}
+                                        meta={[topic.author?.name ?? t('Withdrawn member'), formatDate(topic.updatedAt)]}
+                                        commentCount={topic.commentCount}
+                                    />
                                 ))}
                             </List>
                         </Panel>
