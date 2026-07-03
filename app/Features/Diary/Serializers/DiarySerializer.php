@@ -2,6 +2,7 @@
 
 namespace App\Features\Diary\Serializers;
 
+use App\Features\Diary\DiaryCalendar;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DiaryCommentImage;
@@ -113,6 +114,27 @@ class DiarySerializer
     public static function comments(Collection $comments, Member $viewer): array
     {
         return $comments->map(fn (DiaryComment $comment): array => self::comment($comment, $viewer))->all();
+    }
+
+    /**
+     * The sidemenu calendar as Modern props: the month grid, the days carrying a viewer-visible
+     * diary (linked to the day archive), and the unbounded prev/next month targets. The client
+     * builds archive URLs from `year`/`month`/`day`; the label is the locale-neutral `Y-m` heading.
+     *
+     * @param  list<int>  $diaryDays  day-of-month numbers (1-31) with a viewer-visible diary
+     * @return array{label: string, year: int, month: int, weeks: list<list<?int>>, diaryDays: list<int>, previousMonth: array{year: int, month: int}, nextMonth: array{year: int, month: int}}
+     */
+    public static function calendar(DiaryCalendar $calendar, array $diaryDays): array
+    {
+        return [
+            'label' => $calendar->label(),
+            'year' => $calendar->year,
+            'month' => $calendar->month,
+            'weeks' => $calendar->weeks,
+            'diaryDays' => $diaryDays,
+            'previousMonth' => $calendar->previousMonth(),
+            'nextMonth' => $calendar->nextMonth(),
+        ];
     }
 
     /**

@@ -50,3 +50,19 @@ export interface PaginatedDiaries {
         total: number;
     };
 }
+
+export interface YearMonth {
+    year: number;
+    month: number;
+}
+
+/** The sidemenu-calendar month grid for the diary list (OpenPNE 3 Calendar_Month_Weekdays). */
+export interface DiaryCalendarData {
+    label: string; // locale-neutral "Y-m" heading
+    year: number;
+    month: number;
+    weeks: (number | null)[][]; // rows of 7; null cells are padding from adjacent months
+    diaryDays: number[]; // days-of-month with a viewer-visible diary → linked to the day archive
+    previousMonth: YearMonth;
+    nextMonth: YearMonth;
+}

@@ -10,6 +10,7 @@ use App\Features\Diary\Queries\AdjacentDiaries;
 use App\Features\Diary\Queries\ListDiaries;
 use App\Features\Diary\Queries\ListFriendDiaries;
 use App\Features\Diary\Queries\ListRecentDiaries;
+use App\Features\Diary\Queries\MemberDiaryDays;
 use App\Features\Diary\Queries\SearchDiaries;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\DiarySerializer;
@@ -21,6 +22,7 @@ use App\Models\Diary;
 use App\Models\Member;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,11 +34,12 @@ class DiaryController extends Controller
 {
     use RespondsWithSurface;
 
-    public function listMember(Request $request, ListDiaries $query, ?Member $member = null): View|InertiaResponse
+    public function listMember(Request $request, ListDiaries $query, MemberDiaryDays $diaryDays, ?Member $member = null): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $owner = $this->memberSubject($member);
         $diaries = $query($viewer, $owner);
+        $now = CarbonImmutable::now();
 
         return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.list', [
@@ -47,11 +50,12 @@ class DiaryController extends Controller
                 'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
                 'isOwner' => $viewer->is($owner),
                 'diaries' => DiarySerializer::paginator($diaries),
+                'calendar' => $this->calendarProps($viewer, $owner, $now->year, $now->month, $diaryDays),
             ]),
         ]);
     }
 
-    public function listMemberArchive(Request $request, ListDiaries $query, Member $member): View|InertiaResponse
+    public function listMemberArchive(Request $request, ListDiaries $query, MemberDiaryDays $diaryDays, Member $member): View|InertiaResponse
     {
         // Read the date off the route by name: a positional scalar would collide with the
         // `surface` default on the /m/* route. Segments are digit-constrained by the route.
@@ -79,8 +83,23 @@ class DiaryController extends Controller
                 'isOwner' => $viewer->is($member),
                 'diaries' => DiarySerializer::paginator($diaries),
                 'period' => $period->label,
+                'calendar' => $this->calendarProps($viewer, $member, $period->start->year, $period->start->month, $diaryDays),
             ]),
         ]);
+    }
+
+    /**
+     * The Modern diary-list calendar, mirroring the Classic x-diary.sidemenu. Each surface resolves
+     * its own days (this runs only inside the Modern closure), so Classic never pays for it.
+     *
+     * @return array{label: string, year: int, month: int, weeks: list<list<?int>>, diaryDays: list<int>, previousMonth: array{year: int, month: int}, nextMonth: array{year: int, month: int}}
+     */
+    private function calendarProps(Member $viewer, Member $owner, int $year, int $month, MemberDiaryDays $diaryDays): array
+    {
+        return DiarySerializer::calendar(
+            DiaryCalendar::forMonth($year, $month),
+            $diaryDays($viewer, $owner, $year, $month),
+        );
     }
 
     public function list(Request $request, ListRecentDiaries $query): View|InertiaResponse
