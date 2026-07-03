@@ -1,9 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Search, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useState } from 'react';
 import { CommunityImage } from '@/components/community-image';
 import { CountBadge } from '@/components/entry-row';
 import { Pagination } from '@/components/pagination';
+import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -23,6 +24,7 @@ export default function CommunitySearch() {
     const t = useT();
     const { communities, keyword, categoryId, categories } = usePage<SearchProps>().props;
     const [form, setForm] = useState({ keyword, categoryId: categoryId ?? 0 });
+    const [searching, setSearching] = useState(false);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,7 +32,13 @@ export default function CommunitySearch() {
         router.get(
             '/m/community/search',
             { keyword: form.keyword || undefined, category_id: form.categoryId || undefined },
-            { preserveState: true, preserveScroll: true, replace: true },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                onStart: () => setSearching(true),
+                onFinish: () => setSearching(false),
+            },
         );
     };
 
@@ -61,13 +69,7 @@ export default function CommunitySearch() {
                             onChange={(e) => setForm((f) => ({ ...f, keyword: e.target.value }))}
                             className="rounded-full pr-11 pl-5"
                         />
-                        <button
-                            type="submit"
-                            aria-label={t('Search')}
-                            className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                            <Search className="size-4" aria-hidden />
-                        </button>
+                        <SearchSubmitButton loading={searching} />
                     </div>
                     <label htmlFor="community_category" className="sr-only">
                         {t('Category')}

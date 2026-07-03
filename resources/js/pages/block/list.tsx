@@ -18,13 +18,17 @@ export default function BlockList() {
     const t = useT();
     const { blocks, flash } = usePage<ListProps>().props;
     const [memberId, setMemberId] = useState("");
+    const [adding, setAdding] = useState(false);
 
     function add(e: FormEvent) {
         e.preventDefault();
         if (memberId === "") {
             return;
         }
-        router.get("/m/block/add", { id: memberId });
+        router.get("/m/block/add", { id: memberId }, {
+            onStart: () => setAdding(true),
+            onFinish: () => setAdding(false),
+        });
     }
 
     return (
@@ -52,7 +56,7 @@ export default function BlockList() {
                                 value={memberId}
                                 onChange={(e) => setMemberId(e.target.value)}
                             />
-                            <Button type="submit">{t("Block")}</Button>
+                            <Button type="submit" loading={adding}>{t("Block")}</Button>
                         </form>
                         <p className="text-sm text-muted-foreground">
                             {t(
