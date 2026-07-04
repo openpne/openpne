@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Data\ProfileFormData;
 use App\Features\Profile\ProfileFieldRules;
+use App\Http\Middleware\SetLocale;
 use App\Models\Member;
 use App\Models\Profile;
 use Illuminate\Database\Eloquent\Collection;
@@ -52,6 +53,14 @@ class CreateNewMember implements CreatesNewUsers
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
             ]);
+
+            // Promote the guest's explicit pre-login language choice (POST /locale stores it in the
+            // session) to the durable per-member locale. forceFill — locale is deliberately not
+            // mass-assignable; same write as locale.switch.
+            $locale = session('locale');
+            if (is_string($locale) && in_array($locale, SetLocale::SUPPORTED_LOCALES, strict: true)) {
+                $member->forceFill(['locale' => $locale])->save();
+            }
 
             // Only is_disp_regist fields are saved (saveFields ignores other keys). A submitted
             // visibility is kept for member-editable fields; otherwise it follows the field default.
