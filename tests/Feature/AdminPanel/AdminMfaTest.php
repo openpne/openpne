@@ -61,13 +61,17 @@ class AdminMfaTest extends TestCase
         $this->assertInstanceOf(HasAppAuthentication::class, $admin);
         $this->assertInstanceOf(HasAppAuthenticationRecovery::class, $admin);
 
-        [$secret] = $this->enableMfa($admin);
+        [$secret, $codes] = $this->enableMfa($admin);
 
         $this->assertSame($secret, $admin->fresh()->getAppAuthenticationSecret());
         // The raw column is ciphertext, not the base32 secret.
-        $raw = DB::table('admin_users')->where('id', $admin->getKey())->value('app_authentication_secret');
-        $this->assertNotSame($secret, $raw);
-        $this->assertStringNotContainsString($secret, (string) $raw);
+        $row = DB::table('admin_users')->where('id', $admin->getKey())->first();
+        $this->assertNotSame($secret, $row->app_authentication_secret);
+        $this->assertStringNotContainsString($secret, (string) $row->app_authentication_secret);
+        // Recovery codes are bcrypt-hashed then encrypted — no plaintext code in the column.
+        foreach ($codes as $code) {
+            $this->assertStringNotContainsString($code, (string) $row->app_authentication_recovery_codes);
+        }
     }
 
     public function test_the_setup_qr_code_is_a_single_valid_data_uri_without_imagick(): void
