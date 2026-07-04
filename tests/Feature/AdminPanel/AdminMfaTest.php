@@ -11,6 +11,7 @@ use App\Models\AdminUser;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Facades\Filament;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -128,6 +129,23 @@ class AdminMfaTest extends TestCase
         $remaining = $admin->fresh()->getAppAuthenticationRecoveryCodes();
         $this->assertCount(count($codes) - 1, $remaining);
         $this->assertFalse($this->provider()->verifyRecoveryCode($codes[0], $admin->fresh()));
+    }
+
+    public function test_admin_login_offers_no_remember_me_so_mfa_cannot_be_bypassed(): void
+    {
+        // A recaller cookie authenticates through the guard middleware, which never runs the
+        // TOTP challenge — so remember-me is removed from the admin panel entirely.
+        $admin = AdminUser::factory()->create(['username' => 'noremember', 'password' => 'secret-pass-1']);
+
+        $component = Livewire::test(Login::class)->fillForm(['email' => 'noremember', 'password' => 'secret-pass-1']);
+        // The form exposes no remember toggle.
+        $component->assertFormFieldDoesNotExist('remember');
+
+        // Even if a client forges the field, no recaller cookie — the bypass token — is issued.
+        $component->set('data.remember', true)->call('authenticate')->assertHasNoFormErrors();
+        $this->assertAuthenticatedAs($admin, 'admin');
+        $recaller = 'remember_admin_'.sha1(SessionGuard::class);
+        $this->assertArrayNotHasKey($recaller, $this->app['cookie']->getQueuedCookies());
     }
 
     public function test_first_login_of_a_wrapped_admin_with_mfa_retires_the_password_scheme(): void

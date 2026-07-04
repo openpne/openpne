@@ -27,6 +27,10 @@ dashboard reminder widget.
   actions, keeping the current session; the CLI revokes all), consistent with a
   password change. Regenerating recovery codes does not revoke — the TOTP factor
   is unchanged.
+- **No "remember me."** The admin login drops the remember-me option
+  (`App\Filament\Pages\Auth\Login`): a recaller cookie authenticates through the
+  guard middleware, which never runs the TOTP challenge, so it would silently
+  bypass MFA. Administrators sign in per session.
 
 The secret and recovery codes are stored encrypted (APP_KEY); recovery codes are
 additionally bcrypt-hashed by Filament before encryption. The MFA challenge in
