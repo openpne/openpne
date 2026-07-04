@@ -216,7 +216,7 @@ final class StepRegistry
             // Migrated to typed members columns / the preference store.
             'pc_address' => 'members.email (PC address preferred), MemberUpgrade.',
             'mobile_address' => 'members.email fallback when no PC address, MemberUpgrade.',
-            'password' => 'members.password (legacy hash, rehashed on first login), MemberUpgrade.',
+            'password' => 'members.password (wrapped as bcrypt(md5) by PasswordWrap, plain bcrypt after first login), MemberUpgrade.',
             'profile_page_public_flag' => 'members.profile_visibility, MemberUpgrade.',
             'language' => 'members.locale (ja_JP→ja, …), MemberUpgrade.',
             'diary_public_flag' => 'member_preferences[diary_default_visibility], MemberPreferenceUpgrade.',

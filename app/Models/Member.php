@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ClearsPasswordScheme;
 use App\Notifications\Auth\ResetPasswordNotification;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
@@ -17,11 +18,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'password_scheme', 'remember_token'])]
 class Member extends Authenticatable
 {
     /** @use HasFactory<MemberFactory> */
-    use HasFactory, Notifiable;
+    use ClearsPasswordScheme, HasFactory, Notifiable;
 
     protected function casts(): array
     {

@@ -2,7 +2,9 @@
 
 namespace App\Upgrade\Verify;
 
+use App\Auth\PasswordScheme;
 use App\Models\UpgradeState;
+use App\Support\SnsSettingKey;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
@@ -23,6 +25,8 @@ use Illuminate\Support\Facades\Schema;
  *    or a step that never completed.
  *  - Check B (file_bin): every file has its bytes and files.byte_size == LENGTH(file_bin.bin), and the
  *    FK is rewired onto files.
+ *  - Check C (passwords): the wrap pass's terminal invariant — no bare OpenPNE 3 MD5 at rest, flagged
+ *    rows hold bcrypt, no unknown schemes.
  *
  * Console-free (an output closure) and registry-injectable (tests pass a step subset), like the runner.
  */
@@ -69,7 +73,49 @@ final class UpgradeVerifier
             $this->verifyFileBin($report, $out);
         }
 
+        $this->verifyPasswords($report, $out);
+
         return $report;
+    }
+
+    /**
+     * The wrap pass's terminal invariant (Check C): no bare OpenPNE 3 MD5 may remain at
+     * rest — such a row can no longer authenticate anyone — every row flagged md5_bcrypt
+     * must actually hold a bcrypt string, and no row carries an unknown scheme. Cutover
+     * is held until all pass.
+     */
+    private function verifyPasswords(VerifyReport $report, Closure $out): void
+    {
+        $targets = $this->targetTables();
+
+        foreach (['members', 'admin_users'] as $table) {
+            if (! in_array($table, $targets, true)) {
+                continue;
+            }
+
+            $bare = (int) DB::table($table)->whereRaw("`password` REGEXP '^[0-9a-f]{32}\$'")->count();
+            $this->record($report, $out, "passwords:{$table}:wrapped", $bare === 0,
+                $bare === 0 ? 'no bare-MD5 rows' : "{$bare} bare-MD5 row(s) remain — the password wrap pass has not completed");
+
+            // Strict bcrypt shape, and NULL fails too — NOT LIKE would skip a flagged
+            // NULL and accept a merely-'$2'-prefixed string the hasher cannot parse.
+            $malformed = (int) DB::table($table)
+                ->where('password_scheme', PasswordScheme::Md5Bcrypt->value)
+                ->where(function ($query): void {
+                    $query->whereNull('password')
+                        ->orWhereRaw('`password` NOT REGEXP ?', ['^\\$2[aby]\\$[0-9]{2}\\$[./A-Za-z0-9]{53}$']);
+                })
+                ->count();
+            $this->record($report, $out, "passwords:{$table}:scheme", $malformed === 0,
+                $malformed === 0 ? 'every md5_bcrypt row holds a bcrypt hash' : "{$malformed} md5_bcrypt row(s) do not hold a bcrypt hash");
+
+            $unknown = (int) DB::table($table)
+                ->whereNotNull('password_scheme')
+                ->where('password_scheme', '!=', PasswordScheme::Md5Bcrypt->value)
+                ->count();
+            $this->record($report, $out, "passwords:{$table}:known_schemes", $unknown === 0,
+                $unknown === 0 ? 'no unknown password_scheme values' : "{$unknown} row(s) carry an unknown password_scheme");
+        }
     }
 
     /** @param  list<string>  $absent */
@@ -95,6 +141,13 @@ final class UpgradeVerifier
             : $this->sourceCount($step, $options);
         $targetN = (int) DB::table($step->targetTable())->count();
         $affectedN = (int) $state->rows_affected;
+
+        // The runner stamps surface_mode into sns_settings after a successful run
+        // (UpgradeRunner::stampSurfaceMode — it has no OpenPNE 3 source); that row is not
+        // step output, so the parity comparison must not read it as target drift.
+        if ($step->targetTable() === 'sns_settings') {
+            $targetN -= (int) DB::table('sns_settings')->where('key', SnsSettingKey::SurfaceMode->value)->count();
+        }
 
         if ($sourceN === $affectedN && $affectedN === $targetN) {
             $this->record($report, $out, $key, true, "{$targetN} rows");
