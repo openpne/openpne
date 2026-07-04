@@ -185,11 +185,11 @@ export default function MemberConfig() {
                                         key={opt.value}
                                         name="locale"
                                         value={opt.value}
-                                        lang={opt.value}
                                         checked={locale.data.locale === opt.value}
                                         disabled={locale.processing}
                                         onChange={(e) => switchLocale(e.target.value)}
-                                        label={opt.label}
+                                        // lang belongs on the visible autonym text (RadioCard spreads rest props onto the input).
+                                        label={<span lang={opt.value}>{opt.label}</span>}
                                     />
                                 ))}
                             </RadioCardGroup>
