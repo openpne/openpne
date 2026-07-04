@@ -69,6 +69,7 @@ final class UpgradeRunner
             if ($migratesFiles) {
                 $fileBin->plan($options->sourcePrefix, $options->sourceDatabase, $out);
             }
+            (new PasswordWrap)->plan($out);
             $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
 
             return $this->walk($options, $out);
@@ -88,6 +89,13 @@ final class UpgradeRunner
             }
 
             $walked = $this->walk($options, $out);
+
+            // Wrap after the walk: the steps land the OpenPNE 3 MD5 verbatim (bcrypt is not
+            // expressible in an INSERT...SELECT), and this pass converts it before the run can
+            // complete — verify-upgrade holds the cutover to zero bare-MD5 rows.
+            if ($walked) {
+                $walked = (new PasswordWrap)->run($this->targetTables(), $out);
+            }
 
             // Migrate the BLOBs only after the walk: FileUpgrade (first step) has populated `files`, so
             // the move + the FK rewire's existing-row validation resolve. No later step touches file_bin.

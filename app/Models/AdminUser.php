@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ClearsPasswordScheme;
 use Database\Factories\AdminUserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;
@@ -17,11 +18,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 // `admin_user` table has no email column — accounts carried over from
 // OpenPNE 3 migrate as-is.
 #[Fillable(['username', 'password'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'password_scheme', 'remember_token'])]
 class AdminUser extends Authenticatable implements FilamentUser, HasName
 {
     /** @use HasFactory<AdminUserFactory> */
-    use HasFactory;
+    use ClearsPasswordScheme, HasFactory;
 
     // Table is the inferred `admin_users` (plural). OpenPNE 3's own `admin_user`
     // is the upgrade source, kept distinct so both coexist in a same-database upgrade.
