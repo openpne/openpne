@@ -128,7 +128,11 @@ export default function MemberConfig() {
 
                 <SettingsGroup title={t('Privacy')}>
                     <GroupItem>
-                        <FormSection title={t('Default audience for new diaries')} headingLevel="h3">
+                        <FormSection
+                            title={t('Default audience for new diaries')}
+                            headingLevel="h3"
+                            description={t('Applies to diaries you write from now on. Existing diaries keep their audience.')}
+                        >
                             <RadioCardGroup
                                 legend={t('Default audience for new diaries')}
                                 error={diary.errors.diary_default_visibility}

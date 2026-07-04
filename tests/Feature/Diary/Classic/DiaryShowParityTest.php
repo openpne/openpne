@@ -74,7 +74,7 @@ class DiaryShowParityTest extends TestCase
 
         $this->actingAs($owner)->get("/diary/{$open->getKey()}")
             ->assertOk()
-            ->assertSee('Public to Web'); // Visibility::Open->label()
+            ->assertSee('Anyone on the web'); // Visibility::Open->label()
     }
 
     public function test_renders_the_link_to_the_authors_diary_list(): void
