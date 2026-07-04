@@ -32,7 +32,8 @@ class AdminUserUpgrade extends UpgradeStep
 
     public function targetDefaults(): array
     {
-        // password_scheme is set by the runner's post-walk wrap pass, not this step.
-        return ['password_scheme', 'remember_token'];
+        // password_scheme is set by the runner's post-walk wrap pass; the app_authentication_*
+        // columns are opt-in MFA state an admin sets up post-migration. None have an OpenPNE 3 source.
+        return ['password_scheme', 'remember_token', 'app_authentication_secret', 'app_authentication_recovery_codes'];
     }
 }

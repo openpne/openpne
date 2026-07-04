@@ -1,5 +1,37 @@
 # Security
 
+## Admin two-factor authentication
+
+The Filament admin panel offers **opt-in TOTP** two-factor auth (Filament's
+built-in App provider, registered in
+[`AdminPanelProvider`](../../app/Providers/Filament/AdminPanelProvider.php)). An
+administrator enables it on the **Security** page and is prompted to by a
+dashboard reminder widget.
+
+- **Opt-in, not required.** `isRequired` is `false`: MFA is a strong nudge, not
+  a gate, to keep the panel easy to try. This is a deliberate deviation from
+  NIST SP 800-63B-4's AAL2-for-administrators SHOULD — a blanket requirement is
+  impractical for the operator population. The enforcement lever exists as
+  Filament's `multiFactorAuthentication(..., isRequired:)` argument; a later PR
+  can wire it to a per-site setting (default off).
+- **TOTP only.** Email one-time codes are not offered — NIST does not count them
+  as an AAL2 authenticator, and admins have no email column anyway.
+- **`codeWindow(1)`** (≈±30s / ±1 step) tightens Filament's default of 8 (≈±4
+  minutes), which is too lax for a privileged account.
+- **Lockout recovery** has two paths: recovery codes (shown once at set-up), and
+  the `openpne:admin:disable-mfa <username>` CLI command — gated by server access,
+  the same trust boundary as `openpne:admin:reset-password`, since an admin has
+  no email for a self-service reset.
+- **Session revocation.** Enabling or disabling MFA revokes the admin's other
+  sessions (`App\Auth\AdminAppAuthentication` decorates the set-up/disable
+  actions, keeping the current session; the CLI revokes all), consistent with a
+  password change. Regenerating recovery codes does not revoke — the TOTP factor
+  is unchanged.
+
+The secret and recovery codes are stored encrypted (APP_KEY); recovery codes are
+additionally bcrypt-hashed by Filament before encryption. The MFA challenge in
+the login flow is rate-limited by Filament independently of the password login.
+
 ## Password policy
 
 The policy has a single definition — `Password::defaults()` in

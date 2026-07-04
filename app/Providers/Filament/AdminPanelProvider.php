@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Auth\AdminAppAuthentication;
 use App\Filament\Pages\Auth\Login;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
@@ -43,6 +44,16 @@ class AdminPanelProvider extends PanelProvider
             // and vice versa.
             ->authGuard('admin')
             ->login(Login::class)
+            // Opt-in TOTP two-factor auth (Filament's built-in App provider). isRequired is
+            // false by design — a nudge, not a gate (see the dashboard reminder widget and
+            // docs/internals/security.md); the third argument is the built-in enforcement
+            // hook a later PR can wire to a setting. codeWindow(1) tightens Filament's lax
+            // default (8 ≈ ±4 min) to ±1 step (~±30s). AdminAppAuthentication revokes other
+            // sessions on enable/disable.
+            ->multiFactorAuthentication(
+                [AdminAppAuthentication::make()->recoverable()->codeWindow(1)],
+                isRequired: false,
+            )
             ->colors([
                 'primary' => Color::Amber,
             ])
