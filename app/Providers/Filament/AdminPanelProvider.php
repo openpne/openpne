@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -63,6 +64,12 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make(fn (): string => __('Master Data')),
             ])
             ->middleware([
+                // Outermost so it decorates every response the inner stack produces — not just a
+                // rendered page but a CSRF 419, an auth redirect, a binding error. The panel does
+                // NOT inherit the `web` group, so without this the admin pages — the highest-value
+                // clickjacking target — would ship no security headers. (Livewire endpoints already
+                // run under the `web` group.) It only sets static headers, so the early slot is safe.
+                SecurityHeaders::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,

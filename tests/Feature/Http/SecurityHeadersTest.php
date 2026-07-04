@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Http;
 
+use App\Models\AdminUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -16,7 +17,49 @@ class SecurityHeadersTest extends TestCase
             ->assertOk()
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('X-Frame-Options', 'DENY')
+            ->assertHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'")
+            ->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+            ->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    }
+
+    public function test_the_admin_panel_ships_the_baseline_headers(): void
+    {
+        // The Filament panel keeps its own middleware stack (no `web` group), so this is a
+        // real regression surface — without SecurityHeaders registered there, /admin ships none.
+        $this->get('/admin/login')
+            ->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('X-Frame-Options', 'DENY')
+            ->assertHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'")
+            ->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+            ->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
+
+        $this->actingAs(AdminUser::factory()->create(), 'admin')
+            ->get('/admin')
+            ->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('X-Frame-Options', 'DENY')
+            ->assertHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'")
+            ->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+            ->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    }
+
+    public function test_an_admin_redirect_for_a_guest_still_ships_the_headers(): void
+    {
+        // SecurityHeaders is outermost in the panel stack, so it decorates a short-circuit
+        // response (here the guest→login redirect) that never reaches a rendered page.
+        $this->get('/admin')
+            ->assertRedirect('/admin/login')
+            ->assertHeader('X-Frame-Options', 'DENY')
             ->assertHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'");
+    }
+
+    public function test_cross_origin_resource_policy_is_not_set(): void
+    {
+        // Deliberately omitted: web-public avatars and banners are served for cross-origin
+        // embedding, which CORP: same-origin would break.
+        $this->get('/login')->assertHeaderMissing('Cross-Origin-Resource-Policy');
+        $this->get('/admin/login')->assertHeaderMissing('Cross-Origin-Resource-Policy');
     }
 
     public function test_hsts_is_absent_without_force_https(): void
