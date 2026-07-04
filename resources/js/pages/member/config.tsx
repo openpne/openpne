@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { CheckboxField, Field, FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { RadioCard } from '@/components/ui/radio-card';
+import { RadioPill } from '@/components/ui/radio-pill';
 import { type ColorMode, useColorMode } from '@/lib/color-mode';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -118,17 +119,19 @@ export default function MemberConfig() {
                                 legend={t('Default audience for new diaries')}
                                 error={diary.errors.diary_default_visibility}
                             >
-                                {form.diary.options.map((opt) => (
-                                    <RadioCard
-                                        key={opt.value}
-                                        name="diary_default_visibility"
-                                        value={opt.value}
-                                        checked={diary.data.diary_default_visibility === opt.value}
-                                        disabled={diary.processing}
-                                        onChange={(e) => saveDiary(e.target.value)}
-                                        label={t(opt.label)}
-                                    />
-                                ))}
+                                <div className="flex flex-wrap gap-2">
+                                    {form.diary.options.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="diary_default_visibility"
+                                            value={opt.value}
+                                            checked={diary.data.diary_default_visibility === opt.value}
+                                            disabled={diary.processing}
+                                            onChange={(e) => saveDiary(e.target.value)}
+                                            label={t(opt.label)}
+                                        />
+                                    ))}
+                                </div>
                             </RadioCardGroup>
                             <SavedIndicator show={diary.recentlySuccessful} />
                         </FormSection>
@@ -137,17 +140,19 @@ export default function MemberConfig() {
                     <GroupItem>
                         <FormSection title={t('Who can see your age')} headingLevel="h3">
                             <RadioCardGroup legend={t('Who can see your age')} error={age.errors.age_visibility}>
-                                {form.age.options.map((opt) => (
-                                    <RadioCard
-                                        key={opt.value}
-                                        name="age_visibility"
-                                        value={opt.value}
-                                        checked={age.data.age_visibility === opt.value}
-                                        disabled={age.processing}
-                                        onChange={(e) => saveAge(e.target.value)}
-                                        label={t(opt.label)}
-                                    />
-                                ))}
+                                <div className="flex flex-wrap gap-2">
+                                    {form.age.options.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="age_visibility"
+                                            value={opt.value}
+                                            checked={age.data.age_visibility === opt.value}
+                                            disabled={age.processing}
+                                            onChange={(e) => saveAge(e.target.value)}
+                                            label={t(opt.label)}
+                                        />
+                                    ))}
+                                </div>
                             </RadioCardGroup>
                             <SavedIndicator show={age.recentlySuccessful} />
                         </FormSection>
@@ -162,16 +167,18 @@ export default function MemberConfig() {
                             description={t('Choose a light or dark look. Use system setting follows your device automatically.')}
                         >
                             <RadioCardGroup legend={t('Appearance')}>
-                                {APPEARANCE_OPTIONS.map((opt) => (
-                                    <RadioCard
-                                        key={opt.value}
-                                        name="appearance"
-                                        value={opt.value}
-                                        checked={preference === opt.value}
-                                        onChange={() => setColorMode(opt.value)}
-                                        label={t(opt.label)}
-                                    />
-                                ))}
+                                <div className="flex flex-wrap gap-2">
+                                    {APPEARANCE_OPTIONS.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="appearance"
+                                            value={opt.value}
+                                            checked={preference === opt.value}
+                                            onChange={() => setColorMode(opt.value)}
+                                            label={t(opt.label)}
+                                        />
+                                    ))}
+                                </div>
                             </RadioCardGroup>
                         </FormSection>
                     </GroupItem>
@@ -180,18 +187,20 @@ export default function MemberConfig() {
                         <FormSection title={t('Language')} headingLevel="h3">
                             {/* Locale labels are language autonyms, rendered verbatim (not translation keys). */}
                             <RadioCardGroup legend={t('Language')}>
-                                {form.locale.options.map((opt) => (
-                                    <RadioCard
-                                        key={opt.value}
-                                        name="locale"
-                                        value={opt.value}
-                                        checked={locale.data.locale === opt.value}
-                                        disabled={locale.processing}
-                                        onChange={(e) => switchLocale(e.target.value)}
-                                        // lang belongs on the visible autonym text (RadioCard spreads rest props onto the input).
-                                        label={<span lang={opt.value}>{opt.label}</span>}
-                                    />
-                                ))}
+                                <div className="flex flex-wrap gap-2">
+                                    {form.locale.options.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="locale"
+                                            value={opt.value}
+                                            checked={locale.data.locale === opt.value}
+                                            disabled={locale.processing}
+                                            onChange={(e) => switchLocale(e.target.value)}
+                                            // lang belongs on the visible autonym text (RadioPill spreads rest props onto the input).
+                                            label={<span lang={opt.value}>{opt.label}</span>}
+                                        />
+                                    ))}
+                                </div>
                             </RadioCardGroup>
                         </FormSection>
                     </GroupItem>
