@@ -25,7 +25,7 @@ class AdminLocaleSwitchTest extends TestCase
 
         $this->actingAs($member, 'member')
             ->actingAs($admin, 'admin')
-            ->post('/locale/session', ['locale' => 'en'])
+            ->post('/admin/locale/session', ['locale' => 'en'])
             ->assertNoContent();
 
         $this->assertSame('en', session('locale'));

@@ -7,6 +7,7 @@ use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
 use App\Features\Home\UnreadCounts;
+use App\Http\Middleware\UseAdminSessionStore;
 use App\Models\BannerImage;
 use App\Models\Community;
 use App\Models\CommunityEvent;
@@ -41,6 +42,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TermService::class);
+
+        // Singleton so its constructor captures the member-surface session config
+        // once per process, before any request's surface pin mutates it.
+        $this->app->singleton(UseAdminSessionStore::class);
 
         // Request-scoped so the shell's nav badges and the dashboard notices reuse one set of counts.
         $this->app->scoped(UnreadCounts::class);
