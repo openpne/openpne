@@ -35,3 +35,22 @@ and that it has not logged in since the migration. A slow response stays
 ambiguous (unknown account, or one already on the default cost). The signal
 disappears on the account's first login and is accepted for the migration
 window.
+
+## Response headers
+
+[`SecurityHeaders`](../../app/Http/Middleware/SecurityHeaders.php) sets the
+same baseline on every response — `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY`, a `frame-ancestors 'none'; base-uri 'self'` CSP,
+`Permissions-Policy: camera=(), microphone=(), geolocation=()`,
+`Cross-Origin-Opener-Policy: same-origin`, and (under `force_https`) HSTS. It
+is registered in the `web` group **and** on the Filament panel's own stack:
+the panel does not inherit the `web` group, so the admin pages — the
+highest-value clickjacking target — would otherwise ship none of these.
+
+Deliberately not set:
+
+- **A content CSP (`script-src`)** — deferred until the Vite/Inertia bundle
+  gets nonce/hash wiring. Its absence is also what lets the panel's inline
+  Livewire/Alpine scripts run.
+- **`Cross-Origin-Resource-Policy`** — web-public avatars and banners are
+  served for cross-origin embedding, which `same-origin` would break.
