@@ -88,10 +88,12 @@ return [
 
     'table' => env('SESSION_TABLE', 'sessions'),
 
-    // Session rows for the admin realm (see App\Http\Middleware\UseAdminSessionStore).
-    // A separate table keeps the member session-purge pattern — delete from
-    // config('session.table') by user_id — member-only, and gives the future admin
-    // purge an unambiguous target.
+    // Stable per-realm table names (see App\Http\Middleware\UseAdminSessionStore).
+    // `table` above is pinned per request to whichever realm is serving, so any
+    // code that revokes a specific principal's sessions (App\Auth\SessionRevocation)
+    // must read these two keys — they are never mutated at runtime, regardless of
+    // which realm the revoking request runs on.
+    'member_table' => env('SESSION_TABLE', 'sessions'),
     'admin_table' => 'admin_sessions',
 
     /*

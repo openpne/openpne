@@ -30,16 +30,14 @@ class UseAdminSessionStore
 {
     private readonly string $memberCookie;
 
-    private readonly string $memberTable;
-
     private readonly string $memberGuard;
 
     // Bound as a container singleton: the member-realm base values are captured
-    // once per process, before any request's pin mutates them.
+    // once per process, before any request's pin mutates them. The table pin needs
+    // no capture — session.member_table / session.admin_table are stable keys.
     public function __construct()
     {
         $this->memberCookie = (string) config('session.cookie');
-        $this->memberTable = (string) config('session.table');
         $this->memberGuard = (string) config('auth.defaults.guard');
     }
 
@@ -52,7 +50,7 @@ class UseAdminSessionStore
 
         config([
             'session.cookie' => $admin ? config('session.admin_cookie') : $this->memberCookie,
-            'session.table' => $admin ? config('session.admin_table') : $this->memberTable,
+            'session.table' => $admin ? config('session.admin_table') : config('session.member_table'),
         ]);
         Auth::shouldUse($admin ? 'admin' : $this->memberGuard);
 

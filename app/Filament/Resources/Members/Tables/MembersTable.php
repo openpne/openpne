@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Members\Tables;
 
+use App\Auth\SessionRevocation;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Filament\Resources\Members\MemberResource;
 use App\Models\Member;
@@ -13,6 +14,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
 
 class MembersTable
 {
@@ -83,9 +85,16 @@ class MembersTable
                 }
             })
             ->action(function (Member $record): void {
-                // Direct assignment: is_login_rejected is outside the model's mass-assignable set.
-                $record->is_login_rejected = true;
-                $record->save();
+                // One transaction: the flag only blocks the NEXT login, so a frozen member's
+                // live sessions and remember-me cookies must die with it — a ban that set the
+                // flag but failed the revocation would look complete while the member stays
+                // signed in.
+                DB::transaction(function () use ($record): void {
+                    // Direct assignment: is_login_rejected is outside the model's mass-assignable set.
+                    $record->is_login_rejected = true;
+                    $record->save();
+                    SessionRevocation::revokeMember($record);
+                });
                 Notification::make()
                     ->title(__('The member can no longer log in'))
                     ->success()

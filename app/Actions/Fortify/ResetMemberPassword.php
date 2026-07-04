@@ -2,9 +2,9 @@
 
 namespace App\Actions\Fortify;
 
+use App\Auth\SessionRevocation;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -29,20 +29,15 @@ class ResetMemberPassword implements ResetsUserPasswords
         ])->validate();
 
         // A reset answers a possible compromise, so every other authenticated foothold for this member
-        // must drop. Rotate remember_token (invalidates "remember me" cookies on all devices) and, on
-        // the database session driver, delete the member's server-side sessions outright. For other
-        // drivers the auth.session middleware is the best-effort fallback (it drops a session on its
-        // next protected request once the stored password hash no longer matches).
+        // must drop. remember_token rotates in the same save as the password; the session purge is
+        // SessionRevocation's (for non-database drivers the auth.session middleware is the best-effort
+        // fallback — it drops a session once the stored password hash no longer matches).
         $member->forceFill([
             'password' => Hash::make($input['password']),
             'remember_token' => Str::random(60),
         ])->save();
 
-        if (config('session.driver') === 'database') {
-            DB::table(config('session.table', 'sessions'))
-                ->where('user_id', $member->getAuthIdentifier())
-                ->delete();
-        }
+        SessionRevocation::purgeMemberSessions((int) $member->getAuthIdentifier());
 
         // A reset answers a possible compromise, so void any pending email change too: otherwise an
         // attacker who requested one before the reset still holds a live confirmation token.

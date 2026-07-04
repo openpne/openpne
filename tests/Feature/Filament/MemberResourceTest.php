@@ -12,6 +12,8 @@ use App\Models\Member;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -64,6 +66,34 @@ class MemberResourceTest extends TestCase
 
         $member->refresh();
         $this->assertTrue($member->is_login_rejected);
+    }
+
+    public function test_ban_revokes_live_sessions_and_remember_tokens(): void
+    {
+        // The freeze flag only blocks the NEXT login; the ban must also end what already
+        // exists — server-side sessions and remember-me cookies — immediately.
+        config(['session.driver' => 'database']);
+        $member = Member::factory()->create(['is_login_rejected' => false]);
+        $member->forceFill(['remember_token' => Str::random(60)])->save();
+        $before = $member->remember_token;
+
+        DB::table('sessions')->insert([
+            'id' => 'member-device', 'user_id' => $member->getKey(),
+            'payload' => base64_encode('{}'), 'last_activity' => time(),
+        ]);
+        // The banning operator's own panel session lives in admin_sessions; even with a
+        // colliding id it must survive a member revocation.
+        DB::table('admin_sessions')->insert([
+            'id' => 'operator-device', 'user_id' => $member->getKey(),
+            'payload' => base64_encode('{}'), 'last_activity' => time(),
+        ]);
+
+        Livewire::test(ListMembers::class)
+            ->callAction(TestAction::make('ban')->table($member));
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'member-device']);
+        $this->assertDatabaseHas('admin_sessions', ['id' => 'operator-device']);
+        $this->assertNotSame($before, $member->fresh()->remember_token);
     }
 
     public function test_unban_allows_login(): void
