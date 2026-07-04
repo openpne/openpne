@@ -48,6 +48,7 @@ class ModernOnlyCoverageTest extends TestCase
         'friend.list', 'friend.manage', 'friend.link.show',
         'block.list', 'block.add.show',
         'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
+        'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
         'community.search', 'community.list_mine', 'community.edit', 'community.members', 'community.members.pending',
         'community.recent',
         'message.index', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',

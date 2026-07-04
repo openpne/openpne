@@ -43,8 +43,11 @@ row, back to default-following). `setPreference($default)` is **not** the same a
 ## The config page
 
 The page is Classic + Modern ([`MemberConfigController`](../../app/Features/Member/MemberConfigController.php),
-canonical `member.config` + `/m/*` siblings). **Each section is its own submit** — diary default
-audience, age visibility, language, surface — so saving one never rewrites another. This is
+canonical `member.config` + `/m/*` siblings). **Each section posts independently** — diary default
+audience, age visibility, language, surface — so saving one never rewrites another. On Modern the
+preference radios apply on selection with inline per-control feedback, and the controller omits the
+page flash for those posts (it would announce the same save twice); Classic keeps an explicit
+submit + flash per category page. The independence is
 load-bearing, not cosmetic: the diary section shows `DiaryVisibility::defaultFor()`, which **clamps**
 a stored `Open` to Members at read time once web-public is off; a single combined save would write
 that clamped value back and destroy the stored `Open`. Independent submits keep the read-time clamp

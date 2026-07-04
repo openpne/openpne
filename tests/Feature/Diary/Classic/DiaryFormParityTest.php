@@ -34,7 +34,7 @@ class DiaryFormParityTest extends TestCase
 
         $this->actingAs($member)->get('/diary/new')
             ->assertOk()
-            ->assertSee('Public to Web'); // Visibility::Open->label(), default-on gate
+            ->assertSee('Anyone on the web'); // Visibility::Open->label(), default-on gate
     }
 
     public function test_new_form_hides_web_public_when_the_gate_is_disabled(): void
@@ -44,7 +44,7 @@ class DiaryFormParityTest extends TestCase
 
         $this->actingAs($member)->get('/diary/new')
             ->assertOk()
-            ->assertDontSee('Public to Web');
+            ->assertDontSee('Anyone on the web');
     }
 
     public function test_edit_form_preselects_the_diary_visibility(): void
