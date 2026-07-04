@@ -1,9 +1,9 @@
 <?php
 
-// See the ja override: replaces Filament's default description (which names Google Authenticator
-// with a US-fixed App Store link) with a product-neutral one pointing at the device's own store.
+// See the ja override: replaces Filament's default (which names one product with a US-fixed link)
+// with a neutral, durable instruction that points at the device's own app-store search.
 return [
     'modal' => [
-        'description' => 'You need a TOTP authenticator app (such as Google Authenticator, Microsoft Authenticator, or 1Password). Install one from your device\'s app store.',
+        'description' => 'You need an authenticator app that generates a one-time code at login. Search your device\'s app store for "authenticator" and install one.',
     ],
 ];
