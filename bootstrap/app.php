@@ -3,6 +3,7 @@
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\UseAdminSessionStore;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -37,6 +38,12 @@ $app = Application::configure(basePath: dirname(__DIR__))
             ]),
             subdomains: false,
         );
+
+        // Global, ahead of every group: it must pin the session store (cookie + table)
+        // and default guard for the request's realm before anything resolves the
+        // session driver — including the web group's StartSession, which also serves
+        // the admin realm's Livewire endpoints.
+        $middleware->prepend(UseAdminSessionStore::class);
 
         $middleware->web(append: [
             SetLocale::class,

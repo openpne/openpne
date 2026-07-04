@@ -72,8 +72,10 @@ Route::post('/locale', function (Request $request) {
 // `locale.switch` this NEVER writes members.locale: a co-logged-in member switching the panel
 // language must not have their durable preference changed (OpenPNE 3 pc_backend changeLanguage
 // is per-admin session culture, isolated from member config). The admin switcher fetches this
-// and reloads, so a 204 is enough.
-Route::post('/locale/session', function (Request $request) {
+// and reloads, so a 204 is enough. Lives under /admin so it runs on the admin session store
+// (UseAdminSessionStore): the panel-embedded CSRF token must validate against — and the
+// locale write must land in — the store the panel's SetLocale:session reads.
+Route::post('/admin/locale/session', function (Request $request) {
     $locale = (string) $request->input('locale');
     if (in_array($locale, SetLocale::SUPPORTED_LOCALES, strict: true)) {
         $request->session()->put('locale', $locale);
