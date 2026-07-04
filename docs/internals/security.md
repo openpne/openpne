@@ -28,8 +28,10 @@ passwordless row, unrecognised stored hash) burns an equivalent bcrypt first
 (ASVS 5.0 V6.3.8). Hashing cost is `BCRYPT_ROUNDS` (`config/hashing.php`),
 default 12. Known residual: an account imported from OpenPNE 3 that has not
 logged in yet verifies at the import-time wrap cost
-([`PasswordWrap`](../../app/Upgrade/Runner/PasswordWrap.php)), so a
-wrong-password probe against an **existing** account can distinguish
-"migrated, not yet logged in" from other accounts by timing — it reveals that
-state, not whether an account exists, and disappears on the account's first
-login.
+([`PasswordWrap`](../../app/Upgrade/Runner/PasswordWrap.php), lower than the
+default), so a wrong-password probe that comes back fast is a one-sided oracle
+— it identifies a still-wrapped imported account, revealing both that it exists
+and that it has not logged in since the migration. A slow response stays
+ambiguous (unknown account, or one already on the default cost). The signal
+disappears on the account's first login and is accepted for the migration
+window.
