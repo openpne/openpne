@@ -32,6 +32,10 @@ dashboard reminder widget.
   guard middleware, which never runs the TOTP challenge, so it would silently
   bypass MFA. Administrators sign in per session.
 
+Filament's default set-up modal text is overridden (`lang/vendor/filament-panels/`)
+so it does not deep-link a region-locked (US) App Store URL and names a few
+authenticator apps neutrally rather than a single product.
+
 The secret and recovery codes are stored encrypted (APP_KEY); recovery codes are
 additionally bcrypt-hashed by Filament before encryption. The MFA challenge in
 the login flow is rate-limited by Filament independently of the password login.
