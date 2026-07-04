@@ -5,8 +5,9 @@
 The Filament admin panel offers **opt-in TOTP** two-factor auth (Filament's
 built-in App provider, registered in
 [`AdminPanelProvider`](../../app/Providers/Filament/AdminPanelProvider.php)). An
-administrator enables it on the **Security** page and is prompted to by a
-dashboard reminder widget.
+administrator enables it on the **Security** page — reached from the user menu,
+next to the theme switch — and is prompted to by a dashboard reminder widget;
+the admin-user list shows which administrators have it enabled.
 
 - **Opt-in, not required.** `isRequired` is `false`: MFA is a strong nudge, not
   a gate, to keep the panel easy to try. This is a deliberate deviation from
@@ -33,8 +34,8 @@ dashboard reminder widget.
   bypass MFA. Administrators sign in per session.
 
 Filament's default set-up modal text is overridden (`lang/vendor/filament-panels/`)
-so it does not deep-link a region-locked (US) App Store URL and names a few
-authenticator apps neutrally rather than a single product.
+so it does not deep-link a region-locked (US) App Store URL or name a specific
+product; it points to the device's own app-store search instead.
 
 The secret and recovery codes are stored encrypted (APP_KEY); recovery codes are
 additionally bcrypt-hashed by Filament before encryption. The MFA challenge in
