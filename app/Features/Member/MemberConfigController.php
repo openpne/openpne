@@ -85,6 +85,26 @@ class MemberConfigController extends Controller
         ]);
     }
 
+    /**
+     * Modern-only detail pages for the consequential account changes. The settings page shows a
+     * compact row per item; the actual forms live one level deeper so a validation error returns
+     * to a short, focused page instead of the bottom of the settings list.
+     */
+    public function editEmail(): InertiaResponse
+    {
+        return Inertia::render('member/config/email', ['email' => $this->viewer()->email]);
+    }
+
+    public function editPassword(): InertiaResponse
+    {
+        return Inertia::render('member/config/password');
+    }
+
+    public function editWithdrawal(): InertiaResponse
+    {
+        return Inertia::render('member/config/withdrawal');
+    }
+
     public function updateDiary(UpdateDiaryDefaultRequest $request): RedirectResponse
     {
         $value = PreferenceKey::DiaryDefaultVisibility->coerce($request->validated('diary_default_visibility'));

@@ -2,9 +2,10 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Card } from '@/components/card';
 import { FlashMessage } from '@/components/flash-message';
+import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
-import { CheckboxField, Field, FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { DangerLink } from '@/components/ui/danger-link';
+import { FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
 import { RadioCard } from '@/components/ui/radio-card';
 import { RadioPill } from '@/components/ui/radio-pill';
 import { type ColorMode, useColorMode } from '@/lib/color-mode';
@@ -54,6 +55,22 @@ function GroupItem({ children }: { children: ReactNode }) {
 }
 
 /**
+ * A consequential setting kept as a compact row: title (+ current value) with a link to the
+ * dedicated detail page that carries the actual form.
+ */
+function DetailRow({ title, value, action }: { title: string; value?: ReactNode; action: ReactNode }) {
+    return (
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="space-y-0.5">
+                <h3 className="text-base font-semibold text-foreground">{title}</h3>
+                {value && <p className="text-sm text-muted-foreground">{value}</p>}
+            </div>
+            {action}
+        </div>
+    );
+}
+
+/**
  * Inline feedback for instant-apply preferences. The element is always present (with reserved
  * height) so the aria-live region exists before the announcement and the layout never shifts.
  */
@@ -71,16 +88,13 @@ export default function MemberConfig() {
     const t = useT();
     const { form, flash } = usePage<ConfigProps>().props;
 
-    // One form per section so saving one never resubmits another (mirrors the Classic surface).
+    // One form per preference so saving one never resubmits another (mirrors the Classic surface).
     const diary = useForm({ diary_default_visibility: form.diary.value });
     const age = useForm({ age_visibility: form.age.value });
     const locale = useForm({ locale: form.locale.value });
     // Hooks run unconditionally; the fallback is inert since the surface section renders only when
     // form.surface is present (Classic available).
     const surface = useForm({ preferred_surface: form.surface?.value ?? '' });
-    const password = useForm({ current_password: '', password: '', password_confirmation: '' });
-    const email = useForm({ new_email: '', password: '' });
-    const withdraw = useForm({ password: '', confirm: false });
     // Appearance is a client-side display preference (localStorage), applied immediately — no server post.
     const { preference, set: setColorMode } = useColorMode();
     // Const so the truthiness narrowing holds inside the options .map closure below.
@@ -246,130 +260,41 @@ export default function MemberConfig() {
                     )}
                 </SettingsGroup>
 
+                {/* Consequential account changes are rows into dedicated detail pages: the forms are
+                    deliberately one level deeper (focused page, visible validation errors, weight
+                    matching the action), keeping this page a scannable hub. */}
                 <SettingsGroup title={t('Account')}>
                     <GroupItem>
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                email.post('/m/member/config/email', { onSuccess: () => email.reset() });
-                            }}
-                        >
-                            <FormSection
-                                title={t('Email address')}
-                                headingLevel="h3"
-                                description={`${t('Current email address')}: ${form.email.value}`}
-                            >
-                                <Field label={t('New email address')} htmlFor="new_email" error={email.errors.new_email}>
-                                    <Input
-                                        id="new_email"
-                                        type="email"
-                                        value={email.data.new_email}
-                                        onChange={(e) => email.setData('new_email', e.target.value)}
-                                    />
-                                </Field>
-                                <Field
-                                    label={t('Current password')}
-                                    htmlFor="email_password"
-                                    error={email.errors.password}
-                                    help={t('A confirmation link will be sent to the new address. The change takes effect once you open it.')}
-                                >
-                                    <Input
-                                        id="email_password"
-                                        type="password"
-                                        autoComplete="current-password"
-                                        value={email.data.password}
-                                        onChange={(e) => email.setData('password', e.target.value)}
-                                    />
-                                </Field>
-                                <FormActions>
-                                    <Button type="submit" loading={email.processing}>
-                                        {t('Send confirmation')}
-                                    </Button>
-                                </FormActions>
-                            </FormSection>
-                        </form>
+                        <DetailRow
+                            title={t('Email address')}
+                            value={form.email.value}
+                            action={
+                                <ActionLink href="/m/member/config/email" variant="outline" size="sm">
+                                    {t('Change')}
+                                </ActionLink>
+                            }
+                        />
                     </GroupItem>
-
                     <GroupItem>
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                password.post('/m/member/config/password', { onSuccess: () => password.reset() });
-                            }}
-                        >
-                            <FormSection title={t('Password')} headingLevel="h3">
-                                <Field label={t('Current password')} htmlFor="current_password" error={password.errors.current_password}>
-                                    <Input
-                                        id="current_password"
-                                        type="password"
-                                        autoComplete="current-password"
-                                        value={password.data.current_password}
-                                        onChange={(e) => password.setData('current_password', e.target.value)}
-                                    />
-                                </Field>
-                                <Field label={t('New password')} htmlFor="password" error={password.errors.password}>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        autoComplete="new-password"
-                                        value={password.data.password}
-                                        onChange={(e) => password.setData('password', e.target.value)}
-                                    />
-                                </Field>
-                                <Field label={t('New password (confirm)')} htmlFor="password_confirmation">
-                                    <Input
-                                        id="password_confirmation"
-                                        type="password"
-                                        autoComplete="new-password"
-                                        value={password.data.password_confirmation}
-                                        onChange={(e) => password.setData('password_confirmation', e.target.value)}
-                                    />
-                                </Field>
-                                <FormActions>
-                                    <Button type="submit" loading={password.processing}>
-                                        {t('Save')}
-                                    </Button>
-                                </FormActions>
-                            </FormSection>
-                        </form>
+                        <DetailRow
+                            title={t('Password')}
+                            action={
+                                <ActionLink href="/m/member/config/password" variant="outline" size="sm">
+                                    {t('Change')}
+                                </ActionLink>
+                            }
+                        />
                     </GroupItem>
                 </SettingsGroup>
 
-                {/* Danger zone: the irreversible action sits last, visually separated from everything above. */}
                 <SettingsGroup title={t('Account withdrawal')} danger>
                     <GroupItem>
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                withdraw.post('/m/member/config/withdrawal');
-                            }}
-                        >
-                            <div className="space-y-4">
-                                <p className="text-sm text-muted-foreground">
-                                    {t('Withdrawing permanently deletes your account and cannot be undone.')}
-                                </p>
-                                <Field label={t('Current password')} htmlFor="withdraw_password" error={withdraw.errors.password}>
-                                    <Input
-                                        id="withdraw_password"
-                                        type="password"
-                                        autoComplete="current-password"
-                                        value={withdraw.data.password}
-                                        onChange={(e) => withdraw.setData('password', e.target.value)}
-                                    />
-                                </Field>
-                                <CheckboxField
-                                    label={t('Yes, delete my account.')}
-                                    checked={withdraw.data.confirm}
-                                    onChange={(e) => withdraw.setData('confirm', e.target.checked)}
-                                    error={withdraw.errors.confirm}
-                                />
-                                <FormActions>
-                                    <Button type="submit" variant="destructive" loading={withdraw.processing}>
-                                        {t('Withdraw from this site')}
-                                    </Button>
-                                </FormActions>
-                            </div>
-                        </form>
+                        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                            <p className="text-sm text-muted-foreground">
+                                {t('Withdrawing permanently deletes your account and cannot be undone.')}
+                            </p>
+                            <DangerLink href="/m/member/config/withdrawal">{t('Proceed to withdrawal')}</DangerLink>
+                        </div>
                     </GroupItem>
                 </SettingsGroup>
             </main>

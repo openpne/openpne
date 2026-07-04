@@ -380,6 +380,47 @@ class MemberConfigTest extends TestCase
             ->assertRedirect(route('member.config', ['category' => 'language']));
     }
 
+    public function test_the_modern_account_detail_pages_render(): void
+    {
+        // The consequential account forms live one level under the settings hub (Modern only;
+        // Classic keeps its ?category= pages).
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/m/member/config/email')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('member/config/email')->where('email', $member->email));
+
+        $this->actingAs($member)->get('/m/member/config/password')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('member/config/password'));
+
+        $this->actingAs($member)->get('/m/member/config/withdrawal')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('member/config/withdrawal'));
+    }
+
+    public function test_a_guest_is_redirected_from_the_account_detail_pages(): void
+    {
+        $this->get('/m/member/config/password')->assertRedirect('/login');
+    }
+
+    public function test_a_validation_failure_returns_to_the_detail_page(): void
+    {
+        // The detail page is short, so the redirected-back errors are visible without scrolling —
+        // the reason these forms are not inline on the settings hub.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)
+            ->from('/m/member/config/password')
+            ->post('/m/member/config/password', [
+                'current_password' => 'not-the-password',
+                'password' => 'new-secret-pass',
+                'password_confirmation' => 'new-secret-pass',
+            ])
+            ->assertRedirect('/m/member/config/password')
+            ->assertSessionHasErrors('current_password');
+    }
+
     public function test_a_guest_cannot_post_the_password_change(): void
     {
         $this->post('/member/config/password', [
