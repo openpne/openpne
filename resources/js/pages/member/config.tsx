@@ -1,14 +1,16 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { Card, CardBody } from '@/components/card';
+import { Card } from '@/components/card';
 import { FlashMessage } from '@/components/flash-message';
+import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
-import { CheckboxField, Field, FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { DangerLink } from '@/components/ui/danger-link';
+import { FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
 import { RadioCard } from '@/components/ui/radio-card';
-import { Select } from '@/components/ui/select';
+import { RadioPill } from '@/components/ui/radio-pill';
 import { type ColorMode, useColorMode } from '@/lib/color-mode';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 const APPEARANCE_OPTIONS: { value: ColorMode; label: string }[] = [
@@ -36,11 +38,49 @@ interface ConfigProps extends PageProps {
     form: ConfigForm;
 }
 
-function SectionCard({ children }: { children: ReactNode }) {
+/** A titled group of related sections: one h2 over one card, sections separated by dividers. */
+function SettingsGroup({ title, danger = false, children }: { title: string; danger?: boolean; children: ReactNode }) {
     return (
-        <Card>
-            <CardBody>{children}</CardBody>
-        </Card>
+        <section className="space-y-3">
+            <h2 className={cn('text-lg font-semibold', danger ? 'text-destructive' : 'text-foreground')}>{title}</h2>
+            <Card className={danger ? 'border-destructive/40' : undefined}>
+                <div className="divide-y divide-border px-6">{children}</div>
+            </Card>
+        </section>
+    );
+}
+
+function GroupItem({ children }: { children: ReactNode }) {
+    return <div className="py-5">{children}</div>;
+}
+
+/**
+ * A consequential setting kept as a compact row: title (+ current value) with a link to the
+ * dedicated detail page that carries the actual form.
+ */
+function DetailRow({ title, value, action }: { title: string; value?: ReactNode; action: ReactNode }) {
+    return (
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="space-y-0.5">
+                <h3 className="text-base font-semibold text-foreground">{title}</h3>
+                {value && <p className="text-sm text-muted-foreground">{value}</p>}
+            </div>
+            {action}
+        </div>
+    );
+}
+
+/**
+ * Inline feedback for instant-apply preferences. The element is always present (with reserved
+ * height) so the aria-live region exists before the announcement and the layout never shifts.
+ */
+function SavedIndicator({ show }: { show: boolean }) {
+    const t = useT();
+
+    return (
+        <p aria-live="polite" className="min-h-5 text-sm text-muted-foreground">
+            {show ? `✓ ${t('Saved')}` : null}
+        </p>
     );
 }
 
@@ -48,299 +88,219 @@ export default function MemberConfig() {
     const t = useT();
     const { form, flash } = usePage<ConfigProps>().props;
 
-    // One form per section so saving one never resubmits another (mirrors the Classic surface).
+    // One form per preference so saving one never resubmits another (mirrors the Classic surface).
     const diary = useForm({ diary_default_visibility: form.diary.value });
     const age = useForm({ age_visibility: form.age.value });
     const locale = useForm({ locale: form.locale.value });
     // Hooks run unconditionally; the fallback is inert since the surface section renders only when
     // form.surface is present (Classic available).
     const surface = useForm({ preferred_surface: form.surface?.value ?? '' });
-    const password = useForm({ current_password: '', password: '', password_confirmation: '' });
-    const email = useForm({ new_email: '', password: '' });
-    const withdraw = useForm({ password: '', confirm: false });
     // Appearance is a client-side display preference (localStorage), applied immediately — no server post.
     const { preference, set: setColorMode } = useColorMode();
     // Const so the truthiness narrowing holds inside the options .map closure below.
     const surfaceField = form.surface;
 
+    // Preference radios apply on selection (no per-section save button); SavedIndicator is the
+    // per-control feedback that replaces the page flash, which the server omits for these on Modern.
+    const saveDiary = (value: string) => {
+        diary.setData('diary_default_visibility', value);
+        diary.post('/m/member/config/diary', { preserveScroll: true });
+    };
+    const saveAge = (value: string) => {
+        age.setData('age_visibility', value);
+        age.post('/m/member/config/age', { preserveScroll: true });
+    };
+    // The locale switch responds with a hard navigation (the page reloading in the chosen language
+    // is the feedback), so no SavedIndicator here.
+    const switchLocale = (value: string) => {
+        locale.setData('locale', value);
+        locale.post('/locale');
+    };
+
     return (
         <>
             <Head title={t('Settings')} />
-            <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+            <main className="mx-auto max-w-2xl space-y-8 px-4 py-8">
                 <h1 className="text-xl font-semibold text-foreground">{t('Settings')}</h1>
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <SectionCard>
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            diary.post('/m/member/config/diary');
-                        }}
-                    >
-                        <FormSection title={t('Diary')}>
-                            <Field
-                                label={t('Default audience for new diaries')}
-                                htmlFor="diary_default_visibility"
+                <SettingsGroup title={t('Privacy')}>
+                    <GroupItem>
+                        <FormSection
+                            title={t('Default audience for new diaries')}
+                            headingLevel="h3"
+                            description={t('Applies to diaries you write from now on. Existing diaries keep their audience.')}
+                        >
+                            <RadioCardGroup
+                                legend={t('Default audience for new diaries')}
                                 error={diary.errors.diary_default_visibility}
                             >
-                                <Select
-                                    id="diary_default_visibility"
-                                    value={diary.data.diary_default_visibility}
-                                    onChange={(e) => diary.setData('diary_default_visibility', e.target.value)}
-                                >
+                                <div className="flex flex-wrap gap-2">
                                     {form.diary.options.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {t(opt.label)}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </Field>
-                            <FormActions>
-                                <Button type="submit" loading={diary.processing}>
-                                    {t('Save')}
-                                </Button>
-                            </FormActions>
-                        </FormSection>
-                    </form>
-                </SectionCard>
-
-                <SectionCard>
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            age.post('/m/member/config/age');
-                        }}
-                    >
-                        <FormSection title={t('Age')}>
-                            <Field label={t('Who can see your age')} htmlFor="age_visibility" error={age.errors.age_visibility}>
-                                <Select
-                                    id="age_visibility"
-                                    value={age.data.age_visibility}
-                                    onChange={(e) => age.setData('age_visibility', e.target.value)}
-                                >
-                                    {form.age.options.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {t(opt.label)}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </Field>
-                            <FormActions>
-                                <Button type="submit" loading={age.processing}>
-                                    {t('Save')}
-                                </Button>
-                            </FormActions>
-                        </FormSection>
-                    </form>
-                </SectionCard>
-
-                <SectionCard>
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            locale.post('/locale');
-                        }}
-                    >
-                        <FormSection title={t('Language')}>
-                            <Field label={t('Language')} htmlFor="locale">
-                                {/* Locale labels are language autonyms, rendered verbatim (not translation keys). */}
-                                <Select
-                                    id="locale"
-                                    value={locale.data.locale}
-                                    onChange={(e) => locale.setData('locale', e.target.value)}
-                                >
-                                    {form.locale.options.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </Field>
-                            <FormActions>
-                                <Button type="submit" loading={locale.processing}>
-                                    {t('Save')}
-                                </Button>
-                            </FormActions>
-                        </FormSection>
-                    </form>
-                </SectionCard>
-
-                {surfaceField && (
-                    <SectionCard>
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                surface.post('/m/member/config/surface');
-                            }}
-                        >
-                            <FormSection title={t('Display')}>
-                                <RadioCardGroup legend={t('Display')} error={surface.errors.preferred_surface}>
-                                    {surfaceField.options.map((opt) => (
-                                        <RadioCard
+                                        <RadioPill
                                             key={opt.value}
-                                            name="preferred_surface"
+                                            name="diary_default_visibility"
                                             value={opt.value}
-                                            checked={surface.data.preferred_surface === opt.value}
-                                            onChange={(e) => surface.setData('preferred_surface', e.target.value)}
+                                            checked={diary.data.diary_default_visibility === opt.value}
+                                            disabled={diary.processing}
+                                            onChange={(e) => saveDiary(e.target.value)}
                                             label={t(opt.label)}
-                                            description={opt.description ? t(opt.description) : undefined}
                                         />
                                     ))}
-                                </RadioCardGroup>
-                                <FormActions>
-                                    {/* Disabled until the choice differs from the current surface, so a casual save never pins. */}
-                                    <Button
-                                        type="submit"
-                                        loading={surface.processing}
-                                        disabled={surface.data.preferred_surface === surfaceField.value}
-                                    >
-                                        {t('Save')}
-                                    </Button>
-                                </FormActions>
-                            </FormSection>
-                        </form>
-                    </SectionCard>
-                )}
-
-                <SectionCard>
-                    <FormSection
-                        title={t('Appearance')}
-                        description={t('Choose a light or dark look. Use system setting follows your device automatically.')}
-                    >
-                        <RadioCardGroup legend={t('Appearance')}>
-                            {APPEARANCE_OPTIONS.map((opt) => (
-                                <RadioCard
-                                    key={opt.value}
-                                    name="appearance"
-                                    value={opt.value}
-                                    checked={preference === opt.value}
-                                    onChange={() => setColorMode(opt.value)}
-                                    label={t(opt.label)}
-                                />
-                            ))}
-                        </RadioCardGroup>
-                    </FormSection>
-                </SectionCard>
-
-                <SectionCard>
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            password.post('/m/member/config/password', { onSuccess: () => password.reset() });
-                        }}
-                    >
-                        <FormSection title={t('Password')}>
-                            <Field label={t('Current password')} htmlFor="current_password" error={password.errors.current_password}>
-                                <Input
-                                    id="current_password"
-                                    type="password"
-                                    autoComplete="current-password"
-                                    value={password.data.current_password}
-                                    onChange={(e) => password.setData('current_password', e.target.value)}
-                                />
-                            </Field>
-                            <Field label={t('New password')} htmlFor="password" error={password.errors.password}>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    autoComplete="new-password"
-                                    value={password.data.password}
-                                    onChange={(e) => password.setData('password', e.target.value)}
-                                />
-                            </Field>
-                            <Field label={t('New password (confirm)')} htmlFor="password_confirmation">
-                                <Input
-                                    id="password_confirmation"
-                                    type="password"
-                                    autoComplete="new-password"
-                                    value={password.data.password_confirmation}
-                                    onChange={(e) => password.setData('password_confirmation', e.target.value)}
-                                />
-                            </Field>
-                            <FormActions>
-                                <Button type="submit" loading={password.processing}>
-                                    {t('Save')}
-                                </Button>
-                            </FormActions>
+                                </div>
+                            </RadioCardGroup>
+                            <SavedIndicator show={diary.recentlySuccessful} />
                         </FormSection>
-                    </form>
-                </SectionCard>
+                    </GroupItem>
 
-                <SectionCard>
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            email.post('/m/member/config/email', { onSuccess: () => email.reset() });
-                        }}
-                    >
-                        <FormSection title={t('Email address')} description={`${t('Current email address')}: ${form.email.value}`}>
-                            <Field label={t('New email address')} htmlFor="new_email" error={email.errors.new_email}>
-                                <Input
-                                    id="new_email"
-                                    type="email"
-                                    value={email.data.new_email}
-                                    onChange={(e) => email.setData('new_email', e.target.value)}
-                                />
-                            </Field>
-                            <Field
-                                label={t('Current password')}
-                                htmlFor="email_password"
-                                error={email.errors.password}
-                                help={t('A confirmation link will be sent to the new address. The change takes effect once you open it.')}
-                            >
-                                <Input
-                                    id="email_password"
-                                    type="password"
-                                    autoComplete="current-password"
-                                    value={email.data.password}
-                                    onChange={(e) => email.setData('password', e.target.value)}
-                                />
-                            </Field>
-                            <FormActions>
-                                <Button type="submit" loading={email.processing}>
-                                    {t('Send confirmation')}
-                                </Button>
-                            </FormActions>
+                    <GroupItem>
+                        <FormSection title={t('Who can see your age')} headingLevel="h3">
+                            <RadioCardGroup legend={t('Who can see your age')} error={age.errors.age_visibility}>
+                                <div className="flex flex-wrap gap-2">
+                                    {form.age.options.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="age_visibility"
+                                            value={opt.value}
+                                            checked={age.data.age_visibility === opt.value}
+                                            disabled={age.processing}
+                                            onChange={(e) => saveAge(e.target.value)}
+                                            label={t(opt.label)}
+                                        />
+                                    ))}
+                                </div>
+                            </RadioCardGroup>
+                            <SavedIndicator show={age.recentlySuccessful} />
                         </FormSection>
-                    </form>
-                </SectionCard>
+                    </GroupItem>
+                </SettingsGroup>
 
-                <SectionCard>
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            withdraw.post('/m/member/config/withdrawal');
-                        }}
-                    >
+                <SettingsGroup title={t('Display & language')}>
+                    <GroupItem>
                         <FormSection
-                            title={t('Account withdrawal')}
-                            description={t('Withdrawing permanently deletes your account and cannot be undone.')}
+                            title={t('Appearance')}
+                            headingLevel="h3"
+                            description={t('Choose a light or dark look. Use system setting follows your device automatically.')}
                         >
-                            <Field label={t('Current password')} htmlFor="withdraw_password" error={withdraw.errors.password}>
-                                <Input
-                                    id="withdraw_password"
-                                    type="password"
-                                    autoComplete="current-password"
-                                    value={withdraw.data.password}
-                                    onChange={(e) => withdraw.setData('password', e.target.value)}
-                                />
-                            </Field>
-                            <CheckboxField
-                                label={t('Yes, delete my account.')}
-                                checked={withdraw.data.confirm}
-                                onChange={(e) => withdraw.setData('confirm', e.target.checked)}
-                                error={withdraw.errors.confirm}
-                            />
-                            <FormActions>
-                                <Button type="submit" variant="destructive" loading={withdraw.processing}>
-                                    {t('Withdraw from this site')}
-                                </Button>
-                            </FormActions>
+                            <RadioCardGroup legend={t('Appearance')}>
+                                <div className="flex flex-wrap gap-2">
+                                    {APPEARANCE_OPTIONS.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="appearance"
+                                            value={opt.value}
+                                            checked={preference === opt.value}
+                                            onChange={() => setColorMode(opt.value)}
+                                            label={t(opt.label)}
+                                        />
+                                    ))}
+                                </div>
+                            </RadioCardGroup>
                         </FormSection>
-                    </form>
-                </SectionCard>
+                    </GroupItem>
+
+                    <GroupItem>
+                        <FormSection title={t('Language')} headingLevel="h3">
+                            {/* Locale labels are language autonyms, rendered verbatim (not translation keys). */}
+                            <RadioCardGroup legend={t('Language')}>
+                                <div className="flex flex-wrap gap-2">
+                                    {form.locale.options.map((opt) => (
+                                        <RadioPill
+                                            key={opt.value}
+                                            name="locale"
+                                            value={opt.value}
+                                            checked={locale.data.locale === opt.value}
+                                            disabled={locale.processing}
+                                            onChange={(e) => switchLocale(e.target.value)}
+                                            // lang belongs on the visible autonym text (RadioPill spreads rest props onto the input).
+                                            label={<span lang={opt.value}>{opt.label}</span>}
+                                        />
+                                    ))}
+                                </div>
+                            </RadioCardGroup>
+                        </FormSection>
+                    </GroupItem>
+
+                    {surfaceField && (
+                        <GroupItem>
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    surface.post('/m/member/config/surface');
+                                }}
+                            >
+                                <FormSection title={t('Display')} headingLevel="h3">
+                                    <RadioCardGroup legend={t('Display')} error={surface.errors.preferred_surface}>
+                                        {surfaceField.options.map((opt) => (
+                                            <RadioCard
+                                                key={opt.value}
+                                                name="preferred_surface"
+                                                value={opt.value}
+                                                checked={surface.data.preferred_surface === opt.value}
+                                                onChange={(e) => surface.setData('preferred_surface', e.target.value)}
+                                                label={t(opt.label)}
+                                                description={opt.description ? t(opt.description) : undefined}
+                                            />
+                                        ))}
+                                    </RadioCardGroup>
+                                    <FormActions>
+                                        {/* The one explicit button among the preferences: switching re-renders the whole
+                                            shell on the chosen surface, so it must not fire on a stray radio click.
+                                            Disabled until the choice differs from the current surface, so a casual save
+                                            never pins. */}
+                                        <Button
+                                            type="submit"
+                                            loading={surface.processing}
+                                            disabled={surface.data.preferred_surface === surfaceField.value}
+                                        >
+                                            {t('Switch')}
+                                        </Button>
+                                    </FormActions>
+                                </FormSection>
+                            </form>
+                        </GroupItem>
+                    )}
+                </SettingsGroup>
+
+                {/* Consequential account changes are rows into dedicated detail pages: the forms are
+                    deliberately one level deeper (focused page, visible validation errors, weight
+                    matching the action), keeping this page a scannable hub. */}
+                <SettingsGroup title={t('Account')}>
+                    <GroupItem>
+                        <DetailRow
+                            title={t('Email address')}
+                            value={form.email.value}
+                            action={
+                                <ActionLink href="/m/member/config/email" variant="outline" size="sm">
+                                    {t('Change')}
+                                </ActionLink>
+                            }
+                        />
+                    </GroupItem>
+                    <GroupItem>
+                        <DetailRow
+                            title={t('Password')}
+                            action={
+                                <ActionLink href="/m/member/config/password" variant="outline" size="sm">
+                                    {t('Change')}
+                                </ActionLink>
+                            }
+                        />
+                    </GroupItem>
+                </SettingsGroup>
+
+                <SettingsGroup title={t('Account withdrawal')} danger>
+                    <GroupItem>
+                        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                            <p className="text-sm text-muted-foreground">
+                                {t('Withdrawing permanently deletes your account and cannot be undone.')}
+                            </p>
+                            <DangerLink href="/m/member/config/withdrawal">{t('Proceed to withdrawal')}</DangerLink>
+                        </div>
+                    </GroupItem>
+                </SettingsGroup>
             </main>
         </>
     );
