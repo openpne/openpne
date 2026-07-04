@@ -8,6 +8,7 @@ use App\Auth\AdminAppAuthentication;
 use App\Auth\PasswordScheme;
 use App\Filament\Pages\Auth\Login;
 use App\Models\AdminUser;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Facades\Filament;
@@ -16,6 +17,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
+use PragmaRX\Google2FAQRCode\Google2FA;
+use PragmaRX\Google2FAQRCode\QRCode\Bacon;
 use Tests\TestCase;
 
 /**
@@ -65,6 +68,25 @@ class AdminMfaTest extends TestCase
         $raw = DB::table('admin_users')->where('id', $admin->getKey())->value('app_authentication_secret');
         $this->assertNotSame($secret, $raw);
         $this->assertStringNotContainsString($secret, (string) $raw);
+    }
+
+    public function test_the_setup_qr_code_is_a_single_valid_data_uri_without_imagick(): void
+    {
+        // Force the SVG backend (the imagick-absent path, common on shared hosting). Filament's
+        // parent double-base64-wraps the already-complete data URI there, yielding an image whose
+        // decoded content starts with "data:" instead of "<svg" — the reported "Start tag expected".
+        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $google2fa = new Google2FA(
+            (new Bacon)->setImageBackend(new SvgImageBackEnd),
+        );
+        $provider = new AdminAppAuthentication($google2fa);
+
+        $uri = $provider->generateQrCodeDataUri($provider->generateSecret());
+
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $uri);
+        $decoded = base64_decode(substr($uri, strlen('data:image/svg+xml;base64,')));
+        $this->assertStringStartsWith('<', ltrim($decoded), 'the QR must decode to SVG, not a nested data URI');
+        $this->assertStringNotContainsString('data:image/svg+xml', $decoded, 'the data URI must not be double-encoded');
     }
 
     public function test_the_panel_registers_opt_in_totp_mfa(): void
