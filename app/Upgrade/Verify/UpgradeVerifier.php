@@ -97,9 +97,14 @@ final class UpgradeVerifier
             $this->record($report, $out, "passwords:{$table}:wrapped", $bare === 0,
                 $bare === 0 ? 'no bare-MD5 rows' : "{$bare} bare-MD5 row(s) remain — the password wrap pass has not completed");
 
+            // Strict bcrypt shape, and NULL fails too — NOT LIKE would skip a flagged
+            // NULL and accept a merely-'$2'-prefixed string the hasher cannot parse.
             $malformed = (int) DB::table($table)
                 ->where('password_scheme', PasswordScheme::Md5Bcrypt->value)
-                ->where('password', 'not like', '$2%')
+                ->where(function ($query): void {
+                    $query->whereNull('password')
+                        ->orWhereRaw('`password` NOT REGEXP ?', ['^\\$2[aby]\\$[0-9]{2}\\$[./A-Za-z0-9]{53}$']);
+                })
                 ->count();
             $this->record($report, $out, "passwords:{$table}:scheme", $malformed === 0,
                 $malformed === 0 ? 'every md5_bcrypt row holds a bcrypt hash' : "{$malformed} md5_bcrypt row(s) do not hold a bcrypt hash");

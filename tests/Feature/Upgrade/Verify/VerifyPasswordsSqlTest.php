@@ -88,12 +88,22 @@ class VerifyPasswordsSqlTest extends TestCase
 
     public function test_a_flagged_row_without_a_bcrypt_hash_fails_check_c(): void
     {
-        DB::table('admin_users')->where('id', 1)->update(['password' => 'not-a-hash']);
+        // '$2'-prefixed junk and NULL must both fail — the hasher recognises neither.
+        foreach (['not-a-hash', '$2not-a-real-bcrypt'] as $password) {
+            DB::table('admin_users')->where('id', 1)->update(['password' => $password]);
+
+            [$report, $out] = $this->verify();
+
+            $this->assertTrue($report->failed(), $password);
+            $this->assertStringContainsString('FAIL passwords:admin_users:scheme', $out);
+        }
+
+        DB::table('members')->where('id', 1)->update(['password' => null]);
 
         [$report, $out] = $this->verify();
 
         $this->assertTrue($report->failed());
-        $this->assertStringContainsString('FAIL passwords:admin_users:scheme', $out);
+        $this->assertStringContainsString('FAIL passwords:members:scheme', $out);
     }
 
     public function test_an_unknown_scheme_fails_check_c(): void
