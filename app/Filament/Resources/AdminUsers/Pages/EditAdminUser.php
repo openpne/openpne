@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AdminUsers\Pages;
 
+use App\Auth\SessionRevocation;
 use App\Filament\Resources\AdminUsers\AdminUserResource;
 use App\Models\AdminUser;
 use Filament\Actions\Action;
@@ -80,6 +81,11 @@ class EditAdminUser extends EditRecord
                     $authUser->forceFill(['password' => $record->getAuthPassword()]);
                     session()->put('password_hash_admin', $record->getAuthPassword());
                 }
+
+                // A changed credential must end every other authenticated foothold for this
+                // administrator — other devices' sessions and all remember-me cookies — while
+                // the session that just proved the current password stays signed in.
+                SessionRevocation::revokeAdmin($record, session()->getId());
 
                 Notification::make()->success()->title(__('Password updated'))->send();
             });
