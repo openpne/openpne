@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http;
 
 use App\Http\Middleware\UseAdminSessionStore;
+use App\Models\Member;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -91,6 +92,78 @@ class AdminSessionStoreTest extends TestCase
             ->assertCookie($adminCookie)
             ->assertCookieMissing($memberCookie)
             ->assertCookieMissing('XSRF-TOKEN');
+    }
+
+    public function test_secure_prefixes_both_realm_cookies(): void
+    {
+        config(['session.secure' => true]);
+        $memberBase = config('session.cookie');
+        $adminBase = config('session.admin_cookie');
+
+        $this->handle('/dashboard');
+        $this->assertSame('__Secure-'.$memberBase, config('session.cookie'));
+
+        $this->handle('/admin');
+        $this->assertSame('__Secure-'.$adminBase, config('session.cookie'));
+    }
+
+    public function test_no_secure_prefix_on_a_plain_http_host(): void
+    {
+        // A __Secure- cookie without HTTPS is rejected outright, so a dev host — where
+        // session.secure is off — must keep the bare name or nobody can log in.
+        $this->assertFalse((bool) config('session.secure'));
+        $memberBase = config('session.cookie');
+
+        $this->handle('/dashboard');
+
+        $this->assertSame($memberBase, config('session.cookie'));
+    }
+
+    public function test_an_already_prefixed_base_name_is_left_untouched(): void
+    {
+        // An operator may set SESSION_COOKIE to a name that already carries a cookie-name
+        // prefix; neither is re-prefixed (a stricter __Host- would be demoted by __Secure-).
+        foreach (['__Secure-custom', '__Host-custom'] as $name) {
+            config(['session.secure' => true, 'session.cookie' => $name]);
+            // The middleware captures the member base in its constructor, so re-resolve it
+            // to pick up this iteration's configured name.
+            $this->app->forgetInstance(UseAdminSessionStore::class);
+
+            $this->handle('/dashboard');
+
+            $this->assertSame($name, config('session.cookie'));
+        }
+    }
+
+    public function test_the_prefixed_cookie_is_secure_and_round_trips_a_login(): void
+    {
+        config(['session.driver' => 'database', 'session.secure' => true]);
+        $prefixed = '__Secure-'.config('session.cookie');
+        $member = Member::factory()->create();
+
+        $login = $this->post('/login', ['email' => $member->email, 'password' => 'password']);
+        $login->assertRedirect();
+        $login->assertCookie($prefixed);
+        $this->assertTrue($login->getCookie($prefixed, false)->isSecure());
+        $sid = $login->getCookie($prefixed)->getValue();
+
+        // The browser would send the __Secure- cookie back over HTTPS; the prefixed name
+        // still authenticates.
+        $this->freshRequestState();
+        $this->withCookie($prefixed, $sid)->get('/dashboard')->assertOk();
+    }
+
+    public function test_the_admin_realm_emits_the_prefixed_secure_cookie(): void
+    {
+        // Response-level (not just the config pin): exercises StartSession + the CookieJar
+        // for the admin realm, where the guest redirect still sets its session cookie.
+        config(['session.driver' => 'database', 'session.secure' => true]);
+        $prefixed = '__Secure-'.config('session.admin_cookie');
+
+        $response = $this->get('/admin')->assertRedirect('/admin/login');
+
+        $response->assertCookie($prefixed);
+        $this->assertTrue($response->getCookie($prefixed, false)->isSecure());
     }
 
     public function test_the_xsrf_strip_matches_a_configured_cookie_domain(): void
