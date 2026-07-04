@@ -27,11 +27,11 @@ class AuthenticateMember
             ->where('email', $request->input(Fortify::username()))
             ->first();
 
-        if (! $member || $member->password === null) {
-            return null;
-        }
-
         $password = (string) $request->input('password');
+
+        if (! $member || $member->password === null) {
+            return $this->rejectInConstantTime();
+        }
 
         // The scheme decides first: a wrapped hash IS a bcrypt string, so isHashed cannot
         // tell it apart. An unrecognised stored form (a bare MD5 the wrap pass has not
@@ -39,7 +39,7 @@ class AuthenticateMember
         $verified = match (true) {
             $member->password_scheme === PasswordScheme::Md5Bcrypt->value => $this->verifyWrapped($member, $password),
             Hash::isHashed($member->password) => $this->verifyCurrent($member, $password),
-            default => null,
+            default => $this->rejectInConstantTime(),
         };
 
         // An admin-rejected (OpenPNE 3 is_login_rejected) member cannot log in even with the right
@@ -61,6 +61,22 @@ class AuthenticateMember
         return Hash::needsRehash($member->password)
             ? $this->store($member, $password)
             : $member;
+    }
+
+    /**
+     * A rejection that skipped hash verification — an unknown email, a passwordless row,
+     * an unrecognised stored form — must not answer faster than one that ran it: the
+     * difference (a bcrypt takes hundreds of milliseconds) is an account-existence
+     * oracle. Burn an equivalent hash; Hash::make costs the same as the check a real
+     * account gets and tracks the configured rounds. A fixed input, not the attempt:
+     * bcrypt cost is input-independent, and a configured BCRYPT_LIMIT would otherwise
+     * let an over-long attempt throw on exactly this path.
+     */
+    private function rejectInConstantTime(): ?Member
+    {
+        Hash::make('openpne-timing-equalizer');
+
+        return null;
     }
 
     /** The stored hash is bcrypt over the OpenPNE 3 MD5 hex, so md5() the attempt first. */

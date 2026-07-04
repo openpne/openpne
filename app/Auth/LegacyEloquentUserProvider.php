@@ -22,12 +22,23 @@ use Illuminate\Support\Facades\Hash;
  */
 class LegacyEloquentUserProvider extends EloquentUserProvider
 {
+    public function retrieveByCredentials(#[\SensitiveParameter] array $credentials)
+    {
+        $user = parent::retrieveByCredentials($credentials);
+
+        if ($user === null) {
+            $this->rejectInConstantTime();
+        }
+
+        return $user;
+    }
+
     public function validateCredentials(UserContract $user, #[\SensitiveParameter] array $credentials)
     {
         $hashed = $user->getAuthPassword();
 
         if (! is_string($hashed) || $hashed === '') {
-            return false;
+            return $this->rejectInConstantTime();
         }
 
         if (! $this->usesWrappedScheme($user)) {
@@ -35,7 +46,7 @@ class LegacyEloquentUserProvider extends EloquentUserProvider
             // authenticates nobody, and must not reach the bcrypt hasher, which throws
             // on foreign formats rather than returning false.
             if (! Hash::isHashed($hashed)) {
-                return false;
+                return $this->rejectInConstantTime();
             }
 
             return parent::validateCredentials($user, $credentials);
@@ -44,10 +55,26 @@ class LegacyEloquentUserProvider extends EloquentUserProvider
         $plain = $credentials['password'] ?? null;
 
         if (! is_string($plain)) {
-            return false;
+            return $this->rejectInConstantTime();
         }
 
         return $this->hasher->check(md5($plain), $hashed);
+    }
+
+    /**
+     * A rejection that skipped hash verification — an unknown username, an empty or
+     * unrecognised stored hash — must not answer faster than one that ran it: the
+     * difference (a bcrypt takes hundreds of milliseconds) is an account-existence
+     * oracle. Burn an equivalent hash; make() costs the same as a check and tracks
+     * the configured rounds. A fixed input, not the attempt: bcrypt cost is
+     * input-independent, and a configured BCRYPT_LIMIT would otherwise let an
+     * over-long attempt throw on exactly this path.
+     */
+    private function rejectInConstantTime(): bool
+    {
+        $this->hasher->make('openpne-timing-equalizer');
+
+        return false;
     }
 
     public function rehashPasswordIfRequired(UserContract $user, #[\SensitiveParameter] array $credentials, bool $force = false)
