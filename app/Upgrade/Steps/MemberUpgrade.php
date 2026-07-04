@@ -18,8 +18,9 @@ use App\Upgrade\UpgradeStep;
  *    inactive pre-registration that only has `pc_address_pre`) yields NULL, i.e. a
  *    login-impossible member whose row is still preserved.
  *  - password: the bare 32-char MD5. INSERT...SELECT bypasses Eloquent, so the model's
- *    `hashed` cast does not fire and the legacy hash lands verbatim, to be rehashed to
- *    bcrypt on the member's first login.
+ *    `hashed` cast does not fire and the legacy hash lands verbatim here; the runner's
+ *    post-walk wrap pass (PasswordWrap) then converts it to bcrypt(md5) + password_scheme
+ *    before the run completes, so no bare MD5 survives at rest.
  *  - profile_visibility: the SNS-wide sns_config[is_allow_config_public_flag_profile_page]
  *    when truthy (it overrides the per-member flag in OpenPNE 3's MemberTable::appendRules,
  *    so a stale member_config must not over-expose), else member_config[profile_page_public_flag],
@@ -54,8 +55,9 @@ class MemberUpgrade extends UpgradeStep
 
     public function targetDefaults(): array
     {
-        // No OpenPNE 3 source; rely on the schema default (null).
-        return ['email_verified_at', 'remember_token'];
+        // No OpenPNE 3 source; rely on the schema default (null). password_scheme is set
+        // by the runner's post-walk wrap pass, not this step.
+        return ['email_verified_at', 'password_scheme', 'remember_token'];
     }
 
     public function gaps(): array
