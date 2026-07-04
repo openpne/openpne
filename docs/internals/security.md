@@ -54,3 +54,16 @@ Deliberately not set:
   Livewire/Alpine scripts run.
 - **`Cross-Origin-Resource-Policy`** — web-public avatars and banners are
   served for cross-origin embedding, which `same-origin` would break.
+
+## Cookies
+
+When `session.secure` is on (explicit `SESSION_SECURE_COOKIE`, or `force_https`),
+the two realm session cookies are renamed with the `__Secure-` prefix
+([`UseAdminSessionStore`](../../app/Http/Middleware/UseAdminSessionStore.php)),
+which the browser accepts only over HTTPS with the Secure attribute. A
+plain-HTTP host stays unprefixed so login still works. Not yet covered: the
+`XSRF-TOKEN` cookie is read from JS by name and the remember-me cookies are
+guard-named, so neither takes the prefix — they carry the Secure flag from
+`session.secure` but not the prefix, which the `__Host-` follow-up would
+tighten. So this satisfies the prefix requirement for the session cookies, not
+yet for every authentication cookie.

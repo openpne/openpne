@@ -24,6 +24,17 @@ Per request it pins, both ways:
   stamps `sessions.user_id` from the default guard, so admin-realm rows carry
   `admin_users` ids even on requests where Filament's own `Authenticate` never
   runs (login-screen Livewire updates, uploads, the locale switch).
+- the `__Secure-` cookie-name prefix — added to whichever realm cookie is
+  active, but only when `session.secure` is on (explicit `SESSION_SECURE_COOKIE`
+  or `force_https`); a browser rejects a `__Secure-` cookie that is not Secure
+  over HTTPS, so a plain-HTTP host must stay unprefixed or login breaks. The
+  prefix is not applied to the `XSRF-TOKEN` cookie (read by name from JS) or the
+  remember-me cookies (guard-named); those keep their Secure flag from
+  `session.secure` but no prefix (tightening them is the `__Host-` follow-up).
+  A site already on HTTPS renames its session cookie on deploy, so everyone
+  re-logs in once. A `SESSION_COOKIE` / `SESSION_ADMIN_COOKIE` an operator has
+  already prefixed (`__Secure-`/`__Host-`) is passed through unchanged — the
+  operator then owns satisfying the browser's prefix invariants.
 - admin responses drop the `XSRF-TOKEN` cookie — one global cookie name, so the
   last responding realm would overwrite the member token and 419 the member
   realm's next Inertia POST. Nothing on the admin realm reads it (Livewire

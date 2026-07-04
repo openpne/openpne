@@ -49,7 +49,7 @@ class UseAdminSessionStore
         $admin = $this->isAdminRealm($request);
 
         config([
-            'session.cookie' => $admin ? config('session.admin_cookie') : $this->memberCookie,
+            'session.cookie' => $this->cookieName($admin ? config('session.admin_cookie') : $this->memberCookie),
             'session.table' => $admin ? config('session.admin_table') : config('session.member_table'),
         ]);
         Auth::shouldUse($admin ? 'admin' : $this->memberGuard);
@@ -71,6 +71,24 @@ class UseAdminSessionStore
         }
 
         return $response;
+    }
+
+    /**
+     * The `__Secure-` prefix ties the cookie to HTTPS: a browser accepts a `__Secure-`
+     * cookie only when it carries the Secure attribute over TLS, and rejects it outright
+     * otherwise. So add the prefix exactly when the session cookie is already Secure
+     * (`session.secure` — set explicitly or by force_https), never on a plain-HTTP dev
+     * host where it would silently break login. Leave an already-prefixed base untouched
+     * — an operator-set SESSION_COOKIE, or the pin re-deriving in a long-lived process —
+     * including a stricter `__Host-` name, which `__Secure-__Host-…` would demote.
+     */
+    private function cookieName(string $base): string
+    {
+        if (! config('session.secure') || str_starts_with($base, '__Secure-') || str_starts_with($base, '__Host-')) {
+            return $base;
+        }
+
+        return '__Secure-'.$base;
     }
 
     private function isAdminRealm(Request $request): bool
