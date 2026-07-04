@@ -1,5 +1,5 @@
-import { Link, router, usePage } from '@inertiajs/react';
-import { Globe, LogOut, Settings, User } from 'lucide-react';
+import { Link, router } from '@inertiajs/react';
+import { LogOut, Settings, User } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import { Avatar } from '@/components/avatar';
 import {
@@ -9,19 +9,15 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { AuthUser, PageProps } from '@/types';
-
-const NATIVE_LOCALE_LABEL: Record<string, string> = { ja: '日本語', en: 'English' };
+import type { AuthUser } from '@/types';
 
 /**
- * Account menu: profile, settings, language toggle, sign out. Radix DropdownMenu supplies the
- * keyboard/focus/ARIA behaviour. `compact` shows just the avatar (mobile top bar); the default
- * avatar+name row is used in the desktop sidebar footer. (Appearance lives on the settings page.)
+ * Account menu: profile, settings, sign out. Radix DropdownMenu supplies the keyboard/focus/ARIA
+ * behaviour. `compact` shows just the avatar (mobile top bar); the default avatar+name row is used
+ * in the desktop sidebar footer. (Appearance and language live on the settings page.)
  */
 export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?: boolean }) {
     const t = useT();
-    const locale = usePage<PageProps>().props.locale;
-    const nextLocale = locale === 'ja' ? 'en' : 'ja';
 
     return (
         <DropdownMenu>
@@ -50,10 +46,6 @@ export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => router.post('/locale', { locale: nextLocale })}>
-                    <Globe className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1">{NATIVE_LOCALE_LABEL[nextLocale]}</span>
-                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => router.post('/logout')}>
                     <LogOut className="size-4 shrink-0 text-muted-foreground" />
                     <span className="flex-1">{t('Sign out')}</span>

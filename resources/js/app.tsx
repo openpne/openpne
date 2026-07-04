@@ -1,7 +1,7 @@
-import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react';
-import { LaravelReactI18nProvider } from 'laravel-react-i18n';
+import { createInertiaApp, type ResolvedComponent, router } from '@inertiajs/react';
+import { LaravelReactI18nProvider, useLaravelReactI18n } from 'laravel-react-i18n';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppShell } from '@/components/app-shell';
 // Side-effect import: applies the saved color mode, keeps <meta name="theme-color"> in sync, and
@@ -14,6 +14,33 @@ import type { PageProps } from '@/types';
 // per-site name like Classic. VITE_APP_NAME is only the pre-mount fallback; site name is
 // treated as site-invariant, so capturing the initial page's value is enough.
 let appName = import.meta.env.VITE_APP_NAME ?? 'OpenPNE';
+
+/**
+ * Keeps the i18n provider's active locale in step with the server-resolved `locale` shared on
+ * every Inertia response. The provider reads its locale once at boot, but the server locale can
+ * change without a full page load: logging in switches to the member's durable locale and logging
+ * out falls back to the session/Accept-Language — both arrive as XHR navigations. Without this
+ * the dictionary would keep the boot locale while the per-request `terms` prop moved on,
+ * rendering two languages on one screen. Dictionaries are eager-bundled, so the switch is sync.
+ */
+function SyncLocaleWithServer() {
+    const { currentLocale, setLocale } = useLaravelReactI18n();
+
+    // No dependency array: currentLocale/setLocale are recreated per provider render, so
+    // re-subscribing each render (router.on returns its own unsubscriber) keeps them fresh.
+    useEffect(() => {
+        return router.on('navigate', (event) => {
+            const next = (event.detail.page.props as unknown as PageProps).locale;
+            if (next && next !== currentLocale()) {
+                setLocale(next);
+                // Keep the document language (set server-side on full loads) truthful for AT too.
+                document.documentElement.lang = next;
+            }
+        });
+    });
+
+    return null;
+}
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
@@ -51,6 +78,7 @@ void createInertiaApp({
                 // Classic→Modern surface switch. Eager bundles ja/en (small, flat dicts) instead.
                 files={import.meta.glob('/lang/*.json', { eager: true })}
             >
+                <SyncLocaleWithServer />
                 <App {...props} />
             </LaravelReactI18nProvider>,
         );

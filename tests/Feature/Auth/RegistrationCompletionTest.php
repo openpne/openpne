@@ -103,6 +103,38 @@ class RegistrationCompletionTest extends TestCase
         $this->assertDatabaseCount('registration_tokens', 0);
     }
 
+    public function test_a_pre_login_language_choice_is_promoted_to_the_member_locale(): void
+    {
+        // A guest's explicit choice (POST /locale writes the session) becomes the durable
+        // per-member locale at account creation, so it follows them across devices.
+        $token = $this->issueToken();
+
+        $this->withSession(['locale' => 'en'])->post("/register/{$token}", $this->validForm())
+            ->assertRedirect('/');
+
+        $this->assertSame('en', Member::where('email', 'newcomer@example.com')->first()->locale);
+    }
+
+    public function test_registration_without_a_session_locale_leaves_the_member_locale_unset(): void
+    {
+        // No explicit choice → locale stays NULL and keeps following Accept-Language.
+        $token = $this->issueToken();
+
+        $this->post("/register/{$token}", $this->validForm())->assertRedirect('/');
+
+        $this->assertNull(Member::where('email', 'newcomer@example.com')->first()->locale);
+    }
+
+    public function test_an_unsupported_session_locale_is_not_promoted(): void
+    {
+        $token = $this->issueToken();
+
+        $this->withSession(['locale' => 'xx'])->post("/register/{$token}", $this->validForm())
+            ->assertRedirect('/');
+
+        $this->assertNull(Member::where('email', 'newcomer@example.com')->first()->locale);
+    }
+
     public function test_the_email_comes_from_the_token_not_the_post_body(): void
     {
         // The address was proven by the mailed link; a posted email must be ignored, or anyone with a
