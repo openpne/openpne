@@ -2,6 +2,7 @@
 
 namespace App\Features\Member;
 
+use App\Auth\SessionRevocation;
 use App\Features\Diary\DiaryVisibility;
 use App\Features\Member\Actions\ConfirmEmailChange;
 use App\Features\Member\Actions\RequestEmailChange;
@@ -25,7 +26,6 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -196,13 +196,11 @@ class MemberConfigController extends Controller
         }
 
         // OWASP: changing the login identifier should drop the member's other devices. remember_token
-        // is rotated in the commit (kills remember-me cookies everywhere); on the database session
-        // driver — the app's default — their server-side sessions are purged here too. An email change
-        // does not rotate the password hash, so auth.session alone would not evict other sessions on a
-        // non-database driver; this contract assumes database sessions (as withdrawal/reset do).
-        if (config('session.driver') === 'database') {
-            DB::table(config('session.table', 'sessions'))->where('user_id', $member->getKey())->delete();
-        }
+        // is rotated in the commit (kills remember-me cookies everywhere); the session purge is
+        // SessionRevocation's. An email change does not rotate the password hash, so auth.session
+        // alone would not evict other sessions on a non-database driver; this contract assumes
+        // database sessions (as withdrawal/reset do).
+        SessionRevocation::purgeMemberSessions((int) $member->getKey());
 
         // Only the changed member or a logged-out visitor reaches here (a different logged-in member is
         // turned away above). If this is the changed member's own session, end it too, then everyone
@@ -259,14 +257,9 @@ class MemberConfigController extends Controller
         $withdraw($member);
 
         // Drop the member's other devices too: sessions.user_id carries no FK to members, so deleting
-        // the member leaves its session rows behind. On the database driver purge them outright, honoring
-        // the configured session table (mirror ResetMemberPassword); other drivers keep no central store,
-        // but a deleted member can't re-authenticate regardless. Then reset the current session.
-        if (config('session.driver') === 'database') {
-            DB::table(config('session.table', 'sessions'))
-                ->where('user_id', $member->getKey())
-                ->delete();
-        }
+        // the member leaves its session rows behind (purge-only — the member row is gone, and logout
+        // above already cycled remember_token). Then reset the current session.
+        SessionRevocation::purgeMemberSessions((int) $member->getKey());
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         $request->session()->flash('status', __('Your account has been deleted.'));

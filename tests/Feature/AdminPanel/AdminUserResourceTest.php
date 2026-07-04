@@ -12,7 +12,9 @@ use App\Models\AdminUser;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -164,6 +166,39 @@ class AdminUserResourceTest extends TestCase
         // The session's stored password hash is resynced so AuthenticateSession does not log the
         // operator out on the next request.
         $this->assertTrue(Hash::check('new-strong-pass-1', session('password_hash_admin')));
+    }
+
+    public function test_change_password_revokes_other_devices_but_keeps_this_session(): void
+    {
+        config(['session.driver' => 'database']);
+        $me = AdminUser::factory()->create(['username' => 'me', 'password' => 'original-pass-1']);
+        $me->forceFill(['remember_token' => Str::random(60)])->save();
+        $before = $me->remember_token;
+        $this->actingAs($me, 'admin');
+
+        DB::table('admin_sessions')->insert([
+            ['id' => session()->getId(), 'user_id' => $me->getKey(), 'payload' => base64_encode('{}'), 'last_activity' => time()],
+            ['id' => 'other-device', 'user_id' => $me->getKey(), 'payload' => base64_encode('{}'), 'last_activity' => time()],
+        ]);
+        // A member whose id collides with the admin's id must be unaffected.
+        DB::table('sessions')->insert([
+            'id' => 'member-device', 'user_id' => $me->getKey(),
+            'payload' => base64_encode('{}'), 'last_activity' => time(),
+        ]);
+
+        Livewire::test(EditAdminUser::class, ['record' => $me->getKey()])
+            ->callAction('changePassword', [
+                'current_password' => 'original-pass-1',
+                'password' => 'new-strong-pass-1',
+                'password_confirmation' => 'new-strong-pass-1',
+            ])
+            ->assertHasNoActionErrors();
+
+        // The device that proved the current password stays; every other foothold drops.
+        $this->assertDatabaseHas('admin_sessions', ['id' => session()->getId()]);
+        $this->assertDatabaseMissing('admin_sessions', ['id' => 'other-device']);
+        $this->assertDatabaseHas('sessions', ['id' => 'member-device']);
+        $this->assertNotSame($before, $me->fresh()->remember_token);
     }
 
     public function test_editing_the_username_does_not_change_the_password(): void

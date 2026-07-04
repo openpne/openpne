@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Auth\SessionRevocation;
 use App\Console\Commands\Concerns\ResolvesAdminPassword;
 use App\Models\AdminUser;
 use Illuminate\Console\Command;
@@ -38,7 +39,11 @@ class ResetAdminPasswordCommand extends Command
         // The `password` cast hashes the plaintext on save.
         $admin->update(['password' => $password]);
 
-        $this->info("Password for administrator [{$username}] has been reset.");
+        // Lockout recovery doubles as compromise recovery: end every existing session
+        // and remember-me cookie so only the holder of the new password gets back in.
+        SessionRevocation::revokeAdmin($admin);
+
+        $this->info("Password for administrator [{$username}] has been reset and their sessions revoked.");
 
         return self::SUCCESS;
     }

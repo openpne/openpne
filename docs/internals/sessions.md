@@ -39,12 +39,11 @@ Per request it pins, both ways:
    `app/Filament`, architecture-test enforced). A member-realm Livewire
    component would run on the admin session store — extend the realm
    predicate before introducing one.
-3. **Session purges are per-realm**: member purge code deletes from
-   `config('session.table')` by `user_id` (member ids only); an admin purge
-   targets `session.admin_table`. Neither can revoke the other realm. Caveat
-   for admin-initiated *member* purges (bans): during an admin-realm request
-   `session.table` is pinned to `admin_sessions`, so such code must reference
-   the member table explicitly, not via `config('session.table')`.
+3. **Session purges are per-realm and go through `App\Auth\SessionRevocation`**,
+   which reads the stable `session.member_table` / `session.admin_table` keys.
+   Never purge via `config('session.table')`: that key is pinned to the serving
+   realm, so an admin-realm action revoking a member (a ban) would target the
+   wrong table.
 4. One process serves one request (FPM). The store/guard pin mutates config, so
    a long-lived runtime (Octane) would need per-request driver resets; tests
    simulate fresh workers with `TestCase::freshRequestState()`.
