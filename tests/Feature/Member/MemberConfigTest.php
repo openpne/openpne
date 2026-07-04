@@ -320,6 +320,35 @@ class MemberConfigTest extends TestCase
         ])->assertRedirect(route('member.modern.config'));
     }
 
+    public function test_a_modern_preference_save_suppresses_the_page_flash(): void
+    {
+        // Modern announces the instant-apply preferences (diary/age) inline next to the control; the
+        // page flash is dropped so one save is never announced twice.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/m/member/config/diary', [
+            'diary_default_visibility' => (string) Visibility::Friends->value,
+        ])->assertRedirect(route('member.modern.config'))->assertSessionMissing('status');
+
+        $this->actingAs($member)->post('/m/member/config/age', [
+            'age_visibility' => (string) Visibility::Friends->value,
+        ])->assertRedirect(route('member.modern.config'))->assertSessionMissing('status');
+    }
+
+    public function test_a_classic_preference_save_keeps_the_page_flash(): void
+    {
+        // Classic category pages have no inline indicator, so the flash stays their save feedback.
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/diary', [
+            'diary_default_visibility' => (string) Visibility::Friends->value,
+        ])->assertSessionHas('status');
+
+        $this->actingAs($member)->post('/member/config/age', [
+            'age_visibility' => (string) Visibility::Friends->value,
+        ])->assertSessionHas('status');
+    }
+
     public function test_an_invalid_value_returns_to_its_category(): void
     {
         // The section forms POST to category-less routes, so the browser referer (->from) is what
@@ -433,13 +462,14 @@ class MemberConfigTest extends TestCase
 
     public function test_a_modern_password_save_redirects_to_the_modern_config(): void
     {
+        // Unlike the instant-apply preferences, the explicit password form keeps its flash on Modern.
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/m/member/config/password', [
             'current_password' => 'password',
             'password' => 'new-secret-pass',
             'password_confirmation' => 'new-secret-pass',
-        ])->assertRedirect(route('member.modern.config'));
+        ])->assertRedirect(route('member.modern.config'))->assertSessionHas('status');
 
         $this->assertTrue(Hash::check('new-secret-pass', $member->fresh()->password));
     }
