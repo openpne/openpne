@@ -85,12 +85,32 @@ class MemberConfigController extends Controller
         ]);
     }
 
+    /**
+     * Modern-only detail pages for the consequential account changes. The settings page shows a
+     * compact row per item; the actual forms live one level deeper so a validation error returns
+     * to a short, focused page instead of the bottom of the settings list.
+     */
+    public function editEmail(): InertiaResponse
+    {
+        return Inertia::render('member/config/email', ['email' => $this->viewer()->email]);
+    }
+
+    public function editPassword(): InertiaResponse
+    {
+        return Inertia::render('member/config/password');
+    }
+
+    public function editWithdrawal(): InertiaResponse
+    {
+        return Inertia::render('member/config/withdrawal');
+    }
+
     public function updateDiary(UpdateDiaryDefaultRequest $request): RedirectResponse
     {
         $value = PreferenceKey::DiaryDefaultVisibility->coerce($request->validated('diary_default_visibility'));
         $this->viewer()->setPreference(PreferenceKey::DiaryDefaultVisibility, $value);
 
-        return $this->savedRedirect($request, MemberConfigCategory::Diary);
+        return $this->savedRedirect($request, MemberConfigCategory::Diary, flashOnModern: false);
     }
 
     public function updateAge(UpdateAgeVisibilityRequest $request): RedirectResponse
@@ -98,7 +118,7 @@ class MemberConfigController extends Controller
         $value = PreferenceKey::AgeVisibility->coerce($request->validated('age_visibility'));
         $this->viewer()->setPreference(PreferenceKey::AgeVisibility, $value);
 
-        return $this->savedRedirect($request, MemberConfigCategory::PublicFlag);
+        return $this->savedRedirect($request, MemberConfigCategory::PublicFlag, flashOnModern: false);
     }
 
     public function updatePassword(UpdatePasswordRequest $request): RedirectResponse
@@ -303,14 +323,18 @@ class MemberConfigController extends Controller
     /**
      * Redirect back to the just-saved section: the Classic category page (`?category=`), or the bare
      * Modern config page on Modern (single page, no category). Gating the param to the Classic route
-     * keeps the Modern redirect category-free.
+     * keeps the Modern redirect category-free. An instant-apply preference (diary/age) passes
+     * `flashOnModern: false` — Modern announces those saves inline next to the control, so the page
+     * flash would say the same thing twice; Classic always keeps the flash (its category pages have
+     * no inline indicator).
      */
-    private function savedRedirect(Request $request, MemberConfigCategory $category): RedirectResponse
+    private function savedRedirect(Request $request, MemberConfigCategory $category, bool $flashOnModern = true): RedirectResponse
     {
         $name = SurfaceResolver::redirectName($request, 'member.config');
-        $params = $name === 'member.config' ? ['category' => $category->value] : [];
+        $isClassic = $name === 'member.config';
+        $redirect = redirect()->route($name, $isClassic ? ['category' => $category->value] : []);
 
-        return redirect()->route($name, $params)->with('status', __('Settings updated.'));
+        return $isClassic || $flashOnModern ? $redirect->with('status', __('Settings updated.')) : $redirect;
     }
 
     private function viewer(): Member

@@ -70,11 +70,15 @@ enum Visibility: int
         };
     }
 
-    /** Human-readable label key, translated via __()/t() on either surface. */
+    /**
+     * Human-readable label key, translated via __()/t() on either surface. The set reads as
+     * uniform audience nouns — "Anyone on the web" names the web explicitly so it cannot be
+     * confused with "All members" (ja: Web全体 vs メンバー全員).
+     */
     public function label(): string
     {
         return match ($this) {
-            self::Open => 'Public to Web',
+            self::Open => 'Anyone on the web',
             self::Members => 'All members',
             self::Friends => '%Friends% only',
             self::Private => 'Private',

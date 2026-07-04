@@ -337,6 +337,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/m/member/config/email', [MemberConfigController::class, 'updateEmail'])
         ->defaults('surface', 'modern')->middleware('throttle:email-change')->name('member.modern.config.email');
 
+    // Modern-only detail pages for the consequential account changes (email/password/withdrawal).
+    // The settings page keeps a compact row per item; the forms live here, so a validation error
+    // lands back on a short page where it is visible. Classic keeps its ?category= pages. Like
+    // /m/community/recent these have no Classic twin, so no surface default / `.modern.` name.
+    Route::get('/m/member/config/email', [MemberConfigController::class, 'editEmail'])->name('member.config.email.edit');
+    Route::get('/m/member/config/password', [MemberConfigController::class, 'editPassword'])->name('member.config.password.edit');
+    Route::get('/m/member/config/withdrawal', [MemberConfigController::class, 'editWithdrawal'])->name('member.config.withdrawal.edit');
+
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {
         Route::get('/avatar', 'edit')->name('member.avatar.edit');
         Route::post('/avatar', 'update')->name('member.avatar.update');

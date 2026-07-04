@@ -79,11 +79,22 @@ export function Field({ label, htmlFor, help, error, required, className, labelR
 }
 
 /** A titled group of fields within a settings/form page. */
-export function FormSection({ title, description, children }: { title: ReactNode; description?: ReactNode; children: ReactNode }) {
+export function FormSection({
+    title,
+    description,
+    headingLevel: Heading = 'h2',
+    children,
+}: {
+    title: ReactNode;
+    description?: ReactNode;
+    /** 'h3' when the section sits under a page-level h2 group heading (e.g. the settings page). */
+    headingLevel?: 'h2' | 'h3';
+    children: ReactNode;
+}) {
     return (
         <section className="space-y-4">
             <div className="space-y-0.5">
-                <h2 className="text-base font-semibold text-foreground">{title}</h2>
+                <Heading className="text-base font-semibold text-foreground">{title}</Heading>
                 {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
             {children}
