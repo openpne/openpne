@@ -6,41 +6,35 @@ use App\Filament\Pages\SecuritySettings;
 use App\Models\AdminUser;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Facades\Filament;
-use Filament\Widgets\StatsOverviewWidget;
-use Filament\Widgets\StatsOverviewWidget\Stat;
+use Filament\Widgets\Widget;
 
 /**
- * Nudges the signed-in administrator toward enabling two-factor authentication — the opt-in
- * posture relies on the prompt being visible, not on enforcement. Turns from a warning
- * call-to-action into a settled success stat once MFA is on. Links to SecuritySettings.
+ * A full-width call-to-action prompting the signed-in administrator to enable two-factor
+ * authentication — the opt-in posture relies on the prompt being seen. Rendered only while
+ * MFA is off (a nudge you've acted on should not linger; the Security nav item remains the
+ * ongoing entry point), and styled as an alert, not a stat, so it reads as being about the
+ * operator's own account rather than a member metric.
  */
-class MfaReminderWidget extends StatsOverviewWidget
+class MfaReminderWidget extends Widget
 {
-    protected ?string $heading = null;
+    protected string $view = 'filament.widgets.mfa-reminder';
 
-    protected static ?int $sort = 4;
+    protected int|string|array $columnSpan = 'full';
 
-    protected function getStats(): array
-    {
-        return [
-            $this->enabled()
-                ? Stat::make(__('Two-factor authentication'), __('Enabled'))
-                    ->description(__('Your administrator account is protected'))
-                    ->color('success')
-                    ->url(SecuritySettings::getUrl())
-                : Stat::make(__('Two-factor authentication'), __('Not set up'))
-                    ->description(__('Set it up to protect your account'))
-                    ->color('warning')
-                    ->url(SecuritySettings::getUrl()),
-        ];
-    }
+    // Above the member-stat widgets (sort 1+), so the account prompt is the first thing seen.
+    protected static ?int $sort = -1;
 
-    private function enabled(): bool
+    public static function canView(): bool
     {
         $admin = Filament::auth()->user();
 
         return $admin instanceof AdminUser
             && $admin instanceof HasAppAuthentication
-            && filled($admin->getAppAuthenticationSecret());
+            && blank($admin->getAppAuthenticationSecret());
+    }
+
+    public function getSecurityUrl(): string
+    {
+        return SecuritySettings::getUrl();
     }
 }

@@ -88,16 +88,26 @@ class AdminMfaSessionRevocationTest extends TestCase
         $this->assertDatabaseHas('admin_sessions', ['id' => 'other-device']);
     }
 
-    public function test_the_security_page_renders_and_the_reminder_reflects_state(): void
+    public function test_the_security_page_renders(): void
+    {
+        $this->actingAs(AdminUser::factory()->create(), 'admin');
+
+        $this->get(SecuritySettings::getUrl())->assertOk();
+    }
+
+    public function test_the_reminder_shows_only_while_mfa_is_off(): void
     {
         $admin = AdminUser::factory()->create();
         $this->actingAs($admin, 'admin');
 
-        $this->get(SecuritySettings::getUrl())->assertOk();
+        // Off: the call-to-action is visible and links to the Security page.
+        $this->assertTrue(MfaReminderWidget::canView());
+        Livewire::test(MfaReminderWidget::class)
+            ->assertSee(__('Set up two-factor authentication'))
+            ->assertSee(SecuritySettings::getUrl());
 
-        // Reminder: not-set-up first, enabled after a secret is stored.
-        Livewire::test(MfaReminderWidget::class)->assertSee(__('Not set up'));
+        // On: a nudge you've acted on should not linger.
         $admin->saveAppAuthenticationSecret(AdminAppAuthentication::make()->generateSecret());
-        Livewire::test(MfaReminderWidget::class)->assertSee(__('Enabled'));
+        $this->assertFalse(MfaReminderWidget::canView());
     }
 }

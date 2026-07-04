@@ -22,6 +22,10 @@ class AdminAppAuthentication extends AppAuthentication
     public function getActions(): array
     {
         return array_map(function (Action $action): Action {
+            // Render as an actual button, not Filament's default link, so the set-up /
+            // disable controls read as clickable.
+            $action->button();
+
             if (in_array($action->getName(), ['setUpAppAuthentication', 'disableAppAuthentication'], true)) {
                 $action->after(function (): void {
                     $admin = Filament::auth()->user();
