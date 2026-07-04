@@ -78,13 +78,13 @@ class UseAdminSessionStore
      * cookie only when it carries the Secure attribute over TLS, and rejects it outright
      * otherwise. So add the prefix exactly when the session cookie is already Secure
      * (`session.secure` — set explicitly or by force_https), never on a plain-HTTP dev
-     * host where it would silently break login. The `str_starts_with` guard keeps it
-     * idempotent whether the base name arrives already prefixed (an operator-set
-     * SESSION_COOKIE) or the pin re-derives it in a long-lived process.
+     * host where it would silently break login. Leave an already-prefixed base untouched
+     * — an operator-set SESSION_COOKIE, or the pin re-deriving in a long-lived process —
+     * including a stricter `__Host-` name, which `__Secure-__Host-…` would demote.
      */
     private function cookieName(string $base): string
     {
-        if (! config('session.secure') || str_starts_with($base, '__Secure-')) {
+        if (! config('session.secure') || str_starts_with($base, '__Secure-') || str_starts_with($base, '__Host-')) {
             return $base;
         }
 

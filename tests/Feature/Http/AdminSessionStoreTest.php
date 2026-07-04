@@ -119,14 +119,20 @@ class AdminSessionStoreTest extends TestCase
         $this->assertSame($memberBase, config('session.cookie'));
     }
 
-    public function test_an_already_prefixed_base_name_is_not_double_prefixed(): void
+    public function test_an_already_prefixed_base_name_is_left_untouched(): void
     {
-        // An operator may set SESSION_COOKIE to a name that already carries the prefix.
-        config(['session.secure' => true, 'session.cookie' => '__Secure-custom']);
+        // An operator may set SESSION_COOKIE to a name that already carries a cookie-name
+        // prefix; neither is re-prefixed (a stricter __Host- would be demoted by __Secure-).
+        foreach (['__Secure-custom', '__Host-custom'] as $name) {
+            config(['session.secure' => true, 'session.cookie' => $name]);
+            // The middleware captures the member base in its constructor, so re-resolve it
+            // to pick up this iteration's configured name.
+            $this->app->forgetInstance(UseAdminSessionStore::class);
 
-        $this->handle('/dashboard');
+            $this->handle('/dashboard');
 
-        $this->assertSame('__Secure-custom', config('session.cookie'));
+            $this->assertSame($name, config('session.cookie'));
+        }
     }
 
     public function test_the_prefixed_cookie_is_secure_and_round_trips_a_login(): void
