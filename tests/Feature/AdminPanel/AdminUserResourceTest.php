@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\AdminPanel;
 
+use App\Auth\AdminAppAuthentication;
 use App\Filament\Resources\AdminUsers\AdminUserResource;
 use App\Filament\Resources\AdminUsers\Pages\CreateAdminUser;
 use App\Filament\Resources\AdminUsers\Pages\EditAdminUser;
@@ -42,6 +43,18 @@ class AdminUserResourceTest extends TestCase
         Livewire::test(ListAdminUsers::class)
             ->assertSuccessful()
             ->assertCanSeeTableRecords($others);
+    }
+
+    public function test_list_shows_two_factor_status_per_administrator(): void
+    {
+        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $withMfa = AdminUser::factory()->create();
+        $withMfa->saveAppAuthenticationSecret(AdminAppAuthentication::make()->generateSecret());
+        $withoutMfa = AdminUser::factory()->create();
+
+        Livewire::test(ListAdminUsers::class)
+            ->assertTableColumnStateSet('two_factor', true, $withMfa)
+            ->assertTableColumnStateSet('two_factor', false, $withoutMfa);
     }
 
     public function test_create_persists_a_hashed_password(): void

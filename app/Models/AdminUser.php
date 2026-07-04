@@ -4,6 +4,10 @@ namespace App\Models;
 
 use App\Models\Concerns\ClearsPasswordScheme;
 use Database\Factories\AdminUserFactory;
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthentication;
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthenticationRecovery;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;
 use Filament\Panel;
@@ -19,10 +23,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 // OpenPNE 3 migrate as-is.
 #[Fillable(['username', 'password'])]
 #[Hidden(['password', 'password_scheme', 'remember_token'])]
-class AdminUser extends Authenticatable implements FilamentUser, HasName
+class AdminUser extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasName
 {
     /** @use HasFactory<AdminUserFactory> */
-    use ClearsPasswordScheme, HasFactory;
+    // The App-authentication traits add the encrypted secret/recovery casts and hide
+    // the columns via their initializers; getAppAuthenticationHolderName is overridden
+    // below because admins have no email.
+    use ClearsPasswordScheme, HasFactory, InteractsWithAppAuthentication, InteractsWithAppAuthenticationRecovery;
 
     // Table is the inferred `admin_users` (plural). OpenPNE 3's own `admin_user`
     // is the upgrade source, kept distinct so both coexist in a same-database upgrade.
@@ -42,6 +49,15 @@ class AdminUser extends Authenticatable implements FilamentUser, HasName
      * have only a username, so it doubles as the display name.
      */
     public function getFilamentName(): string
+    {
+        return $this->username;
+    }
+
+    /**
+     * The account label an authenticator app shows next to the TOTP code. The
+     * trait's default is the email column, which administrators do not have.
+     */
+    public function getAppAuthenticationHolderName(): string
     {
         return $this->username;
     }
