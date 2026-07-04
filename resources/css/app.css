@@ -38,6 +38,11 @@
     --color-info: var(--info);
     --color-info-foreground: var(--info-foreground);
     --color-link: var(--link);
+    /* Chosen-state accent for selection controls (checked pill/card, radio dot). Chromatic on
+       purpose: with a neutral primary a gray tint reads as disabled, and a primary fill makes a
+       selected control shout like a primary action. Follows the link blue (declared once in :root;
+       var() resolves against .dark's --link override) until a per-site brand color exists. */
+    --color-selected: var(--selected);
     /* Form-field surface: bg-field is the recessed control fill (background-only — no text-field),
        border-field-border is one step darker than the card border so a control reads as a distinct
        well. Asymmetric by mode: light = near-white raised, dark = darker-than-card recessed. */
@@ -85,6 +90,7 @@
     --info: oklch(0.6 0.13 244);
     --info-foreground: oklch(0.985 0 0);
     --link: oklch(0.52 0.19 256);
+    --selected: var(--link);
     /* Field fill: near-white so it lifts on the page (0.977) and reads as a faint well in a white card. */
     --field: oklch(0.995 0.002 83);
     --field-border: oklch(0.845 0.01 83);

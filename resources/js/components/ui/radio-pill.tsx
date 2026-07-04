@@ -15,15 +15,14 @@ export function RadioPill({ label, className, ...props }: Props) {
     return (
         <label
             className={cn(
-                // Checked = filled with primary (the segmented-control selected look, same language as
-                // the primary button). With a neutral primary, a light tint reads as gray = disabled,
-                // and border+ring alone is too subtle in dark — the inversion is unambiguous in both.
-                'flex cursor-pointer items-center gap-2 rounded-full border border-input px-3.5 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:disabled]:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
+                // Checked = the chromatic selected token (blue border + tint): a hue tint cannot be
+                // mistaken for disabled-gray, and unlike a primary fill it does not shout like an
+                // action button when several checked pills share one screen.
+                'flex cursor-pointer items-center gap-2 rounded-full border border-input px-3.5 py-1.5 text-sm text-foreground transition-colors hover:border-selected/50 has-[:checked]:border-selected has-[:checked]:bg-selected/10 has-[:disabled]:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
                 className,
             )}
         >
-            {/* The checked dot flips to the foreground accent so it stays visible on the filled pill. */}
-            <input type="radio" className="size-3.5 shrink-0 accent-primary outline-none checked:accent-primary-foreground" {...props} />
+            <input type="radio" className="size-3.5 shrink-0 accent-selected outline-none" {...props} />
             <span>{label}</span>
         </label>
     );
