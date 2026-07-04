@@ -32,7 +32,9 @@ Per request it pins, both ways:
   remember-me cookies (guard-named); those keep their Secure flag from
   `session.secure` but no prefix (tightening them is the `__Host-` follow-up).
   A site already on HTTPS renames its session cookie on deploy, so everyone
-  re-logs in once.
+  re-logs in once. A `SESSION_COOKIE` / `SESSION_ADMIN_COOKIE` an operator has
+  already prefixed (`__Secure-`/`__Host-`) is passed through unchanged — the
+  operator then owns satisfying the browser's prefix invariants.
 - admin responses drop the `XSRF-TOKEN` cookie — one global cookie name, so the
   last responding realm would overwrite the member token and 419 the member
   realm's next Inertia POST. Nothing on the admin realm reads it (Livewire
