@@ -7,6 +7,7 @@ namespace Tests\Feature\AdminPanel;
 use App\Auth\AdminAppAuthentication;
 use App\Auth\PasswordScheme;
 use App\Filament\Pages\Auth\Login;
+use App\Filament\Pages\SecuritySettings;
 use App\Models\AdminUser;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
@@ -98,6 +99,17 @@ class AdminMfaTest extends TestCase
         $this->assertTrue(Filament::hasMultiFactorAuthentication());
         $this->assertArrayHasKey('app', Filament::getMultiFactorAuthenticationProviders());
         $this->assertFalse(Filament::getCurrentOrDefaultPanel()->isMultiFactorAuthenticationRequired());
+    }
+
+    public function test_the_security_page_is_reachable_from_the_user_menu_not_the_sidebar(): void
+    {
+        // Own-account 2FA lives in the avatar menu, not the sidebar (personal, not site-wide).
+        $this->assertFalse(SecuritySettings::shouldRegisterNavigation());
+
+        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $items = Filament::getCurrentOrDefaultPanel()->getUserMenuItems();
+        $urls = array_map(fn ($item) => $item->getUrl(), $items);
+        $this->assertContains(SecuritySettings::getUrl(), $urls);
     }
 
     public function test_an_admin_without_mfa_logs_in_with_password_alone(): void

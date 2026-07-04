@@ -23,19 +23,16 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class SecuritySettings extends Page
 {
+    // Reached from the user (avatar) menu, not the sidebar: this is the admin's own account
+    // security, not a site-wide setting, so it belongs with the personal menu (see AdminPanelProvider).
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function getNavigationIcon(): string|BackedEnum|Htmlable|null
     {
         return Heroicon::OutlinedShieldCheck;
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('Settings');
-    }
-
-    public static function getNavigationLabel(): string
-    {
-        return __('Security');
     }
 
     public function getTitle(): string|Htmlable

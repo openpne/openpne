@@ -4,17 +4,20 @@ namespace App\Providers\Filament;
 
 use App\Auth\AdminAppAuthentication;
 use App\Filament\Pages\Auth\Login;
+use App\Filament\Pages\SecuritySettings;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\MenuItem;
 use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -54,6 +57,14 @@ class AdminPanelProvider extends PanelProvider
                 [AdminAppAuthentication::make()->recoverable()->codeWindow(1)],
                 isRequired: false,
             )
+            // The Security page (own-account 2FA) lives in the avatar menu, next to the theme
+            // switch — where an operator looks for their own account settings — not the sidebar.
+            ->userMenuItems([
+                MenuItem::make()
+                    ->label(__('Security'))
+                    ->icon(Heroicon::OutlinedShieldCheck)
+                    ->url(fn (): string => SecuritySettings::getUrl()),
+            ])
             ->colors([
                 'primary' => Color::Amber,
             ])
