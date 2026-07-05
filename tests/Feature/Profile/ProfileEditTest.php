@@ -72,6 +72,19 @@ class ProfileEditTest extends TestCase
                 ->where('form.age.options', fn ($options) => collect($options)->pluck('value')->all() === [0, 1, 2, 3]));
     }
 
+    public function test_the_age_visibility_block_is_offered_when_the_birthday_is_hidden_from_the_form(): void
+    {
+        // is_disp_config off removes the birthday field from the edit form, but the item still
+        // exists, so the age gate stays reachable (the client renders the block at the form's end).
+        $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date', 'is_disp_config' => false]);
+
+        $this->actingAs($member)->get('/m/member/edit/profile')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('form.fields', 0)
+                ->where('form.age.value', Visibility::Private->value));
+    }
+
     public function test_the_age_visibility_block_is_absent_without_a_birthday_item(): void
     {
         $member = Member::factory()->create();

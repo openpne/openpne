@@ -44,7 +44,7 @@
             @break
 
         @case(MemberConfigCategory::PublicFlag)
-            {{-- Age visibility (member_preferences[age_visibility]); no web-public choice — age is never shown to guests. --}}
+            {{-- Age visibility (member_preferences[age_visibility]); Open is offered only while web-public age is on. --}}
             <div class="dparts form" id="member_config_age">
                 <div class="partsHeading"><h3>{{ __('Age') }}</h3></div>
                 <div class="parts">

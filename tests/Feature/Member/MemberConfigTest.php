@@ -153,6 +153,7 @@ class MemberConfigTest extends TestCase
     public function test_updating_age_visibility_writes_the_preference(): void
     {
         $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
 
         $this->actingAs($member)->post('/member/config/age', [
             'age_visibility' => (string) Visibility::Friends->value,
@@ -160,6 +161,21 @@ class MemberConfigTest extends TestCase
 
         $this->assertDatabaseHas('member_preferences', [
             'member_id' => $member->id, 'key' => 'age_visibility', 'value' => '2',
+        ]);
+    }
+
+    public function test_a_crafted_age_post_without_a_birthday_item_persists_nothing(): void
+    {
+        // The category is not offered without a birthday item, so a direct POST writes nothing and
+        // lands where the hidden category's URL does (same gate as the Modern profile-edit write).
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/age', [
+            'age_visibility' => (string) Visibility::Friends->value,
+        ])->assertRedirect(route('member.config'));
+
+        $this->assertDatabaseMissing('member_preferences', [
+            'member_id' => $member->id, 'key' => 'age_visibility',
         ]);
     }
 
@@ -206,6 +222,7 @@ class MemberConfigTest extends TestCase
     {
         $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
         $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
 
         $this->actingAs($member)->post('/member/config/age', [
             'age_visibility' => (string) Visibility::Open->value,
@@ -336,6 +353,7 @@ class MemberConfigTest extends TestCase
     {
         // Classic category pages have no inline indicator, so the flash stays their save feedback.
         $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
 
         $this->actingAs($member)->post('/member/config/diary', [
             'diary_default_visibility' => (string) Visibility::Friends->value,

@@ -64,8 +64,8 @@ out of the write path.
   display, so a profile save in that window persists the clamp (fail-closed direction). Classic
   keeps its `?category=publicFlag` page and per-section submit. Both surfaces offer the setting
   only while a birthday profile item exists — without one there is no age to gate, so the Classic
-  category hides and the Modern block is not served (a crafted `age_visibility` then validates but
-  persists nothing).
+  category hides, the Modern block is not served, and a crafted `age_visibility` on either
+  surface's POST validates but persists nothing.
 - **Language** reuses the shared [`locale.switch`](../../routes/web.php) endpoint (durable
   `members.locale` write + the Inertia hard-navigation it already needs), not a field on this
   page's own form.

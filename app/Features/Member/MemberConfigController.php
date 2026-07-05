@@ -128,6 +128,12 @@ class MemberConfigController extends Controller
     // (the Modern sibling route was removed with it).
     public function updateAge(UpdateAgeVisibilityRequest $request): RedirectResponse
     {
+        // Same gate as every surface that offers the setting: without a birthday item there is no
+        // age, so a crafted POST persists nothing and lands where the hidden category's URL does.
+        if (! ProfileController::birthdayFieldExists()) {
+            return redirect()->route('member.config');
+        }
+
         $value = PreferenceKey::AgeVisibility->coerce($request->validated('age_visibility'));
         $this->viewer()->setPreference(PreferenceKey::AgeVisibility, $value);
 
