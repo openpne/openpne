@@ -39,7 +39,7 @@ export default function CommunityTopicEdit() {
         form.setData('remove_images', remove ? [...form.data.remove_images, imageId] : form.data.remove_images.filter((id) => id !== imageId));
     };
 
-    const title = isEdit ? t('Edit %topic%') : t('Post a new %topic%');
+    const title = isEdit ? t('Edit %topic%') : t('Create a %topic%');
     const backHref = isEdit ? `/m/community/topic/${topic.id}` : `/m/community/${community.id}/topic`;
 
     return (

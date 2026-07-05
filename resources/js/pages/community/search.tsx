@@ -1,10 +1,12 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Users } from 'lucide-react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Plus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { CommunityImage } from '@/components/community-image';
 import { CountBadge } from '@/components/entry-row';
+import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
+import { ActionLink } from '@/components/ui/action-link';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -46,12 +48,15 @@ export default function CommunitySearch() {
         <>
             <Head title={t('%Communities%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <div className="flex items-center justify-between gap-3">
-                    <h1 className="min-w-0 break-words text-xl font-semibold text-foreground">{t('%Communities%')}</h1>
-                    <Link href="/m/community/edit" className="shrink-0 text-sm text-link hover:underline">
-                        {t('Create a %community%')}
-                    </Link>
-                </div>
+                <PageHeading
+                    title={t('%Communities%')}
+                    action={
+                        <ActionLink href="/m/community/edit">
+                            <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+                            {t('Create a %community%')}
+                        </ActionLink>
+                    }
+                />
 
                 <CommunityTabs active="browse" />
 
