@@ -80,4 +80,9 @@ class UpdateDraftRequest extends FormRequest
     {
         return $this->input('action') === 'draft';
     }
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return PostImageRules::attributes();
+    }
 }

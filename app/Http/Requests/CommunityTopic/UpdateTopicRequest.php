@@ -64,4 +64,9 @@ class UpdateTopicRequest extends StoreTopicRequest
             }
         });
     }
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return PostImageRules::attributes();
+    }
 }

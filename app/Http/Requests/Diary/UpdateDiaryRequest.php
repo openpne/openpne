@@ -62,4 +62,9 @@ class UpdateDiaryRequest extends StoreDiaryRequest
             }
         });
     }
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return PostImageRules::attributes();
+    }
 }
