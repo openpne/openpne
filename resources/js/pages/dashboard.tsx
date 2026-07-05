@@ -155,7 +155,7 @@ export default function Dashboard() {
                         )}
 
                         {timeline.length > 0 && (
-                            <DigestSection title={t('Timeline')} viewAllHref="/m/timeline">
+                            <DigestSection title={t('%Activity%')} viewAllHref="/m/timeline">
                                 {timeline.map((post) => (
                                     <TimelineRow key={post.id} post={post} />
                                 ))}

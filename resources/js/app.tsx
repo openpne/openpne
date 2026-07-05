@@ -32,9 +32,14 @@ function SyncLocaleWithServer() {
         return router.on('navigate', (event) => {
             const next = (event.detail.page.props as unknown as PageProps).locale;
             if (next && next !== currentLocale()) {
+                // Twice on purpose. t() resolves a key missing from the active dictionary from
+                // prevLocale BEFORE the fallback, and the en dictionary is sparse by design
+                // (source-text keys), so a single ja→en switch would keep rendering ja strings.
+                // setLocale has no same-value early return, so the second call collapses
+                // prevLocale onto the new locale and misses fall through to the raw English key.
+                // (setLocale also maintains <html lang> itself.)
                 setLocale(next);
-                // Keep the document language (set server-side on full loads) truthful for AT too.
-                document.documentElement.lang = next;
+                setLocale(next);
             }
         });
     });
