@@ -1,4 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
@@ -11,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunitySummary, EventDetail, EventThread, TopicImage } from '../types';
+import type { CommunitySummary, EventDetail, EventThread } from '../types';
 
 interface ShowProps extends PageProps {
     community: CommunitySummary;
@@ -22,25 +23,6 @@ interface ShowProps extends PageProps {
     isParticipant: boolean;
     rosterOpen: boolean; // not closed and not past the deadline
     isFull: boolean;
-}
-
-function ImageGrid({ images }: { images: TopicImage[] }) {
-    const t = useT();
-    if (images.length === 0) {
-        return null;
-    }
-
-    return (
-        <ul className="mt-2 flex flex-wrap gap-2">
-            {images.map((image, i) => (
-                <li key={image.id}>
-                    <a href={image.url} target="_blank" rel="noopener noreferrer" aria-label={`${t('Image')} ${i + 1}`}>
-                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
-                    </a>
-                </li>
-            ))}
-        </ul>
-    );
 }
 
 export default function CommunityEventShow() {
@@ -140,7 +122,7 @@ export default function CommunityEventShow() {
                     </dl>
 
                     <div className="whitespace-pre-wrap break-words">{event.body}</div>
-                    <ImageGrid images={event.images} />
+                    <ImageGrid images={event.images} size="size-24" className="mt-2" />
 
                     {canEdit && (
                         <div className="flex gap-4 text-sm">
@@ -200,7 +182,7 @@ export default function CommunityEventShow() {
                                         )}
                                     </div>
                                     <p className="mt-1 whitespace-pre-wrap break-words">{comment.body}</p>
-                                    <ImageGrid images={comment.images} />
+                                    <ImageGrid images={comment.images} size="size-24" className="mt-2" />
                                 </li>
                             ))}
                         </List>

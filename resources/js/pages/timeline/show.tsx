@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
+import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
@@ -46,13 +47,7 @@ export default function TimelineShow() {
                         <span className="shrink-0 text-muted-foreground">{formatDateTime(post.createdAt)}</span>
                     </div>
                     <p className="whitespace-pre-wrap break-words">{post.body}</p>
-                    {post.images.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                            {post.images.map((image) => (
-                                <img key={image.id} src={image.thumbnailUrl} alt="" className="rounded-md" />
-                            ))}
-                        </div>
-                    )}
+                    <ImageGrid images={post.images} />
                     {post.author.id === viewerId && (
                         <DangerLink href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm">
                             {t('Delete')}
