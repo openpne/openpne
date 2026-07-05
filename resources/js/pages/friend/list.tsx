@@ -1,6 +1,8 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { FlashMessage } from '@/components/flash-message';
+import { PageHeading } from '@/components/page-heading';
+import { PageTabs } from '@/components/page-tabs';
 import { Pagination } from '@/components/pagination';
 import { DangerLink } from '@/components/ui/danger-link';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -23,14 +25,17 @@ export default function FriendList() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <div className="flex items-center justify-between gap-3">
-                    <h1 className="min-w-0 break-words text-xl font-semibold text-foreground">{title}</h1>
-                    {isOwner && (
-                        <Link href="/m/friend/manage" className="shrink-0 text-sm text-link hover:underline">
-                            {t('Pending %friend% requests')}
-                        </Link>
-                    )}
-                </div>
+                <PageHeading title={title} />
+
+                {isOwner && (
+                    <PageTabs
+                        ariaLabel={t('%Friends%')}
+                        items={[
+                            { href: '/m/friend/list', label: t('%Friends%'), active: true },
+                            { href: '/m/friend/manage', label: t('Requests'), active: false },
+                        ]}
+                    />
+                )}
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}

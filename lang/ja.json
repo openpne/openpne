@@ -656,6 +656,7 @@
     "Request Header Fields Too Large": "要求ヘッダーフィールドが大きすぎます",
     "Request Timeout": "リクエストタイムアウト",
     "Request to join": "参加をリクエスト",
+    "Requests": "申請",
     "Requests received": "受信した申請",
     "Requests sent": "送信した申請",
     "Require CAPTCHA": "CAPTCHA を使用する",

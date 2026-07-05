@@ -1,6 +1,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { FlashMessage } from '@/components/flash-message';
+import { PageHeading } from '@/components/page-heading';
+import { PageTabs } from '@/components/page-tabs';
 import { Pagination } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -35,18 +37,22 @@ export default function FriendManage() {
         router.post('/m/friend/reject', { requester_id: requesterId });
     }
 
-    const title = t('Pending %friend% requests');
+    const hubTitle = t('%Friends%');
+    const headTitle = t('Pending %friend% requests');
 
     return (
         <>
-            <Head title={title} />
+            <Head title={headTitle} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <div className="flex items-center justify-between gap-3">
-                    <h1 className="min-w-0 break-words text-xl font-semibold text-foreground">{title}</h1>
-                    <Link href="/m/friend/list" className="shrink-0 text-sm text-link hover:underline">
-                        {t('%Friends%')}
-                    </Link>
-                </div>
+                <PageHeading title={hubTitle} />
+
+                <PageTabs
+                    ariaLabel={hubTitle}
+                    items={[
+                        { href: '/m/friend/list', label: t('%Friends%'), active: false },
+                        { href: '/m/friend/manage', label: t('Requests'), active: true },
+                    ]}
+                />
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}

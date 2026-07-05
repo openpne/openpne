@@ -1,8 +1,9 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
 import { type FormEvent } from 'react';
 import { FlashMessage } from '@/components/flash-message';
 import { PageHeading } from '@/components/page-heading';
+import { PageTabs } from '@/components/page-tabs';
 import { Pagination } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
 import { ActionLink } from '@/components/ui/action-link';
@@ -20,29 +21,14 @@ interface FeedProps extends PageProps {
     diaries: PaginatedDiaries;
 }
 
-/** All / Friends switch between the two diary feeds (OpenPNE 3 list vs listFriend). */
-function FeedTab({ href, label, active }: { href: string; label: string; active: boolean }) {
-    return (
-        <Link
-            href={href}
-            aria-current={active ? 'page' : undefined}
-            className={
-                'min-h-11 border-b-2 px-4 py-2 text-sm font-medium transition-colors ' +
-                (active
-                    ? 'border-foreground text-foreground'
-                    : 'border-transparent text-muted-foreground hover:text-foreground')
-            }
-        >
-            {label}
-        </Link>
-    );
-}
-
 export default function DiaryFeed() {
     const t = useT();
     const { variant, keyword, hasKeyword, diaries, flash, auth } = usePage<FeedProps>().props;
     const searchable = variant !== 'friends';
-    const title =
+    // Hub h1 matches the nav label; the specific view (friends / search) lives in the tabs + the
+    // in-page search context, and the browser Head title keeps the fuller description.
+    const hubTitle = t('%Diaries%');
+    const headTitle =
         variant === 'friends'
             ? t('%Diaries% of %My_friends%')
             : variant === 'search' && hasKeyword
@@ -57,10 +43,10 @@ export default function DiaryFeed() {
 
     return (
         <>
-            <Head title={title} />
+            <Head title={headTitle} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <PageHeading
-                    title={title}
+                    title={hubTitle}
                     action={
                         auth.user && (
                             <ActionLink href="/m/diary/new">
@@ -71,10 +57,13 @@ export default function DiaryFeed() {
                     }
                 />
 
-                <nav className="flex gap-1 border-b border-border" aria-label={title}>
-                    <FeedTab href="/m/diary/list" label={t('All')} active={variant !== 'friends'} />
-                    <FeedTab href="/m/diary/listFriend" label={t('%Friends%')} active={variant === 'friends'} />
-                </nav>
+                <PageTabs
+                    ariaLabel={hubTitle}
+                    items={[
+                        { href: '/m/diary/list', label: t('All'), active: variant !== 'friends' },
+                        { href: '/m/diary/listFriend', label: t('%Friends%'), active: variant === 'friends' },
+                    ]}
+                />
 
                 {searchable && (
                     <form onSubmit={submit}>
@@ -94,6 +83,10 @@ export default function DiaryFeed() {
                             <SearchSubmitButton loading={form.processing} />
                         </div>
                     </form>
+                )}
+
+                {variant === 'search' && hasKeyword && (
+                    <p className="text-sm text-muted-foreground">{t('Search Results')}</p>
                 )}
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
