@@ -1,4 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
+import { Pencil } from 'lucide-react';
+import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
 import { ActionLink } from '@/components/ui/action-link';
 import { FlashMessage } from '@/components/flash-message';
@@ -24,13 +26,17 @@ export default function TimelineMember() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
-
-                {isOwner && (
-                    <div>
-                        <ActionLink href="/m/timeline/new">{t('%Post_activity%')}</ActionLink>
-                    </div>
-                )}
+                <PageHeading
+                    title={title}
+                    action={
+                        isOwner && (
+                            <ActionLink href="/m/timeline/new">
+                                <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('%Post_activity%')}
+                            </ActionLink>
+                        )
+                    }
+                />
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
