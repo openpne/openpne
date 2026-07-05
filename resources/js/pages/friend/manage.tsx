@@ -42,7 +42,7 @@ export default function FriendManage() {
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
                 <div className="flex items-center justify-between gap-3">
-                    <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                    <h1 className="min-w-0 break-words text-xl font-semibold text-foreground">{title}</h1>
                     <Link href="/m/friend/list" className="shrink-0 text-sm text-link hover:underline">
                         {t('%Friends%')}
                     </Link>

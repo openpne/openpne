@@ -51,7 +51,7 @@ export default function CommunityShow() {
                     <div className="flex items-start gap-4">
                         <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
                         <div className="min-w-0 flex-1">
-                            <h1 className="text-xl font-semibold">{community.name}</h1>
+                            <h1 className="break-words text-xl font-semibold">{community.name}</h1>
                             {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}
                             <Link href={`/m/community/${community.id}/members`} className="text-sm text-link hover:underline">
                                 {t(':count members', { count: community.memberCount })}
@@ -89,7 +89,7 @@ export default function CommunityShow() {
                         </div>
                     )}
 
-                    {community.description && <div className="whitespace-pre-wrap">{community.description}</div>}
+                    {community.description && <div className="whitespace-pre-wrap break-words">{community.description}</div>}
                 </Panel>
 
                 {recentTopics !== null && (

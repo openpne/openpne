@@ -39,7 +39,7 @@ export default function BlockList() {
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 <div className="space-y-2">
-                    <h1 className="text-xl font-semibold text-foreground">
+                    <h1 className="break-words text-xl font-semibold text-foreground">
                         {t("Block a member")}
                     </h1>
                     <Panel bodyClassName="space-y-3">

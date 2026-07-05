@@ -33,7 +33,7 @@ export default function TimelineShow() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8 text-foreground">
-                <h1 className="text-xl font-semibold">{title}</h1>
+                <h1 className="break-words text-xl font-semibold">{title}</h1>
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 

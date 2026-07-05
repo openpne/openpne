@@ -43,7 +43,7 @@ export default function MemberShow() {
                             </Link>
                         )}
                     </div>
-                    <h1 className="text-xl font-semibold text-foreground">{owner.name}</h1>
+                    <h1 className="break-words text-xl font-semibold text-foreground">{owner.name}</h1>
                     {isSelf ? (
                         <Link href="/m/member/edit/profile" className="text-sm text-link hover:underline">
                             {t('Edit Profile')}
