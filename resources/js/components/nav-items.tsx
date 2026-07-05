@@ -23,9 +23,9 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
     const unread = props.unread;
 
     const items: Item[] = [
-        { href: '/m/diary/list', icon: BookOpen, label: t('Diaries'), match: '/m/diary' },
+        { href: '/m/diary/list', icon: BookOpen, label: t('%Diaries%'), match: '/m/diary' },
         { href: '/m/community/search', icon: Users, label: t('%Communities%'), match: '/m/community' },
-        { href: '/m/timeline', icon: Activity, label: t('Timeline'), match: '/m/timeline' },
+        { href: '/m/timeline', icon: Activity, label: t('%Activity%'), match: '/m/timeline' },
         {
             href: '/m/friend/list',
             icon: UserCircle2,
