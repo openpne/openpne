@@ -19,7 +19,6 @@ final class PostImageRules
         ];
     }
 
-
     /**
      * Human field names for the images[] errors: without these a per-file failure reads as
      * "images.0" in the message the shared picker surfaces.

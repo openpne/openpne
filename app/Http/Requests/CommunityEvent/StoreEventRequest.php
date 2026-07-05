@@ -100,6 +100,7 @@ class StoreEventRequest extends FormRequest
             capacity: isset($v['capacity']) ? (int) $v['capacity'] : null,
         );
     }
+
     /** @return array<string, string> */
     public function attributes(): array
     {

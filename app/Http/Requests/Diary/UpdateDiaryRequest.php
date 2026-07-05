@@ -62,6 +62,7 @@ class UpdateDiaryRequest extends StoreDiaryRequest
             }
         });
     }
+
     /** @return array<string, string> */
     public function attributes(): array
     {

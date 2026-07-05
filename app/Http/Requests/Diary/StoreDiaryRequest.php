@@ -43,6 +43,7 @@ class StoreDiaryRequest extends FormRequest
             visibility: Visibility::from($validated['visibility']),
         );
     }
+
     /** @return array<string, string> */
     public function attributes(): array
     {

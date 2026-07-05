@@ -70,6 +70,7 @@ class StoreTopicRequest extends FormRequest
             body: $validated['body'],
         );
     }
+
     /** @return array<string, string> */
     public function attributes(): array
     {

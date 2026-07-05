@@ -47,6 +47,7 @@ class StoreEventCommentRequest extends FormRequest
             ...PostImageRules::rules(),
         ];
     }
+
     /** @return array<string, string> */
     public function attributes(): array
     {
