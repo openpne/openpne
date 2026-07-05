@@ -1,4 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { Mail, UserPlus } from 'lucide-react';
+import { ActionLink } from '@/components/ui/action-link';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -31,7 +33,7 @@ export default function MemberShow() {
         <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
             <Head title={owner.name} />
 
-            <Panel>
+            <Panel bodyClassName="space-y-4">
                 <div className="flex items-center gap-4">
                     {/* For the viewer's own profile the avatar block also entry-points the image editor —
                         shown even without an avatar yet, so a first image can be set. */}
@@ -45,34 +47,40 @@ export default function MemberShow() {
                             </Link>
                         )}
                     </div>
-                    <h1 className="break-words text-xl font-semibold text-foreground">{owner.name}</h1>
-                    {isSelf ? (
-                        <Link href="/m/member/edit/profile" className="text-sm text-link hover:underline">
+                    <h1 className="min-w-0 flex-1 break-words text-xl font-semibold text-foreground">{owner.name}</h1>
+                    {isSelf && (
+                        <Link href="/m/member/edit/profile" className="shrink-0 text-sm text-link hover:underline">
                             {t('Edit Profile')}
                         </Link>
-                    ) : (
-                        <div className="flex min-w-0 flex-col gap-1">
-                            {friendStatus === 'none' && (
-                                <Link href={`/m/friend/link?id=${owner.id}`} className="text-sm text-link hover:underline">
-                                    {t('Send a %friend% request')}
-                                </Link>
-                            )}
-                            {friendStatus === 'sent' && (
-                                <Link href="/m/friend/manage" className="text-sm text-muted-foreground hover:underline">
-                                    {t('%Friend% request pending.')}
-                                </Link>
-                            )}
-                            {friendStatus === 'received' && (
-                                <Link href="/m/friend/manage" className="text-sm text-link hover:underline">
-                                    {t(':name sent you a %friend% request.', { name: owner.name })}
-                                </Link>
-                            )}
-                            <Link href={`/m/message/sendToFriend?id=${owner.id}`} className="text-sm text-link hover:underline">
-                                {t('Send a message')}
-                            </Link>
-                        </div>
                     )}
                 </div>
+
+                {/* Primary relationship actions live in the profile panel (not the heading — the heading
+                    carries the person's name). Friend request is the primary action, message the secondary. */}
+                {!isSelf && (
+                    <div className="flex flex-wrap items-center gap-3">
+                        {friendStatus === 'none' && (
+                            <ActionLink href={`/m/friend/link?id=${owner.id}`}>
+                                <UserPlus className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('Send a %friend% request')}
+                            </ActionLink>
+                        )}
+                        {friendStatus === 'sent' && (
+                            <Link href="/m/friend/manage" className="text-sm text-muted-foreground hover:underline">
+                                {t('%Friend% request pending.')}
+                            </Link>
+                        )}
+                        {friendStatus === 'received' && (
+                            <Link href="/m/friend/manage" className="text-sm text-link hover:underline">
+                                {t(':name sent you a %friend% request.', { name: owner.name })}
+                            </Link>
+                        )}
+                        <ActionLink href={`/m/message/sendToFriend?id=${owner.id}`} variant="outline">
+                            <Mail className="size-4" strokeWidth={2.25} aria-hidden />
+                            {t('Send a message')}
+                        </ActionLink>
+                    </div>
+                )}
             </Panel>
 
             {/* Jump to the owner's own content — same links whether the profile is the viewer's or not
