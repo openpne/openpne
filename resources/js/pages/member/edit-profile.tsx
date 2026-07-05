@@ -91,7 +91,7 @@ export default function MemberEditProfile() {
         <>
             <Head title={t('Edit Profile')} />
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{t('Edit Profile')}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit Profile')}</h1>
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 

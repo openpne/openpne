@@ -19,11 +19,11 @@ export default function DiaryCommentDelete() {
         <>
             <Head title={t('Delete the comment')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{t('Delete the comment')}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{t('Delete the comment')}</h1>
 
                 <Panel bodyClassName="space-y-4">
                     <p className="text-foreground">{t('Do you really want to delete this comment?')}</p>
-                    <blockquote className="whitespace-pre-wrap border-l-2 border-border pl-3 text-muted-foreground">
+                    <blockquote className="whitespace-pre-wrap break-words border-l-2 border-border pl-3 text-muted-foreground">
                         {comment.body}
                     </blockquote>
 

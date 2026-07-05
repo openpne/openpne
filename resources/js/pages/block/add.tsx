@@ -31,7 +31,7 @@ export default function BlockAdd() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-md space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
 
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 

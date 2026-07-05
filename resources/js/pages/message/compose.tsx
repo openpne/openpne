@@ -50,7 +50,7 @@ export default function MessageCompose() {
             <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <h1 className="text-xl font-semibold text-foreground">{t('Compose Message')}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{t('Compose Message')}</h1>
 
                 <Panel>
                     <form onSubmit={(e) => e.preventDefault()} className="space-y-4">

@@ -19,7 +19,7 @@ export default function CommunityMembers() {
         <>
             <Head title={t('Members')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">
+                <h1 className="break-words text-xl font-semibold text-foreground">
                     <Link href={`/m/community/${community.id}`} className="hover:underline">
                         {community.name}
                     </Link>

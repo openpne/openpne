@@ -95,7 +95,7 @@ export default function CommunityEventShow() {
                     </Link>
                 </p>
 
-                <h1 className="text-xl font-semibold">{event.name}</h1>
+                <h1 className="break-words text-xl font-semibold">{event.name}</h1>
 
                 <Panel bodyClassName="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">

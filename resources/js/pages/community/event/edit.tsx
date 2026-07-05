@@ -67,7 +67,7 @@ export default function CommunityEventEdit() {
                         {community.name}
                     </Link>
                 </p>
-                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
 
                 <Panel>
                     <form onSubmit={submit} className="space-y-4">

@@ -19,7 +19,7 @@ export default function DiaryDelete() {
         <>
             <Head title={t('Delete %diary%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{t('Delete %diary%')}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{t('Delete %diary%')}</h1>
 
                 <Panel bodyClassName="space-y-4">
                     <p className="text-foreground">{t('Delete ":title"?', { title: diary.title })}</p>
