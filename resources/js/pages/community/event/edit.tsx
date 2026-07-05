@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
@@ -120,16 +121,7 @@ export default function CommunityEventEdit() {
                             </fieldset>
                         )}
 
-                        <Field label={t('Add images')} htmlFor="images" error={form.errors.images}>
-                            <input
-                                id="images"
-                                type="file"
-                                accept="image/jpeg,image/png,image/gif,image/webp"
-                                multiple
-                                onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
-                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
-                            />
-                        </Field>
+                        <ImagesField id="images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
                         <Button type="submit" loading={form.processing}>
                             {isEdit ? t('Save') : t('Post')}

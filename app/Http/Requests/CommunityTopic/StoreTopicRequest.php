@@ -70,4 +70,10 @@ class StoreTopicRequest extends FormRequest
             body: $validated['body'],
         );
     }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return PostImageRules::attributes();
+    }
 }
