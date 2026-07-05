@@ -4,16 +4,11 @@ import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
 /**
- * A page is a compose/edit/settings form when its path carries one of these verbs. The FAB — a
- * shortcut to *start* a diary — is out of place on such a page: it invites abandoning a half-filled
- * form and floats over the form's own controls. Fragments (not full paths) so new form routes under
- * the same verbs need no upkeep here.
- */
-const FORM_URL_FRAGMENTS = ['/new', '/edit', '/config', '/sendToFriend', '/reply/'];
-
-/**
- * Mobile (< lg) primary action: a floating "write a diary" button. The desktop sidebar carries the
- * same action as a pill, so this is hidden at lg+. Hidden on compose/edit/settings pages (see above).
+ * Mobile (< lg) diary-compose shortcut, scoped to the dashboard. Diary compose is fixed (OpenPNE's
+ * differentiation), but a floating button reads as "post to THIS screen" and misleads on e.g. the
+ * timeline — so the FAB shows only on the dashboard, the diary-forward home where a diary shortcut is
+ * in context. Every other screen carries its own in-page primary action. The desktop sidebar keeps the
+ * same action as a labelled pill (no such misread), so this is hidden at lg+.
  */
 export function PostFab() {
     const t = useT();
@@ -22,7 +17,8 @@ export function PostFab() {
     if (!props.auth.user) {
         return null;
     }
-    if (FORM_URL_FRAGMENTS.some((fragment) => url.includes(fragment))) {
+    // Exact pathname match (strip query/hash), not a prefix.
+    if (url.replace(/[?#].*$/, '') !== '/dashboard') {
         return null;
     }
 
