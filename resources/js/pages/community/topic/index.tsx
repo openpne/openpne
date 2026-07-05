@@ -1,8 +1,11 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { Plus } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
 import { EntryRow } from '@/components/entry-row';
 import { FlashMessage } from '@/components/flash-message';
+import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
+import { ActionLink } from '@/components/ui/action-link';
 import { List, Panel } from '@/components/ui/surface';
 import { formatDate } from '@/lib/date';
 import { useT } from '@/lib/i18n';
@@ -23,20 +26,25 @@ export default function CommunityTopicIndex() {
         <>
             <Head title={t('%Topics%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <div className="flex items-center justify-between gap-3">
-                    <h1 className="min-w-0 break-words text-xl font-semibold text-foreground">
-                        <Link href={`/m/community/${community.id}`} className="hover:underline">
-                            {community.name}
-                        </Link>
-                        {' — '}
-                        {t('%Topics%')}
-                    </h1>
-                    {canPost && (
-                        <Link href={`/m/community/${community.id}/topic/new`} className="shrink-0 text-sm text-link hover:underline">
-                            {t('Post a new %topic%')}
-                        </Link>
-                    )}
-                </div>
+                <PageHeading
+                    title={
+                        <>
+                            <Link href={`/m/community/${community.id}`} className="hover:underline">
+                                {community.name}
+                            </Link>
+                            {' — '}
+                            {t('%Topics%')}
+                        </>
+                    }
+                    action={
+                        canPost && (
+                            <ActionLink href={`/m/community/${community.id}/topic/new`}>
+                                <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('Post a new %topic%')}
+                            </ActionLink>
+                        )
+                    }
+                />
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
