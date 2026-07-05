@@ -1,4 +1,4 @@
-import { type ChangeEvent, useState } from 'react';
+import { type ChangeEvent, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n';
 
@@ -78,12 +78,18 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
     const t = useT();
     const [busy, setBusy] = useState(false);
     const [clientError, setClientError] = useState<string | null>(null);
+    // Mirrors the latest selection so an in-flight shrink can re-apply against removals/resets
+    // that happened while it ran, instead of resurrecting them.
+    const latest = useRef(files);
+    latest.current = files;
 
     const serverError = Object.entries(errors)
         .filter(([key, message]) => message && (key === name || key.startsWith(`${name}.`)))
         .map(([, message]) => message)
         .join(' ');
-    const error = clientError ?? (serverError || undefined);
+    // The server verdict outranks a stale client-side note (e.g. an earlier count-cap message
+    // must not mask the validation error that explains why the post was rejected).
+    const error = serverError || clientError || undefined;
     const errorId = error ? `${id}-error` : undefined;
 
     async function pick(e: ChangeEvent<HTMLInputElement>) {
@@ -93,16 +99,24 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
         if (picked.length === 0) {
             return;
         }
-        setClientError(null);
+        // Cap before any decoding: a 50-photo selection must not canvas-process 50 files.
+        const room = Math.max(0, max - files.length);
+        setClientError(picked.length > room ? t('You can attach up to :max images.', { max }) : null);
+        const accepted = picked.slice(0, room);
+        if (accepted.length === 0) {
+            return;
+        }
+        // The raw files enter the form state immediately, so a submit racing the shrink sends
+        // the originals (answered by the now-visible server validation) rather than silently
+        // dropping the selection.
+        onChange([...files, ...accepted]);
         setBusy(true);
         try {
-            const shrunk = await Promise.all(picked.map(shrink));
-            let next = [...files, ...shrunk];
-            if (next.length > max) {
-                setClientError(t('You can attach up to :max images.', { max }));
-                next = next.slice(0, max);
+            const shrunk = new Map<File, File>();
+            for (const raw of accepted) {
+                shrunk.set(raw, await shrink(raw));
             }
-            onChange(next);
+            onChange(latest.current.map((file) => shrunk.get(file) ?? file));
         } finally {
             setBusy(false);
         }
