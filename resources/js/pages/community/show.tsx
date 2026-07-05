@@ -102,7 +102,7 @@ export default function CommunityShow() {
                             canPostTopic && (
                                 <ActionLink href={`/m/community/${community.id}/topic/new`} variant="outline" size="sm">
                                     <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                                    {t('Post a new %topic%')}
+                                    {t('Create a %topic%')}
                                 </ActionLink>
                             )
                         }
@@ -138,7 +138,7 @@ export default function CommunityShow() {
                             canPostEvent && (
                                 <ActionLink href={`/m/community/${community.id}/event/new`} variant="outline" size="sm">
                                     <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                                    {t('Post a new event')}
+                                    {t('Create an event')}
                                 </ActionLink>
                             )
                         }

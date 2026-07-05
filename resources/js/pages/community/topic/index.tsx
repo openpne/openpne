@@ -40,7 +40,7 @@ export default function CommunityTopicIndex() {
                         canPost && (
                             <ActionLink href={`/m/community/${community.id}/topic/new`}>
                                 <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                                {t('Post a new %topic%')}
+                                {t('Create a %topic%')}
                             </ActionLink>
                         )
                     }

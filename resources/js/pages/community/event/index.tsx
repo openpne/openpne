@@ -40,7 +40,7 @@ export default function CommunityEventIndex() {
                         canPost && (
                             <ActionLink href={`/m/community/${community.id}/event/new`}>
                                 <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                                {t('Post a new event')}
+                                {t('Create an event')}
                             </ActionLink>
                         )
                     }
