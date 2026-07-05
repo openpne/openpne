@@ -1,6 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { Pencil } from 'lucide-react';
 import { FlashMessage } from '@/components/flash-message';
+import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
+import { ActionLink } from '@/components/ui/action-link';
 import { DangerLink } from '@/components/ui/danger-link';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -24,17 +27,24 @@ export default function DiaryList() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <div className="flex items-center justify-between gap-3">
-                    <h1 className="min-w-0 break-words text-xl font-semibold text-foreground">
-                        {title}
-                        {period && <span className="ml-2 text-base font-normal text-muted-foreground">{period}</span>}
-                    </h1>
-                    {isOwner && (
-                        <Link href="/m/diary/new" className="shrink-0 text-sm text-link hover:underline">
-                            {t('Write a %diary%')}
-                        </Link>
-                    )}
-                </div>
+                <PageHeading
+                    title={
+                        <>
+                            {title}
+                            {period && (
+                                <span className="ml-2 text-base font-normal text-muted-foreground">{period}</span>
+                            )}
+                        </>
+                    }
+                    action={
+                        isOwner && (
+                            <ActionLink href="/m/diary/new">
+                                <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('Write a %diary%')}
+                            </ActionLink>
+                        )
+                    }
+                />
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}

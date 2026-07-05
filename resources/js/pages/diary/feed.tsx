@@ -1,8 +1,11 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Pencil } from 'lucide-react';
 import { type FormEvent } from 'react';
 import { FlashMessage } from '@/components/flash-message';
+import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
+import { ActionLink } from '@/components/ui/action-link';
 import { Input } from '@/components/ui/input';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -37,7 +40,7 @@ function FeedTab({ href, label, active }: { href: string; label: string; active:
 
 export default function DiaryFeed() {
     const t = useT();
-    const { variant, keyword, hasKeyword, diaries, flash } = usePage<FeedProps>().props;
+    const { variant, keyword, hasKeyword, diaries, flash, auth } = usePage<FeedProps>().props;
     const searchable = variant !== 'friends';
     const title =
         variant === 'friends'
@@ -56,7 +59,17 @@ export default function DiaryFeed() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
+                <PageHeading
+                    title={title}
+                    action={
+                        auth.user && (
+                            <ActionLink href="/m/diary/new">
+                                <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('Write a %diary%')}
+                            </ActionLink>
+                        )
+                    }
+                />
 
                 <nav className="flex gap-1 border-b border-border" aria-label={title}>
                     <FeedTab href="/m/diary/list" label={t('All')} active={variant !== 'friends'} />
