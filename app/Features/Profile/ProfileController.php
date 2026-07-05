@@ -48,18 +48,28 @@ class ProfileController extends Controller
         // covers the Modern surface and the no-gadget fixed box.
         $age = $visibleAge($viewer, $member);
 
+        // Entry point for a friend request (OpenPNE 3 profile parity). Blocked pairs never get
+        // here (memberSubject 404s above), so only the friendly states remain.
+        $friendStatus = ($viewer !== null && ! $isSelf) ? match (true) {
+            $viewer->isFriendsWith($member) => 'friend',
+            $member->hasPendingRequestFrom($viewer) => 'sent',
+            $viewer->hasPendingRequestFrom($member) => 'received',
+            default => 'none',
+        } : null;
+
         return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.show', [
                 'owner' => $member,
                 'fields' => $fields,
                 'age' => $age,
                 'isSelf' => $isSelf,
+                'friendStatus' => $friendStatus,
                 'lang' => $lang,
                 'zones' => $gadgets->zones('profile', subject: $member, viewer: $viewer),
                 'layout' => $gadgets->layoutLetter('profile'),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/show', [
-                'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang, $age),
+                'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang, $age, $friendStatus),
             ]),
         ]);
     }

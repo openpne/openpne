@@ -90,6 +90,101 @@ class MemberProfileRoutesTest extends TestCase
         $this->get("/member/{$owner->getKey()}")->assertOk()->assertSee('shown')->assertDontSee('hidden-value');
     }
 
+    public function test_a_stranger_profile_offers_the_friend_request_entry(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('member/show')
+                ->where('profile.friendStatus', 'none'));
+    }
+
+    public function test_a_friend_profile_has_no_request_entry(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $owner->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $owner->getKey()],
+        ]);
+
+        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('profile.friendStatus', 'friend'));
+    }
+
+    public function test_a_sent_request_shows_as_pending(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        DB::table('friend_requests')->insert([
+            ['requester_id' => $viewer->getKey(), 'target_id' => $owner->getKey()],
+        ]);
+
+        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('profile.friendStatus', 'sent'));
+    }
+
+    public function test_a_received_request_is_flagged(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        DB::table('friend_requests')->insert([
+            ['requester_id' => $owner->getKey(), 'target_id' => $viewer->getKey()],
+        ]);
+
+        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('profile.friendStatus', 'received'));
+    }
+
+    public function test_own_profile_has_no_friend_status(): void
+    {
+        $owner = Member::factory()->create();
+
+        $this->actingAs($owner)->get("/m/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('profile.friendStatus', null));
+    }
+
+    public function test_classic_stranger_profile_links_to_the_friend_request_form(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('informationAboutThisIsYourProfilePage')
+            ->assertSee("/friend/link?id={$owner->getKey()}");
+    }
+
+    public function test_classic_friend_profile_omits_the_request_box(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $owner->getKey(), 'friend_id' => $viewer->getKey()],
+            ['member_id' => $viewer->getKey(), 'friend_id' => $owner->getKey()],
+        ]);
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertDontSee('informationAboutThisIsYourProfilePage');
+    }
+
+    public function test_guest_on_a_web_public_profile_gets_no_friend_entry(): void
+    {
+        $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
+        $this->webField($owner, 'shown');
+
+        $this->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertDontSee('informationAboutThisIsYourProfilePage');
+    }
+
     private function webField(Member $owner, string $value): void
     {
         $profile = Profile::factory()->create(['is_edit_public_flag' => true, 'is_public_web' => true]);

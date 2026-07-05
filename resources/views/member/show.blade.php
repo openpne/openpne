@@ -6,9 +6,10 @@
 @php($hasGadgets = collect($zones)->flatten(1)->isNotEmpty())
 
 @if ($hasGadgets)
-    @include('partials.gadget-sections', ['zones' => $zones])
+    @include('partials.gadget-sections', ['zones' => $zones, 'contentTop' => 'member.partials.friend-link-box'])
 @else
     @section('content')
+        @include('member.partials.friend-link-box')
         {{-- No profile gadgets configured: the fixed profile box (avatar + values + own-page links). --}}
         <div class="dparts" id="member_profile">
             <div class="partsHeading"><h3>{{ $owner->name }}</h3></div>
