@@ -1,5 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
 import { FlashMessage } from '@/components/flash-message';
 import { ActionLink } from '@/components/ui/action-link';
@@ -85,7 +86,7 @@ function SavedIndicator({ show }: { show: boolean }) {
 
 export default function MemberConfig() {
     const t = useT();
-    const { form, flash } = usePage<ConfigProps>().props;
+    const { form, flash, auth } = usePage<ConfigProps>().props;
 
     // One form per preference so saving one never resubmits another (mirrors the Classic surface).
     const diary = useForm({ diary_default_visibility: form.diary.value });
@@ -119,6 +120,35 @@ export default function MemberConfig() {
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
+
+                {/* Identity leads (the survey convention): link rows into the profile-edit pages,
+                    which also host the age-visibility gate that used to live on this page. */}
+                {auth.user && (
+                    <SettingsGroup title={t('Profile')}>
+                        <GroupItem>
+                            <DetailRow
+                                title={t('Profile')}
+                                value={auth.user.name}
+                                action={
+                                    <ActionLink href="/m/member/edit/profile" variant="outline" size="sm">
+                                        {t('Edit')}
+                                    </ActionLink>
+                                }
+                            />
+                        </GroupItem>
+                        <GroupItem>
+                            <DetailRow
+                                title={t('Profile image')}
+                                value={<Avatar id={auth.user.id} name={auth.user.name} src={auth.user.imageUrl} size="sm" decorative />}
+                                action={
+                                    <ActionLink href="/m/member/avatar" variant="outline" size="sm">
+                                        {t('Change')}
+                                    </ActionLink>
+                                }
+                            />
+                        </GroupItem>
+                    </SettingsGroup>
+                )}
 
                 <SettingsGroup title={t('Privacy')}>
                     <GroupItem>
