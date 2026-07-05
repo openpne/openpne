@@ -64,7 +64,7 @@ export default function MemberShow() {
                         <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Diary%')}</span>
                     </ListRow>
                     <ListRow href={`/m/member/${owner.id}/timeline`} chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('Timeline')}</span>
+                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Activity%')}</span>
                     </ListRow>
                     <ListRow href={`/m/friend/list?id=${owner.id}`} chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Friends%')}</span>
