@@ -2,6 +2,7 @@
 
 namespace App\Features\Profile;
 
+use App\Features\Block\BlockLookup;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Queries\EditProfileFields;
 use App\Features\Profile\Queries\ShowProfile;
@@ -48,18 +49,29 @@ class ProfileController extends Controller
         // covers the Modern surface and the no-gadget fixed box.
         $age = $visibleAge($viewer, $member);
 
+        // Entry point for a friend request (OpenPNE 3 profile parity). memberSubject above only
+        // 404s the owner→viewer block; a viewer who blocks the owner still reaches this page, and
+        // the friend-link form rejects any block direction — so hide the entry for both (null).
+        $friendStatus = ($viewer !== null && ! $isSelf && ! BlockLookup::hasAnyBlockBetween($viewer, $member)) ? match (true) {
+            $viewer->isFriendsWith($member) => 'friend',
+            $member->hasPendingRequestFrom($viewer) => 'sent',
+            $viewer->hasPendingRequestFrom($member) => 'received',
+            default => 'none',
+        } : null;
+
         return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.show', [
                 'owner' => $member,
                 'fields' => $fields,
                 'age' => $age,
                 'isSelf' => $isSelf,
+                'friendStatus' => $friendStatus,
                 'lang' => $lang,
                 'zones' => $gadgets->zones('profile', subject: $member, viewer: $viewer),
                 'layout' => $gadgets->layoutLetter('profile'),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/show', [
-                'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang, $age),
+                'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang, $age, $friendStatus),
             ]),
         ]);
     }
