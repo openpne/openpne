@@ -13,6 +13,8 @@ interface ProfilePage {
     owner: { id: number; name: string; avatarUrl: string | null };
     isSelf: boolean;
     age: number | null;
+    /** null = own profile or guest viewer. */
+    friendStatus: 'friend' | 'sent' | 'received' | 'none' | null;
     fields: ProfileField[];
 }
 
@@ -23,7 +25,7 @@ interface ShowProps extends PageProps {
 export default function MemberShow() {
     const t = useT();
     const { profile } = usePage<ShowProps>().props;
-    const { owner, fields, isSelf, age } = profile;
+    const { owner, fields, isSelf, age, friendStatus } = profile;
 
     return (
         <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
@@ -49,9 +51,26 @@ export default function MemberShow() {
                             {t('Edit Profile')}
                         </Link>
                     ) : (
-                        <Link href={`/m/message/sendToFriend?id=${owner.id}`} className="text-sm text-link hover:underline">
-                            {t('Send a message')}
-                        </Link>
+                        <div className="flex min-w-0 flex-col gap-1">
+                            {friendStatus === 'none' && (
+                                <Link href={`/m/friend/link?id=${owner.id}`} className="text-sm text-link hover:underline">
+                                    {t('Send a %friend% request')}
+                                </Link>
+                            )}
+                            {friendStatus === 'sent' && (
+                                <Link href="/m/friend/manage" className="text-sm text-muted-foreground hover:underline">
+                                    {t('%Friend% request pending.')}
+                                </Link>
+                            )}
+                            {friendStatus === 'received' && (
+                                <Link href="/m/friend/manage" className="text-sm text-link hover:underline">
+                                    {t(':name sent you a %friend% request.', { name: owner.name })}
+                                </Link>
+                            )}
+                            <Link href={`/m/message/sendToFriend?id=${owner.id}`} className="text-sm text-link hover:underline">
+                                {t('Send a message')}
+                            </Link>
+                        </div>
                     )}
                 </div>
             </Panel>

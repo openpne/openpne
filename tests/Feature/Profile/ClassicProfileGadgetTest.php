@@ -160,6 +160,19 @@ class ClassicProfileGadgetTest extends TestCase
             ->assertDontSee('<th>Age</th>', false);
     }
 
+    public function test_gadget_driven_profile_still_offers_the_friend_request_entry(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $this->fieldFor($owner, Visibility::Members, 'v');
+        $this->makeGadget('contents', 'profileListBox');
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('informationAboutThisIsYourProfilePage')
+            ->assertSee("/friend/link?id={$owner->getKey()}");
+    }
+
     private function giveBirthday(Member $owner, string $date): void
     {
         $profile = Profile::factory()->create(['name' => 'op_preset_birthday', 'form_type' => 'date']);
