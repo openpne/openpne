@@ -26,6 +26,7 @@ WORKDIR /var/www/html
 
 COPY docker/php-fpm.conf /usr/local/etc/php-fpm.conf
 COPY docker/php-fpm-pool.conf /usr/local/etc/php-fpm.d/app.conf
+COPY docker/php-upload.ini /usr/local/etc/php/conf.d/openpne-upload.ini
 
 COPY docker/entrypoint.sh /usr/local/bin/openpne-entrypoint
 RUN chmod 0755 /usr/local/bin/openpne-entrypoint

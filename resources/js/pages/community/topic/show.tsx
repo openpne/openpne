@@ -1,5 +1,6 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
@@ -178,16 +179,7 @@ export default function CommunityTopicShow() {
                             <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
                                 <Textarea id="comment_body" required rows={5} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
                             </Field>
-                            <Field label={t('Images')} htmlFor="comment_images" error={form.errors.images}>
-                                <input
-                                    id="comment_images"
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/gif,image/webp"
-                                    multiple
-                                    onChange={(e) => form.setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
-                                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
-                                />
-                            </Field>
+                            <ImagesField id="comment_images" label={t('Images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
                             <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
                                 {t('Post comment')}
                             </Button>

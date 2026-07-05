@@ -1,4 +1,5 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
+import { ImagesField } from '@/components/images-field';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -63,16 +64,7 @@ export default function DiaryNew({
                             </Select>
                         </Field>
 
-                        <Field label={t('Images')} htmlFor="diary_images" error={errors.images}>
-                            <input
-                                id="diary_images"
-                                type="file"
-                                accept="image/jpeg,image/png,image/gif,image/webp"
-                                multiple
-                                onChange={(e) => setData('images', Array.from(e.target.files ?? []).slice(0, 3))}
-                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
-                            />
-                        </Field>
+                        <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 
                         <Button type="submit" loading={processing}>
                             {t('Post')}

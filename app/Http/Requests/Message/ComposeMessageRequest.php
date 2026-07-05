@@ -79,4 +79,10 @@ class ComposeMessageRequest extends FormRequest
             threadId: isset($v['thread_id']) ? (int) $v['thread_id'] : null,
         );
     }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return PostImageRules::attributes();
+    }
 }

@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
@@ -41,7 +42,6 @@ export default function MessageCompose() {
         form.post('/m/message/sendToFriend', { forceFormData: true, onFinish: () => setActive(null) });
     };
 
-    const imageError = Object.entries(form.errors).find(([key]) => key.startsWith('images'))?.[1];
     const incomplete = form.data.subject.trim() === '' || form.data.body.trim() === '';
 
     return (
@@ -82,18 +82,7 @@ export default function MessageCompose() {
                             />
                         </Field>
 
-                        <Field label={t('Images')} htmlFor="message_images" error={imageError}>
-                            <input
-                                id="message_images"
-                                type="file"
-                                accept="image/jpeg,image/png,image/gif,image/webp"
-                                multiple
-                                // Send every selection; the server caps the count and surfaces an error
-                                // (a silent client-side truncation would drop attachments without warning).
-                                onChange={(e) => form.setData('images', Array.from(e.target.files ?? []))}
-                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
-                            />
-                        </Field>
+                        <ImagesField id="message_images" label={t('Images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
                         <FormActions>
                             <Button onClick={() => submit('send')} loading={active === 'send'} disabled={form.processing || incomplete}>
