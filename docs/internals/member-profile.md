@@ -88,6 +88,11 @@ age reveals — is therefore exposed *only* through that gate, never through the
   `'1'` enables it, the opposite direction from the CAPTCHA flag). When off, an Open age is shown to
   **nobody**, matching OpenPNE 3's `getAge()`, which gates a web-public flag on that admin setting.
   The [setter](../../app/Features/Profile/AgeVisibility.php) offers Open only when it is on.
+- The **setter's home**: on Modern it sits on the profile-edit form directly under the birthday it
+  derives from (submitted with the form; write semantics under
+  [member preferences](member-preferences.md#the-config-page)); Classic keeps its
+  `?category=publicFlag` config page. Both offer it only while the site has a birthday profile
+  item — without one there is no age to gate.
 
 ## One validation + save path for edit and registration
 

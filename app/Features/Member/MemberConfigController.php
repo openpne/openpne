@@ -9,6 +9,7 @@ use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Features\Member\Serializers\MemberConfigSerializer;
 use App\Features\Profile\AgeVisibility;
+use App\Features\Profile\ProfileController;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\RequestEmailChangeRequest;
@@ -67,9 +68,19 @@ class MemberConfigController extends Controller
             // inside the Classic closure so the Modern single page never sees ?category=.
             SurfaceResolver::CLASSIC => function () use ($viewer, $currentSurface, $request) {
                 $raw = $request->query('category');
+                $category = is_string($raw) ? MemberConfigCategory::tryFrom($raw) : null;
+
+                // Without a birthday profile item there is no age, so the age category is dead
+                // weight: hide it from the nav and fold its URL into the landing (a deliberate
+                // divergence from OpenPNE 3, which always shows it).
+                $ageAvailable = ProfileController::birthdayFieldExists();
+                if ($category === MemberConfigCategory::PublicFlag && ! $ageAvailable) {
+                    $category = null;
+                }
 
                 return view('member.config', [
-                    'category' => is_string($raw) ? MemberConfigCategory::tryFrom($raw) : null,
+                    'category' => $category,
+                    'ageAvailable' => $ageAvailable,
                     'diaryDefault' => DiaryVisibility::defaultFor($viewer),
                     'diaryOptions' => DiaryVisibility::options(),
                     'ageDefault' => AgeVisibility::defaultFor($viewer),
@@ -78,7 +89,7 @@ class MemberConfigController extends Controller
                     'currentSurface' => $currentSurface,
                     'email' => $viewer->email,
                 ]);
-            },
+            }, // Modern serves no age section — its setter lives on the profile-edit form.
             SurfaceResolver::MODERN => fn () => Inertia::render('member/config', [
                 'form' => MemberConfigSerializer::form($viewer, $currentSurface),
             ]),
@@ -113,12 +124,14 @@ class MemberConfigController extends Controller
         return $this->savedRedirect($request, MemberConfigCategory::Diary, flashOnModern: false);
     }
 
+    // Classic-only since the Modern setter moved next to the birthday on the profile-edit form
+    // (the Modern sibling route was removed with it).
     public function updateAge(UpdateAgeVisibilityRequest $request): RedirectResponse
     {
         $value = PreferenceKey::AgeVisibility->coerce($request->validated('age_visibility'));
         $this->viewer()->setPreference(PreferenceKey::AgeVisibility, $value);
 
-        return $this->savedRedirect($request, MemberConfigCategory::PublicFlag, flashOnModern: false);
+        return $this->savedRedirect($request, MemberConfigCategory::PublicFlag);
     }
 
     public function updatePassword(UpdatePasswordRequest $request): RedirectResponse

@@ -8,7 +8,7 @@
 {{-- OpenPNE 3 member/config is paginated by ?category= (LayoutB): the category nav fills the
      sidemenu, the active category's form the center, or a "pick one" landing when none is selected. --}}
 @section('sidemenu')
-    <x-member.config-sidemenu :current="$category" />
+    <x-member.config-sidemenu :current="$category" :age-available="$ageAvailable" />
 @endsection
 
 @section('content')

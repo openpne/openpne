@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Models\ProfileOption;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -46,6 +47,101 @@ class ProfileEditTest extends TestCase
                 ->where('form.name', $member->name)
                 ->has('form.fields', 1)
             );
+    }
+
+    public function test_the_age_visibility_block_is_offered_with_a_birthday_item(): void
+    {
+        $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
+
+        $this->actingAs($member)->get('/m/member/edit/profile')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('form.age.value', Visibility::Private->value) // default Private (fail-closed)
+                // Members/Friends/Private — Open is absent while web-public age is off.
+                ->where('form.age.options', fn ($options) => collect($options)->pluck('value')->all() === [1, 2, 3]));
+    }
+
+    public function test_the_age_visibility_block_includes_web_public_when_enabled(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
+
+        $this->actingAs($member)->get('/m/member/edit/profile')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('form.age.options', fn ($options) => collect($options)->pluck('value')->all() === [0, 1, 2, 3]));
+    }
+
+    public function test_the_age_visibility_block_is_absent_without_a_birthday_item(): void
+    {
+        $member = Member::factory()->create();
+        Profile::factory()->create(['form_type' => 'input']); // some field, but no birthday → no age
+
+        $this->actingAs($member)->get('/m/member/edit/profile')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('form.age', null));
+    }
+
+    public function test_saving_the_profile_persists_the_submitted_age_visibility(): void
+    {
+        $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
+
+        $this->actingAs($member)->post('/member/edit/profile', [
+            'name' => $member->name,
+            'age_visibility' => Visibility::Friends->value,
+        ])->assertRedirect('/member/edit/profile');
+
+        $this->assertDatabaseHas('member_preferences', [
+            'member_id' => $member->getKey(), 'key' => 'age_visibility', 'value' => '2',
+        ]);
+    }
+
+    public function test_an_unchanged_age_visibility_still_persists_an_explicit_row(): void
+    {
+        // Deliberate always-save: the form showed a concrete value and submitting affirms it, even
+        // when it equals the (hardcoded) default — there is no operator default to keep following.
+        $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
+
+        $this->actingAs($member)->post('/member/edit/profile', [
+            'name' => $member->name,
+            'age_visibility' => Visibility::Private->value, // the shown default
+        ])->assertRedirect('/member/edit/profile');
+
+        $this->assertDatabaseHas('member_preferences', [
+            'member_id' => $member->getKey(), 'key' => 'age_visibility', 'value' => '3',
+        ]);
+    }
+
+    public function test_age_visibility_open_is_rejected_while_web_public_age_is_off(): void
+    {
+        $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
+
+        $this->actingAs($member)->post('/member/edit/profile', [
+            'name' => $member->name,
+            'age_visibility' => Visibility::Open->value,
+        ])->assertSessionHasErrors('age_visibility');
+
+        $this->assertDatabaseMissing('member_preferences', [
+            'member_id' => $member->getKey(), 'key' => 'age_visibility',
+        ]);
+    }
+
+    public function test_age_visibility_is_ignored_without_a_birthday_item(): void
+    {
+        // The block is never offered without a birthday item, so a crafted value validates but
+        // persists nothing (the write is gated server-side).
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/edit/profile', [
+            'name' => $member->name,
+            'age_visibility' => Visibility::Friends->value,
+        ])->assertRedirect('/member/edit/profile');
+
+        $this->assertDatabaseMissing('member_preferences', [
+            'member_id' => $member->getKey(), 'key' => 'age_visibility',
+        ]);
     }
 
     public function test_saves_a_text_value_and_the_member_name(): void
