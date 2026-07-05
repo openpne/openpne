@@ -2,6 +2,7 @@
 
 namespace App\Features\Profile;
 
+use App\Features\Block\BlockLookup;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Queries\EditProfileFields;
 use App\Features\Profile\Queries\ShowProfile;
@@ -48,9 +49,10 @@ class ProfileController extends Controller
         // covers the Modern surface and the no-gadget fixed box.
         $age = $visibleAge($viewer, $member);
 
-        // Entry point for a friend request (OpenPNE 3 profile parity). Blocked pairs never get
-        // here (memberSubject 404s above), so only the friendly states remain.
-        $friendStatus = ($viewer !== null && ! $isSelf) ? match (true) {
+        // Entry point for a friend request (OpenPNE 3 profile parity). memberSubject above only
+        // 404s the owner→viewer block; a viewer who blocks the owner still reaches this page, and
+        // the friend-link form rejects any block direction — so hide the entry for both (null).
+        $friendStatus = ($viewer !== null && ! $isSelf && ! BlockLookup::hasAnyBlockBetween($viewer, $member)) ? match (true) {
             $viewer->isFriendsWith($member) => 'friend',
             $member->hasPendingRequestFrom($viewer) => 'sent',
             $viewer->hasPendingRequestFrom($member) => 'received',

@@ -150,6 +150,23 @@ class MemberProfileRoutesTest extends TestCase
                 ->where('profile.friendStatus', null));
     }
 
+    public function test_a_viewer_who_blocks_the_owner_gets_no_friend_entry(): void
+    {
+        // The reverse direction (owner blocks viewer) 404s the whole page; this one still renders
+        // the profile, and the friend-link form would reject the request — so no entry at all.
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        DB::table('member_blocks')->insert(['blocker_id' => $viewer->getKey(), 'blocked_id' => $owner->getKey()]);
+
+        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('profile.friendStatus', null));
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertDontSee('informationAboutThisIsYourProfilePage');
+    }
+
     public function test_classic_stranger_profile_links_to_the_friend_request_form(): void
     {
         $owner = Member::factory()->create();
