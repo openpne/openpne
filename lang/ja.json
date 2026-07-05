@@ -103,6 +103,7 @@
     "Appearance (Classic)": "デザイン（クラシック）",
     "Application deadline": "申し込み締め切り",
     "Applies to diaries you write from now on. Existing diaries keep their audience.": "今後書く日記に適用されます。過去の日記の公開範囲は変わりません。",
+    "Applies to the age calculated from your birthday, separately from the birthday visibility.": "誕生日から自動計算される年齢に適用されます。誕生日(月日)の公開範囲とは別に適用されます。",
     "Approval required": "承認が必要",
     "Approve": "承認",
     "Archive": "アーカイブ",

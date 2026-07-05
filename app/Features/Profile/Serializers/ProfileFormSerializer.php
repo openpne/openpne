@@ -14,13 +14,16 @@ class ProfileFormSerializer
 {
     /**
      * @param  Collection<int, EditableField>  $fields
-     * @return array{name: string, fields: list<array<string, mixed>>}
+     * @param  array{value: int, options: list<array{value: int, label: string}>}|null  $age  Age-visibility
+     *                                                                                        block (null when the site has no birthday profile item — there is no age to gate).
+     * @return array{name: string, fields: list<array<string, mixed>>, age: array<string, mixed>|null}
      */
-    public static function form(string $memberName, Collection $fields, string $lang): array
+    public static function form(string $memberName, Collection $fields, string $lang, ?array $age = null): array
     {
         return [
             'name' => $memberName,
             'fields' => self::fields($fields, $lang),
+            'age' => $age,
         ];
     }
 

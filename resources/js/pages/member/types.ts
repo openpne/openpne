@@ -39,6 +39,8 @@ export interface ProfileFormField {
 export interface ProfileForm {
     name: string;
     fields: ProfileFormField[];
+    /** Age-visibility gate; null when the site has no birthday profile item (no age to gate). */
+    age: { value: number; options: Array<{ value: number; label: string }> } | null;
 }
 
 export interface SearchFormField {

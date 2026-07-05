@@ -56,7 +56,16 @@ out of the write path.
 - **Age visibility** sets who may see the member's derived age (`AgeVisibility`); the audience model
   and web-public gate are under [member profile](member-profile.md#age-derived-from-the-birthday).
   Its options offer `Open` only when web-public age is on — the same gate the read uses, so the
-  setter and the read can never disagree.
+  setter and the read can never disagree. **On Modern the setter lives on the profile-edit form**,
+  directly under the birthday it derives from, and is submitted with that form — **always persisted
+  as shown**, even unchanged: the default is a hardcoded Private (no operator default to keep
+  following), and the form showed a concrete value the member affirmed by saving. Accepted
+  consequence: while web-public age is off, `defaultFor()` clamps a stored Open to Members for
+  display, so a profile save in that window persists the clamp (fail-closed direction). Classic
+  keeps its `?category=publicFlag` page and per-section submit. Both surfaces offer the setting
+  only while a birthday profile item exists — without one there is no age to gate, so the Classic
+  category hides, the Modern block is not served, and a crafted `age_visibility` on either
+  surface's POST validates but persists nothing.
 - **Language** reuses the shared [`locale.switch`](../../routes/web.php) endpoint (durable
   `members.locale` write + the Inertia hard-navigation it already needs), not a field on this
   page's own form.

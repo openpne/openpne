@@ -12,7 +12,9 @@ use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Models\Member;
+use App\Models\Profile;
 use App\Services\GadgetService;
+use App\Support\PreferenceKey;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
 use Illuminate\Http\RedirectResponse;
@@ -75,18 +77,57 @@ class ProfileController extends Controller
                 'lang' => $lang,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/edit-profile', [
-                'form' => ProfileFormSerializer::form($viewer->name, $fields, $lang),
+                'form' => ProfileFormSerializer::form($viewer->name, $fields, $lang, $this->ageBlock($viewer)),
             ]),
         ]);
     }
 
     public function update(UpdateProfileRequest $request, SaveMemberProfile $action): RedirectResponse
     {
-        $action($this->viewer(), $request->toData());
+        $viewer = $this->viewer();
+        $action($viewer, $request->toData());
+
+        // The age-visibility gate is edited next to the birthday it derives from (Modern; Classic
+        // keeps its config category). Deliberately persisted whenever submitted, even unchanged —
+        // the form showed a concrete value and saving affirms it (the default is a hardcoded
+        // Private, so there is no operator default to keep following). Consequence, accepted:
+        // AgeVisibility::defaultFor() clamps a stored Open to Members while web-public age is off,
+        // so saving the profile in that window persists the clamped value (fail-closed direction).
+        $age = $request->validated('age_visibility');
+        if ($age !== null && self::birthdayFieldExists()) {
+            $viewer->setPreference(PreferenceKey::AgeVisibility, Visibility::from((int) $age));
+        }
 
         return redirect()
             ->route(SurfaceResolver::redirectName($request, 'member.profile.edit'))
             ->with('status', __('Profile updated.'));
+    }
+
+    /**
+     * Age-visibility block for the Modern edit form, or null when the site has no birthday
+     * profile item — without a birthday there is no age, so the setting is not offered.
+     *
+     * @return array{value: int, options: list<array{value: int, label: string}>}|null
+     */
+    private function ageBlock(Member $viewer): ?array
+    {
+        if (! self::birthdayFieldExists()) {
+            return null;
+        }
+
+        return [
+            'value' => AgeVisibility::defaultFor($viewer)->value,
+            'options' => array_map(
+                fn (Visibility $v): array => ['value' => $v->value, 'label' => __($v->label())],
+                AgeVisibility::options(),
+            ),
+        ];
+    }
+
+    /** Site-level gate: the preset birthday profile item exists (independent of its display flags). */
+    public static function birthdayFieldExists(): bool
+    {
+        return Profile::query()->where('name', 'op_preset_birthday')->exists();
     }
 
     /** Translation lang code (OpenPNE/Doctrine I18n) for the current locale. */

@@ -7,8 +7,8 @@ use App\Models\Member;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * The age section of the member config page: who may see the member's age. Restricted to the
- * selectable audiences (AgeVisibility::rule() drops Open — age is never web-public).
+ * The age section of the Classic member config page: who may see the member's age. Restricted to
+ * the selectable audiences (AgeVisibility::rule() offers Open only while web-public age is on).
  */
 class UpdateAgeVisibilityRequest extends FormRequest
 {
