@@ -64,6 +64,9 @@ class DiaryRoutesTest extends TestCase
                 ->has('diary.body')
                 ->has('diary.visibility')
                 ->where('diary.id', $diary->getKey())
+                // The byline links to the author's profile and shows their avatar.
+                ->where('diary.author.id', $member->getKey())
+                ->has('diary.author.imageUrl')
             );
     }
 

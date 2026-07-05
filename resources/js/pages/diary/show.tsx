@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { Avatar } from '@/components/avatar';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { FlashMessage } from '@/components/flash-message';
@@ -42,9 +43,13 @@ export default function DiaryShow() {
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
                 <Panel bodyClassName="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                        {diary.author.name} &mdash; {formatDateTime(diary.createdAt)}
-                    </p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} size="sm" decorative />
+                        <Link href={`/m/member/${diary.author.id}`} className="text-link hover:underline">
+                            {diary.author.name}
+                        </Link>
+                        <span>&mdash; {formatDateTime(diary.createdAt)}</span>
+                    </div>
 
                     <div className="whitespace-pre-wrap break-words">{diary.body}</div>
 
