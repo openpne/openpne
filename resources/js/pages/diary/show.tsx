@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
@@ -15,27 +16,6 @@ import type { DiaryComment, DiaryDetail } from './types';
 interface ShowProps extends PageProps {
     diary: DiaryDetail;
     comments: DiaryComment[];
-}
-
-type GridImage = { id: number; url: string; thumbnailUrl: string };
-
-function ImageGrid({ images, size }: { images: GridImage[]; size: string }) {
-    const t = useT();
-    if (images.length === 0) {
-        return null;
-    }
-
-    return (
-        <ul className="mt-1 flex flex-wrap gap-2">
-            {images.map((image, i) => (
-                <li key={image.id}>
-                    <a href={image.url} target="_blank" rel="noopener noreferrer" aria-label={`${t('Image')} ${i + 1}`}>
-                        <img src={image.thumbnailUrl} alt="" className={`${size} rounded-md object-cover`} />
-                    </a>
-                </li>
-            ))}
-        </ul>
-    );
 }
 
 export default function DiaryShow() {
@@ -68,7 +48,7 @@ export default function DiaryShow() {
 
                     <div className="whitespace-pre-wrap break-words">{diary.body}</div>
 
-                    <ImageGrid images={diary.images} size="size-28" />
+                    <ImageGrid images={diary.images} size="size-28" className="mt-1" />
 
                     {isOwner && (
                         <div className="flex gap-4 text-sm">
@@ -105,7 +85,7 @@ export default function DiaryShow() {
                                         )}
                                     </div>
                                     <p className="whitespace-pre-wrap break-words">{comment.body}</p>
-                                    <ImageGrid images={comment.images} size="size-20" />
+                                    <ImageGrid images={comment.images} size="size-20" className="mt-1" />
                                 </li>
                             ))}
                         </List>

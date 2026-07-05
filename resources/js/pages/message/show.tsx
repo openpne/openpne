@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { FlashMessage } from '@/components/flash-message';
@@ -7,7 +8,7 @@ import { Panel } from '@/components/ui/surface';
 import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { MessageBoxSlug, MessageDetail, MessageImage } from './types';
+import type { MessageBoxSlug, MessageDetail } from './types';
 
 interface ShowProps extends PageProps {
     message: MessageDetail;
@@ -27,25 +28,6 @@ const BOX: Record<MessageBoxSlug, { label: string; path: string }> = {
     draft: { label: 'Drafts', path: '/m/message/draftList' },
     trash: { label: 'Trash', path: '/m/message/dustList' },
 };
-
-function ImageGrid({ images }: { images: MessageImage[] }) {
-    const t = useT();
-    if (images.length === 0) {
-        return null;
-    }
-
-    return (
-        <ul className="flex flex-wrap gap-2">
-            {images.map((image, i) => (
-                <li key={image.id}>
-                    <a href={image.url} target="_blank" rel="noopener noreferrer" aria-label={`${t('Image')} ${i + 1}`}>
-                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
-                    </a>
-                </li>
-            ))}
-        </ul>
-    );
-}
 
 export default function MessageShow() {
     const t = useT();
@@ -121,7 +103,7 @@ export default function MessageShow() {
                         <dd>{formatDateTime(message.createdAt)}</dd>
                     </dl>
 
-                    <ImageGrid images={message.images} />
+                    <ImageGrid images={message.images} size="size-24" />
 
                     <div className="whitespace-pre-wrap break-words">{message.body}</div>
 
