@@ -1,9 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Plus } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
 import { EntryRow } from '@/components/entry-row';
 import { FlashMessage } from '@/components/flash-message';
+import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { formatDate } from '@/lib/date';
@@ -98,9 +100,10 @@ export default function CommunityShow() {
                         title={t('Recent %topics%')}
                         right={
                             canPostTopic && (
-                                <Link href={`/m/community/${community.id}/topic/new`} className="shrink-0 text-sm text-link hover:underline">
-                                    {t('Post a new %topic%')}
-                                </Link>
+                                <ActionLink href={`/m/community/${community.id}/topic/new`} variant="outline" size="sm">
+                                    <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+                                    {t('Create a %topic%')}
+                                </ActionLink>
                             )
                         }
                     >
@@ -133,9 +136,10 @@ export default function CommunityShow() {
                         title={t('Recent events')}
                         right={
                             canPostEvent && (
-                                <Link href={`/m/community/${community.id}/event/new`} className="shrink-0 text-sm text-link hover:underline">
-                                    {t('Post a new event')}
-                                </Link>
+                                <ActionLink href={`/m/community/${community.id}/event/new`} variant="outline" size="sm">
+                                    <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+                                    {t('Create an event')}
+                                </ActionLink>
                             )
                         }
                     >

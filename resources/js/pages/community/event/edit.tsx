@@ -56,7 +56,7 @@ export default function CommunityEventEdit() {
         form.setData('remove_images', remove ? [...form.data.remove_images, imageId] : form.data.remove_images.filter((id) => id !== imageId));
     };
 
-    const title = isEdit ? t('Edit event') : t('Post a new event');
+    const title = isEdit ? t('Edit event') : t('Create an event');
     const backHref = isEdit ? `/m/community/event/${event.id}` : `/m/community/${community.id}/event`;
 
     return (
