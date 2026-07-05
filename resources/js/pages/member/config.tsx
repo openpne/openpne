@@ -116,7 +116,7 @@ export default function MemberConfig() {
         <>
             <Head title={t('Settings')} />
             <main className="mx-auto max-w-2xl space-y-8 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{t('Settings')}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{t('Settings')}</h1>
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}

@@ -96,7 +96,7 @@ export default function MessageShow() {
                     </nav>
                 )}
 
-                <h1 className="text-xl font-semibold text-foreground">{message.subject}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{message.subject}</h1>
 
                 <Panel bodyClassName="space-y-3 text-foreground">
                     <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">

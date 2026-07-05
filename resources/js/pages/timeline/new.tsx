@@ -29,7 +29,7 @@ export default function TimelineNew({
         <>
             <Head title={t('%Post_activity%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{t('%Post_activity%')}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{t('%Post_activity%')}</h1>
 
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 

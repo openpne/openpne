@@ -47,7 +47,7 @@ export default function CommunitySearch() {
             <Head title={t('%Communities%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
                 <div className="flex items-center justify-between gap-3">
-                    <h1 className="text-xl font-semibold text-foreground">{t('%Communities%')}</h1>
+                    <h1 className="min-w-0 break-words text-xl font-semibold text-foreground">{t('%Communities%')}</h1>
                     <Link href="/m/community/edit" className="shrink-0 text-sm text-link hover:underline">
                         {t('Create a %community%')}
                     </Link>

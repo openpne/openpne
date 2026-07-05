@@ -38,7 +38,7 @@ export default function DiaryEdit() {
         <>
             <Head title={t('Edit %diary%')} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{t('Edit %diary%')}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit %diary%')}</h1>
 
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 

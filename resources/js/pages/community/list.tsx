@@ -22,7 +22,7 @@ export default function CommunityList() {
         <>
             <Head title={title} />
             <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
 
                 {/* Tabs only in the viewer's own hub; another member's list (via ?id) is not viewer-scoped. */}
                 {isOwner && <CommunityTabs active="joined" />}
