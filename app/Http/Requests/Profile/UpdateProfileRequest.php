@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Profile;
 
+use App\Features\Profile\AgeVisibility;
 use App\Features\Profile\Data\ProfileFormData;
 use App\Features\Profile\ProfileFieldRules;
 use App\Models\Member;
@@ -30,6 +31,11 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         $rules = ['name' => ['required', 'string', 'max:255']];
+
+        // Submitted only when the Modern form offers the age block (site has a birthday item);
+        // the write is additionally gated in the controller, so a crafted value without a
+        // birthday item validates but persists nothing.
+        $rules['age_visibility'] = ['sometimes', 'required', AgeVisibility::rule()];
 
         foreach ($this->editableProfiles() as $profile) {
             $rules += $this->rulesForProfile($profile);

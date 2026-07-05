@@ -8,7 +8,7 @@
 {{-- OpenPNE 3 member/config is paginated by ?category= (LayoutB): the category nav fills the
      sidemenu, the active category's form the center, or a "pick one" landing when none is selected. --}}
 @section('sidemenu')
-    <x-member.config-sidemenu :current="$category" />
+    <x-member.config-sidemenu :current="$category" :age-available="$ageAvailable" />
 @endsection
 
 @section('content')
@@ -44,7 +44,7 @@
             @break
 
         @case(MemberConfigCategory::PublicFlag)
-            {{-- Age visibility (member_preferences[age_visibility]); no web-public choice — age is never shown to guests. --}}
+            {{-- Age visibility (member_preferences[age_visibility]); Open is offered only while web-public age is on. --}}
             <div class="dparts form" id="member_config_age">
                 <div class="partsHeading"><h3>{{ __('Age') }}</h3></div>
                 <div class="parts">

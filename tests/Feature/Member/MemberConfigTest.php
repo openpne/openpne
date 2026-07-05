@@ -4,6 +4,7 @@ namespace Tests\Feature\Member;
 
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
+use App\Models\Profile;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Notifications\Member\EmailChangeNoticeNotification;
 use App\Support\PreferenceKey;
@@ -46,6 +47,7 @@ class MemberConfigTest extends TestCase
     public function test_the_category_nav_links_to_the_other_categories(): void
     {
         $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']); // offers the age category
 
         // On the diary page, diary is plain text and the other three are links.
         $this->actingAs($member)->get('/member/config?category=diary')
@@ -74,6 +76,7 @@ class MemberConfigTest extends TestCase
             'withdrawal' => 'member_config_withdrawal',
         ];
         $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']); // offers the age category
 
         foreach ($sections as $category => $shownId) {
             $response = $this->actingAs($member)->get('/member/config?category='.$category)->assertOk();
@@ -109,9 +112,8 @@ class MemberConfigTest extends TestCase
                 ->where('form.surface.value', 'classic') // preselected to the current surface (mode default)
                 ->where('form.surface.options', fn ($options) => count($options) === 2) // binary: no "default" option
                 ->has('form.diary.options')
-                ->where('form.age.value', '3') // default Private
-                // Members/Friends/Private — Open (value "0") is absent regardless of locale.
-                ->where('form.age.options', fn ($options) => collect($options)->pluck('value')->all() === ['1', '2', '3'])
+                // Age visibility moved next to the birthday on the Modern profile-edit form.
+                ->missing('form.age')
             );
     }
 
@@ -151,6 +153,7 @@ class MemberConfigTest extends TestCase
     public function test_updating_age_visibility_writes_the_preference(): void
     {
         $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
 
         $this->actingAs($member)->post('/member/config/age', [
             'age_visibility' => (string) Visibility::Friends->value,
@@ -158,6 +161,21 @@ class MemberConfigTest extends TestCase
 
         $this->assertDatabaseHas('member_preferences', [
             'member_id' => $member->id, 'key' => 'age_visibility', 'value' => '2',
+        ]);
+    }
+
+    public function test_a_crafted_age_post_without_a_birthday_item_persists_nothing(): void
+    {
+        // The category is not offered without a birthday item, so a direct POST writes nothing and
+        // lands where the hidden category's URL does (same gate as the Modern profile-edit write).
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/member/config/age', [
+            'age_visibility' => (string) Visibility::Friends->value,
+        ])->assertRedirect(route('member.config'));
+
+        $this->assertDatabaseMissing('member_preferences', [
+            'member_id' => $member->id, 'key' => 'age_visibility',
         ]);
     }
 
@@ -187,20 +205,24 @@ class MemberConfigTest extends TestCase
         ]);
     }
 
-    public function test_age_options_include_web_public_when_enabled(): void
+    public function test_the_age_category_is_hidden_without_a_birthday_profile_item(): void
     {
-        $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
+        // No birthday item → no age to gate, so the category is dead weight: absent from the nav
+        // and its URL folds into the landing (deliberate divergence from OpenPNE 3's always-on).
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/m/member/config')
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('form.age.options', fn ($options) => collect($options)->pluck('value')->all() === ['0', '1', '2', '3']));
+        $this->actingAs($member)->get('/member/config?category=publicFlag')
+            ->assertOk()
+            ->assertSee('Please select the item')
+            ->assertDontSee('id="member_config_age"', false)
+            ->assertDontSee('href="'.route('member.config', ['category' => 'publicFlag']).'"', false);
     }
 
     public function test_updating_age_visibility_accepts_web_public_when_enabled(): void
     {
         $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
         $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
 
         $this->actingAs($member)->post('/member/config/age', [
             'age_visibility' => (string) Visibility::Open->value,
@@ -308,30 +330,22 @@ class MemberConfigTest extends TestCase
 
     public function test_a_modern_save_redirect_carries_no_category(): void
     {
-        // The diary/age POSTs are shared with Modern; the category param is gated to the Classic target.
+        // The diary POST is shared with Modern; the category param is gated to the Classic target.
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/m/member/config/diary', [
             'diary_default_visibility' => (string) Visibility::Friends->value,
-        ])->assertRedirect(route('member.modern.config'));
-
-        $this->actingAs($member)->post('/m/member/config/age', [
-            'age_visibility' => (string) Visibility::Friends->value,
         ])->assertRedirect(route('member.modern.config'));
     }
 
     public function test_a_modern_preference_save_suppresses_the_page_flash(): void
     {
-        // Modern announces the instant-apply preferences (diary/age) inline next to the control; the
+        // Modern announces the instant-apply diary preference inline next to the control; the
         // page flash is dropped so one save is never announced twice.
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/m/member/config/diary', [
             'diary_default_visibility' => (string) Visibility::Friends->value,
-        ])->assertRedirect(route('member.modern.config'))->assertSessionMissing('status');
-
-        $this->actingAs($member)->post('/m/member/config/age', [
-            'age_visibility' => (string) Visibility::Friends->value,
         ])->assertRedirect(route('member.modern.config'))->assertSessionMissing('status');
     }
 
@@ -339,6 +353,7 @@ class MemberConfigTest extends TestCase
     {
         // Classic category pages have no inline indicator, so the flash stays their save feedback.
         $member = Member::factory()->create();
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
 
         $this->actingAs($member)->post('/member/config/diary', [
             'diary_default_visibility' => (string) Visibility::Friends->value,

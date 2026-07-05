@@ -326,8 +326,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->defaults('surface', 'modern')->name('member.modern.config');
     Route::post('/m/member/config/diary', [MemberConfigController::class, 'updateDiary'])
         ->defaults('surface', 'modern')->name('member.modern.config.diary');
-    Route::post('/m/member/config/age', [MemberConfigController::class, 'updateAge'])
-        ->defaults('surface', 'modern')->name('member.modern.config.age');
     Route::post('/m/member/config/surface', [MemberConfigController::class, 'updateSurface'])
         ->defaults('surface', 'modern')->name('member.modern.config.surface');
     Route::post('/m/member/config/password', [MemberConfigController::class, 'updatePassword'])

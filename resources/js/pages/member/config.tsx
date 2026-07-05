@@ -1,5 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
 import { FlashMessage } from '@/components/flash-message';
 import { ActionLink } from '@/components/ui/action-link';
@@ -27,7 +28,6 @@ interface Option {
 
 interface ConfigForm {
     diary: { value: string; options: Option[] };
-    age: { value: string; options: Option[] };
     email: { value: string };
     locale: { value: string; options: Option[] };
     // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
@@ -86,11 +86,10 @@ function SavedIndicator({ show }: { show: boolean }) {
 
 export default function MemberConfig() {
     const t = useT();
-    const { form, flash } = usePage<ConfigProps>().props;
+    const { form, flash, auth } = usePage<ConfigProps>().props;
 
     // One form per preference so saving one never resubmits another (mirrors the Classic surface).
     const diary = useForm({ diary_default_visibility: form.diary.value });
-    const age = useForm({ age_visibility: form.age.value });
     const locale = useForm({ locale: form.locale.value });
     // Hooks run unconditionally; the fallback is inert since the surface section renders only when
     // form.surface is present (Classic available).
@@ -105,10 +104,6 @@ export default function MemberConfig() {
     const saveDiary = (value: string) => {
         diary.setData('diary_default_visibility', value);
         diary.post('/m/member/config/diary', { preserveScroll: true });
-    };
-    const saveAge = (value: string) => {
-        age.setData('age_visibility', value);
-        age.post('/m/member/config/age', { preserveScroll: true });
     };
     // The locale switch responds with a hard navigation (the page reloading in the chosen language
     // is the feedback), so no SavedIndicator here.
@@ -125,6 +120,35 @@ export default function MemberConfig() {
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
                 {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
+
+                {/* Identity leads (the survey convention): link rows into the profile-edit pages,
+                    which also host the age-visibility gate that used to live on this page. */}
+                {auth.user && (
+                    <SettingsGroup title={t('Profile')}>
+                        <GroupItem>
+                            <DetailRow
+                                title={t('Profile')}
+                                value={auth.user.name}
+                                action={
+                                    <ActionLink href="/m/member/edit/profile" variant="outline" size="sm">
+                                        {t('Edit')}
+                                    </ActionLink>
+                                }
+                            />
+                        </GroupItem>
+                        <GroupItem>
+                            <DetailRow
+                                title={t('Profile image')}
+                                value={<Avatar id={auth.user.id} name={auth.user.name} src={auth.user.imageUrl} size="sm" decorative />}
+                                action={
+                                    <ActionLink href="/m/member/avatar" variant="outline" size="sm">
+                                        {t('Change')}
+                                    </ActionLink>
+                                }
+                            />
+                        </GroupItem>
+                    </SettingsGroup>
+                )}
 
                 <SettingsGroup title={t('Privacy')}>
                     <GroupItem>
@@ -154,27 +178,7 @@ export default function MemberConfig() {
                             <SavedIndicator show={diary.recentlySuccessful} />
                         </FormSection>
                     </GroupItem>
-
-                    <GroupItem>
-                        <FormSection title={t('Who can see your age')} headingLevel="h3">
-                            <RadioCardGroup legend={t('Who can see your age')} error={age.errors.age_visibility}>
-                                <div className="flex flex-wrap gap-2">
-                                    {form.age.options.map((opt) => (
-                                        <RadioPill
-                                            key={opt.value}
-                                            name="age_visibility"
-                                            value={opt.value}
-                                            checked={age.data.age_visibility === opt.value}
-                                            disabled={age.processing}
-                                            onChange={(e) => saveAge(e.target.value)}
-                                            label={t(opt.label)}
-                                        />
-                                    ))}
-                                </div>
-                            </RadioCardGroup>
-                            <SavedIndicator show={age.recentlySuccessful} />
-                        </FormSection>
-                    </GroupItem>
+                    {/* Age visibility is edited next to the birthday it derives from, on the profile-edit page. */}
                 </SettingsGroup>
 
                 <SettingsGroup title={t('Display & language')}>
