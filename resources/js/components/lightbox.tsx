@@ -43,12 +43,15 @@ export function Lightbox({
                             restoreFocus();
                         }
                     }}
-                    className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] max-w-[min(90vw,60rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-background p-4 text-foreground shadow-xl outline-none"
+                    // Definite width, not max-width: a fixed box centered with left-1/2 + translate and
+                    // width:auto shrink-to-fits to the ~50vw available right of its left edge, so the
+                    // image would render at half screen width. A definite width lets it fill the frame.
+                    className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(94vw,60rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-background p-3 text-foreground shadow-xl outline-none"
                 >
                     <DialogPrimitive.Title className="sr-only">{t('Image')}</DialogPrimitive.Title>
                     {image && (
                         <div className="space-y-2.5">
-                            <img src={image.url} alt="" className="mx-auto max-h-[70vh] max-w-full rounded-md" />
+                            <img src={image.url} alt="" className="mx-auto max-h-[80vh] max-w-full rounded-md" />
                             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
                                 <a href={image.url} target="_blank" rel="noopener noreferrer" className="text-link hover:underline">
                                     {t('Open original in new tab')}
