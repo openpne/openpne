@@ -1,18 +1,15 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { Plus, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useState } from 'react';
 import { CommunityImage } from '@/components/community-image';
 import { CountBadge } from '@/components/entry-row';
-import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
-import { ActionLink } from '@/components/ui/action-link';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import { CommunityTabs } from './community-tabs';
 import type { CommunityCategory, PaginatedCommunities } from './types';
 
 interface SearchProps extends PageProps {
@@ -47,91 +44,77 @@ export default function CommunitySearch() {
     return (
         <>
             <Head title={t('%Communities%')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <PageHeading
-                    title={t('%Communities%')}
-                    action={
-                        <ActionLink href="/m/community/edit">
-                            <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                            {t('Create a %community%')}
-                        </ActionLink>
-                    }
-                />
-
-                <CommunityTabs active="browse" />
-
-                <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
-                    <div className="relative min-w-[12rem] flex-1">
-                        <label htmlFor="community_keyword" className="sr-only">
-                            {t('Keyword')}
-                        </label>
-                        <Input
-                            id="community_keyword"
-                            type="search"
-                            enterKeyHint="search"
-                            placeholder={t('Search by %community% name')}
-                            value={form.keyword}
-                            onChange={(e) => setForm((f) => ({ ...f, keyword: e.target.value }))}
-                            className="rounded-full pr-11 pl-5"
-                        />
-                        <SearchSubmitButton loading={searching} />
-                    </div>
-                    <label htmlFor="community_category" className="sr-only">
-                        {t('Category')}
+            <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+                <div className="relative min-w-[12rem] flex-1">
+                    <label htmlFor="community_keyword" className="sr-only">
+                        {t('Keyword')}
                     </label>
-                    <Select
-                        id="community_category"
-                        value={form.categoryId}
-                        onChange={(e) => setForm((f) => ({ ...f, categoryId: Number(e.target.value) }))}
-                        className="w-auto rounded-full pl-5"
-                    >
-                        <option value={0}>{t('All categories')}</option>
-                        {categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                                {category.name}
-                            </option>
-                        ))}
-                    </Select>
-                </form>
+                    <Input
+                        id="community_keyword"
+                        type="search"
+                        enterKeyHint="search"
+                        placeholder={t('Search by %community% name')}
+                        value={form.keyword}
+                        onChange={(e) => setForm((f) => ({ ...f, keyword: e.target.value }))}
+                        className="rounded-full pr-11 pl-5"
+                    />
+                    <SearchSubmitButton loading={searching} />
+                </div>
+                <label htmlFor="community_category" className="sr-only">
+                    {t('Category')}
+                </label>
+                <Select
+                    id="community_category"
+                    value={form.categoryId}
+                    onChange={(e) => setForm((f) => ({ ...f, categoryId: Number(e.target.value) }))}
+                    className="w-auto rounded-full pl-5"
+                >
+                    <option value={0}>{t('All categories')}</option>
+                    {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                            {category.name}
+                        </option>
+                    ))}
+                </Select>
+            </form>
 
-                {communities.data.length === 0 ? (
-                    <Panel>
-                        <p className="text-sm text-muted-foreground">{t('No %communities% found.')}</p>
-                    </Panel>
-                ) : (
-                    <>
-                        <Panel flush>
-                            <List>
-                                {communities.data.map((community) => (
-                                    <ListRow key={community.id} href={`/m/community/${community.id}`} chevron>
-                                        <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-12" decorative />
-                                        <div className="min-w-0 flex-1">
-                                            <p className="font-medium text-foreground">{community.name}</p>
-                                            <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                                                {community.category && (
-                                                    <>
-                                                        <span className="truncate">{community.category.name}</span>
-                                                        <span aria-hidden>·</span>
-                                                    </>
-                                                )}
-                                                <CountBadge
-                                                    icon={Users}
-                                                    count={community.memberCount}
-                                                    srLabel={t(':count members', { count: community.memberCount })}
-                                                />
-                                            </p>
-                                            {community.description && (
-                                                <p className="line-clamp-2 text-sm text-muted-foreground">{community.description}</p>
+            {communities.data.length === 0 ? (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('No %communities% found.')}</p>
+                </Panel>
+            ) : (
+                <>
+                    <Panel flush>
+                        <List>
+                            {communities.data.map((community) => (
+                                <ListRow key={community.id} href={`/m/community/${community.id}`} chevron>
+                                    <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-12" decorative />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-foreground">{community.name}</p>
+                                        <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                                            {community.category && (
+                                                <>
+                                                    <span className="truncate">{community.category.name}</span>
+                                                    <span aria-hidden>·</span>
+                                                </>
                                             )}
-                                        </div>
-                                    </ListRow>
-                                ))}
-                            </List>
-                        </Panel>
-                        <Pagination meta={communities.meta} />
-                    </>
-                )}
-            </main>
+                                            <CountBadge
+                                                icon={Users}
+                                                count={community.memberCount}
+                                                srLabel={t(':count members', { count: community.memberCount })}
+                                            />
+                                        </p>
+                                        {community.description && (
+                                            <p className="line-clamp-2 text-sm text-muted-foreground">{community.description}</p>
+                                        )}
+                                    </div>
+                                </ListRow>
+                            ))}
+                        </List>
+                    </Panel>
+                    <Pagination meta={communities.meta} />
+                </>
+            )}
         </>
     );
 }

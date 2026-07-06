@@ -15,21 +15,19 @@ export function SettingsSubpage({ title, danger = false, children }: { title: st
     return (
         <>
             <Head title={title} />
-            <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <div className="space-y-1">
-                    <Link
-                        href="/m/member/config"
-                        className="inline-flex items-center gap-1 rounded text-sm text-muted-foreground outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                        <ChevronLeft className="size-4" aria-hidden="true" />
-                        {t('Back to settings')}
-                    </Link>
-                    <h1 className={cn('text-xl font-semibold', danger ? 'text-destructive' : 'text-foreground')}>{title}</h1>
-                </div>
-                <Card className={danger ? 'border-destructive/40' : undefined}>
-                    <CardBody>{children}</CardBody>
-                </Card>
-            </main>
+            <div className="space-y-1">
+                <Link
+                    href="/m/member/config"
+                    className="inline-flex items-center gap-1 rounded text-sm text-muted-foreground outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                    <ChevronLeft className="size-4" aria-hidden="true" />
+                    {t('Back to settings')}
+                </Link>
+                <h1 className={cn('text-xl font-semibold', danger ? 'text-destructive' : 'text-foreground')}>{title}</h1>
+            </div>
+            <Card className={danger ? 'border-destructive/40' : undefined}>
+                <CardBody>{children}</CardBody>
+            </Card>
         </>
     );
 }

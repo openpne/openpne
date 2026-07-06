@@ -2,7 +2,6 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
-import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Field, FormActions } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -22,7 +21,7 @@ interface ComposeProps extends PageProps {
 
 export default function MessageCompose() {
     const t = useT();
-    const { recipient, parentId, threadId, subject, body, flash } = usePage<ComposeProps>().props;
+    const { recipient, parentId, threadId, subject, body } = usePage<ComposeProps>().props;
 
     const form = useForm({
         to: recipient.id,
@@ -47,59 +46,56 @@ export default function MessageCompose() {
     return (
         <>
             <Head title={t('Compose Message')} />
-            <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <h1 className="break-words text-xl font-semibold text-foreground">{t('Compose Message')}</h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">{t('Compose Message')}</h1>
 
-                <Panel>
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-                        <div className="flex items-center gap-2 text-sm">
-                            <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
-                            <Avatar id={recipient.id} name={recipient.name} src={recipient.imageUrl} size="sm" decorative />
-                            <Link href={`/m/member/${recipient.id}`} className="text-link hover:underline">
-                                {recipient.name}
-                            </Link>
-                        </div>
+            <Panel>
+                <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm">
+                        <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
+                        <Avatar id={recipient.id} name={recipient.name} src={recipient.imageUrl} size="sm" decorative />
+                        <Link href={`/m/member/${recipient.id}`} className="text-link hover:underline">
+                            {recipient.name}
+                        </Link>
+                    </div>
 
-                        <Field label={t('Subject')} htmlFor="message_subject" error={form.errors.subject}>
-                            <Input
-                                id="message_subject"
-                                type="text"
-                                required
-                                value={form.data.subject}
-                                onChange={(e) => form.setData('subject', e.target.value)}
-                            />
-                        </Field>
+                    <Field label={t('Subject')} htmlFor="message_subject" error={form.errors.subject}>
+                        <Input
+                            id="message_subject"
+                            type="text"
+                            required
+                            value={form.data.subject}
+                            onChange={(e) => form.setData('subject', e.target.value)}
+                        />
+                    </Field>
 
-                        <Field label={t('Body')} htmlFor="message_body" error={form.errors.body}>
-                            <Textarea
-                                id="message_body"
-                                required
-                                rows={8}
-                                value={form.data.body}
-                                onChange={(e) => form.setData('body', e.target.value)}
-                            />
-                        </Field>
+                    <Field label={t('Body')} htmlFor="message_body" error={form.errors.body}>
+                        <Textarea
+                            id="message_body"
+                            required
+                            rows={8}
+                            value={form.data.body}
+                            onChange={(e) => form.setData('body', e.target.value)}
+                        />
+                    </Field>
 
-                        <ImagesField id="message_images" label={t('Images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
+                    <ImagesField id="message_images" label={t('Images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
-                        <FormActions>
-                            <Button onClick={() => submit('send')} loading={active === 'send'} disabled={form.processing || incomplete}>
-                                {t('Send')}
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                onClick={() => submit('draft')}
-                                loading={active === 'draft'}
-                                disabled={form.processing || incomplete}
-                            >
-                                {t('Save as draft')}
-                            </Button>
-                        </FormActions>
-                    </form>
-                </Panel>
-            </main>
+                    <FormActions>
+                        <Button onClick={() => submit('send')} loading={active === 'send'} disabled={form.processing || incomplete}>
+                            {t('Send')}
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => submit('draft')}
+                            loading={active === 'draft'}
+                            disabled={form.processing || incomplete}
+                        >
+                            {t('Save as draft')}
+                        </Button>
+                    </FormActions>
+                </form>
+            </Panel>
         </>
     );
 }

@@ -17,29 +17,27 @@ export default function TimelineDelete() {
     return (
         <>
             <Head title={t('Delete post')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{t('Delete post')}</h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">{t('Delete post')}</h1>
 
-                <Panel bodyClassName="space-y-4">
-                    <p className="text-foreground">{t('Delete this post?')}</p>
+            <Panel bodyClassName="space-y-4">
+                <p className="text-foreground">{t('Delete this post?')}</p>
 
-                    <div className="flex items-center gap-4">
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                post(`/m/timeline/delete/${timelinePost.id}`);
-                            }}
-                        >
-                            <Button type="submit" variant="destructive" loading={processing}>
-                                {t('Delete')}
-                            </Button>
-                        </form>
-                        <Link href={`/m/timeline/${timelinePost.id}`} className="text-sm text-link hover:underline">
-                            {t('Cancel')}
-                        </Link>
-                    </div>
-                </Panel>
-            </main>
+                <div className="flex items-center gap-4">
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            post(`/m/timeline/delete/${timelinePost.id}`);
+                        }}
+                    >
+                        <Button type="submit" variant="destructive" loading={processing}>
+                            {t('Delete')}
+                        </Button>
+                    </form>
+                    <Link href={`/m/timeline/${timelinePost.id}`} className="text-sm text-link hover:underline">
+                        {t('Cancel')}
+                    </Link>
+                </div>
+            </Panel>
         </>
     );
 }

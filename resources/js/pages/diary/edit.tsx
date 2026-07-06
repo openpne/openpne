@@ -1,6 +1,5 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { ImagesField } from '@/components/images-field';
-import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
@@ -18,7 +17,7 @@ interface EditProps extends PageProps {
 
 export default function DiaryEdit() {
     const t = useT();
-    const { diary, flash } = usePage<EditProps>().props;
+    const { diary } = usePage<EditProps>().props;
     const { data, setData, post, errors, processing } = useForm({
         title: diary.title,
         body: diary.body,
@@ -38,60 +37,56 @@ export default function DiaryEdit() {
     return (
         <>
             <Head title={t('Edit %diary%')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit %diary%')}</h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit %diary%')}</h1>
 
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
+            <Panel>
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        post(`/m/diary/update/${diary.id}`, { forceFormData: true });
+                    }}
+                    className="space-y-4"
+                >
+                    <Field label={t('Title')} htmlFor="diary_title" error={errors.title}>
+                        <Input id="diary_title" type="text" required value={data.title} onChange={(e) => setData('title', e.target.value)} />
+                    </Field>
 
-                <Panel>
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            post(`/m/diary/update/${diary.id}`, { forceFormData: true });
-                        }}
-                        className="space-y-4"
-                    >
-                        <Field label={t('Title')} htmlFor="diary_title" error={errors.title}>
-                            <Input id="diary_title" type="text" required value={data.title} onChange={(e) => setData('title', e.target.value)} />
-                        </Field>
+                    <Field label={t('Body')} htmlFor="diary_body" error={errors.body}>
+                        <Textarea id="diary_body" required rows={10} value={data.body} onChange={(e) => setData('body', e.target.value)} />
+                    </Field>
 
-                        <Field label={t('Body')} htmlFor="diary_body" error={errors.body}>
-                            <Textarea id="diary_body" required rows={10} value={data.body} onChange={(e) => setData('body', e.target.value)} />
-                        </Field>
+                    <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
+                        <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
+                            <option value="1">{t('All members')}</option>
+                            <option value="2">{t('%Friends% only')}</option>
+                            <option value="3">{t('Private')}</option>
+                        </Select>
+                    </Field>
 
-                        <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
-                            <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
-                                <option value="1">{t('All members')}</option>
-                                <option value="2">{t('%Friends% only')}</option>
-                                <option value="3">{t('Private')}</option>
-                            </Select>
-                        </Field>
+                    {diary.images.length > 0 && (
+                        <fieldset className="space-y-2">
+                            <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
+                            <ul className="flex flex-wrap gap-3">
+                                {diary.images.map((image, i) => (
+                                    <li key={image.id} className="space-y-1 text-center">
+                                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
+                                        <label className="flex items-center justify-center gap-1 text-sm text-foreground">
+                                            <Checkbox aria-label={`${t('Delete')} ${t('Image')} ${i + 1}`} onChange={(e) => toggleRemove(image.id, e.target.checked)} />
+                                            {t('Delete')}
+                                        </label>
+                                    </li>
+                                ))}
+                            </ul>
+                        </fieldset>
+                    )}
 
-                        {diary.images.length > 0 && (
-                            <fieldset className="space-y-2">
-                                <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
-                                <ul className="flex flex-wrap gap-3">
-                                    {diary.images.map((image, i) => (
-                                        <li key={image.id} className="space-y-1 text-center">
-                                            <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
-                                            <label className="flex items-center justify-center gap-1 text-sm text-foreground">
-                                                <Checkbox aria-label={`${t('Delete')} ${t('Image')} ${i + 1}`} onChange={(e) => toggleRemove(image.id, e.target.checked)} />
-                                                {t('Delete')}
-                                            </label>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </fieldset>
-                        )}
+                    <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 
-                        <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
-
-                        <Button type="submit" loading={processing}>
-                            {t('Save')}
-                        </Button>
-                    </form>
-                </Panel>
-            </main>
+                    <Button type="submit" loading={processing}>
+                        {t('Save')}
+                    </Button>
+                </form>
+            </Panel>
         </>
     );
 }

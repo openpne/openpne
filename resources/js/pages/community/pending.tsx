@@ -1,6 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
-import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -24,7 +23,7 @@ interface PendingProps extends PageProps {
 
 export default function CommunityPending() {
     const t = useT();
-    const { community, applicants, flash } = usePage<PendingProps>().props;
+    const { community, applicants } = usePage<PendingProps>().props;
 
     const act = (path: 'approve' | 'decline', memberId: number) =>
         router.post(`/m/community/${community.id}/${path}`, { member_id: memberId }, { preserveScroll: true });
@@ -32,46 +31,41 @@ export default function CommunityPending() {
     return (
         <>
             <Head title={t('Pending members')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">
-                    <Link href={`/m/community/${community.id}`} className="hover:underline">
-                        {community.name}
-                    </Link>
-                    {' — '}
-                    {t('Pending members')}
-                </h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">
+                <Link href={`/m/community/${community.id}`} className="hover:underline">
+                    {community.name}
+                </Link>
+                {' — '}
+                {t('Pending members')}
+            </h1>
 
-                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
-
-                {applicants.data.length === 0 ? (
-                    <Panel>
-                        <p className="text-sm text-muted-foreground">{t('No pending requests.')}</p>
+            {applicants.data.length === 0 ? (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('No pending requests.')}</p>
+                </Panel>
+            ) : (
+                <>
+                    <Panel flush>
+                        <List>
+                            {applicants.data.map((applicant) => (
+                                <ListRow key={applicant.id}>
+                                    <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} size="md" decorative />
+                                    <Link href={`/m/member/${applicant.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
+                                        {applicant.name}
+                                    </Link>
+                                    <Button type="button" size="sm" onClick={() => act('approve', applicant.id)}>
+                                        {t('Approve')}
+                                    </Button>
+                                    <Button type="button" size="sm" variant="secondary" onClick={() => act('decline', applicant.id)}>
+                                        {t('Decline')}
+                                    </Button>
+                                </ListRow>
+                            ))}
+                        </List>
                     </Panel>
-                ) : (
-                    <>
-                        <Panel flush>
-                            <List>
-                                {applicants.data.map((applicant) => (
-                                    <ListRow key={applicant.id}>
-                                        <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} size="md" decorative />
-                                        <Link href={`/m/member/${applicant.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
-                                            {applicant.name}
-                                        </Link>
-                                        <Button type="button" size="sm" onClick={() => act('approve', applicant.id)}>
-                                            {t('Approve')}
-                                        </Button>
-                                        <Button type="button" size="sm" variant="secondary" onClick={() => act('decline', applicant.id)}>
-                                            {t('Decline')}
-                                        </Button>
-                                    </ListRow>
-                                ))}
-                            </List>
-                        </Panel>
-                        <Pagination meta={applicants.meta} />
-                    </>
-                )}
-            </main>
+                    <Pagination meta={applicants.meta} />
+                </>
+            )}
         </>
     );
 }

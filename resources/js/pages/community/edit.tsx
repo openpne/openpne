@@ -1,7 +1,6 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
-import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
@@ -31,7 +30,7 @@ interface EditProps extends PageProps {
 export default function CommunityEdit() {
     const t = useT();
     const confirm = useConfirm();
-    const { community, categories, policies, canDelete, flash } = usePage<EditProps>().props;
+    const { community, categories, policies, canDelete } = usePage<EditProps>().props;
     const isEdit = community !== null;
 
     const form = useForm({
@@ -67,102 +66,98 @@ export default function CommunityEdit() {
     return (
         <>
             <Head title={title} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
 
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
+            <Panel>
+                <form onSubmit={submit} className="space-y-4">
+                    <Field label={t('Name')} htmlFor="name" error={form.errors.name}>
+                        <Input
+                            id="name"
+                            type="text"
+                            maxLength={64}
+                            required
+                            value={form.data.name}
+                            onChange={(e) => form.setData('name', e.target.value)}
+                        />
+                    </Field>
 
-                <Panel>
-                    <form onSubmit={submit} className="space-y-4">
-                        <Field label={t('Name')} htmlFor="name" error={form.errors.name}>
-                            <Input
-                                id="name"
-                                type="text"
-                                maxLength={64}
-                                required
-                                value={form.data.name}
-                                onChange={(e) => form.setData('name', e.target.value)}
+                    <Field label={t('Description')} htmlFor="description">
+                        <Textarea
+                            id="description"
+                            rows={5}
+                            value={form.data.description}
+                            onChange={(e) => form.setData('description', e.target.value)}
+                        />
+                    </Field>
+
+                    <Field label={t('Join policy')} htmlFor="register_policy">
+                        <Select
+                            id="register_policy"
+                            value={form.data.register_policy}
+                            onChange={(e) => form.setData('register_policy', Number(e.target.value))}
+                        >
+                            {policies.map((policy) => (
+                                <option key={policy.value} value={policy.value}>
+                                    {t(policy.label)}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+
+                    <Field label={t('Category')} htmlFor="community_category_id">
+                        <Select
+                            id="community_category_id"
+                            value={form.data.community_category_id}
+                            onChange={(e) => form.setData('community_category_id', e.target.value)}
+                        >
+                            <option value="">{t('No category')}</option>
+                            {categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                    {category.name}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+
+                    {/* Field wraps only the file input (single control) so its id/aria wiring reaches it;
+                        the existing-image + remove control is a sibling below, not a second child. */}
+                    <div className="space-y-2">
+                        <Field label={t('Image')} htmlFor="image" error={form.errors.image}>
+                            <input
+                                id="image"
+                                type="file"
+                                accept="image/jpeg,image/png,image/gif,image/webp"
+                                onChange={(e) => form.setData('image', e.target.files?.[0] ?? null)}
+                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
                             />
                         </Field>
-
-                        <Field label={t('Description')} htmlFor="description">
-                            <Textarea
-                                id="description"
-                                rows={5}
-                                value={form.data.description}
-                                onChange={(e) => form.setData('description', e.target.value)}
-                            />
-                        </Field>
-
-                        <Field label={t('Join policy')} htmlFor="register_policy">
-                            <Select
-                                id="register_policy"
-                                value={form.data.register_policy}
-                                onChange={(e) => form.setData('register_policy', Number(e.target.value))}
-                            >
-                                {policies.map((policy) => (
-                                    <option key={policy.value} value={policy.value}>
-                                        {t(policy.label)}
-                                    </option>
-                                ))}
-                            </Select>
-                        </Field>
-
-                        <Field label={t('Category')} htmlFor="community_category_id">
-                            <Select
-                                id="community_category_id"
-                                value={form.data.community_category_id}
-                                onChange={(e) => form.setData('community_category_id', e.target.value)}
-                            >
-                                <option value="">{t('No category')}</option>
-                                {categories.map((category) => (
-                                    <option key={category.id} value={category.id}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </Select>
-                        </Field>
-
-                        {/* Field wraps only the file input (single control) so its id/aria wiring reaches it;
-                            the existing-image + remove control is a sibling below, not a second child. */}
-                        <div className="space-y-2">
-                            <Field label={t('Image')} htmlFor="image" error={form.errors.image}>
-                                <input
-                                    id="image"
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/gif,image/webp"
-                                    onChange={(e) => form.setData('image', e.target.files?.[0] ?? null)}
-                                    className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
-                                />
-                            </Field>
-                            {community?.imageUrl && (
-                                <div className="flex items-center gap-3">
-                                    <img src={community.imageUrl} alt="" className="size-20 rounded-md object-cover" />
-                                    <label className="flex items-center gap-1 text-sm text-foreground">
-                                        <Checkbox
-                                            checked={form.data.remove_image}
-                                            onChange={(e) => form.setData('remove_image', e.target.checked)}
-                                        />
-                                        {t('Delete')}
-                                    </label>
-                                </div>
-                            )}
-                        </div>
-
-                        <Button type="submit" loading={form.processing}>
-                            {t('Save')}
-                        </Button>
-                    </form>
-                </Panel>
-
-                {isEdit && canDelete && (
-                    <div className="flex">
-                        <Button type="button" variant="destructive" onClick={destroy}>
-                            {t('Delete this %community%')}
-                        </Button>
+                        {community?.imageUrl && (
+                            <div className="flex items-center gap-3">
+                                <img src={community.imageUrl} alt="" className="size-20 rounded-md object-cover" />
+                                <label className="flex items-center gap-1 text-sm text-foreground">
+                                    <Checkbox
+                                        checked={form.data.remove_image}
+                                        onChange={(e) => form.setData('remove_image', e.target.checked)}
+                                    />
+                                    {t('Delete')}
+                                </label>
+                            </div>
+                        )}
                     </div>
-                )}
-            </main>
+
+                    <Button type="submit" loading={form.processing}>
+                        {t('Save')}
+                    </Button>
+                </form>
+            </Panel>
+
+            {isEdit && canDelete && (
+                <div className="flex">
+                    <Button type="button" variant="destructive" onClick={destroy}>
+                        {t('Delete this %community%')}
+                    </Button>
+                </div>
+            )}
         </>
     );
 }

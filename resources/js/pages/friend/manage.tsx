@@ -1,8 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
-import { FlashMessage } from '@/components/flash-message';
-import { PageHeading } from '@/components/page-heading';
-import { PageTabs } from '@/components/page-tabs';
 import { Pagination } from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -27,7 +24,7 @@ function MemberCell({ member }: { member: FriendMember }) {
 
 export default function FriendManage() {
     const t = useT();
-    const { received, sent, flash } = usePage<ManageProps>().props;
+    const { received, sent } = usePage<ManageProps>().props;
 
     function accept(requesterId: number) {
         router.post('/m/friend/accept', { requester_id: requesterId });
@@ -37,68 +34,52 @@ export default function FriendManage() {
         router.post('/m/friend/reject', { requester_id: requesterId });
     }
 
-    const hubTitle = t('%Friends%');
     const headTitle = t('Pending %friend% requests');
 
     return (
         <>
             <Head title={headTitle} />
-            <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <PageHeading title={hubTitle} />
+            <section className="space-y-2">
+                <Panel flush title={t('Requests received')}>
+                    {received.data.length === 0 ? (
+                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No pending requests.')}</p>
+                    ) : (
+                        <List>
+                            {received.data.map((requester) => (
+                                <ListRow key={requester.id}>
+                                    <MemberCell member={requester} />
+                                    <div className="flex shrink-0 gap-2">
+                                        <Button type="button" size="sm" onClick={() => accept(requester.id)}>
+                                            {t('Accept')}
+                                        </Button>
+                                        <Button type="button" size="sm" variant="secondary" onClick={() => reject(requester.id)}>
+                                            {t('Reject')}
+                                        </Button>
+                                    </div>
+                                </ListRow>
+                            ))}
+                        </List>
+                    )}
+                </Panel>
+                {received.data.length > 0 && <Pagination meta={received.meta} pageName="received_page" />}
+            </section>
 
-                <PageTabs
-                    ariaLabel={hubTitle}
-                    items={[
-                        { href: '/m/friend/list', label: t('%Friends%'), active: false },
-                        { href: '/m/friend/manage', label: t('Requests'), active: true },
-                    ]}
-                />
-
-                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
-
-                <section className="space-y-2">
-                    <Panel flush title={t('Requests received')}>
-                        {received.data.length === 0 ? (
-                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No pending requests.')}</p>
-                        ) : (
-                            <List>
-                                {received.data.map((requester) => (
-                                    <ListRow key={requester.id}>
-                                        <MemberCell member={requester} />
-                                        <div className="flex shrink-0 gap-2">
-                                            <Button type="button" size="sm" onClick={() => accept(requester.id)}>
-                                                {t('Accept')}
-                                            </Button>
-                                            <Button type="button" size="sm" variant="secondary" onClick={() => reject(requester.id)}>
-                                                {t('Reject')}
-                                            </Button>
-                                        </div>
-                                    </ListRow>
-                                ))}
-                            </List>
-                        )}
-                    </Panel>
-                    {received.data.length > 0 && <Pagination meta={received.meta} pageName="received_page" />}
-                </section>
-
-                <section className="space-y-2">
-                    <Panel flush title={t('Requests sent')}>
-                        {sent.data.length === 0 ? (
-                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No outgoing requests.')}</p>
-                        ) : (
-                            <List>
-                                {sent.data.map((target) => (
-                                    <ListRow key={target.id}>
-                                        <MemberCell member={target} />
-                                    </ListRow>
-                                ))}
-                            </List>
-                        )}
-                    </Panel>
-                    {sent.data.length > 0 && <Pagination meta={sent.meta} pageName="sent_page" />}
-                </section>
-            </main>
+            <section className="space-y-2">
+                <Panel flush title={t('Requests sent')}>
+                    {sent.data.length === 0 ? (
+                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No outgoing requests.')}</p>
+                    ) : (
+                        <List>
+                            {sent.data.map((target) => (
+                                <ListRow key={target.id}>
+                                    <MemberCell member={target} />
+                                </ListRow>
+                            ))}
+                        </List>
+                    )}
+                </Panel>
+                {sent.data.length > 0 && <Pagination meta={sent.meta} pageName="sent_page" />}
+            </section>
         </>
     );
 }

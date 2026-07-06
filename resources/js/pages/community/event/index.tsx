@@ -2,7 +2,6 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
 import { EntryRow } from '@/components/entry-row';
-import { FlashMessage } from '@/components/flash-message';
 import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
 import { ActionLink } from '@/components/ui/action-link';
@@ -20,59 +19,55 @@ interface IndexProps extends PageProps {
 
 export default function CommunityEventIndex() {
     const t = useT();
-    const { community, events, canPost, flash } = usePage<IndexProps>().props;
+    const { community, events, canPost } = usePage<IndexProps>().props;
 
     return (
         <>
             <Head title={t('Events')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <PageHeading
-                    title={
-                        <>
-                            <Link href={`/m/community/${community.id}`} className="hover:underline">
-                                {community.name}
-                            </Link>
-                            {' — '}
-                            {t('Events')}
-                        </>
-                    }
-                    action={
-                        canPost && (
-                            <ActionLink href={`/m/community/${community.id}/event/new`}>
-                                <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                                {t('Create an event')}
-                            </ActionLink>
-                        )
-                    }
-                />
-
-                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
-
-                {events.data.length === 0 ? (
-                    <Panel>
-                        <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
-                    </Panel>
-                ) : (
+            <PageHeading
+                title={
                     <>
-                        <Panel flush>
-                            <List>
-                                {events.data.map((event) => (
-                                    <EntryRow
-                                        key={event.id}
-                                        href={`/m/community/event/${event.id}`}
-                                        leading={<Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" decorative />}
-                                        title={event.name}
-                                        meta={[event.author?.name ?? t('Withdrawn member'), `${t('Open date')}: ${formatDate(event.openDate)}`]}
-                                        commentCount={event.commentCount}
-                                        participantCount={event.participantCount}
-                                    />
-                                ))}
-                            </List>
-                        </Panel>
-                        <Pagination meta={events.meta} />
+                        <Link href={`/m/community/${community.id}`} className="hover:underline">
+                            {community.name}
+                        </Link>
+                        {' — '}
+                        {t('Events')}
                     </>
-                )}
-            </main>
+                }
+                action={
+                    canPost && (
+                        <ActionLink href={`/m/community/${community.id}/event/new`}>
+                            <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+                            {t('Create an event')}
+                        </ActionLink>
+                    )
+                }
+            />
+
+            {events.data.length === 0 ? (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('No events to show.')}</p>
+                </Panel>
+            ) : (
+                <>
+                    <Panel flush>
+                        <List>
+                            {events.data.map((event) => (
+                                <EntryRow
+                                    key={event.id}
+                                    href={`/m/community/event/${event.id}`}
+                                    leading={<Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" decorative />}
+                                    title={event.name}
+                                    meta={[event.author?.name ?? t('Withdrawn member'), `${t('Open date')}: ${formatDate(event.openDate)}`]}
+                                    commentCount={event.commentCount}
+                                    participantCount={event.participantCount}
+                                />
+                            ))}
+                        </List>
+                    </Panel>
+                    <Pagination meta={events.meta} />
+                </>
+            )}
         </>
     );
 }

@@ -1,9 +1,9 @@
 import { createInertiaApp, type ResolvedComponent, router } from '@inertiajs/react';
 import { LaravelReactI18nProvider, useLaravelReactI18n } from 'laravel-react-i18n';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { type ReactNode, useEffect } from 'react';
+import { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AppShell } from '@/components/app-shell';
+import { MemberLayout } from '@/components/member-layout';
 // Side-effect import: applies the saved color mode, keeps <meta name="theme-color"> in sync, and
 // installs the OS prefers-color-scheme listener on every Modern page (the useColorMode UI lives only
 // on the settings page, so without this the listener/sync would load lazily with that page).
@@ -49,23 +49,16 @@ function SyncLocaleWithServer() {
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: async (name) => {
-        const page = await resolvePageComponent<ResolvedComponent>(
+    resolve: (name) =>
+        resolvePageComponent<ResolvedComponent>(
             `./pages/${name}.tsx`,
             import.meta.glob<ResolvedComponent>('./pages/**/*.tsx'),
-        );
-        // resolvePageComponent resolves to the page *module*; the component and its optional
-        // persistent layout live on `.default` (the helper's return type says component, but at
-        // runtime it is the module). Wrap every non-auth page in the shell (nav chrome only — the
-        // page keeps its own <main>/flash); auth/* keep their own AuthLayout, and any page can opt
-        // out with its own `layout`. Gate on `layout === undefined` (not null) — Inertia React treats
-        // a null layout as "use the default".
-        const mod = page as unknown as { default: { layout?: (el: ReactNode) => ReactNode } };
-        if (mod.default.layout === undefined && !name.startsWith('auth/')) {
-            mod.default.layout = (pageEl: ReactNode) => <AppShell>{pageEl}</AppShell>;
-        }
-        return page;
-    },
+        ),
+    // Default layout for every non-auth page: nav chrome + the member page frame (single <main>,
+    // hub header from the chrome registry, central flash). auth/* keep their own AuthLayout. A page
+    // overrides its frame via `Page.layout = (props) => ({ chrome: {…} })` (Inertia merges the
+    // object into this layout's props); returning a component instead replaces the layout entirely.
+    layout: (name: string) => (name.startsWith('auth/') ? undefined : MemberLayout),
     setup({ el, App, props }) {
         appName = (props.initialPage.props as PageProps).name || appName;
         // `fallbackLocale="en"` (not the app default `ja`) so that an en miss

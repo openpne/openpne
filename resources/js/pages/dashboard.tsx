@@ -114,72 +114,70 @@ export default function Dashboard() {
     return (
         <>
             <Head title={t('Home')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="sr-only">{t('Home')}</h1>
+            <h1 className="sr-only">{t('Home')}</h1>
 
-                <AnnouncementsPanel announcements={announcements} />
+            <AnnouncementsPanel announcements={announcements} />
 
-                {everythingEmpty ? (
-                    <Panel title={t('Welcome, :name.', { name: user.name })}>
-                        <p className="text-sm text-muted-foreground">{t('Find people and places to fill your home.')}</p>
-                        <div className="mt-4">
-                            <List>
-                                <ListRow href="/m/member/search" chevron>
-                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search members')}</span>
-                                </ListRow>
-                                <ListRow href="/m/community/search" chevron>
-                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search %communities%')}</span>
-                                </ListRow>
-                                <ListRow href="/m/diary/new" chevron>
-                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Post %diary%')}</span>
-                                </ListRow>
-                            </List>
-                        </div>
-                    </Panel>
-                ) : (
-                    <>
-                        {diaries.length > 0 && (
-                            <DigestSection
-                                title={t('Latest diaries')}
-                                viewAllHref="/m/diary/list"
-                                extra={
-                                    <Link href="/m/diary/listFriend" className="text-link hover:underline">
-                                        {t('%Diaries% of %My_friends%')}
-                                    </Link>
-                                }
-                            >
-                                {diaries.map((diary) => (
-                                    <DiaryRow key={diary.id} diary={diary} showAuthor />
-                                ))}
-                            </DigestSection>
-                        )}
+            {everythingEmpty ? (
+                <Panel title={t('Welcome, :name.', { name: user.name })}>
+                    <p className="text-sm text-muted-foreground">{t('Find people and places to fill your home.')}</p>
+                    <div className="mt-4">
+                        <List>
+                            <ListRow href="/m/member/search" chevron>
+                                <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search members')}</span>
+                            </ListRow>
+                            <ListRow href="/m/community/search" chevron>
+                                <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search %communities%')}</span>
+                            </ListRow>
+                            <ListRow href="/m/diary/new" chevron>
+                                <span className="min-w-0 flex-1 text-sm text-foreground">{t('Post %diary%')}</span>
+                            </ListRow>
+                        </List>
+                    </div>
+                </Panel>
+            ) : (
+                <>
+                    {diaries.length > 0 && (
+                        <DigestSection
+                            title={t('Latest diaries')}
+                            viewAllHref="/m/diary/list"
+                            extra={
+                                <Link href="/m/diary/listFriend" className="text-link hover:underline">
+                                    {t('%Diaries% of %My_friends%')}
+                                </Link>
+                            }
+                        >
+                            {diaries.map((diary) => (
+                                <DiaryRow key={diary.id} diary={diary} showAuthor />
+                            ))}
+                        </DigestSection>
+                    )}
 
-                        {timeline.length > 0 && (
-                            <DigestSection title={t('%Activity%')} viewAllHref="/m/timeline">
-                                {timeline.map((post) => (
-                                    <TimelineRow key={post.id} post={post} />
-                                ))}
-                            </DigestSection>
-                        )}
+                    {timeline.length > 0 && (
+                        <DigestSection title={t('%Activity%')} viewAllHref="/m/timeline">
+                            {timeline.map((post) => (
+                                <TimelineRow key={post.id} post={post} />
+                            ))}
+                        </DigestSection>
+                    )}
 
-                        {communityActivity.length > 0 && (
-                            <DigestSection title={t('Recent %community% activity')} viewAllHref="/m/community/recent">
-                                {communityActivity.map((entry) => (
-                                    <ActivityRow key={`${entry.kind}-${entry.id}`} entry={entry} />
-                                ))}
-                            </DigestSection>
-                        )}
+                    {communityActivity.length > 0 && (
+                        <DigestSection title={t('Recent %community% activity')} viewAllHref="/m/community/recent">
+                            {communityActivity.map((entry) => (
+                                <ActivityRow key={`${entry.kind}-${entry.id}`} entry={entry} />
+                            ))}
+                        </DigestSection>
+                    )}
 
-                        {myDiaries.length > 0 && (
-                            <DigestSection title={t('My recent %diaries%')} viewAllHref={`/m/diary/listMember/${user.id}`}>
-                                {myDiaries.map((diary) => (
-                                    <DiaryRow key={diary.id} diary={diary} showAuthor={false} />
-                                ))}
-                            </DigestSection>
-                        )}
-                    </>
-                )}
-            </main>
+                    {myDiaries.length > 0 && (
+                        <DigestSection title={t('My recent %diaries%')} viewAllHref={`/m/diary/listMember/${user.id}`}>
+                            {myDiaries.map((diary) => (
+                                <DiaryRow key={diary.id} diary={diary} showAuthor={false} />
+                            ))}
+                        </DigestSection>
+                    )}
+                </>
+            )}
         </>
     );
 }

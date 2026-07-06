@@ -4,7 +4,6 @@ import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
 import { EntryRow } from '@/components/entry-row';
-import { FlashMessage } from '@/components/flash-message';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
@@ -32,7 +31,7 @@ export default function CommunityShow() {
     const confirm = useConfirm();
     const {
         community, viewerRole, canManage, isPending, canJoin, canLeave, members,
-        recentTopics, canPostTopic, recentEvents, canPostEvent, flash,
+        recentTopics, canPostTopic, recentEvents, canPostEvent,
     } = usePage<ShowProps>().props;
 
     const join = () => router.post(`/m/community/${community.id}/join`);
@@ -45,143 +44,139 @@ export default function CommunityShow() {
     return (
         <>
             <Head title={community.name} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8 text-foreground">
-                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <Panel bodyClassName="space-y-4">
-                    <div className="flex items-start gap-4">
-                        <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
-                        <div className="min-w-0 flex-1">
-                            <h1 className="break-words text-xl font-semibold">{community.name}</h1>
-                            {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}
-                            <Link href={`/m/community/${community.id}/members`} className="text-sm text-link hover:underline">
-                                {t(':count members', { count: community.memberCount })}
-                            </Link>
-                        </div>
+            <Panel bodyClassName="space-y-4">
+                <div className="flex items-start gap-4">
+                    <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
+                    <div className="min-w-0 flex-1">
+                        <h1 className="break-words text-xl font-semibold">{community.name}</h1>
+                        {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}
+                        <Link href={`/m/community/${community.id}/members`} className="text-sm text-link hover:underline">
+                            {t(':count members', { count: community.memberCount })}
+                        </Link>
                     </div>
+                </div>
 
-                    {isPending && <p className="text-sm text-muted-foreground">{t('Your join request is awaiting approval.')}</p>}
+                {isPending && <p className="text-sm text-muted-foreground">{t('Your join request is awaiting approval.')}</p>}
 
-                    {(canJoin || canLeave) && (
-                        <div className="flex gap-3">
-                            {canJoin && (
-                                <Button type="button" onClick={join}>
-                                    {community.registerPolicy === 'approval' ? t('Request to join') : t('Join')}
-                                </Button>
-                            )}
-                            {canLeave && (
-                                <Button type="button" variant="secondary" onClick={leave}>
-                                    {t('Leave')}
-                                </Button>
-                            )}
-                        </div>
-                    )}
-
-                    {canManage && (
-                        <div className="flex gap-4 text-sm">
-                            <Link href={`/m/community/edit?id=${community.id}`} className="text-link hover:underline">
-                                {t('Edit %community%')}
-                            </Link>
-                            {viewerRole === 'admin' && (
-                                <Link href={`/m/community/${community.id}/pending`} className="text-link hover:underline">
-                                    {t('Pending members')}
-                                </Link>
-                            )}
-                        </div>
-                    )}
-
-                    {community.description && <div className="whitespace-pre-wrap break-words">{community.description}</div>}
-                </Panel>
-
-                {recentTopics !== null && (
-                    <Panel
-                        flush
-                        title={t('Recent %topics%')}
-                        right={
-                            canPostTopic && (
-                                <ActionLink href={`/m/community/${community.id}/topic/new`} variant="outline" size="sm">
-                                    <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                                    {t('Create a %topic%')}
-                                </ActionLink>
-                            )
-                        }
-                    >
-                        {recentTopics.length === 0 ? (
-                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
-                        ) : (
-                            <List>
-                                {recentTopics.map((topic) => (
-                                    <EntryRow
-                                        key={topic.id}
-                                        href={`/m/community/topic/${topic.id}`}
-                                        title={topic.name}
-                                        meta={[formatDate(topic.updatedAt)]}
-                                        commentCount={topic.commentCount}
-                                    />
-                                ))}
-                            </List>
+                {(canJoin || canLeave) && (
+                    <div className="flex gap-3">
+                        {canJoin && (
+                            <Button type="button" onClick={join}>
+                                {community.registerPolicy === 'approval' ? t('Request to join') : t('Join')}
+                            </Button>
                         )}
-                        <div className="border-t border-border px-5 py-2.5">
-                            <Link href={`/m/community/${community.id}/topic`} className="text-sm text-link hover:underline">
-                                {t('See all %topics%')}
-                            </Link>
-                        </div>
-                    </Panel>
+                        {canLeave && (
+                            <Button type="button" variant="secondary" onClick={leave}>
+                                {t('Leave')}
+                            </Button>
+                        )}
+                    </div>
                 )}
 
-                {recentEvents !== null && (
-                    <Panel
-                        flush
-                        title={t('Recent events')}
-                        right={
-                            canPostEvent && (
-                                <ActionLink href={`/m/community/${community.id}/event/new`} variant="outline" size="sm">
-                                    <Plus className="size-4" strokeWidth={2.25} aria-hidden />
-                                    {t('Create an event')}
-                                </ActionLink>
-                            )
-                        }
-                    >
-                        {recentEvents.length === 0 ? (
-                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No events to show.')}</p>
-                        ) : (
-                            <List>
-                                {recentEvents.map((event) => (
-                                    <EntryRow
-                                        key={event.id}
-                                        href={`/m/community/event/${event.id}`}
-                                        title={event.name}
-                                        meta={[`${t('Open date')}: ${formatDate(event.openDate)}`]}
-                                        commentCount={event.commentCount}
-                                        participantCount={event.participantCount}
-                                    />
-                                ))}
-                            </List>
-                        )}
-                        <div className="border-t border-border px-5 py-2.5">
-                            <Link href={`/m/community/${community.id}/event`} className="text-sm text-link hover:underline">
-                                {t('See all events')}
+                {canManage && (
+                    <div className="flex gap-4 text-sm">
+                        <Link href={`/m/community/edit?id=${community.id}`} className="text-link hover:underline">
+                            {t('Edit %community%')}
+                        </Link>
+                        {viewerRole === 'admin' && (
+                            <Link href={`/m/community/${community.id}/pending`} className="text-link hover:underline">
+                                {t('Pending members')}
                             </Link>
-                        </div>
-                    </Panel>
+                        )}
+                    </div>
                 )}
 
-                {members.length > 0 && (
-                    <Panel title={t('Members')}>
-                        <ul className="flex flex-wrap gap-4">
-                            {members.map((member) => (
-                                <li key={member.id} className="w-16">
-                                    <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
-                                        <Avatar id={member.id} name={member.name} src={member.imageUrl} size="lg" decorative />
-                                        <span className="w-full truncate text-center text-xs">{member.name}</span>
-                                    </Link>
-                                </li>
+                {community.description && <div className="whitespace-pre-wrap break-words">{community.description}</div>}
+            </Panel>
+
+            {recentTopics !== null && (
+                <Panel
+                    flush
+                    title={t('Recent %topics%')}
+                    right={
+                        canPostTopic && (
+                            <ActionLink href={`/m/community/${community.id}/topic/new`} variant="outline" size="sm">
+                                <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('Create a %topic%')}
+                            </ActionLink>
+                        )
+                    }
+                >
+                    {recentTopics.length === 0 ? (
+                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
+                    ) : (
+                        <List>
+                            {recentTopics.map((topic) => (
+                                <EntryRow
+                                    key={topic.id}
+                                    href={`/m/community/topic/${topic.id}`}
+                                    title={topic.name}
+                                    meta={[formatDate(topic.updatedAt)]}
+                                    commentCount={topic.commentCount}
+                                />
                             ))}
-                        </ul>
-                    </Panel>
-                )}
-            </main>
+                        </List>
+                    )}
+                    <div className="border-t border-border px-5 py-2.5">
+                        <Link href={`/m/community/${community.id}/topic`} className="text-sm text-link hover:underline">
+                            {t('See all %topics%')}
+                        </Link>
+                    </div>
+                </Panel>
+            )}
+
+            {recentEvents !== null && (
+                <Panel
+                    flush
+                    title={t('Recent events')}
+                    right={
+                        canPostEvent && (
+                            <ActionLink href={`/m/community/${community.id}/event/new`} variant="outline" size="sm">
+                                <Plus className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('Create an event')}
+                            </ActionLink>
+                        )
+                    }
+                >
+                    {recentEvents.length === 0 ? (
+                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No events to show.')}</p>
+                    ) : (
+                        <List>
+                            {recentEvents.map((event) => (
+                                <EntryRow
+                                    key={event.id}
+                                    href={`/m/community/event/${event.id}`}
+                                    title={event.name}
+                                    meta={[`${t('Open date')}: ${formatDate(event.openDate)}`]}
+                                    commentCount={event.commentCount}
+                                    participantCount={event.participantCount}
+                                />
+                            ))}
+                        </List>
+                    )}
+                    <div className="border-t border-border px-5 py-2.5">
+                        <Link href={`/m/community/${community.id}/event`} className="text-sm text-link hover:underline">
+                            {t('See all events')}
+                        </Link>
+                    </div>
+                </Panel>
+            )}
+
+            {members.length > 0 && (
+                <Panel title={t('Members')}>
+                    <ul className="flex flex-wrap gap-4">
+                        {members.map((member) => (
+                            <li key={member.id} className="w-16">
+                                <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
+                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} size="lg" decorative />
+                                    <span className="w-full truncate text-center text-xs">{member.name}</span>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                </Panel>
+            )}
         </>
     );
 }

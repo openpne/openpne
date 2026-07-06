@@ -2,7 +2,6 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
-import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FormActions } from '@/components/ui/field';
@@ -19,7 +18,7 @@ interface EditProps extends PageProps {
 
 export default function MessageEdit() {
     const t = useT();
-    const { draft, flash } = usePage<EditProps>().props;
+    const { draft } = usePage<EditProps>().props;
 
     const form = useForm({
         subject: draft.subject,
@@ -46,81 +45,78 @@ export default function MessageEdit() {
     return (
         <>
             <Head title={t('Edit draft')} />
-            <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit draft')}</h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit draft')}</h1>
 
-                <Panel>
-                    <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-                        {draft.recipient && (
-                            <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
-                                <Avatar id={draft.recipient.id} name={draft.recipient.name} src={draft.recipient.imageUrl} size="sm" decorative />
-                                <Link href={`/m/member/${draft.recipient.id}`} className="text-link hover:underline">
-                                    {draft.recipient.name}
-                                </Link>
-                            </div>
-                        )}
+            <Panel>
+                <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+                    {draft.recipient && (
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
+                            <Avatar id={draft.recipient.id} name={draft.recipient.name} src={draft.recipient.imageUrl} size="sm" decorative />
+                            <Link href={`/m/member/${draft.recipient.id}`} className="text-link hover:underline">
+                                {draft.recipient.name}
+                            </Link>
+                        </div>
+                    )}
 
-                        <Field label={t('Subject')} htmlFor="message_subject" error={form.errors.subject}>
-                            <Input
-                                id="message_subject"
-                                type="text"
-                                required
-                                value={form.data.subject}
-                                onChange={(e) => form.setData('subject', e.target.value)}
-                            />
-                        </Field>
+                    <Field label={t('Subject')} htmlFor="message_subject" error={form.errors.subject}>
+                        <Input
+                            id="message_subject"
+                            type="text"
+                            required
+                            value={form.data.subject}
+                            onChange={(e) => form.setData('subject', e.target.value)}
+                        />
+                    </Field>
 
-                        <Field label={t('Body')} htmlFor="message_body" error={form.errors.body}>
-                            <Textarea
-                                id="message_body"
-                                required
-                                rows={8}
-                                value={form.data.body}
-                                onChange={(e) => form.setData('body', e.target.value)}
-                            />
-                        </Field>
+                    <Field label={t('Body')} htmlFor="message_body" error={form.errors.body}>
+                        <Textarea
+                            id="message_body"
+                            required
+                            rows={8}
+                            value={form.data.body}
+                            onChange={(e) => form.setData('body', e.target.value)}
+                        />
+                    </Field>
 
-                        {draft.images.length > 0 && (
-                            <fieldset className="space-y-2">
-                                <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
-                                <ul className="flex flex-wrap gap-3">
-                                    {draft.images.map((image) => (
-                                        <li key={image.id} className="space-y-1 text-center">
-                                            <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
-                                            <label className="flex items-center justify-center gap-1 text-xs text-foreground">
-                                                <Checkbox
-                                                    checked={form.data.remove_images.includes(image.id)}
-                                                    onChange={(e) => toggleRemove(image.id, e.target.checked)}
-                                                />
-                                                {t('Delete')}
-                                            </label>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </fieldset>
-                        )}
+                    {draft.images.length > 0 && (
+                        <fieldset className="space-y-2">
+                            <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
+                            <ul className="flex flex-wrap gap-3">
+                                {draft.images.map((image) => (
+                                    <li key={image.id} className="space-y-1 text-center">
+                                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
+                                        <label className="flex items-center justify-center gap-1 text-xs text-foreground">
+                                            <Checkbox
+                                                checked={form.data.remove_images.includes(image.id)}
+                                                onChange={(e) => toggleRemove(image.id, e.target.checked)}
+                                            />
+                                            {t('Delete')}
+                                        </label>
+                                    </li>
+                                ))}
+                            </ul>
+                        </fieldset>
+                    )}
 
-                        <ImagesField id="message_images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
+                    <ImagesField id="message_images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
-                        <FormActions>
-                            <Button onClick={() => submit('send')} loading={active === 'send'} disabled={form.processing || incomplete}>
-                                {t('Send')}
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                onClick={() => submit('draft')}
-                                loading={active === 'draft'}
-                                disabled={form.processing || incomplete}
-                            >
-                                {t('Save as draft')}
-                            </Button>
-                        </FormActions>
-                    </form>
-                </Panel>
-            </main>
+                    <FormActions>
+                        <Button onClick={() => submit('send')} loading={active === 'send'} disabled={form.processing || incomplete}>
+                            {t('Send')}
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => submit('draft')}
+                            loading={active === 'draft'}
+                            disabled={form.processing || incomplete}
+                        >
+                            {t('Save as draft')}
+                        </Button>
+                    </FormActions>
+                </form>
+            </Panel>
         </>
     );
 }

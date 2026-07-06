@@ -30,7 +30,7 @@ export default function MemberShow() {
     const { owner, fields, isSelf, age, friendStatus } = profile;
 
     return (
-        <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+        <>
             <Head title={owner.name} />
 
             <Panel bodyClassName="space-y-4">
@@ -124,6 +124,6 @@ export default function MemberShow() {
                     </dl>
                 </Panel>
             )}
-        </main>
+        </>
     );
 }
