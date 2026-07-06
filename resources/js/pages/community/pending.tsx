@@ -31,14 +31,6 @@ export default function CommunityPending() {
     return (
         <>
             <Head title={t('Pending members')} />
-            <h1 className="break-words text-xl font-semibold text-foreground">
-                <Link href={`/m/community/${community.id}`} className="hover:underline">
-                    {community.name}
-                </Link>
-                {' — '}
-                {t('Pending members')}
-            </h1>
-
             {applicants.data.length === 0 ? (
                 <Panel>
                     <p className="text-sm text-muted-foreground">{t('No pending requests.')}</p>
