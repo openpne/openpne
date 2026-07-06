@@ -122,7 +122,11 @@ export default function CommunityEventEdit() {
 
                     <ImagesField id="images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
-                    <Button type="submit" loading={form.processing}>
+                    <Button
+                        type="submit"
+                        loading={form.processing}
+                        disabled={form.data.name.trim() === '' || form.data.body.trim() === '' || form.data.area.trim() === ''}
+                    >
                         {isEdit ? t('Save') : t('Post')}
                     </Button>
                 </form>
