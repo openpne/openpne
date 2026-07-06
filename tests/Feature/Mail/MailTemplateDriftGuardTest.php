@@ -1,0 +1,93 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Mail;
+
+use App\Mail\Template\MailTemplate;
+use App\Mail\Template\MailTemplateRenderer;
+use App\Mail\Template\MailTemplateService;
+use App\Models\Member;
+use App\Models\Message;
+use App\Notifications\Auth\RegistrationLinkNotification;
+use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\Friend\FriendRequestAcceptedNotification;
+use App\Notifications\Friend\FriendRequestedNotification;
+use App\Notifications\Member\EmailChangeConfirmationNotification;
+use App\Notifications\Member\EmailChangeNoticeNotification;
+use App\Notifications\Message\MessageReceivedNotification;
+use App\Support\SnsSettingKey;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Notifications\Messages\MailMessage;
+use Tests\TestCase;
+
+/**
+ * Drift guard for the mail-template registry. Production renders with strict_variables off (an absent
+ * variable renders empty, matching OpenPNE 3's lenient templates), so a body/subject referencing an
+ * undeclared variable — or a notification that fails to pass one — fails silently. Here everything is
+ * rendered through a STRICT renderer, so such a mismatch throws.
+ *
+ * Caveat: strict rendering only exercises the paths the sample context reaches — a variable behind a
+ * false `{% if %}`, an empty `{% for %}`, or absorbed by `|default` is not checked. This guards the
+ * current built-in defaults; a default that later gains such a construct needs an added case or token
+ * extraction to stay covered.
+ */
+class MailTemplateDriftGuardTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setSnsSetting(SnsSettingKey::SnsName, 'My Community');
+        $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
+        // Every render below goes through this strict service so an undeclared/undelivered variable throws.
+        $this->app->instance(MailTemplateService::class, new MailTemplateService(new MailTemplateRenderer(strictVariables: true)));
+    }
+
+    public function test_default_templates_reference_only_declared_variables(): void
+    {
+        $service = app(MailTemplateService::class);
+
+        $rendered = 0;
+        foreach (MailTemplate::cases() as $template) {
+            foreach (['en', 'ja'] as $locale) {
+                // representativeContext() is the declared variable set (plus the globals the service adds);
+                // a default subject/body touching anything outside it throws under strict rendering.
+                $service->render($template, $locale, $template->representativeContext());
+                $rendered++;
+            }
+        }
+
+        // Reached only if nothing above threw.
+        $this->assertSame(count(MailTemplate::cases()) * 2, $rendered);
+    }
+
+    public function test_every_sendable_notification_delivers_its_body_variables(): void
+    {
+        $sender = Member::factory()->create(['name' => 'Sender']);
+        $recipient = Member::factory()->create();
+        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+
+        // One notification per sendable template; RegistrationLink carries an inviter name + message so the
+        // conditional block that uses them is actually exercised.
+        $notifications = [
+            [new RegistrationLinkNotification('raw-token', 'en', inviterName: 'Inviter', message: 'Welcome'), new AnonymousNotifiable],
+            [new ResetPasswordNotification('the-token', 'en'), $recipient],
+            [new EmailChangeConfirmationNotification('the-token', (int) $recipient->getKey(), 'en'), new AnonymousNotifiable],
+            [new EmailChangeNoticeNotification('new@example.test', 'en'), $recipient],
+            [new FriendRequestedNotification($sender), $recipient],
+            [new FriendRequestAcceptedNotification($sender), $recipient],
+            [new MessageReceivedNotification($sender, $message), $recipient],
+        ];
+
+        $this->assertCount(count(MailTemplate::sendable()), $notifications, 'one guarded notification per sendable template');
+
+        foreach ($notifications as [$notification, $notifiable]) {
+            // Throws under strict rendering if the notification's real context omits a variable its default
+            // body/subject uses.
+            $this->assertInstanceOf(MailMessage::class, $notification->toMail($notifiable));
+        }
+    }
+}
