@@ -27,7 +27,7 @@ interface ShowProps extends PageProps {
 export default function CommunityEventShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { community, event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull } = usePage<ShowProps>().props;
+    const { event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull } = usePage<ShowProps>().props;
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -67,12 +67,6 @@ export default function CommunityEventShow() {
     return (
         <>
             <Head title={event.name} />
-
-            <p className="text-sm">
-                <Link href={`/m/community/${community.id}/event`} className="text-muted-foreground hover:text-foreground hover:underline">
-                    {community.name} &mdash; {t('Events')}
-                </Link>
-            </p>
 
             <h1 className="break-words text-xl font-semibold">{event.name}</h1>
 

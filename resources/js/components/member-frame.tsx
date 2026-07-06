@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import { ContextHeader } from '@/components/context-header';
 import { FlashMessage } from '@/components/flash-message';
 import { PageHeading } from '@/components/page-heading';
 import { PageTabs } from '@/components/page-tabs';
@@ -39,6 +40,14 @@ export function MemberFrame({ chrome: override, children }: { chrome?: Partial<C
                 chrome.foreground && 'text-foreground',
             )}
         >
+            {chrome.context && (
+                <ContextHeader
+                    items={chrome.context.map((item) => ({
+                        href: item.href,
+                        label: typeof item.label === 'string' ? item.label : label(item.label),
+                    }))}
+                />
+            )}
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
