@@ -125,10 +125,18 @@ hook is derived from the route parity, not held in the controller — see
 
 **Modern** owns the new product experience, mobile UX, Inertia props, and React
 components. It does not have to cover every Classic feature at once; each carries
-a Modern status (above). Modern pages render inside a shared app shell — an Inertia
-persistent layout ([`resources/js/app.tsx`](../../resources/js/app.tsx)) that adds
-the sidebar / top-bar navigation. The shell is nav chrome only, so **each Modern
-page owns its own `<main>` and flash**; a page opts out by exporting its own `layout`.
+a Modern status (above). Every non-auth Modern page renders inside the default
+Inertia layout ([`MemberLayout`](../../resources/js/components/member-layout.tsx),
+wired via `createInertiaApp`'s `layout` option in
+[`app.tsx`](../../resources/js/app.tsx)): nav chrome plus the page frame
+([`MemberFrame`](../../resources/js/components/member-frame.tsx)), which owns the
+single `<main>`, the hub header (h1 = nav label, tabs, primary action), and central
+flash. Per-section defaults live in the chrome registry
+([`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts)) — the same
+source the nav reads, so nav labels and hub headings cannot drift. **A page renders
+only its content** (no own `<main>`, heading only outside the registry's hub modes,
+no FlashMessage — `MemberFrameGuardTest` enforces this); deviations are registry
+entries, or `Page.layout = (props) => ({ chrome: {…} })` for one-offs.
 Modern pages build on the shared primitives in
 [`components/ui/`](../../resources/js/components/ui) (Button, Input, Field, …) and the
 semantic design tokens in [`app.css`](../../resources/css/app.css), not bare controls or

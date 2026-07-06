@@ -1,6 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -13,7 +12,7 @@ interface LinkProps extends PageProps {
 
 export default function FriendLink() {
     const t = useT();
-    const { target, flash } = usePage<LinkProps>().props;
+    const { target } = usePage<LinkProps>().props;
     const [submitting, setSubmitting] = useState(false);
 
     function submit() {
@@ -30,24 +29,20 @@ export default function FriendLink() {
     return (
         <>
             <Head title={title} />
-            <main className="mx-auto max-w-md space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
 
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
+            <Panel bodyClassName="space-y-4">
+                <p className="text-foreground">{t('Send a %friend% request to :name?', { name: target.name })}</p>
 
-                <Panel bodyClassName="space-y-4">
-                    <p className="text-foreground">{t('Send a %friend% request to :name?', { name: target.name })}</p>
-
-                    <div className="flex items-center gap-3">
-                        <Button type="button" onClick={submit} loading={submitting}>
-                            {t('Send request')}
-                        </Button>
-                        <Link href="/m/friend/list" className="text-sm text-link hover:underline">
-                            {t('Cancel')}
-                        </Link>
-                    </div>
-                </Panel>
-            </main>
+                <div className="flex items-center gap-3">
+                    <Button type="button" onClick={submit} loading={submitting}>
+                        {t('Send request')}
+                    </Button>
+                    <Link href="/m/friend/list" className="text-sm text-link hover:underline">
+                        {t('Cancel')}
+                    </Link>
+                </div>
+            </Panel>
         </>
     );
 }

@@ -1,6 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
-import { FlashMessage } from '@/components/flash-message';
 import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
 import { ActionLink } from '@/components/ui/action-link';
@@ -20,65 +19,60 @@ interface ListProps extends PageProps {
 
 export default function DiaryList() {
     const t = useT();
-    const { owner, isOwner, diaries, period, flash } = usePage<ListProps>().props;
+    const { owner, isOwner, diaries, period } = usePage<ListProps>().props;
     const title = isOwner ? t('%Diary%') : t(":name's %diary%", { name: owner.name });
 
     return (
         <>
             <Head title={title} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <PageHeading
-                    title={
-                        <>
-                            {title}
-                            {period && (
-                                <span className="ml-2 text-base font-normal text-muted-foreground">{period}</span>
-                            )}
-                        </>
-                    }
-                    action={
-                        isOwner && (
-                            <ActionLink href="/m/diary/new">
-                                <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
-                                {t('Write a %diary%')}
-                            </ActionLink>
-                        )
-                    }
-                />
-
-                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
-
-                {diaries.data.length === 0 ? (
-                    <Panel>
-                        <p className="text-sm text-muted-foreground">{t('No %diary% entries to show.')}</p>
-                    </Panel>
-                ) : (
+            <PageHeading
+                title={
                     <>
-                        <Panel flush>
-                            <List>
-                                {diaries.data.map((entry) => (
-                                    <DiaryRow
-                                        key={entry.id}
-                                        diary={entry}
-                                        actions={
-                                            isOwner && (
-                                                <>
-                                                    <Link href={`/m/diary/edit/${entry.id}`} className="text-muted-foreground hover:text-foreground">
-                                                        {t('Edit')}
-                                                    </Link>
-                                                    <DangerLink href={`/m/diary/deleteConfirm/${entry.id}`}>{t('Delete')}</DangerLink>
-                                                </>
-                                            )
-                                        }
-                                    />
-                                ))}
-                            </List>
-                        </Panel>
-                        <Pagination meta={diaries.meta} />
+                        {title}
+                        {period && (
+                            <span className="ml-2 text-base font-normal text-muted-foreground">{period}</span>
+                        )}
                     </>
-                )}
-            </main>
+                }
+                action={
+                    isOwner && (
+                        <ActionLink href="/m/diary/new">
+                            <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
+                            {t('Write a %diary%')}
+                        </ActionLink>
+                    )
+                }
+            />
+
+            {diaries.data.length === 0 ? (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('No %diary% entries to show.')}</p>
+                </Panel>
+            ) : (
+                <>
+                    <Panel flush>
+                        <List>
+                            {diaries.data.map((entry) => (
+                                <DiaryRow
+                                    key={entry.id}
+                                    diary={entry}
+                                    actions={
+                                        isOwner && (
+                                            <>
+                                                <Link href={`/m/diary/edit/${entry.id}`} className="text-muted-foreground hover:text-foreground">
+                                                    {t('Edit')}
+                                                </Link>
+                                                <DangerLink href={`/m/diary/deleteConfirm/${entry.id}`}>{t('Delete')}</DangerLink>
+                                            </>
+                                        )
+                                    }
+                                />
+                            ))}
+                        </List>
+                    </Panel>
+                    <Pagination meta={diaries.meta} />
+                </>
+            )}
         </>
     );
 }

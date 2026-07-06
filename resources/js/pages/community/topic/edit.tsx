@@ -45,57 +45,55 @@ export default function CommunityTopicEdit() {
     return (
         <>
             <Head title={title} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <p className="text-sm">
-                    <Link href={backHref} className="text-muted-foreground hover:text-foreground hover:underline">
-                        {community.name}
-                    </Link>
-                </p>
-                <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
+            <p className="text-sm">
+                <Link href={backHref} className="text-muted-foreground hover:text-foreground hover:underline">
+                    {community.name}
+                </Link>
+            </p>
+            <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
 
-                <Panel>
-                    <form onSubmit={submit} className="space-y-4">
-                        <Field label={t('Title')} htmlFor="name" error={form.errors.name}>
-                            <Input id="name" type="text" required value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} />
-                        </Field>
+            <Panel>
+                <form onSubmit={submit} className="space-y-4">
+                    <Field label={t('Title')} htmlFor="name" error={form.errors.name}>
+                        <Input id="name" type="text" required value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} />
+                    </Field>
 
-                        <Field label={t('Body')} htmlFor="body" error={form.errors.body}>
-                            <Textarea id="body" required rows={10} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
-                        </Field>
+                    <Field label={t('Body')} htmlFor="body" error={form.errors.body}>
+                        <Textarea id="body" required rows={10} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
+                    </Field>
 
-                        {isEdit && topic.images.length > 0 && (
-                            <fieldset className="space-y-2">
-                                <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
-                                <ul className="flex flex-wrap gap-3">
-                                    {topic.images.map((image, i) => (
-                                        <li key={image.id} className="space-y-1 text-center">
-                                            <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
-                                            <label className="flex items-center justify-center gap-1 text-sm text-foreground">
-                                                <Checkbox
-                                                    aria-label={`${t('Delete')} ${t('Image')} ${i + 1}`}
-                                                    checked={form.data.remove_images.includes(image.id)}
-                                                    onChange={(e) => toggleRemove(image.id, e.target.checked)}
-                                                />
-                                                {t('Delete')}
-                                            </label>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </fieldset>
-                        )}
+                    {isEdit && topic.images.length > 0 && (
+                        <fieldset className="space-y-2">
+                            <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
+                            <ul className="flex flex-wrap gap-3">
+                                {topic.images.map((image, i) => (
+                                    <li key={image.id} className="space-y-1 text-center">
+                                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
+                                        <label className="flex items-center justify-center gap-1 text-sm text-foreground">
+                                            <Checkbox
+                                                aria-label={`${t('Delete')} ${t('Image')} ${i + 1}`}
+                                                checked={form.data.remove_images.includes(image.id)}
+                                                onChange={(e) => toggleRemove(image.id, e.target.checked)}
+                                            />
+                                            {t('Delete')}
+                                        </label>
+                                    </li>
+                                ))}
+                            </ul>
+                        </fieldset>
+                    )}
 
-                        <ImagesField id="images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
+                    <ImagesField id="images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
-                        <Button
-                            type="submit"
-                            loading={form.processing}
-                            disabled={form.data.name.trim() === '' || form.data.body.trim() === ''}
-                        >
-                            {isEdit ? t('Save') : t('Post')}
-                        </Button>
-                    </form>
-                </Panel>
-            </main>
+                    <Button
+                        type="submit"
+                        loading={form.processing}
+                        disabled={form.data.name.trim() === '' || form.data.body.trim() === ''}
+                    >
+                        {isEdit ? t('Save') : t('Post')}
+                    </Button>
+                </form>
+            </Panel>
         </>
     );
 }

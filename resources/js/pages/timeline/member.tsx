@@ -1,9 +1,5 @@
 import { Head, usePage } from '@inertiajs/react';
-import { Pencil } from 'lucide-react';
-import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
-import { ActionLink } from '@/components/ui/action-link';
-import { FlashMessage } from '@/components/flash-message';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -19,45 +15,28 @@ interface MemberProps extends PageProps {
 
 export default function TimelineMember() {
     const t = useT();
-    const { owner, isOwner, viewerId, posts, flash } = usePage<MemberProps>().props;
+    const { owner, isOwner, viewerId, posts } = usePage<MemberProps>().props;
     const title = isOwner ? t('%Activity%') : t(":name's %activity%", { name: owner.name });
 
     return (
         <>
             <Head title={title} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <PageHeading
-                    title={title}
-                    action={
-                        isOwner && (
-                            <ActionLink href="/m/timeline/new">
-                                <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
-                                {t('%Post_activity%')}
-                            </ActionLink>
-                        )
-                    }
-                />
-
-                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
-
-                {posts.data.length === 0 ? (
-                    <Panel>
-                        <p className="text-sm text-muted-foreground">{t('No %activity% posts to show.')}</p>
+            {posts.data.length === 0 ? (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('No %activity% posts to show.')}</p>
+                </Panel>
+            ) : (
+                <>
+                    <Panel flush>
+                        <List>
+                            {posts.data.map((post) => (
+                                <TimelinePostCard key={post.id} post={post} viewerId={viewerId} />
+                            ))}
+                        </List>
                     </Panel>
-                ) : (
-                    <>
-                        <Panel flush>
-                            <List>
-                                {posts.data.map((post) => (
-                                    <TimelinePostCard key={post.id} post={post} viewerId={viewerId} />
-                                ))}
-                            </List>
-                        </Panel>
-                        <Pagination meta={posts.meta} />
-                    </>
-                )}
-            </main>
+                    <Pagination meta={posts.meta} />
+                </>
+            )}
         </>
     );
 }

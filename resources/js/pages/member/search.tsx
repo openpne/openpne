@@ -59,113 +59,109 @@ export default function MemberSearch() {
     return (
         <>
             <Head title={t('Member search')} />
-            <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{t('Member search')}</h1>
+            <form onSubmit={submit} className="space-y-3">
+                {/* Card-less pill: the common case is a quick name lookup, so the search stays
+                    subordinate to the results list below. The magnifier submits the whole form. */}
+                <div className="relative">
+                    <label htmlFor="search_name" className="sr-only">
+                        {t('%nickname%')}
+                    </label>
+                    <Input
+                        id="search_name"
+                        type="search"
+                        enterKeyHint="search"
+                        placeholder={t('Search by %nickname%')}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="rounded-full pr-11 pl-5"
+                    />
+                    <SearchSubmitButton loading={searching} />
+                </div>
 
-                <form onSubmit={submit} className="space-y-3">
-                    {/* Card-less pill: the common case is a quick name lookup, so the search stays
-                        subordinate to the results list below. The magnifier submits the whole form. */}
-                    <div className="relative">
-                        <label htmlFor="search_name" className="sr-only">
-                            {t('%nickname%')}
-                        </label>
-                        <Input
-                            id="search_name"
-                            type="search"
-                            enterKeyHint="search"
-                            placeholder={t('Search by %nickname%')}
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="rounded-full pr-11 pl-5"
-                        />
-                        <SearchSubmitButton loading={searching} />
-                    </div>
+                <button
+                    type="button"
+                    onClick={() => setAdvancedOpen((o) => !o)}
+                    aria-expanded={advancedOpen}
+                    className="flex items-center gap-1 text-sm text-link hover:underline"
+                >
+                    <ChevronRight className={cn('size-4 transition-transform', advancedOpen && 'rotate-90')} aria-hidden />
+                    {t('Advanced search')}
+                </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setAdvancedOpen((o) => !o)}
-                        aria-expanded={advancedOpen}
-                        className="flex items-center gap-1 text-sm text-link hover:underline"
-                    >
-                        <ChevronRight className={cn('size-4 transition-transform', advancedOpen && 'rotate-90')} aria-hidden />
-                        {t('Advanced search')}
-                    </button>
+                {advancedOpen && (
+                    <Panel bodyClassName="space-y-4">
+                        {profiles.map((field) => (
+                            <SearchField
+                                key={field.id}
+                                field={field}
+                                value={profile[field.id]}
+                                range={date[field.id]}
+                                monthDay={monthday[field.id]}
+                                onValue={(v) => setField(field.id, v)}
+                                onRange={(k, v) => setRange(field.id, k, v)}
+                                onMonthDay={(k, v) => setMonthDay(field.id, k, v)}
+                            />
+                        ))}
 
-                    {advancedOpen && (
-                        <Panel bodyClassName="space-y-4">
-                            {profiles.map((field) => (
-                                <SearchField
-                                    key={field.id}
-                                    field={field}
-                                    value={profile[field.id]}
-                                    range={date[field.id]}
-                                    monthDay={monthday[field.id]}
-                                    onValue={(v) => setField(field.id, v)}
-                                    onRange={(k, v) => setRange(field.id, k, v)}
-                                    onMonthDay={(k, v) => setMonthDay(field.id, k, v)}
+                        {/* Derived age, gated by AgeVisibility (separate from the birthday field). */}
+                        <fieldset className="space-y-1.5">
+                            <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    className="w-24"
+                                    aria-label={`${t('Age')} ${t('Start')}`}
+                                    value={age.min ?? ''}
+                                    onChange={(e) => setAge((a) => ({ ...a, min: e.target.value }))}
                                 />
-                            ))}
+                                <span className="text-muted-foreground">–</span>
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    className="w-24"
+                                    aria-label={`${t('Age')} ${t('End')}`}
+                                    value={age.max ?? ''}
+                                    onChange={(e) => setAge((a) => ({ ...a, max: e.target.value }))}
+                                />
+                            </div>
+                        </fieldset>
 
-                            {/* Derived age, gated by AgeVisibility (separate from the birthday field). */}
-                            <fieldset className="space-y-1.5">
-                                <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        className="w-24"
-                                        aria-label={`${t('Age')} ${t('Start')}`}
-                                        value={age.min ?? ''}
-                                        onChange={(e) => setAge((a) => ({ ...a, min: e.target.value }))}
-                                    />
-                                    <span className="text-muted-foreground">–</span>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        className="w-24"
-                                        aria-label={`${t('Age')} ${t('End')}`}
-                                        value={age.max ?? ''}
-                                        onChange={(e) => setAge((a) => ({ ...a, max: e.target.value }))}
-                                    />
-                                </div>
-                            </fieldset>
-
-                            <Button type="submit" loading={searching}>{t('Search')}</Button>
-                        </Panel>
-                    )}
-                </form>
-
-                <section className="space-y-3">
-                    <Panel flush title={t('Search Results')}>
-                        {members.data.length === 0 ? (
-                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No members found.')}</p>
-                        ) : (
-                            <List>
-                                {members.data.map((member) => (
-                                    <ListRow
-                                        key={member.id}
-                                        href={`/m/member/${member.id}`}
-                                        chevron
-                                        // Top-align only when a self-introduction adds a second line; single-line rows stay centered.
-                                        className={member.selfIntroduction ? 'items-start' : undefined}
-                                    >
-                                        <Avatar id={member.id} name={member.name} src={member.imageUrl} size="md" decorative />
-                                        <div className="min-w-0 flex-1">
-                                            <span className="block truncate text-foreground">{member.name}</span>
-                                            {member.selfIntroduction && (
-                                                <span className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
-                                                    {member.selfIntroduction}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </ListRow>
-                                ))}
-                            </List>
-                        )}
+                        <Button type="submit" loading={searching}>{t('Search')}</Button>
                     </Panel>
-                    {members.data.length > 0 && <Pagination meta={members.meta} />}
-                </section>
-            </main>
+                )}
+            </form>
+
+            <section className="space-y-3">
+                <Panel flush title={t('Search Results')}>
+                    {members.data.length === 0 ? (
+                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No members found.')}</p>
+                    ) : (
+                        <List>
+                            {members.data.map((member) => (
+                                <ListRow
+                                    key={member.id}
+                                    href={`/m/member/${member.id}`}
+                                    chevron
+                                    // Top-align only when a self-introduction adds a second line; single-line rows stay centered.
+                                    className={member.selfIntroduction ? 'items-start' : undefined}
+                                >
+                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} size="md" decorative />
+                                    <div className="min-w-0 flex-1">
+                                        <span className="block truncate text-foreground">{member.name}</span>
+                                        {member.selfIntroduction && (
+                                            <span className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                                                {member.selfIntroduction}
+                                            </span>
+                                        )}
+                                    </div>
+                                </ListRow>
+                            ))}
+                        </List>
+                    )}
+                </Panel>
+                {members.data.length > 0 && <Pagination meta={members.meta} />}
+            </section>
         </>
     );
 }

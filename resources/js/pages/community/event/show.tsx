@@ -3,7 +3,6 @@ import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
-import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
@@ -28,7 +27,7 @@ interface ShowProps extends PageProps {
 export default function CommunityEventShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { community, event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull, flash } = usePage<ShowProps>().props;
+    const { community, event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull } = usePage<ShowProps>().props;
 
     // Mirror the OpenPNE 3 pager URL: order dropped when default (desc), page dropped when 1.
     const threadLink = (page: number, ascending: boolean) => {
@@ -68,157 +67,153 @@ export default function CommunityEventShow() {
     return (
         <>
             <Head title={event.name} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8 text-foreground">
-                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
 
-                <p className="text-sm">
-                    <Link href={`/m/community/${community.id}/event`} className="text-muted-foreground hover:text-foreground hover:underline">
-                        {community.name} &mdash; {t('Events')}
-                    </Link>
-                </p>
+            <p className="text-sm">
+                <Link href={`/m/community/${community.id}/event`} className="text-muted-foreground hover:text-foreground hover:underline">
+                    {community.name} &mdash; {t('Events')}
+                </Link>
+            </p>
 
-                <h1 className="break-words text-xl font-semibold">{event.name}</h1>
+            <h1 className="break-words text-xl font-semibold">{event.name}</h1>
 
-                <Panel bodyClassName="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" decorative />
-                        {event.author ? (
-                            <Link href={`/m/member/${event.author.id}`} className="text-link hover:underline">
-                                {event.author.name}
+            <Panel bodyClassName="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" decorative />
+                    {event.author ? (
+                        <Link href={`/m/member/${event.author.id}`} className="text-link hover:underline">
+                            {event.author.name}
+                        </Link>
+                    ) : (
+                        <span>{t('Withdrawn member')}</span>
+                    )}
+                    <span>&mdash; {formatDateTime(event.createdAt)}</span>
+                </div>
+
+                <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+                    <dt className="text-muted-foreground">{t('Open date')}</dt>
+                    <dd>
+                        {formatDate(event.openDate)}
+                        {event.openDateComment && <span className="text-muted-foreground"> ({event.openDateComment})</span>}
+                    </dd>
+                    {event.area && (
+                        <>
+                            <dt className="text-muted-foreground">{t('Area')}</dt>
+                            <dd>{event.area}</dd>
+                        </>
+                    )}
+                    {event.applicationDeadline && (
+                        <>
+                            <dt className="text-muted-foreground">{t('Application deadline')}</dt>
+                            <dd>{formatDate(event.applicationDeadline)}</dd>
+                        </>
+                    )}
+                    <dt className="text-muted-foreground">{t('Count of Member')}</dt>
+                    <dd>
+                        {event.capacity != null ? `${event.participantCount} / ${event.capacity}` : event.participantCount}
+                        {' '}
+                        <Link href={`/m/community/event/${event.id}/members`} className="text-link hover:underline">
+                            {t('See Member List')}
+                        </Link>
+                    </dd>
+                </dl>
+
+                <div className="whitespace-pre-wrap break-words">{event.body}</div>
+                <ImageGrid images={event.images} size="size-24" className="mt-2" />
+
+                {canEdit && (
+                    <div className="flex gap-4 text-sm">
+                        <Link href={`/m/community/event/${event.id}/edit`} className="text-link hover:underline">
+                            {t('Edit')}
+                        </Link>
+                        <button type="button" onClick={deleteEvent} className={dangerActionClass}>
+                            {t('Delete')}
+                        </button>
+                    </div>
+                )}
+            </Panel>
+
+            <Panel title={t(':count comments', { count: thread.total })} flush>
+                {thread.lastPage > 1 && (
+                    <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-2.5 text-sm">
+                        {thread.hasOlder && thread.olderPage !== null ? (
+                            <Link href={threadLink(thread.olderPage, thread.ascending)} preserveScroll className="text-link hover:underline">
+                                {t('Older')}
                             </Link>
                         ) : (
-                            <span>{t('Withdrawn member')}</span>
+                            <span />
                         )}
-                        <span>&mdash; {formatDateTime(event.createdAt)}</span>
+                        <Link href={threadLink(1, !thread.ascending)} preserveScroll className="text-link hover:underline">
+                            {thread.ascending ? t('View Latest') : t('View Oldest First')}
+                        </Link>
+                        {thread.hasNewer && thread.newerPage !== null ? (
+                            <Link href={threadLink(thread.newerPage, thread.ascending)} preserveScroll className="text-link hover:underline">
+                                {t('Newer')}
+                            </Link>
+                        ) : (
+                            <span />
+                        )}
                     </div>
-
-                    <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
-                        <dt className="text-muted-foreground">{t('Open date')}</dt>
-                        <dd>
-                            {formatDate(event.openDate)}
-                            {event.openDateComment && <span className="text-muted-foreground"> ({event.openDateComment})</span>}
-                        </dd>
-                        {event.area && (
-                            <>
-                                <dt className="text-muted-foreground">{t('Area')}</dt>
-                                <dd>{event.area}</dd>
-                            </>
-                        )}
-                        {event.applicationDeadline && (
-                            <>
-                                <dt className="text-muted-foreground">{t('Application deadline')}</dt>
-                                <dd>{formatDate(event.applicationDeadline)}</dd>
-                            </>
-                        )}
-                        <dt className="text-muted-foreground">{t('Count of Member')}</dt>
-                        <dd>
-                            {event.capacity != null ? `${event.participantCount} / ${event.capacity}` : event.participantCount}
-                            {' '}
-                            <Link href={`/m/community/event/${event.id}/members`} className="text-link hover:underline">
-                                {t('See Member List')}
-                            </Link>
-                        </dd>
-                    </dl>
-
-                    <div className="whitespace-pre-wrap break-words">{event.body}</div>
-                    <ImageGrid images={event.images} size="size-24" className="mt-2" />
-
-                    {canEdit && (
-                        <div className="flex gap-4 text-sm">
-                            <Link href={`/m/community/event/${event.id}/edit`} className="text-link hover:underline">
-                                {t('Edit')}
-                            </Link>
-                            <button type="button" onClick={deleteEvent} className={dangerActionClass}>
-                                {t('Delete')}
-                            </button>
-                        </div>
-                    )}
-                </Panel>
-
-                <Panel title={t(':count comments', { count: thread.total })} flush>
-                    {thread.lastPage > 1 && (
-                        <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-2.5 text-sm">
-                            {thread.hasOlder && thread.olderPage !== null ? (
-                                <Link href={threadLink(thread.olderPage, thread.ascending)} preserveScroll className="text-link hover:underline">
-                                    {t('Older')}
-                                </Link>
-                            ) : (
-                                <span />
-                            )}
-                            <Link href={threadLink(1, !thread.ascending)} preserveScroll className="text-link hover:underline">
-                                {thread.ascending ? t('View Latest') : t('View Oldest First')}
-                            </Link>
-                            {thread.hasNewer && thread.newerPage !== null ? (
-                                <Link href={threadLink(thread.newerPage, thread.ascending)} preserveScroll className="text-link hover:underline">
-                                    {t('Newer')}
-                                </Link>
-                            ) : (
-                                <span />
-                            )}
-                        </div>
-                    )}
-
-                    {thread.comments.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No comments yet.')}</p>
-                    ) : (
-                        <List>
-                            {thread.comments.map((comment) => (
-                                <li key={comment.id} className="px-5 py-4">
-                                    <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
-                                        <span className="font-medium">#{comment.number}</span>
-                                        {comment.author ? (
-                                            <Link href={`/m/member/${comment.author.id}`} className="text-link hover:underline">
-                                                {comment.author.name}
-                                            </Link>
-                                        ) : (
-                                            <span>{t('Withdrawn member')}</span>
-                                        )}
-                                        <span className="ml-auto">{formatDateTime(comment.createdAt)}</span>
-                                        {comment.deletable && (
-                                            <button type="button" onClick={() => deleteComment(comment.id)} className={dangerActionClass}>
-                                                {t('Delete')}
-                                            </button>
-                                        )}
-                                    </div>
-                                    <p className="mt-1 whitespace-pre-wrap break-words">{comment.body}</p>
-                                    <ImageGrid images={comment.images} size="size-24" className="mt-2" />
-                                </li>
-                            ))}
-                        </List>
-                    )}
-                </Panel>
-
-                {canComment && (
-                    <Panel title={t('Post a new event comment')}>
-                        <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
-                            <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
-                                <Textarea id="comment_body" required rows={5} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
-                            </Field>
-                            <ImagesField id="comment_images" label={t('Images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
-
-                            {/* RSVP + comment share one form (OpenPNE 3): participate/cancel toggle the roster,
-                                comment-only skips it. A comment is required for every submit. */}
-                            <div className="flex flex-wrap items-center gap-3">
-                                {rosterOpen && isParticipant && (
-                                    <Button type="button" variant="secondary" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
-                                        {t('Cancel to join')}
-                                    </Button>
-                                )}
-                                {rosterOpen && !isParticipant && !isFull && (
-                                    <Button type="button" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
-                                        {t('Participate in this event')}
-                                    </Button>
-                                )}
-                                {rosterOpen && !isParticipant && isFull && <p className="self-center text-sm text-destructive">{t('This event is full.')}</p>}
-                                <Button type="button" variant="outline" onClick={() => submit(true)} disabled={form.processing || bodyEmpty}>
-                                    {t('Add a comment only')}
-                                </Button>
-                            </div>
-                        </form>
-                    </Panel>
                 )}
-            </main>
+
+                {thread.comments.length === 0 ? (
+                    <p className="px-5 py-4 text-sm text-muted-foreground">{t('No comments yet.')}</p>
+                ) : (
+                    <List>
+                        {thread.comments.map((comment) => (
+                            <li key={comment.id} className="px-5 py-4">
+                                <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
+                                    <span className="font-medium">#{comment.number}</span>
+                                    {comment.author ? (
+                                        <Link href={`/m/member/${comment.author.id}`} className="text-link hover:underline">
+                                            {comment.author.name}
+                                        </Link>
+                                    ) : (
+                                        <span>{t('Withdrawn member')}</span>
+                                    )}
+                                    <span className="ml-auto">{formatDateTime(comment.createdAt)}</span>
+                                    {comment.deletable && (
+                                        <button type="button" onClick={() => deleteComment(comment.id)} className={dangerActionClass}>
+                                            {t('Delete')}
+                                        </button>
+                                    )}
+                                </div>
+                                <p className="mt-1 whitespace-pre-wrap break-words">{comment.body}</p>
+                                <ImageGrid images={comment.images} size="size-24" className="mt-2" />
+                            </li>
+                        ))}
+                    </List>
+                )}
+            </Panel>
+
+            {canComment && (
+                <Panel title={t('Post a new event comment')}>
+                    <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
+                        <Field label={t('Comment')} htmlFor="comment_body" error={form.errors.body}>
+                            <Textarea id="comment_body" required rows={5} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
+                        </Field>
+                        <ImagesField id="comment_images" label={t('Images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
+
+                        {/* RSVP + comment share one form (OpenPNE 3): participate/cancel toggle the roster,
+                            comment-only skips it. A comment is required for every submit. */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            {rosterOpen && isParticipant && (
+                                <Button type="button" variant="secondary" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
+                                    {t('Cancel to join')}
+                                </Button>
+                            )}
+                            {rosterOpen && !isParticipant && !isFull && (
+                                <Button type="button" onClick={() => submit(false)} disabled={form.processing || bodyEmpty}>
+                                    {t('Participate in this event')}
+                                </Button>
+                            )}
+                            {rosterOpen && !isParticipant && isFull && <p className="self-center text-sm text-destructive">{t('This event is full.')}</p>}
+                            <Button type="button" variant="outline" onClick={() => submit(true)} disabled={form.processing || bodyEmpty}>
+                                {t('Add a comment only')}
+                            </Button>
+                        </div>
+                    </form>
+                </Panel>
+            )}
         </>
     );
 }
