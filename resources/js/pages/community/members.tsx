@@ -18,29 +18,27 @@ export default function CommunityMembers() {
     return (
         <>
             <Head title={t('Members')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">
-                    <Link href={`/m/community/${community.id}`} className="hover:underline">
-                        {community.name}
-                    </Link>
-                    {' — '}
-                    {t('Members')}
-                </h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">
+                <Link href={`/m/community/${community.id}`} className="hover:underline">
+                    {community.name}
+                </Link>
+                {' — '}
+                {t('Members')}
+            </h1>
 
-                <Panel>
-                    <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-                        {members.data.map((member) => (
-                            <li key={member.id}>
-                                <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
-                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} size="lg" decorative />
-                                    <span className="w-full truncate text-center text-sm">{member.name}</span>
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
-                </Panel>
-                <Pagination meta={members.meta} />
-            </main>
+            <Panel>
+                <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+                    {members.data.map((member) => (
+                        <li key={member.id}>
+                            <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
+                                <Avatar id={member.id} name={member.name} src={member.imageUrl} size="lg" decorative />
+                                <span className="w-full truncate text-center text-sm">{member.name}</span>
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            </Panel>
+            <Pagination meta={members.meta} />
         </>
     );
 }

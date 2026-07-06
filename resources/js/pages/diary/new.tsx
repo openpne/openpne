@@ -1,6 +1,5 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { ImagesField } from '@/components/images-field';
-import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,6 @@ import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
-import type { PageProps } from '@/types';
 
 type VisibilityOption = { value: string; label: string };
 
@@ -20,7 +18,6 @@ export default function DiaryNew({
     visibilityOptions: VisibilityOption[];
 }) {
     const t = useT();
-    const { flash } = usePage<PageProps>().props;
     const { data, setData, post, errors, processing } = useForm({
         title: '',
         body: '',
@@ -31,47 +28,43 @@ export default function DiaryNew({
     return (
         <>
             <Head title={t('Write a %diary%')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
 
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
+            <Panel>
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        // forceFormData: the upload needs a multipart body, which Inertia uses
+                        // automatically once a File is present but not for an initially-empty array.
+                        post('/m/diary/create', { forceFormData: true });
+                    }}
+                    className="space-y-4"
+                >
+                    <Field label={t('Title')} htmlFor="diary_title" error={errors.title}>
+                        <Input id="diary_title" type="text" required value={data.title} onChange={(e) => setData('title', e.target.value)} />
+                    </Field>
 
-                <Panel>
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            // forceFormData: the upload needs a multipart body, which Inertia uses
-                            // automatically once a File is present but not for an initially-empty array.
-                            post('/m/diary/create', { forceFormData: true });
-                        }}
-                        className="space-y-4"
-                    >
-                        <Field label={t('Title')} htmlFor="diary_title" error={errors.title}>
-                            <Input id="diary_title" type="text" required value={data.title} onChange={(e) => setData('title', e.target.value)} />
-                        </Field>
+                    <Field label={t('Body')} htmlFor="diary_body" error={errors.body}>
+                        <Textarea id="diary_body" required rows={10} value={data.body} onChange={(e) => setData('body', e.target.value)} />
+                    </Field>
 
-                        <Field label={t('Body')} htmlFor="diary_body" error={errors.body}>
-                            <Textarea id="diary_body" required rows={10} value={data.body} onChange={(e) => setData('body', e.target.value)} />
-                        </Field>
+                    <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
+                        <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
+                            {visibilityOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {t(option.label)}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
 
-                        <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
-                            <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
-                                {visibilityOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {t(option.label)}
-                                    </option>
-                                ))}
-                            </Select>
-                        </Field>
+                    <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 
-                        <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
-
-                        <Button type="submit" loading={processing}>
-                            {t('Post')}
-                        </Button>
-                    </form>
-                </Panel>
-            </main>
+                    <Button type="submit" loading={processing}>
+                        {t('Post')}
+                    </Button>
+                </form>
+            </Panel>
         </>
     );
 }

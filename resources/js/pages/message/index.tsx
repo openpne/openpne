@@ -2,7 +2,6 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
-import { FlashMessage } from '@/components/flash-message';
 import { Pagination } from '@/components/pagination';
 import { Checkbox } from '@/components/ui/checkbox';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -56,7 +55,7 @@ const BULK: Record<MessageBoxSlug, BulkAction[]> = {
 export default function MessageIndex() {
     const t = useT();
     const confirm = useConfirm();
-    const { box, messages, flash } = usePage<IndexProps>().props;
+    const { box, messages } = usePage<IndexProps>().props;
     const current = BOX[box];
     const showPath = SHOW_PATH[box];
 
@@ -83,94 +82,89 @@ export default function MessageIndex() {
     return (
         <>
             <Head title={t(current.label)} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
 
-                <h1 className="break-words text-xl font-semibold text-foreground">{t(current.label)}</h1>
+            <nav className="flex flex-wrap gap-4 border-b border-border text-sm" aria-label={t('Message boxes')}>
+                {ORDER.map((slug) => (
+                    <Link
+                        key={slug}
+                        href={BOX[slug].path}
+                        aria-current={slug === box ? 'page' : undefined}
+                        className={
+                            slug === box
+                                ? 'border-b-2 border-primary pb-2 font-medium text-foreground'
+                                : 'pb-2 text-muted-foreground hover:text-foreground hover:underline'
+                        }
+                    >
+                        {t(BOX[slug].label)}
+                    </Link>
+                ))}
+            </nav>
 
-                <nav className="flex flex-wrap gap-4 border-b border-border text-sm" aria-label={t('Message boxes')}>
-                    {ORDER.map((slug) => (
-                        <Link
-                            key={slug}
-                            href={BOX[slug].path}
-                            aria-current={slug === box ? 'page' : undefined}
-                            className={
-                                slug === box
-                                    ? 'border-b-2 border-primary pb-2 font-medium text-foreground'
-                                    : 'pb-2 text-muted-foreground hover:text-foreground hover:underline'
-                            }
-                        >
-                            {t(BOX[slug].label)}
-                        </Link>
-                    ))}
-                </nav>
-
-                {messages.data.length === 0 ? (
-                    <Panel>
-                        <p className="text-sm text-muted-foreground">{t('There are no messages')}</p>
-                    </Panel>
-                ) : (
-                    <>
-                        <Panel flush>
-                            <div className="flex flex-wrap items-center gap-4 border-b border-border px-5 py-3 text-sm">
-                                <label className="flex items-center gap-2 text-foreground">
-                                    <Checkbox checked={allSelected} onChange={toggleAll} />
-                                    {t('Select All')}
-                                </label>
-                                {selected.length > 0 && <span className="text-muted-foreground">{t(':count selected', { count: selected.length })}</span>}
-                                <div className="ml-auto flex gap-3">
-                                    {BULK[box].map((a) => (
-                                        <button
-                                            key={a.action}
-                                            type="button"
-                                            onClick={() => runBulk(a)}
-                                            disabled={selected.length === 0}
-                                            className={`rounded-md outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 ${a.danger ? 'text-destructive' : 'text-link'}`}
-                                        >
-                                            {t(a.label)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <List>
-                                {messages.data.map((m) => (
-                                    <ListRow key={m.id} className="items-start">
-                                        <Checkbox
-                                            checked={selected.includes(m.id)}
-                                            onChange={() => toggle(m.id)}
-                                            aria-label={m.subject || t('(No subject)')}
-                                            className="mt-1"
-                                        />
-                                        <Avatar
-                                            id={m.counterparty?.id ?? 0}
-                                            name={m.counterparty?.name ?? ''}
-                                            src={m.counterparty?.imageUrl ?? null}
-                                            size="sm"
-                                            decorative
-                                        />
-                                        <div className="min-w-0 flex-1">
-                                            <p className={m.unread ? 'truncate font-semibold text-foreground' : 'truncate text-foreground'}>
-                                                <Link href={showPath(m.id)} className="hover:underline">
-                                                    {m.subject || t('(No subject)')}
-                                                </Link>
-                                            </p>
-                                            <p className="truncate text-xs text-muted-foreground">
-                                                {m.counterparty?.name ?? t('Withdrawn member')} &mdash;{' '}
-                                                {formatDateTime(m.date)}
-                                            </p>
-                                        </div>
-                                        {m.unread && (
-                                            <span role="img" aria-label={t('Unread')} className="mt-1 size-2 shrink-0 rounded-full bg-primary" />
-                                        )}
-                                    </ListRow>
+            {messages.data.length === 0 ? (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('There are no messages')}</p>
+                </Panel>
+            ) : (
+                <>
+                    <Panel flush>
+                        <div className="flex flex-wrap items-center gap-4 border-b border-border px-5 py-3 text-sm">
+                            <label className="flex items-center gap-2 text-foreground">
+                                <Checkbox checked={allSelected} onChange={toggleAll} />
+                                {t('Select All')}
+                            </label>
+                            {selected.length > 0 && <span className="text-muted-foreground">{t(':count selected', { count: selected.length })}</span>}
+                            <div className="ml-auto flex gap-3">
+                                {BULK[box].map((a) => (
+                                    <button
+                                        key={a.action}
+                                        type="button"
+                                        onClick={() => runBulk(a)}
+                                        disabled={selected.length === 0}
+                                        className={`rounded-md outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 ${a.danger ? 'text-destructive' : 'text-link'}`}
+                                    >
+                                        {t(a.label)}
+                                    </button>
                                 ))}
-                            </List>
-                        </Panel>
-                        <Pagination meta={messages.meta} />
-                    </>
-                )}
-            </main>
+                            </div>
+                        </div>
+
+                        <List>
+                            {messages.data.map((m) => (
+                                <ListRow key={m.id} className="items-start">
+                                    <Checkbox
+                                        checked={selected.includes(m.id)}
+                                        onChange={() => toggle(m.id)}
+                                        aria-label={m.subject || t('(No subject)')}
+                                        className="mt-1"
+                                    />
+                                    <Avatar
+                                        id={m.counterparty?.id ?? 0}
+                                        name={m.counterparty?.name ?? ''}
+                                        src={m.counterparty?.imageUrl ?? null}
+                                        size="sm"
+                                        decorative
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                        <p className={m.unread ? 'truncate font-semibold text-foreground' : 'truncate text-foreground'}>
+                                            <Link href={showPath(m.id)} className="hover:underline">
+                                                {m.subject || t('(No subject)')}
+                                            </Link>
+                                        </p>
+                                        <p className="truncate text-xs text-muted-foreground">
+                                            {m.counterparty?.name ?? t('Withdrawn member')} &mdash;{' '}
+                                            {formatDateTime(m.date)}
+                                        </p>
+                                    </div>
+                                    {m.unread && (
+                                        <span role="img" aria-label={t('Unread')} className="mt-1 size-2 shrink-0 rounded-full bg-primary" />
+                                    )}
+                                </ListRow>
+                            ))}
+                        </List>
+                    </Panel>
+                    <Pagination meta={messages.meta} />
+                </>
+            )}
         </>
     );
 }

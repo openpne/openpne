@@ -18,37 +18,35 @@ export default function CommunityEventMembers() {
     return (
         <>
             <Head title={t('Count of Member')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">
-                    <Link href={`/m/community/event/${event.id}`} className="hover:underline">
-                        {event.name}
-                    </Link>
-                    {' — '}
-                    {t('Count of Member')}
-                </h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">
+                <Link href={`/m/community/event/${event.id}`} className="hover:underline">
+                    {event.name}
+                </Link>
+                {' — '}
+                {t('Count of Member')}
+            </h1>
 
-                {participants.data.length === 0 ? (
+            {participants.data.length === 0 ? (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('No participants yet.')}</p>
+                </Panel>
+            ) : (
+                <>
                     <Panel>
-                        <p className="text-sm text-muted-foreground">{t('No participants yet.')}</p>
+                        <ul className="flex flex-wrap gap-4">
+                            {participants.data.map((participant) => (
+                                <li key={participant.id} className="w-16">
+                                    <Link href={`/m/member/${participant.id}`} className="flex flex-col items-center gap-1">
+                                        <Avatar id={participant.id} name={participant.name} src={participant.imageUrl} size="lg" decorative />
+                                        <span className="w-full truncate text-center text-xs">{participant.name}</span>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
                     </Panel>
-                ) : (
-                    <>
-                        <Panel>
-                            <ul className="flex flex-wrap gap-4">
-                                {participants.data.map((participant) => (
-                                    <li key={participant.id} className="w-16">
-                                        <Link href={`/m/member/${participant.id}`} className="flex flex-col items-center gap-1">
-                                            <Avatar id={participant.id} name={participant.name} src={participant.imageUrl} size="lg" decorative />
-                                            <span className="w-full truncate text-center text-xs">{participant.name}</span>
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </Panel>
-                        <Pagination meta={participants.meta} />
-                    </>
-                )}
-            </main>
+                    <Pagination meta={participants.meta} />
+                </>
+            )}
         </>
     );
 }

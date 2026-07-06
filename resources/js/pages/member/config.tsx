@@ -2,7 +2,6 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/avatar';
 import { Card } from '@/components/card';
-import { FlashMessage } from '@/components/flash-message';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { DangerLink } from '@/components/ui/danger-link';
@@ -86,7 +85,7 @@ function SavedIndicator({ show }: { show: boolean }) {
 
 export default function MemberConfig() {
     const t = useT();
-    const { form, flash, auth } = usePage<ConfigProps>().props;
+    const { form, auth } = usePage<ConfigProps>().props;
 
     // One form per preference so saving one never resubmits another (mirrors the Classic surface).
     const diary = useForm({ diary_default_visibility: form.diary.value });
@@ -115,197 +114,190 @@ export default function MemberConfig() {
     return (
         <>
             <Head title={t('Settings')} />
-            <main className="mx-auto max-w-2xl space-y-8 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{t('Settings')}</h1>
+            {/* Identity leads (the survey convention): link rows into the profile-edit pages,
+                which also host the age-visibility gate that used to live on this page. */}
+            {auth.user && (
+                <SettingsGroup title={t('Profile')}>
+                    <GroupItem>
+                        <DetailRow
+                            title={t('Profile')}
+                            value={auth.user.name}
+                            action={
+                                <ActionLink href="/m/member/edit/profile" variant="outline" size="sm">
+                                    {t('Edit')}
+                                </ActionLink>
+                            }
+                        />
+                    </GroupItem>
+                    <GroupItem>
+                        <DetailRow
+                            title={t('Profile image')}
+                            value={<Avatar id={auth.user.id} name={auth.user.name} src={auth.user.imageUrl} size="sm" decorative />}
+                            action={
+                                <ActionLink href="/m/member/avatar" variant="outline" size="sm">
+                                    {t('Change')}
+                                </ActionLink>
+                            }
+                        />
+                    </GroupItem>
+                </SettingsGroup>
+            )}
 
-                {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
-                {flash.error && <FlashMessage variant="error">{flash.error}</FlashMessage>}
+            <SettingsGroup title={t('Privacy')}>
+                <GroupItem>
+                    <FormSection
+                        title={t('Default audience for new diaries')}
+                        headingLevel="h3"
+                        description={t('Applies to diaries you write from now on. Existing diaries keep their audience.')}
+                    >
+                        <RadioCardGroup
+                            legend={t('Default audience for new diaries')}
+                            error={diary.errors.diary_default_visibility}
+                        >
+                            <div className="flex flex-wrap gap-2">
+                                {form.diary.options.map((opt) => (
+                                    <RadioPill
+                                        key={opt.value}
+                                        name="diary_default_visibility"
+                                        value={opt.value}
+                                        checked={diary.data.diary_default_visibility === opt.value}
+                                        disabled={diary.processing}
+                                        onChange={(e) => saveDiary(e.target.value)}
+                                        label={t(opt.label)}
+                                    />
+                                ))}
+                            </div>
+                        </RadioCardGroup>
+                        <SavedIndicator show={diary.recentlySuccessful} />
+                    </FormSection>
+                </GroupItem>
+                {/* Age visibility is edited next to the birthday it derives from, on the profile-edit page. */}
+            </SettingsGroup>
 
-                {/* Identity leads (the survey convention): link rows into the profile-edit pages,
-                    which also host the age-visibility gate that used to live on this page. */}
-                {auth.user && (
-                    <SettingsGroup title={t('Profile')}>
-                        <GroupItem>
-                            <DetailRow
-                                title={t('Profile')}
-                                value={auth.user.name}
-                                action={
-                                    <ActionLink href="/m/member/edit/profile" variant="outline" size="sm">
-                                        {t('Edit')}
-                                    </ActionLink>
-                                }
-                            />
-                        </GroupItem>
-                        <GroupItem>
-                            <DetailRow
-                                title={t('Profile image')}
-                                value={<Avatar id={auth.user.id} name={auth.user.name} src={auth.user.imageUrl} size="sm" decorative />}
-                                action={
-                                    <ActionLink href="/m/member/avatar" variant="outline" size="sm">
-                                        {t('Change')}
-                                    </ActionLink>
-                                }
-                            />
-                        </GroupItem>
-                    </SettingsGroup>
+            <SettingsGroup title={t('Display & language')}>
+                <GroupItem>
+                    <FormSection
+                        title={t('Appearance')}
+                        headingLevel="h3"
+                        description={t('Choose a light or dark look. Use system setting follows your device automatically.')}
+                    >
+                        <RadioCardGroup legend={t('Appearance')}>
+                            <div className="flex flex-wrap gap-2">
+                                {APPEARANCE_OPTIONS.map((opt) => (
+                                    <RadioPill
+                                        key={opt.value}
+                                        name="appearance"
+                                        value={opt.value}
+                                        checked={preference === opt.value}
+                                        onChange={() => setColorMode(opt.value)}
+                                        label={t(opt.label)}
+                                    />
+                                ))}
+                            </div>
+                        </RadioCardGroup>
+                    </FormSection>
+                </GroupItem>
+
+                <GroupItem>
+                    <FormSection title={t('Language')} headingLevel="h3">
+                        {/* Locale labels are language autonyms, rendered verbatim (not translation keys). */}
+                        <RadioCardGroup legend={t('Language')}>
+                            <div className="flex flex-wrap gap-2">
+                                {form.locale.options.map((opt) => (
+                                    <RadioPill
+                                        key={opt.value}
+                                        name="locale"
+                                        value={opt.value}
+                                        checked={locale.data.locale === opt.value}
+                                        disabled={locale.processing}
+                                        onChange={(e) => switchLocale(e.target.value)}
+                                        // lang belongs on the visible autonym text (RadioPill spreads rest props onto the input).
+                                        label={<span lang={opt.value}>{opt.label}</span>}
+                                    />
+                                ))}
+                            </div>
+                        </RadioCardGroup>
+                    </FormSection>
+                </GroupItem>
+
+                {surfaceField && (
+                    <GroupItem>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                surface.post('/m/member/config/surface');
+                            }}
+                        >
+                            <FormSection title={t('Display')} headingLevel="h3">
+                                <RadioCardGroup legend={t('Display')} error={surface.errors.preferred_surface}>
+                                    {surfaceField.options.map((opt) => (
+                                        <RadioCard
+                                            key={opt.value}
+                                            name="preferred_surface"
+                                            value={opt.value}
+                                            checked={surface.data.preferred_surface === opt.value}
+                                            onChange={(e) => surface.setData('preferred_surface', e.target.value)}
+                                            label={t(opt.label)}
+                                            description={opt.description ? t(opt.description) : undefined}
+                                        />
+                                    ))}
+                                </RadioCardGroup>
+                                <FormActions>
+                                    {/* The one explicit button among the preferences: switching re-renders the whole
+                                        shell on the chosen surface, so it must not fire on a stray radio click.
+                                        Disabled until the choice differs from the current surface, so a casual save
+                                        never pins. */}
+                                    <Button
+                                        type="submit"
+                                        loading={surface.processing}
+                                        disabled={surface.data.preferred_surface === surfaceField.value}
+                                    >
+                                        {t('Switch')}
+                                    </Button>
+                                </FormActions>
+                            </FormSection>
+                        </form>
+                    </GroupItem>
                 )}
+            </SettingsGroup>
 
-                <SettingsGroup title={t('Privacy')}>
-                    <GroupItem>
-                        <FormSection
-                            title={t('Default audience for new diaries')}
-                            headingLevel="h3"
-                            description={t('Applies to diaries you write from now on. Existing diaries keep their audience.')}
-                        >
-                            <RadioCardGroup
-                                legend={t('Default audience for new diaries')}
-                                error={diary.errors.diary_default_visibility}
-                            >
-                                <div className="flex flex-wrap gap-2">
-                                    {form.diary.options.map((opt) => (
-                                        <RadioPill
-                                            key={opt.value}
-                                            name="diary_default_visibility"
-                                            value={opt.value}
-                                            checked={diary.data.diary_default_visibility === opt.value}
-                                            disabled={diary.processing}
-                                            onChange={(e) => saveDiary(e.target.value)}
-                                            label={t(opt.label)}
-                                        />
-                                    ))}
-                                </div>
-                            </RadioCardGroup>
-                            <SavedIndicator show={diary.recentlySuccessful} />
-                        </FormSection>
-                    </GroupItem>
-                    {/* Age visibility is edited next to the birthday it derives from, on the profile-edit page. */}
-                </SettingsGroup>
+            {/* Consequential account changes are rows into dedicated detail pages: the forms are
+                deliberately one level deeper (focused page, visible validation errors, weight
+                matching the action), keeping this page a scannable hub. */}
+            <SettingsGroup title={t('Account')}>
+                <GroupItem>
+                    <DetailRow
+                        title={t('Email address')}
+                        value={form.email.value}
+                        action={
+                            <ActionLink href="/m/member/config/email" variant="outline" size="sm">
+                                {t('Change')}
+                            </ActionLink>
+                        }
+                    />
+                </GroupItem>
+                <GroupItem>
+                    <DetailRow
+                        title={t('Password')}
+                        action={
+                            <ActionLink href="/m/member/config/password" variant="outline" size="sm">
+                                {t('Change')}
+                            </ActionLink>
+                        }
+                    />
+                </GroupItem>
+            </SettingsGroup>
 
-                <SettingsGroup title={t('Display & language')}>
-                    <GroupItem>
-                        <FormSection
-                            title={t('Appearance')}
-                            headingLevel="h3"
-                            description={t('Choose a light or dark look. Use system setting follows your device automatically.')}
-                        >
-                            <RadioCardGroup legend={t('Appearance')}>
-                                <div className="flex flex-wrap gap-2">
-                                    {APPEARANCE_OPTIONS.map((opt) => (
-                                        <RadioPill
-                                            key={opt.value}
-                                            name="appearance"
-                                            value={opt.value}
-                                            checked={preference === opt.value}
-                                            onChange={() => setColorMode(opt.value)}
-                                            label={t(opt.label)}
-                                        />
-                                    ))}
-                                </div>
-                            </RadioCardGroup>
-                        </FormSection>
-                    </GroupItem>
-
-                    <GroupItem>
-                        <FormSection title={t('Language')} headingLevel="h3">
-                            {/* Locale labels are language autonyms, rendered verbatim (not translation keys). */}
-                            <RadioCardGroup legend={t('Language')}>
-                                <div className="flex flex-wrap gap-2">
-                                    {form.locale.options.map((opt) => (
-                                        <RadioPill
-                                            key={opt.value}
-                                            name="locale"
-                                            value={opt.value}
-                                            checked={locale.data.locale === opt.value}
-                                            disabled={locale.processing}
-                                            onChange={(e) => switchLocale(e.target.value)}
-                                            // lang belongs on the visible autonym text (RadioPill spreads rest props onto the input).
-                                            label={<span lang={opt.value}>{opt.label}</span>}
-                                        />
-                                    ))}
-                                </div>
-                            </RadioCardGroup>
-                        </FormSection>
-                    </GroupItem>
-
-                    {surfaceField && (
-                        <GroupItem>
-                            <form
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    surface.post('/m/member/config/surface');
-                                }}
-                            >
-                                <FormSection title={t('Display')} headingLevel="h3">
-                                    <RadioCardGroup legend={t('Display')} error={surface.errors.preferred_surface}>
-                                        {surfaceField.options.map((opt) => (
-                                            <RadioCard
-                                                key={opt.value}
-                                                name="preferred_surface"
-                                                value={opt.value}
-                                                checked={surface.data.preferred_surface === opt.value}
-                                                onChange={(e) => surface.setData('preferred_surface', e.target.value)}
-                                                label={t(opt.label)}
-                                                description={opt.description ? t(opt.description) : undefined}
-                                            />
-                                        ))}
-                                    </RadioCardGroup>
-                                    <FormActions>
-                                        {/* The one explicit button among the preferences: switching re-renders the whole
-                                            shell on the chosen surface, so it must not fire on a stray radio click.
-                                            Disabled until the choice differs from the current surface, so a casual save
-                                            never pins. */}
-                                        <Button
-                                            type="submit"
-                                            loading={surface.processing}
-                                            disabled={surface.data.preferred_surface === surfaceField.value}
-                                        >
-                                            {t('Switch')}
-                                        </Button>
-                                    </FormActions>
-                                </FormSection>
-                            </form>
-                        </GroupItem>
-                    )}
-                </SettingsGroup>
-
-                {/* Consequential account changes are rows into dedicated detail pages: the forms are
-                    deliberately one level deeper (focused page, visible validation errors, weight
-                    matching the action), keeping this page a scannable hub. */}
-                <SettingsGroup title={t('Account')}>
-                    <GroupItem>
-                        <DetailRow
-                            title={t('Email address')}
-                            value={form.email.value}
-                            action={
-                                <ActionLink href="/m/member/config/email" variant="outline" size="sm">
-                                    {t('Change')}
-                                </ActionLink>
-                            }
-                        />
-                    </GroupItem>
-                    <GroupItem>
-                        <DetailRow
-                            title={t('Password')}
-                            action={
-                                <ActionLink href="/m/member/config/password" variant="outline" size="sm">
-                                    {t('Change')}
-                                </ActionLink>
-                            }
-                        />
-                    </GroupItem>
-                </SettingsGroup>
-
-                <SettingsGroup title={t('Account withdrawal')} danger>
-                    <GroupItem>
-                        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                            <p className="text-sm text-muted-foreground">
-                                {t('Withdrawing permanently deletes your account and cannot be undone.')}
-                            </p>
-                            <DangerLink href="/m/member/config/withdrawal">{t('Proceed to withdrawal')}</DangerLink>
-                        </div>
-                    </GroupItem>
-                </SettingsGroup>
-            </main>
+            <SettingsGroup title={t('Account withdrawal')} danger>
+                <GroupItem>
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                        <p className="text-sm text-muted-foreground">
+                            {t('Withdrawing permanently deletes your account and cannot be undone.')}
+                        </p>
+                        <DangerLink href="/m/member/config/withdrawal">{t('Proceed to withdrawal')}</DangerLink>
+                    </div>
+                </GroupItem>
+            </SettingsGroup>
         </>
     );
 }

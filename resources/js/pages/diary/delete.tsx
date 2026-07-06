@@ -18,29 +18,27 @@ export default function DiaryDelete() {
     return (
         <>
             <Head title={t('Delete %diary%')} />
-            <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
-                <h1 className="break-words text-xl font-semibold text-foreground">{t('Delete %diary%')}</h1>
+            <h1 className="break-words text-xl font-semibold text-foreground">{t('Delete %diary%')}</h1>
 
-                <Panel bodyClassName="space-y-4">
-                    <p className="text-foreground">{t('Delete ":title"?', { title: diary.title })}</p>
+            <Panel bodyClassName="space-y-4">
+                <p className="text-foreground">{t('Delete ":title"?', { title: diary.title })}</p>
 
-                    <div className="flex items-center gap-4">
-                        <form
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                post(`/m/diary/delete/${diary.id}`);
-                            }}
-                        >
-                            <Button type="submit" variant="destructive" loading={processing}>
-                                {t('Delete')}
-                            </Button>
-                        </form>
-                        <Link href={`/m/diary/${diary.id}`} className="text-sm text-link hover:underline">
-                            {t('Cancel')}
-                        </Link>
-                    </div>
-                </Panel>
-            </main>
+                <div className="flex items-center gap-4">
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            post(`/m/diary/delete/${diary.id}`);
+                        }}
+                    >
+                        <Button type="submit" variant="destructive" loading={processing}>
+                            {t('Delete')}
+                        </Button>
+                    </form>
+                    <Link href={`/m/diary/${diary.id}`} className="text-sm text-link hover:underline">
+                        {t('Cancel')}
+                    </Link>
+                </div>
+            </Panel>
         </>
     );
 }

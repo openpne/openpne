@@ -1,0 +1,222 @@
+import type { ComponentType } from 'react';
+import { Activity, BookOpen, Mail, Pencil, Plus, Search, Settings, UserCircle2, Users } from 'lucide-react';
+
+/**
+ * The member-surface chrome registry: the single source for what the nav and the page frame render
+ * per section — nav label/icon/badge, hub h1, tabs, and the primary action. NavItems and MemberFrame
+ * both read it, so a hub's h1 IS its nav label by construction (they share the key), and a screen
+ * missing from the registry still gets the default frame — consistency is the default, not an opt-in.
+ *
+ * Everything here is data (label keys, hrefs, icon references): builders run outside React, so
+ * translation happens in the consumer (useT). Per-page deviations live in the maps below, keyed by
+ * Inertia component name; a page can also override via `Page.layout = (props) => ({ chrome: {…} })`
+ * (Inertia merges the object into the default layout's props) — reserve that for one-offs.
+ */
+
+export interface ChromeLabel {
+    key: string;
+    replacements?: Record<string, string | number>;
+}
+
+// Named `t` so the i18n scanner (which recognizes keys wrapped by a t call) sees registry keys:
+// this is the deferred form — it captures the key; the frame/nav translate at render with useT.
+const t = (key: string, replacements?: Record<string, string | number>): ChromeLabel => ({ key, replacements });
+
+type Icon = ComponentType<{ className?: string; strokeWidth?: number; 'aria-hidden'?: boolean }>;
+
+export interface ChromeTab {
+    href: string;
+    label: ChromeLabel;
+    active: boolean;
+}
+
+export interface ChromeAction {
+    href: string;
+    label: ChromeLabel;
+    icon: Icon;
+}
+
+export interface Chrome {
+    /**
+     * section = hub header (h1 = nav label) from the registry; contextual = frame header with a
+     * page-specific title; embedded = no frame header — the page body carries its own heading
+     * (details, forms, the dashboard's sr-only h1, member/show's in-panel h1).
+     */
+    mode: 'section' | 'contextual' | 'embedded';
+    title?: ChromeLabel;
+    tabs?: ChromeTab[];
+    /** aria-label for the tab strip (the section label). */
+    tabsLabel?: ChromeLabel;
+    /** Primary action button (rendered only for a signed-in member). */
+    action?: ChromeAction;
+    width: 'standard' | 'narrow';
+    gap: '4' | '6' | '8';
+    /** Detail pages keep the text-foreground their own <main> used to set. */
+    foreground?: boolean;
+}
+
+export interface NavSection {
+    href: string;
+    match: string;
+    icon: Icon;
+    label: ChromeLabel;
+    badge?: { count: 'friendRequests' | 'unreadMessages'; label: ChromeLabel };
+}
+
+// Section labels shared between the nav and the hub headers (the h1 = nav label invariant).
+const DIARIES = t('%Diaries%');
+const COMMUNITIES = t('%Communities%');
+const ACTIVITY = t('%Activity%');
+const FRIENDS = t('%Friends%');
+const MESSAGES = t('Messages');
+const MEMBER_SEARCH = t('Search members');
+const SETTINGS = t('Settings');
+
+/** Nav order and metadata (Home is the brand row, so it is omitted). */
+export const NAV_SECTIONS: NavSection[] = [
+    { href: '/m/diary/list', match: '/m/diary', icon: BookOpen, label: DIARIES },
+    { href: '/m/community/search', match: '/m/community', icon: Users, label: COMMUNITIES },
+    { href: '/m/timeline', match: '/m/timeline', icon: Activity, label: ACTIVITY },
+    {
+        href: '/m/friend/list',
+        match: '/m/friend',
+        icon: UserCircle2,
+        label: FRIENDS,
+        badge: { count: 'friendRequests', label: t(':count pending %friend% requests') },
+    },
+    {
+        href: '/m/message',
+        match: '/m/message',
+        icon: Mail,
+        label: MESSAGES,
+        badge: { count: 'unreadMessages', label: t(':count unread messages') },
+    },
+    { href: '/m/member/search', match: '/m/member/search', icon: Search, label: MEMBER_SEARCH },
+    { href: '/m/member/config', match: '/m/member/config', icon: Settings, label: SETTINGS },
+];
+
+const WRITE_DIARY: ChromeAction = { href: '/m/diary/new', label: t('Write a %diary%'), icon: Pencil };
+const POST_ACTIVITY: ChromeAction = { href: '/m/timeline/new', label: t('%Post_activity%'), icon: Pencil };
+const CREATE_COMMUNITY: ChromeAction = { href: '/m/community/edit', label: t('Create a %community%'), icon: Plus };
+
+const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
+    { href: '/m/community/search', label: t('All'), active: active === 'browse' },
+    { href: '/m/community/joined', label: t('Joined'), active: active === 'joined' },
+    { href: '/m/community/recent', label: t('Recent activity'), active: active === 'recent' },
+];
+
+const friendTabs = (active: 'list' | 'manage'): ChromeTab[] => [
+    { href: '/m/friend/list', label: FRIENDS, active: active === 'list' },
+    { href: '/m/friend/manage', label: t('Requests'), active: active === 'manage' },
+];
+
+// The message page's own box map keeps the paths/bulk actions; the frame only needs box → title.
+const MESSAGE_BOX_LABEL: Record<string, ChromeLabel> = {
+    receive: t('Inbox'),
+    sent: t('Sent Message'),
+    draft: t('Drafts'),
+    trash: t('Trash'),
+};
+
+interface OwnerScoped {
+    owner: { name: string };
+    isOwner: boolean;
+}
+
+/**
+ * Hub chrome per Inertia component, computed from page props where a component doubles as the
+ * viewer's hub and another member's contextual list (owner → hub chrome, non-owner → contextual
+ * title, no tabs/action).
+ */
+const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chrome>> = {
+    'diary/feed': (props) => ({
+        mode: 'section',
+        title: DIARIES,
+        tabsLabel: DIARIES,
+        tabs: [
+            { href: '/m/diary/list', label: t('All'), active: (props as { variant: string }).variant !== 'friends' },
+            { href: '/m/diary/listFriend', label: FRIENDS, active: (props as { variant: string }).variant === 'friends' },
+        ],
+        action: WRITE_DIARY,
+    }),
+    'community/search': () => ({
+        mode: 'section',
+        title: COMMUNITIES,
+        tabsLabel: COMMUNITIES,
+        tabs: communityTabs('browse'),
+        action: CREATE_COMMUNITY,
+    }),
+    // list/recent keep their contextual titles for now; the community hub unification (h1 =
+    // %Communities% on all three tabs) is a follow-up semantic change, not part of the frame move.
+    'community/list': (props) => {
+        const { owner, isOwner } = props as unknown as OwnerScoped;
+        return isOwner
+            ? { mode: 'contextual', title: t('My %communities%'), tabsLabel: COMMUNITIES, tabs: communityTabs('joined') }
+            : { mode: 'contextual', title: t(":name's %communities%", { name: owner.name }) };
+    },
+    'community/recent': () => ({
+        mode: 'contextual',
+        title: t('Recent %community% activity'),
+        tabsLabel: COMMUNITIES,
+        tabs: communityTabs('recent'),
+    }),
+    'timeline/index': () => ({ mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }),
+    'timeline/member': (props) => {
+        const { owner, isOwner } = props as unknown as OwnerScoped;
+        return isOwner
+            ? { mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }
+            : { mode: 'contextual', title: t(":name's %activity%", { name: owner.name }) };
+    },
+    'friend/list': (props) => {
+        const { owner, isOwner } = props as unknown as OwnerScoped;
+        return isOwner
+            ? { mode: 'section', title: FRIENDS, tabsLabel: FRIENDS, tabs: friendTabs('list') }
+            : { mode: 'contextual', title: t(":name's %friends%", { name: owner.name }) };
+    },
+    'friend/manage': () => ({
+        mode: 'section',
+        title: FRIENDS,
+        tabsLabel: FRIENDS,
+        tabs: friendTabs('manage'),
+        gap: '6',
+    }),
+    // Contextual box title for now; the Messages hub (stable h1 + box tabs) is a follow-up.
+    'message/index': (props) => ({
+        mode: 'contextual',
+        title: MESSAGE_BOX_LABEL[(props as { box: string }).box] ?? MESSAGES,
+    }),
+    'member/search': () => ({ mode: 'section', title: MEMBER_SEARCH, gap: '6' }),
+    'member/config': () => ({ mode: 'section', title: SETTINGS, gap: '8' }),
+};
+
+/** Non-hub deviations from the frame defaults (width/gap/foreground), keyed by component name. */
+const STATIC_CHROME: Record<string, Partial<Chrome>> = {
+    'block/add': { width: 'narrow' },
+    'block/remove': { width: 'narrow' },
+    'friend/link': { width: 'narrow' },
+    'friend/unlink': { width: 'narrow' },
+    'member/invite': { width: 'narrow' },
+    'block/list': { gap: '6' },
+    'member/avatar': { gap: '6' },
+    'member/edit-profile': { gap: '6' },
+    'member/show': { gap: '6' },
+    'message/compose': { gap: '6' },
+    'message/edit': { gap: '6' },
+    'member/config/email': { gap: '6' },
+    'member/config/password': { gap: '6' },
+    'member/config/withdrawal': { gap: '6' },
+    'community/show': { foreground: true },
+    'community/topic/show': { foreground: true },
+    'community/event/show': { foreground: true },
+    'diary/show': { foreground: true },
+    'timeline/show': { foreground: true },
+};
+
+export function resolveChrome(
+    component: string,
+    props: Record<string, unknown>,
+    override?: Partial<Chrome>,
+): Chrome {
+    const base: Chrome = { mode: 'embedded', width: 'standard', gap: '4' };
+    return { ...base, ...STATIC_CHROME[component], ...HUB_CHROME[component]?.(props), ...override };
+}
