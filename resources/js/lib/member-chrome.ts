@@ -53,6 +53,8 @@ export interface Chrome {
     gap: '4' | '6' | '8';
     /** Detail pages keep the text-foreground their own <main> used to set. */
     foreground?: boolean;
+    /** Scope crumbs above the heading (community, and for board content the board). */
+    context?: { href: string; label: string | ChromeLabel }[];
 }
 
 export interface NavSection {
@@ -110,6 +112,15 @@ const friendTabs = (active: 'list' | 'manage'): ChromeTab[] => [
     { href: '/m/friend/manage', label: t('Requests'), active: active === 'manage' },
 ];
 
+interface CommunityRef {
+    id: number;
+    name: string;
+}
+
+const communityContext = (community: CommunityRef): Chrome['context'] => [
+    { href: `/m/community/${community.id}`, label: community.name },
+];
+
 // The message page's own box map keeps the paths/bulk actions; the frame only needs box → title.
 const MESSAGE_BOX_LABEL: Record<string, ChromeLabel> = {
     receive: t('Inbox'),
@@ -146,20 +157,72 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: communityTabs('browse'),
         action: CREATE_COMMUNITY,
     }),
-    // list/recent keep their contextual titles for now; the community hub unification (h1 =
-    // %Communities% on all three tabs) is a follow-up semantic change, not part of the frame move.
+    // The three community tabs are one hub: same h1 (= nav label) and the create action on every
+    // tab, so switching tabs never shifts the header. A non-owner's list stays contextual.
     'community/list': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
-            ? { mode: 'contextual', title: t('My %communities%'), tabsLabel: COMMUNITIES, tabs: communityTabs('joined') }
+            ? {
+                  mode: 'section',
+                  title: COMMUNITIES,
+                  tabsLabel: COMMUNITIES,
+                  tabs: communityTabs('joined'),
+                  action: CREATE_COMMUNITY,
+              }
             : { mode: 'contextual', title: t(":name's %communities%", { name: owner.name }) };
     },
     'community/recent': () => ({
-        mode: 'contextual',
-        title: t('Recent %community% activity'),
+        mode: 'section',
+        title: COMMUNITIES,
         tabsLabel: COMMUNITIES,
         tabs: communityTabs('recent'),
+        action: CREATE_COMMUNITY,
     }),
+    // Community-scoped pages carry the community as context crumbs; board indexes keep a short h1
+    // ("Topics" / "Events") so a long community name never wraps the heading. Detail pages add the
+    // board as a second crumb (the back-to-board path they used to carry in the body).
+    'community/topic/index': (props) => {
+        const { community, canPost } = props as unknown as { community: CommunityRef; canPost: boolean };
+        return {
+            mode: 'contextual',
+            title: t('%Topics%'),
+            context: communityContext(community),
+            action: canPost
+                ? { href: `/m/community/${community.id}/topic/new`, label: t('Create a %topic%'), icon: Plus }
+                : undefined,
+        };
+    },
+    'community/event/index': (props) => {
+        const { community, canPost } = props as unknown as { community: CommunityRef; canPost: boolean };
+        return {
+            mode: 'contextual',
+            title: t('Events'),
+            context: communityContext(community),
+            action: canPost
+                ? { href: `/m/community/${community.id}/event/new`, label: t('Create an event'), icon: Plus }
+                : undefined,
+        };
+    },
+    'community/topic/show': (props) => {
+        const { community } = props as unknown as { community: CommunityRef };
+        return {
+            context: [...communityContext(community)!, { href: `/m/community/${community.id}/topic`, label: t('%Topics%') }],
+        };
+    },
+    'community/event/show': (props) => {
+        const { community } = props as unknown as { community: CommunityRef };
+        return {
+            context: [...communityContext(community)!, { href: `/m/community/${community.id}/event`, label: t('Events') }],
+        };
+    },
+    'community/pending': (props) => {
+        const { community } = props as unknown as { community: CommunityRef };
+        return { mode: 'contextual', title: t('Pending members'), context: communityContext(community) };
+    },
+    'community/edit': (props) => {
+        const { community } = props as unknown as { community: CommunityRef | null };
+        return community ? { context: communityContext(community) } : {};
+    },
     'timeline/index': () => ({ mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }),
     'timeline/member': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
