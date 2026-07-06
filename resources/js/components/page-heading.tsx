@@ -16,7 +16,7 @@ type Props = {
  */
 export function PageHeading({ title, action, className }: Props) {
     return (
-        <div className={cn('flex items-center justify-between gap-3', className)}>
+        <div className={cn('flex min-h-11 items-center justify-between gap-3', className)}>
             <h1 className="min-w-0 break-words text-xl font-semibold text-foreground">{title}</h1>
             {action && <div className="shrink-0">{action}</div>}
         </div>
