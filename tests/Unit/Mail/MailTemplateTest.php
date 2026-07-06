@@ -66,4 +66,24 @@ class MailTemplateTest extends TestCase
         $this->assertNotContains(MailTemplate::Signature, MailTemplate::sendable());
         $this->assertCount(count(MailTemplate::cases()) - 1, MailTemplate::sendable());
     }
+
+    public function test_variable_keys_are_collision_free_dot_paths(): void
+    {
+        // representativeContext() undots the declared keys, so a key that is a dot-prefix of another
+        // (e.g. 'member' alongside 'member.name') would clobber one under Arr::undot. Forbid it.
+        foreach (MailTemplate::cases() as $template) {
+            $keys = array_keys($template->definition()->variables);
+            foreach ($keys as $a) {
+                foreach ($keys as $b) {
+                    if ($a === $b) {
+                        continue;
+                    }
+                    $this->assertFalse(
+                        str_starts_with($b, $a.'.'),
+                        "{$template->value}: variable '{$a}' is a dot-prefix of '{$b}'",
+                    );
+                }
+            }
+        }
+    }
 }

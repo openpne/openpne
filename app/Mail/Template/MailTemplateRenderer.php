@@ -26,7 +26,13 @@ class MailTemplateRenderer
 {
     private readonly Environment $twig;
 
-    public function __construct()
+    /**
+     * @param  bool  $strictVariables  production is false (an absent variable renders empty, matching
+     *                                 OpenPNE 3's lenient templates). Tests pass true to turn a body/subject referencing an undeclared
+     *                                 variable into a loud error — the drift guard between a template's used variables and its declared
+     *                                 set (MailTemplateDriftGuardTest).
+     */
+    public function __construct(bool $strictVariables = false)
     {
         $policy = new SecurityPolicy(
             allowedTags: ['if', 'for', 'app_url_for'],
@@ -43,7 +49,7 @@ class MailTemplateRenderer
 
         $this->twig = new Environment(new ArrayLoader, [
             'autoescape' => false,
-            'strict_variables' => false,
+            'strict_variables' => $strictVariables,
             'cache' => false,
         ]);
         $this->twig->addExtension(new SandboxExtension($policy, true));

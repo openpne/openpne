@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Mail\Template;
 
+use Illuminate\Support\Arr;
+
 /**
  * The closed registry of OpenPNE 4 system-mail templates (OpenPNE 3 "NotificationMail"). The case value
- * is the stored `mail_templates.key`. Each case declares its OpenPNE 3 import origin, whether an admin
- * may disable it, whether it is a sendable mail or the appended signature, its admin caption + variable
- * hints, and its built-in per-locale default wording (MailTemplateDefaults).
+ * is the stored `mail_templates.key`. Each case's full registry entry lives in definition() — its
+ * OpenPNE 3 import origin, whether an admin may disable it, its admin caption, and its variable set
+ * (help + representative sample per variable). The accessors below are thin views over that one entry.
  *
  * Required/security mails (registration, password, email change) are NOT configurable: the service
  * treats them as always-enabled and the OpenPNE 3 import does not carry their is_enabled, so a migrated
@@ -27,26 +29,96 @@ enum MailTemplate: string
     /** Not a sendable mail: rendered and appended to every sendable body by MailTemplateService. */
     case Signature = 'signature';
 
+    /**
+     * The full registry entry, colocated so adding/changing a template is one arm here. Untranslated:
+     * caption and variable help are source strings; __() is applied in the accessors. Variable keys are
+     * dot paths ({{ member.name }} → 'member.name'); see MailTemplateDefinition.
+     */
+    public function definition(): MailTemplateDefinition
+    {
+        return match ($this) {
+            self::RegistrationLink => new MailTemplateDefinition(
+                op3SourceName: 'pc_requestRegisterURL',
+                isConfigurable: false,
+                caption: 'Registration link',
+                variables: [
+                    'name' => ['help' => 'The inviter’s name (member or admin invitations).', 'sample' => 'Example'],
+                    'message' => ['help' => 'The optional message from the inviter.', 'sample' => 'Example'],
+                    'token' => ['help' => 'The registration token (used by the app_url_for link).', 'sample' => 'example-token'],
+                    'authMode' => ['help' => 'The authentication mode.', 'sample' => 'MailAddress'],
+                ],
+            ),
+            self::PasswordReset => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Password reset',
+                variables: [
+                    'url' => ['help' => 'The password reset URL.', 'sample' => 'https://example.test/reset'],
+                ],
+            ),
+            self::EmailChangeConfirm => new MailTemplateDefinition(
+                op3SourceName: 'pc_changeMailAddress',
+                isConfigurable: false,
+                caption: 'Email address change (confirmation)',
+                variables: [
+                    'token' => ['help' => 'The confirmation token (used by the app_url_for link).', 'sample' => 'example-token'],
+                    'id' => ['help' => 'The member ID.', 'sample' => 1],
+                    'type' => ['help' => 'The address type.', 'sample' => 'pc_address'],
+                ],
+            ),
+            self::EmailChangeNotice => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Email address change (notice)',
+                variables: [
+                    'new_email' => ['help' => 'The new email address.', 'sample' => 'new@example.test'],
+                ],
+            ),
+            self::FriendRequested => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: true,
+                caption: 'Friend request',
+                variables: [
+                    'member.name' => ['help' => 'The requester’s name.', 'sample' => 'Example'],
+                    'url' => ['help' => 'The friend management URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::FriendAccepted => new MailTemplateDefinition(
+                op3SourceName: 'pc_friendLinkComplete',
+                isConfigurable: true,
+                caption: 'Friend request accepted',
+                variables: [
+                    'member.name' => ['help' => 'The name of the member who accepted.', 'sample' => 'Example'],
+                ],
+            ),
+            self::MessageReceived => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: true,
+                caption: 'Message received',
+                variables: [
+                    'member.name' => ['help' => 'The sender’s name.', 'sample' => 'Example'],
+                    'url' => ['help' => 'The message URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::Signature => new MailTemplateDefinition(
+                op3SourceName: 'pc_signature',
+                isConfigurable: false,
+                caption: 'Signature',
+                variables: [],
+            ),
+        };
+    }
+
     /** The OpenPNE 3 `notification_mail.name` (pc_*) this template imports from, or null when there is none. */
     public function op3SourceName(): ?string
     {
-        return match ($this) {
-            self::RegistrationLink => 'pc_requestRegisterURL',
-            self::EmailChangeConfirm => 'pc_changeMailAddress',
-            self::FriendAccepted => 'pc_friendLinkComplete',
-            self::Signature => 'pc_signature',
-            self::PasswordReset, self::EmailChangeNotice, self::FriendRequested, self::MessageReceived => null,
-        };
+        return $this->definition()->op3SourceName;
     }
 
     /** Whether an admin may turn this mail off. Required/security mails and the signature are not toggleable. */
     public function isConfigurable(): bool
     {
-        return match ($this) {
-            self::FriendRequested, self::FriendAccepted, self::MessageReceived => true,
-            self::RegistrationLink, self::PasswordReset, self::EmailChangeConfirm, self::EmailChangeNotice,
-            self::Signature => false,
-        };
+        return $this->definition()->isConfigurable;
     }
 
     /** A real outgoing mail (vs the signature, which is appended to other bodies). */
@@ -58,27 +130,18 @@ enum MailTemplate: string
     /** Admin-facing caption (the editor's section heading). */
     public function caption(): string
     {
-        return match ($this) {
-            self::RegistrationLink => __('Registration link'),
-            self::PasswordReset => __('Password reset'),
-            self::EmailChangeConfirm => __('Email address change (confirmation)'),
-            self::EmailChangeNotice => __('Email address change (notice)'),
-            self::FriendRequested => __('Friend request'),
-            self::FriendAccepted => __('Friend request accepted'),
-            self::MessageReceived => __('Message received'),
-            self::Signature => __('Signature'),
-        };
+        return __($this->definition()->caption);
     }
 
     /**
      * The template-specific variables a body/subject may reference, as the bare names the admin writes
-     * inside `{{ … }}`. Derived from variableHelp() so the hint and the name list cannot drift.
+     * inside `{{ … }}`. Keys of the definition's variable set, so the name list cannot drift from the help.
      *
      * @return list<string>
      */
     public function variables(): array
     {
-        return array_keys($this->variableHelp());
+        return array_keys($this->definition()->variables);
     }
 
     /**
@@ -89,53 +152,20 @@ enum MailTemplate: string
      */
     public function variableHelp(): array
     {
-        return match ($this) {
-            self::RegistrationLink => [
-                'name' => __('The inviter’s name (member or admin invitations).'),
-                'message' => __('The optional message from the inviter.'),
-                'token' => __('The registration token (used by the app_url_for link).'),
-                'authMode' => __('The authentication mode.'),
-            ],
-            self::PasswordReset => ['url' => __('The password reset URL.')],
-            self::EmailChangeConfirm => [
-                'token' => __('The confirmation token (used by the app_url_for link).'),
-                'id' => __('The member ID.'),
-                'type' => __('The address type.'),
-            ],
-            self::EmailChangeNotice => ['new_email' => __('The new email address.')],
-            self::FriendRequested => [
-                'member.name' => __('The requester’s name.'),
-                'url' => __('The friend management URL.'),
-            ],
-            self::FriendAccepted => ['member.name' => __('The name of the member who accepted.')],
-            self::MessageReceived => [
-                'member.name' => __('The sender’s name.'),
-                'url' => __('The message URL.'),
-            ],
-            self::Signature => [],
-        };
+        return array_map(static fn (array $v): string => __($v['help']), $this->definition()->variables);
     }
 
     /**
      * Dummy values for this template's variables, enough to render it once for a syntax check: a token so
      * `app_url_for` resolves (its absence would throw a missing-token error, not a template fault) and a
-     * value for each declared variable. Reused by the admin editor's save-time validation and available
-     * to the import preflight.
+     * value for each declared variable. Derived from the same variable set as variableHelp() and undotted
+     * to the nested shape the renderer sees (`member.name` sample → `['member' => ['name' => …]]`).
      *
      * @return array<string, mixed>
      */
     public function representativeContext(): array
     {
-        return match ($this) {
-            self::RegistrationLink => ['name' => 'Example', 'message' => 'Example', 'token' => 'example-token', 'authMode' => 'MailAddress'],
-            self::PasswordReset => ['url' => 'https://example.test/reset'],
-            self::EmailChangeConfirm => ['token' => 'example-token', 'id' => 1, 'type' => 'pc_address'],
-            self::EmailChangeNotice => ['new_email' => 'new@example.test'],
-            self::FriendRequested => ['member' => ['name' => 'Example'], 'url' => 'https://example.test'],
-            self::FriendAccepted => ['member' => ['name' => 'Example']],
-            self::MessageReceived => ['member' => ['name' => 'Example'], 'url' => 'https://example.test'],
-            self::Signature => [],
-        };
+        return Arr::undot(array_map(static fn (array $v): mixed => $v['sample'], $this->definition()->variables));
     }
 
     public function defaultSubject(string $locale): ?string
