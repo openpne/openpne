@@ -86,7 +86,7 @@ export default function DiaryFeed() {
                 )}
 
                 {variant === 'search' && hasKeyword && (
-                    <p className="text-sm text-muted-foreground">{t('Search Results')}</p>
+                    <p className="text-sm text-muted-foreground">{t('Search results for :keyword', { keyword })}</p>
                 )}
 
                 {flash.status && <FlashMessage>{flash.status}</FlashMessage>}
