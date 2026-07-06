@@ -15,14 +15,13 @@ interface IndexProps extends PageProps {
     messages: PaginatedMessages;
 }
 
-const BOX: Record<MessageBoxSlug, { label: string; path: string }> = {
-    receive: { label: 'Inbox', path: '/m/message/receiveList' },
-    sent: { label: 'Sent Message', path: '/m/message/sendList' },
-    draft: { label: 'Drafts', path: '/m/message/draftList' },
-    trash: { label: 'Trash', path: '/m/message/dustList' },
+// Box labels for the browser Head title; the hub tabs live in the chrome registry.
+const BOX_LABEL: Record<MessageBoxSlug, string> = {
+    receive: 'Inbox',
+    sent: 'Sent Message',
+    draft: 'Drafts',
+    trash: 'Trash',
 };
-
-const ORDER: MessageBoxSlug[] = ['receive', 'sent', 'draft', 'trash'];
 
 // The per-box row destination (OpenPNE 3 paths): the show page for a sent/received/trashed message,
 // the edit form for a draft.
@@ -56,7 +55,6 @@ export default function MessageIndex() {
     const t = useT();
     const confirm = useConfirm();
     const { box, messages } = usePage<IndexProps>().props;
-    const current = BOX[box];
     const showPath = SHOW_PATH[box];
 
     const [selected, setSelected] = useState<number[]>([]);
@@ -81,24 +79,7 @@ export default function MessageIndex() {
 
     return (
         <>
-            <Head title={t(current.label)} />
-
-            <nav className="flex flex-wrap gap-4 border-b border-border text-sm" aria-label={t('Message boxes')}>
-                {ORDER.map((slug) => (
-                    <Link
-                        key={slug}
-                        href={BOX[slug].path}
-                        aria-current={slug === box ? 'page' : undefined}
-                        className={
-                            slug === box
-                                ? 'border-b-2 border-primary pb-2 font-medium text-foreground'
-                                : 'pb-2 text-muted-foreground hover:text-foreground hover:underline'
-                        }
-                    >
-                        {t(BOX[slug].label)}
-                    </Link>
-                ))}
-            </nav>
+            <Head title={t(BOX_LABEL[box])} />
 
             {messages.data.length === 0 ? (
                 <Panel>

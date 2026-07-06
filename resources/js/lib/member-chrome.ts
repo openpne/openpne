@@ -121,13 +121,13 @@ const communityContext = (community: CommunityRef): Chrome['context'] => [
     { href: `/m/community/${community.id}`, label: community.name },
 ];
 
-// The message page's own box map keeps the paths/bulk actions; the frame only needs box → title.
-const MESSAGE_BOX_LABEL: Record<string, ChromeLabel> = {
-    receive: t('Inbox'),
-    sent: t('Sent Message'),
-    draft: t('Drafts'),
-    trash: t('Trash'),
-};
+// The message page's own box map keeps the row paths/bulk actions; the hub tabs live here.
+const messageTabs = (active: string): ChromeTab[] => [
+    { href: '/m/message/receiveList', label: t('Inbox'), active: active === 'receive' },
+    { href: '/m/message/sendList', label: t('Sent Message'), active: active === 'sent' },
+    { href: '/m/message/draftList', label: t('Drafts'), active: active === 'draft' },
+    { href: '/m/message/dustList', label: t('Trash'), active: active === 'trash' },
+];
 
 interface OwnerScoped {
     owner: { name: string };
@@ -243,10 +243,13 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: friendTabs('manage'),
         gap: '6',
     }),
-    // Contextual box title for now; the Messages hub (stable h1 + box tabs) is a follow-up.
+    // One Messages hub: stable h1 (= nav label) with the four boxes as tabs; the active box lives
+    // in the tabs and the browser Head title, not the h1.
     'message/index': (props) => ({
-        mode: 'contextual',
-        title: MESSAGE_BOX_LABEL[(props as { box: string }).box] ?? MESSAGES,
+        mode: 'section',
+        title: MESSAGES,
+        tabsLabel: MESSAGES,
+        tabs: messageTabs((props as { box: string }).box),
     }),
     'member/search': () => ({ mode: 'section', title: MEMBER_SEARCH, gap: '6' }),
     'member/config': () => ({ mode: 'section', title: SETTINGS, gap: '8' }),
