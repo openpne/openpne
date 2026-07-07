@@ -117,11 +117,13 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($throttleKey);
         });
 
-        // Two-factor challenge submissions, keyed by the challenged member (login.id) plus IP: the
-        // member id bounds guessing one account's 6-digit code across IPs; the IP component keeps a
-        // stray unchallenged POST (no login.id) from sharing one global bucket.
+        // Two-factor challenge submissions, keyed by the challenged member (login.id) alone —
+        // vendor semantics. The adversary here already holds the password, so the guess budget
+        // must be per account, not per (account, IP): an IP component would hand a distributed
+        // attacker 5/min per IP. Unchallenged strays (no login.id) share one bucket and fail at
+        // challengedUser() anyway.
         RateLimiter::for('two-factor', function (Request $request) {
-            return Limit::perMinute(5)->by('two-factor|'.$request->session()->get('login.id').'|'.$request->ip());
+            return Limit::perMinute(5)->by('two-factor|'.$request->session()->get('login.id'));
         });
 
         // Two limits, whichever trips first: per-(email,ip) caps re-sends to one address; per-ip caps
