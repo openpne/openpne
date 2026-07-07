@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Notifications\Settings;
 
 /**
- * The closed registry of member-configurable notification kinds — the OpenPNE 3 tejimaya
- * notification catalog ("catalog A": notification_config.yml items). The case value is the stored
+ * The closed registry of member-configurable notification kinds — the OpenPNE 3 notification
+ * catalog (notification_config.yml items). The case value is the stored
  * `member_notification_settings.kind`; each case's registry entry lives in definition().
  *
  * Every OpenPNE 3 item is registered, wired or not, so the one-shot upgrade can preserve every

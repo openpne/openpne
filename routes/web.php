@@ -148,8 +148,8 @@ Route::get('/member/login/{tail?}', fn () => redirect()->route('login'))
 Route::get('/leave', fn () => redirect()->route('member.config', ['category' => 'withdrawal']))
     ->name('member.leave_compat');
 
-// tejimaya OpenPNE 3 notification settings lived at member/configNotification (a global-fallback
-// URL, no named route); OpenPNE 4 serves them as the member-config notification category.
+// OpenPNE 3 notification settings lived at member/configNotification (a global-fallback URL, no
+// named route); OpenPNE 4 serves them as the member-config notification category.
 Route::get('/member/configNotification', fn () => redirect()->route('member.config', ['category' => 'notification']))
     ->name('member.config_notification_compat');
 
@@ -394,7 +394,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/m/member/config/password', [MemberConfigController::class, 'editPassword'])->name('member.config.password.edit');
     Route::get('/m/member/config/withdrawal', [MemberConfigController::class, 'editWithdrawal'])->name('member.config.withdrawal.edit');
 
-    // Notification catalog opt-ins (tejimaya OpenPNE 3 member/configNotification; Classic serves it
+    // Notification catalog opt-ins (OpenPNE 3 member/configNotification; Classic serves it
     // as ?category=notification). Modern edits on a detail page with per-toggle saves.
     Route::get('/m/member/config/notifications', [NotificationSettingsController::class, 'edit'])->name('member.config.notifications.edit');
     Route::post('/member/config/notifications', [NotificationSettingsController::class, 'update'])->name('member.config.notifications');

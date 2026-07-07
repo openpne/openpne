@@ -130,7 +130,7 @@
             @break
 
         @case(MemberConfigCategory::Notification)
-            {{-- The notification catalog opt-ins (tejimaya OpenPNE 3 member/configNotification): every
+            {{-- The notification catalog opt-ins (OpenPNE 3 member/configNotification): every
                  wired kind × in-app/email as flat checkboxes, one bulk save. A hidden 0 precedes each
                  checkbox so an unchecked box still submits an explicit false. --}}
             <div class="dparts form" id="member_config_notification">
