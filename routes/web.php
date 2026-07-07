@@ -19,6 +19,7 @@ use App\Features\Member\MemberMfaController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Message\MessageController;
 use App\Features\Notifications\NotificationFeedController;
+use App\Features\Notifications\NotificationSettingsController;
 use App\Features\Profile\ProfileController;
 use App\Features\Timeline\TimelineController;
 use App\Http\Controllers\Admin\AdminFileController;
@@ -146,6 +147,12 @@ Route::get('/member/login/{tail?}', fn () => redirect()->route('login'))
 // not POST /leave). Guest-reachable: the config target bounces a logged-out visitor to /login.
 Route::get('/leave', fn () => redirect()->route('member.config', ['category' => 'withdrawal']))
     ->name('member.leave_compat');
+
+// OpenPNE 3 sites carrying the notification extension served its settings at
+// member/configNotification (a global-fallback URL, no named route); OpenPNE 4 serves them as
+// the member-config notification category.
+Route::get('/member/configNotification', fn () => redirect()->route('member.config', ['category' => 'notification']))
+    ->name('member.config_notification_compat');
 
 // Email-change confirmation (OpenPNE 3 member/configComplete; OpenPNE 4-native URL). Token-gated and
 // reachable whether or not the visitor is logged in (the member may open the link on another device),
@@ -387,6 +394,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/m/member/config/email', [MemberConfigController::class, 'editEmail'])->name('member.config.email.edit');
     Route::get('/m/member/config/password', [MemberConfigController::class, 'editPassword'])->name('member.config.password.edit');
     Route::get('/m/member/config/withdrawal', [MemberConfigController::class, 'editWithdrawal'])->name('member.config.withdrawal.edit');
+
+    // Notification catalog opt-ins (see NotificationKind; Classic serves it
+    // as ?category=notification). Modern edits on a detail page with per-toggle saves.
+    Route::get('/m/member/config/notifications', [NotificationSettingsController::class, 'edit'])->name('member.config.notifications.edit');
+    Route::post('/member/config/notifications', [NotificationSettingsController::class, 'update'])->name('member.config.notifications');
+    Route::post('/m/member/config/notifications', [NotificationSettingsController::class, 'update'])
+        ->defaults('surface', 'modern')->name('member.modern.config.notifications');
 
     // Member two-factor management (OpenPNE 4-native; Classic serves it as ?category=mfa).
     // Re-auth is one current_password per flow (enable opens a window that covers confirm);

@@ -14,10 +14,10 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells a recipient a new message arrived (OpenPNE 3 notifyNewMessage). Mail + database, each
- * gated by the recipient's catalog opt-in: MessageNew covers every sender; while it is off,
- * MessageNewOnlyFriends (its dependOnNot variant) still covers friend senders — the OpenPNE 3
- * opMessagePluginUtil if/elseif chain.
+ * Tells a recipient a new message arrived. Mail + database, each gated by the recipient's
+ * catalog opt-in: MessageNew covers every sender; while it is off, MessageNewOnlyFriends (its
+ * dependOnNot variant) still covers friend senders. This exact chain is what imported opt-outs
+ * were saved against, so it must not change shape.
  */
 class MessageReceivedNotification extends Notification implements ShouldQueue
 {
@@ -47,7 +47,7 @@ class MessageReceivedNotification extends Notification implements ShouldQueue
     {
         return $this->mailFromTemplate(MailTemplate::MessageReceived, [
             'member' => ['name' => $this->sender->name],
-            // OpenPNE 3 notifyNewMessage variable names, so imported wording renders as-is.
+            // The extension wording's flat variable names, so an imported body renders as-is.
             'member_name' => $this->sender->name,
             'message_subject' => $this->message->subject,
             'message_body' => $this->message->body,

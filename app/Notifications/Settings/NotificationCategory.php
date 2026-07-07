@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications\Settings;
 
 /**
- * The OpenPNE 3 notification_config.yml categories, used to group kinds on the settings pages.
+ * The notification-catalog categories, used to group kinds on the settings pages.
  */
 enum NotificationCategory: string
 {
@@ -16,8 +16,13 @@ enum NotificationCategory: string
     case FriendLink = 'friend_link';
     case Message = 'message';
 
-    /** Member-facing group heading (untranslated source string; %term% placeholders apply). */
+    /** Member-facing group heading (translated; %term% placeholders resolve downstream). */
     public function caption(): string
+    {
+        return __($this->sourceCaption());
+    }
+
+    private function sourceCaption(): string
     {
         return match ($this) {
             self::Timeline => 'Timeline',
