@@ -25,11 +25,17 @@ type OtpInputProps = {
 export function OtpInput({ value, onChange, label, length = 6, autoFocus, id, ...aria }: OtpInputProps) {
     const t = useT();
     const boxes = useRef<(HTMLInputElement | null)[]>([]);
+    // write() focuses the next box before React re-renders, so the focus handler would still see
+    // the previous value and bounce the focus straight back (the type-one-digit-twice bug). The
+    // flag tells it "this focus is ours — don't second-guess it".
+    const programmaticFocus = useRef(false);
 
     const write = (next: string) => {
         const digits = next.replace(/\D/g, '').slice(0, length);
         onChange(digits);
+        programmaticFocus.current = true;
         boxes.current[Math.min(digits.length, length - 1)]?.focus();
+        programmaticFocus.current = false;
     };
 
     const handleChange = (index: number, raw: string) => {
@@ -50,12 +56,15 @@ export function OtpInput({ value, onChange, label, length = 6, autoFocus, id, ..
     };
 
     // The value is left-filled, so the only sensible caret is the first empty box (or the last
-    // one for corrections); redirect a click on any box past it.
+    // one for corrections); redirect a click on any box past it. Never second-guess a focus that
+    // write() just placed — at that moment `value` is still the pre-update render's.
     const handleFocus = (index: number, input: HTMLInputElement) => {
-        const active = Math.min(value.length, length - 1);
-        if (index > active) {
-            boxes.current[active]?.focus();
-            return;
+        if (!programmaticFocus.current) {
+            const active = Math.min(value.length, length - 1);
+            if (index > active) {
+                boxes.current[active]?.focus();
+                return;
+            }
         }
         input.select();
     };
