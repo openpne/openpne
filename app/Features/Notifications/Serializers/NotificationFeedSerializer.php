@@ -3,6 +3,7 @@
 namespace App\Features\Notifications\Serializers;
 
 use App\Models\Member;
+use App\Models\MessageRecipient;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
@@ -57,7 +58,7 @@ class NotificationFeedSerializer
         return match ($data['kind'] ?? null) {
             'friend_requested' => '/m/friend/manage',
             'friend_request_accepted' => self::profileUrl($data['accepter_id'] ?? null),
-            'message_received' => isset($data['message_id']) ? '/m/message/read/'.$data['message_id'] : null,
+            'message_received' => self::messageUrl($row, $data['message_id'] ?? null),
             default => null,
         };
     }
@@ -101,5 +102,23 @@ class NotificationFeedSerializer
         }
 
         return '/m/member/'.$memberId;
+    }
+
+    /**
+     * The read page 404s unless the viewer still holds a live inbox receipt (ShowMessage's
+     * Receive-box predicate), so a trashed/purged message counts as gone.
+     */
+    private static function messageUrl(DatabaseNotification $row, ?int $messageId): ?string
+    {
+        if ($messageId === null) {
+            return null;
+        }
+
+        $stillInInbox = MessageRecipient::query()->ofDelivered()->recipientLive()
+            ->where('recipient_id', $row->notifiable_id)
+            ->where('message_id', $messageId)
+            ->exists();
+
+        return $stillInInbox ? '/m/message/read/'.$messageId : null;
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Notifications;
 
 use App\Models\Member;
+use App\Models\Message;
+use App\Models\MessageRecipient;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Message\MessageReceivedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -61,10 +63,25 @@ class NotificationFeedTest extends TestCase
     public function test_open_marks_the_row_read_and_redirects_to_its_target(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        $message = Message::factory()->create(['sender_id' => $actor->getKey()]);
+        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $row = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => $message->getKey()]);
+
+        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+            ->assertRedirect('/m/message/read/'.$message->getKey());
+
+        $this->assertNotNull($row->fresh()->read_at);
+    }
+
+    public function test_open_falls_back_to_the_feed_when_the_message_left_the_inbox(): void
+    {
+        // No live inbox receipt (trashed/purged/never delivered) — the read page would 404, so
+        // the row is marked read and the member lands back on the feed instead.
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
         $row = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => 34]);
 
         $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/m/message/read/34');
+            ->assertRedirect(route('notifications.index'));
 
         $this->assertNotNull($row->fresh()->read_at);
     }
