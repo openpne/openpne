@@ -32,6 +32,7 @@ use App\Upgrade\Steps\MailTemplateTranslationUpgrade;
 use App\Upgrade\Steps\MailTemplateUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberImageUpgrade;
+use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberProfileUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
@@ -59,6 +60,8 @@ final class StepRegistry
             MemberUpgrade::class,
             // member_preferences references members; only the member step must precede it.
             MemberPreferenceUpgrade::class,
+            // Same shape for the notification opt-in keys; only the member step must precede it.
+            MemberNotificationSettingUpgrade::class,
             FriendshipUpgrade::class,
             FriendRequestUpgrade::class,
             MemberBlockUpgrade::class,
@@ -222,7 +225,7 @@ final class StepRegistry
             'diary_public_flag' => 'member_preferences[diary_default_visibility], MemberPreferenceUpgrade.',
             'age_public_flag' => 'member_preferences[age_visibility], MemberPreferenceUpgrade.',
             // Owned by another OpenPNE 4 surface, migrated with that feature (not here).
-            'is_send_*_mail / is_send_*_web' => 'Per-member notification opt-in/out — the notification centre store, not the scalar preference store.',
+            'is_send_*_mail / is_send_*_web' => 'member_notification_settings (kind × channel rows), MemberNotificationSettingUpgrade. Only the registered NotificationKind keys migrate; an is_send_ name outside the registry is an unrecognised custom key the upgrade does not carry.',
             'op_screen_name' => 'members.screen_name (unique handle) — lands with the timeline feature.',
             // Intentionally dropped: no OpenPNE 4 consumer.
             'time_zone' => 'Dropped: no per-member timezone rendering in OpenPNE 4.',
