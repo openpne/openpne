@@ -7,7 +7,7 @@
         "build": "vite build",
         "dev": "vite",
         "type-check": "tsc --noEmit",
-        "test": "node --test 'resources/js/**/*.test.ts'"
+        "test": "node --test --experimental-strip-types 'resources/js/**/*.test.ts'"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.3.2",
