@@ -87,6 +87,19 @@ class BodyTextTest extends TestCase
         $this->assertSame('', (string) BodyText::render(null));
     }
 
+    public function test_full_width_url_truncation_uses_display_width(): void
+    {
+        // Str::limit measures display width (mb_strwidth), so this 47-character full-width URL (width
+        // ~87 > 57) truncates and gets an ellipsis. The TS linkify() mirror measures character count
+        // and intentionally diverges — no ellipsis — see resources/js/lib/linkify.test.ts.
+        $url = 'http://'.str_repeat('あ', 40);
+
+        $html = (string) BodyText::render($url);
+
+        $this->assertStringContainsString('href="'.$url.'"', $html); // full href
+        $this->assertStringContainsString('...</a>', $html);          // width-based truncation adds an ellipsis
+    }
+
     public function test_excerpt_collapses_newlines_to_spaces(): void
     {
         $this->assertSame('a b c', BodyText::excerpt("a\nb\r\nc"));

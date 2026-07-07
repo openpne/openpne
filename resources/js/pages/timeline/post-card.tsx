@@ -3,6 +3,7 @@ import { MessageCircle } from 'lucide-react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { CountBadge } from '@/components/entry-row';
+import { UserText } from '@/components/user-text';
 import { DangerLink } from '@/components/ui/danger-link';
 import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
@@ -33,7 +34,9 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
                     </Link>
                 </div>
             </div>
-            <p className="whitespace-pre-wrap break-words">{post.body}</p>
+            <p className="whitespace-pre-wrap break-words">
+                <UserText text={post.body} />
+            </p>
             <ImageGrid images={post.images} />
             {isOwn && (
                 <DangerLink href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm">

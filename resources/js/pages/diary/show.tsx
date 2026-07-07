@@ -3,6 +3,7 @@ import { type FormEvent } from 'react';
 import { Avatar } from '@/components/avatar';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
+import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { DangerLink } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
@@ -46,7 +47,9 @@ export default function DiaryShow() {
                     <span>&mdash; {formatDateTime(diary.createdAt)}</span>
                 </div>
 
-                <div className="whitespace-pre-wrap break-words">{diary.body}</div>
+                <div className="whitespace-pre-wrap break-words">
+                    <UserText text={diary.body} />
+                </div>
 
                 <ImageGrid images={diary.images} size="size-28" className="mt-1" />
 
@@ -84,7 +87,9 @@ export default function DiaryShow() {
                                         </DangerLink>
                                     )}
                                 </div>
-                                <p className="whitespace-pre-wrap break-words">{comment.body}</p>
+                                <p className="whitespace-pre-wrap break-words">
+                                    <UserText text={comment.body} />
+                                </p>
                                 <ImageGrid images={comment.images} size="size-20" className="mt-1" />
                             </li>
                         ))}
