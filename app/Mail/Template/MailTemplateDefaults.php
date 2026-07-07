@@ -50,6 +50,10 @@ final class MailTemplateDefaults
             'en' => 'New comment on "{{ diary_title }}"',
             'ja' => '【{{ op_config.sns_name }}】新着日記コメント「{{ diary_title }}」',
         ],
+        'community-posting' => [
+            'en' => '[{{ op_config.sns_name }}] {{ community_name }} {{ topic_name }}',
+            'ja' => '【{{ op_config.sns_name }}】{{ community_name }} {{ topic_name }}',
+        ],
         'signature' => [
             'en' => null,
             'ja' => null,

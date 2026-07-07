@@ -112,11 +112,13 @@ enum NotificationKind: string
                 category: NotificationCategory::CommunityTopic,
                 op3Name: 'communityTopicReplyNewPost',
                 caption: 'Comments on %topics% you created',
+                isWired: true,
             ),
             self::CommunityTopicRelatedNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::CommunityTopic,
                 op3Name: 'communityTopicRelatedNewPost',
                 caption: 'Comments on %topics% you commented on',
+                isWired: true,
             ),
             self::CommunityEventNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::CommunityEvent,
@@ -132,11 +134,13 @@ enum NotificationKind: string
                 category: NotificationCategory::CommunityEvent,
                 op3Name: 'communityEventReplyNewPost',
                 caption: 'Comments on events you created',
+                isWired: true,
             ),
             self::CommunityEventRelatedNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::CommunityEvent,
                 op3Name: 'communityEventRelatedNewPost',
                 caption: 'Comments on events you commented on',
+                isWired: true,
             ),
             self::FriendLinkConfirm => new NotificationKindDefinition(
                 category: NotificationCategory::FriendLink,
