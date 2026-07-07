@@ -49,7 +49,7 @@ class CommunityMemberUpgrade extends UpgradeStep
     public function gaps(): array
     {
         return [
-            'is_receive_mail_pc' => 'Per-member community-post mail opt-in; lands with the notification feature.',
+            'is_receive_mail_pc' => 'Dropped: superseded by the member-level notification catalog (member_notification_settings, MemberNotificationSettingUpgrade) — community-post mail opt-ins are member-wide there, so this column\'s per-community granularity is not carried.',
             'is_receive_mail_mobile' => 'Mobile (feature-phone) post-notification opt-in; the mobile frontend is out of scope.',
         ];
     }
