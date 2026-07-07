@@ -26,6 +26,7 @@ enum MailTemplate: string
     case FriendAccepted = 'friend-accepted';
     case MessageReceived = 'message-received';
     case DiaryCommentReceived = 'diary-comment';
+    case CommunityPostingNotified = 'community-posting';
 
     /** Not a sendable mail: rendered and appended to every sendable body by MailTemplateService. */
     case Signature = 'signature';
@@ -117,6 +118,21 @@ enum MailTemplate: string
                     'diary_title' => ['help' => 'The diary title.', 'sample' => 'Example title'],
                     'body' => ['help' => 'The comment body.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The diary URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::CommunityPostingNotified => new MailTemplateDefinition(
+                op3SourceName: 'pc_notifyCommunityPosting',
+                isConfigurable: true,
+                // One template for every community-board notification (topic and event comments
+                // now; the new-post broadcasts later share it too), matching the source template —
+                // a second case could not import the same source row.
+                caption: 'Notification of %Community% Posting',
+                variables: [
+                    'community_name' => ['help' => 'The %community% name.', 'sample' => 'Example community'],
+                    'topic_name' => ['help' => 'The %topic% or event title.', 'sample' => 'Example title'],
+                    'nickname' => ['help' => 'The poster’s name.', 'sample' => 'Example'],
+                    'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
+                    'url' => ['help' => 'The %topic% or event URL.', 'sample' => 'https://example.test'],
                 ],
             ),
             self::Signature => new MailTemplateDefinition(

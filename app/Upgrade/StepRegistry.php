@@ -290,6 +290,7 @@ final class StepRegistry
             'pc_friendLinkRequest' => 'mail_templates[friend-requested]. Configurable: is_enabled carried over.',
             'pc_notifyNewMessage' => 'mail_templates[message-received]. Configurable: is_enabled carried over.',
             'pc_notifyNewDiaryComment' => 'mail_templates[diary-comment]. Not admin-toggleable (member opt-out lives in member_notification_settings): is_enabled forced on.',
+            'pc_notifyCommunityPosting' => 'mail_templates[community-posting]. Configurable: is_enabled carried over. One template for topic and event comments (and the new-post broadcasts later).',
             'pc_signature' => 'mail_templates[signature]. Appended to every sendable body; not itself toggleable.',
             // Dropped: no OpenPNE 4 sender yet — the wording and a sender land together as a follow-up.
             'pc_registerEnd' => 'Dropped: OpenPNE 4 has no registration-complete mail yet (follow-up adds wording + sender together).',

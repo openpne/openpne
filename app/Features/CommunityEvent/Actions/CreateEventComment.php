@@ -3,6 +3,7 @@
 namespace App\Features\CommunityEvent\Actions;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
+use App\Features\CommunityEvent\Events\EventCommentPosted;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionFailure;
 use App\Files\PostImages;
@@ -64,6 +65,9 @@ class CreateEventComment
             $file = $store($upload, 'communityEventComment', (int) $comment->getKey());
             $comment->images()->create(['file_id' => $file->getKey(), 'number' => $index + 1]);
         }
+
+        // Both entry points (direct and the merged RSVP+comment submit) funnel through here.
+        EventCommentPosted::dispatch($event, $comment, $author);
 
         return $comment;
     }

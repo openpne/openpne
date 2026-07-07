@@ -27,7 +27,7 @@ enum NotificationCategory: string
         return match ($this) {
             self::Timeline => 'Timeline',
             self::Diary => '%Diaries%',
-            self::CommunityTopic => '%Community% topics',
+            self::CommunityTopic => '%Community% %topics%',
             self::CommunityEvent => '%Community% events',
             self::FriendLink => '%Friend% requests',
             self::Message => 'Messages',

@@ -3,6 +3,7 @@
 namespace App\Features\CommunityTopic\Actions;
 
 use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Features\CommunityTopic\Events\TopicCommentPosted;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionFailure;
 use App\Files\PostImages;
@@ -47,6 +48,8 @@ class CreateTopicComment
 
                 $topic->topic_updated_at = now();
                 $topic->save(); // dirty → updated_at bumped too, lifting the topic on the board
+
+                TopicCommentPosted::dispatch($topic, $comment, $author);
 
                 return $comment;
             },

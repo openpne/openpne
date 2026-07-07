@@ -2,7 +2,11 @@
 
 namespace App\Features\Notifications\Serializers;
 
+use App\Features\CommunityEvent\CommunityEventAccess;
+use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\Diary\DiaryAccess;
+use App\Models\CommunityEvent;
+use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Models\MessageRecipient;
@@ -45,7 +49,7 @@ class NotificationFeedSerializer
             'friend_requested' => $data['requester_id'] ?? null,
             'friend_request_accepted' => $data['accepter_id'] ?? null,
             'message_received' => $data['sender_id'] ?? null,
-            'diary_commented' => $data['commenter_id'] ?? null,
+            'diary_commented', 'community_topic_commented', 'community_event_commented' => $data['commenter_id'] ?? null,
             default => null,
         };
     }
@@ -63,6 +67,8 @@ class NotificationFeedSerializer
             'friend_request_accepted' => self::profileUrl($data['accepter_id'] ?? null),
             'message_received' => self::messageUrl($row, $data['message_id'] ?? null),
             'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
+            'community_topic_commented' => self::topicUrl($row, $data['topic_id'] ?? null),
+            'community_event_commented' => self::eventUrl($row, $data['event_id'] ?? null),
             default => null,
         };
     }
@@ -122,6 +128,36 @@ class NotificationFeedSerializer
 
         return $viewer !== null && DiaryAccess::canView($viewer, $diary)
             ? '/m/diary/'.$diary->getKey()
+            : null;
+    }
+
+    /** A deleted topic — or one whose board the recipient can no longer read — counts as gone. */
+    private static function topicUrl(DatabaseNotification $row, ?int $topicId): ?string
+    {
+        $topic = $topicId === null ? null : CommunityTopic::find($topicId);
+        if ($topic === null) {
+            return null;
+        }
+
+        $viewer = Member::find($row->notifiable_id);
+
+        return $viewer !== null && CommunityTopicAccess::canViewTopic($topic, $viewer)
+            ? '/m/community/topic/'.$topic->getKey()
+            : null;
+    }
+
+    /** The event twin of topicUrl(). */
+    private static function eventUrl(DatabaseNotification $row, ?int $eventId): ?string
+    {
+        $event = $eventId === null ? null : CommunityEvent::find($eventId);
+        if ($event === null) {
+            return null;
+        }
+
+        $viewer = Member::find($row->notifiable_id);
+
+        return $viewer !== null && CommunityEventAccess::canViewEvent($event, $viewer)
+            ? '/m/community/event/'.$event->getKey()
             : null;
     }
 
