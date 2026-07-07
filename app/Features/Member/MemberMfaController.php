@@ -6,6 +6,7 @@ use App\Auth\SessionRevocation;
 use App\Features\Member\Serializers\MemberMfaSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\ConfirmMfaRequest;
+use App\Http\Requests\Member\DisableMfaRequest;
 use App\Http\Requests\Member\MfaManagementRequest;
 use App\Models\Member;
 use App\Support\SurfaceResolver;
@@ -49,6 +50,10 @@ class MemberMfaController extends Controller
 
         $enable($viewer);
 
+        // The password was just verified (MfaManagementRequest); the stamp lets confirm finish
+        // the same sitting without asking for it a second time.
+        MfaSetupReauth::stamp($request->session());
+
         return $this->mfaRedirect($request);
     }
 
@@ -74,12 +79,13 @@ class MemberMfaController extends Controller
             ]);
         }
 
+        MfaSetupReauth::clear($request->session());
         $request->session()->flash(MemberMfaSerializer::SHOW_RECOVERY_CODES, true);
 
         return $this->mfaRedirect($request, __('Two-factor authentication is now enabled.'));
     }
 
-    public function disable(MfaManagementRequest $request, DisableTwoFactorAuthentication $disable): RedirectResponse
+    public function disable(DisableMfaRequest $request, DisableTwoFactorAuthentication $disable): RedirectResponse
     {
         $viewer = $this->viewer();
 
@@ -94,6 +100,7 @@ class MemberMfaController extends Controller
             $disable($viewer);
             SessionRevocation::revokeMember($viewer, $request->session()->getId());
         });
+        MfaSetupReauth::clear($request->session());
 
         // Cancelling a pending set-up isn't a factor change worth announcing.
         return $this->mfaRedirect($request, $wasEnabled ? __('Two-factor authentication has been disabled.') : null);

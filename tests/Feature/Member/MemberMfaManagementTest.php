@@ -107,26 +107,80 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_classic_routes_the_password_error_to_the_form_that_was_submitted(): void
     {
-        // The pending page has two forms sharing the current_password key; the flashed _mfa_form
-        // marker routes the error into the submitted (collapsed) cancel form and reopens it.
+        // The enabled page has two password forms sharing the error key; the flashed _mfa_form
+        // marker routes the error into the submitted (collapsed) disable form and reopens it.
         // No assertSessionHasErrors between the POST and the GET: reading the session in the
         // assertion ages the flash, which would blank the very render under test.
-        $member = $this->memberWithPendingSetup();
+        $member = $this->memberWithTwoFactor();
 
         $this->actingAs($member)
             ->from('/member/config?category=mfa')
-            ->post('/member/config/mfa/disable', ['current_password' => 'wrong-password', '_mfa_form' => 'cancel'])
+            ->post('/member/config/mfa/disable', ['current_password' => 'wrong-password', '_mfa_form' => 'disable'])
             ->assertRedirect('/member/config?category=mfa');
 
         $this->get('/member/config?category=mfa')
-            ->assertSee('<details open', false)
-            ->assertSeeInOrder(['id="mfa_cancel_password"', 'The password is incorrect.'], false);
+            ->assertSee('<details open>', false)
+            ->assertSeeInOrder(['id="mfa_disable_password"', 'The password is incorrect.'], false);
 
-        // A wrong password on the confirm form (the default) leaves the cancel details closed.
-        $this->post('/member/config/mfa/confirm', ['current_password' => 'wrong-password', 'code' => '000000', '_mfa_form' => 'confirm']);
+        // A wrong password on the regenerate form (the default) leaves the disable details closed.
+        $this->post('/member/config/mfa/recovery-codes', ['current_password' => 'wrong-password', '_mfa_form' => 'regenerate']);
         $this->get('/member/config?category=mfa')
-            ->assertDontSee('<details open', false)
-            ->assertSeeInOrder(['id="mfa_current_password"', 'The password is incorrect.'], false);
+            ->assertDontSee('<details open>', false)
+            ->assertSeeInOrder(['id="mfa_regen_password"', 'The password is incorrect.'], false);
+    }
+
+    public function test_confirm_within_the_reauth_window_needs_no_password(): void
+    {
+        // The password was verified moments ago at enable; asking again in the same sitting is
+        // the double-entry the sudo-mode window exists to avoid.
+        $member = Member::factory()->create();
+        $this->actingAs($member)->post('/member/config/mfa/enable', ['current_password' => 'password']);
+
+        $fresh = $member->fresh();
+        $this->post('/member/config/mfa/confirm', ['code' => $this->currentOtp($fresh)]);
+
+        $this->assertNotNull($fresh->fresh()->two_factor_confirmed_at);
+    }
+
+    public function test_an_empty_password_field_does_not_shadow_the_code_error(): void
+    {
+        // Shared client form state submits current_password as '' even when the window hides the
+        // field; that must read as "not provided", or the invalid-code error would be displaced
+        // by a password error the page has no field to show.
+        $member = Member::factory()->create();
+        $this->actingAs($member)->post('/member/config/mfa/enable', ['current_password' => 'password']);
+
+        $this->post('/member/config/mfa/confirm', ['code' => 'not-a-code', 'current_password' => ''])
+            ->assertSessionHasErrors('code')
+            ->assertSessionDoesntHaveErrors('current_password');
+    }
+
+    public function test_confirm_after_the_window_lapses_demands_the_password(): void
+    {
+        $member = Member::factory()->create();
+        $this->actingAs($member)->post('/member/config/mfa/enable', ['current_password' => 'password']);
+        $fresh = $member->fresh();
+
+        $this->travel(16)->minutes();
+
+        // Codes stay valid under Carbon travel (google2fa reads the real clock); only the window lapses.
+        $this->post('/member/config/mfa/confirm', ['code' => $this->currentOtp($fresh)])
+            ->assertSessionHasErrors('current_password');
+        $this->assertNull($fresh->fresh()->two_factor_confirmed_at);
+
+        $this->post('/member/config/mfa/confirm', ['code' => $this->currentOtp($fresh), 'current_password' => 'password']);
+        $this->assertNotNull($fresh->fresh()->two_factor_confirmed_at);
+    }
+
+    public function test_disabling_a_live_factor_without_the_password_is_rejected(): void
+    {
+        $member = $this->memberWithTwoFactor();
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable')
+            ->assertSessionHasErrors('current_password');
+
+        $this->assertNotNull($member->fresh()->two_factor_secret);
     }
 
     public function test_the_classic_category_renders_each_state(): void
@@ -168,10 +222,12 @@ class MemberMfaManagementTest extends TestCase
                 ->missing('secret'));
 
         app(EnableTwoFactorAuthentication::class)($member, force: true);
+        // Enabled outside the HTTP flow, so no re-auth stamp: the page must ask for the password.
         $this->actingAs($member->fresh())->get('/m/member/config/mfa')
             ->assertInertia(fn (Assert $page) => $page
                 ->component('member/config/mfa')
                 ->where('state', 'pending')
+                ->where('requiresPassword', true)
                 ->has('qrCode')
                 ->has('secret'));
 
@@ -277,12 +333,12 @@ class MemberMfaManagementTest extends TestCase
         $this->assertSame('old-remember-token', $member->fresh()->remember_token);
     }
 
-    public function test_cancelling_a_pending_setup_clears_the_secret(): void
+    public function test_cancelling_a_pending_setup_clears_the_secret_without_a_password(): void
     {
+        // The pending secret gates nothing, so abandoning the wizard costs nothing to undo.
         $member = $this->memberWithPendingSetup();
 
-        $this->actingAs($member)
-            ->post('/member/config/mfa/disable', ['current_password' => 'password']);
+        $this->actingAs($member)->post('/member/config/mfa/disable');
 
         $this->assertNull($member->fresh()->two_factor_secret);
     }

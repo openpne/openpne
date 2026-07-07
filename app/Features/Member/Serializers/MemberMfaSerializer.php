@@ -2,6 +2,7 @@
 
 namespace App\Features\Member\Serializers;
 
+use App\Features\Member\MfaSetupReauth;
 use App\Models\Member;
 use Illuminate\Contracts\Session\Session;
 use Laravel\Fortify\Fortify;
@@ -31,6 +32,9 @@ class MemberMfaSerializer
                 'state' => 'pending',
                 'qrCode' => 'data:image/svg+xml;base64,'.base64_encode($member->twoFactorQrCodeSvg()),
                 'secret' => Fortify::currentEncrypter()->decrypt($member->two_factor_secret),
+                // The confirm form only shows a password field when the enable step's re-auth
+                // window has lapsed (ConfirmMfaRequest demands it in lockstep).
+                'requiresPassword' => ! MfaSetupReauth::isFresh($session),
             ];
         }
 

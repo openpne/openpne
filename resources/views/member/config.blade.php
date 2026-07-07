@@ -170,13 +170,13 @@
 
         @case(MemberConfigCategory::Mfa)
             {{-- Two-factor authentication: disabled → pending (QR + code confirm) → enabled.
-                 Every action re-authenticates with the account password. --}}
+                 The password is asked once at enable (re-auth window); disabling a live factor and
+                 regenerating codes re-ask it, cancelling an inert pending set-up does not. --}}
             <div class="dparts form" id="member_config_mfa">
                 <div class="partsHeading"><h3>{{ __('Two-factor authentication') }}</h3></div>
                 <div class="parts">
                     @if ($mfa['state'] === 'disabled')
-                        <p>{{ __('When two-factor authentication is on, signing in asks for a six-digit one-time code in addition to your password — so a leaked password alone cannot open your account.') }}</p>
-                        <p>{{ __('You need an authenticator app that generates the code. Search your device\'s app store for "authenticator" and install one before you start.') }}</p>
+                        <p>{{ __('To continue, first confirm it is you.') }}</p>
                         <form method="POST" action="{{ route('member.config.mfa.enable') }}">
                             @csrf
                             <table>
@@ -195,26 +195,13 @@
                             </div>
                         </form>
                     @elseif ($mfa['state'] === 'pending')
-                        {{-- The forms here share the current_password error key, so a hidden marker
-                             (flashed back as old input) routes the error to the form that was
-                             actually submitted — and reopens it when it lives in a <details>. --}}
-                        @php($submittedForm = old('_mfa_form', 'confirm'))
-                        <p>{{ __('Scan this QR code with your authenticator app. The app will show a six-digit code — enter it below to finish setting up.') }}</p>
+                        <p>{{ __('You need an authenticator app that generates a one-time code at login. Search your device\'s app store for "authenticator" and install one.') }}</p>
+                        <p>{{ __('Scan the following QR code with your authenticator app:') }}</p>
                         <img src="{{ $mfa['qrCode'] }}" alt="{{ __('QR code for your authenticator app') }}" width="192" height="192">
-                        <p>{{ __('Setup key') }}: <code>{{ $mfa['secret'] }}</code></p>
+                        <p>{{ __('Or enter the following code manually:') }} <code>{{ $mfa['secret'] }}</code></p>
                         <form method="POST" action="{{ route('member.config.mfa.confirm') }}">
                             @csrf
-                            <input type="hidden" name="_mfa_form" value="confirm">
                             <table>
-                                <tr>
-                                    <th><label for="mfa_current_password">{{ __('Current password') }}</label></th>
-                                    <td>
-                                        <input type="password" id="mfa_current_password" name="current_password" autocomplete="current-password">
-                                        @if ($submittedForm === 'confirm')
-                                            @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                        @endif
-                                    </td>
-                                </tr>
                                 <tr>
                                     <th><label for="mfa_code">{{ __('Authentication code') }}</label></th>
                                     <td>
@@ -223,6 +210,16 @@
                                         @error('code')<p class="error" role="alert">{{ $message }}</p>@enderror
                                     </td>
                                 </tr>
+                                @if ($mfa['requiresPassword'])
+                                    <tr>
+                                        <th><label for="mfa_current_password">{{ __('Current password') }}</label></th>
+                                        <td>
+                                            <input type="password" id="mfa_current_password" name="current_password" autocomplete="current-password">
+                                            <p>{{ __('Some time has passed since you started, so please confirm it is you: enter your current password as well.') }}</p>
+                                            @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        </td>
+                                    </tr>
+                                @endif
                             </table>
                             <div class="operation">
                                 <ul class="moreInfo button">
@@ -230,30 +227,16 @@
                                 </ul>
                             </div>
                         </form>
-                        {{-- Cancelling clears the pending secret; setting up again issues a fresh QR. --}}
-                        <details {{ $submittedForm === 'cancel' && $errors->any() ? 'open' : '' }}>
-                            <summary>{{ __('Cancel set-up') }}</summary>
-                            <form method="POST" action="{{ route('member.config.mfa.disable') }}">
-                                @csrf
-                                <input type="hidden" name="_mfa_form" value="cancel">
-                                <table>
-                                    <tr>
-                                        <th><label for="mfa_cancel_password">{{ __('Current password') }}</label></th>
-                                        <td>
-                                            <input type="password" id="mfa_cancel_password" name="current_password" autocomplete="current-password">
-                                            @if ($submittedForm === 'cancel')
-                                                @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                            @endif
-                                        </td>
-                                    </tr>
-                                </table>
-                                <div class="operation">
-                                    <ul class="moreInfo button">
-                                        <li><input type="submit" class="input_submit" value="{{ __('Cancel set-up') }}"></li>
-                                    </ul>
-                                </div>
-                            </form>
-                        </details>
+                        {{-- Cancelling clears the inert pending secret (no password: it gates nothing);
+                             setting up again issues a fresh QR. --}}
+                        <form method="POST" action="{{ route('member.config.mfa.disable') }}">
+                            @csrf
+                            <div class="operation">
+                                <ul class="moreInfo button">
+                                    <li><input type="submit" class="input_submit" value="{{ __('Cancel set-up') }}"></li>
+                                </ul>
+                            </div>
+                        </form>
                     @else
                         @php($submittedForm = old('_mfa_form', 'regenerate'))
                         <p>{{ __('Two-factor authentication is enabled.') }}</p>
@@ -271,6 +254,7 @@
                         <form method="POST" action="{{ route('member.config.mfa.recovery') }}">
                             @csrf
                             <input type="hidden" name="_mfa_form" value="regenerate">
+                            <p>{{ __('Regenerating replaces every unused recovery code with a fresh set.') }}</p>
                             <table>
                                 <tr>
                                     <th><label for="mfa_regen_password">{{ __('Current password') }}</label></th>
@@ -293,6 +277,7 @@
                             <form method="POST" action="{{ route('member.config.mfa.disable') }}">
                                 @csrf
                                 <input type="hidden" name="_mfa_form" value="disable">
+                                <p>{{ __('Your password alone will sign you in again.') }}</p>
                                 <table>
                                     <tr>
                                         <th><label for="mfa_disable_password">{{ __('Current password') }}</label></th>

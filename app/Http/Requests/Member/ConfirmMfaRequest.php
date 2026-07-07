@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests\Member;
 
+use App\Features\Member\MfaSetupReauth;
+
 /**
- * Confirming set-up proves authenticator possession with a TOTP code, on top of the
- * password re-auth every management action carries.
+ * Confirming set-up proves authenticator possession with a TOTP code. The password is only
+ * demanded when the enable step's re-auth window has lapsed (a pending set-up left behind and
+ * picked up later) — in the normal sitting the member typed it moments ago at enable.
  */
 class ConfirmMfaRequest extends MfaManagementRequest
 {
@@ -14,5 +17,10 @@ class ConfirmMfaRequest extends MfaManagementRequest
         return parent::rules() + [
             'code' => ['required', 'string'],
         ];
+    }
+
+    protected function requiresPassword(): bool
+    {
+        return ! MfaSetupReauth::isFresh($this->session());
     }
 }

@@ -77,19 +77,28 @@ Differences from the admin posture, all deliberate:
 app uses (login, logout, password reset, the two-factor challenge — names,
 methods and middleware pinned by `FortifyRoutesTest`). Fortify's
 `/user/two-factor-*` endpoints never ship: they would allow enabling/disabling
-the factor without the app's contract of an inline `current_password` re-auth
-and session revocation on factor change (confirm and disable revoke the
-member's other sessions and rotate `remember_token` in the same transaction;
-regenerating recovery codes revokes nothing — the factor is unchanged).
+the factor without the app's re-auth and revocation contract:
+
+- **Re-auth is per flow, not per step** (the sudo-mode convention). Enabling
+  verifies the account password and opens a short re-auth window
+  ([`MfaSetupReauth`](../../app/Features/Member/MfaSetupReauth.php)); confirming
+  inside the window needs only the TOTP code, after it the password again.
+  Disabling a live factor and regenerating recovery codes always re-authenticate
+  inline; cancelling an inert pending set-up never does (it gates nothing).
+- **Factor changes revoke**: confirm and disable revoke the member's other
+  sessions and rotate `remember_token` in the same transaction; regenerating
+  recovery codes revokes nothing — the factor is unchanged.
 
 **Lockout recovery**: recovery codes, or `openpne:member:disable-mfa <email>` —
 server access as the trust boundary, same as the admin command; the member's
 self-service password reset cannot remove a lost second factor.
 
 Accepted residual: a pending (unconfirmed) set-up QR is visible to whoever
-holds the member's session, but the pending secret gates nothing, every
-management action requires the account password, and restarting set-up rotates
-the secret.
+holds the member's session, and inside the enable re-auth window it could even
+be confirmed without the password — bounded by the window's length, and until
+confirmed the pending secret gates nothing. Outside the window every
+security-relevant action requires the account password, and restarting set-up
+mints a fresh secret.
 
 There is no enforcement lever yet ("this site requires MFA"); the natural
 insertion point is a post-login check on `hasEnabledTwoFactorAuthentication()`,

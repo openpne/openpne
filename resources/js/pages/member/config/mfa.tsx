@@ -4,11 +4,12 @@ import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
 import { Field, FormActions } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { OtpInput } from '@/components/ui/otp-input';
 import { useT } from '@/lib/i18n';
 
 type Props =
     | { state: 'disabled' }
-    | { state: 'pending'; qrCode: string; secret: string }
+    | { state: 'pending'; qrCode: string; secret: string; requiresPassword: boolean }
     | { state: 'enabled'; recoveryCodesCount: number; recoveryCodes?: string[] };
 
 /** The one-time recovery-code list, shown right after confirm/regenerate minted it. */
@@ -43,23 +44,13 @@ function Disabled() {
             }}
         >
             <div className="space-y-4">
-                <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>
-                        {t(
-                            'When two-factor authentication is on, signing in asks for a six-digit one-time code in addition to your password — so a leaked password alone cannot open your account.',
-                        )}
-                    </p>
-                    <p>
-                        {t(
-                            'You need an authenticator app that generates the code. Search your device\'s app store for "authenticator" and install one before you start.',
-                        )}
-                    </p>
-                </div>
+                <p className="text-sm text-foreground">{t('To continue, first confirm it is you.')}</p>
                 <Field label={t('Current password')} htmlFor="current_password" error={form.errors.current_password}>
                     <Input
                         id="current_password"
                         type="password"
                         autoComplete="current-password"
+                        autoFocus
                         value={form.data.current_password}
                         onChange={(e) => form.setData('current_password', e.target.value)}
                     />
@@ -74,17 +65,18 @@ function Disabled() {
     );
 }
 
-function Pending({ qrCode, secret }: { qrCode: string; secret: string }) {
+function Pending({ qrCode, secret, requiresPassword }: { qrCode: string; secret: string; requiresPassword: boolean }) {
     const t = useT();
-    // One password entry serves both outcomes: Confirm submits it with the code; Cancel posts the
-    // same re-auth to the disable endpoint (which clears the pending secret).
-    const form = useForm({ current_password: '', code: '' });
+    const form = useForm({ code: '', current_password: '' });
+    // Cancelling a pending set-up needs no fields (the pending secret gates nothing).
+    const cancel = useForm({});
 
     return (
         <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-                {t('Scan this QR code with your authenticator app. The app will show a six-digit code — enter it below to finish setting up.')}
+            <p className="text-xs text-muted-foreground">
+                {t('You need an authenticator app that generates a one-time code at login. Search your device\'s app store for "authenticator" and install one.')}
             </p>
+            <p className="text-sm text-foreground">{t('Scan the following QR code with your authenticator app:')}</p>
             {/* The padding is the QR quiet zone: it must stay the QR's own background color in both
                 themes (functional, not thematic — an inline style like the identity-mark colors). */}
             <img
@@ -96,34 +88,37 @@ function Pending({ qrCode, secret }: { qrCode: string; secret: string }) {
                 style={{ backgroundColor: '#fff' }}
             />
             <p className="text-sm text-muted-foreground">
-                {t('Setup key')}: <code className="select-all">{secret}</code>
+                {t('Or enter the following code manually:')} <code className="select-all">{secret}</code>
             </p>
             <form
                 onSubmit={(e: FormEvent<HTMLFormElement>) => {
                     e.preventDefault();
+                    // Send the password only when the form actually shows it (the server treats
+                    // an empty string as absent either way).
+                    form.transform((data) => (data.current_password === '' ? { code: data.code } : data));
                     form.post('/m/member/config/mfa/confirm');
                 }}
             >
                 <div className="space-y-4">
-                    <Field label={t('Current password')} htmlFor="current_password" error={form.errors.current_password}>
-                        <Input
-                            id="current_password"
-                            type="password"
-                            autoComplete="current-password"
-                            value={form.data.current_password}
-                            onChange={(e) => form.setData('current_password', e.target.value)}
-                        />
-                    </Field>
                     <Field label={t('Authentication code')} htmlFor="code" error={form.errors.code}>
-                        <Input
-                            id="code"
-                            type="text"
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                            value={form.data.code}
-                            onChange={(e) => form.setData('code', e.target.value)}
-                        />
+                        <OtpInput value={form.data.code} onChange={(code) => form.setData('code', code)} />
                     </Field>
+                    {requiresPassword && (
+                        <Field
+                            label={t('Current password')}
+                            htmlFor="current_password"
+                            help={t('Some time has passed since you started, so please confirm it is you: enter your current password as well.')}
+                            error={form.errors.current_password}
+                        >
+                            <Input
+                                id="current_password"
+                                type="password"
+                                autoComplete="current-password"
+                                value={form.data.current_password}
+                                onChange={(e) => form.setData('current_password', e.target.value)}
+                            />
+                        </Field>
+                    )}
                     <FormActions>
                         <Button type="submit" loading={form.processing}>
                             {t('Confirm')}
@@ -131,8 +126,8 @@ function Pending({ qrCode, secret }: { qrCode: string; secret: string }) {
                         <Button
                             type="button"
                             variant="outline"
-                            disabled={form.processing}
-                            onClick={() => form.post('/m/member/config/mfa/disable')}
+                            disabled={form.processing || cancel.processing}
+                            onClick={() => cancel.post('/m/member/config/mfa/disable')}
                         >
                             {t('Cancel set-up')}
                         </Button>
@@ -167,12 +162,10 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                 }}
                 className="space-y-4 border-t border-border pt-4"
             >
-                <Field
-                    label={t('Current password')}
-                    htmlFor="regenerate_password"
-                    help={t('Regenerating replaces every unused recovery code with a fresh set.')}
-                    error={regenerate.errors.current_password}
-                >
+                <p className="text-sm text-muted-foreground">
+                    {t('Regenerating replaces every unused recovery code with a fresh set.')}
+                </p>
+                <Field label={t('Current password')} htmlFor="regenerate_password" error={regenerate.errors.current_password}>
                     <Input
                         id="regenerate_password"
                         type="password"
@@ -195,12 +188,8 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                 }}
                 className="space-y-4 border-t border-border pt-4"
             >
-                <Field
-                    label={t('Current password')}
-                    htmlFor="disable_password"
-                    help={t('Your password alone will sign you in again.')}
-                    error={disable.errors.current_password}
-                >
+                <p className="text-sm text-muted-foreground">{t('Your password alone will sign you in again.')}</p>
+                <Field label={t('Current password')} htmlFor="disable_password" error={disable.errors.current_password}>
                     <Input
                         id="disable_password"
                         type="password"
@@ -225,7 +214,7 @@ export default function ConfigMfa(props: Props) {
     return (
         <SettingsSubpage title={t('Two-factor authentication')}>
             {props.state === 'disabled' && <Disabled />}
-            {props.state === 'pending' && <Pending qrCode={props.qrCode} secret={props.secret} />}
+            {props.state === 'pending' && <Pending qrCode={props.qrCode} secret={props.secret} requiresPassword={props.requiresPassword} />}
             {props.state === 'enabled' && <Enabled recoveryCodesCount={props.recoveryCodesCount} recoveryCodes={props.recoveryCodes} />}
         </SettingsSubpage>
     );
