@@ -28,6 +28,7 @@ interface Option {
 interface ConfigForm {
     diary: { value: string; options: Option[] };
     email: { value: string };
+    mfa: { enabled: boolean };
     locale: { value: string; options: Option[] };
     // Absent under modern_only — the Classic/Modern picker is only served when Classic is available.
     surface?: { value: string; options: Option[] };
@@ -282,6 +283,17 @@ export default function MemberConfig() {
                         action={
                             <ActionLink href="/m/member/config/password" variant="outline" size="sm">
                                 {t('Change')}
+                            </ActionLink>
+                        }
+                    />
+                </GroupItem>
+                <GroupItem>
+                    <DetailRow
+                        title={t('Two-factor authentication')}
+                        value={form.mfa.enabled ? t('Enabled') : t('Not enabled')}
+                        action={
+                            <ActionLink href="/m/member/config/mfa" variant="outline" size="sm">
+                                {t('Manage')}
                             </ActionLink>
                         }
                     />

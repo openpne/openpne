@@ -114,8 +114,11 @@ class TwoFactorChallengeTest extends TestCase
         $this->assertAuthenticatedAs($member);
     }
 
-    public function test_a_recovery_code_completes_the_login_and_is_replaced(): void
+    public function test_a_recovery_code_completes_the_login_and_is_consumed(): void
     {
+        // Deleted, not swapped for a fresh one (Member::replaceRecoveryCode): codes are shown
+        // exactly once at set-up, so the member could never learn a silent replacement — the
+        // unused count must shrink as their saved codes are spent.
         $member = $this->memberWithTwoFactor();
         $codes = $member->recoveryCodes();
         $this->startChallenge($member);
@@ -125,7 +128,7 @@ class TwoFactorChallengeTest extends TestCase
         $this->assertAuthenticatedAs($member);
         $remaining = $member->fresh()->recoveryCodes();
         $this->assertNotContains($codes[0], $remaining);
-        $this->assertCount(8, $remaining);
+        $this->assertCount(7, $remaining);
     }
 
     public function test_an_invalid_recovery_code_is_rejected(): void

@@ -270,6 +270,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'message/edit': { gap: '6' },
     'member/config/email': { gap: '6' },
     'member/config/password': { gap: '6' },
+    'member/config/mfa': { gap: '6' },
     'member/config/withdrawal': { gap: '6' },
     'community/show': { foreground: true },
     'community/topic/show': { foreground: true },
