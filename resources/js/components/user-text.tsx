@@ -17,7 +17,9 @@ export function UserText({ text }: { text: string | null | undefined }) {
                         href={segment.href}
                         target="_blank"
                         rel="noopener noreferrer nofollow"
-                        className="break-all text-link hover:underline"
+                        // Always underlined, not hover-only: these sit inline in body prose, where a
+                        // color-only link fails WCAG 1.4.1 (axe link-in-text-block).
+                        className="break-all text-link underline"
                     >
                         {segment.visible}
                     </a>
