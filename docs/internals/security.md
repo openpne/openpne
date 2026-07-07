@@ -51,8 +51,10 @@ themselves out by starting set-up and walking away. The verification window is
 cannot be replayed inside the window (Fortify caches it). The login challenge
 (`/two-factor-challenge`) renders on both surfaces through the same seam as the
 other Fortify screens ([`FortifyServiceProvider`](../../app/Providers/FortifyServiceProvider.php)),
-and its POST is throttled 5/min per challenged member + IP; the GET render is
-deliberately unthrottled so a refresh cannot burn the guess budget.
+and its POST is throttled 5/min per challenged member — not per IP, since the
+adversary at this step already holds the password, so the guess budget must
+not scale with attacker IPs; the GET render is deliberately unthrottled so a
+refresh cannot burn the guess budget.
 
 Differences from the admin posture, all deliberate:
 

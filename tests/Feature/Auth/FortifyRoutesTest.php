@@ -79,7 +79,7 @@ class FortifyRoutesTest extends TestCase
 
     public function test_fortifys_unused_password_confirmation_routes_are_not_carried_over(): void
     {
-        foreach (['password.confirm', 'password.confirmation'] as $name) {
+        foreach (['password.confirm', 'password.confirm.store', 'password.confirmation'] as $name) {
             $this->assertNull(Route::getRoutes()->getByName($name), "route [{$name}] must not exist");
         }
     }
