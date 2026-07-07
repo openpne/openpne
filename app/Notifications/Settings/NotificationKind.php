@@ -5,15 +5,13 @@ declare(strict_types=1);
 namespace App\Notifications\Settings;
 
 /**
- * The closed registry of member-configurable notification kinds — the notification catalog of
- * the OpenPNE 3 notification extension (its notification_config.yml items; vanilla OpenPNE 3
- * has no such catalog, so the imported keys exist only on sites that carried the extension).
- * The case value is the stored `member_notification_settings.kind`; each case's registry entry
- * lives in definition().
+ * The closed registry of member-configurable notification kinds (the notification catalog; its
+ * OpenPNE 3 lineage is described in docs/internals/notifications.md). The case value is the
+ * stored `member_notification_settings.kind`; each case's registry entry lives in definition().
  *
- * Every catalog item is registered, wired or not, so the one-shot upgrade can preserve every
- * member's stored choice; only wired kinds (those with an OpenPNE 4 sender) surface in the
- * settings UI. Timeline kinds stay unwired until community-scoped timeline lands.
+ * Every importable catalog item is registered, wired or not, so the one-shot upgrade can
+ * preserve every member's stored choice; only wired kinds (those with an OpenPNE 4 sender)
+ * surface in the settings UI. Timeline kinds stay unwired until community-scoped timeline lands.
  */
 enum NotificationKind: string
 {
@@ -189,8 +187,9 @@ enum NotificationKind: string
     }
 
     /**
-     * Whether an absent settings row means enabled. Parity with the OpenPNE 3 extension, where
-     * an absent member_config meant '1'. Kept per-kind so a default can be flipped in one arm later.
+     * Whether an absent settings row means enabled. Must stay true for imported kinds (an
+     * absent source key meant enabled, and the import writes no row for it); kept per-kind so
+     * a default can be flipped in one arm later.
      */
     public function defaultEnabled(): bool
     {

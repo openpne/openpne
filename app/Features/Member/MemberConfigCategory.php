@@ -15,8 +15,8 @@ enum MemberConfigCategory: string
     case PublicFlag = 'publicFlag';
     case Language = 'language';
     case General = 'general';
-    // The notification catalog opt-ins (member/configNotification on OpenPNE 3 sites carrying
-    // the notification extension; vanilla OpenPNE 3 had no such page).
+    // The notification catalog opt-ins (the member/configNotification page on OpenPNE 3 sites
+    // that carried the notification extension — the compat redirect in routes/web.php).
     case Notification = 'notification';
     case Password = 'password';
     // OpenPNE 4-native two-factor authentication (no OpenPNE 3 source), like General.

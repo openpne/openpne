@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications\Settings;
 
 /**
- * The notification-catalog categories (the OpenPNE 3 extension's notification_config.yml
- * groups), used to group kinds on the settings pages.
+ * The notification-catalog categories, used to group kinds on the settings pages.
  */
 enum NotificationCategory: string
 {

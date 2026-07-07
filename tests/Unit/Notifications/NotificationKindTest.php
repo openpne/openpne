@@ -66,7 +66,8 @@ class NotificationKindTest extends TestCase
 
     public function test_every_kind_defaults_enabled(): void
     {
-        // Parity with the OpenPNE 3 extension: an absent member_config row meant '1' for every item.
+        // Imported kinds must default on (an absent source key meant enabled); flipping one is a
+        // deliberate one-arm change, never an accident.
         foreach (NotificationKind::cases() as $kind) {
             $this->assertTrue($kind->defaultEnabled(), "{$kind->value} should default on");
         }

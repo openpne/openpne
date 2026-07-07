@@ -21,9 +21,9 @@ final readonly class NotificationKindDefinition
         /** Member-facing toggle label (untranslated source string; %term% placeholders apply). */
         public string $caption,
         /**
-         * The "(x only)" variant relation (the extension's `dependOnNot`): this kind only takes
-         * effect while $dependOnNot is disabled for the recipient — an enabled $dependOnNot
-         * already covers the narrower audience.
+         * The "(x only)" variant relation: this kind only takes effect while $dependOnNot is
+         * disabled for the recipient — an enabled $dependOnNot already covers the narrower
+         * audience.
          */
         public ?NotificationKind $dependOnNot = null,
         /**

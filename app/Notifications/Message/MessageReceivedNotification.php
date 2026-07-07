@@ -14,10 +14,10 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells a recipient a new message arrived (notifyNewMessage in the OpenPNE 3 notification
- * extension). Mail + database, each gated by the recipient's catalog opt-in: MessageNew covers
- * every sender; while it is off, MessageNewOnlyFriends (its dependOnNot variant) still covers
- * friend senders — the extension's if/elseif delivery chain.
+ * Tells a recipient a new message arrived. Mail + database, each gated by the recipient's
+ * catalog opt-in: MessageNew covers every sender; while it is off, MessageNewOnlyFriends (its
+ * dependOnNot variant) still covers friend senders. This exact chain is what imported opt-outs
+ * were saved against, so it must not change shape.
  */
 class MessageReceivedNotification extends Notification implements ShouldQueue
 {
