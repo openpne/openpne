@@ -6,6 +6,9 @@ namespace App\Notifications\Concerns;
 
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
+use App\Models\Member;
+use App\Notifications\Settings\NotificationChannel;
+use App\Notifications\Settings\NotificationKind;
 use Illuminate\Notifications\Messages\MailMessage;
 
 /**
@@ -31,6 +34,31 @@ trait RendersMailTemplate
         return app(MailTemplateService::class)->isEnabled($template)
             ? ['mail', ...$others]
             : $others;
+    }
+
+    /**
+     * templateChannels() plus the recipient's own catalog opt-out: 'mail' additionally requires
+     * the member's mail toggle for $kind, and a 'database' entry in $others requires the web
+     * toggle (web gates the in-app per-event record). Other $others pass through unchanged.
+     *
+     * @param  list<string>  $others
+     * @return list<string>
+     */
+    protected function templateChannelsFor(MailTemplate $template, NotificationKind $kind, Member $notifiable, array $others = []): array
+    {
+        $channels = $notifiable->wantsNotification($kind, NotificationChannel::Mail)
+            ? $this->templateChannels($template)
+            : [];
+
+        foreach ($others as $channel) {
+            if ($channel === 'database' && ! $notifiable->wantsNotification($kind, NotificationChannel::Web)) {
+                continue;
+            }
+
+            $channels[] = $channel;
+        }
+
+        return $channels;
     }
 
     /** @param array<string, mixed> $context */

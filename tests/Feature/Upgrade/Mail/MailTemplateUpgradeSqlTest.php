@@ -54,6 +54,8 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->seedMail(2, 'pc_changeMailAddress');
         $this->seedMail(3, 'pc_friendLinkComplete');
         $this->seedMail(4, 'pc_signature');
+        $this->seedMail(5, 'pc_friendLinkRequest');
+        $this->seedMail(6, 'pc_notifyNewMessage');
 
         $this->runUpgrade();
 
@@ -62,6 +64,29 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('mail_templates', ['id' => 2, 'key' => 'email-change-confirm']);
         $this->assertDatabaseHas('mail_templates', ['id' => 3, 'key' => 'friend-accepted']);
         $this->assertDatabaseHas('mail_templates', ['id' => 4, 'key' => 'signature']);
+        $this->assertDatabaseHas('mail_templates', ['id' => 5, 'key' => 'friend-requested']);
+        $this->assertDatabaseHas('mail_templates', ['id' => 6, 'key' => 'message-received']);
+    }
+
+    public function test_an_imported_openpne3_message_body_renders_with_its_flat_variables(): void
+    {
+        // The OpenPNE 3 notifyNewMessage sample uses flat names (member_name/message_subject/…);
+        // the OpenPNE 4 notification context must keep providing them so imported wording renders.
+        $this->seedMail(6, 'pc_notifyNewMessage');
+        $this->seedTranslation(6, 'ja_JP', '新着メッセージ「{{ message_subject }}」', "{{ member_name }}>>\n\n{{ message_body }}\n\n{{ url }}");
+
+        $this->runUpgrade();
+        app(MailTemplateService::class)->clearCache();
+
+        $rendered = app(MailTemplateService::class)->render(MailTemplate::MessageReceived, 'ja', [
+            'member_name' => 'Alice',
+            'message_subject' => 'Hi',
+            'message_body' => 'Hello there',
+            'url' => 'https://example.test/message/1',
+        ]);
+
+        $this->assertSame('新着メッセージ「Hi」', $rendered->subject);
+        $this->assertStringContainsString("Alice>>\n\nHello there\n\nhttps://example.test/message/1", $rendered->body);
     }
 
     public function test_forces_required_mails_on_and_keeps_a_configurable_flag(): void

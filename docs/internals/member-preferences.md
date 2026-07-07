@@ -8,8 +8,9 @@ under [`app/Features/Member/`](../../app/Features/Member); the store is
 
 Not every OpenPNE 3 `member_config` use lands here. Identity-bearing / hot-path attributes are
 typed `members` columns instead (e.g. `locale`, read every request by
-[`SetLocale`](../../app/Http/Middleware/SetLocale.php)); notification opt-ins are deferred to a
-dedicated store. This store holds the feature-scoped preferences that are neither.
+[`SetLocale`](../../app/Http/Middleware/SetLocale.php)); notification opt-ins have their own
+store (see [notifications.md](notifications.md)). This store holds the feature-scoped
+preferences that are neither.
 
 ## The typed registry
 

@@ -75,7 +75,7 @@ enum MailTemplate: string
                 ],
             ),
             self::FriendRequested => new MailTemplateDefinition(
-                op3SourceName: null,
+                op3SourceName: 'pc_friendLinkRequest',
                 isConfigurable: true,
                 caption: 'Friend request',
                 variables: [
@@ -92,11 +92,15 @@ enum MailTemplate: string
                 ],
             ),
             self::MessageReceived => new MailTemplateDefinition(
-                op3SourceName: null,
+                op3SourceName: 'pc_notifyNewMessage',
                 isConfigurable: true,
                 caption: 'Message received',
                 variables: [
                     'member.name' => ['help' => 'The sender’s name.', 'sample' => 'Example'],
+                    // Flat OpenPNE 3 notifyNewMessage names, kept alongside so imported wording renders.
+                    'member_name' => ['help' => 'The sender’s name.', 'sample' => 'Example'],
+                    'message_subject' => ['help' => 'The message subject.', 'sample' => 'Example subject'],
+                    'message_body' => ['help' => 'The message body.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The message URL.', 'sample' => 'https://example.test'],
                 ],
             ),

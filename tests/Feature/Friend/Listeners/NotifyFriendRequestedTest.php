@@ -6,6 +6,8 @@ use App\Features\Friend\Events\FriendRequested;
 use App\Listeners\Friend\NotifyFriendRequested;
 use App\Models\Member;
 use App\Notifications\Friend\FriendRequestedNotification;
+use App\Notifications\Settings\NotificationChannel;
+use App\Notifications\Settings\NotificationKind;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -50,5 +52,47 @@ class NotifyFriendRequestedTest extends TestCase
         FriendRequested::dispatch($alice, $bob);
 
         Notification::assertSentTo($bob, FriendRequestedNotification::class);
+    }
+
+    public function test_mail_opt_out_keeps_the_database_record(): void
+    {
+        Notification::fake();
+        [$alice, $bob] = Member::factory()->count(2)->create()->all();
+        $bob->setNotificationSetting(NotificationKind::FriendLinkConfirm, NotificationChannel::Mail, false);
+
+        (new NotifyFriendRequested)->handle(new FriendRequested($alice, $bob));
+
+        Notification::assertSentTo(
+            $bob,
+            FriendRequestedNotification::class,
+            fn (FriendRequestedNotification $notification, array $channels) => $channels === ['database'],
+        );
+    }
+
+    public function test_web_opt_out_keeps_the_mail(): void
+    {
+        Notification::fake();
+        [$alice, $bob] = Member::factory()->count(2)->create()->all();
+        $bob->setNotificationSetting(NotificationKind::FriendLinkConfirm, NotificationChannel::Web, false);
+
+        (new NotifyFriendRequested)->handle(new FriendRequested($alice, $bob));
+
+        Notification::assertSentTo(
+            $bob,
+            FriendRequestedNotification::class,
+            fn (FriendRequestedNotification $notification, array $channels) => $channels === ['mail'],
+        );
+    }
+
+    public function test_opting_out_of_both_channels_sends_nothing(): void
+    {
+        Notification::fake();
+        [$alice, $bob] = Member::factory()->count(2)->create()->all();
+        $bob->setNotificationSetting(NotificationKind::FriendLinkConfirm, NotificationChannel::Mail, false);
+        $bob->setNotificationSetting(NotificationKind::FriendLinkConfirm, NotificationChannel::Web, false);
+
+        (new NotifyFriendRequested)->handle(new FriendRequested($alice, $bob));
+
+        Notification::assertNotSentTo($bob, FriendRequestedNotification::class);
     }
 }
