@@ -17,7 +17,7 @@
                 <div class="timeline-member-name">
                     <a href="{{ route('member.profile.show', $post->member) }}">{{ $post->member->name }}</a>
                 </div>
-                <div class="timeline-post-body">{{ $post->body }}</div>
+                <div class="timeline-post-body"><x-user-text :value="$post->body" /></div>
                 @foreach ($post->images as $image)
                     @if ($image->file)
                         <img class="timeline-post-image" src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">
@@ -40,7 +40,7 @@
                             <div class="timeline-member-name">
                                 <a href="{{ route('member.profile.show', $reply->member) }}">{{ $reply->member->name }}</a>
                             </div>
-                            <div class="timeline-post-body">{{ $reply->body }}</div>
+                            <div class="timeline-post-body"><x-user-text :value="$reply->body" /></div>
                             <div class="timeline-post-control">
                                 <span class="timestamp">{{ \App\Support\LocalizedDate::dateTime($reply->created_at) }}</span>
                                 @if ($reply->member->is($viewer))

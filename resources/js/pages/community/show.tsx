@@ -4,6 +4,7 @@ import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
 import { EntryRow } from '@/components/entry-row';
+import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
@@ -87,7 +88,11 @@ export default function CommunityShow() {
                     </div>
                 )}
 
-                {community.description && <div className="whitespace-pre-wrap break-words">{community.description}</div>}
+                {community.description && (
+                    <div className="whitespace-pre-wrap break-words">
+                        <UserText text={community.description} />
+                    </div>
+                )}
             </Panel>
 
             {recentTopics !== null && (

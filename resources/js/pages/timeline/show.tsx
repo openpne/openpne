@@ -2,6 +2,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
+import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { DangerLink } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
@@ -42,7 +43,9 @@ export default function TimelineShow() {
                     </Link>
                     <span className="shrink-0 text-muted-foreground">{formatDateTime(post.createdAt)}</span>
                 </div>
-                <p className="whitespace-pre-wrap break-words">{post.body}</p>
+                <p className="whitespace-pre-wrap break-words">
+                    <UserText text={post.body} />
+                </p>
                 <ImageGrid images={post.images} />
                 {post.author.id === viewerId && (
                     <DangerLink href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm">
@@ -62,7 +65,9 @@ export default function TimelineShow() {
                                     </Link>
                                     <span className="text-muted-foreground">{formatDateTime(reply.createdAt)}</span>
                                 </div>
-                                <p className="whitespace-pre-wrap break-words">{reply.body}</p>
+                                <p className="whitespace-pre-wrap break-words">
+                                    <UserText text={reply.body} />
+                                </p>
                                 {reply.author.id === viewerId && (
                                     <DangerLink href={`/m/timeline/deleteConfirm/${reply.id}`} className="text-sm">
                                         {t('Delete')}

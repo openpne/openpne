@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Mail, UserPlus } from 'lucide-react';
+import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -118,7 +119,9 @@ export default function MemberShow() {
                         {fields.map((field) => (
                             <div key={field.name} className="flex gap-4 py-2 text-sm">
                                 <dt className="w-40 shrink-0 font-medium text-muted-foreground">{field.caption}</dt>
-                                <dd className="text-foreground">{field.value}</dd>
+                                <dd className="whitespace-pre-wrap break-words text-foreground">
+                                    <UserText text={field.value} />
+                                </dd>
                             </div>
                         ))}
                     </dl>

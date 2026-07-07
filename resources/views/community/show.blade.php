@@ -25,7 +25,7 @@
                 <p class="category">{{ $community->category->name }}</p>
             @endif
             @if ($community->description)
-                <p class="description">{{ $community->description }}</p>
+                <p class="description"><x-user-text :value="$community->description" /></p>
             @endif
             <p class="memberCount">{{ __(':count members', ['count' => $community->members_count]) }}</p>
 

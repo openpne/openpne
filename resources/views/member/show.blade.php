@@ -32,7 +32,7 @@
                         @foreach ($fields as $field)
                             <tr>
                                 <th>{{ $field->profile->getCaption($lang) }}</th>
-                                <td>{{ $field->display($lang) }}</td>
+                                <td><x-user-text :value="$field->display($lang)" /></td>
                             </tr>
                         @endforeach
                     </table>

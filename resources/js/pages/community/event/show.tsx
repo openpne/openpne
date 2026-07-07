@@ -3,6 +3,7 @@ import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
@@ -92,7 +93,9 @@ export default function CommunityEventShow() {
                     {event.area && (
                         <>
                             <dt className="text-muted-foreground">{t('Area')}</dt>
-                            <dd>{event.area}</dd>
+                            <dd className="whitespace-pre-wrap break-words">
+                                <UserText text={event.area} />
+                            </dd>
                         </>
                     )}
                     {event.applicationDeadline && (
@@ -111,7 +114,9 @@ export default function CommunityEventShow() {
                     </dd>
                 </dl>
 
-                <div className="whitespace-pre-wrap break-words">{event.body}</div>
+                <div className="whitespace-pre-wrap break-words">
+                    <UserText text={event.body} />
+                </div>
                 <ImageGrid images={event.images} size="size-24" className="mt-2" />
 
                 {canEdit && (
@@ -171,7 +176,9 @@ export default function CommunityEventShow() {
                                         </button>
                                     )}
                                 </div>
-                                <p className="mt-1 whitespace-pre-wrap break-words">{comment.body}</p>
+                                <p className="mt-1 whitespace-pre-wrap break-words">
+                                    <UserText text={comment.body} />
+                                </p>
                                 <ImageGrid images={comment.images} size="size-24" className="mt-2" />
                             </li>
                         ))}

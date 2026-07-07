@@ -173,6 +173,31 @@ class ClassicProfileGadgetTest extends TestCase
             ->assertSee("/friend/link?id={$owner->getKey()}");
     }
 
+    public function test_profile_field_value_url_is_auto_linked(): void
+    {
+        $owner = Member::factory()->create(['name' => 'Owner']);
+        $viewer = Member::factory()->create();
+        $this->fieldFor($owner, Visibility::Members, 'see https://example.com/x');
+        $this->makeGadget('contents', 'profileListBox');
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('<a href="https://example.com/x" target="_blank" rel="noopener noreferrer nofollow">https://example.com/x</a>', false);
+    }
+
+    public function test_nickname_row_is_not_auto_linked(): void
+    {
+        // A nickname is not free-text profile content, so a URL-looking name must not be linkified.
+        $owner = Member::factory()->create(['name' => 'https://nick.example/x']);
+        $viewer = Member::factory()->create();
+        $this->makeGadget('contents', 'profileListBox'); // nickname-only box, no linkified fields
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('<th>Nickname</th>', false)
+            ->assertDontSee('rel="noopener noreferrer nofollow"', false); // no auto-link anchor rendered
+    }
+
     private function giveBirthday(Member $owner, string $date): void
     {
         $profile = Profile::factory()->create(['name' => 'op_preset_birthday', 'form_type' => 'date']);

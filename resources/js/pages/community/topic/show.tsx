@@ -4,6 +4,7 @@ import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -77,7 +78,9 @@ export default function CommunityTopicShow() {
                     <span>&mdash; {formatDateTime(topic.createdAt)}</span>
                 </div>
 
-                <div className="whitespace-pre-wrap break-words">{topic.body}</div>
+                <div className="whitespace-pre-wrap break-words">
+                    <UserText text={topic.body} />
+                </div>
                 <ImageGrid images={topic.images} size="size-24" className="mt-2" />
 
                 {canEdit && (
@@ -137,7 +140,9 @@ export default function CommunityTopicShow() {
                                         </button>
                                     )}
                                 </div>
-                                <p className="mt-1 whitespace-pre-wrap break-words">{comment.body}</p>
+                                <p className="mt-1 whitespace-pre-wrap break-words">
+                                    <UserText text={comment.body} />
+                                </p>
                                 <ImageGrid images={comment.images} size="size-24" className="mt-2" />
                             </li>
                         ))}

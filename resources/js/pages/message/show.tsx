@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { Panel } from '@/components/ui/surface';
 import { formatDateTime } from '@/lib/date';
@@ -101,7 +102,9 @@ export default function MessageShow() {
 
                 <ImageGrid images={message.images} size="size-24" />
 
-                <div className="whitespace-pre-wrap break-words">{message.body}</div>
+                <div className="whitespace-pre-wrap break-words">
+                    <UserText text={message.body} />
+                </div>
 
                 <div className="flex flex-wrap items-center gap-4 pt-2">
                     {canReply && <ActionLink href={`/m/message/reply/${message.id}`}>{t('Reply')}</ActionLink>}
