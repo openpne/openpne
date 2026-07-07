@@ -55,6 +55,8 @@ class NotificationKindTest extends TestCase
     {
         $this->assertSame(
             [
+                NotificationKind::DiaryReplyPost,
+                NotificationKind::DiaryRelatedPost,
                 NotificationKind::FriendLinkConfirm,
                 NotificationKind::FriendLinkComplete,
                 NotificationKind::MessageNew,

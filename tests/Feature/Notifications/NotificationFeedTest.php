@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications;
 
+use App\Models\Diary;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
@@ -105,6 +106,30 @@ class NotificationFeedTest extends TestCase
             ->assertRedirect(route('notifications.index'));
 
         $this->assertNotNull($row->fresh()->read_at);
+    }
+
+    public function test_open_redirects_a_diary_comment_to_the_diary(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        $diary = Diary::factory()->create(['member_id' => $viewer->getKey()]);
+        $row = $this->seedRow($viewer, 'diary_commented', ['commenter_id' => $actor->getKey(), 'diary_id' => $diary->getKey(), 'reason' => 'reply']);
+
+        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+            ->assertRedirect('/m/diary/'.$diary->getKey());
+    }
+
+    public function test_open_falls_back_to_the_feed_when_the_diary_is_gone_or_hidden(): void
+    {
+        [$viewer, $actor, $owner] = Member::factory()->count(3)->create()->all();
+        // A private diary the viewer once commented on but can no longer view.
+        $hidden = Diary::factory()->private()->create(['member_id' => $owner->getKey()]);
+        $gone = $this->seedRow($viewer, 'diary_commented', ['commenter_id' => $actor->getKey(), 'diary_id' => 424242, 'reason' => 'related']);
+        $unviewable = $this->seedRow($viewer, 'diary_commented', ['commenter_id' => $actor->getKey(), 'diary_id' => $hidden->getKey(), 'reason' => 'related']);
+
+        $this->actingAs($viewer)->post("/m/notifications/{$gone->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
+        $this->actingAs($viewer)->post("/m/notifications/{$unviewable->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
     }
 
     public function test_open_rejects_another_members_notification(): void

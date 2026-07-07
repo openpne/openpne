@@ -95,11 +95,14 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->seedMail(1, 'pc_requestRegisterURL', isEnabled: false);
         // ...while a configurable one keeps the admin's OpenPNE 3 choice.
         $this->seedMail(3, 'pc_friendLinkComplete', isEnabled: false);
+        // Non-configurable like the source template — forced on; the member-level opt-out gates it.
+        $this->seedMail(5, 'pc_notifyNewDiaryComment', isEnabled: false);
 
         $this->runUpgrade();
 
         $this->assertDatabaseHas('mail_templates', ['key' => 'registration-link', 'is_enabled' => 1]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'friend-accepted', 'is_enabled' => 0]);
+        $this->assertDatabaseHas('mail_templates', ['key' => 'diary-comment', 'is_enabled' => 1]);
     }
 
     public function test_drops_mobile_and_unsupported_templates(): void
