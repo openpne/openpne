@@ -57,8 +57,9 @@ member-gated.
 ## Key invariants
 
 - `NotificationKind` is the only kind list; the stored `kind` column holds its case value.
-- An absent settings row means the kind's `defaultEnabled()` — defaults are never written, so a
-  default flip later applies to everyone without an explicit choice.
+- An absent settings row means the kind's `defaultEnabled()`. An explicit choice is stored even
+  when it equals the default (the UI saves what the member picked; the upgrade copies OpenPNE 3
+  rows verbatim), so a default flip later applies only to members with no stored row.
 - OpenPNE 3 `member_config` key names derive from `NotificationKind::op3ConfigName()`
   (`is_send_{name}_web` / `is_send_pc_{name}_mail`) — the upgrade has no second name list.
 - Layer-1 counts and layer-3 `read_at` never feed each other.
