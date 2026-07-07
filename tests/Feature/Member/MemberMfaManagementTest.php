@@ -11,9 +11,11 @@ use PragmaRX\Google2FA\Google2FA;
 use Tests\TestCase;
 
 /**
- * Member two-factor management: every POST re-authenticates with the account password;
- * confirm/disable revoke the member's other sessions (a factor change is a credential change)
- * while regenerating recovery codes revokes nothing; recovery codes render exactly once.
+ * Member two-factor management: one password re-auth per flow (enable opens a window that
+ * covers confirm; disabling a live factor and regenerating codes re-auth every time; cancelling
+ * a pending set-up never does). Confirm and live-factor disable revoke the member's other
+ * sessions (a factor change is a credential change); regenerating codes and cancelling a
+ * pending set-up revoke nothing. Recovery codes render exactly once.
  */
 class MemberMfaManagementTest extends TestCase
 {
@@ -49,8 +51,10 @@ class MemberMfaManagementTest extends TestCase
         ]);
     }
 
-    public function test_every_management_post_requires_the_current_password(): void
+    public function test_a_wrong_password_is_rejected_on_every_management_post(): void
     {
+        // Whenever the field is provided it must be the account password, whatever the action's
+        // required-ness (window fresh or not, factor live or not).
         $member = Member::factory()->create();
 
         foreach (['enable', 'confirm', 'disable', 'recovery-codes'] as $action) {
@@ -335,12 +339,19 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_cancelling_a_pending_setup_clears_the_secret_without_a_password(): void
     {
-        // The pending secret gates nothing, so abandoning the wizard costs nothing to undo.
+        // The pending secret gates nothing, so abandoning the wizard costs nothing to undo — and
+        // since the cancel is password-free it must also be side-effect-free: no session purge,
+        // no remember_token rotation a walked-up session could trigger for free.
         $member = $this->memberWithPendingSetup();
+        $member->forceFill(['remember_token' => 'old-remember-token'])->save();
+        $this->insertOtherDeviceSession($member);
 
         $this->actingAs($member)->post('/member/config/mfa/disable');
 
-        $this->assertNull($member->fresh()->two_factor_secret);
+        $fresh = $member->fresh();
+        $this->assertNull($fresh->two_factor_secret);
+        $this->assertDatabaseHas('sessions', ['id' => 'other-device-session']);
+        $this->assertSame('old-remember-token', $fresh->remember_token);
     }
 
     public function test_regenerate_rotates_codes_without_revoking_sessions(): void

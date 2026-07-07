@@ -379,9 +379,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/m/member/config/password', [MemberConfigController::class, 'editPassword'])->name('member.config.password.edit');
     Route::get('/m/member/config/withdrawal', [MemberConfigController::class, 'editWithdrawal'])->name('member.config.withdrawal.edit');
 
-    // Member two-factor management (OpenPNE 4-native; Classic serves it as ?category=mfa). Every
-    // POST re-authenticates with current_password; enable/confirm/disable/regenerate semantics —
-    // including which ones revoke other sessions — live in MemberMfaController.
+    // Member two-factor management (OpenPNE 4-native; Classic serves it as ?category=mfa).
+    // Re-auth is one current_password per flow (enable opens a window that covers confirm);
+    // which actions re-demand it and which revoke other sessions live in MemberMfaController.
     Route::controller(MemberMfaController::class)->group(function () {
         Route::post('/member/config/mfa/enable', 'enable')->name('member.config.mfa.enable');
         Route::post('/member/config/mfa/confirm', 'confirm')->name('member.config.mfa.confirm');

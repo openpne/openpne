@@ -85,9 +85,11 @@ the factor without the app's re-auth and revocation contract:
   inside the window needs only the TOTP code, after it the password again.
   Disabling a live factor and regenerating recovery codes always re-authenticate
   inline; cancelling an inert pending set-up never does (it gates nothing).
-- **Factor changes revoke**: confirm and disable revoke the member's other
-  sessions and rotate `remember_token` in the same transaction; regenerating
-  recovery codes revokes nothing — the factor is unchanged.
+- **Live-factor changes revoke**: confirm and disabling a live factor revoke
+  the member's other sessions and rotate `remember_token` in the same
+  transaction. Regenerating recovery codes revokes nothing (the factor is
+  unchanged), and neither does cancelling a pending set-up — it is
+  password-free, so it must also stay side-effect-free.
 
 **Lockout recovery**: recovery codes, or `openpne:member:disable-mfa <email>` —
 server access as the trust boundary, same as the admin command; the member's

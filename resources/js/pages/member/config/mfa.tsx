@@ -101,7 +101,7 @@ function Pending({ qrCode, secret, requiresPassword }: { qrCode: string; secret:
             >
                 <div className="space-y-4">
                     <Field label={t('Authentication code')} htmlFor="code" error={form.errors.code}>
-                        <OtpInput value={form.data.code} onChange={(code) => form.setData('code', code)} />
+                        <OtpInput label={t('Authentication code')} value={form.data.code} onChange={(code) => form.setData('code', code)} />
                     </Field>
                     {requiresPassword && (
                         <Field

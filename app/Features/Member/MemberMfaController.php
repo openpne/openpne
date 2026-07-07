@@ -23,9 +23,11 @@ use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 
 /**
  * Member two-factor management: Fortify's actions behind this app's management contract —
- * inline current_password re-auth on every POST (the form requests) and other-session
- * revocation when the factor changes (docs/internals/security.md). Fortify's own
- * /user/two-factor-* endpoints are not registered precisely because they lack both.
+ * one inline current_password re-auth per flow (enable opens MfaSetupReauth's window for
+ * confirm; disabling a live factor and regenerating codes re-auth every time; cancelling an
+ * inert pending set-up never does) and other-session revocation when the live factor changes
+ * (docs/internals/security.md). Fortify's own /user/two-factor-* endpoints are not registered
+ * precisely because they lack both.
  *
  * State machine: disabled → (enable: pending secret + codes) → pending → (confirm: TOTP proof)
  * → enabled. A pending secret never gates login, so cancelling or abandoning set-up is safe.
@@ -96,9 +98,14 @@ class MemberMfaController extends Controller
 
         $wasEnabled = $viewer->hasEnabledTwoFactorAuthentication();
 
-        DB::transaction(function () use ($disable, $viewer, $request): void {
+        // Only a live factor's removal is a credential change worth revoking sessions over.
+        // Cancelling a pending set-up is password-free, so it must stay side-effect-free too —
+        // otherwise a walked-up session could log out the member's other devices for free.
+        DB::transaction(function () use ($disable, $viewer, $request, $wasEnabled): void {
             $disable($viewer);
-            SessionRevocation::revokeMember($viewer, $request->session()->getId());
+            if ($wasEnabled) {
+                SessionRevocation::revokeMember($viewer, $request->session()->getId());
+            }
         });
         MfaSetupReauth::clear($request->session());
 

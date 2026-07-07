@@ -5,6 +5,9 @@ import { cn } from '@/lib/utils';
 type OtpInputProps = {
     value: string;
     onChange: (value: string) => void;
+    /** Field context for each box's accessible name — per-box aria-labels override the
+     * associated <label>, so the context must be baked in ("Authentication code: digit 2 of 6"). */
+    label: string;
     length?: number;
     autoFocus?: boolean;
     /** Injected by Field onto the first box, so its label/error wiring lands on a real control. */
@@ -19,7 +22,7 @@ type OtpInputProps = {
  * typing advances, backspace retreats, and a paste or an OS code autofill (which drops the whole
  * code into one box) spreads across the boxes.
  */
-export function OtpInput({ value, onChange, length = 6, autoFocus, id, ...aria }: OtpInputProps) {
+export function OtpInput({ value, onChange, label, length = 6, autoFocus, id, ...aria }: OtpInputProps) {
     const t = useT();
     const boxes = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -58,7 +61,7 @@ export function OtpInput({ value, onChange, length = 6, autoFocus, id, ...aria }
     };
 
     return (
-        <div className="flex gap-2">
+        <div role="group" aria-label={label} className="flex gap-2">
             {Array.from({ length }, (_, i) => (
                 <input
                     key={i}
@@ -75,7 +78,7 @@ export function OtpInput({ value, onChange, length = 6, autoFocus, id, ...aria }
                     onKeyDown={(e) => handleKeyDown(i, e)}
                     onPaste={handlePaste}
                     onFocus={(e) => handleFocus(i, e.target)}
-                    aria-label={t('Digit :number of :count', { number: i + 1, count: length })}
+                    aria-label={`${label}: ${t('Digit :number of :count', { number: i + 1, count: length })}`}
                     aria-invalid={aria['aria-invalid']}
                     aria-describedby={i === 0 ? aria['aria-describedby'] : undefined}
                     className={cn(

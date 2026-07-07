@@ -60,7 +60,7 @@ export default function TwoFactorChallenge() {
                         help={t('Enter the six-digit code shown in your authenticator app.')}
                         error={errors.code}
                     >
-                        <OtpInput autoFocus value={data.code} onChange={(code) => setData('code', code)} />
+                        <OtpInput label={t('Authentication code')} autoFocus value={data.code} onChange={(code) => setData('code', code)} />
                     </Field>
                 )}
 
