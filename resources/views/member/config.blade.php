@@ -172,10 +172,10 @@
             {{-- Two-factor authentication: disabled → pending (QR + code confirm) → enabled.
                  The password is asked once at enable (re-auth window); disabling a live factor and
                  regenerating codes re-ask it, cancelling an inert pending set-up does not. --}}
-            <div class="dparts form" id="member_config_mfa">
-                <div class="partsHeading"><h3>{{ __('Two-factor authentication') }}</h3></div>
-                <div class="parts">
-                    @if ($mfa['state'] === 'disabled')
+            @if ($mfa['state'] === 'disabled')
+                <div class="dparts form" id="member_config_mfa">
+                    <div class="partsHeading"><h3>{{ __('Two-factor authentication') }}</h3></div>
+                    <div class="parts">
                         <p>{{ __('To continue, first confirm it is you.') }}</p>
                         <form method="POST" action="{{ route('member.config.mfa.enable') }}">
                             @csrf
@@ -194,7 +194,12 @@
                                 </ul>
                             </div>
                         </form>
-                    @elseif ($mfa['state'] === 'pending')
+                    </div>
+                </div>
+            @elseif ($mfa['state'] === 'pending')
+                <div class="dparts form" id="member_config_mfa">
+                    <div class="partsHeading"><h3>{{ __('Two-factor authentication') }}</h3></div>
+                    <div class="parts">
                         <p>{{ __('You need an authenticator app that generates a one-time code at login. Search your device\'s app store for "authenticator" and install one.') }}</p>
                         <p>{{ __('Scan the following QR code with your authenticator app:') }}</p>
                         <img src="{{ $mfa['qrCode'] }}" alt="{{ __('QR code for your authenticator app') }}" width="192" height="192">
@@ -237,12 +242,18 @@
                                 </ul>
                             </div>
                         </form>
-                    @else
-                        @php($submittedForm = old('_mfa_form', 'regenerate'))
+                    </div>
+                </div>
+            @else
+                @php($submittedForm = old('_mfa_form', 'regenerate'))
+                <div class="dparts" id="member_config_mfa">
+                    <div class="partsHeading"><h3>{{ __('Two-factor authentication') }}</h3></div>
+                    <div class="parts">
                         <p>{{ __('Two-factor authentication is enabled.') }}</p>
                         @isset($mfa['recoveryCodes'])
                             {{-- Shown once, right after confirm/regenerate minted them. --}}
-                            <p class="error">{{ __('Store these codes somewhere safe. Each can be used once if you lose your authenticator.') }}</p>
+                            <p class="error">{{ __('These codes are shown only this once.') }}</p>
+                            <p>{{ __('Save them somewhere safe now — each can be used once to sign in if you lose your authenticator.') }}</p>
                             <ul>
                                 @foreach ($mfa['recoveryCodes'] as $code)
                                     <li><code>{{ $code }}</code></li>
@@ -251,10 +262,17 @@
                         @else
                             <p>{{ __('Unused recovery codes') }}: {{ $mfa['recoveryCodesCount'] }}</p>
                         @endisset
+                    </div>
+                </div>
+                {{-- Each management action gets its own headed box, so what a password field is
+                     FOR is stated before the field itself. --}}
+                <div class="dparts form" id="member_config_mfa_recovery">
+                    <div class="partsHeading"><h3>{{ __('Regenerate recovery codes') }}</h3></div>
+                    <div class="parts">
+                        <p>{{ __('Regenerating replaces every unused recovery code with a fresh set.') }}</p>
                         <form method="POST" action="{{ route('member.config.mfa.recovery') }}">
                             @csrf
                             <input type="hidden" name="_mfa_form" value="regenerate">
-                            <p>{{ __('Regenerating replaces every unused recovery code with a fresh set.') }}</p>
                             <table>
                                 <tr>
                                     <th><label for="mfa_regen_password">{{ __('Current password') }}</label></th>
@@ -272,33 +290,35 @@
                                 </ul>
                             </div>
                         </form>
-                        <details {{ $submittedForm === 'disable' && $errors->any() ? 'open' : '' }}>
-                            <summary>{{ __('Disable two-factor authentication') }}</summary>
-                            <form method="POST" action="{{ route('member.config.mfa.disable') }}">
-                                @csrf
-                                <input type="hidden" name="_mfa_form" value="disable">
-                                <p>{{ __('Your password alone will sign you in again.') }}</p>
-                                <table>
-                                    <tr>
-                                        <th><label for="mfa_disable_password">{{ __('Current password') }}</label></th>
-                                        <td>
-                                            <input type="password" id="mfa_disable_password" name="current_password" autocomplete="current-password">
-                                            @if ($submittedForm === 'disable')
-                                                @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
-                                            @endif
-                                        </td>
-                                    </tr>
-                                </table>
-                                <div class="operation">
-                                    <ul class="moreInfo button">
-                                        <li><input type="submit" class="input_submit" value="{{ __('Disable two-factor authentication') }}"></li>
-                                    </ul>
-                                </div>
-                            </form>
-                        </details>
-                    @endif
+                    </div>
                 </div>
-            </div>
+                <div class="dparts form" id="member_config_mfa_disable">
+                    <div class="partsHeading"><h3>{{ __('Disable two-factor authentication') }}</h3></div>
+                    <div class="parts">
+                        <p>{{ __('Your password alone will sign you in again.') }}</p>
+                        <form method="POST" action="{{ route('member.config.mfa.disable') }}">
+                            @csrf
+                            <input type="hidden" name="_mfa_form" value="disable">
+                            <table>
+                                <tr>
+                                    <th><label for="mfa_disable_password">{{ __('Current password') }}</label></th>
+                                    <td>
+                                        <input type="password" id="mfa_disable_password" name="current_password" autocomplete="current-password">
+                                        @if ($submittedForm === 'disable')
+                                            @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        @endif
+                                    </td>
+                                </tr>
+                            </table>
+                            <div class="operation">
+                                <ul class="moreInfo button">
+                                    <li><input type="submit" class="input_submit" value="{{ __('Disable two-factor authentication') }}"></li>
+                                </ul>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            @endif
             @break
 
         @case(MemberConfigCategory::Email)

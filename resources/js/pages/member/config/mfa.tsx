@@ -2,7 +2,7 @@ import { useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
-import { Field, FormActions } from '@/components/ui/field';
+import { Field, FormActions, FormSection } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { OtpInput } from '@/components/ui/otp-input';
 import { useT } from '@/lib/i18n';
@@ -12,23 +12,29 @@ type Props =
     | { state: 'pending'; qrCode: string; secret: string; requiresPassword: boolean }
     | { state: 'enabled'; recoveryCodesCount: number; recoveryCodes?: string[] };
 
-/** The one-time recovery-code list, shown right after confirm/regenerate minted it. */
+/**
+ * The one-time recovery-code list, shown right after confirm/regenerate minted it. Dashed frame +
+ * an explicit "only this once" lead so it reads as a moment to act on, not page furniture that
+ * would still be here on the next visit.
+ */
 function RecoveryCodes({ codes }: { codes: string[] }) {
     const t = useT();
 
     return (
-        <div className="space-y-2 rounded-md border border-border bg-muted/40 p-4">
-            <p className="text-sm font-semibold text-foreground">
-                {t('Store these codes somewhere safe. Each can be used once if you lose your authenticator.')}
+        <section className="space-y-2 rounded-md border-2 border-dashed border-foreground/30 p-4">
+            <h2 className="text-base font-semibold text-foreground">{t('Recovery codes')}</h2>
+            <p className="text-sm font-semibold text-foreground">{t('These codes are shown only this once.')}</p>
+            <p className="text-sm text-muted-foreground">
+                {t('Save them somewhere safe now — each can be used once to sign in if you lose your authenticator.')}
             </p>
-            <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-1 pt-1 sm:grid-cols-2">
                 {codes.map((code) => (
                     <li key={code}>
                         <code className="text-sm">{code}</code>
                     </li>
                 ))}
             </ul>
-        </div>
+        </section>
     );
 }
 
@@ -155,55 +161,69 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                 </p>
             )}
 
-            <form
-                onSubmit={(e: FormEvent<HTMLFormElement>) => {
-                    e.preventDefault();
-                    regenerate.post('/m/member/config/mfa/recovery-codes');
-                }}
-                className="space-y-4 border-t border-border pt-4"
-            >
-                <p className="text-sm text-muted-foreground">
-                    {t('Regenerating replaces every unused recovery code with a fresh set.')}
-                </p>
-                <Field label={t('Current password')} htmlFor="regenerate_password" error={regenerate.errors.current_password}>
-                    <Input
-                        id="regenerate_password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={regenerate.data.current_password}
-                        onChange={(e) => regenerate.setData('current_password', e.target.value)}
-                    />
-                </Field>
-                <FormActions>
-                    <Button type="submit" variant="outline" loading={regenerate.processing}>
-                        {t('Regenerate recovery codes')}
-                    </Button>
-                </FormActions>
-            </form>
+            {/* Each management form leads with a heading + what it does; the password field is
+                the means, not the message. */}
+            <div className="border-t border-border pt-5">
+                <FormSection
+                    title={t('Regenerate recovery codes')}
+                    headingLevel="h2"
+                    description={t('Regenerating replaces every unused recovery code with a fresh set.')}
+                >
+                    <form
+                        onSubmit={(e: FormEvent<HTMLFormElement>) => {
+                            e.preventDefault();
+                            regenerate.post('/m/member/config/mfa/recovery-codes');
+                        }}
+                        className="space-y-4"
+                    >
+                        <Field label={t('Current password')} htmlFor="regenerate_password" error={regenerate.errors.current_password}>
+                            <Input
+                                id="regenerate_password"
+                                type="password"
+                                autoComplete="current-password"
+                                value={regenerate.data.current_password}
+                                onChange={(e) => regenerate.setData('current_password', e.target.value)}
+                            />
+                        </Field>
+                        <FormActions>
+                            <Button type="submit" variant="outline" loading={regenerate.processing}>
+                                {t('Regenerate recovery codes')}
+                            </Button>
+                        </FormActions>
+                    </form>
+                </FormSection>
+            </div>
 
-            <form
-                onSubmit={(e: FormEvent<HTMLFormElement>) => {
-                    e.preventDefault();
-                    disable.post('/m/member/config/mfa/disable');
-                }}
-                className="space-y-4 border-t border-border pt-4"
-            >
-                <p className="text-sm text-muted-foreground">{t('Your password alone will sign you in again.')}</p>
-                <Field label={t('Current password')} htmlFor="disable_password" error={disable.errors.current_password}>
-                    <Input
-                        id="disable_password"
-                        type="password"
-                        autoComplete="current-password"
-                        value={disable.data.current_password}
-                        onChange={(e) => disable.setData('current_password', e.target.value)}
-                    />
-                </Field>
-                <FormActions>
-                    <Button type="submit" variant="destructive" loading={disable.processing}>
-                        {t('Disable two-factor authentication')}
-                    </Button>
-                </FormActions>
-            </form>
+            <div className="border-t border-border pt-5">
+                <FormSection
+                    title={t('Disable two-factor authentication')}
+                    headingLevel="h2"
+                    description={t('Your password alone will sign you in again.')}
+                >
+                    <form
+                        onSubmit={(e: FormEvent<HTMLFormElement>) => {
+                            e.preventDefault();
+                            disable.post('/m/member/config/mfa/disable');
+                        }}
+                        className="space-y-4"
+                    >
+                        <Field label={t('Current password')} htmlFor="disable_password" error={disable.errors.current_password}>
+                            <Input
+                                id="disable_password"
+                                type="password"
+                                autoComplete="current-password"
+                                value={disable.data.current_password}
+                                onChange={(e) => disable.setData('current_password', e.target.value)}
+                            />
+                        </Field>
+                        <FormActions>
+                            <Button type="submit" variant="destructive" loading={disable.processing}>
+                                {t('Disable two-factor authentication')}
+                            </Button>
+                        </FormActions>
+                    </form>
+                </FormSection>
+            </div>
         </div>
     );
 }

@@ -109,8 +109,22 @@ class MemberMfaController extends Controller
         });
         MfaSetupReauth::clear($request->session());
 
-        // Cancelling a pending set-up isn't a factor change worth announcing.
-        return $this->mfaRedirect($request, $wasEnabled ? __('Two-factor authentication has been disabled.') : null);
+        // Cancelling a pending set-up isn't a factor change worth announcing; it lands back on
+        // the set-up screen for a restart. Disabling a live factor lands on the settings hub —
+        // the Modern detail page's disabled state is the set-up form, which reads as "do it
+        // again", not "it is now off"; the hub shows the flash without scrolling and the account
+        // row states the new status.
+        if (! $wasEnabled) {
+            return $this->mfaRedirect($request);
+        }
+
+        $status = __('Two-factor authentication has been disabled.');
+        if (SurfaceResolver::redirectName($request, 'member.config') === 'member.config') {
+            return redirect()->route('member.config', ['category' => MemberConfigCategory::Mfa->value])
+                ->with('status', $status);
+        }
+
+        return redirect()->route('member.modern.config')->with('status', $status);
     }
 
     public function regenerate(MfaManagementRequest $request, GenerateNewRecoveryCodes $generate): RedirectResponse

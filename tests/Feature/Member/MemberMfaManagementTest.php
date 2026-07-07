@@ -112,8 +112,8 @@ class MemberMfaManagementTest extends TestCase
     public function test_classic_routes_the_password_error_to_the_form_that_was_submitted(): void
     {
         // The enabled page has two password forms sharing the error key; the flashed _mfa_form
-        // marker routes the error into the submitted (collapsed) disable form and reopens it.
-        // No assertSessionHasErrors between the POST and the GET: reading the session in the
+        // marker routes the error into the form that was actually submitted. No
+        // assertSessionHasErrors between the POST and the GET: reading the session in the
         // assertion ages the flash, which would blank the very render under test.
         $member = $this->memberWithTwoFactor();
 
@@ -122,15 +122,26 @@ class MemberMfaManagementTest extends TestCase
             ->post('/member/config/mfa/disable', ['current_password' => 'wrong-password', '_mfa_form' => 'disable'])
             ->assertRedirect('/member/config?category=mfa');
 
+        // The error sits inside the disable box, i.e. after the regenerate box's field.
         $this->get('/member/config?category=mfa')
-            ->assertSee('<details open>', false)
-            ->assertSeeInOrder(['id="mfa_disable_password"', 'The password is incorrect.'], false);
+            ->assertSeeInOrder(['id="mfa_regen_password"', 'id="mfa_disable_password"', 'The password is incorrect.'], false);
 
-        // A wrong password on the regenerate form (the default) leaves the disable details closed.
+        // A wrong password on the regenerate form places it before the disable box instead.
         $this->post('/member/config/mfa/recovery-codes', ['current_password' => 'wrong-password', '_mfa_form' => 'regenerate']);
         $this->get('/member/config?category=mfa')
-            ->assertDontSee('<details open>', false)
-            ->assertSeeInOrder(['id="mfa_regen_password"', 'The password is incorrect.'], false);
+            ->assertSeeInOrder(['id="mfa_regen_password"', 'The password is incorrect.', 'id="mfa_disable_password"'], false);
+    }
+
+    public function test_disabling_a_live_factor_lands_on_the_modern_settings_hub(): void
+    {
+        // The detail page's disabled state is the set-up form again — it reads as "do it again",
+        // not "it is now off". The hub announces the change without scrolling.
+        $member = $this->memberWithTwoFactor();
+
+        $this->actingAs($member)
+            ->post('/m/member/config/mfa/disable', ['current_password' => 'password'])
+            ->assertRedirect('/m/member/config')
+            ->assertSessionHas('status');
     }
 
     public function test_confirm_within_the_reauth_window_needs_no_password(): void
