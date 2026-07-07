@@ -168,6 +168,130 @@
             </div>
             @break
 
+        @case(MemberConfigCategory::Mfa)
+            {{-- Two-factor authentication: disabled → pending (QR + code confirm) → enabled.
+                 Every action re-authenticates with the account password. --}}
+            <div class="dparts form" id="member_config_mfa">
+                <div class="partsHeading"><h3>{{ __('Two-factor authentication') }}</h3></div>
+                <div class="parts">
+                    @if ($mfa['state'] === 'disabled')
+                        <form method="POST" action="{{ route('member.config.mfa.enable') }}">
+                            @csrf
+                            <table>
+                                <tr>
+                                    <th><label for="mfa_current_password">{{ __('Current password') }}</label></th>
+                                    <td>
+                                        <input type="password" id="mfa_current_password" name="current_password" autocomplete="current-password">
+                                        <p>{{ __('Add a second sign-in step: your password plus a six-digit code from an authenticator app.') }}</p>
+                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                    </td>
+                                </tr>
+                            </table>
+                            <div class="operation">
+                                <ul class="moreInfo button">
+                                    <li><input type="submit" class="input_submit" value="{{ __('Set up two-factor authentication') }}"></li>
+                                </ul>
+                            </div>
+                        </form>
+                    @elseif ($mfa['state'] === 'pending')
+                        <p>{{ __('Scan this QR code with your authenticator app, then enter the six-digit code to finish.') }}</p>
+                        <img src="{{ $mfa['qrCode'] }}" alt="{{ __('QR code for your authenticator app') }}" width="192" height="192">
+                        <p>{{ __('Setup key') }}: <code>{{ $mfa['secret'] }}</code></p>
+                        <form method="POST" action="{{ route('member.config.mfa.confirm') }}">
+                            @csrf
+                            <table>
+                                <tr>
+                                    <th><label for="mfa_current_password">{{ __('Current password') }}</label></th>
+                                    <td>
+                                        <input type="password" id="mfa_current_password" name="current_password" autocomplete="current-password">
+                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="mfa_code">{{ __('Authentication code') }}</label></th>
+                                    <td>
+                                        <input type="text" id="mfa_code" name="code" class="input_text"
+                                               inputmode="numeric" autocomplete="one-time-code">
+                                        @error('code')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                    </td>
+                                </tr>
+                            </table>
+                            <div class="operation">
+                                <ul class="moreInfo button">
+                                    <li><input type="submit" class="input_submit" value="{{ __('Confirm') }}"></li>
+                                </ul>
+                            </div>
+                        </form>
+                        {{-- Cancelling clears the pending secret; setting up again issues a fresh QR. --}}
+                        <details>
+                            <summary>{{ __('Cancel set-up') }}</summary>
+                            <form method="POST" action="{{ route('member.config.mfa.disable') }}">
+                                @csrf
+                                <table>
+                                    <tr>
+                                        <th><label for="mfa_cancel_password">{{ __('Current password') }}</label></th>
+                                        <td><input type="password" id="mfa_cancel_password" name="current_password" autocomplete="current-password"></td>
+                                    </tr>
+                                </table>
+                                <div class="operation">
+                                    <ul class="moreInfo button">
+                                        <li><input type="submit" class="input_submit" value="{{ __('Cancel set-up') }}"></li>
+                                    </ul>
+                                </div>
+                            </form>
+                        </details>
+                    @else
+                        <p>{{ __('Two-factor authentication is enabled.') }}</p>
+                        @isset($mfa['recoveryCodes'])
+                            {{-- Shown once, right after confirm/regenerate minted them. --}}
+                            <p class="error">{{ __('Store these codes somewhere safe. Each can be used once if you lose your authenticator.') }}</p>
+                            <ul>
+                                @foreach ($mfa['recoveryCodes'] as $code)
+                                    <li><code>{{ $code }}</code></li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p>{{ __('Unused recovery codes') }}: {{ $mfa['recoveryCodesCount'] }}</p>
+                        @endisset
+                        <form method="POST" action="{{ route('member.config.mfa.recovery') }}">
+                            @csrf
+                            <table>
+                                <tr>
+                                    <th><label for="mfa_regen_password">{{ __('Current password') }}</label></th>
+                                    <td>
+                                        <input type="password" id="mfa_regen_password" name="current_password" autocomplete="current-password">
+                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                    </td>
+                                </tr>
+                            </table>
+                            <div class="operation">
+                                <ul class="moreInfo button">
+                                    <li><input type="submit" class="input_submit" value="{{ __('Regenerate recovery codes') }}"></li>
+                                </ul>
+                            </div>
+                        </form>
+                        <details>
+                            <summary>{{ __('Disable two-factor authentication') }}</summary>
+                            <form method="POST" action="{{ route('member.config.mfa.disable') }}">
+                                @csrf
+                                <table>
+                                    <tr>
+                                        <th><label for="mfa_disable_password">{{ __('Current password') }}</label></th>
+                                        <td><input type="password" id="mfa_disable_password" name="current_password" autocomplete="current-password"></td>
+                                    </tr>
+                                </table>
+                                <div class="operation">
+                                    <ul class="moreInfo button">
+                                        <li><input type="submit" class="input_submit" value="{{ __('Disable two-factor authentication') }}"></li>
+                                    </ul>
+                                </div>
+                            </form>
+                        </details>
+                    @endif
+                </div>
+            </div>
+            @break
+
         @case(MemberConfigCategory::Email)
             {{-- Email-address change: re-auth with the current password; a confirmation link is mailed
                  to the new address and the change commits only when that link is confirmed. --}}

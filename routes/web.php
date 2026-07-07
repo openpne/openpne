@@ -15,6 +15,7 @@ use App\Features\Home\HomeController;
 use App\Features\Member\InviteController;
 use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberConfigController;
+use App\Features\Member\MemberMfaController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Message\MessageController;
 use App\Features\Profile\ProfileController;
@@ -377,6 +378,26 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/m/member/config/email', [MemberConfigController::class, 'editEmail'])->name('member.config.email.edit');
     Route::get('/m/member/config/password', [MemberConfigController::class, 'editPassword'])->name('member.config.password.edit');
     Route::get('/m/member/config/withdrawal', [MemberConfigController::class, 'editWithdrawal'])->name('member.config.withdrawal.edit');
+
+    // Member two-factor management (OpenPNE 4-native; Classic serves it as ?category=mfa). Every
+    // POST re-authenticates with current_password; enable/confirm/disable/regenerate semantics —
+    // including which ones revoke other sessions — live in MemberMfaController.
+    Route::controller(MemberMfaController::class)->group(function () {
+        Route::post('/member/config/mfa/enable', 'enable')->name('member.config.mfa.enable');
+        Route::post('/member/config/mfa/confirm', 'confirm')->name('member.config.mfa.confirm');
+        Route::post('/member/config/mfa/disable', 'disable')->name('member.config.mfa.disable');
+        Route::post('/member/config/mfa/recovery-codes', 'regenerate')->name('member.config.mfa.recovery');
+        Route::post('/m/member/config/mfa/enable', 'enable')
+            ->defaults('surface', 'modern')->name('member.modern.config.mfa.enable');
+        Route::post('/m/member/config/mfa/confirm', 'confirm')
+            ->defaults('surface', 'modern')->name('member.modern.config.mfa.confirm');
+        Route::post('/m/member/config/mfa/disable', 'disable')
+            ->defaults('surface', 'modern')->name('member.modern.config.mfa.disable');
+        Route::post('/m/member/config/mfa/recovery-codes', 'regenerate')
+            ->defaults('surface', 'modern')->name('member.modern.config.mfa.recovery');
+        // Modern-only detail page, like the email/password/withdrawal ones above.
+        Route::get('/m/member/config/mfa', 'edit')->name('member.config.mfa.edit');
+    });
 
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {
         Route::get('/avatar', 'edit')->name('member.avatar.edit');
