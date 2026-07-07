@@ -64,12 +64,15 @@ Differences from the admin posture, all deliberate:
   challenge (why the admin login dropped it). Enabling or disabling MFA rotates
   `remember_token`, so recallers minted before MFA was enabled stop working.
 - **Recovery codes are encrypted but recoverable** (Fortify standard: a used
-  code is compared in plaintext and replaced with a fresh one), not
-  bcrypt-hashed like the admin's. They are displayed only right after
-  confirmation or regeneration and are never stored in the session; that
-  display is a server-side one-shot, but a browser may re-show the page from
-  its own history state — accepted, since the codes sit behind an
-  authenticated session and remain regenerable.
+  code is compared in plaintext), not bcrypt-hashed like the admin's. They are
+  displayed only right after confirmation or regeneration and are never stored
+  in the session; that display is a server-side one-shot, but a browser may
+  re-show the page from its own history state — accepted, since the codes sit
+  behind an authenticated session and remain regenerable. A used code is
+  deleted rather than silently swapped for a fresh one (Fortify's default,
+  overridden in `Member::replaceRecoveryCode`): under show-once display the
+  member could never learn the replacement, so swapping would hold the unused
+  count at a phantom maximum while their saved codes dwindle.
 
 **Management endpoints are this app's own** (member settings), not Fortify's:
 [`FortifyServiceProvider`](../../app/Providers/FortifyServiceProvider.php) calls
