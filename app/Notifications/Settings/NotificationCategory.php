@@ -16,8 +16,13 @@ enum NotificationCategory: string
     case FriendLink = 'friend_link';
     case Message = 'message';
 
-    /** Member-facing group heading (untranslated source string; %term% placeholders apply). */
+    /** Member-facing group heading (translated; %term% placeholders resolve downstream). */
     public function caption(): string
+    {
+        return __($this->sourceCaption());
+    }
+
+    private function sourceCaption(): string
     {
         return match ($this) {
             self::Timeline => 'Timeline',

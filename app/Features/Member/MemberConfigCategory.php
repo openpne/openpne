@@ -15,6 +15,8 @@ enum MemberConfigCategory: string
     case PublicFlag = 'publicFlag';
     case Language = 'language';
     case General = 'general';
+    // The notification catalog opt-ins (tejimaya OpenPNE 3 member/configNotification).
+    case Notification = 'notification';
     case Password = 'password';
     // OpenPNE 4-native two-factor authentication (no OpenPNE 3 source), like General.
     case Mfa = 'mfa';
@@ -28,6 +30,7 @@ enum MemberConfigCategory: string
             self::PublicFlag => __('Privacy'),
             self::Language => __('Language'),
             self::General => __('General'),
+            self::Notification => __('Notifications'),
             self::Password => __('Password'),
             self::Mfa => __('Two-factor authentication'),
             self::Email => __('Email address'),
