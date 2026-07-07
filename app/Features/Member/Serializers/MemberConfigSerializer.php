@@ -30,6 +30,10 @@ class MemberConfigSerializer
             'email' => [
                 'value' => (string) $member->email,
             ],
+            // Status only; secret material stays on the MFA detail page's own serializer.
+            'mfa' => [
+                'enabled' => $member->hasEnabledTwoFactorAuthentication(),
+            ],
             'locale' => [
                 'value' => app()->getLocale(),
                 'options' => [

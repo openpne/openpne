@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\Events\RecoveryCodeReplaced;
+use Laravel\Fortify\Fortify;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 #[Fillable(['name', 'email', 'password'])]
@@ -28,6 +30,25 @@ class Member extends Authenticatable
     // The login pipeline detects a two-factor member via class_uses_recursive, so the trait is
     // load-bearing, not decorative.
     use TwoFactorAuthenticatable;
+
+    /**
+     * A used recovery code is deleted, not silently swapped for a fresh one (the Fortify
+     * default). Codes are displayed exactly once here, so the member could never see the
+     * replacement — swapping would keep the unused count at a phantom "8" while the codes in
+     * their safe actually dwindle. Deleting keeps the count honest; regenerating refills the set.
+     *
+     * @param  string  $code
+     */
+    public function replaceRecoveryCode($code): void
+    {
+        $this->forceFill([
+            'two_factor_recovery_codes' => Fortify::currentEncrypter()->encrypt(json_encode(
+                array_values(array_diff($this->recoveryCodes(), [$code])),
+            )),
+        ])->save();
+
+        RecoveryCodeReplaced::dispatch($this, $code);
+    }
 
     protected function casts(): array
     {

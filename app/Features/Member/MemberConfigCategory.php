@@ -16,6 +16,8 @@ enum MemberConfigCategory: string
     case Language = 'language';
     case General = 'general';
     case Password = 'password';
+    // OpenPNE 4-native two-factor authentication (no OpenPNE 3 source), like General.
+    case Mfa = 'mfa';
     case Email = 'email';
     case Withdrawal = 'withdrawal';
 
@@ -27,6 +29,7 @@ enum MemberConfigCategory: string
             self::Language => __('Language'),
             self::General => __('General'),
             self::Password => __('Password'),
+            self::Mfa => __('Two-factor authentication'),
             self::Email => __('Email address'),
             self::Withdrawal => __('Account withdrawal'),
         };

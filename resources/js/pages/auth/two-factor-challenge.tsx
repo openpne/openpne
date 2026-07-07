@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { OtpInput } from '@/components/ui/otp-input';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 
@@ -59,17 +60,7 @@ export default function TwoFactorChallenge() {
                         help={t('Enter the six-digit code shown in your authenticator app.')}
                         error={errors.code}
                     >
-                        <Input
-                            id="code"
-                            type="text"
-                            name="code"
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                            autoFocus
-                            required
-                            value={data.code}
-                            onChange={(e) => setData('code', e.target.value)}
-                        />
+                        <OtpInput label={t('Authentication code')} autoFocus value={data.code} onChange={(code) => setData('code', code)} />
                     </Field>
                 )}
 
