@@ -6,7 +6,7 @@
         {{-- OpenPNE 3 shows the @screen_name handle here; Classic shows the nickname. --}}
         <a href="{{ route('member.profile.show', $post->member) }}">{{ $post->member->name }}</a>
     </div>
-    <div class="timeline-post-body">{{ $post->body }}</div>
+    <div class="timeline-post-body"><x-user-text :value="$post->body" /></div>
     @foreach ($post->images as $image)
         @if ($image->file)
             <img class="timeline-post-image" src="{{ $image->file->thumbnailUrl(120, 120, square: true) }}" alt="">

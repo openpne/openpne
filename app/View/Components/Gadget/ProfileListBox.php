@@ -16,7 +16,7 @@ use Illuminate\View\Component;
  */
 class ProfileListBox extends Component
 {
-    /** @var list<array{caption: string, value: string}> */
+    /** @var list<array{caption: string, value: string, linkify: bool}> */
     public array $rows;
 
     public string $lang;
@@ -41,13 +41,14 @@ class ProfileListBox extends Component
         $viewer = auth()->user();
 
         // OpenPNE 3 seeds the nickname row, then Age right after it (gated separately from the
-        // birthday field), then the visible profile fields.
-        $rows = [['caption' => __('%Nickname%'), 'value' => $subject->name]];
+        // birthday field), then the visible profile fields. Only the free-text profile values are
+        // URL-auto-linked (OpenPNE 3 op_auto_link_text); nickname and the computed Age are not.
+        $rows = [['caption' => __('%Nickname%'), 'value' => $subject->name, 'linkify' => false]];
         if (($age = $visibleAge($viewer, $subject)) !== null) {
-            $rows[] = ['caption' => __('Age'), 'value' => __(':age years old', ['age' => $age])];
+            $rows[] = ['caption' => __('Age'), 'value' => __(':age years old', ['age' => $age]), 'linkify' => false];
         }
         foreach ($showProfile($viewer, $subject, $this->lang) ?? collect() as $field) {
-            $rows[] = ['caption' => $field->profile->getCaption($this->lang), 'value' => $field->display($this->lang)];
+            $rows[] = ['caption' => $field->profile->getCaption($this->lang), 'value' => $field->display($this->lang), 'linkify' => true];
         }
 
         $this->rows = $rows;

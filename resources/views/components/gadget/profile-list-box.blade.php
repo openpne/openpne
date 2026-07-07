@@ -6,7 +6,7 @@
             @foreach ($rows as $row)
                 <tr>
                     <th>{{ $row['caption'] }}</th>
-                    <td>{{ $row['value'] }}</td>
+                    <td>@if ($row['linkify'])<x-user-text :value="$row['value']" />@else{{ $row['value'] }}@endif</td>
                 </tr>
             @endforeach
         </table>
