@@ -119,6 +119,10 @@ return [
 
     'limiters' => [
         'login' => 'login',
+        // Fortify only attaches throttle middleware to the challenge POST when this key is set —
+        // without it the two-factor code endpoint ships unthrottled. The limiter itself is
+        // registered in App\Providers\FortifyServiceProvider.
+        'two-factor' => 'two-factor',
     ],
 
     /*
@@ -149,7 +153,15 @@ return [
         // Registration is owned by App\Features\Auth\RegistrationController (OpenPNE 3's multi-stage
         // email-confirmation flow), not Fortify's single-stage /register.
         Features::resetPasswords(),
-        // update password, profile update, email verification, 2FA, passkeys は
+        // Member TOTP two-factor authentication (opt-in). `confirm` keeps an unconfirmed secret
+        // inert at login — a member can never lock themselves out by starting set-up and walking
+        // away. `window` 1 (≈±30s) matches the admin panel's codeWindow(1) posture. Management
+        // endpoints live under /member/config (docs/internals/security.md), not Fortify's /user/*.
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'window' => 1,
+        ]),
+        // update password, profile update, email verification, passkeys は
         // 後続 PR で必要になった時に Features::*() を再有効化する
     ],
 

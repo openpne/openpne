@@ -41,6 +41,58 @@ The secret and recovery codes are stored encrypted (APP_KEY); recovery codes are
 additionally bcrypt-hashed by Filament before encryption. The MFA challenge in
 the login flow is rate-limited by Filament independently of the password login.
 
+## Member two-factor authentication
+
+Members get **opt-in TOTP** two-factor auth through Fortify's two-factor feature
+(`config/fortify.php`), in confirm mode: a secret whose set-up was never
+confirmed with a valid code is inert at login, so a member cannot lock
+themselves out by starting set-up and walking away. The verification window is
+1 step (≈±30s), matching the admin panel's `codeWindow(1)`; an accepted code
+cannot be replayed inside the window (Fortify caches it). The login challenge
+(`/two-factor-challenge`) renders on both surfaces through the same seam as the
+other Fortify screens ([`FortifyServiceProvider`](../../app/Providers/FortifyServiceProvider.php)),
+and its POST is throttled 5/min per challenged member + IP; the GET render is
+deliberately unthrottled so a refresh cannot burn the guess budget.
+
+Differences from the admin posture, all deliberate:
+
+- **"Remember me" stays available.** Fortify only mints the remember cookie
+  *after* the challenge succeeds, so a recaller is always evidence of a full
+  password + TOTP login — unlike Filament, whose recaller path would bypass the
+  challenge (why the admin login dropped it). Enabling or disabling MFA rotates
+  `remember_token`, so recallers minted before MFA was enabled stop working.
+- **Recovery codes are encrypted but recoverable** (Fortify standard: a used
+  code is compared in plaintext and replaced with a fresh one), not
+  bcrypt-hashed like the admin's. They are displayed only right after
+  confirmation or regeneration and are never stored in the session; that
+  display is a server-side one-shot, but a browser may re-show the page from
+  its own history state — accepted, since the codes sit behind an
+  authenticated session and remain regenerable.
+
+**Management endpoints are this app's own** (member settings), not Fortify's:
+[`FortifyServiceProvider`](../../app/Providers/FortifyServiceProvider.php) calls
+`Fortify::ignoreRoutes()` and `routes/web.php` re-declares only the routes the
+app uses (login, logout, password reset, the two-factor challenge — names,
+methods and middleware pinned by `FortifyRoutesTest`). Fortify's
+`/user/two-factor-*` endpoints never ship: they would allow enabling/disabling
+the factor without the app's contract of an inline `current_password` re-auth
+and session revocation on factor change (confirm and disable revoke the
+member's other sessions and rotate `remember_token` in the same transaction;
+regenerating recovery codes revokes nothing — the factor is unchanged).
+
+**Lockout recovery**: recovery codes, or `openpne:member:disable-mfa <email>` —
+server access as the trust boundary, same as the admin command; the member's
+self-service password reset cannot remove a lost second factor.
+
+Accepted residual: a pending (unconfirmed) set-up QR is visible to whoever
+holds the member's session, but the pending secret gates nothing, every
+management action requires the account password, and restarting set-up rotates
+the secret.
+
+There is no enforcement lever yet ("this site requires MFA"); the natural
+insertion point is a post-login check on `hasEnabledTwoFactorAuthentication()`,
+kept open by design.
+
 ## Password policy
 
 The policy has a single definition — `Password::defaults()` in

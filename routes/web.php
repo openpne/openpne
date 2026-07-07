@@ -34,6 +34,10 @@ use App\Models\Member;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
+use Laravel\Fortify\Http\Controllers\NewPasswordController;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
+use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticatedSessionController;
 
 // Canonical OpenPNE 3 homepage (member/home). Resolves by surface: a Modern surface redirects to
 // the Inertia dashboard, Classic renders the OpenPNE 3 gadget home.
@@ -97,6 +101,37 @@ Route::get('/m/member/{member}', [ProfileController::class, 'show'])
 // whole legacy URL space redirects instead of 404ing past the id.
 Route::get('/member/profile/id/{member}/{tail?}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
     ->whereNumber('member')->where('tail', '.*')->name('member.profile.raw_compat');
+
+// Fortify's own route registration is off (Fortify::ignoreRoutes() in FortifyServiceProvider):
+// enabling the two-factor feature would otherwise also ship Fortify's /user/two-factor-*
+// management endpoints, which bypass this app's management contract (inline current_password
+// re-auth + session revocation on factor change — docs/internals/security.md). The routes this
+// app does use are declared here instead, pinning the vendor names, methods and middleware
+// (guarded by FortifyRoutesTest); the never-referenced password.confirm trio is not carried over.
+Route::middleware([NoReferrer::class, 'throttle:password-reset'])->group(function () {
+    Route::get('/login', [AuthenticatedSessionController::class, 'create'])
+        ->middleware('guest:member')->name('login');
+    Route::post('/login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware(['guest:member', 'throttle:login'])->name('login.store');
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+        ->middleware('auth:member')->name('logout');
+
+    Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])
+        ->middleware('guest:member')->name('password.request');
+    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware('guest:member')->name('password.email');
+    Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])
+        ->middleware('guest:member')->name('password.reset');
+    Route::post('/reset-password', [NewPasswordController::class, 'store'])
+        ->middleware('guest:member')->name('password.update');
+
+    // The challenge GET is deliberately unthrottled (vendor parity): a refresh or back-navigation
+    // render must not consume the code-guess budget before the member has typed anything.
+    Route::get('/two-factor-challenge', [TwoFactorAuthenticatedSessionController::class, 'create'])
+        ->middleware('guest:member')->name('two-factor.login');
+    Route::post('/two-factor-challenge', [TwoFactorAuthenticatedSessionController::class, 'store'])
+        ->middleware(['guest:member', 'throttle:two-factor'])->name('two-factor.login.store');
+});
 
 // OpenPNE 3 served login at /member/login/*; login moved to Fortify's /login. Preserve the legacy
 // URL with a redirect (guest-reachable, so outside the auth group). The {member} route above is

@@ -31,6 +31,12 @@ class FortifyServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Enabling the two-factor feature would also auto-register Fortify's /user/two-factor-*
+        // management routes, which bypass this app's management contract (inline current_password
+        // re-auth + session revocation on factor change). Routes Fortify would register are instead
+        // declared by hand in routes/web.php — only the ones this app uses.
+        Fortify::ignoreRoutes();
+
         // Both outcomes of a forgot-password request resolve to the same neutral response, so the
         // endpoint cannot be used to enumerate which addresses have an account.
         $this->app->singleton(SuccessfulPasswordResetLinkRequestResponse::class, NeutralPasswordResetLinkResponse::class);
@@ -41,8 +47,17 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::createUsersUsing(CreateNewMember::class);
 
-        // A class-string is not a callable, so wrap the invokable action in a closure.
+        // A class-string is not a callable, so wrap the invokable action in a closure. With the
+        // two-factor feature on, Fortify's login pipeline invokes this callback twice on a
+        // successful non-two-factor login (RedirectIfTwoFactorAuthenticatable validates first,
+        // AttemptToAuthenticate re-validates), so the resolved member is memoised per request —
+        // otherwise every such login would burn a second bcrypt verification. A failure throws at
+        // the first stage, so failures are still counted exactly once.
         Fortify::authenticateUsing(function (Request $request): ?Member {
+            if ($request->attributes->has('login.member')) {
+                return $request->attributes->get('login.member');
+            }
+
             // After repeated failures from this IP, require the CAPTCHA before the credentials are even
             // checked — a soft escalation, never a lockout. A missing/invalid solve re-renders the form
             // with the widget; a bad solve is not counted as a login failure.
@@ -54,6 +69,8 @@ class FortifyServiceProvider extends ServiceProvider
 
             $throttle = app(LoginThrottle::class);
             $member ? $throttle->clear((string) $request->ip()) : $throttle->recordFailure((string) $request->ip());
+
+            $request->attributes->set('login.member', $member);
 
             return $member;
         });
@@ -81,6 +98,10 @@ class FortifyServiceProvider extends ServiceProvider
             return $this->screen($request, 'password.reset', 'auth.reset-password',
                 fn () => Inertia::render('auth/reset-password', $props), $props);
         });
+        Fortify::twoFactorChallengeView(fn (Request $request) => $this->screen(
+            $request, 'two-factor.login', 'auth.two-factor-challenge',
+            fn () => Inertia::render('auth/two-factor-challenge'),
+        ));
 
         RateLimiter::for('login', function (Request $request) {
             // In the challenge phase the proof-of-work + single-use solution is the throttle, so a
@@ -94,6 +115,13 @@ class FortifyServiceProvider extends ServiceProvider
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
+        });
+
+        // Two-factor challenge submissions, keyed by the challenged member (login.id) plus IP: the
+        // member id bounds guessing one account's 6-digit code across IPs; the IP component keeps a
+        // stray unchallenged POST (no login.id) from sharing one global bucket.
+        RateLimiter::for('two-factor', function (Request $request) {
+            return Limit::perMinute(5)->by('two-factor|'.$request->session()->get('login.id').'|'.$request->ip());
         });
 
         // Two limits, whichever trips first: per-(email,ip) caps re-sends to one address; per-ip caps
@@ -153,7 +181,9 @@ class FortifyServiceProvider extends ServiceProvider
     /**
      * Whether the request carries a valid CAPTCHA solution. The solution is single-use, so it is
      * verified at most once per request and the result is memoised — the rate limiter and the
-     * authentication callback both read it without consuming it twice.
+     * authentication callback both read it without consuming it twice. Load-bearing: with the
+     * two-factor feature on, the login pipeline calls the authentication callback twice in one
+     * request, so an unmemoised verify would spend the solution and fail its own second read.
      */
     private function loginCaptchaSolved(Request $request): bool
     {
