@@ -5,6 +5,7 @@ namespace App\Notifications\Friend;
 use App\Mail\Template\MailTemplate;
 use App\Models\Member;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Notifications\Settings\NotificationKind;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -20,7 +21,7 @@ class FriendRequestAcceptedNotification extends Notification implements ShouldQu
     /** @return list<string> */
     public function via(Member $notifiable): array
     {
-        return $this->templateChannels(MailTemplate::FriendAccepted, ['database']);
+        return $this->templateChannelsFor(MailTemplate::FriendAccepted, NotificationKind::FriendLinkComplete, $notifiable, ['database']);
     }
 
     public function toMail(Member $notifiable): MailMessage

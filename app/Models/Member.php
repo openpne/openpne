@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Models\Concerns\ClearsPasswordScheme;
 use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\Settings\NotificationChannel;
+use App\Notifications\Settings\NotificationKind;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
 use App\Support\Visibility;
@@ -219,6 +221,35 @@ class Member extends Authenticatable
             ['value' => $key->encode($value)],
         );
         $this->unsetRelation('preferences');
+    }
+
+    /** @return HasMany<MemberNotificationSetting, $this> */
+    public function notificationSettings(): HasMany
+    {
+        return $this->hasMany(MemberNotificationSetting::class, 'member_id');
+    }
+
+    /**
+     * Whether this member receives $kind on $channel. An absent row means the kind's default
+     * (enabled). Reads the loaded `notificationSettings` relation (lazy-loaded once and cached),
+     * so a notification's per-channel checks share one query.
+     */
+    public function wantsNotification(NotificationKind $kind, NotificationChannel $channel): bool
+    {
+        $setting = $this->notificationSettings
+            ->first(fn (MemberNotificationSetting $row): bool => $row->kind === $kind->value && $row->channel === $channel->value);
+
+        return $setting?->is_enabled ?? $kind->defaultEnabled();
+    }
+
+    /** Store an explicit opt-in/out for $kind on $channel (even one equal to the default). */
+    public function setNotificationSetting(NotificationKind $kind, NotificationChannel $channel, bool $enabled): void
+    {
+        $this->notificationSettings()->updateOrCreate(
+            ['kind' => $kind->value, 'channel' => $channel->value],
+            ['is_enabled' => $enabled],
+        );
+        $this->unsetRelation('notificationSettings');
     }
 
     /**
