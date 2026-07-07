@@ -46,6 +46,10 @@ final class MailTemplateDefaults
             'en' => 'You have a new message',
             'ja' => '新しいメッセージが届きました',
         ],
+        'diary-comment' => [
+            'en' => 'New comment on "{{ diary_title }}"',
+            'ja' => '【{{ op_config.sns_name }}】新着日記コメント「{{ diary_title }}」',
+        ],
         'signature' => [
             'en' => null,
             'ja' => null,

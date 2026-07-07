@@ -78,23 +78,25 @@ enum NotificationKind: string
             self::DiaryNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::Diary,
                 op3Name: 'diaryNewPost',
-                caption: 'New diaries (everyone)',
+                caption: 'New %diaries% (everyone)',
             ),
             self::DiaryNewPostOnlyFriends => new NotificationKindDefinition(
                 category: NotificationCategory::Diary,
                 op3Name: 'diaryNewPostOnlyFriends',
-                caption: 'New diaries (%friends% only)',
+                caption: 'New %diaries% (%friends% only)',
                 dependOnNot: self::DiaryNewPost,
             ),
             self::DiaryReplyPost => new NotificationKindDefinition(
                 category: NotificationCategory::Diary,
                 op3Name: 'diaryReplyPost',
-                caption: 'Comments on your diaries',
+                caption: 'Comments on your %diaries%',
+                isWired: true,
             ),
             self::DiaryRelatedPost => new NotificationKindDefinition(
                 category: NotificationCategory::Diary,
                 op3Name: 'diaryRelatedPost',
-                caption: 'Comments on diaries you commented on',
+                caption: 'Comments on %diaries% you commented on',
+                isWired: true,
             ),
             self::CommunityTopicNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::CommunityTopic,

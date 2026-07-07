@@ -2,6 +2,7 @@
 
 namespace App\Features\Diary\Actions;
 
+use App\Features\Diary\Events\DiaryCommentPosted;
 use App\Files\PostImages;
 use App\Models\Diary;
 use App\Models\DiaryComment;
@@ -42,6 +43,8 @@ class CreateComment
                 $file = $store($upload, 'diaryComment', (int) $comment->getKey());
                 $comment->images()->create(['file_id' => $file->getKey()]);
             }
+
+            DiaryCommentPosted::dispatch($diary, $comment, $author);
 
             return $comment;
         });
