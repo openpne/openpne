@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Actions\Fortify\AuthenticateMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -50,6 +52,31 @@ class AuthenticationTest extends TestCase
 
         $this->assertAuthenticatedAs($member);
         $response->assertRedirect('/'); // surface-aware root landing
+    }
+
+    public function test_a_successful_login_verifies_credentials_exactly_once(): void
+    {
+        // With the two-factor feature on, Fortify's login pipeline calls the authentication
+        // callback twice per successful login; the callback memoises the resolved member so the
+        // second call must not re-run the bcrypt verification (FortifyServiceProvider).
+        $counting = new class extends AuthenticateMember
+        {
+            public int $calls = 0;
+
+            public function __invoke(Request $request): ?Member
+            {
+                $this->calls++;
+
+                return parent::__invoke($request);
+            }
+        };
+        $this->app->instance(AuthenticateMember::class, $counting);
+        $member = Member::factory()->create();
+
+        $this->post('/login', ['email' => $member->email, 'password' => 'password']);
+
+        $this->assertAuthenticatedAs($member);
+        $this->assertSame(1, $counting->calls);
     }
 
     public function test_authenticated_members_visiting_login_are_redirected_through_the_root(): void

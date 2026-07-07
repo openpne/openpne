@@ -56,8 +56,10 @@ class MemberUpgrade extends UpgradeStep
     public function targetDefaults(): array
     {
         // No OpenPNE 3 source; rely on the schema default (null). password_scheme is set
-        // by the runner's post-walk wrap pass, not this step.
-        return ['email_verified_at', 'password_scheme', 'remember_token'];
+        // by the runner's post-walk wrap pass, not this step. The two_factor_* columns are
+        // opt-in MFA state a member sets up post-migration.
+        return ['email_verified_at', 'password_scheme', 'remember_token',
+            'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at'];
     }
 
     public function gaps(): array
