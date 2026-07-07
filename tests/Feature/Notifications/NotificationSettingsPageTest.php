@@ -24,14 +24,17 @@ class NotificationSettingsPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/config/notifications')
-                ->has('form.groups', 2)
-                ->where('form.groups.0.key', 'friend_link')
+                ->has('form.groups', 3)
+                ->where('form.groups.0.key', 'diary')
                 ->has('form.groups.0.kinds', 2)
-                ->where('form.groups.0.kinds.0.kind', 'friend_link_confirm')
-                ->where('form.groups.0.kinds.0.web', true)
-                ->where('form.groups.1.key', 'message')
-                ->where('form.groups.1.kinds.0.mail', false)
-                ->where('form.groups.1.kinds.1.dependOnNot', 'message_new'),
+                ->where('form.groups.0.kinds.0.kind', 'diary_reply_post')
+                ->where('form.groups.1.key', 'friend_link')
+                ->has('form.groups.1.kinds', 2)
+                ->where('form.groups.1.kinds.0.kind', 'friend_link_confirm')
+                ->where('form.groups.1.kinds.0.web', true)
+                ->where('form.groups.2.key', 'message')
+                ->where('form.groups.2.kinds.0.mail', false)
+                ->where('form.groups.2.kinds.1.dependOnNot', 'message_new'),
             );
     }
 

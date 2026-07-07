@@ -16,6 +16,7 @@ interface FeedActor {
 interface FeedItem {
     id: string;
     kind: string;
+    reason: string | null;
     createdAt: string;
     read: boolean;
     actor: FeedActor | null;
@@ -41,6 +42,10 @@ export default function NotificationsIndex() {
                 return t(':name accepted your %friend% request.', { name });
             case 'message_received':
                 return t(':name sent you a message.', { name });
+            case 'diary_commented':
+                return item.reason === 'related'
+                    ? t(':name commented on a %diary% you commented on.', { name })
+                    : t(':name commented on your %diary%.', { name });
             default:
                 return t('New notification');
         }

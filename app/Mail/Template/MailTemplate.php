@@ -25,6 +25,7 @@ enum MailTemplate: string
     case FriendRequested = 'friend-requested';
     case FriendAccepted = 'friend-accepted';
     case MessageReceived = 'message-received';
+    case DiaryCommentReceived = 'diary-comment';
 
     /** Not a sendable mail: rendered and appended to every sendable body by MailTemplateService. */
     case Signature = 'signature';
@@ -103,6 +104,19 @@ enum MailTemplate: string
                     'message_subject' => ['help' => 'The message subject.', 'sample' => 'Example subject'],
                     'message_body' => ['help' => 'The message body.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The message URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::DiaryCommentReceived => new MailTemplateDefinition(
+                op3SourceName: 'pc_notifyNewDiaryComment',
+                // Not admin-toggleable (matching the source template); the member-level opt-out
+                // lives in the notification settings instead.
+                isConfigurable: false,
+                caption: 'Diary Comment',
+                variables: [
+                    'member_name' => ['help' => 'The commenter’s name.', 'sample' => 'Example'],
+                    'diary_title' => ['help' => 'The diary title.', 'sample' => 'Example title'],
+                    'body' => ['help' => 'The comment body.', 'sample' => 'Example body'],
+                    'url' => ['help' => 'The diary URL.', 'sample' => 'https://example.test'],
                 ],
             ),
             self::Signature => new MailTemplateDefinition(

@@ -2,6 +2,8 @@
 
 namespace App\Features\Notifications\Serializers;
 
+use App\Features\Diary\DiaryAccess;
+use App\Models\Diary;
 use App\Models\Member;
 use App\Models\MessageRecipient;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -17,7 +19,7 @@ class NotificationFeedSerializer
 {
     /**
      * @param  LengthAwarePaginator<int, DatabaseNotification>  $rows
-     * @return array{data: list<array{id: string, kind: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string}}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @return array{data: list<array{id: string, kind: string, reason: ?string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string}}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
     public static function paginator(LengthAwarePaginator $rows): array
     {
@@ -43,6 +45,7 @@ class NotificationFeedSerializer
             'friend_requested' => $data['requester_id'] ?? null,
             'friend_request_accepted' => $data['accepter_id'] ?? null,
             'message_received' => $data['sender_id'] ?? null,
+            'diary_commented' => $data['commenter_id'] ?? null,
             default => null,
         };
     }
@@ -59,6 +62,7 @@ class NotificationFeedSerializer
             'friend_requested' => '/m/friend/manage',
             'friend_request_accepted' => self::profileUrl($data['accepter_id'] ?? null),
             'message_received' => self::messageUrl($row, $data['message_id'] ?? null),
+            'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
             default => null,
         };
     }
@@ -76,7 +80,7 @@ class NotificationFeedSerializer
 
     /**
      * @param  Collection<int, Member>  $actors
-     * @return array{id: string, kind: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string}}
+     * @return array{id: string, kind: string, reason: ?string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string}}
      */
     private static function row(DatabaseNotification $row, Collection $actors): array
     {
@@ -85,6 +89,8 @@ class NotificationFeedSerializer
         return [
             'id' => $row->getKey(),
             'kind' => $row->data['kind'] ?? 'unknown',
+            // Sub-discriminator for kinds that label by cause (a comment's reply/related).
+            'reason' => $row->data['reason'] ?? null,
             'createdAt' => $row->created_at?->toISOString() ?? '',
             'read' => $row->read_at !== null,
             'actor' => $actor === null ? null : [
@@ -102,6 +108,21 @@ class NotificationFeedSerializer
         }
 
         return '/m/member/'.$memberId;
+    }
+
+    /** A deleted diary — or one the recipient can no longer view — counts as gone. */
+    private static function diaryUrl(DatabaseNotification $row, ?int $diaryId): ?string
+    {
+        $diary = $diaryId === null ? null : Diary::find($diaryId);
+        if ($diary === null) {
+            return null;
+        }
+
+        $viewer = Member::find($row->notifiable_id);
+
+        return $viewer !== null && DiaryAccess::canView($viewer, $diary)
+            ? '/m/diary/'.$diary->getKey()
+            : null;
     }
 
     /**

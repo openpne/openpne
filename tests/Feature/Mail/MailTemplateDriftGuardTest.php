@@ -7,10 +7,13 @@ namespace Tests\Feature\Mail;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateRenderer;
 use App\Mail\Template\MailTemplateService;
+use App\Models\Diary;
 use App\Models\Member;
 use App\Models\Message;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\CommentReason;
+use App\Notifications\Diary\DiaryCommentedNotification;
 use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
@@ -69,6 +72,8 @@ class MailTemplateDriftGuardTest extends TestCase
         $sender = Member::factory()->create(['name' => 'Sender']);
         $recipient = Member::factory()->create();
         $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+        $diary = Diary::factory()->create(['member_id' => $recipient->getKey()]);
+        $comment = $diary->comments()->create(['member_id' => $sender->getKey(), 'number' => 1, 'body' => 'a comment']);
 
         // One notification per sendable template; RegistrationLink carries an inviter name + message so the
         // conditional block that uses them is actually exercised.
@@ -80,6 +85,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new FriendRequestedNotification($sender), $recipient],
             [new FriendRequestAcceptedNotification($sender), $recipient],
             [new MessageReceivedNotification($sender, $message), $recipient],
+            [new DiaryCommentedNotification($sender, $diary, $comment, CommentReason::Reply), $recipient],
         ];
 
         $this->assertCount(count(MailTemplate::sendable()), $notifications, 'one guarded notification per sendable template');
