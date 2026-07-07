@@ -209,7 +209,7 @@ jobs:
       - run: vendor/bin/pint --test
 
   frontend:
-    name: Frontend (type-check + test + build)
+    name: Frontend (type-check + build)
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
