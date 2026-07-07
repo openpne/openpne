@@ -9,6 +9,7 @@ use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Features\Member\Serializers\MemberConfigSerializer;
 use App\Features\Member\Serializers\MemberMfaSerializer;
+use App\Features\Notifications\Serializers\NotificationSettingsSerializer;
 use App\Features\Profile\AgeVisibility;
 use App\Features\Profile\ProfileController;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
@@ -93,6 +94,9 @@ class MemberConfigController extends Controller
                     // which no other page needs in scope.
                     'mfa' => $category === MemberConfigCategory::Mfa
                         ? MemberMfaSerializer::state($viewer, $request->session())
+                        : null,
+                    'notificationGroups' => $category === MemberConfigCategory::Notification
+                        ? NotificationSettingsSerializer::form($viewer)['groups']
                         : null,
                 ]);
             }, // Modern serves no age section — its setter lives on the profile-edit form.

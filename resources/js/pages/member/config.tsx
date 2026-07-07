@@ -262,6 +262,20 @@ export default function MemberConfig() {
                 )}
             </SettingsGroup>
 
+            <SettingsGroup title={t('Notifications')}>
+                <GroupItem>
+                    <DetailRow
+                        title={t('Notifications')}
+                        value={t('Choose which notifications you receive, in-app and by email.')}
+                        action={
+                            <ActionLink href="/m/member/config/notifications" variant="outline" size="sm">
+                                {t('Edit')}
+                            </ActionLink>
+                        }
+                    />
+                </GroupItem>
+            </SettingsGroup>
+
             {/* Consequential account changes are rows into dedicated detail pages: the forms are
                 deliberately one level deeper (focused page, visible validation errors, weight
                 matching the action), keeping this page a scannable hub. */}

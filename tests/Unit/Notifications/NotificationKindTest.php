@@ -8,7 +8,7 @@ use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use PHPUnit\Framework\TestCase;
 
-/** Registry self-consistency: every kind is fully specified and the OpenPNE 3 mapping is well-formed. */
+/** Registry self-consistency: every kind is fully specified and the imported key mapping is well-formed. */
 class NotificationKindTest extends TestCase
 {
     public function test_op3_names_are_unique(): void
@@ -66,7 +66,8 @@ class NotificationKindTest extends TestCase
 
     public function test_every_kind_defaults_enabled(): void
     {
-        // OpenPNE 3 parity: an absent member_config row means '1' for every catalog item.
+        // Imported kinds must default on (an absent source key meant enabled); flipping one is a
+        // deliberate one-arm change, never an accident.
         foreach (NotificationKind::cases() as $kind) {
             $this->assertTrue($kind->defaultEnabled(), "{$kind->value} should default on");
         }

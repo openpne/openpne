@@ -129,6 +129,48 @@
             </div>
             @break
 
+        @case(MemberConfigCategory::Notification)
+            {{-- The notification catalog opt-ins: every wired kind × in-app/email as flat
+                 checkboxes, one bulk save. A hidden 0 precedes each checkbox so an unchecked box
+                 still submits an explicit false. --}}
+            <div class="dparts form" id="member_config_notification">
+                <div class="partsHeading"><h3>{{ __('Notifications') }}</h3></div>
+                <div class="parts">
+                    <form method="POST" action="{{ route('member.config.notifications') }}">
+                        @csrf
+                        <table>
+                            @foreach ($notificationGroups as $group)
+                                <tr><th colspan="2">{{ $group['caption'] }}</th></tr>
+                                @foreach ($group['kinds'] as $kind)
+                                    <tr>
+                                        <th>{{ $kind['caption'] }}</th>
+                                        <td>
+                                            <label>
+                                                <input type="hidden" name="settings[{{ $kind['kind'] }}][web]" value="0">
+                                                <input type="checkbox" name="settings[{{ $kind['kind'] }}][web]" value="1" @checked($kind['web'])>
+                                                {{ __('In-app notifications') }}
+                                            </label>
+                                            <label>
+                                                <input type="hidden" name="settings[{{ $kind['kind'] }}][mail]" value="0">
+                                                <input type="checkbox" name="settings[{{ $kind['kind'] }}][mail]" value="1" @checked($kind['mail'])>
+                                                {{ __('Email notifications') }}
+                                            </label>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            @endforeach
+                        </table>
+                        @error('settings')<p class="error">{{ $message }}</p>@enderror
+                        <div class="operation">
+                            <ul class="moreInfo button">
+                                <li><input type="submit" class="input_submit" value="{{ __('Save') }}"></li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            @break
+
         @case(MemberConfigCategory::Password)
             {{-- In-session password change: re-auth with the current password, new password entered twice. --}}
             <div class="dparts form" id="member_config_password">

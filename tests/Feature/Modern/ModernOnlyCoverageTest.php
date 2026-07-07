@@ -49,7 +49,7 @@ class ModernOnlyCoverageTest extends TestCase
         'block.list', 'block.add.show',
         'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
         'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
-        'member.config.mfa.edit',
+        'member.config.mfa.edit', 'member.config.notifications.edit',
         'community.search', 'community.list_mine', 'community.edit', 'community.members', 'community.members.pending',
         'community.recent',
         'message.index', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
