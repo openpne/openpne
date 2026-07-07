@@ -195,17 +195,24 @@
                             </div>
                         </form>
                     @elseif ($mfa['state'] === 'pending')
+                        {{-- The forms here share the current_password error key, so a hidden marker
+                             (flashed back as old input) routes the error to the form that was
+                             actually submitted — and reopens it when it lives in a <details>. --}}
+                        @php($submittedForm = old('_mfa_form', 'confirm'))
                         <p>{{ __('Scan this QR code with your authenticator app. The app will show a six-digit code — enter it below to finish setting up.') }}</p>
                         <img src="{{ $mfa['qrCode'] }}" alt="{{ __('QR code for your authenticator app') }}" width="192" height="192">
                         <p>{{ __('Setup key') }}: <code>{{ $mfa['secret'] }}</code></p>
                         <form method="POST" action="{{ route('member.config.mfa.confirm') }}">
                             @csrf
+                            <input type="hidden" name="_mfa_form" value="confirm">
                             <table>
                                 <tr>
                                     <th><label for="mfa_current_password">{{ __('Current password') }}</label></th>
                                     <td>
                                         <input type="password" id="mfa_current_password" name="current_password" autocomplete="current-password">
-                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        @if ($submittedForm === 'confirm')
+                                            @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        @endif
                                     </td>
                                 </tr>
                                 <tr>
@@ -224,14 +231,20 @@
                             </div>
                         </form>
                         {{-- Cancelling clears the pending secret; setting up again issues a fresh QR. --}}
-                        <details>
+                        <details {{ $submittedForm === 'cancel' && $errors->any() ? 'open' : '' }}>
                             <summary>{{ __('Cancel set-up') }}</summary>
                             <form method="POST" action="{{ route('member.config.mfa.disable') }}">
                                 @csrf
+                                <input type="hidden" name="_mfa_form" value="cancel">
                                 <table>
                                     <tr>
                                         <th><label for="mfa_cancel_password">{{ __('Current password') }}</label></th>
-                                        <td><input type="password" id="mfa_cancel_password" name="current_password" autocomplete="current-password"></td>
+                                        <td>
+                                            <input type="password" id="mfa_cancel_password" name="current_password" autocomplete="current-password">
+                                            @if ($submittedForm === 'cancel')
+                                                @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                            @endif
+                                        </td>
                                     </tr>
                                 </table>
                                 <div class="operation">
@@ -242,6 +255,7 @@
                             </form>
                         </details>
                     @else
+                        @php($submittedForm = old('_mfa_form', 'regenerate'))
                         <p>{{ __('Two-factor authentication is enabled.') }}</p>
                         @isset($mfa['recoveryCodes'])
                             {{-- Shown once, right after confirm/regenerate minted them. --}}
@@ -256,12 +270,15 @@
                         @endisset
                         <form method="POST" action="{{ route('member.config.mfa.recovery') }}">
                             @csrf
+                            <input type="hidden" name="_mfa_form" value="regenerate">
                             <table>
                                 <tr>
                                     <th><label for="mfa_regen_password">{{ __('Current password') }}</label></th>
                                     <td>
                                         <input type="password" id="mfa_regen_password" name="current_password" autocomplete="current-password">
-                                        @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        @if ($submittedForm === 'regenerate')
+                                            @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        @endif
                                     </td>
                                 </tr>
                             </table>
@@ -271,14 +288,20 @@
                                 </ul>
                             </div>
                         </form>
-                        <details>
+                        <details {{ $submittedForm === 'disable' && $errors->any() ? 'open' : '' }}>
                             <summary>{{ __('Disable two-factor authentication') }}</summary>
                             <form method="POST" action="{{ route('member.config.mfa.disable') }}">
                                 @csrf
+                                <input type="hidden" name="_mfa_form" value="disable">
                                 <table>
                                     <tr>
                                         <th><label for="mfa_disable_password">{{ __('Current password') }}</label></th>
-                                        <td><input type="password" id="mfa_disable_password" name="current_password" autocomplete="current-password"></td>
+                                        <td>
+                                            <input type="password" id="mfa_disable_password" name="current_password" autocomplete="current-password">
+                                            @if ($submittedForm === 'disable')
+                                                @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                            @endif
+                                        </td>
                                     </tr>
                                 </table>
                                 <div class="operation">

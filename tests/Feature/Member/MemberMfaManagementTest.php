@@ -78,8 +78,8 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_enable_is_rejected_once_the_factor_is_confirmed(): void
     {
-        // force-enabling would rotate the live secret under a set two_factor_confirmed_at —
-        // an instant lockout at the next challenge.
+        // Rotating the live secret under a set two_factor_confirmed_at would be an instant
+        // lockout at the next challenge.
         $member = $this->memberWithTwoFactor();
         $secret = $member->two_factor_secret;
 
@@ -88,6 +88,45 @@ class MemberMfaManagementTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame($secret, $member->fresh()->two_factor_secret);
+    }
+
+    public function test_enable_is_rejected_while_a_setup_is_pending(): void
+    {
+        // Enable never rotates an existing secret in place: a parallel enable racing a confirm
+        // could otherwise stamp two_factor_confirmed_at against a secret the member never
+        // scanned. Restarting is cancel (disable) first, then enable.
+        $member = $this->memberWithPendingSetup();
+        $secret = $member->two_factor_secret;
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/enable', ['current_password' => 'password'])
+            ->assertForbidden();
+
+        $this->assertSame($secret, $member->fresh()->two_factor_secret);
+    }
+
+    public function test_classic_routes_the_password_error_to_the_form_that_was_submitted(): void
+    {
+        // The pending page has two forms sharing the current_password key; the flashed _mfa_form
+        // marker routes the error into the submitted (collapsed) cancel form and reopens it.
+        // No assertSessionHasErrors between the POST and the GET: reading the session in the
+        // assertion ages the flash, which would blank the very render under test.
+        $member = $this->memberWithPendingSetup();
+
+        $this->actingAs($member)
+            ->from('/member/config?category=mfa')
+            ->post('/member/config/mfa/disable', ['current_password' => 'wrong-password', '_mfa_form' => 'cancel'])
+            ->assertRedirect('/member/config?category=mfa');
+
+        $this->get('/member/config?category=mfa')
+            ->assertSee('<details open', false)
+            ->assertSeeInOrder(['id="mfa_cancel_password"', 'The password is incorrect.'], false);
+
+        // A wrong password on the confirm form (the default) leaves the cancel details closed.
+        $this->post('/member/config/mfa/confirm', ['current_password' => 'wrong-password', 'code' => '000000', '_mfa_form' => 'confirm']);
+        $this->get('/member/config?category=mfa')
+            ->assertDontSee('<details open', false)
+            ->assertSeeInOrder(['id="mfa_current_password"', 'The password is incorrect.'], false);
     }
 
     public function test_the_classic_category_renders_each_state(): void

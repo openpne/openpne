@@ -40,13 +40,14 @@ class MemberMfaController extends Controller
     {
         $viewer = $this->viewer();
 
-        // force would rotate a live confirmed secret while two_factor_confirmed_at stays set —
-        // instant lockout at the next challenge. Enabling is only a disabled/pending-state action.
-        abort_if($viewer->hasEnabledTwoFactorAuthentication(), 403);
+        // Strictly a disabled-state action: with any secret present (pending or confirmed) a
+        // parallel enable could rotate the stored secret under a concurrent confirm, which then
+        // stamps two_factor_confirmed_at against a secret the member never scanned — a lockout.
+        // Restarting a pending set-up is cancel (disable) first, then enable — never a rotation
+        // in place.
+        abort_if(! blank($viewer->two_factor_secret), 403);
 
-        // force: a repeated enable (stale tab, lost QR) restarts set-up with a fresh secret
-        // instead of silently keeping one the member may no longer have.
-        $enable($viewer, force: true);
+        $enable($viewer);
 
         return $this->mfaRedirect($request);
     }
