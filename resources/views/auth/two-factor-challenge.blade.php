@@ -15,10 +15,10 @@
                         <th><label for="two_factor_code">{{ __('Authentication code') }}</label></th>
                         <td><input type="text" id="two_factor_code" name="code" class="input_text"
                                    inputmode="numeric" autocomplete="one-time-code" autofocus required>
+                            <p>{{ __('Enter the six-digit code shown in your authenticator app.') }}</p>
                             @error('code')<p class="error" role="alert">{{ $message }}</p>@enderror</td>
                     </tr>
                 </table>
-                <p>{{ __('Enter the six-digit code shown in your authenticator app.') }}</p>
                 <div class="operation">
                     <ul class="moreInfo button">
                         <li><input type="submit" class="input_submit" value="{{ __('Sign in') }}"></li>
@@ -37,10 +37,10 @@
                             <th><label for="two_factor_recovery_code">{{ __('Recovery code') }}</label></th>
                             <td><input type="text" id="two_factor_recovery_code" name="recovery_code"
                                        class="input_text" autocomplete="off" required>
+                                <p>{{ __('Each recovery code can be used once, if you no longer have your authenticator.') }}</p>
                                 @error('recovery_code')<p class="error" role="alert">{{ $message }}</p>@enderror</td>
                         </tr>
                     </table>
-                    <p>{{ __('Each recovery code can be used once, if you no longer have your authenticator.') }}</p>
                     <div class="operation">
                         <ul class="moreInfo button">
                             <li><input type="submit" class="input_submit" value="{{ __('Sign in') }}"></li>
