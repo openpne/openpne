@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Notifications\Settings;
 
 /**
- * The closed registry of member-configurable notification kinds — the OpenPNE 3 notification
- * catalog (notification_config.yml items). The case value is the stored
- * `member_notification_settings.kind`; each case's registry entry lives in definition().
+ * The closed registry of member-configurable notification kinds — the notification catalog of
+ * the OpenPNE 3 notification extension (its notification_config.yml items; vanilla OpenPNE 3
+ * has no such catalog, so the imported keys exist only on sites that carried the extension).
+ * The case value is the stored `member_notification_settings.kind`; each case's registry entry
+ * lives in definition().
  *
- * Every OpenPNE 3 item is registered, wired or not, so the one-shot upgrade can preserve every
+ * Every catalog item is registered, wired or not, so the one-shot upgrade can preserve every
  * member's stored choice; only wired kinds (those with an OpenPNE 4 sender) surface in the
- * settings UI. Timeline kinds stay unwired until community-scoped timeline lands (Timeline
- * Phase B).
+ * settings UI. Timeline kinds stay unwired until community-scoped timeline lands.
  */
 enum NotificationKind: string
 {
@@ -188,8 +189,8 @@ enum NotificationKind: string
     }
 
     /**
-     * Whether an absent settings row means enabled. OpenPNE 3 parity: every kind defaults on
-     * (absent member_config = '1'). Kept per-kind so a default can be flipped in one arm later.
+     * Whether an absent settings row means enabled. Parity with the OpenPNE 3 extension, where
+     * an absent member_config meant '1'. Kept per-kind so a default can be flipped in one arm later.
      */
     public function defaultEnabled(): bool
     {
@@ -197,8 +198,8 @@ enum NotificationKind: string
     }
 
     /**
-     * The OpenPNE 3 member_config key for this kind on $channel, built exactly as
-     * opNotificationConfigForm did. The upgrade derives its imported name set from this,
+     * The OpenPNE 3 member_config key for this kind on $channel, in the exact format the
+     * extension's settings form stored. The upgrade derives its imported name set from this,
      * so there is no second list to keep in sync.
      */
     public function op3ConfigName(NotificationChannel $channel): string

@@ -1,9 +1,11 @@
 # Notifications
 
 The member-facing notification system: what fires them, how a member opts in or out (the
-OpenPNE 3 "notification catalog"), and how the pieces layer. Mail wording is the admin-editable
-template system (see [`app/Mail/Template/`](../../app/Mail/Template)); this document covers the
-delivery model around it.
+"notification catalog"), and how the pieces layer. The catalog mirrors an **OpenPNE 3
+notification extension** — an add-on carried by some OpenPNE 3 sites, not vanilla OpenPNE 3 —
+whose per-member `member_config` opt-in keys are what the upgrade imports. Mail wording is the
+admin-editable template system (see [`app/Mail/Template/`](../../app/Mail/Template)); this
+document covers the delivery model around it.
 
 ## The three layers
 
@@ -29,22 +31,22 @@ and per-event information behind one ambiguous read model; the layers keep the t
 ## The per-member catalog
 
 [`NotificationKind`](../../app/Notifications/Settings/NotificationKind.php) is the closed
-registry of member-configurable notification kinds (the OpenPNE 3 `notification_config.yml`
+registry of member-configurable notification kinds (the extension's `notification_config.yml`
 catalog). Each kind is toggleable per
 [`NotificationChannel`](../../app/Notifications/Settings/NotificationChannel.php): **mail**
 gates the notification email, **web** gates the layer-3 `database` record. Rows live in
 [`member_notification_settings`](../../database/migrations/2026_07_08_000001_create_member_notification_settings_table.php);
-an **absent row means the kind's default (enabled)**, matching OpenPNE 3's absent
+an **absent row means the kind's default (enabled)**, matching the extension's absent
 `member_config` = `'1'`. Typed access is
 `Member::wantsNotification()` / `setNotificationSetting()`.
 
-Every OpenPNE 3 catalog item is registered so the one-shot upgrade can preserve stored choices,
-but only **wired** kinds (those with an OpenPNE 4 sender) appear in the settings UI. Timeline
-kinds stay unwired until community-scoped timeline lands.
+Every catalog item is registered so the one-shot upgrade can preserve stored choices, but only
+**wired** kinds (those with an OpenPNE 4 sender) appear in the settings UI. Timeline kinds stay
+unwired until community-scoped timeline lands.
 
-`dependOnNot` encodes the OpenPNE 3 "(x only)" variants: `MessageNewOnlyFriends` only takes
+`dependOnNot` encodes the extension's "(x only)" variants: `MessageNewOnlyFriends` only takes
 effect while `MessageNew` is off — an enabled broad kind already covers the narrower audience.
-Delivery reproduces the OpenPNE 3 chain: broad kind on → deliver; else narrow kind on and the
+Delivery reproduces the extension's chain: broad kind on → deliver; else narrow kind on and the
 relation holds (e.g. sender is a friend) → deliver.
 
 ## Gating flow
@@ -65,6 +67,6 @@ member-gated.
 - An absent settings row means the kind's `defaultEnabled()`. An explicit choice is stored even
   when it equals the default (the UI saves what the member picked; the upgrade copies OpenPNE 3
   rows verbatim), so a default flip later applies only to members with no stored row.
-- OpenPNE 3 `member_config` key names derive from `NotificationKind::op3ConfigName()`
+- The imported `member_config` key names derive from `NotificationKind::op3ConfigName()`
   (`is_send_{name}_web` / `is_send_pc_{name}_mail`) — the upgrade has no second name list.
 - Layer-1 counts and layer-3 `read_at` never feed each other.

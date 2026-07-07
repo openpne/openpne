@@ -130,9 +130,9 @@
             @break
 
         @case(MemberConfigCategory::Notification)
-            {{-- The notification catalog opt-ins (OpenPNE 3 member/configNotification): every
-                 wired kind × in-app/email as flat checkboxes, one bulk save. A hidden 0 precedes each
-                 checkbox so an unchecked box still submits an explicit false. --}}
+            {{-- The notification catalog opt-ins: every wired kind × in-app/email as flat
+                 checkboxes, one bulk save. A hidden 0 precedes each checkbox so an unchecked box
+                 still submits an explicit false. --}}
             <div class="dparts form" id="member_config_notification">
                 <div class="partsHeading"><h3>{{ __('Notifications') }}</h3></div>
                 <div class="parts">

@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * The OpenPNE 3 opMessagePluginUtil chain per channel: MessageNew on → deliver to anyone;
- * else MessageNewOnlyFriends on and the sender is a friend → deliver.
+ * The OpenPNE 3 notification extension's delivery chain per channel: MessageNew on → deliver to
+ * anyone; else MessageNewOnlyFriends on and the sender is a friend → deliver.
  */
 class MessageReceivedNotificationGatingTest extends TestCase
 {
@@ -57,7 +57,7 @@ class MessageReceivedNotificationGatingTest extends TestCase
 
     public function test_broad_kind_covers_everyone_regardless_of_the_variant(): void
     {
-        // OpenPNE 3 checks MessageNew first: while it is on, the friends-only toggle is inert.
+        // The extension checks MessageNew first: while it is on, the friends-only toggle is inert.
         [$sender, $recipient] = Member::factory()->count(2)->create()->all();
         $recipient->setNotificationSetting(NotificationKind::MessageNewOnlyFriends, NotificationChannel::Mail, false);
 

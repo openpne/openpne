@@ -66,7 +66,7 @@ class NotificationKindTest extends TestCase
 
     public function test_every_kind_defaults_enabled(): void
     {
-        // OpenPNE 3 parity: an absent member_config row means '1' for every catalog item.
+        // Parity with the OpenPNE 3 extension: an absent member_config row meant '1' for every item.
         foreach (NotificationKind::cases() as $kind) {
             $this->assertTrue($kind->defaultEnabled(), "{$kind->value} should default on");
         }

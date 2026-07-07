@@ -7,8 +7,9 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Per-member notification opt-in/out, keyed by App\Notifications\Settings\NotificationKind and
  * channel ('web' | 'mail'). One row per (member, kind, channel); an absent row means "the kind's
- * default" (enabled, matching OpenPNE 3's absent member_config = '1'). Channel is a row dimension,
- * not two boolean columns, so the OpenPNE 3 import maps one member_config row to one row here.
+ * default" (enabled, matching the imported OpenPNE 3 keys' absent = '1'). Channel is a row
+ * dimension, not two boolean columns, so the OpenPNE 3 import maps one member_config row to one
+ * row here.
  */
 return new class extends Migration
 {

@@ -97,7 +97,7 @@ enum MailTemplate: string
                 caption: 'Message received',
                 variables: [
                     'member.name' => ['help' => 'The sender’s name.', 'sample' => 'Example'],
-                    // Flat OpenPNE 3 notifyNewMessage names, kept alongside so imported wording renders.
+                    // Flat names used by the imported OpenPNE 3 wording, kept alongside so it renders.
                     'member_name' => ['help' => 'The sender’s name.', 'sample' => 'Example'],
                     'message_subject' => ['help' => 'The message subject.', 'sample' => 'Example subject'],
                     'message_body' => ['help' => 'The message body.', 'sample' => 'Example body'],
