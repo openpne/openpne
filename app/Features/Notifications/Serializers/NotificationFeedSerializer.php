@@ -1,0 +1,105 @@
+<?php
+
+namespace App\Features\Notifications\Serializers;
+
+use App\Models\Member;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Collection;
+
+/**
+ * Modern feed shapes for the per-event notification rows (layer 3). Rows store only the kind
+ * discriminator and entity ids; everything displayed is hydrated at render time, so a withdrawn
+ * actor degrades to a fallback label instead of freezing stale text into the row.
+ */
+class NotificationFeedSerializer
+{
+    /**
+     * @param  LengthAwarePaginator<int, DatabaseNotification>  $rows
+     * @return array{data: list<array{id: string, kind: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string}}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     */
+    public static function paginator(LengthAwarePaginator $rows): array
+    {
+        $actors = self::actors(collect($rows->items()));
+
+        return [
+            'data' => array_map(fn (DatabaseNotification $row): array => self::row($row, $actors), $rows->items()),
+            'meta' => [
+                'currentPage' => $rows->currentPage(),
+                'lastPage' => $rows->lastPage(),
+                'perPage' => $rows->perPage(),
+                'total' => $rows->total(),
+            ],
+        ];
+    }
+
+    /** The member the row is "about" (its avatar/name), or null for unknown kinds. */
+    public static function actorId(DatabaseNotification $row): ?int
+    {
+        $data = $row->data;
+
+        return match ($data['kind'] ?? null) {
+            'friend_requested' => $data['requester_id'] ?? null,
+            'friend_request_accepted' => $data['accepter_id'] ?? null,
+            'message_received' => $data['sender_id'] ?? null,
+            default => null,
+        };
+    }
+
+    /**
+     * Where opening the row lands, or null when there is nowhere sensible to go (unknown kind, or
+     * a target that no longer exists) — the controller then returns to the feed.
+     */
+    public static function targetUrl(DatabaseNotification $row): ?string
+    {
+        $data = $row->data;
+
+        return match ($data['kind'] ?? null) {
+            'friend_requested' => '/m/friend/manage',
+            'friend_request_accepted' => self::profileUrl($data['accepter_id'] ?? null),
+            'message_received' => isset($data['message_id']) ? '/m/message/read/'.$data['message_id'] : null,
+            default => null,
+        };
+    }
+
+    /**
+     * @param  Collection<int, DatabaseNotification>  $rows
+     * @return Collection<int, Member>
+     */
+    private static function actors(Collection $rows): Collection
+    {
+        $ids = $rows->map(fn (DatabaseNotification $row): ?int => self::actorId($row))->filter()->unique();
+
+        return Member::with('avatar.file')->findMany($ids)->keyBy(fn (Member $member): int => $member->getKey());
+    }
+
+    /**
+     * @param  Collection<int, Member>  $actors
+     * @return array{id: string, kind: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string}}
+     */
+    private static function row(DatabaseNotification $row, Collection $actors): array
+    {
+        $actor = $actors->get(self::actorId($row));
+
+        return [
+            'id' => $row->getKey(),
+            'kind' => $row->data['kind'] ?? 'unknown',
+            'createdAt' => $row->created_at?->toISOString() ?? '',
+            'read' => $row->read_at !== null,
+            'actor' => $actor === null ? null : [
+                'id' => $actor->getKey(),
+                'name' => $actor->name,
+                'imageUrl' => $actor->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            ],
+        ];
+    }
+
+    private static function profileUrl(?int $memberId): ?string
+    {
+        if ($memberId === null || ! Member::whereKey($memberId)->exists()) {
+            return null;
+        }
+
+        return '/m/member/'.$memberId;
+    }
+}

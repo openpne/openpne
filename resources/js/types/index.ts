@@ -13,6 +13,7 @@ export interface SnsLogo {
 export interface UnreadCounts {
     friendRequests: number;
     unreadMessages: number;
+    notifications: number;
 }
 
 export interface RightRailItem {

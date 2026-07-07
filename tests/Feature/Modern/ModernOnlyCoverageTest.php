@@ -54,6 +54,7 @@ class ModernOnlyCoverageTest extends TestCase
         'community.recent',
         'message.index', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
         'member.invite',
+        'notifications.index',
     ];
 
     protected function setUp(): void
@@ -98,6 +99,7 @@ class ModernOnlyCoverageTest extends TestCase
             'community search' => ['/community/search'],
             'community joined' => ['/community/joinList'],
             'community recent activity' => ['/m/community/recent'],
+            'notification feed' => ['/m/notifications'],
             'community create form' => ['/community/edit'],
             'invite' => ['/invite'],
             'message index' => ['/message'],
