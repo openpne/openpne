@@ -18,6 +18,7 @@ use App\Features\Member\MemberConfigController;
 use App\Features\Member\MemberMfaController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Message\MessageController;
+use App\Features\Notifications\NotificationFeedController;
 use App\Features\Profile\ProfileController;
 use App\Features\Timeline\TimelineController;
 use App\Http\Controllers\Admin\AdminFileController;
@@ -225,6 +226,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // The dashboard's community activity section, expanded. Modern-only (no OpenPNE 3 equivalent),
     // so it renders Inertia directly like /dashboard — not a surface twin.
     Route::get('/m/community/recent', [HomeController::class, 'communityActivity'])->name('community.recent');
+
+    // The per-event notification feed (layer 3). Modern-only, like /m/community/recent — OpenPNE 3's
+    // notification centre had no PC page to be compatible with.
+    Route::prefix('m/notifications')->controller(NotificationFeedController::class)->group(function () {
+        Route::get('/', 'index')->name('notifications.index');
+        Route::post('/read-all', 'readAll')->name('notifications.readAll');
+        Route::post('/{notification}/open', 'open')->whereUuid('notification')->name('notifications.open');
+    });
 
     Route::prefix('friend')->controller(FriendController::class)->group(function () {
         Route::get('/list', 'list')->name('friend.list');

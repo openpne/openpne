@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Activity, BookOpen, Mail, Pencil, Plus, Search, Settings, UserCircle2, Users } from 'lucide-react';
+import { Activity, Bell, BookOpen, Mail, Pencil, Plus, Search, Settings, UserCircle2, Users } from 'lucide-react';
 
 /**
  * The member-surface chrome registry: the single source for what the nav and the page frame render
@@ -62,7 +62,7 @@ export interface NavSection {
     match: string;
     icon: Icon;
     label: ChromeLabel;
-    badge?: { count: 'friendRequests' | 'unreadMessages'; label: ChromeLabel };
+    badge?: { count: 'friendRequests' | 'unreadMessages' | 'notifications'; label: ChromeLabel };
 }
 
 // Section labels shared between the nav and the hub headers (the h1 = nav label invariant).
@@ -71,6 +71,7 @@ const COMMUNITIES = t('%Communities%');
 const ACTIVITY = t('%Activity%');
 const FRIENDS = t('%Friends%');
 const MESSAGES = t('Messages');
+const NOTIFICATIONS = t('Notifications');
 const MEMBER_SEARCH = t('Search members');
 const SETTINGS = t('Settings');
 
@@ -92,6 +93,13 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Mail,
         label: MESSAGES,
         badge: { count: 'unreadMessages', label: t(':count unread messages') },
+    },
+    {
+        href: '/m/notifications',
+        match: '/m/notifications',
+        icon: Bell,
+        label: NOTIFICATIONS,
+        badge: { count: 'notifications', label: t(':count unread notifications') },
     },
     { href: '/m/member/search', match: '/m/member/search', icon: Search, label: MEMBER_SEARCH },
     { href: '/m/member/config', match: '/m/member/config', icon: Settings, label: SETTINGS },
@@ -253,6 +261,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     }),
     'member/search': () => ({ mode: 'section', title: MEMBER_SEARCH, gap: '6' }),
     'member/config': () => ({ mode: 'section', title: SETTINGS, gap: '8' }),
+    'notifications/index': () => ({ mode: 'section', title: NOTIFICATIONS }),
 };
 
 /** Non-hub deviations from the frame defaults (width/gap/foreground), keyed by component name. */
