@@ -16,13 +16,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'password_scheme', 'remember_token'])]
+#[Hidden(['password', 'password_scheme', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class Member extends Authenticatable
 {
     /** @use HasFactory<MemberFactory> */
     use ClearsPasswordScheme, HasFactory, Notifiable;
+
+    // The login pipeline detects a two-factor member via class_uses_recursive, so the trait is
+    // load-bearing, not decorative.
+    use TwoFactorAuthenticatable;
 
     protected function casts(): array
     {
@@ -31,6 +36,7 @@ class Member extends Authenticatable
             'password' => 'hashed',
             'is_login_rejected' => 'boolean',
             'profile_visibility' => Visibility::class,
+            'two_factor_confirmed_at' => 'datetime',
         ];
     }
 
