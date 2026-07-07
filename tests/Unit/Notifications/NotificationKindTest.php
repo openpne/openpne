@@ -8,7 +8,7 @@ use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use PHPUnit\Framework\TestCase;
 
-/** Registry self-consistency: every kind is fully specified and the OpenPNE 3 mapping is well-formed. */
+/** Registry self-consistency: every kind is fully specified and the imported key mapping is well-formed. */
 class NotificationKindTest extends TestCase
 {
     public function test_op3_names_are_unique(): void

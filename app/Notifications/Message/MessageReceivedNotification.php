@@ -47,7 +47,7 @@ class MessageReceivedNotification extends Notification implements ShouldQueue
     {
         return $this->mailFromTemplate(MailTemplate::MessageReceived, [
             'member' => ['name' => $this->sender->name],
-            // The imported OpenPNE 3 wording's flat variable names, so it renders as-is.
+            // The extension wording's flat variable names, so an imported body renders as-is.
             'member_name' => $this->sender->name,
             'message_subject' => $this->message->subject,
             'message_body' => $this->message->body,

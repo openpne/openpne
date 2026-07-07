@@ -28,7 +28,7 @@ final readonly class NotificationKindDefinition
         public ?NotificationKind $dependOnNot = null,
         /**
          * Whether OpenPNE 4 has a sender for this kind. Unwired kinds exist for import fidelity
-         * (the one-shot upgrade preserves the member's OpenPNE 3 choice) but are hidden from the
+         * (the one-shot upgrade preserves a choice the extension stored) but are hidden from the
          * settings UI until their sender lands.
          */
         public bool $isWired = false,
