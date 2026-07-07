@@ -46,6 +46,14 @@ export default function NotificationsIndex() {
                 return item.reason === 'related'
                     ? t(':name commented on a %diary% you commented on.', { name })
                     : t(':name commented on your %diary%.', { name });
+            case 'community_topic_commented':
+                return item.reason === 'related'
+                    ? t(':name commented on a %topic% you commented on.', { name })
+                    : t(':name commented on your %topic%.', { name });
+            case 'community_event_commented':
+                return item.reason === 'related'
+                    ? t(':name commented on an event you commented on.', { name })
+                    : t(':name commented on your event.', { name });
             default:
                 return t('New notification');
         }

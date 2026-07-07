@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications;
 
+use App\Features\CommunityTopic\TopicReadAccess;
+use App\Models\Community;
+use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Models\Message;
@@ -129,6 +132,31 @@ class NotificationFeedTest extends TestCase
         $this->actingAs($viewer)->post("/m/notifications/{$gone->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
         $this->actingAs($viewer)->post("/m/notifications/{$unviewable->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
+    }
+
+    public function test_open_redirects_a_topic_comment_to_the_topic(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        $topic = CommunityTopic::factory()->create(['member_id' => $viewer->getKey()]);
+        $row = $this->seedRow($viewer, 'community_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $topic->getKey(), 'reason' => 'reply']);
+
+        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+            ->assertRedirect('/m/community/topic/'.$topic->getKey());
+    }
+
+    public function test_open_falls_back_to_the_feed_when_the_board_is_gone_or_unreadable(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        // A members-only board the viewer is not a member of: the topic exists but is unreadable.
+        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
+        $hidden = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $gone = $this->seedRow($viewer, 'community_event_commented', ['commenter_id' => $actor->getKey(), 'event_id' => 424242, 'reason' => 'reply']);
+        $unreadable = $this->seedRow($viewer, 'community_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $hidden->getKey(), 'reason' => 'related']);
+
+        $this->actingAs($viewer)->post("/m/notifications/{$gone->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
+        $this->actingAs($viewer)->post("/m/notifications/{$unreadable->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
     }
 

@@ -57,6 +57,10 @@ class NotificationKindTest extends TestCase
             [
                 NotificationKind::DiaryReplyPost,
                 NotificationKind::DiaryRelatedPost,
+                NotificationKind::CommunityTopicReplyNewPost,
+                NotificationKind::CommunityTopicRelatedNewPost,
+                NotificationKind::CommunityEventReplyNewPost,
+                NotificationKind::CommunityEventRelatedNewPost,
                 NotificationKind::FriendLinkConfirm,
                 NotificationKind::FriendLinkComplete,
                 NotificationKind::MessageNew,
