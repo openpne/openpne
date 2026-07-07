@@ -175,6 +175,8 @@
                 <div class="partsHeading"><h3>{{ __('Two-factor authentication') }}</h3></div>
                 <div class="parts">
                     @if ($mfa['state'] === 'disabled')
+                        <p>{{ __('When two-factor authentication is on, signing in asks for a six-digit one-time code in addition to your password — so a leaked password alone cannot open your account.') }}</p>
+                        <p>{{ __('You need an authenticator app that generates the code. Search your device\'s app store for "authenticator" and install one before you start.') }}</p>
                         <form method="POST" action="{{ route('member.config.mfa.enable') }}">
                             @csrf
                             <table>
@@ -182,7 +184,6 @@
                                     <th><label for="mfa_current_password">{{ __('Current password') }}</label></th>
                                     <td>
                                         <input type="password" id="mfa_current_password" name="current_password" autocomplete="current-password">
-                                        <p>{{ __('Add a second sign-in step: your password plus a six-digit code from an authenticator app.') }}</p>
                                         @error('current_password')<p class="error" role="alert">{{ $message }}</p>@enderror
                                     </td>
                                 </tr>
@@ -194,7 +195,7 @@
                             </div>
                         </form>
                     @elseif ($mfa['state'] === 'pending')
-                        <p>{{ __('Scan this QR code with your authenticator app, then enter the six-digit code to finish.') }}</p>
+                        <p>{{ __('Scan this QR code with your authenticator app. The app will show a six-digit code — enter it below to finish setting up.') }}</p>
                         <img src="{{ $mfa['qrCode'] }}" alt="{{ __('QR code for your authenticator app') }}" width="192" height="192">
                         <p>{{ __('Setup key') }}: <code>{{ $mfa['secret'] }}</code></p>
                         <form method="POST" action="{{ route('member.config.mfa.confirm') }}">

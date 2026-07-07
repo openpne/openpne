@@ -43,9 +43,18 @@ function Disabled() {
             }}
         >
             <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                    {t('Add a second sign-in step: your password plus a six-digit code from an authenticator app.')}
-                </p>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>
+                        {t(
+                            'When two-factor authentication is on, signing in asks for a six-digit one-time code in addition to your password — so a leaked password alone cannot open your account.',
+                        )}
+                    </p>
+                    <p>
+                        {t(
+                            'You need an authenticator app that generates the code. Search your device\'s app store for "authenticator" and install one before you start.',
+                        )}
+                    </p>
+                </div>
                 <Field label={t('Current password')} htmlFor="current_password" error={form.errors.current_password}>
                     <Input
                         id="current_password"
@@ -74,7 +83,7 @@ function Pending({ qrCode, secret }: { qrCode: string; secret: string }) {
     return (
         <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-                {t('Scan this QR code with your authenticator app, then enter the six-digit code to finish.')}
+                {t('Scan this QR code with your authenticator app. The app will show a six-digit code — enter it below to finish setting up.')}
             </p>
             {/* The padding is the QR quiet zone: it must stay the QR's own background color in both
                 themes (functional, not thematic — an inline style like the identity-mark colors). */}
