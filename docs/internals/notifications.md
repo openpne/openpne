@@ -15,7 +15,12 @@ delivery model around it.
    read layer-1 counts.
 3. **Per-event records** — one row per event in the standard Laravel `notifications` table
    (the `database` channel of each notification class), carrying a `kind` discriminator plus
-   entity ids. Read state is the row's own `read_at`. This feeds the notification feed/bell.
+   entity ids. Read state is the row's own `read_at`. Read by the feed
+   ([`app/Features/Notifications/`](../../app/Features/Notifications), `/m/notifications`,
+   Modern-only): rows are hydrated at render time from their ids (a withdrawn actor degrades to
+   a fallback label), opening a row marks it read and redirects to its target, and viewing the
+   feed marks nothing — only opening a row or the explicit mark-all does. The nav badge is the
+   unread-row count (via `UnreadCounts`, alongside the layer-1 numbers).
 
 **Read-state separation is the invariant**: layer-1 counts never consume `read_at`, and reading
 the feed never mutates domain state. OpenPNE 3's notification centre failed by mixing aggregate

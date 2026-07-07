@@ -8,22 +8,28 @@ use App\Models\Message;
 use App\Models\MessageRecipient;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class UnreadCountsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_aggregates_friend_requests_and_unread_messages(): void
+    public function test_aggregates_friend_requests_unread_messages_and_notifications(): void
     {
         [$viewer, $sender] = Member::factory()->count(2)->create()->all();
         DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
         $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
         MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $viewer->notifications()->create([
+            'id' => (string) Str::uuid(),
+            'type' => 'test',
+            'data' => ['kind' => 'friend_requested', 'requester_id' => $sender->getKey()],
+        ]);
 
         $counts = app(UnreadCounts::class)->for($viewer);
 
-        $this->assertSame(['friendRequests' => 1, 'unreadMessages' => 1], $counts);
+        $this->assertSame(['friendRequests' => 1, 'unreadMessages' => 1, 'notifications' => 1], $counts);
     }
 
     public function test_memoizes_per_member_within_the_request(): void
