@@ -152,6 +152,25 @@ class CommunityRoutesTest extends TestCase
         ]);
     }
 
+    public function test_editing_renders_and_persists_the_join_notification_toggle(): void
+    {
+        $community = Community::factory()->create(['is_join_notification_enabled' => true]);
+        $admin = $this->memberWithRole($community, CommunityRole::Admin);
+
+        // The checkbox renders checked for a community that has notifications on.
+        $this->actingAs($admin)->get(route('community.edit', ['id' => $community->getKey()]))
+            ->assertOk()
+            ->assertSee('name="is_join_notification_enabled"', false);
+
+        // Unchecking it (the field is simply absent on submit) turns it off.
+        $this->actingAs($admin)->post('/community/edit?'.http_build_query(['id' => $community->getKey()]), [
+            'name' => $community->name,
+            'register_policy' => $community->register_policy->value,
+        ])->assertRedirect(route('community.show', $community));
+
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'is_join_notification_enabled' => false]);
+    }
+
     public function test_join_list_shows_another_members_communities(): void
     {
         $viewer = Member::factory()->create();

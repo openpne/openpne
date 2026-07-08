@@ -38,6 +38,15 @@
                         </td>
                     </tr>
                     <tr>
+                        <th>{{ __('Notifications') }}</th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="is_join_notification_enabled" value="1" @checked(old('is_join_notification_enabled', $community?->is_join_notification_enabled ?? true))>
+                                {{ __('Notify admins when a member joins.') }}
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
                         <th>{{ __('Category') }}</th>
                         <td>
                             <select name="community_category_id">

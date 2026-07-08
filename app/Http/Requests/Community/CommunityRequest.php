@@ -27,6 +27,7 @@ class CommunityRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'register_policy' => ['required', Rule::in(array_map(static fn (JoinPolicy $p): int => $p->value, JoinPolicy::cases()))],
             'community_category_id' => ['nullable', 'integer', 'exists:community_categories,id'],
+            'is_join_notification_enabled' => ['boolean'],
             // Single top image (OpenPNE 3 CommunityFileForm), with a remove toggle. The bytes are
             // handled in the action, not the DTO — same split as the topic/event image uploads.
             'image' => PostImageRules::single(),
@@ -43,6 +44,7 @@ class CommunityRequest extends FormRequest
             description: $validated['description'] ?? null,
             registerPolicy: JoinPolicy::from((int) $validated['register_policy']),
             categoryId: isset($validated['community_category_id']) ? (int) $validated['community_category_id'] : null,
+            isJoinNotificationEnabled: $this->boolean('is_join_notification_enabled'),
         );
     }
 }

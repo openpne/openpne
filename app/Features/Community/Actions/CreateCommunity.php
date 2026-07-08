@@ -30,6 +30,7 @@ class CreateCommunity
                 'description' => $data->description,
                 'register_policy' => $data->registerPolicy,
                 'community_category_id' => $data->categoryId,
+                'is_join_notification_enabled' => $data->isJoinNotificationEnabled,
             ]);
 
             // The creator is the sole admin (one admin per community in Phase A).
