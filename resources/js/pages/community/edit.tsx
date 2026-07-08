@@ -17,6 +17,7 @@ interface EditCommunity {
     description: string;
     registerPolicy: number;
     categoryId: number | null;
+    isJoinNotificationEnabled: boolean;
     imageUrl: string | null;
 }
 
@@ -38,6 +39,7 @@ export default function CommunityEdit() {
         description: community?.description ?? '',
         register_policy: community?.registerPolicy ?? policies[0]?.value ?? 1,
         community_category_id: community?.categoryId ? String(community.categoryId) : '',
+        is_join_notification_enabled: community?.isJoinNotificationEnabled ?? true,
         image: null as File | null,
         remove_image: false,
     });
@@ -103,6 +105,14 @@ export default function CommunityEdit() {
                             ))}
                         </Select>
                     </Field>
+
+                    <label className="flex items-center gap-2 text-sm text-foreground">
+                        <Checkbox
+                            checked={form.data.is_join_notification_enabled}
+                            onChange={(e) => form.setData('is_join_notification_enabled', e.target.checked)}
+                        />
+                        {t('Notify admins when a member joins.')}
+                    </label>
 
                     <Field label={t('Category')} htmlFor="community_category_id">
                         <Select

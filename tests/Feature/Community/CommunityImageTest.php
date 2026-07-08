@@ -27,7 +27,7 @@ class CommunityImageTest extends TestCase
 
     private function data(string $name = 'Community'): CommunityFormData
     {
-        return new CommunityFormData($name, 'desc', JoinPolicy::Approval, null);
+        return new CommunityFormData($name, 'desc', JoinPolicy::Approval, null, true);
     }
 
     private function communityWithAdmin(): array

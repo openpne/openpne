@@ -152,6 +152,46 @@ class CommunityRoutesTest extends TestCase
         ]);
     }
 
+    public function test_editing_renders_and_persists_the_join_notification_toggle(): void
+    {
+        $community = Community::factory()->create(['is_join_notification_enabled' => true]);
+        $admin = $this->memberWithRole($community, CommunityRole::Admin);
+
+        // The hidden 0 + checkbox 1 pair renders, so the value is always submitted.
+        $this->actingAs($admin)->get(route('community.edit', ['id' => $community->getKey()]))
+            ->assertOk()
+            ->assertSee('type="hidden" name="is_join_notification_enabled" value="0"', false);
+
+        // Unchecking submits the hidden 0, turning it off.
+        $this->actingAs($admin)->post('/community/edit?'.http_build_query(['id' => $community->getKey()]), [
+            'name' => $community->name,
+            'register_policy' => $community->register_policy->value,
+            'is_join_notification_enabled' => '0',
+        ])->assertRedirect(route('community.show', $community));
+
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'is_join_notification_enabled' => false]);
+    }
+
+    public function test_a_validation_error_preserves_the_unchecked_join_notification(): void
+    {
+        $community = Community::factory()->create(['is_join_notification_enabled' => true]);
+        $admin = $this->memberWithRole($community, CommunityRole::Admin);
+        $editUrl = route('community.edit', ['id' => $community->getKey()]);
+
+        // Uncheck (hidden 0) but trip validation with a blank name.
+        $this->actingAs($admin)->from($editUrl)->post('/community/edit?'.http_build_query(['id' => $community->getKey()]), [
+            'name' => '',
+            'register_policy' => $community->register_policy->value,
+            'is_join_notification_enabled' => '0',
+        ])->assertRedirect($editUrl)->assertSessionHasErrors('name');
+
+        // Re-rendering reflects the unchecked choice (old '0'), not the still-true stored value.
+        $this->actingAs($admin)->get($editUrl)
+            ->assertOk()
+            ->assertSee('name="is_join_notification_enabled" value="1"', false)
+            ->assertDontSee('value="1" checked', false);
+    }
+
     public function test_join_list_shows_another_members_communities(): void
     {
         $viewer = Member::factory()->create();
