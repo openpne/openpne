@@ -22,6 +22,9 @@ use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Notifications\Member\EmailChangeNoticeNotification;
+use App\Notifications\Member\MfaDisabledNotification;
+use App\Notifications\Member\MfaEnabledNotification;
+use App\Notifications\Member\PasswordChangedNotification;
 use App\Notifications\Member\RegistrationCompletedNotification;
 use App\Notifications\Member\WithdrawalAdminNotification;
 use App\Notifications\Member\WithdrawalCompletedNotification;
@@ -101,6 +104,9 @@ class MailTemplateDriftGuardTest extends TestCase
             [new RegistrationCompletedNotification('en'), $recipient],
             [new WithdrawalCompletedNotification('Sender', 'en'), new AnonymousNotifiable],
             [new WithdrawalAdminNotification('Sender', 'sender@example.test', (int) $sender->getKey(), 'en'), new AnonymousNotifiable],
+            [new PasswordChangedNotification('en'), $recipient],
+            [new MfaEnabledNotification('en'), $recipient],
+            [new MfaDisabledNotification('en'), $recipient],
         ];
 
         $this->assertCount(count(MailTemplate::sendable()), $notifications, 'one guarded notification per sendable template');

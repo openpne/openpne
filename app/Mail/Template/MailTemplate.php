@@ -31,6 +31,9 @@ enum MailTemplate: string
     case RegistrationCompleted = 'registration-complete';
     case WithdrawalCompleted = 'withdrawal-complete';
     case WithdrawalAdminNotice = 'withdrawal-admin-notice';
+    case PasswordChanged = 'password-changed';
+    case MfaEnabled = 'mfa-enabled';
+    case MfaDisabled = 'mfa-disabled';
 
     /** Not a sendable mail: rendered and appended to every sendable body by MailTemplateService. */
     case Signature = 'signature';
@@ -183,6 +186,25 @@ enum MailTemplate: string
                     'member.email' => ['help' => 'The withdrawing member’s email address.', 'sample' => 'member@example.test'],
                     'member.id' => ['help' => 'The withdrawing member’s ID.', 'sample' => 1],
                 ],
+            ),
+            self::PasswordChanged => new MailTemplateDefinition(
+                // OpenPNE-4-only security alert (takeover detection); OpenPNE 3 had no such mail.
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Password changed',
+                variables: [],
+            ),
+            self::MfaEnabled => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Two-factor authentication enabled',
+                variables: [],
+            ),
+            self::MfaDisabled => new MailTemplateDefinition(
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Two-factor authentication disabled',
+                variables: [],
             ),
             self::Signature => new MailTemplateDefinition(
                 op3SourceName: 'pc_signature',
