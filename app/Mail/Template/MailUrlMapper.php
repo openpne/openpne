@@ -22,6 +22,10 @@ final class MailUrlMapper
             'member/register' => self::tokenUrl('/register/', $token),
             // OpenPNE 3 carried token+id+type; OpenPNE 4's confirm route is token-only.
             'member/configComplete' => self::tokenUrl('/member/config/email/confirm/', $token),
+            // OpenPNE 3 named-route form (@route?id=N); the id names the model, resolved to the
+            // canonical (surface-agnostic) URL so the mailed link works from any client.
+            '@community_home' => route('community.show', ['community' => self::id($params)]),
+            '@member_profile' => route('member.profile.show', ['member' => self::id($params)]),
             default => throw new UnsupportedMailTemplateSyntaxException("app_url_for has no OpenPNE 4 mapping for '{$path}'"),
         };
     }
@@ -33,5 +37,16 @@ final class MailUrlMapper
         }
 
         return url($base.$token);
+    }
+
+    /** @param array<string, mixed> $params */
+    private static function id(array $params): int
+    {
+        $id = (string) ($params['id'] ?? '');
+        if (! ctype_digit($id)) {
+            throw new UnsupportedMailTemplateSyntaxException('app_url_for requires a numeric `id`');
+        }
+
+        return (int) $id;
     }
 }

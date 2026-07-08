@@ -27,6 +27,7 @@ enum MailTemplate: string
     case MessageReceived = 'message-received';
     case DiaryCommentReceived = 'diary-comment';
     case CommunityPostingNotified = 'community-posting';
+    case CommunityJoinNotice = 'community-join';
     case RegistrationCompleted = 'registration-complete';
     case WithdrawalCompleted = 'withdrawal-complete';
     case WithdrawalAdminNotice = 'withdrawal-admin-notice';
@@ -136,6 +137,19 @@ enum MailTemplate: string
                     'nickname' => ['help' => 'The poster’s name.', 'sample' => 'Example'],
                     'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The %topic% or event URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::CommunityJoinNotice => new MailTemplateDefinition(
+                op3SourceName: 'pc_joinCommunity',
+                isConfigurable: true,
+                caption: 'Notification of Someone’s Joining Your %Community%',
+                variables: [
+                    // The default body builds its links with app_url_for from these ids, so both the
+                    // name and the id are declared (MailUrlMapper resolves @community_home / @member_profile).
+                    'new_member.name' => ['help' => 'The joining member’s name.', 'sample' => 'Example'],
+                    'new_member.id' => ['help' => 'The joining member’s ID.', 'sample' => 1],
+                    'community.name' => ['help' => 'The %community% name.', 'sample' => 'Example community'],
+                    'community.id' => ['help' => 'The %community% ID.', 'sample' => 1],
                 ],
             ),
             self::RegistrationCompleted => new MailTemplateDefinition(

@@ -1,0 +1,8 @@
+こんにちは！{{ op_config.sns_name }} からのお知らせです。
+
+{{ new_member.name }} さんが {{ community.name }}{{ op_term.community }} に参加しました。
+
+◆{{ community.name }}{{ op_term.community }}のページ
+{% app_url_for('pc_frontend', '@community_home?id='~community.id, true) %}
+◇{{ new_member.name }}さんのページ
+{% app_url_for('pc_frontend', '@member_profile?id='~new_member.id, true) %}

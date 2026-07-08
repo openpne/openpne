@@ -81,6 +81,8 @@ class CommunityUpgradeSqlTest extends TestCase
         $this->seedConfig(100, 'topic_authority', 'admin_only');
         // Marked as a default ("everyone") community (OpenPNE 3 KV value '1').
         $this->seedConfig(100, 'is_default', '1');
+        // Admin opted out of join notifications (KV '0' → false).
+        $this->seedConfig(100, 'is_send_pc_joinCommunity_mail', '0');
         // Community 101: no config (→ Open default), and points at the dropped root → category nulled.
         $this->seedCommunity(101, 'Osaka Cooks', categoryId: 1);
 
@@ -112,6 +114,7 @@ class CommunityUpgradeSqlTest extends TestCase
             'description' => 'We run on weekends.',
             'register_policy' => JoinPolicy::Approval->value,
             'is_default' => 1,
+            'is_join_notification_enabled' => 0,
             'topic_read_access' => TopicReadAccess::MembersOnly->value,
             'topic_post_authority' => TopicPostAuthority::AdminsOnly->value,
             'community_category_id' => 2,
@@ -125,6 +128,7 @@ class CommunityUpgradeSqlTest extends TestCase
             'id' => 101,
             'register_policy' => JoinPolicy::Open->value,
             'is_default' => 0,
+            'is_join_notification_enabled' => 1,
             'topic_read_access' => TopicReadAccess::Everyone->value,
             'topic_post_authority' => TopicPostAuthority::Members->value,
             'description' => null,

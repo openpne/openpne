@@ -160,6 +160,25 @@ class NotificationFeedTest extends TestCase
             ->assertRedirect(route('notifications.index'));
     }
 
+    public function test_open_redirects_a_community_join_to_the_community(): void
+    {
+        [$viewer, $joiner] = Member::factory()->count(2)->create()->all();
+        $community = Community::factory()->create();
+        $row = $this->seedRow($viewer, 'community_joined', ['new_member_id' => $joiner->getKey(), 'community_id' => $community->getKey()]);
+
+        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+            ->assertRedirect('/m/community/'.$community->getKey());
+    }
+
+    public function test_open_falls_back_to_the_feed_when_the_community_is_gone(): void
+    {
+        [$viewer, $joiner] = Member::factory()->count(2)->create()->all();
+        $row = $this->seedRow($viewer, 'community_joined', ['new_member_id' => $joiner->getKey(), 'community_id' => 424242]);
+
+        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
+    }
+
     public function test_open_rejects_another_members_notification(): void
     {
         [$viewer, $other, $actor] = Member::factory()->count(3)->create()->all();

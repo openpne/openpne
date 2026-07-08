@@ -45,6 +45,7 @@
     ":name commented on your %diary%.": ":name さんがあなたの%diary%にコメントしました。",
     ":name commented on your %topic%.": ":name さんがあなたの%topic%にコメントしました。",
     ":name commented on your event.": ":name さんがあなたのイベントにコメントしました。",
+    ":name joined your %community%.": ":name さんがあなたの%community%に参加しました。",
     ":name members": ":nameのメンバー",
     ":name sent you a %friend% request.": ":name さんから%friend%申請が届いています。",
     ":name sent you a message.": ":name さんからメッセージが届きました。",

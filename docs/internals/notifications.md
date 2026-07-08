@@ -64,6 +64,11 @@ they are `['mail']` only and always sent. The withdrawal mails address on-demand
 (the Member row is already deleted): a scalar `MemberWithdrawn` payload carries the name, email,
 and locale so nothing dereferences the gone row.
 
+The community-join notice to admins is `['mail', 'database']` but gated differently: not a member
+catalog kind, so the opt-out is the **per-community** `communities.is_join_notification_enabled`
+(applied by the recipient query — an opted-out community notifies no one), plus the admin's global
+`community-join` template toggle for the mail part.
+
 ## Key invariants
 
 - `NotificationKind` is the only kind list; the stored `kind` column holds its case value.
