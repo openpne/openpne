@@ -22,6 +22,7 @@ use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Http\Requests\Member\WithdrawalRequest;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
+use App\Notifications\Member\PasswordChangedNotification;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
 use App\Support\SurfaceResolver;
@@ -174,6 +175,9 @@ class MemberConfigController extends Controller
         // requested an email change, so a password change must void any pending one — otherwise the
         // attacker still holds a live confirmation token for the new address.
         EmailChangeRequest::where('member_id', $viewer->getKey())->delete();
+
+        // Security alert to the member's own address (takeover detection).
+        $viewer->notify(new PasswordChangedNotification($viewer->locale ?? app()->getLocale()));
 
         return $this->savedRedirect($request, MemberConfigCategory::Password);
     }

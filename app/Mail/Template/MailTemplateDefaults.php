@@ -70,6 +70,18 @@ final class MailTemplateDefaults
             'en' => 'A member has withdrawn from {{ op_config.sns_name }}',
             'ja' => '{{ op_config.sns_name }} からメンバーが退会しました',
         ],
+        'password-changed' => [
+            'en' => 'Your password was changed',
+            'ja' => 'パスワードが変更されました',
+        ],
+        'mfa-enabled' => [
+            'en' => 'Two-factor authentication was enabled',
+            'ja' => '2要素認証が有効になりました',
+        ],
+        'mfa-disabled' => [
+            'en' => 'Two-factor authentication was disabled',
+            'ja' => '2要素認証が無効になりました',
+        ],
         'signature' => [
             'en' => null,
             'ja' => null,
