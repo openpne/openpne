@@ -101,6 +101,17 @@ class MailTemplateRendererTest extends TestCase
         );
     }
 
+    public function test_app_url_for_tag_honors_an_explicit_whitespace_trim(): void
+    {
+        // A `-%}` trim spanning a blank line eats all trailing whitespace, so the re-emit must not fire —
+        // the URL runs straight into the next content.
+        $r = $this->renderer();
+        $this->assertSame(
+            'Page:'.url('/community/3').'Profile',
+            $r->render("Page:{% app_url_for('pc_frontend', '@community_home?id='~id, true) -%}\n\nProfile", ['id' => '3']),
+        );
+    }
+
     public function test_string_literal_containing_the_tag_text_is_not_rewritten(): void
     {
         // A real token parser (not a source rewrite): `{% app_url_for %}` inside a string literal is just
