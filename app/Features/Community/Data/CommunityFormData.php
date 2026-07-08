@@ -11,5 +11,6 @@ final readonly class CommunityFormData
         public ?string $description,
         public JoinPolicy $registerPolicy,
         public ?int $categoryId,
+        public bool $isJoinNotificationEnabled,
     ) {}
 }

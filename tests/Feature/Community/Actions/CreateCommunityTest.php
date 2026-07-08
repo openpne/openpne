@@ -21,7 +21,7 @@ class CreateCommunityTest extends TestCase
     public function test_creates_community_with_creator_as_admin(): void
     {
         $creator = Member::factory()->create();
-        $data = new CommunityFormData('Hiking', 'desc', JoinPolicy::Approval, null);
+        $data = new CommunityFormData('Hiking', 'desc', JoinPolicy::Approval, null, true);
 
         $community = app(CreateCommunity::class)($creator, $data);
 
@@ -38,7 +38,7 @@ class CreateCommunityTest extends TestCase
     {
         $creator = Member::factory()->create();
         $category = CommunityCategory::factory()->adminOnly()->create();
-        $data = new CommunityFormData('X', null, JoinPolicy::Open, $category->getKey());
+        $data = new CommunityFormData('X', null, JoinPolicy::Open, $category->getKey(), true);
 
         $this->assertFailsWith(CommunityActionFailure::CategoryNotAllowed, fn () => app(CreateCommunity::class)($creator, $data));
         $this->assertDatabaseMissing('communities', ['name' => 'X']);
@@ -48,7 +48,7 @@ class CreateCommunityTest extends TestCase
     {
         $creator = Member::factory()->create();
         $category = CommunityCategory::factory()->create();
-        $data = new CommunityFormData('Y', null, JoinPolicy::Open, $category->getKey());
+        $data = new CommunityFormData('Y', null, JoinPolicy::Open, $category->getKey(), true);
 
         $community = app(CreateCommunity::class)($creator, $data);
 

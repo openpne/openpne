@@ -205,6 +205,7 @@ class CommunityController extends Controller
                     'description' => $community->description ?? '',
                     'registerPolicy' => $community->register_policy->value,
                     'categoryId' => $community->community_category_id,
+                    'isJoinNotificationEnabled' => $community->is_join_notification_enabled,
                     'imageUrl' => $community->image?->thumbnailUrl(180, 180, square: true),
                 ],
                 'categories' => $categories->map(fn (CommunityCategory $category): array => [

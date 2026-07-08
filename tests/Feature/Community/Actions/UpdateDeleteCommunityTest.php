@@ -22,7 +22,7 @@ class UpdateDeleteCommunityTest extends TestCase
 
     private function data(?int $categoryId = null): CommunityFormData
     {
-        return new CommunityFormData('Renamed', 'new desc', JoinPolicy::Approval, $categoryId);
+        return new CommunityFormData('Renamed', 'new desc', JoinPolicy::Approval, $categoryId, true);
     }
 
     public function test_admin_can_update(): void

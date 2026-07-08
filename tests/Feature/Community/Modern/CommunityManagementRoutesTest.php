@@ -78,6 +78,45 @@ class CommunityManagementRoutesTest extends TestCase
         ]);
     }
 
+    public function test_modern_create_defaults_join_notifications_on(): void
+    {
+        $member = Member::factory()->create();
+
+        // No is_join_notification_enabled in the payload → the default-on contract (not a silent off).
+        $this->actingAs($member)->post('/m/community/edit', [
+            'name' => 'Defaulted Community',
+            'register_policy' => 1,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('communities', ['name' => 'Defaulted Community', 'is_join_notification_enabled' => true]);
+    }
+
+    public function test_modern_edit_exposes_the_join_notification_toggle(): void
+    {
+        $admin = Member::factory()->create();
+        $community = Community::factory()->create(['is_join_notification_enabled' => false]);
+        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+
+        $this->actingAs($admin)
+            ->get("/m/community/edit?id={$community->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('community.isJoinNotificationEnabled', false));
+    }
+
+    public function test_modern_save_persists_the_join_notification_toggle(): void
+    {
+        $admin = Member::factory()->create();
+        $community = Community::factory()->create(['is_join_notification_enabled' => true]);
+        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+
+        $this->actingAs($admin)->post("/m/community/edit?id={$community->getKey()}", [
+            'name' => $community->name,
+            'register_policy' => $community->register_policy->value,
+            'is_join_notification_enabled' => false,
+        ])->assertRedirect(route('community.modern.show', $community));
+
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'is_join_notification_enabled' => false]);
+    }
+
     public function test_modern_update_keeps_the_same_name_without_a_unique_error(): void
     {
         // Regression guard: CommunityRequest must read the id from the /m path, not only ?id=,
