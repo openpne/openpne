@@ -54,6 +54,18 @@ final class MailTemplateDefaults
             'en' => '[{{ op_config.sns_name }}] {{ community_name }} {{ topic_name }}',
             'ja' => '【{{ op_config.sns_name }}】{{ community_name }} {{ topic_name }}',
         ],
+        'registration-complete' => [
+            'en' => 'Information of the completion of registration',
+            'ja' => '登録完了のお知らせ',
+        ],
+        'withdrawal-complete' => [
+            'en' => 'Your leaving process was finished',
+            'ja' => '退会手続きが完了しました',
+        ],
+        'withdrawal-admin-notice' => [
+            'en' => 'A member has withdrawn from {{ op_config.sns_name }}',
+            'ja' => '{{ op_config.sns_name }} からメンバーが退会しました',
+        ],
         'signature' => [
             'en' => null,
             'ja' => null,
