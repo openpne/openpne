@@ -69,12 +69,47 @@ class MailTemplateRendererTest extends TestCase
                 ['token' => 'T', 'id' => '9', 'type' => 'pc_address'],
             ),
         );
+        // Named-route (@route?id=N) form: the id names the model, resolved to the canonical URL.
+        $this->assertSame(
+            route('community.show', ['community' => 3]),
+            $r->render("{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}", ['id' => '3']),
+        );
+        $this->assertSame(
+            route('member.profile.show', ['member' => 8]),
+            $r->render("{% app_url_for('pc_frontend', '@member_profile?id='~id, true) %}", ['id' => '8']),
+        );
     }
 
-    public function test_app_url_for_requires_token_and_rejects_unmapped_route(): void
+    public function test_app_url_for_requires_token_or_id_and_rejects_unmapped_route(): void
     {
         $this->assertRejected("{% app_url_for('pc_frontend', 'member/register', true) %}");
-        $this->assertRejected("{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}", ['id' => '1']);
+        // A named route with no / a non-numeric id, and a route with no OpenPNE 4 mapping.
+        $this->assertRejected("{% app_url_for('pc_frontend', '@community_home', true) %}");
+        $this->assertRejected("{% app_url_for('pc_frontend', '@member_profile?id='~id, true) %}", ['id' => 'x']);
+        $this->assertRejected("{% app_url_for('pc_frontend', 'community/deleteComment?id='~id, true) %}", ['id' => '1']);
+    }
+
+    public function test_app_url_for_tag_on_its_own_line_keeps_the_following_line(): void
+    {
+        // Twig eats the first newline after a `%}` block tag; the parser re-emits it so an imported
+        // OpenPNE 3 body with the tag mid-text (its own line, followed by more) does not merge the URL
+        // into the next line. The print form and a tag at end-of-body are unaffected.
+        $r = $this->renderer();
+        $this->assertSame(
+            "Page:\n".url('/community/3')."\nProfile:",
+            $r->render("Page:\n{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}\nProfile:", ['id' => '3']),
+        );
+    }
+
+    public function test_app_url_for_tag_honors_an_explicit_whitespace_trim(): void
+    {
+        // A `-%}` trim spanning a blank line eats all trailing whitespace, so the re-emit must not fire —
+        // the URL runs straight into the next content.
+        $r = $this->renderer();
+        $this->assertSame(
+            'Page:'.url('/community/3').'Profile',
+            $r->render("Page:{% app_url_for('pc_frontend', '@community_home?id='~id, true) -%}\n\nProfile", ['id' => '3']),
+        );
     }
 
     public function test_string_literal_containing_the_tag_text_is_not_rewritten(): void

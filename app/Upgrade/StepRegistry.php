@@ -265,9 +265,9 @@ final class StepRegistry
             'public_flag' => 'communities.topic_read_access (public→Everyone, auth_commu_member→MembersOnly; missing→Everyone), CommunityUpgrade. Shared read gate for both the topic board and events (OpenPNE 3 reads the same config for both).',
             'topic_authority' => 'communities.topic_post_authority (public→Members, admin_only→AdminsOnly; missing→Members), CommunityUpgrade. Shared post gate for both the topic board and events.',
             'is_default' => 'communities.is_default (KV "1"→true, else false), CommunityUpgrade.',
-            // Owned by a later feature.
-            'is_send_pc_joinCommunity_mail' => 'Per-community join-notification opt-in — lands with the notification feature.',
-            'is_send_mobile_joinCommunity_mail' => 'Mobile join-notification opt-in — the mobile frontend is out of scope.',
+            'is_send_pc_joinCommunity_mail' => 'communities.is_join_notification_enabled (KV "0"→false, missing/else→true), CommunityUpgrade.',
+            // Dropped: the mobile (feature-phone) frontend is out of scope.
+            'is_send_mobile_joinCommunity_mail' => 'Dropped: mobile join-notification opt-in — the mobile frontend is out of scope.',
         ];
     }
 
@@ -293,9 +293,8 @@ final class StepRegistry
             'pc_notifyCommunityPosting' => 'mail_templates[community-posting]. Configurable: is_enabled carried over. One template for topic and event comments (and the new-post broadcasts later).',
             'pc_registerEnd' => 'mail_templates[registration-complete]. Not admin-toggleable (transactional): is_enabled forced on.',
             'pc_leave' => 'mail_templates[withdrawal-complete]. Not admin-toggleable (transactional): is_enabled forced on.',
+            'pc_joinCommunity' => 'mail_templates[community-join]. Configurable: is_enabled carried over. The per-community opt-in lands on communities.is_join_notification_enabled (CommunityUpgrade).',
             'pc_signature' => 'mail_templates[signature]. Appended to every sendable body; not itself toggleable.',
-            // Dropped: no OpenPNE 4 sender yet — the wording and a sender land together as a follow-up.
-            'pc_joinCommunity' => 'Dropped: OpenPNE 4 has no community-join mail yet (follow-up).',
             // Dropped: deliberately not carried.
             'pc_reissuedPassword' => 'Dropped: OpenPNE 3 mailed a new plaintext password; OpenPNE 4 sends a reset link (password-reset) instead — a different mail with no OpenPNE 3 wording to carry.',
             'pc_birthday' => 'Dropped: the birthday digest is a Phase 3 feature (needs the loop/filter renderer extensions).',

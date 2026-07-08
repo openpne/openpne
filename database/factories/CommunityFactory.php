@@ -17,6 +17,7 @@ class CommunityFactory extends Factory
             'name' => fake()->unique()->company(),
             'description' => fake()->paragraph(),
             'register_policy' => JoinPolicy::Open,
+            'is_join_notification_enabled' => true,
             'community_category_id' => null,
             'file_id' => null,
         ];
