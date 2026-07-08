@@ -59,10 +59,14 @@ A notification's `via($notifiable)` decides channels through
 - `database` requires the recipient's web toggle for the kind.
 
 Account-security and transactional mails (password reset, email change, registration-complete,
-the withdrawal receipt + admin notice, …) are not catalog kinds and are never member-gated —
-they are `['mail']` only and always sent. The withdrawal mails address on-demand notifiables
-(the Member row is already deleted): a scalar `MemberWithdrawn` payload carries the name, email,
-and locale so nothing dereferences the gone row.
+the withdrawal receipt + admin notice, and the takeover-detection alerts — password changed,
+two-factor enabled/disabled, …) are not catalog kinds and are never member-gated — they are
+`['mail']` only and always sent. The withdrawal mails address on-demand notifiables (the Member row
+is already deleted): a scalar `MemberWithdrawn` payload carries the name, email, and locale so
+nothing dereferences the gone row. The two-factor-disabled alert fires only for the removal of a
+*live* factor: each caller reads `hasEnabledTwoFactorAuthentication()` before disabling and gates the
+alert on it, so cancelling a pending set-up — and the operator lockout CLI acting on a member with no
+active factor — sends nothing.
 
 The community-join notice to admins is `['mail', 'database']` but gated differently: not a member
 catalog kind, so the opt-out is the **per-community** `communities.is_join_notification_enabled`

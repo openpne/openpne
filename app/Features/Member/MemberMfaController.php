@@ -9,6 +9,8 @@ use App\Http\Requests\Member\ConfirmMfaRequest;
 use App\Http\Requests\Member\DisableMfaRequest;
 use App\Http\Requests\Member\MfaManagementRequest;
 use App\Models\Member;
+use App\Notifications\Member\MfaDisabledNotification;
+use App\Notifications\Member\MfaEnabledNotification;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -84,6 +86,9 @@ class MemberMfaController extends Controller
         MfaSetupReauth::clear($request->session());
         $request->session()->flash(MemberMfaSerializer::SHOW_RECOVERY_CODES, true);
 
+        // After the factor is live: a security alert to the member's own address (takeover detection).
+        $viewer->notify(new MfaEnabledNotification($viewer->locale ?? app()->getLocale()));
+
         return $this->mfaRedirect($request, __('Two-factor authentication is now enabled.'));
     }
 
@@ -96,11 +101,12 @@ class MemberMfaController extends Controller
             return $this->mfaRedirect($request);
         }
 
+        // Read before disabling: only a live (confirmed) factor's removal is a credential change worth
+        // revoking sessions over and alerting on. Cancelling a pending set-up is password-free, so it
+        // must stay side-effect-free too — otherwise a walked-up session could log out the member's
+        // other devices for free.
         $wasEnabled = $viewer->hasEnabledTwoFactorAuthentication();
 
-        // Only a live factor's removal is a credential change worth revoking sessions over.
-        // Cancelling a pending set-up is password-free, so it must stay side-effect-free too —
-        // otherwise a walked-up session could log out the member's other devices for free.
         DB::transaction(function () use ($disable, $viewer, $request, $wasEnabled): void {
             $disable($viewer);
             if ($wasEnabled) {
@@ -117,6 +123,9 @@ class MemberMfaController extends Controller
         if (! $wasEnabled) {
             return $this->mfaRedirect($request);
         }
+
+        // The removed factor was live: a security alert to the member's own address.
+        $viewer->notify(new MfaDisabledNotification($viewer->locale ?? app()->getLocale()));
 
         $status = __('Two-factor authentication has been disabled.');
         if (SurfaceResolver::redirectName($request, 'member.config') === 'member.config') {

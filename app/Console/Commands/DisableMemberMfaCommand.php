@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Auth\SessionRevocation;
 use App\Models\Member;
+use App\Notifications\Member\MfaDisabledNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
@@ -31,6 +32,10 @@ class DisableMemberMfaCommand extends Command
             return self::FAILURE;
         }
 
+        // Read before disabling: only a live (confirmed) factor's removal is a security event worth
+        // mailing the member about — clearing a member with no active factor (or a pending set-up) is not.
+        $wasEnabled = $member->hasEnabledTwoFactorAuthentication();
+
         // All-or-nothing: clearing the factor and revoking sessions must not half-apply.
         DB::transaction(function () use ($disable, $member): void {
             $disable($member);
@@ -39,6 +44,10 @@ class DisableMemberMfaCommand extends Command
             // outlive the reset. The operator is at the CLI, not in a browser, so revoke all.
             SessionRevocation::revokeMember($member);
         });
+
+        if ($wasEnabled) {
+            $member->notify(new MfaDisabledNotification($member->locale ?? config('app.locale')));
+        }
 
         $this->info("Two-factor authentication for member [{$email}] has been disabled and their sessions revoked.");
 

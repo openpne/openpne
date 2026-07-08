@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Auth\SessionRevocation;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
+use App\Notifications\Member\PasswordChangedNotification;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -42,5 +43,8 @@ class ResetMemberPassword implements ResetsUserPasswords
         // A reset answers a possible compromise, so void any pending email change too: otherwise an
         // attacker who requested one before the reset still holds a live confirmation token.
         EmailChangeRequest::where('member_id', $member->getKey())->delete();
+
+        // Security alert to the member's own address (takeover detection), the same as an in-session change.
+        $member->notify(new PasswordChangedNotification($member->locale ?? app()->getLocale()));
     }
 }
