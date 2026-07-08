@@ -27,6 +27,9 @@ enum MailTemplate: string
     case MessageReceived = 'message-received';
     case DiaryCommentReceived = 'diary-comment';
     case CommunityPostingNotified = 'community-posting';
+    case RegistrationCompleted = 'registration-complete';
+    case WithdrawalCompleted = 'withdrawal-complete';
+    case WithdrawalAdminNotice = 'withdrawal-admin-notice';
 
     /** Not a sendable mail: rendered and appended to every sendable body by MailTemplateService. */
     case Signature = 'signature';
@@ -133,6 +136,38 @@ enum MailTemplate: string
                     'nickname' => ['help' => 'The poster’s name.', 'sample' => 'Example'],
                     'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The %topic% or event URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::RegistrationCompleted => new MailTemplateDefinition(
+                op3SourceName: 'pc_registerEnd',
+                // Non-configurable in OpenPNE 3 (registerEnd configurable:false) — a transactional
+                // "your account is ready" mail with no admin toggle and no member opt-out.
+                isConfigurable: false,
+                caption: 'Registration complete',
+                variables: [
+                    'url' => ['help' => 'The sign-in URL.', 'sample' => 'https://example.test/login'],
+                ],
+            ),
+            self::WithdrawalCompleted => new MailTemplateDefinition(
+                op3SourceName: 'pc_leave',
+                // Non-configurable in OpenPNE 3 (leave configurable:false). Sent to the just-deleted
+                // member's captured address, so it carries no in-app record and no member opt-out.
+                isConfigurable: false,
+                caption: 'Withdrawal complete',
+                variables: [
+                    'member.name' => ['help' => 'The withdrawing member’s name.', 'sample' => 'Example'],
+                ],
+            ),
+            self::WithdrawalAdminNotice => new MailTemplateDefinition(
+                // OpenPNE-4-only: OpenPNE 3's admin withdrawal notice was a global (non-NotificationMail)
+                // template, so there is no source wording to carry — the default is authored here.
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Member withdrawal (admin notice)',
+                variables: [
+                    'member.name' => ['help' => 'The withdrawing member’s name.', 'sample' => 'Example'],
+                    'member.email' => ['help' => 'The withdrawing member’s email address.', 'sample' => 'member@example.test'],
+                    'member.id' => ['help' => 'The withdrawing member’s ID.', 'sample' => 1],
                 ],
             ),
             self::Signature => new MailTemplateDefinition(
