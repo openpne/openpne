@@ -17,9 +17,14 @@ class NotifyMemberWithdrawn
 {
     public function handle(MemberWithdrawn $event): void
     {
-        Notification::route('mail', $event->email)->notify(
-            new WithdrawalCompletedNotification($event->name, $event->locale),
-        );
+        // A member upgraded from OpenPNE 3 without a usable address is login-impossible and has no
+        // inbox (members.email is nullable → captured as ''); OpenPNE 3 likewise only mailed the
+        // receipt when an address was present. Skip the receipt, but still notify the admin.
+        if ($event->email !== '') {
+            Notification::route('mail', $event->email)->notify(
+                new WithdrawalCompletedNotification($event->name, $event->locale),
+            );
+        }
 
         // Operator-facing: rendered in the site default locale, not the withdrawing member's.
         Notification::route('mail', sns_admin_mail_address())->notify(

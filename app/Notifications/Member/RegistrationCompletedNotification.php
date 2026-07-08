@@ -33,7 +33,8 @@ class RegistrationCompletedNotification extends Notification implements ShouldQu
     public function toMail(object $notifiable): MailMessage
     {
         return $this->mailFromTemplate(MailTemplate::RegistrationCompleted, [
-            'url' => route('login'),
+            // The home URL, as OpenPNE 3 registerEnd passed (genUrl homepage), not the login page.
+            'url' => route('home'),
         ]);
     }
 }

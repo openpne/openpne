@@ -48,6 +48,35 @@ class NotifyMemberWithdrawnTest extends TestCase
         );
     }
 
+    public function test_a_member_without_an_address_gets_no_receipt_but_the_admin_is_notified(): void
+    {
+        Notification::fake();
+        $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
+
+        // A login-impossible member upgraded from OpenPNE 3 has no address (captured as '').
+        app(NotifyMemberWithdrawn::class)->handle(new MemberWithdrawn(42, 'Gone', '', 'ja'));
+
+        // Only the admin notice — the empty-address receipt is skipped.
+        Notification::assertCount(1);
+        Notification::assertSentOnDemand(
+            WithdrawalAdminNotification::class,
+            fn ($notification, array $channels, $notifiable): bool => ($notifiable->routes['mail'] ?? null) === 'ops@example.test',
+        );
+    }
+
+    public function test_withdrawing_a_member_without_an_address_yields_an_empty_email_payload(): void
+    {
+        Event::fake([MemberWithdrawn::class]);
+        $member = Member::factory()->create(['email' => null]);
+
+        app(WithdrawMember::class)($member);
+
+        Event::assertDispatched(
+            MemberWithdrawn::class,
+            fn (MemberWithdrawn $event): bool => $event->email === '' && $event->memberId === (int) $member->getKey(),
+        );
+    }
+
     public function test_withdrawing_dispatches_the_event_with_a_scalar_payload_after_delete(): void
     {
         Event::fake([MemberWithdrawn::class]);

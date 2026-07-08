@@ -145,7 +145,7 @@ enum MailTemplate: string
                 isConfigurable: false,
                 caption: 'Registration complete',
                 variables: [
-                    'url' => ['help' => 'The sign-in URL.', 'sample' => 'https://example.test/login'],
+                    'url' => ['help' => 'The home URL.', 'sample' => 'https://example.test'],
                 ],
             ),
             self::WithdrawalCompleted => new MailTemplateDefinition(
