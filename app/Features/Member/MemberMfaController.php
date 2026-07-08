@@ -3,7 +3,6 @@
 namespace App\Features\Member;
 
 use App\Auth\SessionRevocation;
-use App\Features\Member\Actions\DisableMemberMfa;
 use App\Features\Member\Serializers\MemberMfaSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\ConfirmMfaRequest;
@@ -20,6 +19,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
+use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 
@@ -92,7 +92,7 @@ class MemberMfaController extends Controller
         return $this->mfaRedirect($request, __('Two-factor authentication is now enabled.'));
     }
 
-    public function disable(DisableMfaRequest $request, DisableMemberMfa $disable): RedirectResponse
+    public function disable(DisableMfaRequest $request, DisableTwoFactorAuthentication $disable): RedirectResponse
     {
         $viewer = $this->viewer();
 
@@ -101,16 +101,17 @@ class MemberMfaController extends Controller
             return $this->mfaRedirect($request);
         }
 
-        // Only a live factor's removal is a credential change worth revoking sessions over.
-        // Cancelling a pending set-up is password-free, so it must stay side-effect-free too —
-        // otherwise a walked-up session could log out the member's other devices for free.
-        $wasEnabled = DB::transaction(function () use ($disable, $viewer, $request): bool {
-            $wasEnabled = $disable($viewer);
+        // Read before disabling: only a live (confirmed) factor's removal is a credential change worth
+        // revoking sessions over and alerting on. Cancelling a pending set-up is password-free, so it
+        // must stay side-effect-free too — otherwise a walked-up session could log out the member's
+        // other devices for free.
+        $wasEnabled = $viewer->hasEnabledTwoFactorAuthentication();
+
+        DB::transaction(function () use ($disable, $viewer, $request, $wasEnabled): void {
+            $disable($viewer);
             if ($wasEnabled) {
                 SessionRevocation::revokeMember($viewer, $request->session()->getId());
             }
-
-            return $wasEnabled;
         });
         MfaSetupReauth::clear($request->session());
 
