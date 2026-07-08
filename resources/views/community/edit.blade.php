@@ -40,7 +40,10 @@
                     <tr>
                         <th>{{ __('Notifications') }}</th>
                         <td>
+                            {{-- hidden 0 + checkbox 1: the field is always submitted, so an unchecked box
+                                 survives a validation round-trip (old() sees '0', not the current value). --}}
                             <label>
+                                <input type="hidden" name="is_join_notification_enabled" value="0">
                                 <input type="checkbox" name="is_join_notification_enabled" value="1" @checked(old('is_join_notification_enabled', $community?->is_join_notification_enabled ?? true))>
                                 {{ __('Notify admins when a member joins.') }}
                             </label>

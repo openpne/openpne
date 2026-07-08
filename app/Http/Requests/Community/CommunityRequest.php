@@ -44,7 +44,10 @@ class CommunityRequest extends FormRequest
             description: $validated['description'] ?? null,
             registerPolicy: JoinPolicy::from((int) $validated['register_policy']),
             categoryId: isset($validated['community_category_id']) ? (int) $validated['community_category_id'] : null,
-            isJoinNotificationEnabled: $this->boolean('is_join_notification_enabled'),
+            // Default on (OpenPNE 3 treats an absent value as on): both edit forms always submit the
+            // field (Modern sends the boolean, Classic via a hidden 0), so an absent value is a non-form
+            // caller, which should still get the default rather than a silent off.
+            isJoinNotificationEnabled: $this->boolean('is_join_notification_enabled', true),
         );
     }
 }

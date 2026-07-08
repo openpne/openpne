@@ -78,6 +78,19 @@ class CommunityManagementRoutesTest extends TestCase
         ]);
     }
 
+    public function test_modern_create_defaults_join_notifications_on(): void
+    {
+        $member = Member::factory()->create();
+
+        // No is_join_notification_enabled in the payload → the default-on contract (not a silent off).
+        $this->actingAs($member)->post('/m/community/edit', [
+            'name' => 'Defaulted Community',
+            'register_policy' => 1,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('communities', ['name' => 'Defaulted Community', 'is_join_notification_enabled' => true]);
+    }
+
     public function test_modern_edit_exposes_the_join_notification_toggle(): void
     {
         $admin = Member::factory()->create();
