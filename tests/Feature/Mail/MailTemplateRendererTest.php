@@ -89,6 +89,18 @@ class MailTemplateRendererTest extends TestCase
         $this->assertRejected("{% app_url_for('pc_frontend', 'community/deleteComment?id='~id, true) %}", ['id' => '1']);
     }
 
+    public function test_app_url_for_tag_on_its_own_line_keeps_the_following_line(): void
+    {
+        // Twig eats the first newline after a `%}` block tag; the parser re-emits it so an imported
+        // OpenPNE 3 body with the tag mid-text (its own line, followed by more) does not merge the URL
+        // into the next line. The print form and a tag at end-of-body are unaffected.
+        $r = $this->renderer();
+        $this->assertSame(
+            "Page:\n".url('/community/3')."\nProfile:",
+            $r->render("Page:\n{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}\nProfile:", ['id' => '3']),
+        );
+    }
+
     public function test_string_literal_containing_the_tag_text_is_not_rewritten(): void
     {
         // A real token parser (not a source rewrite): `{% app_url_for %}` inside a string literal is just

@@ -8,6 +8,7 @@ use Twig\Node\Expression\FunctionExpression;
 use Twig\Node\Node;
 use Twig\Node\Nodes;
 use Twig\Node\PrintNode;
+use Twig\Node\TextNode;
 use Twig\Token;
 use Twig\TokenParser\AbstractTokenParser;
 
@@ -35,11 +36,21 @@ final class AppUrlForTokenParser extends AbstractTokenParser
             $arguments[] = $this->parser->parseExpression();
         }
         $stream->expect(Token::PUNCTUATION_TYPE, ')');
-        $stream->expect(Token::BLOCK_END_TYPE);
+        $end = $stream->expect(Token::BLOCK_END_TYPE);
 
         $function = $this->parser->getEnvironment()->getFunction('app_url_for');
+        $print = new PrintNode(new FunctionExpression($function, new Nodes($arguments, $line), $line), $line);
 
-        return new PrintNode(new FunctionExpression($function, new Nodes($arguments, $line), $line), $line);
+        // Twig's lexer swallows the first newline after a `%}` block tag. For a helper that merely prints
+        // a URL that is wrong: an imported OpenPNE 3 body puts the tag on its own line mid-text, so the
+        // URL would merge into the following line. The swallowed newline advanced the lexer's line count,
+        // so the next token sitting on a later line is the tell — re-emit the one newline it ate.
+        $next = $stream->getCurrent();
+        if ($next->getLine() > $end->getLine()) {
+            return new Nodes([$print, new TextNode("\n", $end->getLine())], $line);
+        }
+
+        return $print;
     }
 
     public function getTag(): string
