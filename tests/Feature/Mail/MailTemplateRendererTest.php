@@ -47,11 +47,11 @@ class MailTemplateRendererTest extends TestCase
         $this->assertSame('1970-01-01', $r->render('{{ x|date("Y-m-d") }}', ['x' => 'not-a-date']));
     }
 
-    public function test_constant_function_is_denied_but_the_constant_test_is_allowed(): void
+    public function test_constant_function_and_constant_test_are_both_denied(): void
     {
-        // Documented: the sandbox does not filter Twig *tests* (`is constant` only compares a constant,
-        // it cannot read/exec), but the constant() *function* is denied by the allowlist.
-        $this->assertSame('yes', $this->renderer()->render('{% if 8 is constant("E_NOTICE") %}yes{% else %}no{% endif %}', []));
+        // Strict mode denies every `is <test>` outside allowedTests (empty), so the `constant` test is
+        // rejected just like the `constant()` function. Imported OpenPNE 3 templates use no tests.
+        $this->assertRejected('{% if 8 is constant("E_NOTICE") %}yes{% else %}no{% endif %}');
         $this->assertRejected('{{ constant("E_NOTICE") }}');
     }
 
