@@ -50,6 +50,7 @@ class CommunityUpgrade extends UpgradeStep
             'description' => Column::expr($this->configValueLatest('description'), uses: ['id']),
             'register_policy' => Column::expr($this->registerPolicyExpr(), uses: ['id']),
             'is_default' => Column::expr($this->isDefaultExpr(), uses: ['id']),
+            'is_join_notification_enabled' => Column::expr($this->joinNotificationExpr(), uses: ['id']),
             'topic_read_access' => Column::expr($this->topicReadAccessExpr(), uses: ['id']),
             'topic_post_authority' => Column::expr($this->topicPostAuthorityExpr(), uses: ['id']),
             'community_category_id' => Column::expr($this->categoryIdExpr(), uses: ['community_category_id']),
@@ -80,6 +81,16 @@ class CommunityUpgrade extends UpgradeStep
             JoinPolicy::Open->value,
             JoinPolicy::Open->value,
         );
+    }
+
+    /**
+     * community_config[is_send_pc_joinCommunity_mail] → communities.is_join_notification_enabled.
+     * OpenPNE 3 treated an absent value as on and only '0' as off (opCommunityAction), so every
+     * other value maps to on.
+     */
+    private function joinNotificationExpr(): string
+    {
+        return sprintf("CASE WHEN %s = '0' THEN 0 ELSE 1 END", $this->configValueLatest('is_send_pc_joinCommunity_mail'));
     }
 
     /**

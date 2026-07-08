@@ -69,12 +69,24 @@ class MailTemplateRendererTest extends TestCase
                 ['token' => 'T', 'id' => '9', 'type' => 'pc_address'],
             ),
         );
+        // Named-route (@route?id=N) form: the id names the model, resolved to the canonical URL.
+        $this->assertSame(
+            route('community.show', ['community' => 3]),
+            $r->render("{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}", ['id' => '3']),
+        );
+        $this->assertSame(
+            route('member.profile.show', ['member' => 8]),
+            $r->render("{% app_url_for('pc_frontend', '@member_profile?id='~id, true) %}", ['id' => '8']),
+        );
     }
 
-    public function test_app_url_for_requires_token_and_rejects_unmapped_route(): void
+    public function test_app_url_for_requires_token_or_id_and_rejects_unmapped_route(): void
     {
         $this->assertRejected("{% app_url_for('pc_frontend', 'member/register', true) %}");
-        $this->assertRejected("{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}", ['id' => '1']);
+        // A named route with no / a non-numeric id, and a route with no OpenPNE 4 mapping.
+        $this->assertRejected("{% app_url_for('pc_frontend', '@community_home', true) %}");
+        $this->assertRejected("{% app_url_for('pc_frontend', '@member_profile?id='~id, true) %}", ['id' => 'x']);
+        $this->assertRejected("{% app_url_for('pc_frontend', 'community/deleteComment?id='~id, true) %}", ['id' => '1']);
     }
 
     public function test_string_literal_containing_the_tag_text_is_not_rewritten(): void

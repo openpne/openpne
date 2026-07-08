@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'description', 'register_policy', 'topic_read_access', 'topic_post_authority', 'community_category_id', 'file_id', 'is_default'])]
+#[Fillable(['name', 'description', 'register_policy', 'topic_read_access', 'topic_post_authority', 'community_category_id', 'file_id', 'is_default', 'is_join_notification_enabled'])]
 class Community extends Model
 {
     /** @use HasFactory<CommunityFactory> */
@@ -26,6 +26,7 @@ class Community extends Model
             'topic_read_access' => TopicReadAccess::class,
             'topic_post_authority' => TopicPostAuthority::class,
             'is_default' => 'boolean',
+            'is_join_notification_enabled' => 'boolean',
         ];
     }
 

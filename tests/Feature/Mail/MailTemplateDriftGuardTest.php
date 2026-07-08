@@ -7,6 +7,7 @@ namespace Tests\Feature\Mail;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateRenderer;
 use App\Mail\Template\MailTemplateService;
+use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Member;
@@ -14,6 +15,7 @@ use App\Models\Message;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
 use App\Notifications\CommentReason;
+use App\Notifications\Community\CommunityJoinedNotification;
 use App\Notifications\CommunityTopic\TopicCommentedNotification;
 use App\Notifications\Diary\DiaryCommentedNotification;
 use App\Notifications\Friend\FriendRequestAcceptedNotification;
@@ -81,6 +83,7 @@ class MailTemplateDriftGuardTest extends TestCase
         $comment = $diary->comments()->create(['member_id' => $sender->getKey(), 'number' => 1, 'body' => 'a comment']);
         $topic = CommunityTopic::factory()->create(['member_id' => $recipient->getKey()]);
         $topicComment = $topic->comments()->create(['member_id' => $sender->getKey(), 'number' => 1, 'body' => 'a comment']);
+        $community = Community::factory()->create();
 
         // One notification per sendable template; RegistrationLink carries an inviter name + message so the
         // conditional block that uses them is actually exercised.
@@ -94,6 +97,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new MessageReceivedNotification($sender, $message), $recipient],
             [new DiaryCommentedNotification($sender, $diary, $comment, CommentReason::Reply), $recipient],
             [new TopicCommentedNotification($sender, $topic, $topicComment, CommentReason::Reply), $recipient],
+            [new CommunityJoinedNotification($community, $sender), $recipient],
             [new RegistrationCompletedNotification('en'), $recipient],
             [new WithdrawalCompletedNotification('Sender', 'en'), new AnonymousNotifiable],
             [new WithdrawalAdminNotification('Sender', 'sender@example.test', (int) $sender->getKey(), 'en'), new AnonymousNotifiable],

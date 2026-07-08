@@ -5,6 +5,7 @@ namespace App\Features\Notifications\Serializers;
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\Diary\DiaryAccess;
+use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
@@ -50,6 +51,7 @@ class NotificationFeedSerializer
             'friend_request_accepted' => $data['accepter_id'] ?? null,
             'message_received' => $data['sender_id'] ?? null,
             'diary_commented', 'community_topic_commented', 'community_event_commented' => $data['commenter_id'] ?? null,
+            'community_joined' => $data['new_member_id'] ?? null,
             default => null,
         };
     }
@@ -69,6 +71,7 @@ class NotificationFeedSerializer
             'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
             'community_topic_commented' => self::topicUrl($row, $data['topic_id'] ?? null),
             'community_event_commented' => self::eventUrl($row, $data['event_id'] ?? null),
+            'community_joined' => self::communityUrl($data['community_id'] ?? null),
             default => null,
         };
     }
@@ -114,6 +117,16 @@ class NotificationFeedSerializer
         }
 
         return '/m/member/'.$memberId;
+    }
+
+    /** A dissolved community counts as gone; the recipient is an admin, so no extra view gate. */
+    private static function communityUrl(?int $communityId): ?string
+    {
+        if ($communityId === null || ! Community::whereKey($communityId)->exists()) {
+            return null;
+        }
+
+        return '/m/community/'.$communityId;
     }
 
     /** A deleted diary — or one the recipient can no longer view — counts as gone. */

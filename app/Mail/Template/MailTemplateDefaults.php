@@ -54,6 +54,10 @@ final class MailTemplateDefaults
             'en' => '[{{ op_config.sns_name }}] {{ community_name }} {{ topic_name }}',
             'ja' => '【{{ op_config.sns_name }}】{{ community_name }} {{ topic_name }}',
         ],
+        'community-join' => [
+            'en' => '{{ new_member.name }} registered your {{ op_term.community }}, {{ community.name }}',
+            'ja' => '{{ new_member.name }} さんがあなたの{{ op_term.community }}に参加しました',
+        ],
         'registration-complete' => [
             'en' => 'Information of the completion of registration',
             'ja' => '登録完了のお知らせ',

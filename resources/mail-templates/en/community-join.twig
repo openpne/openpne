@@ -1,0 +1,8 @@
+Hello! This is information from {{ op_config.sns_name }}.
+
+{{ new_member.name }} registered your {{ op_term.community }}, {{ community.name }}.
+
+{{ community.name }} {{ op_term.community }} page:
+{{ app_url_for('pc_frontend', '@community_home?id='~community.id, true) }}
+{{ new_member.name }}'s profile page:
+{{ app_url_for('pc_frontend', '@member_profile?id='~new_member.id, true) }}

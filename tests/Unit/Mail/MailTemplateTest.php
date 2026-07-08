@@ -55,7 +55,7 @@ class MailTemplateTest extends TestCase
         ));
 
         $this->assertSame(
-            [MailTemplate::FriendRequested, MailTemplate::FriendAccepted, MailTemplate::MessageReceived, MailTemplate::CommunityPostingNotified],
+            [MailTemplate::FriendRequested, MailTemplate::FriendAccepted, MailTemplate::MessageReceived, MailTemplate::CommunityPostingNotified, MailTemplate::CommunityJoinNotice],
             $configurable,
         );
     }
