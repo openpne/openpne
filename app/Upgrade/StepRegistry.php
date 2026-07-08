@@ -291,11 +291,11 @@ final class StepRegistry
             'pc_notifyNewMessage' => 'mail_templates[message-received]. Configurable: is_enabled carried over.',
             'pc_notifyNewDiaryComment' => 'mail_templates[diary-comment]. Not admin-toggleable (member opt-out lives in member_notification_settings): is_enabled forced on.',
             'pc_notifyCommunityPosting' => 'mail_templates[community-posting]. Configurable: is_enabled carried over. One template for topic and event comments (and the new-post broadcasts later).',
+            'pc_registerEnd' => 'mail_templates[registration-complete]. Not admin-toggleable (transactional): is_enabled forced on.',
+            'pc_leave' => 'mail_templates[withdrawal-complete]. Not admin-toggleable (transactional): is_enabled forced on.',
             'pc_signature' => 'mail_templates[signature]. Appended to every sendable body; not itself toggleable.',
             // Dropped: no OpenPNE 4 sender yet — the wording and a sender land together as a follow-up.
-            'pc_registerEnd' => 'Dropped: OpenPNE 4 has no registration-complete mail yet (follow-up adds wording + sender together).',
             'pc_joinCommunity' => 'Dropped: OpenPNE 4 has no community-join mail yet (follow-up).',
-            'pc_leave' => 'Dropped: OpenPNE 4 has no withdrawal mail yet (follow-up).',
             // Dropped: deliberately not carried.
             'pc_reissuedPassword' => 'Dropped: OpenPNE 3 mailed a new plaintext password; OpenPNE 4 sends a reset link (password-reset) instead — a different mail with no OpenPNE 3 wording to carry.',
             'pc_birthday' => 'Dropped: the birthday digest is a Phase 3 feature (needs the loop/filter renderer extensions).',

@@ -3,6 +3,7 @@
 namespace App\Features\Auth\Actions;
 
 use App\Actions\Fortify\CreateNewMember;
+use App\Features\Auth\Events\MemberRegistered;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Models\Member;
 use App\Models\RegistrationToken;
@@ -34,6 +35,10 @@ class CompleteRegistration
             $member = $this->create->create(['email' => $pending->email] + $input);
             $this->autoFriendInviter($pending, $member);
             $pending->delete();
+
+            // Fires after this transaction commits (ShouldDispatchAfterCommit), so the queued
+            // registration-complete mail never references a not-yet-durable member row.
+            MemberRegistered::dispatch($member);
 
             return $member;
         });

@@ -56,6 +56,8 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->seedMail(4, 'pc_signature');
         $this->seedMail(5, 'pc_friendLinkRequest');
         $this->seedMail(6, 'pc_notifyNewMessage');
+        $this->seedMail(7, 'pc_registerEnd');
+        $this->seedMail(8, 'pc_leave');
 
         $this->runUpgrade();
 
@@ -66,6 +68,8 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('mail_templates', ['id' => 4, 'key' => 'signature']);
         $this->assertDatabaseHas('mail_templates', ['id' => 5, 'key' => 'friend-requested']);
         $this->assertDatabaseHas('mail_templates', ['id' => 6, 'key' => 'message-received']);
+        $this->assertDatabaseHas('mail_templates', ['id' => 7, 'key' => 'registration-complete']);
+        $this->assertDatabaseHas('mail_templates', ['id' => 8, 'key' => 'withdrawal-complete']);
     }
 
     public function test_an_imported_openpne3_message_body_renders_with_its_flat_variables(): void
@@ -99,6 +103,9 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->seedMail(5, 'pc_notifyNewDiaryComment', isEnabled: false);
         // Configurable like the source template — the admin's choice carries.
         $this->seedMail(6, 'pc_notifyCommunityPosting', isEnabled: false);
+        // Transactional like the source templates (registerEnd/leave configurable:false) — forced on.
+        $this->seedMail(7, 'pc_registerEnd', isEnabled: false);
+        $this->seedMail(8, 'pc_leave', isEnabled: false);
 
         $this->runUpgrade();
 
@@ -106,6 +113,8 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('mail_templates', ['key' => 'friend-accepted', 'is_enabled' => 0]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'diary-comment', 'is_enabled' => 1]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'community-posting', 'is_enabled' => 0]);
+        $this->assertDatabaseHas('mail_templates', ['key' => 'registration-complete', 'is_enabled' => 1]);
+        $this->assertDatabaseHas('mail_templates', ['key' => 'withdrawal-complete', 'is_enabled' => 1]);
     }
 
     public function test_drops_mobile_and_unsupported_templates(): void

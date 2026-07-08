@@ -5,6 +5,7 @@ namespace App\Features\Member\Actions;
 use App\Features\Community\Actions\DeleteCommunity;
 use App\Features\Community\CommunityRole;
 use App\Features\Diary\Actions\DeleteDiary;
+use App\Features\Member\Events\MemberWithdrawn;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Models\Community;
 use App\Models\CommunityMember;
@@ -52,6 +53,13 @@ class WithdrawMember
             throw new RuntimeException('The primary member cannot be withdrawn.');
         }
 
+        // Capture the address/name/locale the withdrawal mails need before the row is gone; the event
+        // carries only these scalars (dispatched post-delete).
+        $memberId = (int) $member->getKey();
+        $name = (string) $member->name;
+        $email = (string) $member->email;
+        $locale = $member->locale ?? (string) config('app.locale');
+
         // Resolve sole-admin communities first (each under its own row lock); dissolve the leftover
         // empty ones after their lock commits so their byte purge stays post-commit.
         foreach ($this->handOverAdminCommunities($member) as $community) {
@@ -76,6 +84,8 @@ class WithdrawMember
         }
 
         $member->delete();
+
+        MemberWithdrawn::dispatch($memberId, $name, $email, $locale);
     }
 
     /**

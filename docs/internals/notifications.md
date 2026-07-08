@@ -58,8 +58,11 @@ A notification's `via($notifiable)` decides channels through
   for non-configurable templates) **and** the recipient's mail toggle for the kind.
 - `database` requires the recipient's web toggle for the kind.
 
-Account-security mails (password reset, email change, …) are not catalog kinds and are never
-member-gated.
+Account-security and transactional mails (password reset, email change, registration-complete,
+the withdrawal receipt + admin notice, …) are not catalog kinds and are never member-gated —
+they are `['mail']` only and always sent. The withdrawal mails address on-demand notifiables
+(the Member row is already deleted): a scalar `MemberWithdrawn` payload carries the name, email,
+and locale so nothing dereferences the gone row.
 
 ## Key invariants
 
