@@ -26,6 +26,7 @@ enum MailTemplate: string
     case FriendAccepted = 'friend-accepted';
     case MessageReceived = 'message-received';
     case DiaryCommentReceived = 'diary-comment';
+    case DiaryPostedNotified = 'diary-posted';
     case CommunityPostingNotified = 'community-posting';
     case CommunityJoinNotice = 'community-join';
     case RegistrationCompleted = 'registration-complete';
@@ -126,6 +127,18 @@ enum MailTemplate: string
                     'diary_title' => ['help' => 'The diary title.', 'sample' => 'Example title'],
                     'body' => ['help' => 'The comment body.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The diary URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::DiaryPostedNotified => new MailTemplateDefinition(
+                op3SourceName: 'pc_notifyNewDiary',
+                // Not admin-toggleable (matching the source template); the member-level opt-out
+                // (diary-new-post / friends-only) lives in the notification settings instead.
+                isConfigurable: false,
+                caption: 'New %Diary%',
+                variables: [
+                    'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
+                    'diary_title' => ['help' => 'The %diary% title.', 'sample' => 'Example title'],
+                    'url' => ['help' => 'The %diary% URL.', 'sample' => 'https://example.test'],
                 ],
             ),
             self::CommunityPostingNotified => new MailTemplateDefinition(

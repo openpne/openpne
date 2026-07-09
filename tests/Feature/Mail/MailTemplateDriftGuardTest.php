@@ -18,6 +18,7 @@ use App\Notifications\CommentReason;
 use App\Notifications\Community\CommunityJoinedNotification;
 use App\Notifications\CommunityTopic\TopicCommentedNotification;
 use App\Notifications\Diary\DiaryCommentedNotification;
+use App\Notifications\Diary\DiaryPostedNotification;
 use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
@@ -99,6 +100,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new FriendRequestAcceptedNotification($sender), $recipient],
             [new MessageReceivedNotification($sender, $message), $recipient],
             [new DiaryCommentedNotification($sender, $diary, $comment, CommentReason::Reply), $recipient],
+            [new DiaryPostedNotification($diary, $sender, ['mail']), $recipient],
             [new TopicCommentedNotification($sender, $topic, $topicComment, CommentReason::Reply), $recipient],
             [new CommunityJoinedNotification($community, $sender), $recipient],
             [new RegistrationCompletedNotification('en'), $recipient],

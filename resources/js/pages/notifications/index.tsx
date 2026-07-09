@@ -56,6 +56,8 @@ export default function NotificationsIndex() {
                     : t(':name commented on your event.', { name });
             case 'community_joined':
                 return t(':name joined your %community%.', { name });
+            case 'diary_posted':
+                return t(':name posted a new %diary%.', { name });
             default:
                 return t('New notification');
         }

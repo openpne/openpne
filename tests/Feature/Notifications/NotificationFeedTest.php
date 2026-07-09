@@ -121,6 +121,16 @@ class NotificationFeedTest extends TestCase
             ->assertRedirect('/m/diary/'.$diary->getKey());
     }
 
+    public function test_open_redirects_a_diary_post_to_the_diary(): void
+    {
+        [$viewer, $author] = Member::factory()->count(2)->create()->all();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey()]);
+        $row = $this->seedRow($viewer, 'diary_posted', ['author_id' => $author->getKey(), 'diary_id' => $diary->getKey()]);
+
+        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+            ->assertRedirect('/m/diary/'.$diary->getKey());
+    }
+
     public function test_open_falls_back_to_the_feed_when_the_diary_is_gone_or_hidden(): void
     {
         [$viewer, $actor, $owner] = Member::factory()->count(3)->create()->all();
