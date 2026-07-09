@@ -31,6 +31,15 @@ trait MigratesUpgradeTargetsOnce
 
     protected function truncateDatabaseTables(): void
     {
+        // MySQL-only suite: on any other driver each test's setUp calls markTestSkipped, so
+        // there is nothing to migrate or reset. Return before touching RefreshDatabaseState —
+        // on sqlite :memory: RefreshDatabase owns it *and* an in-memory PDO cache; setting
+        // $migrated=true here without populating that cache leaves a following RefreshDatabase
+        // test to open its transaction on a schemaless fresh :memory: connection.
+        if ($this->app->make('db')->connection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         // A co-resident DatabaseMigrations test (same worker — --functional interleaves a
         // class's methods across workers) drops the schema and clears
         // RefreshDatabaseState::$migrated in its teardown rollback. Sharing that flag — not a
