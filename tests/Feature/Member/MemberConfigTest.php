@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Member;
 
+use App\Features\Member\Actions\ConfirmEmailChange;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Models\Profile;
@@ -994,6 +995,25 @@ class MemberConfigTest extends TestCase
         $this->post('/member/config/email/cancel/'.$raw)->assertRedirect(route('login'));
 
         $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id]); // left for prune
+    }
+
+    public function test_a_confirm_race_with_a_cancel_does_not_change_the_email(): void
+    {
+        // The confirm controller loads the pending row, then the action commits. If a cancel (or a
+        // password-change purge) deletes that row in between, the action must re-read it under a lock
+        // and no-op — otherwise the cancel would report success while the login identifier still flips.
+        $member = Member::factory()->create(['email' => 'old@example.com']);
+        $pending = EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'new@example.com',
+            'token' => hash('sha256', str_repeat('r', 40)),
+            'cancel_token' => hash('sha256', str_repeat('s', 40)), 'created_at' => now(),
+        ]);
+
+        // The controller's stale in-memory model; the row is gone by the time the action's transaction runs.
+        EmailChangeRequest::whereKey($pending->getKey())->delete();
+
+        $this->assertNull(app(ConfirmEmailChange::class)($pending));
+        $this->assertSame('old@example.com', $member->fresh()->email);
     }
 
     public function test_a_confirm_token_does_not_work_on_the_cancel_route(): void

@@ -249,6 +249,12 @@ class MemberConfigController extends Controller
             return redirect()->route('login')->with('status', __('That email address is no longer available.'));
         }
 
+        // A concurrent cancel (or password-change purge) voided the pending change between the lookup
+        // above and the commit — the login identifier was not touched, so surface it as a dead link.
+        if ($member === null) {
+            return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
+        }
+
         // OWASP: changing the login identifier should drop the member's other devices. remember_token
         // is rotated in the commit (kills remember-me cookies everywhere); the session purge is
         // SessionRevocation's. An email change does not rotate the password hash, so auth.session
