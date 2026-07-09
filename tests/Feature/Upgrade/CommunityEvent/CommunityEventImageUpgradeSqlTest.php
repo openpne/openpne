@@ -9,8 +9,8 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\CommunityEventCommentImageUpgrade;
 use App\Upgrade\Steps\CommunityEventImageUpgrade;
 use App\Upgrade\UpgradeStep;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -22,7 +22,7 @@ use Tests\TestCase;
  */
 class CommunityEventImageUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     private array $sourceTables = ['community_event_image', 'community_event_comment_image'];
 

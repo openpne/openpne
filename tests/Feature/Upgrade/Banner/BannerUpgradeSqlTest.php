@@ -8,8 +8,8 @@ use App\Upgrade\Steps\BannerImageUpgrade;
 use App\Upgrade\Steps\BannerUpgrade;
 use App\Upgrade\Steps\BannerUseImageUpgrade;
 use App\Upgrade\UpgradeStep;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -21,7 +21,7 @@ use Tests\TestCase;
  */
 class BannerUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     private array $sourceTables = ['banner', 'banner_image', 'banner_use_image'];
 

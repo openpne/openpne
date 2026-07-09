@@ -7,8 +7,8 @@ use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\CommunityEventMemberUpgrade;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -16,12 +16,12 @@ use Tests\TestCase;
  * `community_event_member` DDL.
  *
  * MySQL only: the set-based copy and the source DDL (DATETIME, utf8mb3) are MySQL features. Uses
- * DatabaseMigrations rather than RefreshDatabase because creating the source table is DDL, which
+ * MigratesUpgradeTargetsOnce rather than RefreshDatabase because creating the source table is DDL, which
  * implicitly commits transactions.
  */
 class CommunityEventMemberUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     protected function setUp(): void
     {

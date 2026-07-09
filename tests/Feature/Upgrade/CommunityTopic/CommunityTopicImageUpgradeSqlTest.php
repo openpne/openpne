@@ -9,8 +9,8 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\CommunityTopicCommentImageUpgrade;
 use App\Upgrade\Steps\CommunityTopicImageUpgrade;
 use App\Upgrade\UpgradeStep;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -22,7 +22,7 @@ use Tests\TestCase;
  */
 class CommunityTopicImageUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     private array $sourceTables = ['community_topic_image', 'community_topic_comment_image'];
 

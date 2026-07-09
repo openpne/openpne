@@ -8,20 +8,20 @@ use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
  * Runs the compiled diary-comment INSERT...SELECT against the real OpenPNE 3 `diary_comment` DDL.
  *
  * MySQL only: the set-based copy and the source DDL (TEXT, tinyint, DATETIME, utf8mb3)
- * are MySQL features. Uses DatabaseMigrations rather than RefreshDatabase because
+ * are MySQL features. Uses MigratesUpgradeTargetsOnce rather than RefreshDatabase because
  * creating the source table is DDL, which implicitly commits transactions.
  */
 class DiaryCommentUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     protected function setUp(): void
     {
