@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Mail\Template\MailTemplate;
+use App\Notifications\Settings\NotificationCategory;
+use App\Notifications\Settings\NotificationKind;
 use App\Services\TermService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
@@ -78,6 +81,38 @@ class CheckTranslationsCommand extends Command
     private const BASELINE_FILE = 'lang/.i18n-baseline.json';
 
     /**
+     * Term-vocabulary words that must never appear as a bare literal in a translatable string —
+     * they belong in a `%term%` placeholder so an admin's term customisation reaches the UI on
+     * every surface. The English list is the default rendered term values (and plurals); the
+     * Japanese list is the shipped ja defaults. `activity`/`post` are intentionally omitted: their
+     * defaults ("timeline"/"post") are either caught directly (`timeline`) or too generic to gate
+     * (`post`).
+     */
+    public const TERM_EN_WORDS = ['diary', 'diaries', 'friend', 'friends', 'community', 'communities', 'topic', 'topics', 'timeline', 'nickname'];
+
+    public const TERM_JA_WORDS = ['日記', 'フレンド', 'コミュニティ', 'トピック', 'タイムライン', 'ニックネーム'];
+
+    /**
+     * Registries whose captions/help strings reach __() through a variable, so the code scanner
+     * never sees them. Each exposes a static `sourceStrings(): list<string>` the term-literal gate
+     * scans directly. A new such registry must be added here or its literals go ungated.
+     *
+     * @var list<class-string>
+     */
+    private const DYNAMIC_SOURCE_REGISTRIES = [
+        NotificationKind::class,
+        NotificationCategory::class,
+        MailTemplate::class,
+    ];
+
+    /**
+     * Strings exempt from the term-literal gate (exact match against a source string or ja value).
+     * Ships empty — every translatable string is expected to term-ize. A legitimate future
+     * exception is a data addition here, not a code change or a weakened gate.
+     */
+    private const TERM_LITERAL_ALLOWLIST_FILE = 'lang/.i18n-term-literal-allowlist.json';
+
+    /**
      * Files that legitimately mention `__('...')` / `t('...')` strings without intending them as
      * real translation references (e.g. this command's own docblocks). Skip when extracting.
      */
@@ -126,7 +161,8 @@ class CheckTranslationsCommand extends Command
             + $this->reportNamespaceCollisions($base)
             + $this->reportUnknownGroups($base)
             + $this->reportAppUiCoverage($base)
-            + $this->reportReactPhpGroupKeys($base);
+            + $this->reportReactPhpGroupKeys($base)
+            + $this->reportLiteralTerms($base, $found);
         $this->reportCollisions($base);
         $this->reportNearFold($base);
 
@@ -676,6 +712,145 @@ class CheckTranslationsCommand extends Command
         }
 
         return count($bad);
+    }
+
+    /**
+     * Hard gate: no translatable string may carry a term-vocabulary word (diary, friend,
+     * community, topic, timeline, nickname) as a bare literal — it must sit inside a `%term%`
+     * placeholder so an admin's term override reaches every surface (PHP, React, Blade all run the
+     * same substitution). English words are matched against source strings — scanner-extracted
+     * keys, ja.json keys, and dynamic-registry captions/help that reach __() via a variable (so the
+     * code scanner never sees them, {@see DYNAMIC_SOURCE_REGISTRIES}). Japanese words are matched
+     * against ja.json values. `%placeholder%` and `:param` tokens are stripped before matching. The
+     * allowlist ships empty: every translatable string is expected to term-ize.
+     *
+     * @param  array<string, list<string>>  $found  extracted key => [file:line, ...]
+     * @return int number of offending strings
+     */
+    private function reportLiteralTerms(string $base, array $found): int
+    {
+        $allow = $this->loadTermLiteralAllowlist($base);
+        $ja = $this->loadJsonDictionary("{$base}/lang/ja.json");
+
+        // English side: source strings, each with one origin for the report.
+        $sources = [];
+        foreach ($found as $key => $locations) {
+            $sources[(string) $key] ??= $locations[0] ?? 'code';
+        }
+        foreach (array_keys($ja) as $key) {
+            $sources[(string) $key] ??= 'lang/ja.json (key)';
+        }
+        foreach (self::dynamicSourceStrings() as $string => $registry) {
+            $sources[(string) $string] ??= $registry;
+        }
+
+        $violations = [];
+        foreach ($sources as $text => $origin) {
+            if (isset($allow[$text])) {
+                continue;
+            }
+            $hits = self::bareTermMatches((string) $text, self::TERM_EN_WORDS, true);
+            if ($hits !== []) {
+                $violations[] = [(string) $text, $origin, $hits];
+            }
+        }
+
+        // Japanese side: ja.json values.
+        foreach ($ja as $key => $value) {
+            $value = (string) $value;
+            if (isset($allow[$value]) || isset($allow[(string) $key])) {
+                continue;
+            }
+            $hits = self::bareTermMatches($value, self::TERM_JA_WORDS, false);
+            if ($hits !== []) {
+                $violations[] = [$value, 'lang/ja.json value of '.json_encode((string) $key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $hits];
+            }
+        }
+
+        if ($violations === []) {
+            return 0;
+        }
+
+        $this->error(sprintf(
+            'Bare term-vocabulary literals (%d) — wrap the term in a %%placeholder%% (e.g. %%diary%%) so admin term overrides reach every surface, or allowlist in %s if genuinely generic:',
+            count($violations),
+            self::TERM_LITERAL_ALLOWLIST_FILE,
+        ));
+        foreach ($violations as [$text, $origin, $hits]) {
+            $this->line(sprintf(
+                '  - %s  [%s]  ← %s',
+                json_encode($text, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                implode(', ', $hits),
+                $origin,
+            ));
+        }
+
+        return count($violations);
+    }
+
+    /**
+     * @return array<string, true> exact strings exempt from the term-literal gate
+     */
+    private function loadTermLiteralAllowlist(string $base): array
+    {
+        $path = "{$base}/".self::TERM_LITERAL_ALLOWLIST_FILE;
+        if (! is_file($path)) {
+            return [];
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+        $allow = is_array($data) ? ($data['allow'] ?? []) : [];
+
+        $out = [];
+        foreach ((array) $allow as $string) {
+            $out[(string) $string] = true;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Source strings from every dynamic registry ({@see DYNAMIC_SOURCE_REGISTRIES}) that reach
+     * __() through a variable, mapped to their registry class for reporting. These never enter the
+     * code scanner, so the term-literal gate reads them here directly.
+     *
+     * @return array<string, class-string> source string => registry class
+     */
+    public static function dynamicSourceStrings(): array
+    {
+        $out = [];
+        foreach (self::DYNAMIC_SOURCE_REGISTRIES as $registry) {
+            foreach ($registry::sourceStrings() as $string) {
+                $out[(string) $string] ??= $registry;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Term-vocabulary words appearing as a bare literal in $text — outside any `%placeholder%` and
+     * not part of a `:param` token. ASCII words match on word boundaries (English); non-ASCII words
+     * match as substrings (Japanese has no word boundaries). Returns the matched words, empty when
+     * clean.
+     *
+     * @param  list<string>  $words
+     * @return list<string>
+     */
+    public static function bareTermMatches(string $text, array $words, bool $ascii): array
+    {
+        $stripped = (string) preg_replace(['/%[A-Za-z_]+%/', '/:[A-Za-z_]+/'], '', $text);
+
+        $hits = [];
+        foreach ($words as $word) {
+            $pattern = $ascii
+                ? '/\b'.preg_quote($word, '/').'\b/i'
+                : '/'.preg_quote($word, '/').'/u';
+            if (preg_match($pattern, $stripped) === 1) {
+                $hits[] = $word;
+            }
+        }
+
+        return $hits;
     }
 
     /**

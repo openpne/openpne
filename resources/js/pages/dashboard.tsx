@@ -139,7 +139,7 @@ export default function Dashboard() {
                 <>
                     {diaries.length > 0 && (
                         <DigestSection
-                            title={t('Latest diaries')}
+                            title={t('Latest %diaries%')}
                             viewAllHref="/m/diary/list"
                             extra={
                                 <Link href="/m/diary/listFriend" className="text-link hover:underline">

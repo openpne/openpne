@@ -18,10 +18,10 @@
             @if ($previousDiary || $nextDiary)
                 <div class="block prevNextLinkLine">
                     @if ($previousDiary)
-                        <p class="prev"><a href="{{ route('diary.show', $previousDiary) }}">{{ __('Previous Diary') }}</a></p>
+                        <p class="prev"><a href="{{ route('diary.show', $previousDiary) }}">{{ __('Previous %Diary%') }}</a></p>
                     @endif
                     @if ($nextDiary)
-                        <p class="next"><a href="{{ route('diary.show', $nextDiary) }}">{{ __('Next Diary') }}</a></p>
+                        <p class="next"><a href="{{ route('diary.show', $nextDiary) }}">{{ __('Next %Diary%') }}</a></p>
                     @endif
                 </div>
             @endif

@@ -48,12 +48,12 @@ class TimelineSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Timeline');
+        return __('%Activity%');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Timeline');
+        return __('%Activity%');
     }
 
     public function mount(): void
@@ -126,7 +126,7 @@ class TimelineSettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('Timeline'))
+        return Section::make(__('%Activity%'))
             ->schema([
                 Toggle::make(SnsSettingKey::TimelineAllowWebPublic->value)
                     ->label(SnsSettingKey::TimelineAllowWebPublic->label()),
