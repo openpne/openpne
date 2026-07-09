@@ -1,12 +1,14 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { MessageCircle } from 'lucide-react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
+import { useConfirm } from '@/components/confirm-dialog';
 import { CountBadge } from '@/components/entry-row';
 import { UserText } from '@/components/user-text';
-import { DangerLink } from '@/components/ui/danger-link';
+import { dangerActionClass } from '@/components/ui/danger-link';
 import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { TimelinePostEntry } from './types';
 
 interface TimelinePostCardProps {
@@ -18,7 +20,14 @@ interface TimelinePostCardProps {
 // shows only on the viewer's own posts.
 export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
     const t = useT();
+    const confirm = useConfirm();
     const isOwn = post.author.id === viewerId;
+
+    const deletePost = async () => {
+        if (await confirm({ title: t('Delete this post?'), confirmLabel: t('Delete'), danger: true })) {
+            router.post(`/m/timeline/delete/${post.id}`);
+        }
+    };
 
     return (
         <li className="space-y-2 px-5 py-4 text-foreground">
@@ -39,9 +48,9 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
             </p>
             <ImageGrid images={post.images} />
             {isOwn && (
-                <DangerLink href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm">
+                <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
                     {t('Delete')}
-                </DangerLink>
+                </button>
             )}
         </li>
     );

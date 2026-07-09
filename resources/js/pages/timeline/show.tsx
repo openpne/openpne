@@ -1,15 +1,17 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
+import { useConfirm } from '@/components/confirm-dialog';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
-import { DangerLink } from '@/components/ui/danger-link';
+import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { TimelinePostEntry } from './types';
 
@@ -21,6 +23,7 @@ interface ShowProps extends PageProps {
 
 export default function TimelineShow() {
     const t = useT();
+    const confirm = useConfirm();
     const { post, replies, viewerId } = usePage<ShowProps>().props;
     const title = t(":name's %activity%", { name: post.author.name });
     const form = useForm({ body: '' });
@@ -28,6 +31,18 @@ export default function TimelineShow() {
     const submitReply = (e: FormEvent) => {
         e.preventDefault();
         form.post(`/m/timeline/${post.id}/reply`, { onSuccess: () => form.reset('body') });
+    };
+
+    const deletePost = async () => {
+        if (await confirm({ title: t('Delete this post?'), confirmLabel: t('Delete'), danger: true })) {
+            router.post(`/m/timeline/delete/${post.id}`);
+        }
+    };
+
+    const deleteReply = async (replyId: number) => {
+        if (await confirm({ title: t('Delete this reply?'), confirmLabel: t('Delete'), danger: true })) {
+            router.post(`/m/timeline/delete/${replyId}`, {}, { preserveScroll: true });
+        }
     };
 
     return (
@@ -48,9 +63,9 @@ export default function TimelineShow() {
                 </p>
                 <ImageGrid images={post.images} />
                 {post.author.id === viewerId && (
-                    <DangerLink href={`/m/timeline/deleteConfirm/${post.id}`} className="text-sm">
+                    <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
                         {t('Delete')}
-                    </DangerLink>
+                    </button>
                 )}
             </Panel>
 
@@ -69,9 +84,9 @@ export default function TimelineShow() {
                                     <UserText text={reply.body} />
                                 </p>
                                 {reply.author.id === viewerId && (
-                                    <DangerLink href={`/m/timeline/deleteConfirm/${reply.id}`} className="text-sm">
+                                    <button type="button" onClick={() => deleteReply(reply.id)} className={cn(dangerActionClass, 'text-sm')}>
                                         {t('Delete')}
-                                    </DangerLink>
+                                    </button>
                                 )}
                             </li>
                         ))}

@@ -15,7 +15,6 @@ class DiaryCommentRoutesTest extends TestCase
     public function test_guests_are_redirected_to_login_for_modern_comment_routes(): void
     {
         $this->post('/m/diary/1/comment/create')->assertRedirect('/login');
-        $this->get('/m/diary/comment/deleteConfirm/1')->assertRedirect('/login');
         $this->post('/m/diary/comment/delete/1')->assertRedirect('/login');
     }
 
@@ -86,21 +85,7 @@ class DiaryCommentRoutesTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_modern_delete_confirm_renders_inertia(): void
-    {
-        $owner = Member::factory()->create();
-        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
-        $comment = DiaryComment::factory()->create(['diary_id' => $diary->getKey()]);
-
-        $this->actingAs($owner)->get("/m/diary/comment/deleteConfirm/{$comment->getKey()}")
-            ->assertInertia(fn ($page) => $page
-                ->component('diary/comment/delete')
-                ->where('comment.id', $comment->getKey())
-                ->where('diaryId', $diary->getKey())
-            );
-    }
-
-    public function test_modern_delete_confirm_returns_404_for_non_deletable_comment(): void
+    public function test_modern_delete_returns_404_for_a_non_deletable_comment(): void
     {
         $diary = Diary::factory()->create();
         $comment = DiaryComment::factory()->create([
@@ -108,8 +93,9 @@ class DiaryCommentRoutesTest extends TestCase
         ]);
 
         $this->actingAs(Member::factory()->create())
-            ->get("/m/diary/comment/deleteConfirm/{$comment->getKey()}")
+            ->post("/m/diary/comment/delete/{$comment->getKey()}")
             ->assertNotFound();
+        $this->assertDatabaseHas('diary_comments', ['id' => $comment->getKey()]);
     }
 
     public function test_modern_delete_removes_comment_and_redirects_to_modern_show(): void

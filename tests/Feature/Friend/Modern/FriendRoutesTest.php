@@ -139,21 +139,6 @@ class FriendRoutesTest extends TestCase
         );
     }
 
-    public function test_modern_unlink_show_returns_inertia_component(): void
-    {
-        $alice = Member::factory()->create();
-        $bob = Member::factory()->create(['name' => 'Bob']);
-        $this->makeFriends($alice, $bob);
-
-        $response = $this->actingAs($alice)->get("/m/friend/unlink/{$bob->getKey()}");
-
-        $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('friend/unlink')
-            ->where('target.id', $bob->getKey())
-        );
-    }
-
     public function test_modern_link_show_returns_404_when_target_blocked_viewer(): void
     {
         $alice = Member::factory()->create();
@@ -171,14 +156,6 @@ class FriendRoutesTest extends TestCase
         $alice = Member::factory()->create();
 
         $this->actingAs($alice)->get("/m/friend/link?id={$alice->getKey()}")->assertNotFound();
-    }
-
-    public function test_modern_unlink_show_returns_404_when_not_friends(): void
-    {
-        $alice = Member::factory()->create();
-        $bob = Member::factory()->create();
-
-        $this->actingAs($alice)->get("/m/friend/unlink/{$bob->getKey()}")->assertNotFound();
     }
 
     public function test_modern_link_post_redirects_to_modern_list(): void
@@ -265,6 +242,19 @@ class FriendRoutesTest extends TestCase
 
         $response->assertRedirect(route('friend.modern.list'));
         $response->assertSessionHas('status');
+    }
+
+    public function test_modern_unlink_post_redirects_to_modern_list_on_error(): void
+    {
+        // No GET confirm page guards non-friends anymore; the POST action redirects with an error.
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create();
+
+        $response = $this->actingAs($alice)
+            ->post("/m/friend/unlink/{$bob->getKey()}");
+
+        $response->assertRedirect(route('friend.modern.list'));
+        $response->assertSessionHas('error');
     }
 
     public function test_modern_list_paginates_via_page_query(): void

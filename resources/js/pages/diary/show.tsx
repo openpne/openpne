@@ -1,16 +1,18 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { Avatar } from '@/components/avatar';
+import { useConfirm } from '@/components/confirm-dialog';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
-import { DangerLink } from '@/components/ui/danger-link';
+import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { DiaryComment, DiaryDetail } from './types';
 
@@ -21,6 +23,7 @@ interface ShowProps extends PageProps {
 
 export default function DiaryShow() {
     const t = useT();
+    const confirm = useConfirm();
     const { diary, comments, auth } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
 
@@ -31,6 +34,18 @@ export default function DiaryShow() {
             forceFormData: true,
             onSuccess: () => form.reset('body', 'images'),
         });
+    };
+
+    const deleteDiary = async () => {
+        if (await confirm({ title: t('Delete this %diary%?'), description: diary.title, confirmLabel: t('Delete'), danger: true })) {
+            router.post(`/m/diary/delete/${diary.id}`);
+        }
+    };
+
+    const deleteComment = async (commentId: number) => {
+        if (await confirm({ title: t('Delete this comment?'), confirmLabel: t('Delete'), danger: true })) {
+            router.post(`/m/diary/comment/delete/${commentId}`, {}, { preserveScroll: true });
+        }
     };
 
     return (
@@ -58,7 +73,9 @@ export default function DiaryShow() {
                         <Link href={`/m/diary/edit/${diary.id}`} className="text-link hover:underline">
                             {t('Edit')}
                         </Link>
-                        <DangerLink href={`/m/diary/deleteConfirm/${diary.id}`}>{t('Delete')}</DangerLink>
+                        <button type="button" onClick={deleteDiary} className={dangerActionClass}>
+                            {t('Delete')}
+                        </button>
                     </div>
                 )}
             </Panel>
@@ -82,9 +99,9 @@ export default function DiaryShow() {
                                     )}
                                     <span className="ml-auto shrink-0">{formatDateTime(comment.createdAt)}</span>
                                     {comment.deletable && (
-                                        <DangerLink href={`/m/diary/comment/deleteConfirm/${comment.id}`} className="shrink-0">
+                                        <button type="button" onClick={() => deleteComment(comment.id)} className={cn(dangerActionClass, 'shrink-0')}>
                                             {t('Delete')}
-                                        </DangerLink>
+                                        </button>
                                     )}
                                 </div>
                                 <p className="whitespace-pre-wrap break-words">

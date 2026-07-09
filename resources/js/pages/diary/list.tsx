@@ -1,9 +1,10 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Pencil } from 'lucide-react';
+import { useConfirm } from '@/components/confirm-dialog';
 import { PageHeading } from '@/components/page-heading';
 import { Pagination } from '@/components/pagination';
 import { ActionLink } from '@/components/ui/action-link';
-import { DangerLink } from '@/components/ui/danger-link';
+import { dangerActionClass } from '@/components/ui/danger-link';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -19,8 +20,15 @@ interface ListProps extends PageProps {
 
 export default function DiaryList() {
     const t = useT();
+    const confirm = useConfirm();
     const { owner, isOwner, diaries, period } = usePage<ListProps>().props;
     const title = isOwner ? t('%Diary%') : t(":name's %diary%", { name: owner.name });
+
+    const deleteDiary = async (id: number, diaryTitle: string) => {
+        if (await confirm({ title: t('Delete this %diary%?'), description: diaryTitle, confirmLabel: t('Delete'), danger: true })) {
+            router.post(`/m/diary/delete/${id}`);
+        }
+    };
 
     return (
         <>
@@ -62,7 +70,9 @@ export default function DiaryList() {
                                                 <Link href={`/m/diary/edit/${entry.id}`} className="text-muted-foreground hover:text-foreground">
                                                     {t('Edit')}
                                                 </Link>
-                                                <DangerLink href={`/m/diary/deleteConfirm/${entry.id}`}>{t('Delete')}</DangerLink>
+                                                <button type="button" onClick={() => deleteDiary(entry.id, entry.title)} className={dangerActionClass}>
+                                                    {t('Delete')}
+                                                </button>
                                             </>
                                         )
                                     }

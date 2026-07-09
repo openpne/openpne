@@ -269,7 +269,6 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'block/add': { width: 'narrow' },
     'block/remove': { width: 'narrow' },
     'friend/link': { width: 'narrow' },
-    'friend/unlink': { width: 'narrow' },
     'member/invite': { width: 'narrow' },
     'block/list': { gap: '6' },
     'member/avatar': { gap: '6' },

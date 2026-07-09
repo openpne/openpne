@@ -270,7 +270,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/link', 'submitLink')->defaults('surface', 'modern')->name('friend.modern.link');
         Route::post('/accept', 'submitAccept')->defaults('surface', 'modern')->name('friend.modern.accept');
         Route::post('/reject', 'submitReject')->defaults('surface', 'modern')->name('friend.modern.reject');
-        Route::get('/unlink/{member}', 'showUnlink')->defaults('surface', 'modern')->name('friend.modern.unlink.show');
+        // No GET unlink-confirm twin — Modern confirms unfriend inline (Radix AlertDialog).
         Route::post('/unlink/{member}', 'submitUnlink')->defaults('surface', 'modern')->name('friend.modern.unlink.submit');
     });
 
@@ -329,14 +329,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/create', 'store')->defaults('surface', 'modern')->name('diary.modern.store');
         Route::get('/edit/{diary}', 'edit')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.edit');
         Route::post('/update/{diary}', 'update')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.update');
-        Route::get('/deleteConfirm/{diary}', 'showDelete')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.delete.show');
+        // No GET delete-confirm twin — Modern confirms delete inline (Radix AlertDialog).
         Route::post('/delete/{diary}', 'delete')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.delete');
         Route::get('/{diary}', 'show')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.show');
     });
 
     Route::controller(DiaryCommentController::class)->group(function () {
         Route::post('/m/diary/{diary}/comment/create', 'store')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.comment.store');
-        Route::get('/m/diary/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete.show');
+        // No GET delete-confirm twin — Modern confirms delete inline (Radix AlertDialog).
         Route::post('/m/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete');
     });
 
@@ -358,7 +358,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/m/member/{member}/timeline', 'member')->whereNumber('member')->defaults('surface', 'modern')->name('timeline.modern.member');
         Route::get('/m/timeline/new', 'new')->defaults('surface', 'modern')->name('timeline.modern.new');
         Route::post('/m/timeline/create', 'store')->defaults('surface', 'modern')->name('timeline.modern.store');
-        Route::get('/m/timeline/deleteConfirm/{timelinePost}', 'showDelete')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.delete.show');
+        // No GET delete-confirm twin — Modern confirms delete inline (Radix AlertDialog).
         Route::post('/m/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.delete');
         Route::post('/m/timeline/{timelinePost}/reply', 'storeReply')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.reply.store');
         Route::get('/m/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.show');
