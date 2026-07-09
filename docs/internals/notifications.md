@@ -73,6 +73,17 @@ catalog kind, so the opt-out is the **per-community** `communities.is_join_notif
 (applied by the recipient query — an opted-out community notifies no one), plus the admin's global
 `community-join` template toggle for the mail part.
 
+## Broadcast fan-out
+
+A new-diary broadcast reaches its whole audience (visibility-scoped: everyone / the author's friends /
+nobody), so it does not gate through `via()`. A queued [`BroadcastDiaryPosted`](../../app/Jobs/BroadcastDiaryPosted.php)
+job walks the audience ([`DiaryPostedRecipients`](../../app/Features/Diary/Queries/DiaryPostedRecipients.php))
+in id-ordered chunks; each chunk resolves every recipient's channels from **one** opt-out query over
+the `member_notification_settings` fan-out index (absent-means-on), never a per-recipient cold read.
+The two kinds compose as a union (which realises `dependOnNot`): mailed/fed if `diaryNewPost` is on,
+**or** the recipient is a friend and `diaryNewPostOnlyFriends` is on. Each recipient gets exactly one
+notification carrying its decided channels, so the `database` feed row is never duplicated per channel.
+
 ## Key invariants
 
 - `NotificationKind` is the only kind list; the stored `kind` column holds its case value.
