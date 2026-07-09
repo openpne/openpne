@@ -20,7 +20,7 @@ class CommunityTopicsTable
                     ->sortable(),
 
                 TextColumn::make('name')
-                    ->label(__('Topic Name'))
+                    ->label(__('%Topic% Name'))
                     ->searchable()
                     ->limit(40),
 

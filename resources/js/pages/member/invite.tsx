@@ -20,7 +20,7 @@ export default function MemberInvite() {
         post('/invite');
     }
 
-    const title = t('Invite a friend');
+    const title = t('Invite a new member');
 
     return (
         <>

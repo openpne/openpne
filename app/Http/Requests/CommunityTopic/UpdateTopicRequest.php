@@ -60,7 +60,7 @@ class UpdateTopicRequest extends StoreTopicRequest
             $kept = count($currentIds) - count($removing);
 
             if ($kept + count($this->file('images', [])) > PostImages::MAX_IMAGES) {
-                $validator->errors()->add('images', __('A topic can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
+                $validator->errors()->add('images', __('A %topic% can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
             }
         });
     }

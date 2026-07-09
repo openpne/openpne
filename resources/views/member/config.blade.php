@@ -16,13 +16,13 @@
         @case(MemberConfigCategory::Diary)
             {{-- Diary default audience (member_preferences[diary_default_visibility]). --}}
             <div class="dparts form" id="member_config_diary">
-                <div class="partsHeading"><h3>{{ __('Diary') }}</h3></div>
+                <div class="partsHeading"><h3>{{ __('%Diary%') }}</h3></div>
                 <div class="parts">
                     <form method="POST" action="{{ route('member.config.diary') }}">
                         @csrf
                         <table>
                             <tr>
-                                <th><label for="diary_default_visibility">{{ __('Default audience for new diaries') }}</label></th>
+                                <th><label for="diary_default_visibility">{{ __('Default audience for new %diaries%') }}</label></th>
                                 <td>
                                     <select id="diary_default_visibility" name="diary_default_visibility">
                                         @foreach ($diaryOptions as $option)

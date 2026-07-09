@@ -52,28 +52,28 @@ enum NotificationKind: string
             self::TimelineNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineNewPost',
-                caption: 'New timeline posts (everyone)',
+                caption: 'New %activity% posts (everyone)',
             ),
             self::TimelineNewPostOnlyFriends => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineNewPostOnlyFriends',
-                caption: 'New timeline posts (%friends% only)',
+                caption: 'New %activity% posts (%friends% only)',
                 dependOnNot: self::TimelineNewPost,
             ),
             self::TimelineNewPostCommunity => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineNewPostCommunity',
-                caption: 'New %community% timeline posts',
+                caption: 'New %community% %activity% posts',
             ),
             self::TimelineReplyPost => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineReplyPost',
-                caption: 'Comments on your timeline posts',
+                caption: 'Comments on your %activity% posts',
             ),
             self::TimelineRelatedPost => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineRelatedPost',
-                caption: 'Comments on timeline posts you commented on',
+                caption: 'Comments on %activity% posts you commented on',
             ),
             self::DiaryNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::Diary,
@@ -227,5 +227,16 @@ enum NotificationKind: string
     public static function wiredCases(): array
     {
         return array_values(array_filter(self::cases(), static fn (self $kind): bool => $kind->isWired()));
+    }
+
+    /**
+     * Raw caption source strings (pre-__()). Exposed so the i18n:check term-literal gate can
+     * scan captions that reach __() via a variable and never enter the code scanner.
+     *
+     * @return list<string>
+     */
+    public static function sourceStrings(): array
+    {
+        return array_map(static fn (self $kind): string => $kind->definition()->caption, self::cases());
     }
 }

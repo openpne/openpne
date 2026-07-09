@@ -34,7 +34,7 @@ class NavigationForm
                     ->label(__('Link URL'))
                     ->required()
                     ->maxLength(2048)
-                    ->helperText(__('An internal path starting with / (e.g. /member/search) or an http(s):// URL. In member/community items, :id is replaced with the member or community id.'))
+                    ->helperText(__('An internal path starting with / (e.g. /member/search) or an http(s):// URL. In member/%community% items, :id is replaced with the member or %community% id.'))
                     ->rules([
                         fn (Get $get): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
                             $uri = (string) $value;
@@ -44,7 +44,7 @@ class NavigationForm
                                 return;
                             }
                             if (str_contains($uri, ':id') && ! in_array($get('type'), ['friend', 'community'], true)) {
-                                $fail(__('The :id placeholder is only allowed in member and community navigation.'));
+                                $fail(__('The :id placeholder is only allowed in member and %community% navigation.'));
                             }
                         },
                     ]),
