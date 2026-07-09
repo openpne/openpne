@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Mail, UserPlus } from 'lucide-react';
+import { InitialBadge } from '@/components/initial-badge';
 import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { List, ListRow, Panel } from '@/components/ui/surface';
@@ -39,8 +40,10 @@ export default function MemberShow() {
                     {/* For the viewer's own profile the avatar block also entry-points the image editor —
                         shown even without an avatar yet, so a first image can be set. */}
                     <div className="flex flex-col items-center gap-1">
-                        {owner.avatarUrl && (
+                        {owner.avatarUrl ? (
                             <img src={owner.avatarUrl} alt="" className="size-20 rounded-md object-cover" />
+                        ) : (
+                            <InitialBadge aria-hidden name={owner.name} className="size-20 rounded-md text-2xl" />
                         )}
                         {isSelf && (
                             <Link href="/m/member/avatar" className="text-xs text-link hover:underline">

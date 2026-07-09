@@ -1,10 +1,9 @@
 /**
- * Initial-badge fallback shown when a member or community has no image.
+ * Helpers for the badges that stand in for a missing image: the neutral InitialBadge (members and
+ * communities) and BrandMark, whose color the admin configures.
  *
- * The color is derived from the entity id (id mod palette length), so the same entity keeps its
- * color across reloads and renames. The 12-color palette is mid-lightness so that either white
- * or slate-900 text can meet WCAG 4.5:1 — pickReadableTextColor chooses which. Shape (circle vs
- * rounded square) distinguishes a member from a community and is applied by the caller's className.
+ * pickReadableTextColor returns raw Tailwind color classes, which RawPaletteGuardTest bans in
+ * `.tsx`. Keep it here — a `.ts` file the guard does not scan — rather than inlining at call sites.
  */
 
 /**
@@ -25,30 +24,6 @@ export function computeInitial(name: string): string {
 function isCjk(ch: string): boolean {
     // CJK symbols/punctuation, hiragana, katakana, unified ideographs, and fullwidth/halfwidth forms.
     return /[　-〿぀-ゟ゠-ヿ一-鿿＀-￯]/.test(ch);
-}
-
-// Tailwind 500-hues at mid-lightness so white or slate-900 text clears WCAG 4.5:1 on each. Members
-// and communities share the palette; shape (circle vs rounded square) keeps them distinguishable.
-const PALETTE: readonly string[] = [
-    '#ef4444', // red-500
-    '#f97316', // orange-500
-    '#f59e0b', // amber-500
-    '#eab308', // yellow-500
-    '#84cc16', // lime-500
-    '#10b981', // emerald-500
-    '#14b8a6', // teal-500
-    '#06b6d4', // cyan-500
-    '#3b82f6', // blue-500
-    '#6366f1', // indigo-500
-    '#a855f7', // purple-500
-    '#ec4899', // pink-500
-];
-
-/** Maps a 1-based id to a palette color. Non-finite/negative ids are guarded to the first color. */
-export function pickPaletteColor(id: number): string {
-    if (!Number.isFinite(id)) return PALETTE[0]!;
-    const index = Math.abs(Math.trunc(id)) % PALETTE.length;
-    return PALETTE[index]!;
 }
 
 /**

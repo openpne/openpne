@@ -16,8 +16,8 @@ use Tests\TestCase;
  * its numbered bg but keep a raw `text-white` that should be a `-foreground` token.
  *
  * ALLOWLIST holds the screens not yet migrated to tokens; it must only shrink. Exceptions: an
- * opacity black/white (bg-black/50 dialog scrims, overlays) is allowed, and the identity-mark hashed
- * colors are inline styles, not classes.
+ * opacity black/white (bg-black/50 dialog scrims, overlays) is allowed, and BrandMark's admin-chosen
+ * color is an inline style, not a class.
  */
 class RawPaletteGuardTest extends TestCase
 {

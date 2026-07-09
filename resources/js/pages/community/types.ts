@@ -8,7 +8,7 @@ export interface CommunitySummary {
     name: string;
     description: string;
     memberCount: number;
-    imageUrl: string | null; // null → CommunityImage renders the id-colored initial badge
+    imageUrl: string | null; // null → CommunityImage renders the neutral initial badge
     category: CommunityCategory | null;
 }
 
@@ -45,7 +45,7 @@ export interface PaginatedCommunityMembers {
 export interface TopicAuthor {
     id: number;
     name: string;
-    imageUrl: string | null; // null → Avatar renders the id-colored initial badge
+    imageUrl: string | null; // null → Avatar renders the neutral initial badge
 }
 
 export interface TopicImage {

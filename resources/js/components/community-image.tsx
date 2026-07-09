@@ -1,13 +1,11 @@
-import { computeInitial, pickPaletteColor, pickReadableTextColor } from '@/lib/identity-mark';
+import { InitialBadge } from '@/components/initial-badge';
 
 /**
- * Square community image. Renders the image when `src` is set, otherwise an initial badge colored
- * by community id (stable across renames). The rounded-square shape distinguishes a community
- * (place) from the circular member Avatar (person).
+ * Square community image. Renders the image when `src` is set, otherwise a neutral initial badge.
+ * The rounded-square shape distinguishes a community (place) from the circular member Avatar
+ * (person).
  */
 type Props = {
-    /** Community id, hashed to the badge color. */
-    id: number;
     name: string;
     /** Image URL, or null to fall back to the initial badge. */
     src: string | null;
@@ -20,7 +18,7 @@ type Props = {
     decorative?: boolean;
 };
 
-export function CommunityImage({ id, name, src, className = 'size-14', textClassName = 'text-xl', decorative = false }: Props) {
+export function CommunityImage({ name, src, className = 'size-14', textClassName = 'text-xl', decorative = false }: Props) {
     const base = `${className} shrink-0 rounded-lg`;
     const semantics = decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': name };
 
@@ -28,16 +26,5 @@ export function CommunityImage({ id, name, src, className = 'size-14', textClass
         return <img src={src} alt={decorative ? '' : name} className={`${base} object-cover`} />;
     }
 
-    const bgColor = pickPaletteColor(id);
-    const textColorClass = pickReadableTextColor(bgColor);
-
-    return (
-        <span
-            className={`${base} inline-flex items-center justify-center font-bold leading-none ${textColorClass} ${textClassName}`}
-            style={{ backgroundColor: bgColor }}
-            {...semantics}
-        >
-            {computeInitial(name)}
-        </span>
-    );
+    return <InitialBadge name={name} className={`${base} ${textClassName}`} {...semantics} />;
 }
