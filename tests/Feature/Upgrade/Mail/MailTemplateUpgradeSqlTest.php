@@ -59,6 +59,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->seedMail(7, 'pc_registerEnd');
         $this->seedMail(8, 'pc_leave');
         $this->seedMail(9, 'pc_joinCommunity');
+        $this->seedMail(10, 'pc_notifyNewDiary');
 
         $this->runUpgrade();
 
@@ -72,6 +73,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('mail_templates', ['id' => 7, 'key' => 'registration-complete']);
         $this->assertDatabaseHas('mail_templates', ['id' => 8, 'key' => 'withdrawal-complete']);
         $this->assertDatabaseHas('mail_templates', ['id' => 9, 'key' => 'community-join']);
+        $this->assertDatabaseHas('mail_templates', ['id' => 10, 'key' => 'diary-posted']);
     }
 
     public function test_an_imported_openpne3_message_body_renders_with_its_flat_variables(): void
@@ -110,6 +112,8 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->seedMail(8, 'pc_leave', isEnabled: false);
         // Configurable like the source template — the admin's choice carries.
         $this->seedMail(9, 'pc_joinCommunity', isEnabled: false);
+        // Not admin-toggleable like the source template — forced on; the member-level opt-out gates it.
+        $this->seedMail(10, 'pc_notifyNewDiary', isEnabled: false);
 
         $this->runUpgrade();
 
@@ -120,6 +124,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('mail_templates', ['key' => 'registration-complete', 'is_enabled' => 1]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'withdrawal-complete', 'is_enabled' => 1]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'community-join', 'is_enabled' => 0]);
+        $this->assertDatabaseHas('mail_templates', ['key' => 'diary-posted', 'is_enabled' => 1]);
     }
 
     public function test_drops_mobile_and_unsupported_templates(): void

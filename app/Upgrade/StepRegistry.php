@@ -290,6 +290,7 @@ final class StepRegistry
             'pc_friendLinkRequest' => 'mail_templates[friend-requested]. Configurable: is_enabled carried over.',
             'pc_notifyNewMessage' => 'mail_templates[message-received]. Configurable: is_enabled carried over.',
             'pc_notifyNewDiaryComment' => 'mail_templates[diary-comment]. Not admin-toggleable (member opt-out lives in member_notification_settings): is_enabled forced on.',
+            'pc_notifyNewDiary' => 'mail_templates[diary-posted]. Not admin-toggleable (member opt-out lives in member_notification_settings): is_enabled forced on.',
             'pc_notifyCommunityPosting' => 'mail_templates[community-posting]. Configurable: is_enabled carried over. One template for topic and event comments (and the new-post broadcasts later).',
             'pc_registerEnd' => 'mail_templates[registration-complete]. Not admin-toggleable (transactional): is_enabled forced on.',
             'pc_leave' => 'mail_templates[withdrawal-complete]. Not admin-toggleable (transactional): is_enabled forced on.',

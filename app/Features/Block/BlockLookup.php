@@ -55,4 +55,26 @@ class BlockLookup
                 ->where('member_blocks.blocked_id', $viewerId);
         });
     }
+
+    /**
+     * Set form of hasAnyBlockBetween() for a broadcast audience: drop rows whose member has a block in
+     * either direction with $other, so a fan-out never reaches a blocked pair.
+     *
+     * @param  string  $memberColumn  qualified member-id column on the query's table (e.g. `members.id`)
+     */
+    public static function excludeBlockedBetween(Builder $query, Member $other, string $memberColumn): void
+    {
+        $otherId = $other->getKey();
+
+        $query->whereNotExists(function (Builder $sub) use ($otherId, $memberColumn) {
+            $sub->select(DB::raw(1))
+                ->from('member_blocks')
+                ->where(function (Builder $q) use ($otherId, $memberColumn) {
+                    $q->whereColumn('member_blocks.blocker_id', $memberColumn)->where('member_blocks.blocked_id', $otherId);
+                })
+                ->orWhere(function (Builder $q) use ($otherId, $memberColumn) {
+                    $q->where('member_blocks.blocker_id', $otherId)->whereColumn('member_blocks.blocked_id', $memberColumn);
+                });
+        });
+    }
 }
