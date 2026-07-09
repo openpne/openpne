@@ -17,39 +17,57 @@ class I18nTermLiteralTest extends TestCase
 {
     public function test_bare_english_term_words_are_flagged(): void
     {
-        $this->assertSame(['diaries'], Cmd::bareTermMatches('Latest diaries', Cmd::TERM_EN_WORDS, true));
-        $this->assertSame(['friends'], Cmd::bareTermMatches("A list of the member's friends.", Cmd::TERM_EN_WORDS, true));
-        $this->assertSame(['communities'], Cmd::bareTermMatches('Members can create communities in this category', Cmd::TERM_EN_WORDS, true));
+        $this->assertSame(['diaries'], Cmd::bareTermMatches('Latest diaries', Cmd::termLiteralWords('en'), true));
+        $this->assertSame(['friends'], Cmd::bareTermMatches("A list of the member's friends.", Cmd::termLiteralWords('en'), true));
+        $this->assertSame(['communities'], Cmd::bareTermMatches('Members can create communities in this category', Cmd::termLiteralWords('en'), true));
         // A source-only registry caption (no ja entry) — the exact class the gate would otherwise miss.
-        $this->assertSame(['timeline'], Cmd::bareTermMatches('New timeline posts (everyone)', Cmd::TERM_EN_WORDS, true));
+        $this->assertSame(['timeline'], Cmd::bareTermMatches('New timeline posts (everyone)', Cmd::termLiteralWords('en'), true));
     }
 
     public function test_placeholder_wrapped_terms_are_not_flagged(): void
     {
-        $this->assertSame([], Cmd::bareTermMatches('Next %Diary%', Cmd::TERM_EN_WORDS, true));
-        $this->assertSame([], Cmd::bareTermMatches('New %activity% posts (everyone)', Cmd::TERM_EN_WORDS, true));
-        $this->assertSame([], Cmd::bareTermMatches('The %friend% management URL.', Cmd::TERM_EN_WORDS, true));
+        $this->assertSame([], Cmd::bareTermMatches('Next %Diary%', Cmd::termLiteralWords('en'), true));
+        $this->assertSame([], Cmd::bareTermMatches('New %activity% posts (everyone)', Cmd::termLiteralWords('en'), true));
+        $this->assertSame([], Cmd::bareTermMatches('The %friend% management URL.', Cmd::termLiteralWords('en'), true));
     }
 
     public function test_param_tokens_are_not_flagged(): void
     {
         // `:community` is a Laravel replacement parameter, not the term word.
-        $this->assertSame([], Cmd::bareTermMatches(':count join requests for :community', Cmd::TERM_EN_WORDS, true));
-        $this->assertSame([], Cmd::bareTermMatches('A %topic% can have at most :max images.', Cmd::TERM_EN_WORDS, true));
+        $this->assertSame([], Cmd::bareTermMatches(':count join requests for :community', Cmd::termLiteralWords('en'), true));
+        $this->assertSame([], Cmd::bareTermMatches('A %topic% can have at most :max images.', Cmd::termLiteralWords('en'), true));
     }
 
     public function test_clean_strings_return_empty(): void
     {
-        $this->assertSame([], Cmd::bareTermMatches('Invite a new member', Cmd::TERM_EN_WORDS, true));
-        $this->assertSame([], Cmd::bareTermMatches('Send invitation', Cmd::TERM_EN_WORDS, true));
+        $this->assertSame([], Cmd::bareTermMatches('Invite a new member', Cmd::termLiteralWords('en'), true));
+        $this->assertSame([], Cmd::bareTermMatches('Send invitation', Cmd::termLiteralWords('en'), true));
     }
 
     public function test_japanese_term_words_matched_as_substring(): void
     {
-        $this->assertSame(['コミュニティ'], Cmd::bareTermMatches('メンバーはコミュニティに参加できます', Cmd::TERM_JA_WORDS, false));
+        $this->assertSame(['コミュニティ'], Cmd::bareTermMatches('メンバーはコミュニティに参加できます', Cmd::termLiteralWords('ja'), false));
         // Placeholders strip out before matching, so a term-ized ja value is clean.
-        $this->assertSame([], Cmd::bareTermMatches('%diary%コメント', Cmd::TERM_JA_WORDS, false));
-        $this->assertSame([], Cmd::bareTermMatches('新しい%diaries%の初期公開範囲', Cmd::TERM_JA_WORDS, false));
+        $this->assertSame([], Cmd::bareTermMatches('%diary%コメント', Cmd::termLiteralWords('ja'), false));
+        $this->assertSame([], Cmd::bareTermMatches('新しい%diaries%の初期公開範囲', Cmd::termLiteralWords('ja'), false));
+    }
+
+    public function test_word_list_is_derived_from_term_defaults(): void
+    {
+        $en = Cmd::termLiteralWords('en');
+        // Derived from lang/en/terms.php values (+ plurals), so a new term extends the gate with no
+        // second list to maintain.
+        $this->assertContains('diary', $en);
+        $this->assertContains('diaries', $en);
+        $this->assertContains('timeline', $en); // activity's value
+        // post_activity's value ("post") is too generic to gate — and the retained "%activity% posts"
+        // phrasing must not trip.
+        $this->assertNotContains('post', $en);
+        $this->assertNotContains('posts', $en);
+
+        $ja = Cmd::termLiteralWords('ja');
+        $this->assertContains('日記', $ja); // no pluralisation on the ja side
+        $this->assertNotContains('ポスト', $ja);
     }
 
     /**
@@ -68,7 +86,7 @@ class I18nTermLiteralTest extends TestCase
         foreach (array_keys($sources) as $source) {
             $this->assertSame(
                 [],
-                Cmd::bareTermMatches($source, Cmd::TERM_EN_WORDS, true),
+                Cmd::bareTermMatches($source, Cmd::termLiteralWords('en'), true),
                 "Registry source string carries a bare term literal (wrap it in a %term%): {$source}",
             );
         }

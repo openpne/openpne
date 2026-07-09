@@ -81,16 +81,11 @@ class CheckTranslationsCommand extends Command
     private const BASELINE_FILE = 'lang/.i18n-baseline.json';
 
     /**
-     * Term-vocabulary words that must never appear as a bare literal in a translatable string —
-     * they belong in a `%term%` placeholder so an admin's term customisation reaches the UI on
-     * every surface. The English list is the default rendered term values (and plurals); the
-     * Japanese list is the shipped ja defaults. `activity`/`post` are intentionally omitted: their
-     * defaults ("timeline"/"post") are either caught directly (`timeline`) or too generic to gate
-     * (`post`).
+     * Terms whose default value is too generic to gate as a bare literal. post_activity renders
+     * "post" / "ポスト", which occurs in ordinary prose — and in the retained `%activity% posts`
+     * phrasing — everywhere. Every other term's value is distinctive enough to flag.
      */
-    public const TERM_EN_WORDS = ['diary', 'diaries', 'friend', 'friends', 'community', 'communities', 'topic', 'topics', 'timeline', 'nickname'];
-
-    public const TERM_JA_WORDS = ['日記', 'フレンド', 'コミュニティ', 'トピック', 'タイムライン', 'ニックネーム'];
+    private const TERM_LITERAL_GENERIC_TERMS = ['post_activity'];
 
     /**
      * Registries whose captions/help strings reach __() through a variable, so the code scanner
@@ -731,6 +726,8 @@ class CheckTranslationsCommand extends Command
     {
         $allow = $this->loadTermLiteralAllowlist($base);
         $ja = $this->loadJsonDictionary("{$base}/lang/ja.json");
+        $enWords = self::termLiteralWords('en');
+        $jaWords = self::termLiteralWords('ja');
 
         // English side: source strings, each with one origin for the report.
         $sources = [];
@@ -749,7 +746,7 @@ class CheckTranslationsCommand extends Command
             if (isset($allow[$text])) {
                 continue;
             }
-            $hits = self::bareTermMatches((string) $text, self::TERM_EN_WORDS, true);
+            $hits = self::bareTermMatches((string) $text, $enWords, true);
             if ($hits !== []) {
                 $violations[] = [(string) $text, $origin, $hits];
             }
@@ -761,7 +758,7 @@ class CheckTranslationsCommand extends Command
             if (isset($allow[$value]) || isset($allow[(string) $key])) {
                 continue;
             }
-            $hits = self::bareTermMatches($value, self::TERM_JA_WORDS, false);
+            $hits = self::bareTermMatches($value, $jaWords, false);
             if ($hits !== []) {
                 $violations[] = [$value, 'lang/ja.json value of '.json_encode((string) $key, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $hits];
             }
@@ -825,6 +822,29 @@ class CheckTranslationsCommand extends Command
         }
 
         return $out;
+    }
+
+    /**
+     * Words the term-literal gate flags for a locale: the shipped term default values
+     * (lang/{locale}/terms.php), minus the generic ones ({@see TERM_LITERAL_GENERIC_TERMS}), plus
+     * English plurals. Derived from the same source as the placeholder exemption ({@see termNames})
+     * so adding a term extends the gate with no second list to maintain.
+     *
+     * @return list<string>
+     */
+    public static function termLiteralWords(string $locale): array
+    {
+        $defaults = array_diff_key(TermService::defaults($locale), array_flip(self::TERM_LITERAL_GENERIC_TERMS));
+
+        $words = [];
+        foreach ($defaults as $value) {
+            $words[$value] = true;
+            if ($locale === 'en') {
+                $words[Str::plural($value)] = true;
+            }
+        }
+
+        return array_keys($words);
     }
 
     /**
