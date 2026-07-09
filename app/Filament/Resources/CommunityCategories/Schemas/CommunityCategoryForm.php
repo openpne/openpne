@@ -23,7 +23,7 @@ class CommunityCategoryForm
                     ->maxLength(64),
 
                 Toggle::make('is_allow_member_community')
-                    ->label(__('Members can create communities in this category'))
+                    ->label(__('Members can create %communities% in this category'))
                     ->default(true),
 
                 TextInput::make('sort_order')

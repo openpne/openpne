@@ -1,10 +1,10 @@
 @extends('layouts.classic')
 
-@section('title', __('Invite a friend'))
+@section('title', __('Invite a new member'))
 
 @section('content')
     <div class="dparts" id="member_invite">
-        <div class="partsHeading"><h3>{{ __('Invite a friend') }}</h3></div>
+        <div class="partsHeading"><h3>{{ __('Invite a new member') }}</h3></div>
         <div class="parts">
             <p>{{ __('Enter an email address to send a registration link.') }}</p>
 

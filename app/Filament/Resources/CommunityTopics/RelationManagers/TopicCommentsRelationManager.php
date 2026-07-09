@@ -57,6 +57,9 @@ class TopicCommentsRelationManager extends RelationManager
                         return true;
                     }),
             ])
+            // Without an explicit heading Filament humanises the model class (CommunityTopicComment)
+            // into an untranslated "community topic comment" for the empty state.
+            ->emptyStateHeading(__('No comments yet'))
             ->defaultSort('id', 'asc');
     }
 }

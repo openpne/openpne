@@ -47,7 +47,7 @@ class OverviewStatsWidget extends StatsOverviewWidget
                 ->descriptionColor($newMembersDelta >= 0 ? 'success' : 'gray')
                 ->url(MemberResource::getUrl('index')),
 
-            Stat::make(__('Diaries this month'), number_format($diaries))
+            Stat::make(__('%Diaries% this month'), number_format($diaries))
                 ->description($this->delta($diariesDelta))
                 ->descriptionColor($diariesDelta >= 0 ? 'success' : 'gray')
                 ->url(DiaryResource::getUrl('index')),
@@ -56,7 +56,7 @@ class OverviewStatsWidget extends StatsOverviewWidget
                 ->url(CommunityResource::getUrl('index')),
 
             Stat::make(__('Active %communities% (last 30 days)'), number_format(self::activeCommunityCount($activeSince)))
-                ->description(__('Topics, events, or comments in the last 30 days'))
+                ->description(__('%Topics%, events, or comments in the last 30 days'))
                 ->color('success'),
         ];
     }

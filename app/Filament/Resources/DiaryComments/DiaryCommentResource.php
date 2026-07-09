@@ -19,12 +19,12 @@ class DiaryCommentResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Diary Comment');
+        return __('%Diary% Comment');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Diary Comments');
+        return __('%Diary% Comments');
     }
 
     public static function getNavigationGroup(): ?string
