@@ -84,6 +84,11 @@ The two kinds compose as a union (which realises `dependOnNot`): mailed/fed if `
 **or** the recipient is a friend and `diaryNewPostOnlyFriends` is on. Each recipient gets exactly one
 notification carrying its decided channels, so the `database` feed row is never duplicated per channel.
 
+New community topic/event postings broadcast the same way ([`CommunityNewPostFanout`](../../app/Features/Community/CommunityNewPostFanout.php)),
+but to the community's confirmed members (minus the author / banned / blocked) and gated by a single
+new-post kind — no friends-only variant. Their mail leg also needs the shared (configurable)
+`community-posting` template to be enabled, resolved once per broadcast rather than per recipient.
+
 ## Key invariants
 
 - `NotificationKind` is the only kind list; the stored `kind` column holds its case value.

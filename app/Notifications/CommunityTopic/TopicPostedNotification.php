@@ -1,0 +1,60 @@
+<?php
+
+namespace App\Notifications\CommunityTopic;
+
+use App\Mail\Template\MailTemplate;
+use App\Models\Community;
+use App\Models\CommunityTopic;
+use App\Models\Member;
+use App\Notifications\Concerns\RendersMailTemplate;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
+
+/**
+ * Announces a new topic to a community member in the broadcast audience. The fan-out resolves each
+ * recipient's channels once and passes them, so via() returns them verbatim (one instance per
+ * recipient). Shares the community-posting mail template with the comment notifications.
+ */
+class TopicPostedNotification extends Notification implements ShouldQueue
+{
+    use Queueable;
+    use RendersMailTemplate;
+
+    /** @param list<string> $channels the pre-resolved delivery channels (mail and/or database). */
+    public function __construct(
+        public readonly Community $community,
+        public readonly CommunityTopic $topic,
+        public readonly Member $author,
+        public readonly array $channels,
+    ) {}
+
+    /** @return list<string> */
+    public function via(object $notifiable): array
+    {
+        return $this->channels;
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return $this->mailFromTemplate(MailTemplate::CommunityPostingNotified, [
+            'community_name' => $this->community->name,
+            'topic_name' => $this->topic->name,
+            'nickname' => $this->author->name,
+            'body' => $this->topic->body,
+            'url' => route('communityTopic.show', ['topic' => $this->topic->getKey()]),
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    public function toArray(object $notifiable): array
+    {
+        return [
+            'kind' => 'community_topic_posted',
+            'author_id' => $this->author->getKey(),
+            'topic_id' => $this->topic->getKey(),
+            'community_id' => $this->community->getKey(),
+        ];
+    }
+}
