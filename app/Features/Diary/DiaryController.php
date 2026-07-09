@@ -2,6 +2,7 @@
 
 namespace App\Features\Diary;
 
+use App\Compat\RouteParityRegistry;
 use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Actions\DeleteDiary;
 use App\Features\Diary\Actions\UpdateDiary;
@@ -250,19 +251,13 @@ class DiaryController extends Controller
             ->with('status', __('%Diary% updated.'));
     }
 
-    public function showDelete(Request $request, Diary $diary): View|InertiaResponse
+    public function showDelete(Request $request, Diary $diary): View
     {
         $viewer = $this->viewer();
         abort_unless($viewer->is($diary->member), 404);
 
-        return $this->respondWith($request, 'diary', [
-            SurfaceResolver::CLASSIC => fn () => view('diary.delete', [
-                'diary' => $diary,
-            ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('diary/delete', [
-                'diary' => DiarySerializer::summary($diary),
-            ]),
-        ]);
+        // Classic-only GET confirm page — Modern confirms delete inline (Radix AlertDialog).
+        return $this->classic('diary.delete', ['diary' => $diary]);
     }
 
     public function delete(Request $request, Diary $diary, DeleteDiary $action): RedirectResponse
@@ -288,6 +283,19 @@ class DiaryController extends Controller
         }
 
         return $redirect;
+    }
+
+    /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
+    private function classic(string $view, array $data = []): View
+    {
+        return view($view, $data)->with('pageId', RouteParityRegistry::bodyId($this->routeName()));
+    }
+
+    private function routeName(): string
+    {
+        $route = request()->route();
+
+        return $route !== null ? (string) $route->getName() : '';
     }
 
     private function viewer(): Member

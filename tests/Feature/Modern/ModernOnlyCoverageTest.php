@@ -36,6 +36,10 @@ class ModernOnlyCoverageTest extends TestCase
         'communityEvent.comment.delete.show',   // CommunityEventCommentController::showDelete
         'communityTopic.delete.show',           // CommunityTopicController::showDelete
         'communityTopic.comment.delete.show',   // CommunityTopicCommentController::showDelete
+        'diary.delete.show',                    // DiaryController::showDelete          -> diary.delete
+        'diary.comment.delete.show',            // DiaryCommentController::showDelete   -> diary.comment.delete
+        'timeline.delete.show',                 // TimelineController::showDelete       -> timeline.delete
+        'friend.unlink.show',                   // FriendController::showUnlink         -> friend.unlink.submit
         'message.trash.purge.confirm',          // MessageController::purgeConfirm      -> message.purge_confirm
         'member.config.email.confirm',          // MemberConfigController::confirmEmailForm -> member.email-change-confirm
     ];

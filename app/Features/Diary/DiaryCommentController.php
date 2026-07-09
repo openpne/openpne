@@ -7,7 +7,6 @@ use App\Features\Diary\Actions\CreateComment;
 use App\Features\Diary\Actions\DeleteComment;
 use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Queries\ShowDiary;
-use App\Features\Diary\Serializers\DiarySerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Diary\StoreCommentRequest;
 use App\Models\DiaryComment;
@@ -16,8 +15,6 @@ use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Inertia\Inertia;
-use Inertia\Response as InertiaResponse;
 
 class DiaryCommentController extends Controller
 {
@@ -36,18 +33,12 @@ class DiaryCommentController extends Controller
             ->with('status', __('Comment posted.'));
     }
 
-    public function showDelete(Request $request, DiaryComment $comment): View|InertiaResponse
+    public function showDelete(Request $request, DiaryComment $comment): View
     {
         $viewer = $this->viewer();
         abort_unless($comment->isDeletableBy($viewer), 404);
 
-        if (SurfaceResolver::resolve($request, 'diary') === SurfaceResolver::MODERN) {
-            return Inertia::render('diary/comment/delete', [
-                'comment' => DiarySerializer::comment($comment, $viewer),
-                'diaryId' => $comment->diary_id,
-            ]);
-        }
-
+        // Classic-only GET confirm page — Modern confirms delete inline (Radix AlertDialog).
         return view('diary.comment.delete', [
             'comment' => $comment,
             'pageId' => RouteParityRegistry::bodyId('diary.comment.delete.show'),
