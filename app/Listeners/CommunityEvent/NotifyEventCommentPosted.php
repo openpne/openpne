@@ -4,6 +4,8 @@ namespace App\Listeners\CommunityEvent;
 
 use App\Features\CommunityEvent\Events\EventCommentPosted;
 use App\Features\CommunityEvent\Queries\EventCommentNotificationRecipients;
+use App\Jobs\BroadcastEventCommentPosted;
+use App\Models\CommunityEvent;
 use App\Notifications\CommunityEvent\EventCommentedNotification;
 
 class NotifyEventCommentPosted
@@ -12,11 +14,37 @@ class NotifyEventCommentPosted
 
     public function handle(EventCommentPosted $event): void
     {
+        // Author + co-commenters, notified inline (a small set).
         foreach (($this->recipients)($event->event, $event->commenter) as [$member, $reason]) {
             $member->notify(
                 (new EventCommentedNotification($event->commenter, $event->event, $event->comment, $reason))
                     ->locale($member->locale ?? app()->getLocale()),
             );
         }
+
+        // The rest of the community, off the request (CommentNewPost). Snapshot the author + co-commenter
+        // ids now (the Reply/Related lane) so the async broadcast excludes exactly them even if a comment
+        // is deleted before it runs — otherwise a dropped co-commenter would be notified twice.
+        BroadcastEventCommentPosted::dispatch(
+            (int) $event->event->getKey(),
+            (int) $event->comment->getKey(),
+            (int) $event->commenter->getKey(),
+            $this->replyRelatedIds($event->event),
+        );
+    }
+
+    /**
+     * The author + everyone who has commented — the members handled by the inline Reply/Related lane.
+     *
+     * @return list<int>
+     */
+    private function replyRelatedIds(CommunityEvent $event): array
+    {
+        $ids = $event->comments()->whereNotNull('member_id')->distinct()->pluck('member_id')->all();
+        if ($event->member_id !== null) {
+            $ids[] = (int) $event->member_id;
+        }
+
+        return array_map('intval', $ids);
     }
 }

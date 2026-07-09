@@ -47,13 +47,13 @@ export default function NotificationsIndex() {
                     ? t(':name commented on a %diary% you commented on.', { name })
                     : t(':name commented on your %diary%.', { name });
             case 'community_topic_commented':
-                return item.reason === 'related'
-                    ? t(':name commented on a %topic% you commented on.', { name })
-                    : t(':name commented on your %topic%.', { name });
+                if (item.reason === 'related') return t(':name commented on a %topic% you commented on.', { name });
+                if (item.reason === 'community') return t(':name commented on a %topic% in your %community%.', { name });
+                return t(':name commented on your %topic%.', { name });
             case 'community_event_commented':
-                return item.reason === 'related'
-                    ? t(':name commented on an event you commented on.', { name })
-                    : t(':name commented on your event.', { name });
+                if (item.reason === 'related') return t(':name commented on an event you commented on.', { name });
+                if (item.reason === 'community') return t(':name commented on an event in your %community%.', { name });
+                return t(':name commented on your event.', { name });
             case 'community_joined':
                 return t(':name joined your %community%.', { name });
             case 'diary_posted':

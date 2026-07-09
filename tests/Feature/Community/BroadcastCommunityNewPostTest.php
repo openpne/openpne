@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Community;
 
-use App\Features\Community\CommunityNewPostFanout;
 use App\Features\Community\CommunityRole;
 use App\Jobs\BroadcastEventPosted;
 use App\Jobs\BroadcastTopicPosted;
 use App\Mail\Template\MailTemplate;
-use App\Mail\Template\MailTemplateService;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
@@ -42,7 +40,7 @@ class BroadcastCommunityNewPostTest extends TestCase
 
     private function broadcastTopic(CommunityTopic $topic): void
     {
-        (new BroadcastTopicPosted((int) $topic->getKey()))->handle(app(CommunityNewPostFanout::class), app(MailTemplateService::class));
+        app()->call([new BroadcastTopicPosted((int) $topic->getKey()), 'handle']);
     }
 
     public function test_a_new_topic_notifies_confirmed_members_but_not_the_author(): void
@@ -144,7 +142,7 @@ class BroadcastCommunityNewPostTest extends TestCase
         $reader = $this->member($community);
         $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
 
-        (new BroadcastEventPosted((int) $event->getKey()))->handle(app(CommunityNewPostFanout::class), app(MailTemplateService::class));
+        app()->call([new BroadcastEventPosted((int) $event->getKey()), 'handle']);
 
         Notification::assertSentTo($reader, EventPostedNotification::class);
         Notification::assertNotSentTo($author, EventPostedNotification::class);
