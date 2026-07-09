@@ -110,6 +110,7 @@ enum NotificationKind: string
                 category: NotificationCategory::CommunityTopic,
                 op3Name: 'communityTopicCommentNewPost',
                 caption: 'New comments on %topics% in your %communities%',
+                isWired: true,
             ),
             self::CommunityTopicReplyNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::CommunityTopic,
@@ -133,6 +134,7 @@ enum NotificationKind: string
                 category: NotificationCategory::CommunityEvent,
                 op3Name: 'communityEventCommentNewPost',
                 caption: 'New comments on events in your %communities%',
+                isWired: true,
             ),
             self::CommunityEventReplyNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::CommunityEvent,
