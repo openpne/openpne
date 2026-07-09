@@ -14,8 +14,8 @@ use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\UpgradeStep;
 use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -25,7 +25,7 @@ use Tests\TestCase;
  */
 class UpgradeVerifierSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     protected function setUp(): void
     {

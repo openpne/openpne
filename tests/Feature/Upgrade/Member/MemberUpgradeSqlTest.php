@@ -7,8 +7,8 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberUpgrade;
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -17,12 +17,12 @@ use Tests\TestCase;
  * MD5, login-impossible NULLs).
  *
  * MySQL only, like the other upgrade SQL tests: the correlated subqueries and source DDL
- * (TEXT, utf8mb3, DATETIME) are MySQL features. DatabaseMigrations because creating the
+ * (TEXT, utf8mb3, DATETIME) are MySQL features. MigratesUpgradeTargetsOnce because creating the
  * source tables is DDL, which implicitly commits.
  */
 class MemberUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     protected function setUp(): void
     {

@@ -8,8 +8,8 @@ use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\CommunityTopicCommentUpgrade;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -17,12 +17,12 @@ use Tests\TestCase;
  * `community_topic_comment` DDL.
  *
  * MySQL only: the set-based copy and the source DDL (TEXT, DATETIME, utf8mb3) are MySQL features.
- * Uses DatabaseMigrations rather than RefreshDatabase because creating the source table is DDL,
+ * Uses MigratesUpgradeTargetsOnce rather than RefreshDatabase because creating the source table is DDL,
  * which implicitly commits transactions.
  */
 class CommunityTopicCommentUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     protected function setUp(): void
     {

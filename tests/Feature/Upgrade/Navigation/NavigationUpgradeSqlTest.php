@@ -6,8 +6,8 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\NavigationTranslationUpgrade;
 use App\Upgrade\Steps\NavigationUpgrade;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -16,11 +16,11 @@ use Tests\TestCase;
  * already-URL / unresolved) and the PC-type filter.
  *
  * MySQL only, like the other upgrade SQL tests: the source DDL (TEXT, utf8mb3, DATETIME) and the
- * set-based copy are MySQL features. DatabaseMigrations because creating the source tables is DDL.
+ * set-based copy are MySQL features. MigratesUpgradeTargetsOnce because creating the source tables is DDL.
  */
 class NavigationUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     protected function setUp(): void
     {

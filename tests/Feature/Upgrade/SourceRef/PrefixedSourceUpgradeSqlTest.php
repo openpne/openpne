@@ -8,8 +8,8 @@ use App\Support\Visibility;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -18,12 +18,12 @@ use Tests\TestCase;
  * prefix) sits alongside the unprefixed OpenPNE 4 target, and MemberPreferenceUpgrade — whose filter
  * reads member_config again in a MAX() subquery — must read the prefixed table in both places.
  *
- * DatabaseMigrations (not RefreshDatabase): creating the source table is DDL, which auto-commits on
+ * MigratesUpgradeTargetsOnce (not RefreshDatabase): creating the source table is DDL, which auto-commits on
  * MySQL and cannot be rolled back inside a transaction.
  */
 class PrefixedSourceUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     protected function setUp(): void
     {

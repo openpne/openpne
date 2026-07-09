@@ -9,8 +9,8 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberProfileUpgrade;
 use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileUpgrade;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -24,7 +24,7 @@ use Tests\TestCase;
  */
 class MemberProfileUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     private int $memberId;
 

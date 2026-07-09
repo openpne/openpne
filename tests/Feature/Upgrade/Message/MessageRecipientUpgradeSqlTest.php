@@ -9,8 +9,8 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MessageRecipientUpgrade;
 use App\Upgrade\Steps\MessageUpgrade;
 use App\Upgrade\UpgradeStep;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -24,7 +24,7 @@ use Tests\TestCase;
  */
 class MessageRecipientUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     private array $sourceTables = ['message', 'message_send_list', 'deleted_message', 'message_type'];
 

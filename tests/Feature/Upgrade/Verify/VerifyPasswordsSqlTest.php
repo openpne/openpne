@@ -12,9 +12,9 @@ use App\Upgrade\Steps\MemberUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -24,7 +24,7 @@ use Tests\TestCase;
  */
 class VerifyPasswordsSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     protected function setUp(): void
     {

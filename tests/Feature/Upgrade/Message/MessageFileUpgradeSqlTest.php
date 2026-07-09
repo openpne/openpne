@@ -8,8 +8,8 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MessageFileUpgrade;
 use App\Upgrade\Steps\MessageUpgrade;
 use App\Upgrade\UpgradeStep;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -22,7 +22,7 @@ use Tests\TestCase;
  */
 class MessageFileUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     private array $sourceTables = ['message_file', 'message', 'message_send_list', 'deleted_message', 'message_type'];
 

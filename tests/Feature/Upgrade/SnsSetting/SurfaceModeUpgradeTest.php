@@ -10,8 +10,8 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -22,7 +22,7 @@ use Tests\TestCase;
  */
 class SurfaceModeUpgradeTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     protected function setUp(): void
     {
