@@ -164,6 +164,16 @@ Route::get('/member/config/email/confirm/{token}', [MemberConfigController::clas
 Route::post('/member/config/email/confirm/{token}', [MemberConfigController::class, 'confirmEmail'])
     ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.confirm.submit');
 
+// Email-change cancellation, carried by the old-address security notice. Same public, token-gated,
+// GET-renders-POST-acts shape as confirmation above (a second token, distinct from the confirm one),
+// so the old-address holder can void a change they did not initiate without signing in. Cancelling
+// only deletes the pending row — it never itself alters the login identifier — so no member match is
+// required and a prefetch of the GET is harmless.
+Route::get('/member/config/email/cancel/{token}', [MemberConfigController::class, 'cancelEmailForm'])
+    ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.cancel');
+Route::post('/member/config/email/cancel/{token}', [MemberConfigController::class, 'cancelEmail'])
+    ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.cancel.submit');
+
 // OpenPNE 3 password recovery lived under the opAuthMailAddress plugin. Fortify owns the canonical
 // /forgot-password and /reset-password/{token}; the OpenPNE 3 token scheme (id + token) cannot be
 // honored by Fortify (email + path token), so both legacy entry points restart at the request form.

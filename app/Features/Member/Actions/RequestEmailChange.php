@@ -26,17 +26,19 @@ class RequestEmailChange
 
         // One row per member (the column is unique): a re-request refreshes the token in place. upsert
         // is a single atomic statement so two concurrent requests cannot race the unique index into a
-        // 500.
+        // 500. Two independent raw tokens: confirm (to the new address) and cancel (to the old).
         $raw = Str::random(40);
+        $rawCancel = Str::random(40);
         EmailChangeRequest::upsert(
             [[
                 'member_id' => $member->getKey(),
                 'new_email' => $newEmail,
                 'token' => hash('sha256', $raw),
+                'cancel_token' => hash('sha256', $rawCancel),
                 'created_at' => now(),
             ]],
             ['member_id'],
-            ['new_email', 'token', 'created_at'],
+            ['new_email', 'token', 'cancel_token', 'created_at'],
         );
 
         Notification::route('mail', $newEmail)->notify(
@@ -44,8 +46,9 @@ class RequestEmailChange
         );
 
         // Sent to the current address while members.email still holds it (captured here as a literal).
+        // Carries the cancel link so the old-address holder can void a change they did not initiate.
         Notification::route('mail', $member->email)->notify(
-            new EmailChangeNoticeNotification($newEmail, app()->getLocale()),
+            new EmailChangeNoticeNotification($newEmail, $rawCancel, app()->getLocale()),
         );
     }
 }

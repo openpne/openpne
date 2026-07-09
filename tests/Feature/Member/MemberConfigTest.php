@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Member;
 
+use App\Features\Member\Actions\ConfirmEmailChange;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Models\Profile;
@@ -687,9 +688,13 @@ class MemberConfigTest extends TestCase
             EmailChangeConfirmationNotification::class,
             fn ($n, $channels, $notifiable): bool => ($notifiable->routes['mail'] ?? null) === 'new@example.com',
         );
+        // The old-address notice carries the raw cancel token whose hash is the stored cancel_token.
+        $row = EmailChangeRequest::firstWhere('member_id', $member->id);
+        $this->assertNotNull($row?->cancel_token);
         Notification::assertSentOnDemand(
             EmailChangeNoticeNotification::class,
-            fn ($n, $channels, $notifiable): bool => ($notifiable->routes['mail'] ?? null) === $old,
+            fn (EmailChangeNoticeNotification $n, $channels, $notifiable): bool => ($notifiable->routes['mail'] ?? null) === $old
+                && hash('sha256', $n->rawCancelToken) === $row->cancel_token,
         );
     }
 
@@ -924,5 +929,107 @@ class MemberConfigTest extends TestCase
 
         $this->assertSame($old, $member->fresh()->email);
         $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id]); // left for prune
+    }
+
+    /** @return array{0: Member, 1: string} the member and the raw cancel token of a seeded pending change. */
+    private function seedPendingWithCancelToken(string $rawCancel, string $newEmail = 'new@example.com'): array
+    {
+        $member = Member::factory()->create();
+        EmailChangeRequest::create([
+            'member_id' => $member->id,
+            'new_email' => $newEmail,
+            'token' => hash('sha256', str_repeat('c', 40)),
+            'cancel_token' => hash('sha256', $rawCancel),
+            'created_at' => now(),
+        ]);
+
+        return [$member, $rawCancel];
+    }
+
+    public function test_the_cancel_form_renders_and_does_not_void_on_the_get(): void
+    {
+        [$member, $raw] = $this->seedPendingWithCancelToken(str_repeat('a', 40));
+
+        // Reachable without auth; the GET only renders, so a mail scanner / prefetch cannot cancel.
+        $this->get('/member/config/email/cancel/'.$raw)
+            ->assertOk()
+            ->assertSee('id="page_member_emailChangeCancel"', false)
+            ->assertSee('class="insecure_page"', false)
+            ->assertSee('new@example.com')
+            ->assertSee(route('member.config.email.cancel.submit', ['token' => $raw]), false);
+
+        $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id]);
+    }
+
+    public function test_cancelling_voids_the_pending_change(): void
+    {
+        [$member, $raw] = $this->seedPendingWithCancelToken(str_repeat('b', 40));
+
+        $this->post('/member/config/email/cancel/'.$raw)
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseMissing('email_change_requests', ['member_id' => $member->id]);
+    }
+
+    public function test_an_unknown_cancel_token_is_a_no_op_success(): void
+    {
+        // A gone/never-existed row is already not pending, so the POST is a harmless no-op success.
+        $this->post('/member/config/email/cancel/'.str_repeat('z', 40))
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('status');
+        $this->get('/member/config/email/cancel/'.str_repeat('z', 40))->assertRedirect(route('login'));
+    }
+
+    public function test_an_expired_cancel_token_is_rejected(): void
+    {
+        $member = Member::factory()->create();
+        $raw = str_repeat('e', 40);
+        $ttl = (int) config('openpne.email_change.token_ttl_minutes');
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'new@example.com',
+            'token' => hash('sha256', str_repeat('c', 40)),
+            'cancel_token' => hash('sha256', $raw), 'created_at' => now()->subMinutes($ttl + 1),
+        ]);
+
+        $this->post('/member/config/email/cancel/'.$raw)->assertRedirect(route('login'));
+
+        $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id]); // left for prune
+    }
+
+    public function test_a_confirm_race_with_a_cancel_does_not_change_the_email(): void
+    {
+        // The confirm controller loads the pending row, then the action commits. If a cancel (or a
+        // password-change purge) deletes that row in between, the action must re-read it under a lock
+        // and no-op — otherwise the cancel would report success while the login identifier still flips.
+        $member = Member::factory()->create(['email' => 'old@example.com']);
+        $pending = EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'new@example.com',
+            'token' => hash('sha256', str_repeat('r', 40)),
+            'cancel_token' => hash('sha256', str_repeat('s', 40)), 'created_at' => now(),
+        ]);
+
+        // The controller's stale in-memory model; the row is gone by the time the action's transaction runs.
+        EmailChangeRequest::whereKey($pending->getKey())->delete();
+
+        $this->assertNull(app(ConfirmEmailChange::class)($pending));
+        $this->assertSame('old@example.com', $member->fresh()->email);
+    }
+
+    public function test_a_confirm_token_does_not_work_on_the_cancel_route(): void
+    {
+        // The two tokens are distinct namespaces (separate columns): the confirm token, known to the
+        // new-address holder, must not cancel; only the old-address cancel token does.
+        $member = Member::factory()->create();
+        $confirmRaw = str_repeat('h', 40);
+        EmailChangeRequest::create([
+            'member_id' => $member->id, 'new_email' => 'new@example.com',
+            'token' => hash('sha256', $confirmRaw),
+            'cancel_token' => hash('sha256', str_repeat('k', 40)), 'created_at' => now(),
+        ]);
+
+        $this->post('/member/config/email/cancel/'.$confirmRaw)->assertRedirect(route('login'));
+
+        $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id]);
     }
 }
