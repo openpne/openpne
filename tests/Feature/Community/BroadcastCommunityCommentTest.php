@@ -48,6 +48,22 @@ class BroadcastCommunityCommentTest extends TestCase
         ]);
     }
 
+    /** The author + co-commenter ids the listener snapshots at dispatch time. @return list<int> */
+    private function excluded(CommunityTopic $topic): array
+    {
+        $ids = $topic->comments()->whereNotNull('member_id')->distinct()->pluck('member_id')->all();
+        if ($topic->member_id !== null) {
+            $ids[] = (int) $topic->member_id;
+        }
+
+        return array_map('intval', $ids);
+    }
+
+    private function broadcast(CommunityTopic $topic, CommunityTopicComment $comment, Member $commenter, array $excluded): void
+    {
+        app()->call([new BroadcastTopicCommentPosted((int) $topic->getKey(), (int) $comment->getKey(), (int) $commenter->getKey(), $excluded), 'handle']);
+    }
+
     public function test_broadcasts_to_members_but_not_the_author_co_commenters_or_commenter(): void
     {
         Notification::fake();
@@ -60,7 +76,7 @@ class BroadcastCommunityCommentTest extends TestCase
         $this->comment($topic, $coCommenter);            // prior comment → a co-commenter
         $comment = $this->comment($topic, $commenter);   // the new comment
 
-        app()->call([new BroadcastTopicCommentPosted((int) $topic->getKey(), (int) $comment->getKey(), (int) $commenter->getKey()), 'handle']);
+        $this->broadcast($topic, $comment, $commenter, $this->excluded($topic));
 
         Notification::assertSentTo(
             $general,
@@ -84,7 +100,7 @@ class BroadcastCommunityCommentTest extends TestCase
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
         $comment = $this->comment($topic, $commenter);
 
-        app()->call([new BroadcastTopicCommentPosted((int) $topic->getKey(), (int) $comment->getKey(), (int) $commenter->getKey()), 'handle']);
+        $this->broadcast($topic, $comment, $commenter, $this->excluded($topic));
 
         Notification::assertSentTo(
             $general,
@@ -104,9 +120,30 @@ class BroadcastCommunityCommentTest extends TestCase
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
         $comment = $this->comment($topic, $commenter);
 
-        app()->call([new BroadcastTopicCommentPosted((int) $topic->getKey(), (int) $comment->getKey(), (int) $commenter->getKey()), 'handle']);
+        $this->broadcast($topic, $comment, $commenter, $this->excluded($topic));
 
         Notification::assertNotSentTo($blocked, TopicCommentBroadcastNotification::class);
+    }
+
+    public function test_a_co_commenters_deleted_comment_still_keeps_them_out_of_the_broadcast(): void
+    {
+        // The exclusion is snapshotted at dispatch, so a co-commenter who already got Related is not
+        // re-included (and double-notified) if their comment is deleted before the async job runs.
+        Notification::fake();
+        $community = Community::factory()->create();
+        $author = $this->member($community);
+        $coCommenter = $this->member($community);
+        $commenter = $this->member($community);
+        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $priorComment = $this->comment($topic, $coCommenter);
+        $comment = $this->comment($topic, $commenter);
+        $excluded = $this->excluded($topic); // captured while both comments exist
+
+        $priorComment->delete(); // the co-commenter's comment is gone by the time the job runs
+
+        $this->broadcast($topic, $comment, $commenter, $excluded);
+
+        Notification::assertNotSentTo($coCommenter, TopicCommentBroadcastNotification::class);
     }
 
     public function test_the_comment_listener_dispatches_the_broadcast_and_notifies_the_author_inline(): void
@@ -120,7 +157,8 @@ class BroadcastCommunityCommentTest extends TestCase
 
         app(CreateTopicComment::class)($commenter, $topic, 'hello');
 
-        // Inline: the author gets a Reply. Off the request: the community-wide broadcast job.
+        // Inline: the author gets a Reply. Off the request: the community-wide broadcast job, carrying the
+        // author + commenter in its snapshotted exclusion.
         Notification::assertSentTo(
             $author,
             TopicCommentedNotification::class,
@@ -128,7 +166,10 @@ class BroadcastCommunityCommentTest extends TestCase
         );
         Bus::assertDispatched(
             BroadcastTopicCommentPosted::class,
-            fn (BroadcastTopicCommentPosted $job) => $job->topicId === (int) $topic->getKey() && $job->commenterId === (int) $commenter->getKey(),
+            fn (BroadcastTopicCommentPosted $job) => $job->topicId === (int) $topic->getKey()
+                && $job->commenterId === (int) $commenter->getKey()
+                && in_array($author->getKey(), $job->excludedMemberIds, true)
+                && in_array($commenter->getKey(), $job->excludedMemberIds, true),
         );
     }
 }

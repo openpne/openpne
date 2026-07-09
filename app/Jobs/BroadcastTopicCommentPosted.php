@@ -29,10 +29,12 @@ class BroadcastTopicCommentPosted implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
+    /** @param list<int> $excludedMemberIds the author + co-commenters, snapshotted at dispatch time */
     public function __construct(
         public readonly int $topicId,
         public readonly int $commentId,
         public readonly int $commenterId,
+        public readonly array $excludedMemberIds,
     ) {}
 
     public function handle(CommunityNewPostFanout $fanout, CommunityNewPostRecipients $recipients, MailTemplateService $templates): void
@@ -44,19 +46,10 @@ class BroadcastTopicCommentPosted implements ShouldQueue
             return;
         }
 
-        // Everyone who commented (co-commenters) plus the author get Reply / Related; keep them out of
-        // the broadcast so no member is notified twice.
-        $excluded = CommunityTopicComment::query()
-            ->where('community_topic_id', $topic->getKey())
-            ->whereNotNull('member_id')
-            ->distinct()
-            ->pluck('member_id')
-            ->all();
-        if ($topic->member_id !== null) {
-            $excluded[] = $topic->member_id;
-        }
-
-        $audience = $recipients->viewers($topic->community, $commenter)->whereNotIn('id', $excluded);
+        // The author + co-commenters (who get Reply / Related) are excluded using the set captured when
+        // the comment was posted, not re-read here: a comment deleted before this job ran would otherwise
+        // drop its author out of the exclusion and double-notify them (Related then Community).
+        $audience = $recipients->viewers($topic->community, $commenter)->whereNotIn('id', $this->excludedMemberIds);
         $mailEnabled = $templates->isEnabled(MailTemplate::CommunityPostingNotified);
 
         $fanout->run(
