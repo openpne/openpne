@@ -2,35 +2,34 @@
 
 namespace App\Features\Community;
 
-use App\Features\Community\Queries\CommunityNewPostRecipients;
-use App\Models\Community;
 use App\Models\Member;
 use App\Notifications\Settings\NotificationKind;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Shared new-community-posting fan-out (topic and event new-post). Walks the audience in id-ordered
- * chunks and resolves each chunk's channels from ONE opt-out query over the member_notification_settings
- * fan-out index — never a per-recipient cold read. Unlike the diary broadcast there is no friends-only
- * variant, so the gate is the single new-post kind; the mail leg additionally needs the shared
- * (configurable) community-posting template to be enabled, checked once by the caller.
+ * Shared community-posting fan-out (topic/event new-post and comment broadcast). Walks the given member
+ * audience in id-ordered chunks and resolves each chunk's channels from ONE opt-out query over the
+ * member_notification_settings fan-out index — never a per-recipient cold read. Unlike the diary
+ * broadcast there is no friends-only variant, so the gate is the single kind; the mail leg additionally
+ * needs the shared (configurable) community-posting template to be enabled, checked once by the caller.
+ * The audience itself (who to reach, minus author / already-notified) is the caller's to build.
  */
 class CommunityNewPostFanout
 {
     private const CHUNK = 1000;
 
-    public function __construct(private readonly CommunityNewPostRecipients $recipients) {}
-
     /**
+     * @param  Builder<Member>  $audience  the members to reach (already excluding author / reply-related)
      * @param  bool  $mailTemplateEnabled  the community-posting template's admin toggle, resolved once
      * @param  callable(list<string>): Notification  $makeNotification  builds the notification for decided channels
      */
-    public function run(Community $community, Member $author, NotificationKind $kind, bool $mailTemplateEnabled, callable $makeNotification): void
+    public function run(Builder $audience, NotificationKind $kind, bool $mailTemplateEnabled, callable $makeNotification): void
     {
-        $this->recipients->viewers($community, $author)
+        $audience
             ->select('id', 'email', 'locale')
             ->chunkById(self::CHUNK, function (EloquentCollection $members) use ($kind, $mailTemplateEnabled, $makeNotification): void {
                 $optedOut = $this->optedOut($kind, $members->pluck('id'));

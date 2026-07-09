@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Features\Community\CommunityNewPostFanout;
+use App\Features\Community\Queries\CommunityNewPostRecipients;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
 use App\Models\CommunityEvent;
@@ -24,7 +25,7 @@ class BroadcastEventPosted implements ShouldQueue
 
     public function __construct(public readonly int $eventId) {}
 
-    public function handle(CommunityNewPostFanout $fanout, MailTemplateService $templates): void
+    public function handle(CommunityNewPostFanout $fanout, CommunityNewPostRecipients $recipients, MailTemplateService $templates): void
     {
         $event = CommunityEvent::with('community', 'member')->find($this->eventId);
         if ($event === null || $event->community === null || $event->member === null) {
@@ -36,8 +37,7 @@ class BroadcastEventPosted implements ShouldQueue
         $mailEnabled = $templates->isEnabled(MailTemplate::CommunityPostingNotified);
 
         $fanout->run(
-            $community,
-            $author,
+            $recipients->viewers($community, $author),
             NotificationKind::CommunityEventNewPost,
             $mailEnabled,
             fn (array $channels) => new EventPostedNotification($community, $event, $author, $channels),
