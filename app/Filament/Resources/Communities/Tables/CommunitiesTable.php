@@ -79,7 +79,7 @@ class CommunitiesTable
                     ->label(__('Add all members'))
                     ->icon(Heroicon::OutlinedUserPlus)
                     ->requiresConfirmation()
-                    ->modalDescription(__('Add every member who is not already in this community. This may take a while on large sites.'))
+                    ->modalDescription(__('Add every member who is not already in this %community%. This may take a while on large sites.'))
                     ->action(function (Community $record): void {
                         $added = app(AddAllMembers::class)($record);
                         Notification::make()

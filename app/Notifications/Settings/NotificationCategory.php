@@ -25,12 +25,23 @@ enum NotificationCategory: string
     private function sourceCaption(): string
     {
         return match ($this) {
-            self::Timeline => 'Timeline',
+            self::Timeline => '%Activity%',
             self::Diary => '%Diaries%',
             self::CommunityTopic => '%Community% %topics%',
             self::CommunityEvent => '%Community% events',
             self::FriendLink => '%Friend% requests',
             self::Message => 'Messages',
         };
+    }
+
+    /**
+     * Raw caption source strings (pre-__()). Exposed so the i18n:check term-literal gate can
+     * scan captions that reach __() via a variable and never enter the code scanner.
+     *
+     * @return list<string>
+     */
+    public static function sourceStrings(): array
+    {
+        return array_map(static fn (self $category): string => $category->sourceCaption(), self::cases());
     }
 }

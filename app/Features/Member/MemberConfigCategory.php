@@ -27,7 +27,7 @@ enum MemberConfigCategory: string
     public function caption(): string
     {
         return match ($this) {
-            self::Diary => __('Diary'),
+            self::Diary => __('%Diary%'),
             self::PublicFlag => __('Privacy'),
             self::Language => __('Language'),
             self::General => __('General'),

@@ -47,7 +47,7 @@ class DashboardWidgetsTest extends TestCase
             ->assertSuccessful()
             ->assertSee(__('Member count'))
             ->assertSee(__('New members this month'))
-            ->assertSee(__('Diaries this month'));
+            ->assertSee(__('%Diaries% this month'));
     }
 
     public function test_registration_mode_widget_reflects_current_mode(): void

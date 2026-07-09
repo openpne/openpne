@@ -14,7 +14,7 @@ class FriendListBoxGadget extends GridListGadget
 
     public function description(): string
     {
-        return __("A list of the member's friends.");
+        return __("A list of the member's %friends%.");
     }
 
     public function component(): string

@@ -20,7 +20,7 @@ class DiaryCommentsTable
                     ->sortable(),
 
                 TextColumn::make('diary.title')
-                    ->label(__('Diary'))
+                    ->label(__('%Diary%'))
                     ->searchable()
                     ->limit(30)
                     // Jump to the parent diary in the diary list (search by its title).

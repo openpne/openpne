@@ -237,7 +237,7 @@ enum SnsSettingKey: string
             self::RegistrationMode => __('Registration mode'),
             self::CaptchaEnabled => __('Require CAPTCHA'),
             self::AllowWebPublicAge => __('Allow members to make their age public to the web'),
-            self::TimelineAllowWebPublic => __('Allow members to make timeline posts public to the web'),
+            self::TimelineAllowWebPublic => __('Allow members to make %activity% posts public to the web'),
             self::GadgetHomeLayout => __('Home layout'),
             self::GadgetProfileLayout => __('Profile layout'),
             self::GadgetLoginLayout => __('Login layout'),

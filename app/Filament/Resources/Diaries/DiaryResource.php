@@ -20,12 +20,12 @@ class DiaryResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Diary');
+        return __('%Diary%');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Diaries');
+        return __('%Diaries%');
     }
 
     public static function getNavigationGroup(): ?string

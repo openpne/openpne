@@ -29,12 +29,12 @@ class CommunityTopicResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Topic');
+        return __('%Topic%');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Topics');
+        return __('%Topics%');
     }
 
     public static function getNavigationGroup(): ?string

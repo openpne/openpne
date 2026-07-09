@@ -48,13 +48,13 @@ class CommunityForm
                     ->required(),
 
                 Radio::make('topic_read_access')
-                    ->label(__('Topic read access'))
+                    ->label(__('%Topic% read access'))
                     ->options(self::enumOptions(TopicReadAccess::cases()))
                     ->formatStateUsing(self::enumValue(...))
                     ->required(),
 
                 Radio::make('topic_post_authority')
-                    ->label(__('Topic post authority'))
+                    ->label(__('%Topic% post authority'))
                     ->options(self::enumOptions(TopicPostAuthority::cases()))
                     ->formatStateUsing(self::enumValue(...))
                     ->required(),

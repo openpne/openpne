@@ -7,7 +7,7 @@
             <div class="body">
                 @if ($friendStatus === 'none')
                     <p>
-                        {{ __('If :name is a friend of yours, send a %friend% request!', ['name' => $owner->name]) }}<br>
+                        {{ __('If :name is someone you know, send a %friend% request!', ['name' => $owner->name]) }}<br>
                         <a href="{{ route('friend.link.show', ['id' => $owner->getKey()]) }}">{{ __('Send a %friend% request') }}</a>
                     </p>
                 @elseif ($friendStatus === 'sent')

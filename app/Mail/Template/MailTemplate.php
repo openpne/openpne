@@ -88,16 +88,16 @@ enum MailTemplate: string
             self::FriendRequested => new MailTemplateDefinition(
                 op3SourceName: 'pc_friendLinkRequest',
                 isConfigurable: true,
-                caption: 'Friend request',
+                caption: '%Friend% request',
                 variables: [
                     'member.name' => ['help' => 'The requester’s name.', 'sample' => 'Example'],
-                    'url' => ['help' => 'The friend management URL.', 'sample' => 'https://example.test'],
+                    'url' => ['help' => 'The %friend% management URL.', 'sample' => 'https://example.test'],
                 ],
             ),
             self::FriendAccepted => new MailTemplateDefinition(
                 op3SourceName: 'pc_friendLinkComplete',
                 isConfigurable: true,
-                caption: 'Friend request accepted',
+                caption: '%Friend% request accepted',
                 variables: [
                     'member.name' => ['help' => 'The name of the member who accepted.', 'sample' => 'Example'],
                 ],
@@ -121,12 +121,12 @@ enum MailTemplate: string
                 // Not admin-toggleable (matching the source template); the member-level opt-out
                 // lives in the notification settings instead.
                 isConfigurable: false,
-                caption: 'Diary Comment',
+                caption: '%Diary% Comment',
                 variables: [
                     'member_name' => ['help' => 'The commenter’s name.', 'sample' => 'Example'],
-                    'diary_title' => ['help' => 'The diary title.', 'sample' => 'Example title'],
+                    'diary_title' => ['help' => 'The %diary% title.', 'sample' => 'Example title'],
                     'body' => ['help' => 'The comment body.', 'sample' => 'Example body'],
-                    'url' => ['help' => 'The diary URL.', 'sample' => 'https://example.test'],
+                    'url' => ['help' => 'The %diary% URL.', 'sample' => 'https://example.test'],
                 ],
             ),
             self::DiaryPostedNotified => new MailTemplateDefinition(
@@ -273,6 +273,27 @@ enum MailTemplate: string
     public function variableHelp(): array
     {
         return array_map(static fn (array $v): string => __($v['help']), $this->definition()->variables);
+    }
+
+    /**
+     * Raw source strings (pre-__()): every caption and variable-help string across all templates.
+     * Exposed so the i18n:check term-literal gate can scan strings that reach __() via a variable
+     * and never enter the code scanner.
+     *
+     * @return list<string>
+     */
+    public static function sourceStrings(): array
+    {
+        $strings = [];
+        foreach (self::cases() as $template) {
+            $definition = $template->definition();
+            $strings[] = $definition->caption;
+            foreach ($definition->variables as $variable) {
+                $strings[] = $variable['help'];
+            }
+        }
+
+        return $strings;
     }
 
     /**
