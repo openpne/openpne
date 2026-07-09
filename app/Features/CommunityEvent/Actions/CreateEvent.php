@@ -4,6 +4,7 @@ namespace App\Features\CommunityEvent\Actions;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityEvent\Data\CommunityEventFormData;
+use App\Features\CommunityEvent\Events\EventPosted;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionFailure;
 use App\Files\PostImages;
@@ -27,7 +28,7 @@ class CreateEvent
 
         // event_updated_at starts at creation time (OpenPNE 3 sets it whenever name/body change,
         // which a fresh event does).
-        return $this->images->attach(
+        $event = $this->images->attach(
             'communityEvent',
             $images,
             persist: fn (): CommunityEvent => $community->events()->create([
@@ -43,5 +44,11 @@ class CreateEvent
             ]),
             relation: fn (CommunityEvent $event) => $event->images(),
         );
+
+        // Fires after the image-attach transaction commits (ShouldDispatchAfterCommit); the fan-out job
+        // re-reads a durable event.
+        EventPosted::dispatch($event, $author);
+
+        return $event;
     }
 }

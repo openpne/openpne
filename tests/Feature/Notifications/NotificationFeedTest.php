@@ -6,6 +6,7 @@ namespace Tests\Feature\Notifications;
 
 use App\Features\CommunityTopic\TopicReadAccess;
 use App\Models\Community;
+use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Member;
@@ -153,6 +154,20 @@ class NotificationFeedTest extends TestCase
 
         $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
             ->assertRedirect('/m/community/topic/'.$topic->getKey());
+    }
+
+    public function test_open_redirects_a_new_topic_and_event_to_their_pages(): void
+    {
+        [$viewer, $author] = Member::factory()->count(2)->create()->all();
+        $topic = CommunityTopic::factory()->create(['member_id' => $author->getKey()]);
+        $event = CommunityEvent::factory()->create(['member_id' => $author->getKey()]);
+        $topicRow = $this->seedRow($viewer, 'community_topic_posted', ['author_id' => $author->getKey(), 'topic_id' => $topic->getKey()]);
+        $eventRow = $this->seedRow($viewer, 'community_event_posted', ['author_id' => $author->getKey(), 'event_id' => $event->getKey()]);
+
+        $this->actingAs($viewer)->post("/m/notifications/{$topicRow->getKey()}/open")
+            ->assertRedirect('/m/community/topic/'.$topic->getKey());
+        $this->actingAs($viewer)->post("/m/notifications/{$eventRow->getKey()}/open")
+            ->assertRedirect('/m/community/event/'.$event->getKey());
     }
 
     public function test_open_falls_back_to_the_feed_when_the_board_is_gone_or_unreadable(): void
