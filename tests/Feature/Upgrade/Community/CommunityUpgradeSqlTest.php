@@ -14,8 +14,8 @@ use App\Upgrade\Steps\CommunityJoinRequestUpgrade;
 use App\Upgrade\Steps\CommunityMemberUpgrade;
 use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\UpgradeStep;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -27,7 +27,7 @@ use Tests\TestCase;
  */
 class CommunityUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     /** Source tables this step set reads, created from the real dump (FKs stripped to stand alone). */
     private array $sourceTables = [

@@ -7,8 +7,8 @@ use App\Models\Message;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MessageUpgrade;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
@@ -21,7 +21,7 @@ use Tests\TestCase;
  */
 class MessageUpgradeSqlTest extends TestCase
 {
-    use DatabaseMigrations;
+    use MigratesUpgradeTargetsOnce;
 
     /** Source tables MessageUpgrade reads (its FROM table plus the subquery tables), FKs stripped. */
     private array $sourceTables = ['message', 'message_send_list', 'deleted_message', 'message_type'];
