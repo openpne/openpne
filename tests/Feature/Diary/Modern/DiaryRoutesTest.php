@@ -115,6 +115,17 @@ class DiaryRoutesTest extends TestCase
         $this->assertDatabaseMissing('diaries', ['id' => $diary->getKey()]);
     }
 
+    public function test_modern_delete_returns_404_for_a_non_owner(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+
+        $this->actingAs(Member::factory()->create())
+            ->post("/m/diary/delete/{$diary->getKey()}")
+            ->assertNotFound();
+        $this->assertDatabaseHas('diaries', ['id' => $diary->getKey()]);
+    }
+
     public function test_visibility_slug_is_string_in_inertia_props(): void
     {
         $member = Member::factory()->create();

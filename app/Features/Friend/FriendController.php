@@ -2,6 +2,7 @@
 
 namespace App\Features\Friend;
 
+use App\Compat\RouteParityRegistry;
 use App\Features\Block\BlockLookup;
 use App\Features\Friend\Actions\AcceptFriendRequest;
 use App\Features\Friend\Actions\RejectFriendRequest;
@@ -132,7 +133,7 @@ class FriendController extends Controller
         return $this->redirectAfterSubmit($request, 'friend.manage', status: __('%Friend% request rejected.'));
     }
 
-    public function showUnlink(Request $request, Member $member): View|InertiaResponse
+    public function showUnlink(Request $request, Member $member): View
     {
         $viewer = $this->viewer();
         if ($viewer->is($member) || ! $viewer->isFriendsWith($member)) {
@@ -140,14 +141,8 @@ class FriendController extends Controller
         }
         $this->markLocalNavSubject($member); // OpenPNE 3 friend module: the target's friend localNav
 
-        return $this->respondWith($request, 'friend', [
-            self::SURFACE_CLASSIC => fn () => view('friend.unlink', [
-                'target' => $member,
-            ]),
-            self::SURFACE_MODERN => fn () => Inertia::render('friend/unlink', [
-                'target' => FriendSerializer::member($member),
-            ]),
-        ]);
+        // Classic-only GET confirm page — Modern confirms unfriend inline (Radix AlertDialog).
+        return $this->classic('friend.unlink', ['target' => $member]);
     }
 
     public function submitUnlink(Request $request, Member $member, Unfriend $action): RedirectResponse
@@ -174,6 +169,19 @@ class FriendController extends Controller
         }
 
         return $redirect;
+    }
+
+    /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
+    private function classic(string $view, array $data = []): View
+    {
+        return view($view, $data)->with('pageId', RouteParityRegistry::bodyId($this->routeName()));
+    }
+
+    private function routeName(): string
+    {
+        $route = request()->route();
+
+        return $route !== null ? (string) $route->getName() : '';
     }
 
     private function viewer(): Member

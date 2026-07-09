@@ -1,9 +1,11 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Pagination } from '@/components/pagination';
-import { DangerLink } from '@/components/ui/danger-link';
+import { dangerActionClass } from '@/components/ui/danger-link';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { FriendMember, PaginatedFriends } from './types';
 
@@ -15,8 +17,15 @@ interface ListProps extends PageProps {
 
 export default function FriendList() {
     const t = useT();
+    const confirm = useConfirm();
     const { owner, isOwner, friends } = usePage<ListProps>().props;
     const title = isOwner ? t('%Friends%') : t(":name's %friends%", { name: owner.name });
+
+    const unlinkFriend = async (id: number, name: string) => {
+        if (await confirm({ title: t('Remove :name from your %friends%?', { name }), confirmLabel: t('Remove %friend%'), danger: true })) {
+            router.post(`/m/friend/unlink/${id}`);
+        }
+    };
 
     return (
         <>
@@ -36,9 +45,9 @@ export default function FriendList() {
                                         <span className="min-w-0 flex-1 truncate">{friend.name}</span>
                                     </Link>
                                     {isOwner && (
-                                        <DangerLink href={`/m/friend/unlink/${friend.id}`} className="shrink-0 text-sm">
+                                        <button type="button" onClick={() => unlinkFriend(friend.id, friend.name)} className={cn(dangerActionClass, 'shrink-0 text-sm')}>
                                             {t('Remove %friend%')}
-                                        </DangerLink>
+                                        </button>
                                     )}
                                 </ListRow>
                             ))}

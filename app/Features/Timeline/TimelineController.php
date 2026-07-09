@@ -2,6 +2,7 @@
 
 namespace App\Features\Timeline;
 
+use App\Compat\RouteParityRegistry;
 use App\Features\Timeline\Actions\CreateReply;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
@@ -140,16 +141,12 @@ class TimelineController extends Controller
             ->with('status', __('Reply posted.'));
     }
 
-    public function showDelete(Request $request, TimelinePost $timelinePost): View|InertiaResponse
+    public function showDelete(Request $request, TimelinePost $timelinePost): View
     {
         abort_unless($this->viewer()->is($timelinePost->member), 404);
 
-        return $this->respondWith($request, 'timeline', [
-            SurfaceResolver::CLASSIC => fn () => view('timeline.delete', ['post' => $timelinePost]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('timeline/delete', [
-                'post' => TimelinePostSerializer::entry($timelinePost->load(['member.avatar.file', 'images.file'])),
-            ]),
-        ]);
+        // Classic-only GET confirm page — Modern confirms delete inline (Radix AlertDialog).
+        return $this->classic('timeline.delete', ['post' => $timelinePost]);
     }
 
     public function delete(Request $request, TimelinePost $timelinePost, DeleteTimelinePost $action): RedirectResponse
@@ -170,6 +167,19 @@ class TimelineController extends Controller
         return redirect()
             ->route(SurfaceResolver::redirectName($request, 'timeline.member'), ['member' => $viewer->getKey()])
             ->with('status', __('Post deleted.'));
+    }
+
+    /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
+    private function classic(string $view, array $data = []): View
+    {
+        return view($view, $data)->with('pageId', RouteParityRegistry::bodyId($this->routeName()));
+    }
+
+    private function routeName(): string
+    {
+        $route = request()->route();
+
+        return $route !== null ? (string) $route->getName() : '';
     }
 
     private function viewer(): Member

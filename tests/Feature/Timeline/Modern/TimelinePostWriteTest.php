@@ -34,14 +34,15 @@ class TimelinePostWriteTest extends TestCase
         $this->assertDatabaseHas('timeline_posts', ['body' => 'Modern post']);
     }
 
-    public function test_modern_delete_confirm_renders_inertia_component(): void
+    public function test_modern_delete_returns_404_for_a_non_author(): void
     {
         $member = Member::factory()->create();
         $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
 
-        $this->actingAs($member)
-            ->get("/m/timeline/deleteConfirm/{$post->getKey()}")
-            ->assertInertia(fn ($page) => $page->component('timeline/delete')->where('post.id', $post->getKey()));
+        $this->actingAs(Member::factory()->create())
+            ->post("/m/timeline/delete/{$post->getKey()}")
+            ->assertNotFound();
+        $this->assertDatabaseHas('timeline_posts', ['id' => $post->getKey()]);
     }
 
     public function test_modern_delete_removes_the_post(): void
