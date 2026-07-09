@@ -81,6 +81,7 @@ enum MailTemplate: string
                 caption: 'Email address change (notice)',
                 variables: [
                     'new_email' => ['help' => 'The new email address.', 'sample' => 'new@example.test'],
+                    'cancel_url' => ['help' => 'The link that cancels the pending change.', 'sample' => 'https://example.test/member/config/email/cancel/token'],
                 ],
             ),
             self::FriendRequested => new MailTemplateDefinition(

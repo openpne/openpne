@@ -94,7 +94,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new RegistrationLinkNotification('raw-token', 'en', inviterName: 'Inviter', message: 'Welcome'), new AnonymousNotifiable],
             [new ResetPasswordNotification('the-token', 'en'), $recipient],
             [new EmailChangeConfirmationNotification('the-token', (int) $recipient->getKey(), 'en'), new AnonymousNotifiable],
-            [new EmailChangeNoticeNotification('new@example.test', 'en'), $recipient],
+            [new EmailChangeNoticeNotification('new@example.test', 'cancel-token', 'en'), $recipient],
             [new FriendRequestedNotification($sender), $recipient],
             [new FriendRequestAcceptedNotification($sender), $recipient],
             [new MessageReceivedNotification($sender, $message), $recipient],

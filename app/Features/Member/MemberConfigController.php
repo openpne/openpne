@@ -4,6 +4,7 @@ namespace App\Features\Member;
 
 use App\Auth\SessionRevocation;
 use App\Features\Diary\DiaryVisibility;
+use App\Features\Member\Actions\CancelEmailChange;
 use App\Features\Member\Actions\ConfirmEmailChange;
 use App\Features\Member\Actions\RequestEmailChange;
 use App\Features\Member\Actions\WithdrawMember;
@@ -269,6 +270,36 @@ class MemberConfigController extends Controller
     }
 
     /**
+     * Token-gated landing for the cancel link in the old-address notice. Public and no member match:
+     * the cancel token proves control of the old address, and cancelling only voids a pending change,
+     * so anyone holding the link may do it. The cancel is the POST below, so a mail scanner / prefetch
+     * of this GET cannot void the change.
+     */
+    public function cancelEmailForm(string $token): View|RedirectResponse
+    {
+        $pending = $this->pendingEmailChangeByCancelToken($token);
+        if ($pending === null) {
+            return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
+        }
+
+        return view('member.email-change-cancel', ['token' => $token, 'newEmail' => $pending->new_email])
+            ->with('pageId', 'page_member_emailChangeCancel')
+            ->with('pageClass', auth()->check() ? 'secure_page' : 'insecure_page');
+    }
+
+    public function cancelEmail(string $token, CancelEmailChange $cancel): RedirectResponse
+    {
+        // A gone/expired row is already not pending — the cancel goal is met either way, so this is a
+        // no-op success rather than an error.
+        $pending = $this->pendingEmailChangeByCancelToken($token);
+        if ($pending !== null) {
+            $cancel($pending);
+        }
+
+        return redirect()->route('login')->with('status', __('The email-address change has been cancelled.'));
+    }
+
+    /**
      * A confirmation link is the changed member's action; completing it while logged in as a DIFFERENT
      * member is an incoherent state (and would surface that member's identity in the shell). Turn them
      * away with a clear message — they can sign out and reopen the link. A guest, or the member
@@ -285,10 +316,22 @@ class MemberConfigController extends Controller
         return null;
     }
 
-    /** The live pending email change for a raw token, or null when it is unknown or past its TTL. */
+    /** The live pending email change for a raw confirm token, or null when unknown or past its TTL. */
     private function pendingEmailChange(string $rawToken): ?EmailChangeRequest
     {
-        $row = EmailChangeRequest::where('token', hash('sha256', $rawToken))->first();
+        return $this->livePendingEmailChange('token', $rawToken);
+    }
+
+    /** The live pending email change for a raw cancel token (old-address notice), or null. */
+    private function pendingEmailChangeByCancelToken(string $rawToken): ?EmailChangeRequest
+    {
+        return $this->livePendingEmailChange('cancel_token', $rawToken);
+    }
+
+    /** The live pending row whose $column matches the hashed raw token, or null when unknown or expired. */
+    private function livePendingEmailChange(string $column, string $rawToken): ?EmailChangeRequest
+    {
+        $row = EmailChangeRequest::where($column, hash('sha256', $rawToken))->first();
         if ($row === null || $row->created_at === null) {
             return null;
         }
