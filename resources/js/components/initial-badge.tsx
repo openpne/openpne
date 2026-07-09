@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
  * entities apart in dense grids. Callers own size, rounding, text size, and the a11y semantics
  * (`aria-hidden` when adjacent text already names the entity, else `role="img" aria-label`).
  */
-export function InitialBadge({ name, className, ...props }: { name: string } & ComponentProps<'span'>) {
+export function InitialBadge({ name, className, ...props }: { name: string } & Omit<ComponentProps<'span'>, 'children'>) {
     return (
         <span
             className={cn('inline-flex items-center justify-center bg-muted font-bold leading-none text-muted-foreground', className)}
