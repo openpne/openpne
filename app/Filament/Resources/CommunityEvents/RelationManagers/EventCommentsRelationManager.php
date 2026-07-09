@@ -57,6 +57,9 @@ class EventCommentsRelationManager extends RelationManager
                         return true;
                     }),
             ])
+            // Without an explicit heading Filament humanises the model class (CommunityEventComment)
+            // into an untranslated "community event comment" for the empty state.
+            ->emptyStateHeading(__('No comments yet'))
             ->defaultSort('id', 'asc');
     }
 }
