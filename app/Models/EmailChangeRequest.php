@@ -10,14 +10,16 @@ use Illuminate\Support\Carbon;
 
 /**
  * A pending email-address change. `token` holds the SHA-256 hash of the raw token the confirmation
- * URL carries; the raw token only ever lives in the emailed link. Only created_at is tracked (expiry
- * is derived from it), so timestamps are off. One row per member (the column is unique); it cascades
- * away with the member. Mirrors RegistrationToken.
+ * URL carries (sent to the new address); `cancel_token` is the same for the cancel link (sent to the
+ * old address). Both raw tokens only ever live in their emailed links. Only created_at is tracked
+ * (expiry is derived from it), so timestamps are off. One row per member (the column is unique); it
+ * cascades away with the member. Mirrors RegistrationToken.
  *
  * @property int $id
  * @property int $member_id
  * @property string $new_email
  * @property string $token
+ * @property string|null $cancel_token
  * @property Carbon|null $created_at
  */
 class EmailChangeRequest extends Model
@@ -26,7 +28,7 @@ class EmailChangeRequest extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['member_id', 'new_email', 'token', 'created_at'];
+    protected $fillable = ['member_id', 'new_email', 'token', 'cancel_token', 'created_at'];
 
     protected function casts(): array
     {

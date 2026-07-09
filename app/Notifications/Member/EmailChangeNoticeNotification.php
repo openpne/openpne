@@ -11,18 +11,21 @@ use Illuminate\Notifications\Notification;
 
 /**
  * A notify-only security alert, sent on-demand to the member's CURRENT (old) address when an email
- * change is requested — the takeover-detection control (OWASP). It carries no action link: the
- * request step already re-authenticated with the current password, so the actionable path for an
- * unexpected change is "change your password", not a one-click revert. Sent before members.email
- * changes, so the address it reaches is still the member's own.
+ * change is requested — the takeover-detection control (OWASP). Sent before members.email changes, so
+ * the address it reaches is still the member's own. It carries a cancel link (a second single-use
+ * token) so the old-address holder can void a change they did not initiate without signing in; the
+ * link only voids the pending change, it never itself alters the login identifier.
  */
 class EmailChangeNoticeNotification extends Notification implements ShouldQueue
 {
     use Queueable;
     use RendersMailTemplate;
 
-    public function __construct(public readonly string $newEmail, string $locale)
-    {
+    public function __construct(
+        public readonly string $newEmail,
+        public readonly string $rawCancelToken,
+        string $locale,
+    ) {
         $this->locale($locale);
     }
 
@@ -36,6 +39,7 @@ class EmailChangeNoticeNotification extends Notification implements ShouldQueue
     {
         return $this->mailFromTemplate(MailTemplate::EmailChangeNotice, [
             'new_email' => $this->newEmail,
+            'cancel_url' => route('member.config.email.cancel', ['token' => $this->rawCancelToken]),
         ]);
     }
 }

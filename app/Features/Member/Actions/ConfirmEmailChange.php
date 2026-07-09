@@ -15,21 +15,34 @@ use Illuminate\Support\Str;
  * unique index is the final TOCTOU guard: if the address was claimed between the controller's check
  * and here, the insert throws QueryException and the caller voids the dead pending row.
  *
+ * The pending row is re-read under a lock (by its unique token) at the top of the transaction, not
+ * trusted from the controller's earlier read: a concurrent cancel or password-change purge may have
+ * deleted it — or a re-request replaced it (same PK, new token) — in between. Gone/replaced returns
+ * null so the login identifier is never flipped on a voided change; without this, a cancel could
+ * report success while a racing confirm still changed the address off the stale row.
+ *
+ * @return Member|null the changed member, or null when the pending change was voided before commit
+ *
  * @throws QueryException the new address was claimed between check and commit
  */
 class ConfirmEmailChange
 {
-    public function __invoke(EmailChangeRequest $pending): Member
+    public function __invoke(EmailChangeRequest $pending): ?Member
     {
-        return DB::transaction(function () use ($pending): Member {
-            $member = Member::whereKey($pending->member_id)->lockForUpdate()->firstOrFail();
+        return DB::transaction(function () use ($pending): ?Member {
+            $locked = EmailChangeRequest::where('token', $pending->token)->lockForUpdate()->first();
+            if ($locked === null) {
+                return null;
+            }
+
+            $member = Member::whereKey($locked->member_id)->lockForUpdate()->firstOrFail();
 
             $member->forceFill([
-                'email' => $pending->new_email,
+                'email' => $locked->new_email,
                 'remember_token' => Str::random(60),
             ])->save();
 
-            $pending->delete();
+            $locked->delete();
 
             return $member;
         });
