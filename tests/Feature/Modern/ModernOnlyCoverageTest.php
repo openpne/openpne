@@ -239,29 +239,43 @@ class ModernOnlyCoverageTest extends TestCase
     }
 
     /**
-     * The confirm pages that survive as pages under modern_only: the token landings from the
-     * email-change mails. Asserts the VALID-token render, not only the invalid-token redirect —
-     * otherwise a Classic render could hide behind the redirect. The cancel link is guest-reachable
-     * (it proves control of the old address), so that one is asserted logged-out.
+     * The confirm token landing from the email-change mail survives as a page under modern_only.
+     * Asserts the VALID-token render, not only the invalid-token redirect — otherwise a Classic
+     * render could hide behind the redirect.
      */
-    public function test_email_change_token_landings_render_modern_under_modern_only(): void
+    public function test_valid_token_email_change_confirm_renders_modern_under_modern_only(): void
     {
         $member = Member::factory()->create();
-        $confirmToken = str_repeat('a', 40);
-        $cancelToken = str_repeat('b', 40);
+        $token = str_repeat('a', 40);
         EmailChangeRequest::create([
             'member_id' => $member->getKey(),
             'new_email' => 'new@example.com',
-            'token' => hash('sha256', $confirmToken),
-            'cancel_token' => hash('sha256', $cancelToken),
+            'token' => hash('sha256', $token),
             'created_at' => now(),
         ]);
 
-        $this->actingAs($member)->get("/member/config/email/confirm/{$confirmToken}")
+        $this->actingAs($member)->get("/member/config/email/confirm/{$token}")
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('auth/email-change-confirm')
                 ->where('newEmail', 'new@example.com'));
+    }
+
+    /**
+     * The cancel token landing is guest-reachable (the token proves control of the old address), so
+     * it is asserted without a login — its own test, since actingAs in a shared test would persist.
+     */
+    public function test_email_change_cancel_renders_modern_for_a_guest_under_modern_only(): void
+    {
+        $member = Member::factory()->create();
+        $cancelToken = str_repeat('b', 40);
+        EmailChangeRequest::create([
+            'member_id' => $member->getKey(),
+            'new_email' => 'new@example.com',
+            'token' => hash('sha256', str_repeat('a', 40)),
+            'cancel_token' => hash('sha256', $cancelToken),
+            'created_at' => now(),
+        ]);
 
         $this->get("/member/config/email/cancel/{$cancelToken}")
             ->assertOk()
