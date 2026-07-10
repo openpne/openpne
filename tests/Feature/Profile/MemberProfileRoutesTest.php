@@ -50,13 +50,13 @@ class MemberProfileRoutesTest extends TestCase
     public function test_modern_owner_carries_the_chosen_badge_color_as_hex(): void
     {
         $owner = Member::factory()->create();
-        $owner->forceFill(['avatar_color' => AvatarColor::Emerald])->save();
+        $owner->forceFill(['avatar_color' => AvatarColor::Green])->save();
         $viewer = Member::factory()->create();
 
         $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/show')
-                ->where('profile.owner.avatarColor', '#10b981')
+                ->where('profile.owner.avatarColor', '#15803d')
             );
     }
 

@@ -116,27 +116,30 @@ export default function MemberAvatar() {
                         <legend className="text-base font-semibold text-foreground">{t('Badge color')}</legend>
                         <p className="text-sm text-muted-foreground">{t('Shown in place of your photo when no profile image is set.')}</p>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                            {/* The badge as others would see it with the tentative color — visible even
-                                while a photo hides the page-top preview. */}
-                            <InitialBadge aria-hidden name={auth.user.name} color={tentativeHex} className="size-12 rounded-full text-base" />
-                            <div className="flex flex-wrap items-center gap-2" role="presentation">
+                        {/* The badge as others would see it with the tentative color — visible even
+                            while a photo hides the page-top preview. */}
+                        <InitialBadge aria-hidden name={auth.user.name} color={tentativeHex} className="size-12 rounded-full text-base" />
+
+                        {/* The default fills the light-gray cell, so the grid is exactly 9 families ×
+                            2 tiers. The options arrive family-paired (light, deep): column-major on
+                            sm+ gives one column per family (light over deep); the phone's 6-column
+                            row-major keeps each pair side by side. */}
+                        <div className="grid w-fit grid-cols-6 gap-3 sm:grid-cols-none sm:grid-flow-col sm:grid-rows-2" role="presentation">
+                            <Swatch
+                                checked={color.data.avatar_color === null}
+                                onSelect={() => color.setData('avatar_color', null)}
+                                ariaLabel={t('None (gray)')}
+                                hex={null}
+                            />
+                            {badgeColor.options.map((option) => (
                                 <Swatch
-                                    checked={color.data.avatar_color === null}
-                                    onSelect={() => color.setData('avatar_color', null)}
-                                    ariaLabel={t('None (gray)')}
-                                    hex={null}
+                                    key={option.value}
+                                    checked={color.data.avatar_color === option.value}
+                                    onSelect={() => color.setData('avatar_color', option.value)}
+                                    ariaLabel={t(option.label)}
+                                    hex={option.hex}
                                 />
-                                {badgeColor.options.map((option) => (
-                                    <Swatch
-                                        key={option.value}
-                                        checked={color.data.avatar_color === option.value}
-                                        onSelect={() => color.setData('avatar_color', option.value)}
-                                        ariaLabel={t(option.label)}
-                                        hex={option.hex}
-                                    />
-                                ))}
-                            </div>
+                            ))}
                         </div>
                         {color.errors.avatar_color && <p className="text-sm text-destructive">{color.errors.avatar_color}</p>}
 
@@ -151,12 +154,13 @@ export default function MemberAvatar() {
 }
 
 /** One color swatch: a real radio (arrow-key group navigation) behind a colored disc; the checked
- *  state shows a checkmark so it never reads by color alone. `hex: null` is the neutral option. */
+ *  state shows a checkmark so it never reads by color alone. `hex: null` is the neutral option.
+ *  size-11 keeps the touch target at 44px (the grid gap alone is too thin a separator on phones). */
 function Swatch({ checked, onSelect, ariaLabel, hex }: { checked: boolean; onSelect: () => void; ariaLabel: string; hex: string | null }) {
     return (
         <label
             className={cn(
-                'relative inline-flex size-9 cursor-pointer items-center justify-center rounded-full',
+                'relative inline-flex size-11 cursor-pointer items-center justify-center rounded-full',
                 hex === null && 'bg-muted-foreground/20',
                 checked && 'ring-2 ring-selected ring-offset-2 ring-offset-card',
                 'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-card',

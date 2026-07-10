@@ -10,52 +10,74 @@ namespace App\Support;
  * The slugs are the stored `members.avatar_color` values and the hexes are what serializers ship;
  * both live here so palette changes stay one edit. The column is a free string, not this enum, so
  * a later "any color code" tier can store `#rrggbb` literals without a schema change.
+ *
+ * Nine families (gray + eight hues) in a light and a deep tier. Every light hex keeps slate-900
+ * text >= 4.5:1 and every deep hex keeps white text >= 4.5:1, so the client's readable-text pick
+ * lands uniformly per tier — never one odd badge in a row. The case order is family-paired
+ * (light, deep) because the picker grid renders it verbatim: column-major on wide screens gives
+ * one column per family, row-major on phones keeps each pair adjacent. The default (null) fills
+ * the light-gray cell, which is why Gray has no Light twin here.
  */
 enum AvatarColor: string
 {
+    case Gray = 'gray';
+
+    case LightRed = 'light-red';
+
     case Red = 'red';
+
+    case LightOrange = 'light-orange';
 
     case Orange = 'orange';
 
+    case LightAmber = 'light-amber';
+
     case Amber = 'amber';
 
-    case Yellow = 'yellow';
+    case LightGreen = 'light-green';
 
-    case Lime = 'lime';
+    case Green = 'green';
 
-    case Emerald = 'emerald';
+    case LightTeal = 'light-teal';
 
     case Teal = 'teal';
 
-    case Cyan = 'cyan';
+    case LightBlue = 'light-blue';
 
     case Blue = 'blue';
 
-    case Indigo = 'indigo';
+    case LightViolet = 'light-violet';
 
-    case Purple = 'purple';
+    case Violet = 'violet';
+
+    case LightPink = 'light-pink';
 
     case Pink = 'pink';
 
-    /**
-     * Mid-lightness (Tailwind 500) hues: every one lets the client's readable-text pick (white or
-     * slate-900) clear WCAG 4.5:1 in both color modes.
-     */
     public function hex(): string
     {
         return match ($this) {
-            self::Red => '#ef4444',
-            self::Orange => '#f97316',
-            self::Amber => '#f59e0b',
-            self::Yellow => '#eab308',
-            self::Lime => '#84cc16',
-            self::Emerald => '#10b981',
-            self::Teal => '#14b8a6',
-            self::Cyan => '#06b6d4',
-            self::Blue => '#3b82f6',
-            self::Indigo => '#6366f1',
-            self::Purple => '#a855f7',
-            self::Pink => '#ec4899',
+            self::Gray => '#78716c',
+            self::LightRed => '#fca5a5',
+            self::Red => '#dc2626',
+            self::LightOrange => '#fdba74',
+            self::Orange => '#c2410c',
+            self::LightAmber => '#fcd34d',
+            // yellow-700 rather than amber-700: at white-text depths amber collapses into the same
+            // brown as orange, so the deep cut leans mustard to keep the two families apart.
+            self::Amber => '#a16207',
+            self::LightGreen => '#86efac',
+            self::Green => '#15803d',
+            // cyan-300/700 rather than teal: darkened teal reads as another green, so the family
+            // leans cyan to stay apart from Green.
+            self::LightTeal => '#67e8f9',
+            self::Teal => '#0e7490',
+            self::LightBlue => '#93c5fd',
+            self::Blue => '#2563eb',
+            self::LightViolet => '#c4b5fd',
+            self::Violet => '#7c3aed',
+            self::LightPink => '#f9a8d4',
+            self::Pink => '#db2777',
         };
     }
 
@@ -63,17 +85,22 @@ enum AvatarColor: string
     public function label(): string
     {
         return match ($this) {
+            self::Gray => 'Dark gray',
+            self::LightRed => 'Light red',
             self::Red => 'Red',
+            self::LightOrange => 'Light orange',
             self::Orange => 'Orange',
+            self::LightAmber => 'Light amber',
             self::Amber => 'Amber',
-            self::Yellow => 'Yellow',
-            self::Lime => 'Lime',
-            self::Emerald => 'Emerald',
+            self::LightGreen => 'Light green',
+            self::Green => 'Green',
+            self::LightTeal => 'Light teal',
             self::Teal => 'Teal',
-            self::Cyan => 'Cyan',
+            self::LightBlue => 'Light blue',
             self::Blue => 'Blue',
-            self::Indigo => 'Indigo',
-            self::Purple => 'Purple',
+            self::LightViolet => 'Light violet',
+            self::Violet => 'Violet',
+            self::LightPink => 'Light pink',
             self::Pink => 'Pink',
         };
     }
