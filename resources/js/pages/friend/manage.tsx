@@ -15,7 +15,7 @@ interface ManageProps extends PageProps {
 /** Avatar + name linking to the member's profile — the shared leading cell of a pending-request row. */
 function MemberCell({ member }: { member: FriendMember }) {
     return (
-        <Link href={`/m/member/${member.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
+        <Link href={`/member/${member.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
             <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="sm" decorative />
             <span className="min-w-0 flex-1 truncate">{member.name}</span>
         </Link>
@@ -27,11 +27,11 @@ export default function FriendManage() {
     const { received, sent } = usePage<ManageProps>().props;
 
     function accept(requesterId: number) {
-        router.post('/m/friend/accept', { requester_id: requesterId });
+        router.post('/friend/accept', { requester_id: requesterId });
     }
 
     function reject(requesterId: number) {
-        router.post('/m/friend/reject', { requester_id: requesterId });
+        router.post('/friend/reject', { requester_id: requesterId });
     }
 
     const headTitle = t('Pending %friend% requests');

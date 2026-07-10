@@ -11,7 +11,7 @@ import type { DiarySummary } from './types';
 export function DiaryRow({ diary, showAuthor = false, actions }: { diary: DiarySummary; showAuthor?: boolean; actions?: ReactNode }) {
     return (
         <EntryRow
-            href={`/m/diary/${diary.id}`}
+            href={`/diary/${diary.id}`}
             leading={showAuthor ? <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} size="sm" decorative /> : undefined}
             title={diary.title}
             meta={[showAuthor && diary.author.name, formatDate(diary.createdAt)]}

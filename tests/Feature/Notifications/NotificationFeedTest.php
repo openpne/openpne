@@ -73,7 +73,7 @@ class NotificationFeedTest extends TestCase
         $row = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => $message->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/m/message/read/'.$message->getKey());
+            ->assertRedirect('/message/read/'.$message->getKey());
 
         $this->assertNotNull($row->fresh()->read_at);
     }
@@ -97,7 +97,7 @@ class NotificationFeedTest extends TestCase
         $row = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/m/friend/manage');
+            ->assertRedirect('/friend/manage');
     }
 
     public function test_open_falls_back_to_the_feed_when_the_target_is_gone(): void
@@ -119,7 +119,7 @@ class NotificationFeedTest extends TestCase
         $row = $this->seedRow($viewer, 'diary_commented', ['commenter_id' => $actor->getKey(), 'diary_id' => $diary->getKey(), 'reason' => 'reply']);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/m/diary/'.$diary->getKey());
+            ->assertRedirect('/diary/'.$diary->getKey());
     }
 
     public function test_open_redirects_a_diary_post_to_the_diary(): void
@@ -129,7 +129,7 @@ class NotificationFeedTest extends TestCase
         $row = $this->seedRow($viewer, 'diary_posted', ['author_id' => $author->getKey(), 'diary_id' => $diary->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/m/diary/'.$diary->getKey());
+            ->assertRedirect('/diary/'.$diary->getKey());
     }
 
     public function test_open_falls_back_to_the_feed_when_the_diary_is_gone_or_hidden(): void
@@ -153,7 +153,7 @@ class NotificationFeedTest extends TestCase
         $row = $this->seedRow($viewer, 'community_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $topic->getKey(), 'reason' => 'reply']);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/m/community/topic/'.$topic->getKey());
+            ->assertRedirect('/communityTopic/'.$topic->getKey());
     }
 
     public function test_open_redirects_a_new_topic_and_event_to_their_pages(): void
@@ -165,9 +165,9 @@ class NotificationFeedTest extends TestCase
         $eventRow = $this->seedRow($viewer, 'community_event_posted', ['author_id' => $author->getKey(), 'event_id' => $event->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$topicRow->getKey()}/open")
-            ->assertRedirect('/m/community/topic/'.$topic->getKey());
+            ->assertRedirect('/communityTopic/'.$topic->getKey());
         $this->actingAs($viewer)->post("/notifications/{$eventRow->getKey()}/open")
-            ->assertRedirect('/m/community/event/'.$event->getKey());
+            ->assertRedirect('/communityEvent/'.$event->getKey());
     }
 
     public function test_open_falls_back_to_the_feed_when_the_board_is_gone_or_unreadable(): void
@@ -192,7 +192,7 @@ class NotificationFeedTest extends TestCase
         $row = $this->seedRow($viewer, 'community_joined', ['new_member_id' => $joiner->getKey(), 'community_id' => $community->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/m/community/'.$community->getKey());
+            ->assertRedirect('/community/'.$community->getKey());
     }
 
     public function test_open_falls_back_to_the_feed_when_the_community_is_gone(): void

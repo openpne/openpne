@@ -36,7 +36,7 @@ export default function CommunityEventShow() {
         if (ascending) params.set('order', 'asc');
         if (page > 1) params.set('page', String(page));
         const qs = params.toString();
-        return `/m/community/event/${event.id}${qs ? `?${qs}` : ''}`;
+        return `/communityEvent/${event.id}${qs ? `?${qs}` : ''}`;
     };
 
     // OpenPNE 3 posts RSVP through the comment endpoint: the participate/cancel buttons toggle the
@@ -44,7 +44,7 @@ export default function CommunityEventShow() {
     const form = useForm({ body: '', images: [] as File[] });
     const submit = (commentOnly: boolean) => {
         form.transform((data) => (commentOnly ? { ...data, comment: '1' } : data));
-        form.post(`/m/community/event/${event.id}/comment`, {
+        form.post(`/communityEvent/${event.id}/comment/create`, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => form.reset('body', 'images'),
@@ -53,13 +53,13 @@ export default function CommunityEventShow() {
 
     const deleteEvent = async () => {
         if (await confirm({ title: t('Delete this event?'), description: event.name, confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/community/event/${event.id}/delete`);
+            router.post(`/communityEvent/delete/${event.id}`);
         }
     };
 
     const deleteComment = async (commentId: number) => {
         if (await confirm({ title: t('Delete this comment?'), confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/community/event/comment/${commentId}/delete`, {}, { preserveScroll: true });
+            router.post(`/communityEvent/comment/delete/${commentId}`, {}, { preserveScroll: true });
         }
     };
 
@@ -75,7 +75,7 @@ export default function CommunityEventShow() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} color={event.author?.avatarColor ?? null} size="sm" decorative />
                     {event.author ? (
-                        <Link href={`/m/member/${event.author.id}`} className="text-link hover:underline">
+                        <Link href={`/member/${event.author.id}`} className="text-link hover:underline">
                             {event.author.name}
                         </Link>
                     ) : (
@@ -108,7 +108,7 @@ export default function CommunityEventShow() {
                     <dd>
                         {event.capacity != null ? `${event.participantCount} / ${event.capacity}` : event.participantCount}
                         {' '}
-                        <Link href={`/m/community/event/${event.id}/members`} className="text-link hover:underline">
+                        <Link href={`/communityEvent/${event.id}/memberList`} className="text-link hover:underline">
                             {t('See Member List')}
                         </Link>
                     </dd>
@@ -121,7 +121,7 @@ export default function CommunityEventShow() {
 
                 {canEdit && (
                     <div className="flex gap-4 text-sm">
-                        <Link href={`/m/community/event/${event.id}/edit`} className="text-link hover:underline">
+                        <Link href={`/communityEvent/edit/${event.id}`} className="text-link hover:underline">
                             {t('Edit')}
                         </Link>
                         <button type="button" onClick={deleteEvent} className={dangerActionClass}>
@@ -163,7 +163,7 @@ export default function CommunityEventShow() {
                                 <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
                                     <span className="font-medium">#{comment.number}</span>
                                     {comment.author ? (
-                                        <Link href={`/m/member/${comment.author.id}`} className="text-link hover:underline">
+                                        <Link href={`/member/${comment.author.id}`} className="text-link hover:underline">
                                             {comment.author.name}
                                         </Link>
                                     ) : (

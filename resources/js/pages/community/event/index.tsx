@@ -32,7 +32,7 @@ export default function CommunityEventIndex() {
                             {events.data.map((event) => (
                                 <EntryRow
                                     key={event.id}
-                                    href={`/m/community/event/${event.id}`}
+                                    href={`/communityEvent/${event.id}`}
                                     leading={<Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} color={event.author?.avatarColor ?? null} size="sm" decorative />}
                                     title={event.name}
                                     meta={[event.author?.name ?? t('Withdrawn member'), `${t('Open date')}: ${formatDate(event.openDate)}`]}

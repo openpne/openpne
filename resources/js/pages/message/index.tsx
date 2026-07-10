@@ -26,10 +26,10 @@ const BOX_LABEL: Record<MessageBoxSlug, string> = {
 // The per-box row destination (OpenPNE 3 paths): the show page for a sent/received/trashed message,
 // the edit form for a draft.
 const SHOW_PATH: Record<MessageBoxSlug, (id: number) => string> = {
-    receive: (id) => `/m/message/read/${id}`,
-    sent: (id) => `/m/message/check/${id}`,
-    trash: (id) => `/m/message/checkDelete/${id}`,
-    draft: (id) => `/m/message/edit/${id}`,
+    receive: (id) => `/message/read/${id}`,
+    sent: (id) => `/message/check/${id}`,
+    trash: (id) => `/message/checkDelete/${id}`,
+    draft: (id) => `/message/edit/${id}`,
 };
 
 // The bulk actions a box offers: trash from the active boxes; restore
@@ -71,7 +71,7 @@ export default function MessageIndex() {
             return;
         }
         router.post(
-            '/m/message/bulk',
+            '/message/bulk',
             { box, action, ids: selected, ...(needsConfirm ? { confirm: true } : {}) },
             { preserveScroll: true, onSuccess: () => setSelected([]) },
         );

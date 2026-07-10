@@ -28,7 +28,7 @@ export default function CommunityEventMembers() {
                         <ul className="flex flex-wrap gap-4">
                             {participants.data.map((participant) => (
                                 <li key={participant.id} className="w-16">
-                                    <Link href={`/m/member/${participant.id}`} className="flex flex-col items-center gap-1">
+                                    <Link href={`/member/${participant.id}`} className="flex flex-col items-center gap-1">
                                         <Avatar id={participant.id} name={participant.name} src={participant.imageUrl} color={participant.avatarColor} size="lg" decorative />
                                         <span className="w-full truncate text-center text-xs">{participant.name}</span>
                                     </Link>

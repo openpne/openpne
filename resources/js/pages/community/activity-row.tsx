@@ -17,7 +17,7 @@ export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
     const t = useT();
     return (
         <EntryRow
-            href={entry.kind === 'topic' ? `/m/community/topic/${entry.id}` : `/m/community/event/${entry.id}`}
+            href={entry.kind === 'topic' ? `/communityTopic/${entry.id}` : `/communityEvent/${entry.id}`}
             leading={
                 <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                     {entry.kind === 'topic' ? t('%Topic%') : t('Event')}

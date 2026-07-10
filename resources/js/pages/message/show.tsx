@@ -16,10 +16,10 @@ interface ShowProps extends PageProps {
 
 // The per-box show route (OpenPNE 3 paths), for the prev/next pager.
 const SHOW_PATH: Record<MessageBoxSlug, (id: number) => string> = {
-    receive: (id) => `/m/message/read/${id}`,
-    sent: (id) => `/m/message/check/${id}`,
-    trash: (id) => `/m/message/checkDelete/${id}`,
-    draft: (id) => `/m/message/read/${id}`, // unreachable: a draft has no show page
+    receive: (id) => `/message/read/${id}`,
+    sent: (id) => `/message/check/${id}`,
+    trash: (id) => `/message/checkDelete/${id}`,
+    draft: (id) => `/message/read/${id}`, // unreachable: a draft has no show page
 };
 
 export default function MessageShow() {
@@ -34,7 +34,7 @@ export default function MessageShow() {
     const trash = (path: string) => router.post(path);
     const purge = async () => {
         if (await confirm({ title: t('Delete this message permanently?'), confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/message/deleteComplete/${message.id}`);
+            router.post(`/message/deleteComplete/${message.id}`);
         }
     };
 
@@ -74,7 +74,7 @@ export default function MessageShow() {
                                 {message.counterparties.map((m) => (
                                     <li key={m.id} className="flex items-center gap-1">
                                         <Avatar id={m.id} name={m.name} src={m.imageUrl} color={m.avatarColor} size="sm" decorative />
-                                        <Link href={`/m/member/${m.id}`} className="text-link hover:underline">
+                                        <Link href={`/member/${m.id}`} className="text-link hover:underline">
                                             {m.name}
                                         </Link>
                                     </li>
@@ -93,20 +93,20 @@ export default function MessageShow() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 pt-2">
-                    {canReply && <ActionLink href={`/m/message/reply/${message.id}`}>{t('Reply')}</ActionLink>}
+                    {canReply && <ActionLink href={`/message/reply/${message.id}`}>{t('Reply')}</ActionLink>}
                     {message.box === 'receive' && (
-                        <button type="button" onClick={() => trash(`/m/message/deleteReceiveMessage/${message.id}`)} className="rounded-md text-sm text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
+                        <button type="button" onClick={() => trash(`/message/deleteReceiveMessage/${message.id}`)} className="rounded-md text-sm text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
                             {t('Delete')}
                         </button>
                     )}
                     {message.box === 'sent' && (
-                        <button type="button" onClick={() => trash(`/m/message/deleteSendMessage/${message.id}`)} className="rounded-md text-sm text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
+                        <button type="button" onClick={() => trash(`/message/deleteSendMessage/${message.id}`)} className="rounded-md text-sm text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
                             {t('Delete')}
                         </button>
                     )}
                     {message.box === 'trash' && (
                         <>
-                            <button type="button" onClick={() => trash(`/m/message/restore/${message.id}`)} className="rounded-md text-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
+                            <button type="button" onClick={() => trash(`/message/restore/${message.id}`)} className="rounded-md text-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">
                                 {t('Restore')}
                             </button>
                             <button type="button" onClick={purge} className="rounded-md text-sm text-destructive outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring">

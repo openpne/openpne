@@ -28,7 +28,7 @@ export default function DiaryList() {
 
     const deleteDiary = async (id: number, diaryTitle: string) => {
         if (await confirm({ title: t('Delete this %diary%?'), description: diaryTitle, confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/diary/delete/${id}`);
+            router.post(`/diary/delete/${id}`);
         }
     };
 
@@ -46,7 +46,7 @@ export default function DiaryList() {
                 }
                 action={
                     isOwner && (
-                        <ActionLink href="/m/diary/new">
+                        <ActionLink href="/diary/new">
                             <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
                             {t('Write a %diary%')}
                         </ActionLink>
@@ -69,7 +69,7 @@ export default function DiaryList() {
                                     actions={
                                         isOwner && (
                                             <>
-                                                <Link href={`/m/diary/edit/${entry.id}`} className="text-muted-foreground hover:text-foreground">
+                                                <Link href={`/diary/edit/${entry.id}`} className="text-muted-foreground hover:text-foreground">
                                                     {t('Edit')}
                                                 </Link>
                                                 <button type="button" onClick={() => deleteDiary(entry.id, entry.title)} className={dangerActionClass}>

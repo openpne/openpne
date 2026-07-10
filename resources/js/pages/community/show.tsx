@@ -35,10 +35,10 @@ export default function CommunityShow() {
         recentTopics, canPostTopic, recentEvents, canPostEvent,
     } = usePage<ShowProps>().props;
 
-    const join = () => router.post(`/m/community/${community.id}/join`);
+    const join = () => router.post('/community/join', { id: community.id });
     const leave = async () => {
         if (await confirm({ title: t('Leave this %community%?'), confirmLabel: t('Leave'), danger: true })) {
-            router.post(`/m/community/${community.id}/quit`);
+            router.post('/community/quit', { id: community.id });
         }
     };
 
@@ -52,7 +52,7 @@ export default function CommunityShow() {
                     <div className="min-w-0 flex-1">
                         <h1 className="break-words text-xl font-semibold">{community.name}</h1>
                         {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}
-                        <Link href={`/m/community/${community.id}/members`} className="text-sm text-link hover:underline">
+                        <Link href={`/community/member/list?id=${community.id}`} className="text-sm text-link hover:underline">
                             {t(':count members', { count: community.memberCount })}
                         </Link>
                     </div>
@@ -77,11 +77,11 @@ export default function CommunityShow() {
 
                 {canManage && (
                     <div className="flex gap-4 text-sm">
-                        <Link href={`/m/community/edit?id=${community.id}`} className="text-link hover:underline">
+                        <Link href={`/community/edit?id=${community.id}`} className="text-link hover:underline">
                             {t('Edit %community%')}
                         </Link>
                         {viewerRole === 'admin' && (
-                            <Link href={`/m/community/${community.id}/pending`} className="text-link hover:underline">
+                            <Link href={`/community/member/pending?id=${community.id}`} className="text-link hover:underline">
                                 {t('Pending members')}
                             </Link>
                         )}
@@ -101,7 +101,7 @@ export default function CommunityShow() {
                     title={t('Recent %topics%')}
                     right={
                         canPostTopic && (
-                            <ActionLink href={`/m/community/${community.id}/topic/new`} variant="outline" size="sm">
+                            <ActionLink href={`/communityTopic/new/${community.id}`} variant="outline" size="sm">
                                 <Plus className="size-4" strokeWidth={2.25} aria-hidden />
                                 {t('Create a %topic%')}
                             </ActionLink>
@@ -115,7 +115,7 @@ export default function CommunityShow() {
                             {recentTopics.map((topic) => (
                                 <EntryRow
                                     key={topic.id}
-                                    href={`/m/community/topic/${topic.id}`}
+                                    href={`/communityTopic/${topic.id}`}
                                     title={topic.name}
                                     meta={[formatDate(topic.updatedAt)]}
                                     commentCount={topic.commentCount}
@@ -124,7 +124,7 @@ export default function CommunityShow() {
                         </List>
                     )}
                     <div className="border-t border-border px-5 py-2.5">
-                        <Link href={`/m/community/${community.id}/topic`} className="text-sm text-link hover:underline">
+                        <Link href={`/communityTopic/listCommunity/${community.id}`} className="text-sm text-link hover:underline">
                             {t('See all %topics%')}
                         </Link>
                     </div>
@@ -137,7 +137,7 @@ export default function CommunityShow() {
                     title={t('Recent events')}
                     right={
                         canPostEvent && (
-                            <ActionLink href={`/m/community/${community.id}/event/new`} variant="outline" size="sm">
+                            <ActionLink href={`/communityEvent/new/${community.id}`} variant="outline" size="sm">
                                 <Plus className="size-4" strokeWidth={2.25} aria-hidden />
                                 {t('Create an event')}
                             </ActionLink>
@@ -151,7 +151,7 @@ export default function CommunityShow() {
                             {recentEvents.map((event) => (
                                 <EntryRow
                                     key={event.id}
-                                    href={`/m/community/event/${event.id}`}
+                                    href={`/communityEvent/${event.id}`}
                                     title={event.name}
                                     meta={[`${t('Open date')}: ${formatDate(event.openDate)}`]}
                                     commentCount={event.commentCount}
@@ -161,7 +161,7 @@ export default function CommunityShow() {
                         </List>
                     )}
                     <div className="border-t border-border px-5 py-2.5">
-                        <Link href={`/m/community/${community.id}/event`} className="text-sm text-link hover:underline">
+                        <Link href={`/communityEvent/listCommunity/${community.id}`} className="text-sm text-link hover:underline">
                             {t('See all events')}
                         </Link>
                     </div>
@@ -173,7 +173,7 @@ export default function CommunityShow() {
                     <ul className="flex flex-wrap gap-4">
                         {members.map((member) => (
                             <li key={member.id} className="w-16">
-                                <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
+                                <Link href={`/member/${member.id}`} className="flex flex-col items-center gap-1">
                                     <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="lg" decorative />
                                     <span className="w-full truncate text-center text-xs">{member.name}</span>
                                 </Link>
