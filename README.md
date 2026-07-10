@@ -8,7 +8,7 @@ This repository is a Laravel 13 reimplementation succeeding the previous version
 
 - PHP 8.3+
 - Composer 2.x
-- Node.js 22+ (for the frontend toolchain)
+- Node.js 26+ (for the frontend toolchain)
 
 ## Getting started
 
