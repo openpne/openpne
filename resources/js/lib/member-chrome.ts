@@ -95,8 +95,8 @@ export const NAV_SECTIONS: NavSection[] = [
         badge: { count: 'unreadMessages', label: t(':count unread messages') },
     },
     {
-        href: '/m/notifications',
-        match: '/m/notifications',
+        href: '/notifications',
+        match: '/notifications',
         icon: Bell,
         label: NOTIFICATIONS,
         badge: { count: 'notifications', label: t(':count unread notifications') },
@@ -112,7 +112,7 @@ const CREATE_COMMUNITY: ChromeAction = { href: '/m/community/edit', label: t('Cr
 const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
     { href: '/m/community/search', label: t('All'), active: active === 'browse' },
     { href: '/m/community/joined', label: t('Joined'), active: active === 'joined' },
-    { href: '/m/community/recent', label: t('Recent activity'), active: active === 'recent' },
+    { href: '/community/recent', label: t('Recent activity'), active: active === 'recent' },
 ];
 
 const friendTabs = (active: 'list' | 'manage'): ChromeTab[] => [

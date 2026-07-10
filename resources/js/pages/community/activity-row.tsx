@@ -12,7 +12,7 @@ export interface CommunityActivityEntry {
     updatedAt: string;
 }
 
-/** One row of the cross-community activity digest (dashboard + /m/community/recent). */
+/** One row of the cross-community activity digest (dashboard + /community/recent). */
 export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
     const t = useT();
     return (

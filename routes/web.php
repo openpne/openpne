@@ -242,11 +242,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
     // The dashboard's community activity section, expanded. Modern-only (no OpenPNE 3 equivalent),
     // so it renders Inertia directly like /dashboard — not a surface twin.
-    Route::get('/m/community/recent', [HomeController::class, 'communityActivity'])->name('community.recent');
+    Route::get('/community/recent', [HomeController::class, 'communityActivity'])->name('community.recent');
 
-    // The per-event notification feed (layer 3). Modern-only, like /m/community/recent — OpenPNE 3's
+    // The per-event notification feed (layer 3). Modern-only, like /community/recent — OpenPNE 3's
     // notification centre had no PC page to be compatible with.
-    Route::prefix('m/notifications')->controller(NotificationFeedController::class)->group(function () {
+    Route::prefix('notifications')->controller(NotificationFeedController::class)->group(function () {
         Route::get('/', 'index')->name('notifications.index');
         Route::post('/read-all', 'readAll')->name('notifications.readAll');
         Route::post('/{notification}/open', 'open')->whereUuid('notification')->name('notifications.open');
@@ -400,14 +400,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // Modern-only detail pages for the consequential account changes (email/password/withdrawal).
     // The settings page keeps a compact row per item; the forms live here, so a validation error
     // lands back on a short page where it is visible. Classic keeps its ?category= pages. Like
-    // /m/community/recent these have no Classic twin, so no surface default / `.modern.` name.
-    Route::get('/m/member/config/email', [MemberConfigController::class, 'editEmail'])->name('member.config.email.edit');
-    Route::get('/m/member/config/password', [MemberConfigController::class, 'editPassword'])->name('member.config.password.edit');
-    Route::get('/m/member/config/withdrawal', [MemberConfigController::class, 'editWithdrawal'])->name('member.config.withdrawal.edit');
+    // /community/recent these have no Classic twin, so no surface default / `.modern.` name.
+    Route::get('/member/config/email', [MemberConfigController::class, 'editEmail'])->name('member.config.email.edit');
+    Route::get('/member/config/password', [MemberConfigController::class, 'editPassword'])->name('member.config.password.edit');
+    Route::get('/member/config/withdrawal', [MemberConfigController::class, 'editWithdrawal'])->name('member.config.withdrawal.edit');
 
     // Notification catalog opt-ins (see NotificationKind; Classic serves it
     // as ?category=notification). Modern edits on a detail page with per-toggle saves.
-    Route::get('/m/member/config/notifications', [NotificationSettingsController::class, 'edit'])->name('member.config.notifications.edit');
+    Route::get('/member/config/notifications', [NotificationSettingsController::class, 'edit'])->name('member.config.notifications.edit');
     Route::post('/member/config/notifications', [NotificationSettingsController::class, 'update'])->name('member.config.notifications');
     Route::post('/m/member/config/notifications', [NotificationSettingsController::class, 'update'])
         ->defaults('surface', 'modern')->name('member.modern.config.notifications');
@@ -429,7 +429,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/m/member/config/mfa/recovery-codes', 'regenerate')
             ->defaults('surface', 'modern')->name('member.modern.config.mfa.recovery');
         // Modern-only detail page, like the email/password/withdrawal ones above.
-        Route::get('/m/member/config/mfa', 'edit')->name('member.config.mfa.edit');
+        Route::get('/member/config/mfa', 'edit')->name('member.config.mfa.edit');
     });
 
     Route::prefix('member')->controller(MemberAvatarController::class)->group(function () {
@@ -695,3 +695,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/bulk', 'bulk')->defaults('surface', 'modern')->name('message.modern.bulk');
     });
 });
+
+// Transition-era compat: the retired /m/ Modern URL space permanently redirects to the canonical
+// URL (308 keeps the method for stale in-flight forms; the query string rides along). Registered
+// last so any still-live /m/ route wins, and carries no surface default — the canonical target
+// resolves the surface from viewer state.
+Route::any('/m/{path?}', function (Request $request, string $path = '') {
+    $query = $request->getQueryString();
+
+    return redirect()->to('/'.$path.($query === null ? '' : '?'.$query), 308);
+})->where('path', '.*')->name('compat.m_prefix');

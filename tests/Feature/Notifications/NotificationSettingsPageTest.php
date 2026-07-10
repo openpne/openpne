@@ -20,7 +20,7 @@ class NotificationSettingsPageTest extends TestCase
         $member = Member::factory()->create();
         $member->setNotificationSetting(NotificationKind::MessageNew, NotificationChannel::Mail, false);
 
-        $this->actingAs($member)->get('/m/member/config/notifications')
+        $this->actingAs($member)->get('/member/config/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/config/notifications')
@@ -85,7 +85,7 @@ class NotificationSettingsPageTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->from('/m/member/config/notifications')
+            ->from('/member/config/notifications')
             ->post('/m/member/config/notifications', ['settings' => ['timeline_new_post' => ['mail' => false]]])
             ->assertSessionHasErrors('settings');
 
@@ -97,7 +97,7 @@ class NotificationSettingsPageTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->from('/m/member/config/notifications')
+            ->from('/member/config/notifications')
             ->post('/m/member/config/notifications', ['settings' => ['message_new' => ['push' => true]]])
             ->assertSessionHasErrors('settings.message_new');
 

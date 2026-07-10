@@ -402,22 +402,22 @@ class MemberConfigTest extends TestCase
         // Classic keeps its ?category= pages).
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/m/member/config/email')
+        $this->actingAs($member)->get('/member/config/email')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('member/config/email')->where('email', $member->email));
 
-        $this->actingAs($member)->get('/m/member/config/password')
+        $this->actingAs($member)->get('/member/config/password')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('member/config/password'));
 
-        $this->actingAs($member)->get('/m/member/config/withdrawal')
+        $this->actingAs($member)->get('/member/config/withdrawal')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('member/config/withdrawal'));
     }
 
     public function test_a_guest_is_redirected_from_the_account_detail_pages(): void
     {
-        $this->get('/m/member/config/password')->assertRedirect('/login');
+        $this->get('/member/config/password')->assertRedirect('/login');
     }
 
     public function test_a_validation_failure_returns_to_the_detail_page(): void
@@ -427,13 +427,13 @@ class MemberConfigTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->from('/m/member/config/password')
+            ->from('/member/config/password')
             ->post('/m/member/config/password', [
                 'current_password' => 'not-the-password',
                 'password' => 'new-secret-pass',
                 'password_confirmation' => 'new-secret-pass',
             ])
-            ->assertRedirect('/m/member/config/password')
+            ->assertRedirect('/member/config/password')
             ->assertSessionHasErrors('current_password');
     }
 

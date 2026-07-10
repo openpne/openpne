@@ -229,7 +229,7 @@ class MemberMfaManagementTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/m/member/config/mfa')
+        $this->actingAs($member)->get('/member/config/mfa')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('member/config/mfa')
@@ -238,7 +238,7 @@ class MemberMfaManagementTest extends TestCase
 
         app(EnableTwoFactorAuthentication::class)($member, force: true);
         // Enabled outside the HTTP flow, so no re-auth stamp: the page must ask for the password.
-        $this->actingAs($member->fresh())->get('/m/member/config/mfa')
+        $this->actingAs($member->fresh())->get('/member/config/mfa')
             ->assertInertia(fn (Assert $page) => $page
                 ->component('member/config/mfa')
                 ->where('state', 'pending')
@@ -247,7 +247,7 @@ class MemberMfaManagementTest extends TestCase
                 ->has('secret'));
 
         $member->fresh()->forceFill(['two_factor_confirmed_at' => now()])->save();
-        $this->actingAs($member->fresh())->get('/m/member/config/mfa')
+        $this->actingAs($member->fresh())->get('/member/config/mfa')
             ->assertInertia(fn (Assert $page) => $page
                 ->component('member/config/mfa')
                 ->where('state', 'enabled')
@@ -399,12 +399,12 @@ class MemberMfaManagementTest extends TestCase
 
         $this->actingAs($member)
             ->post('/m/member/config/mfa/enable', ['current_password' => 'password'])
-            ->assertRedirect('/m/member/config/mfa');
+            ->assertRedirect('/member/config/mfa');
     }
 
     public function test_management_requires_authentication(): void
     {
-        $this->get('/m/member/config/mfa')->assertRedirect('/login');
+        $this->get('/member/config/mfa')->assertRedirect('/login');
         $this->post('/member/config/mfa/enable', ['current_password' => 'password'])->assertRedirect('/login');
     }
 
