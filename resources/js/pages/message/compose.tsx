@@ -38,7 +38,7 @@ export default function MessageCompose() {
     const submit = (action: 'send' | 'draft') => {
         setActive(action);
         form.transform((data) => ({ ...data, action }));
-        form.post('/m/message/sendToFriend', { forceFormData: true, onFinish: () => setActive(null) });
+        form.post('/message/sendToFriend', { forceFormData: true, onFinish: () => setActive(null) });
     };
 
     const incomplete = form.data.subject.trim() === '' || form.data.body.trim() === '';
@@ -54,7 +54,7 @@ export default function MessageCompose() {
                     <div className="flex items-center gap-2 text-sm">
                         <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
                         <Avatar id={recipient.id} name={recipient.name} src={recipient.imageUrl} color={recipient.avatarColor} size="sm" decorative />
-                        <Link href={`/m/member/${recipient.id}`} className="text-link hover:underline">
+                        <Link href={`/member/${recipient.id}`} className="text-link hover:underline">
                             {recipient.name}
                         </Link>
                     </div>

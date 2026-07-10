@@ -32,18 +32,18 @@ export default function TimelineShow() {
 
     const submitReply = (e: FormEvent) => {
         e.preventDefault();
-        form.post(`/m/timeline/${post.id}/reply`, { onSuccess: () => form.reset('body') });
+        form.post(`/timeline/${post.id}/reply`, { onSuccess: () => form.reset('body') });
     };
 
     const deletePost = async () => {
         if (await confirm({ title: t('Delete this post?'), confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/timeline/delete/${post.id}`);
+            router.post(`/timeline/delete/${post.id}`);
         }
     };
 
     const deleteReply = async (replyId: number) => {
         if (await confirm({ title: t('Delete this reply?'), confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/timeline/delete/${replyId}`, {}, { preserveScroll: true });
+            router.post(`/timeline/delete/${replyId}`, {}, { preserveScroll: true });
         }
     };
 
@@ -54,7 +54,7 @@ export default function TimelineShow() {
 
             <Panel bodyClassName="space-y-2">
                 <div className="flex items-center justify-between gap-3 text-sm">
-                    <Link href={`/m/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 font-medium text-link hover:underline">
+                    <Link href={`/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 font-medium text-link hover:underline">
                         <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="sm" decorative />
                         <span className="truncate">{post.author.name}</span>
                     </Link>
@@ -77,7 +77,7 @@ export default function TimelineShow() {
                         {replies.map((reply) => (
                             <li key={reply.id} className="space-y-1 px-5 py-3">
                                 <div className="flex items-center justify-between text-sm">
-                                    <Link href={`/m/member/${reply.author.id}/timeline`} className="font-medium text-link hover:underline">
+                                    <Link href={`/member/${reply.author.id}/timeline`} className="font-medium text-link hover:underline">
                                         {reply.author.name}
                                     </Link>
                                     <span className="text-muted-foreground">{formatDateTime(reply.createdAt)}</span>

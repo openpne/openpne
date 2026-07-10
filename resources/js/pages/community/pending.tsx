@@ -27,7 +27,7 @@ export default function CommunityPending() {
     const { community, applicants } = usePage<PendingProps>().props;
 
     const act = (path: 'approve' | 'decline', memberId: number) =>
-        router.post(`/m/community/${community.id}/${path}`, { member_id: memberId }, { preserveScroll: true });
+        router.post(`/community/member/${path}`, { id: community.id, member_id: memberId }, { preserveScroll: true });
 
     return (
         <>
@@ -43,7 +43,7 @@ export default function CommunityPending() {
                             {applicants.data.map((applicant) => (
                                 <ListRow key={applicant.id}>
                                     <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} color={applicant.avatarColor} size="md" decorative />
-                                    <Link href={`/m/member/${applicant.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
+                                    <Link href={`/member/${applicant.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
                                         {applicant.name}
                                     </Link>
                                     <Button type="button" size="sm" onClick={() => act('approve', applicant.id)}>

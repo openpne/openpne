@@ -46,7 +46,7 @@ export default function CommunityEdit() {
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        form.post(isEdit ? `/m/community/edit?id=${community.id}` : '/m/community/edit', { forceFormData: true });
+        form.post(isEdit ? `/community/edit?id=${community.id}` : '/community/edit', { forceFormData: true });
     };
 
     const destroy = async () => {
@@ -59,7 +59,7 @@ export default function CommunityEdit() {
                 danger: true,
             })
         ) {
-            router.post(`/m/community/${community.id}/delete`);
+            router.post(`/community/delete/${community.id}`);
         }
     };
 

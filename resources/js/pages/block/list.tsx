@@ -24,7 +24,7 @@ export default function BlockList() {
         if (memberId === "") {
             return;
         }
-        router.get("/m/block/add", { id: memberId }, {
+        router.get("/block/add", { id: memberId }, {
             onStart: () => setAdding(true),
             onFinish: () => setAdding(false),
         });
@@ -75,7 +75,7 @@ export default function BlockList() {
                                     <Avatar id={blocked.id} name={blocked.name} src={blocked.imageUrl} color={blocked.avatarColor} size="sm" decorative />
                                     <span className="min-w-0 flex-1 truncate text-foreground">{blocked.name}</span>
                                     {/* Unblock restores access (non-destructive), so it stays text-link, not destructive red. */}
-                                    <Link href={`/m/block/remove/${blocked.id}`} className="shrink-0 text-sm text-link hover:underline">
+                                    <Link href={`/block/remove/${blocked.id}`} className="shrink-0 text-sm text-link hover:underline">
                                         {t("Unblock")}
                                     </Link>
                                 </ListRow>

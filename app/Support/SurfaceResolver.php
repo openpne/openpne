@@ -23,6 +23,14 @@ class SurfaceResolver
             return self::CLASSIC;
         }
 
+        // An Inertia navigation can only originate from the Modern SPA, and answering it with
+        // Classic Blade would make the client reject the response — so a Modern session sticks
+        // across canonical URLs regardless of the viewer's resolved surface. A deliberate handoff
+        // to Classic (the surface picker) bypasses this via Inertia::location (full page load).
+        if ($request->hasHeader('X-Inertia')) {
+            return self::MODERN;
+        }
+
         // An explicit /m/* route opts into Modern, above everything except a non-native feature.
         if ($request->route('surface') === self::MODERN) {
             return self::MODERN;

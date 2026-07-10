@@ -36,7 +36,7 @@ export default function DiaryNew({
                         e.preventDefault();
                         // forceFormData: the upload needs a multipart body, which Inertia uses
                         // automatically once a File is present but not for an initially-empty array.
-                        post('/m/diary/create', { forceFormData: true });
+                        post('/diary/create', { forceFormData: true });
                     }}
                     className="space-y-4"
                 >

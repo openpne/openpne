@@ -30,7 +30,7 @@ export function PostFab() {
             className="fixed right-5 bottom-[calc(1.25rem+env(safe-area-inset-bottom))] z-30 lg:hidden"
         >
             <Link
-                href="/m/diary/new"
+                href="/diary/new"
                 aria-label={t('Post %diary%')}
                 className="inline-flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97]"
             >

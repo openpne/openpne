@@ -59,8 +59,8 @@ export interface Chrome {
 
 export interface NavSection {
     href: string;
-    /** URL prefix(es) marking this section active — plural while a section spans the canonical and /m/ URL spaces. */
-    match: string | string[];
+    /** Canonical URL prefix marking this section active (NavItems normalizes legacy /m/ URLs first). */
+    match: string;
     icon: Icon;
     label: ChromeLabel;
     badge?: { count: 'friendRequests' | 'unreadMessages' | 'notifications'; label: ChromeLabel };
@@ -78,19 +78,20 @@ const SETTINGS = t('Settings');
 
 /** Nav order and metadata (Home is the brand row, so it is omitted). */
 export const NAV_SECTIONS: NavSection[] = [
-    { href: '/m/diary/list', match: '/m/diary', icon: BookOpen, label: DIARIES },
-    { href: '/m/community/search', match: ['/m/community', '/community/recent'], icon: Users, label: COMMUNITIES },
-    { href: '/m/timeline', match: '/m/timeline', icon: Activity, label: ACTIVITY },
+    { href: '/diary/list', match: '/diary', icon: BookOpen, label: DIARIES },
+    // '/community' also prefixes /communityTopic|Event, so board pages keep this section active.
+    { href: '/community/search', match: '/community', icon: Users, label: COMMUNITIES },
+    { href: '/timeline', match: '/timeline', icon: Activity, label: ACTIVITY },
     {
-        href: '/m/friend/list',
-        match: '/m/friend',
+        href: '/friend/list',
+        match: '/friend',
         icon: UserCircle2,
         label: FRIENDS,
         badge: { count: 'friendRequests', label: t(':count pending %friend% requests') },
     },
     {
-        href: '/m/message',
-        match: '/m/message',
+        href: '/message',
+        match: '/message',
         icon: Mail,
         label: MESSAGES,
         badge: { count: 'unreadMessages', label: t(':count unread messages') },
@@ -102,23 +103,23 @@ export const NAV_SECTIONS: NavSection[] = [
         label: NOTIFICATIONS,
         badge: { count: 'notifications', label: t(':count unread notifications') },
     },
-    { href: '/m/member/search', match: '/m/member/search', icon: Search, label: MEMBER_SEARCH },
-    { href: '/m/member/config', match: ['/m/member/config', '/member/config'], icon: Settings, label: SETTINGS },
+    { href: '/member/search', match: '/member/search', icon: Search, label: MEMBER_SEARCH },
+    { href: '/member/config', match: '/member/config', icon: Settings, label: SETTINGS },
 ];
 
-const WRITE_DIARY: ChromeAction = { href: '/m/diary/new', label: t('Write a %diary%'), icon: Pencil };
-const POST_ACTIVITY: ChromeAction = { href: '/m/timeline/new', label: t('%Post_activity%'), icon: Pencil };
-const CREATE_COMMUNITY: ChromeAction = { href: '/m/community/edit', label: t('Create a %community%'), icon: Plus };
+const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary%'), icon: Pencil };
+const POST_ACTIVITY: ChromeAction = { href: '/timeline/new', label: t('%Post_activity%'), icon: Pencil };
+const CREATE_COMMUNITY: ChromeAction = { href: '/community/edit', label: t('Create a %community%'), icon: Plus };
 
 const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
-    { href: '/m/community/search', label: t('All'), active: active === 'browse' },
-    { href: '/m/community/joined', label: t('Joined'), active: active === 'joined' },
+    { href: '/community/search', label: t('All'), active: active === 'browse' },
+    { href: '/community/joinList', label: t('Joined'), active: active === 'joined' },
     { href: '/community/recent', label: t('Recent activity'), active: active === 'recent' },
 ];
 
 const friendTabs = (active: 'list' | 'manage'): ChromeTab[] => [
-    { href: '/m/friend/list', label: FRIENDS, active: active === 'list' },
-    { href: '/m/friend/manage', label: t('Requests'), active: active === 'manage' },
+    { href: '/friend/list', label: FRIENDS, active: active === 'list' },
+    { href: '/friend/manage', label: t('Requests'), active: active === 'manage' },
 ];
 
 interface CommunityRef {
@@ -127,19 +128,19 @@ interface CommunityRef {
 }
 
 const communityContext = (community: CommunityRef): Chrome['context'] => [
-    { href: `/m/community/${community.id}`, label: community.name },
+    { href: `/community/${community.id}`, label: community.name },
 ];
 
 // Board-scoped context: the community crumb plus the board itself, shared by a board's detail
 // (show) and edit pages — an edit page adds the specific topic/event as a third crumb.
 const topicBoardContext = (community: CommunityRef): Chrome['context'] => [
     ...communityContext(community)!,
-    { href: `/m/community/${community.id}/topic`, label: t('%Topics%') },
+    { href: `/communityTopic/listCommunity/${community.id}`, label: t('%Topics%') },
 ];
 
 const eventBoardContext = (community: CommunityRef): Chrome['context'] => [
     ...communityContext(community)!,
-    { href: `/m/community/${community.id}/event`, label: t('Events') },
+    { href: `/communityEvent/listCommunity/${community.id}`, label: t('Events') },
 ];
 
 interface MemberRef {
@@ -152,28 +153,28 @@ interface MemberRef {
 // the one place the chrome shows the member's name — titles stay generic (FRIENDS, not ":name's
 // %friends%") so the same string never renders twice back to back.
 const memberContext = (member: MemberRef): Chrome['context'] => [
-    { href: `/m/member/${member.id}`, label: member.name },
+    { href: `/member/${member.id}`, label: member.name },
 ];
 
 // The message page's own box map keeps the row paths/bulk actions; the hub tabs live here.
 const messageTabs = (active: string): ChromeTab[] => [
-    { href: '/m/message/receiveList', label: t('Inbox'), active: active === 'receive' },
-    { href: '/m/message/sendList', label: t('Sent Message'), active: active === 'sent' },
-    { href: '/m/message/draftList', label: t('Drafts'), active: active === 'draft' },
-    { href: '/m/message/dustList', label: t('Trash'), active: active === 'trash' },
+    { href: '/message/receiveList', label: t('Inbox'), active: active === 'receive' },
+    { href: '/message/sendList', label: t('Sent Message'), active: active === 'sent' },
+    { href: '/message/draftList', label: t('Drafts'), active: active === 'draft' },
+    { href: '/message/dustList', label: t('Trash'), active: active === 'trash' },
 ];
 
 type MessageBoxSlug = 'receive' | 'sent' | 'draft' | 'trash';
 
 // Where a message's box crumbs back to (message/show, message/edit's fixed drafts box).
 const MESSAGE_BOX_PARENT: Record<MessageBoxSlug, { href: string; label: ChromeLabel }> = {
-    receive: { href: '/m/message/receiveList', label: t('Inbox') },
-    sent: { href: '/m/message/sendList', label: t('Sent Message') },
-    draft: { href: '/m/message/draftList', label: t('Drafts') },
-    trash: { href: '/m/message/dustList', label: t('Trash') },
+    receive: { href: '/message/receiveList', label: t('Inbox') },
+    sent: { href: '/message/sendList', label: t('Sent Message') },
+    draft: { href: '/message/draftList', label: t('Drafts') },
+    trash: { href: '/message/dustList', label: t('Trash') },
 };
 
-const CONFIG_CONTEXT: Chrome['context'] = [{ href: '/m/member/config', label: SETTINGS }];
+const CONFIG_CONTEXT: Chrome['context'] = [{ href: '/member/config', label: SETTINGS }];
 
 interface OwnerScoped {
     owner: MemberRef;
@@ -191,8 +192,8 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         title: DIARIES,
         tabsLabel: DIARIES,
         tabs: [
-            { href: '/m/diary/list', label: t('All'), active: (props as { variant: string }).variant !== 'friends' },
-            { href: '/m/diary/listFriend', label: FRIENDS, active: (props as { variant: string }).variant === 'friends' },
+            { href: '/diary/list', label: t('All'), active: (props as { variant: string }).variant !== 'friends' },
+            { href: '/diary/listFriend', label: FRIENDS, active: (props as { variant: string }).variant === 'friends' },
         ],
         action: WRITE_DIARY,
     }),
@@ -206,12 +207,12 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     'diary/show': (props) => {
         const { diary } = props as unknown as { diary: { author: MemberRef } };
         return {
-            context: [{ href: `/m/diary/listMember/${diary.author.id}`, label: t(":name's %diary%", { name: diary.author.name }) }],
+            context: [{ href: `/diary/listMember/${diary.author.id}`, label: t(":name's %diary%", { name: diary.author.name }) }],
         };
     },
     'diary/edit': (props) => {
         const { diary } = props as unknown as { diary: { id: number; title: string } };
-        return { context: [{ href: `/m/diary/${diary.id}`, label: diary.title }] };
+        return { context: [{ href: `/diary/${diary.id}`, label: diary.title }] };
     },
     'community/search': () => ({
         mode: 'section',
@@ -251,7 +252,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             title: t('%Topics%'),
             context: communityContext(community),
             action: canPost
-                ? { href: `/m/community/${community.id}/topic/new`, label: t('Create a %topic%'), icon: Plus }
+                ? { href: `/communityTopic/new/${community.id}`, label: t('Create a %topic%'), icon: Plus }
                 : undefined,
         };
     },
@@ -262,7 +263,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             title: t('Events'),
             context: communityContext(community),
             action: canPost
-                ? { href: `/m/community/${community.id}/event/new`, label: t('Create an event'), icon: Plus }
+                ? { href: `/communityEvent/new/${community.id}`, label: t('Create an event'), icon: Plus }
                 : undefined,
         };
     },
@@ -280,7 +281,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { community, topic } = props as unknown as { community: CommunityRef; topic: { id: number; name: string } | null };
         return {
             context: topic
-                ? [...topicBoardContext(community)!, { href: `/m/community/topic/${topic.id}`, label: topic.name }]
+                ? [...topicBoardContext(community)!, { href: `/communityTopic/${topic.id}`, label: topic.name }]
                 : topicBoardContext(community),
         };
     },
@@ -288,7 +289,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { community, event } = props as unknown as { community: CommunityRef; event: { id: number; name: string } | null };
         return {
             context: event
-                ? [...eventBoardContext(community)!, { href: `/m/community/event/${event.id}`, label: event.name }]
+                ? [...eventBoardContext(community)!, { href: `/communityEvent/${event.id}`, label: event.name }]
                 : eventBoardContext(community),
         };
     },
@@ -301,7 +302,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { community } = props as unknown as { community: CommunityRef | null };
         return community
             ? { context: communityContext(community) }
-            : { context: [{ href: '/m/community/search', label: COMMUNITIES }] };
+            : { context: [{ href: '/community/search', label: COMMUNITIES }] };
     },
     // The h1-as-link pattern these replaced put the community/event name in the h1 itself; the
     // crumb now carries it, so the h1 shrinks to the plain section label (existing keys reused).
@@ -314,7 +315,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         return {
             mode: 'contextual',
             title: t('Count of Member'),
-            context: [...eventBoardContext(community)!, { href: `/m/community/event/${event.id}`, label: event.name }],
+            context: [...eventBoardContext(community)!, { href: `/communityEvent/${event.id}`, label: event.name }],
         };
     },
     'timeline/index': () => ({ mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }),
@@ -329,7 +330,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     'timeline/show': (props) => {
         const { post } = props as unknown as { post: { author: MemberRef } };
         return {
-            context: [{ href: `/m/member/${post.author.id}/timeline`, label: post.author.name }],
+            context: [{ href: `/member/${post.author.id}/timeline`, label: post.author.name }],
         };
     },
     'friend/list': (props) => {
@@ -369,9 +370,9 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                           MESSAGE_BOX_PARENT.receive,
                           // Legacy subjects can be empty; fall back as the box pages do so the
                           // crumb link keeps an accessible name.
-                          { href: `/m/message/read/${parentId}`, label: parentSubject || t('(No subject)') },
+                          { href: `/message/read/${parentId}`, label: parentSubject || t('(No subject)') },
                       ]
-                    : [{ href: '/m/message', label: MESSAGES }],
+                    : [{ href: '/message', label: MESSAGES }],
         };
     },
     'member/search': () => ({ mode: 'section', title: MEMBER_SEARCH, gap: '6' }),
@@ -399,9 +400,9 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'community/topic/show': { foreground: true },
     'community/event/show': { foreground: true },
     'diary/show': { foreground: true },
-    'diary/new': { context: [{ href: '/m/diary/list', label: DIARIES }] },
+    'diary/new': { context: [{ href: '/diary/list', label: DIARIES }] },
     'timeline/show': { foreground: true },
-    'timeline/new': { context: [{ href: '/m/timeline', label: ACTIVITY }] },
+    'timeline/new': { context: [{ href: '/timeline', label: ACTIVITY }] },
 };
 
 /**

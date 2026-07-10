@@ -33,7 +33,7 @@ export default function TimelineNew({
                         e.preventDefault();
                         // forceFormData: the upload needs a multipart body, which Inertia uses
                         // automatically once a File is present but not for an initially-null field.
-                        post('/m/timeline/create', { forceFormData: true });
+                        post('/timeline/create', { forceFormData: true });
                     }}
                     className="space-y-4"
                 >

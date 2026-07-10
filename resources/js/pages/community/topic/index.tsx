@@ -32,7 +32,7 @@ export default function CommunityTopicIndex() {
                             {topics.data.map((topic) => (
                                 <EntryRow
                                     key={topic.id}
-                                    href={`/m/community/topic/${topic.id}`}
+                                    href={`/communityTopic/${topic.id}`}
                                     leading={<Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} color={topic.author?.avatarColor ?? null} size="sm" decorative />}
                                     title={topic.name}
                                     meta={[topic.author?.name ?? t('Withdrawn member'), formatDate(topic.updatedAt)]}

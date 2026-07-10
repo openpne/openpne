@@ -46,7 +46,7 @@ function Disabled() {
         <form
             onSubmit={(e: FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
-                form.post('/m/member/config/mfa/enable');
+                form.post('/member/config/mfa/enable');
             }}
         >
             <div className="space-y-4">
@@ -102,7 +102,7 @@ function Pending({ qrCode, secret, requiresPassword }: { qrCode: string; secret:
                     // Send the password only when the form actually shows it (the server treats
                     // an empty string as absent either way).
                     form.transform((data) => (data.current_password === '' ? { code: data.code } : data));
-                    form.post('/m/member/config/mfa/confirm');
+                    form.post('/member/config/mfa/confirm');
                 }}
             >
                 <div className="space-y-4">
@@ -133,7 +133,7 @@ function Pending({ qrCode, secret, requiresPassword }: { qrCode: string; secret:
                             type="button"
                             variant="outline"
                             disabled={form.processing || cancel.processing}
-                            onClick={() => cancel.post('/m/member/config/mfa/disable')}
+                            onClick={() => cancel.post('/member/config/mfa/disable')}
                         >
                             {t('Cancel set-up')}
                         </Button>
@@ -172,7 +172,7 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                     <form
                         onSubmit={(e: FormEvent<HTMLFormElement>) => {
                             e.preventDefault();
-                            regenerate.post('/m/member/config/mfa/recovery-codes');
+                            regenerate.post('/member/config/mfa/recovery-codes');
                         }}
                         className="space-y-4"
                     >
@@ -203,7 +203,7 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                     <form
                         onSubmit={(e: FormEvent<HTMLFormElement>) => {
                             e.preventDefault();
-                            disable.post('/m/member/config/mfa/disable');
+                            disable.post('/member/config/mfa/disable');
                         }}
                         className="space-y-4"
                     >

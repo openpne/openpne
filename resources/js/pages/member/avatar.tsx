@@ -63,7 +63,7 @@ export default function MemberAvatar() {
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        upload.post('/m/member/avatar', { onSuccess: () => upload.reset() });
+                        upload.post('/member/avatar', { onSuccess: () => upload.reset() });
                     }}
                     className="space-y-3"
                 >
@@ -87,7 +87,7 @@ export default function MemberAvatar() {
                     <form
                         onSubmit={(e) => {
                             e.preventDefault();
-                            remove.delete('/m/member/avatar', { preserveScroll: true });
+                            remove.delete('/member/avatar', { preserveScroll: true });
                         }}
                     >
                         <button
@@ -105,7 +105,7 @@ export default function MemberAvatar() {
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        color.post('/m/member/avatar/color', {
+                        color.post('/member/avatar/color', {
                             preserveScroll: true,
                             // Rebase so the save button disarms until the member picks something new.
                             onSuccess: () => color.setDefaults(),

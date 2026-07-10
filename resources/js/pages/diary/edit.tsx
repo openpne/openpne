@@ -43,7 +43,7 @@ export default function DiaryEdit() {
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        post(`/m/diary/update/${diary.id}`, { forceFormData: true });
+                        post(`/diary/update/${diary.id}`, { forceFormData: true });
                     }}
                     className="space-y-4"
                 >

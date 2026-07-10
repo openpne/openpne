@@ -46,14 +46,14 @@ export default function MemberShow() {
                             <InitialBadge aria-hidden name={owner.name} color={owner.avatarColor} className="size-20 rounded-full text-2xl" />
                         )}
                         {isSelf && (
-                            <Link href="/m/member/avatar" className="text-xs text-link hover:underline">
+                            <Link href="/member/avatar" className="text-xs text-link hover:underline">
                                 {t('Edit profile image')}
                             </Link>
                         )}
                     </div>
                     <h1 className="min-w-0 flex-1 break-words text-xl font-semibold text-foreground">{owner.name}</h1>
                     {isSelf && (
-                        <Link href="/m/member/edit/profile" className="shrink-0 text-sm text-link hover:underline">
+                        <Link href="/member/edit/profile" className="shrink-0 text-sm text-link hover:underline">
                             {t('Edit Profile')}
                         </Link>
                     )}
@@ -64,22 +64,22 @@ export default function MemberShow() {
                 {!isSelf && (
                     <div className="flex flex-wrap items-center gap-3">
                         {friendStatus === 'none' && (
-                            <ActionLink href={`/m/friend/link?id=${owner.id}`}>
+                            <ActionLink href={`/friend/link?id=${owner.id}`}>
                                 <UserPlus className="size-4" strokeWidth={2.25} aria-hidden />
                                 {t('Send a %friend% request')}
                             </ActionLink>
                         )}
                         {friendStatus === 'sent' && (
-                            <Link href="/m/friend/manage" className="text-sm text-muted-foreground hover:underline">
+                            <Link href="/friend/manage" className="text-sm text-muted-foreground hover:underline">
                                 {t('%Friend% request pending.')}
                             </Link>
                         )}
                         {friendStatus === 'received' && (
-                            <Link href="/m/friend/manage" className="text-sm text-link hover:underline">
+                            <Link href="/friend/manage" className="text-sm text-link hover:underline">
                                 {t(':name sent you a %friend% request.', { name: owner.name })}
                             </Link>
                         )}
-                        <ActionLink href={`/m/message/sendToFriend?id=${owner.id}`} variant="outline">
+                        <ActionLink href={`/message/sendToFriend?id=${owner.id}`} variant="outline">
                             <Mail className="size-4" strokeWidth={2.25} aria-hidden />
                             {t('Send a message')}
                         </ActionLink>
@@ -91,16 +91,16 @@ export default function MemberShow() {
                 The list/joined routes accept ?id so they scope to this owner. */}
             <Panel flush>
                 <List>
-                    <ListRow href={`/m/diary/listMember/${owner.id}`} chevron>
+                    <ListRow href={`/diary/listMember/${owner.id}`} chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Diary%')}</span>
                     </ListRow>
-                    <ListRow href={`/m/member/${owner.id}/timeline`} chevron>
+                    <ListRow href={`/member/${owner.id}/timeline`} chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Activity%')}</span>
                     </ListRow>
-                    <ListRow href={`/m/friend/list?id=${owner.id}`} chevron>
+                    <ListRow href={`/friend/list?id=${owner.id}`} chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Friends%')}</span>
                     </ListRow>
-                    <ListRow href={`/m/community/joined?id=${owner.id}`} chevron>
+                    <ListRow href={`/community/joinList?id=${owner.id}`} chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Communities%')}</span>
                     </ListRow>
                 </List>

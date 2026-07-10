@@ -18,7 +18,7 @@ export default function BlockRemove() {
     function submit() {
         setSubmitting(true);
         router.post(
-            `/m/block/remove/${target.id}`,
+            `/block/remove/${target.id}`,
             {},
             { onFinish: () => setSubmitting(false) },
         );
@@ -38,7 +38,7 @@ export default function BlockRemove() {
                     <Button type="button" onClick={submit} loading={submitting}>
                         {title}
                     </Button>
-                    <Link href="/m/block/list" className="text-sm text-link hover:underline">
+                    <Link href="/block/list" className="text-sm text-link hover:underline">
                         {t("Cancel")}
                     </Link>
                 </div>

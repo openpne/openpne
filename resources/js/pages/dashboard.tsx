@@ -39,21 +39,21 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
         <Panel flush title={t('Notices')}>
             <List>
                 {friendRequests > 0 && (
-                    <ListRow href="/m/friend/manage" chevron>
+                    <ListRow href="/friend/manage" chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
                             {t(':count pending %friend% requests', { count: friendRequests })}
                         </span>
                     </ListRow>
                 )}
                 {unreadMessages > 0 && (
-                    <ListRow href="/m/message" chevron>
+                    <ListRow href="/message" chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
                             {t(':count unread messages', { count: unreadMessages })}
                         </span>
                     </ListRow>
                 )}
                 {communityApprovals.map((approval) => (
-                    <ListRow key={approval.communityId} href={`/m/community/${approval.communityId}/pending`} chevron>
+                    <ListRow key={approval.communityId} href={`/community/member/pending?id=${approval.communityId}`} chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
                             {t(':count join requests for :community', { count: approval.count, community: approval.communityName })}
                         </span>
@@ -88,7 +88,7 @@ function DigestSection({ title, viewAllHref, extra, children }: { title: string;
 function TimelineRow({ post }: { post: TimelinePostEntry }) {
     return (
         <EntryRow
-            href={`/m/timeline/${post.id}`}
+            href={`/timeline/${post.id}`}
             leading={<Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="sm" decorative />}
             title={post.body}
             titleClassName="line-clamp-2 text-sm text-foreground"
@@ -123,13 +123,13 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground">{t('Find people and places to fill your home.')}</p>
                     <div className="mt-4">
                         <List>
-                            <ListRow href="/m/member/search" chevron>
+                            <ListRow href="/member/search" chevron>
                                 <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search members')}</span>
                             </ListRow>
-                            <ListRow href="/m/community/search" chevron>
+                            <ListRow href="/community/search" chevron>
                                 <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search %communities%')}</span>
                             </ListRow>
-                            <ListRow href="/m/diary/new" chevron>
+                            <ListRow href="/diary/new" chevron>
                                 <span className="min-w-0 flex-1 text-sm text-foreground">{t('Post %diary%')}</span>
                             </ListRow>
                         </List>
@@ -140,9 +140,9 @@ export default function Dashboard() {
                     {diaries.length > 0 && (
                         <DigestSection
                             title={t('Latest %diaries%')}
-                            viewAllHref="/m/diary/list"
+                            viewAllHref="/diary/list"
                             extra={
-                                <Link href="/m/diary/listFriend" className="text-link hover:underline">
+                                <Link href="/diary/listFriend" className="text-link hover:underline">
                                     {t('%Diaries% of %My_friends%')}
                                 </Link>
                             }
@@ -154,7 +154,7 @@ export default function Dashboard() {
                     )}
 
                     {timeline.length > 0 && (
-                        <DigestSection title={t('%Activity%')} viewAllHref="/m/timeline">
+                        <DigestSection title={t('%Activity%')} viewAllHref="/timeline">
                             {timeline.map((post) => (
                                 <TimelineRow key={post.id} post={post} />
                             ))}
@@ -170,7 +170,7 @@ export default function Dashboard() {
                     )}
 
                     {myDiaries.length > 0 && (
-                        <DigestSection title={t('My recent %diaries%')} viewAllHref={`/m/diary/listMember/${user.id}`}>
+                        <DigestSection title={t('My recent %diaries%')} viewAllHref={`/diary/listMember/${user.id}`}>
                             {myDiaries.map((diary) => (
                                 <DiaryRow key={diary.id} diary={diary} showAuthor={false} />
                             ))}

@@ -95,7 +95,7 @@ export default function MemberEditProfile() {
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        post('/m/member/edit/profile');
+                        post('/member/edit/profile');
                     }}
                     className="space-y-5"
                 >
