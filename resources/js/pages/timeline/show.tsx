@@ -104,10 +104,6 @@ export default function TimelineShow() {
                     </Button>
                 </form>
             </Panel>
-
-            <Link href={`/m/member/${post.author.id}/timeline`} className="text-sm text-link hover:underline">
-                {t(":name's %activity%", { name: post.author.name })}
-            </Link>
         </>
     );
 }

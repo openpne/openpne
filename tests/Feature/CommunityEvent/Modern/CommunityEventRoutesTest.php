@@ -217,6 +217,7 @@ class CommunityEventRoutesTest extends TestCase
             ->get(route('communityEvent.modern.member_list', $event))
             ->assertInertia(fn ($page) => $page
                 ->component('community/event/members')
+                ->where('community.id', $community->getKey())
                 ->where('event.id', $event->getKey())
                 ->where('participants.data.0.id', $member->getKey())
             );

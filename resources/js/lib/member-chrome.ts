@@ -129,6 +129,29 @@ const communityContext = (community: CommunityRef): Chrome['context'] => [
     { href: `/m/community/${community.id}`, label: community.name },
 ];
 
+// Board-scoped context: the community crumb plus the board itself, shared by a board's detail
+// (show) and edit pages — an edit page adds the specific topic/event as a third crumb.
+const topicBoardContext = (community: CommunityRef): Chrome['context'] => [
+    ...communityContext(community)!,
+    { href: `/m/community/${community.id}/topic`, label: t('%Topics%') },
+];
+
+const eventBoardContext = (community: CommunityRef): Chrome['context'] => [
+    ...communityContext(community)!,
+    { href: `/m/community/${community.id}/event`, label: t('Events') },
+];
+
+interface MemberRef {
+    id: number;
+    name: string;
+}
+
+// A contextual page about another member (their diary archive, friends, communities): crumb back
+// to that member's profile, the closest thing those lists have to a canonical parent.
+const memberContext = (member: MemberRef): Chrome['context'] => [
+    { href: `/m/member/${member.id}`, label: member.name },
+];
+
 // The message page's own box map keeps the row paths/bulk actions; the hub tabs live here.
 const messageTabs = (active: string): ChromeTab[] => [
     { href: '/m/message/receiveList', label: t('Inbox'), active: active === 'receive' },
@@ -137,8 +160,20 @@ const messageTabs = (active: string): ChromeTab[] => [
     { href: '/m/message/dustList', label: t('Trash'), active: active === 'trash' },
 ];
 
+type MessageBoxSlug = 'receive' | 'sent' | 'draft' | 'trash';
+
+// Where a message's box crumbs back to (message/show, message/edit's fixed drafts box).
+const MESSAGE_BOX_PARENT: Record<MessageBoxSlug, { href: string; label: ChromeLabel }> = {
+    receive: { href: '/m/message/receiveList', label: t('Inbox') },
+    sent: { href: '/m/message/sendList', label: t('Sent Message') },
+    draft: { href: '/m/message/draftList', label: t('Drafts') },
+    trash: { href: '/m/message/dustList', label: t('Trash') },
+};
+
+const CONFIG_CONTEXT: Chrome['context'] = [{ href: '/m/member/config', label: SETTINGS }];
+
 interface OwnerScoped {
-    owner: { name: string };
+    owner: MemberRef;
     isOwner: boolean;
 }
 
@@ -158,6 +193,23 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         ],
         action: WRITE_DIARY,
     }),
+    // Another member's diary archive (listMember): a crumb back to their profile. Not promoted to
+    // 'contextual' mode — the page already carries its own period-suffixed PageHeading and the
+    // owner-only write action, so only the crumb is added here.
+    'diary/list': (props) => {
+        const { owner, isOwner } = props as unknown as OwnerScoped;
+        return isOwner ? {} : { context: memberContext(owner) };
+    },
+    'diary/show': (props) => {
+        const { diary } = props as unknown as { diary: { author: MemberRef } };
+        return {
+            context: [{ href: `/m/diary/listMember/${diary.author.id}`, label: t(":name's %diary%", { name: diary.author.name }) }],
+        };
+    },
+    'diary/edit': (props) => {
+        const { diary } = props as unknown as { diary: { id: number; title: string } };
+        return { context: [{ href: `/m/diary/${diary.id}`, label: diary.title }] };
+    },
     'community/search': () => ({
         mode: 'section',
         title: COMMUNITIES,
@@ -177,7 +229,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                   tabs: communityTabs('joined'),
                   action: CREATE_COMMUNITY,
               }
-            : { mode: 'contextual', title: t(":name's %communities%", { name: owner.name }) };
+            : { mode: 'contextual', title: t(":name's %communities%", { name: owner.name }), context: memberContext(owner) };
     },
     'community/recent': () => ({
         mode: 'section',
@@ -213,14 +265,28 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     },
     'community/topic/show': (props) => {
         const { community } = props as unknown as { community: CommunityRef };
-        return {
-            context: [...communityContext(community)!, { href: `/m/community/${community.id}/topic`, label: t('%Topics%') }],
-        };
+        return { context: topicBoardContext(community) };
     },
     'community/event/show': (props) => {
         const { community } = props as unknown as { community: CommunityRef };
+        return { context: eventBoardContext(community) };
+    },
+    // Edit mode's third crumb is the topic/event being edited (the page it returns to on cancel);
+    // create mode stops at the board, matching diary/edit vs diary/new.
+    'community/topic/edit': (props) => {
+        const { community, topic } = props as unknown as { community: CommunityRef; topic: { id: number; name: string } | null };
         return {
-            context: [...communityContext(community)!, { href: `/m/community/${community.id}/event`, label: t('Events') }],
+            context: topic
+                ? [...topicBoardContext(community)!, { href: `/m/community/topic/${topic.id}`, label: topic.name }]
+                : topicBoardContext(community),
+        };
+    },
+    'community/event/edit': (props) => {
+        const { community, event } = props as unknown as { community: CommunityRef; event: { id: number; name: string } | null };
+        return {
+            context: event
+                ? [...eventBoardContext(community)!, { href: `/m/community/event/${event.id}`, label: event.name }]
+                : eventBoardContext(community),
         };
     },
     'community/pending': (props) => {
@@ -231,18 +297,40 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { community } = props as unknown as { community: CommunityRef | null };
         return community ? { context: communityContext(community) } : {};
     },
+    // The h1-as-link pattern these replaced put the community/event name in the h1 itself; the
+    // crumb now carries it, so the h1 shrinks to the plain section label (existing keys reused).
+    'community/members': (props) => {
+        const { community } = props as unknown as { community: CommunityRef };
+        return { mode: 'contextual', title: t('Members'), context: communityContext(community) };
+    },
+    'community/event/members': (props) => {
+        const { community, event } = props as unknown as { community: CommunityRef; event: { id: number; name: string } };
+        return {
+            mode: 'contextual',
+            title: t('Count of Member'),
+            context: [...eventBoardContext(community)!, { href: `/m/community/event/${event.id}`, label: event.name }],
+        };
+    },
     'timeline/index': () => ({ mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }),
     'timeline/member': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
             ? { mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }
-            : { mode: 'contextual', title: t(":name's %activity%", { name: owner.name }) };
+            : { mode: 'contextual', title: t(":name's %activity%", { name: owner.name }), context: memberContext(owner) };
+    },
+    // Crumb label is the bare author name (as diary/list's crumb is): the page's own h1 already
+    // reads ":name's %activity%", so the full phrase here would render twice back to back.
+    'timeline/show': (props) => {
+        const { post } = props as unknown as { post: { author: MemberRef } };
+        return {
+            context: [{ href: `/m/member/${post.author.id}/timeline`, label: post.author.name }],
+        };
     },
     'friend/list': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
             ? { mode: 'section', title: FRIENDS, tabsLabel: FRIENDS, tabs: friendTabs('list') }
-            : { mode: 'contextual', title: t(":name's %friends%", { name: owner.name }) };
+            : { mode: 'contextual', title: t(":name's %friends%", { name: owner.name }), context: memberContext(owner) };
     },
     'friend/manage': () => ({
         mode: 'section',
@@ -259,6 +347,22 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabsLabel: MESSAGES,
         tabs: messageTabs((props as { box: string }).box),
     }),
+    'message/show': (props) => {
+        const { message } = props as unknown as { message: { box: MessageBoxSlug } };
+        return { context: [MESSAGE_BOX_PARENT[message.box]] };
+    },
+    // Reply crumbs back to the original message (its box, then the message itself); a fresh compose
+    // crumbs to the Messages hub. parentSubject is null except when replying.
+    'message/compose': (props) => {
+        const { parentId, parentSubject } = props as unknown as { parentId: number | null; parentSubject: string | null };
+        return {
+            gap: '6',
+            context:
+                parentId !== null && parentSubject !== null
+                    ? [MESSAGE_BOX_PARENT.receive, { href: `/m/message/read/${parentId}`, label: parentSubject }]
+                    : [{ href: '/m/message', label: MESSAGES }],
+        };
+    },
     'member/search': () => ({ mode: 'section', title: MEMBER_SEARCH, gap: '6' }),
     'member/config': () => ({ mode: 'section', title: SETTINGS, gap: '8' }),
     'notifications/index': () => ({ mode: 'section', title: NOTIFICATIONS }),
@@ -271,22 +375,49 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'friend/link': { width: 'narrow' },
     'member/invite': { width: 'narrow' },
     'block/list': { gap: '6' },
-    'member/avatar': { gap: '6' },
-    'member/edit-profile': { gap: '6' },
+    'member/avatar': { gap: '6', context: CONFIG_CONTEXT },
+    'member/edit-profile': { gap: '6', context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
-    'message/compose': { gap: '6' },
-    'message/edit': { gap: '6' },
-    'member/config/email': { gap: '6' },
-    'member/config/password': { gap: '6' },
-    'member/config/mfa': { gap: '6' },
-    'member/config/notifications': { gap: '6' },
-    'member/config/withdrawal': { gap: '6' },
+    'message/edit': { gap: '6', context: [MESSAGE_BOX_PARENT.draft] },
+    'member/config/email': { gap: '6', context: CONFIG_CONTEXT },
+    'member/config/password': { gap: '6', context: CONFIG_CONTEXT },
+    'member/config/mfa': { gap: '6', context: CONFIG_CONTEXT },
+    'member/config/notifications': { gap: '6', context: CONFIG_CONTEXT },
+    'member/config/withdrawal': { gap: '6', context: CONFIG_CONTEXT },
     'community/show': { foreground: true },
     'community/topic/show': { foreground: true },
     'community/event/show': { foreground: true },
     'diary/show': { foreground: true },
+    'diary/new': { context: [{ href: '/m/diary/list', label: DIARIES }] },
     'timeline/show': { foreground: true },
+    'timeline/new': { context: [{ href: '/m/timeline', label: ACTIVITY }] },
 };
+
+/**
+ * Modern components with intentionally no context crumb, checked by ChromeContextCoverageTest so a
+ * new page cannot land unclassified. Hub tops and tab-switch pages have no parent to crumb to;
+ * member/show and community/show are top-level entities no surveyed SNS crumbs back from; the rest
+ * are orphaned entry points with no inbound nav today (tracked separately, out of this pass's scope).
+ */
+export const NO_CONTEXT_COMPONENTS: readonly string[] = [
+    'dashboard',
+    'diary/feed',
+    'community/search',
+    'community/recent',
+    'community/show',
+    'timeline/index',
+    'message/index',
+    'member/search',
+    'member/config',
+    'notifications/index',
+    'friend/manage',
+    'member/show',
+    'block/add',
+    'block/list',
+    'block/remove',
+    'friend/link',
+    'member/invite',
+];
 
 export function resolveChrome(
     component: string,
