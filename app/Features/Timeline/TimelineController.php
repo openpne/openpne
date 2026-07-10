@@ -141,11 +141,15 @@ class TimelineController extends Controller
             ->with('status', __('Reply posted.'));
     }
 
-    public function showDelete(Request $request, TimelinePost $timelinePost): View
+    public function showDelete(Request $request, TimelinePost $timelinePost): View|RedirectResponse
     {
         abort_unless($this->viewer()->is($timelinePost->member), 404);
 
-        // Classic-only GET confirm page — Modern confirms delete inline (Radix AlertDialog).
+        // Modern confirms delete inline (Radix AlertDialog) — send a Modern viewer to the post's thread.
+        if (SurfaceResolver::resolve($request, 'timeline') === SurfaceResolver::MODERN) {
+            return redirect()->route('timeline.show', ['timelinePost' => $timelinePost->in_reply_to_id ?? $timelinePost->getKey()]);
+        }
+
         return $this->classic('timeline.delete', ['post' => $timelinePost]);
     }
 

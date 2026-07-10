@@ -3,12 +3,21 @@
 namespace Tests\Feature\Modern;
 
 use App\Models\Community;
+use App\Models\CommunityEvent;
+use App\Models\CommunityEventComment;
 use App\Models\CommunityMember;
+use App\Models\CommunityTopic;
+use App\Models\CommunityTopicComment;
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
+use App\Models\Message;
+use App\Models\MessageRecipient;
+use App\Models\TimelinePost;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -19,29 +28,28 @@ use Tests\TestCase;
  * Blade page. Each member-facing canonical GET below is asserted to render Inertia under
  * surface_mode=modern_only.
  *
- * KNOWN_LEAKS are the canonical GETs that still fall back to Classic — the OpenPNE 3 delete/join/quit
- * confirm pages (Modern confirms inline instead) plus the email-change confirm. Each is Modernized or
- * blocked as its Modern surface lands, emptying this list.
+ * KNOWN_LEAKS is empty: no canonical GET renders Classic under modern_only anymore. The const and
+ * its guards stay as the tripwire — a future Classic-only page fails the classification test until
+ * it is Modernized (COVERED) or consciously allowlisted here.
+ *
+ * REDIRECTS_UNDER_MODERN are the OpenPNE 3 confirm pages (Modern confirms inline instead): under
+ * modern_only a direct GET redirects to its context page rather than rendering a page.
  */
 class ModernOnlyCoverageTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Canonical GET route names that STILL render Classic under modern_only (to be closed). */
-    private const KNOWN_LEAKS = [
-        'community.join.show',                  // CommunityController::showJoin        -> community.join
-        'community.quit.show',                  // CommunityController::showQuit        -> community.quit
-        'community.delete.show',                // CommunityController::showDelete      -> community.delete
-        'communityEvent.delete.show',           // CommunityEventController::showDelete
-        'communityEvent.comment.delete.show',   // CommunityEventCommentController::showDelete
-        'communityTopic.delete.show',           // CommunityTopicController::showDelete
-        'communityTopic.comment.delete.show',   // CommunityTopicCommentController::showDelete
-        'diary.delete.show',                    // DiaryController::showDelete          -> diary.delete
-        'diary.comment.delete.show',            // DiaryCommentController::showDelete   -> diary.comment.delete
-        'timeline.delete.show',                 // TimelineController::showDelete       -> timeline.delete
-        'friend.unlink.show',                   // FriendController::showUnlink         -> friend.unlink.submit
-        'message.trash.purge.confirm',          // MessageController::purgeConfirm      -> message.purge_confirm
-        'member.config.email.confirm',          // MemberConfigController::confirmEmailForm -> member.email-change-confirm
+    /** Canonical GET route names that STILL render Classic under modern_only (kept empty). */
+    private const KNOWN_LEAKS = [];
+
+    /**
+     * Parameterless OpenPNE 3 confirm pages: Classic renders a confirm Blade, Modern confirms inline,
+     * so under modern_only a direct GET redirects to the community. Their parameterized siblings
+     * (delete/unlink/purge confirms) are asserted case-by-case below, like the show pages.
+     */
+    private const REDIRECTS_UNDER_MODERN = [
+        'community.join.show',
+        'community.quit.show',
     ];
 
     /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */
@@ -172,14 +180,13 @@ class ModernOnlyCoverageTest extends TestCase
     }
 
     /**
-     * Keeps KNOWN_LEAKS from going stale: every allowlisted name must still be a registered route. A
-     * leak that is Modernized/renamed but left here — or a typo — fails, so shrinking the allowlist to
-     * zero cannot be silently forgotten.
+     * Keeps the allowlists from going stale: every listed name must still be a registered route. A
+     * page that is renamed/removed but left here — or a typo — fails, so the lists stay honest.
      */
-    public function test_known_leaks_are_registered_routes(): void
+    public function test_allowlisted_names_are_registered_routes(): void
     {
-        foreach (self::KNOWN_LEAKS as $name) {
-            $this->assertTrue(Route::has($name), "KNOWN_LEAKS route [{$name}] no longer exists — remove it (Modernized?) or fix the name.");
+        foreach ([...self::KNOWN_LEAKS, ...self::REDIRECTS_UNDER_MODERN] as $name) {
+            $this->assertTrue(Route::has($name), "Allowlisted route [{$name}] no longer exists — remove it or fix the name.");
         }
     }
 
@@ -220,39 +227,129 @@ class ModernOnlyCoverageTest extends TestCase
             if ($route->getActionName() === 'Closure') {
                 continue;
             }
-            if (in_array($name, self::COVERED, true) || in_array($name, self::KNOWN_LEAKS, true)) {
+            if (in_array($name, self::COVERED, true) || in_array($name, self::KNOWN_LEAKS, true)
+                || in_array($name, self::REDIRECTS_UNDER_MODERN, true)) {
                 continue;
             }
 
             $unclassified[] = "{$name} ({$uri})";
         }
 
-        $this->assertSame([], $unclassified, 'Unclassified parameterless modern_only pages (add to COVERED once Modernized, or to KNOWN_LEAKS): '.implode(', ', $unclassified));
+        $this->assertSame([], $unclassified, 'Unclassified parameterless modern_only pages (add to COVERED once Modernized, to REDIRECTS_UNDER_MODERN for a confirm page, or to KNOWN_LEAKS): '.implode(', ', $unclassified));
     }
 
     /**
-     * Asserts the VALID-token render, not only the invalid-token redirect — otherwise the leak hides
-     * behind the redirect. Today the valid-token confirm renders a Classic Blade (allowlisted); it
-     * turns Inertia and drops out of KNOWN_LEAKS once Modernized.
+     * The confirm pages that survive as pages under modern_only: the token landings from the
+     * email-change mails. Asserts the VALID-token render, not only the invalid-token redirect —
+     * otherwise a Classic render could hide behind the redirect. The cancel link is guest-reachable
+     * (it proves control of the old address), so that one is asserted logged-out.
      */
-    public function test_valid_token_email_change_confirm_is_a_known_classic_leak(): void
+    public function test_email_change_token_landings_render_modern_under_modern_only(): void
     {
-        $this->assertContains('member.config.email.confirm', self::KNOWN_LEAKS);
-
         $member = Member::factory()->create();
-        $raw = str_repeat('a', 40);
+        $confirmToken = str_repeat('a', 40);
+        $cancelToken = str_repeat('b', 40);
         EmailChangeRequest::create([
             'member_id' => $member->getKey(),
             'new_email' => 'new@example.com',
-            'token' => hash('sha256', $raw),
+            'token' => hash('sha256', $confirmToken),
+            'cancel_token' => hash('sha256', $cancelToken),
             'created_at' => now(),
         ]);
 
-        $response = $this->actingAs($member)->get("/member/config/email/confirm/{$raw}");
+        $this->actingAs($member)->get("/member/config/email/confirm/{$confirmToken}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('auth/email-change-confirm')
+                ->where('newEmail', 'new@example.com'));
 
-        // Renders 200 but as Classic (the OP3 body id proves it is Blade, not Inertia) — the leak to
-        // close by Modernizing this confirm.
-        $response->assertOk();
-        $this->assertStringContainsString('page_member_emailChangeConfirm', $response->getContent());
+        $this->get("/member/config/email/cancel/{$cancelToken}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('auth/email-change-cancel')
+                ->where('newEmail', 'new@example.com'));
+    }
+
+    /**
+     * The parameterless confirm pages: redirect under modern_only (Modern confirms inline), still a
+     * Classic confirm page under a coexistence mode.
+     */
+    public function test_join_and_quit_confirms_redirect_under_modern_only_and_render_under_classic(): void
+    {
+        $member = Member::factory()->create();
+        $toJoin = Community::factory()->create();
+        $toQuit = Community::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $toQuit->getKey(), 'member_id' => $member->getKey()]);
+
+        $this->actingAs($member)->get("/community/join?id={$toJoin->getKey()}")
+            ->assertRedirect(route('community.show', $toJoin));
+        $this->actingAs($member)->get("/community/quit?id={$toQuit->getKey()}")
+            ->assertRedirect(route('community.show', $toQuit));
+
+        config()->set('openpne.surface_mode', 'classic_default');
+
+        $this->actingAs($member)->get("/community/join?id={$toJoin->getKey()}")
+            ->assertOk()->assertSee('id="page_community_join"', false);
+        $this->actingAs($member)->get("/community/quit?id={$toQuit->getKey()}")
+            ->assertOk()->assertSee('id="page_community_quit"', false);
+    }
+
+    /**
+     * The parameterized OpenPNE 3 confirm pages (delete/unlink/purge): under modern_only each
+     * redirects to its context page — the screen whose inline dialog replaces the confirm.
+     */
+    public function test_parameterized_confirm_pages_redirect_under_modern_only(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $diary = Diary::factory()->create(['member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('diary.delete.show', $diary))
+            ->assertRedirect(route('diary.show', $diary));
+
+        $comment = DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('diary.comment.delete.show', ['comment' => $comment->getKey()]))
+            ->assertRedirect(route('diary.show', $diary));
+
+        $post = TimelinePost::factory()->create(['member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('timeline.delete.show', ['timelinePost' => $post->getKey()]))
+            ->assertRedirect(route('timeline.show', ['timelinePost' => $post->getKey()]));
+
+        $community = Community::factory()->create();
+        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('community.delete.show', $community))
+            ->assertRedirect(route('community.show', $community));
+
+        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('communityTopic.delete.show', $topic))
+            ->assertRedirect(route('communityTopic.show', $topic));
+
+        $topicComment = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('communityTopic.comment.delete.show', ['comment' => $topicComment->getKey()]))
+            ->assertRedirect(route('communityTopic.show', $topic));
+
+        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('communityEvent.delete.show', $event))
+            ->assertRedirect(route('communityEvent.show', $event));
+
+        $eventComment = CommunityEventComment::factory()->create(['community_event_id' => $event->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('communityEvent.comment.delete.show', ['comment' => $eventComment->getKey()]))
+            ->assertRedirect(route('communityEvent.show', $event));
+
+        $friend = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+        ]);
+        $this->actingAs($viewer)->get(route('friend.unlink.show', ['member' => $friend->getKey()]))
+            ->assertRedirect(route('member.profile.show', ['member' => $friend->getKey()]));
+
+        $message = Message::factory()->create(['sender_id' => $friend->getKey()]);
+        MessageRecipient::factory()->create([
+            'message_id' => $message->getKey(),
+            'recipient_id' => $viewer->getKey(),
+            'recipient_deleted_at' => now(),
+        ]);
+        $this->actingAs($viewer)->get(route('message.trash.purge.confirm', ['message' => $message->getKey()]))
+            ->assertRedirect(route('message.trash.show', ['message' => $message->getKey()]));
     }
 }

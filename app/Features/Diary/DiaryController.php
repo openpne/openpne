@@ -251,12 +251,16 @@ class DiaryController extends Controller
             ->with('status', __('%Diary% updated.'));
     }
 
-    public function showDelete(Request $request, Diary $diary): View
+    public function showDelete(Request $request, Diary $diary): View|RedirectResponse
     {
         $viewer = $this->viewer();
         abort_unless($viewer->is($diary->member), 404);
 
-        // Classic-only GET confirm page — Modern confirms delete inline (Radix AlertDialog).
+        // Modern confirms delete inline (Radix AlertDialog) — send a Modern viewer back to the diary.
+        if (SurfaceResolver::resolve($request, 'diary') === SurfaceResolver::MODERN) {
+            return redirect()->route('diary.show', $diary);
+        }
+
         return $this->classic('diary.delete', ['diary' => $diary]);
     }
 
