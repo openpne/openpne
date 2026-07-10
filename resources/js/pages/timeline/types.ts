@@ -4,6 +4,7 @@ export interface TimelinePostAuthor {
     id: number;
     name: string;
     imageUrl: string | null;
+    avatarColor: string | null;
 }
 
 export interface TimelinePostImage {

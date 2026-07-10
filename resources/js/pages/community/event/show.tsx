@@ -73,7 +73,7 @@ export default function CommunityEventShow() {
 
             <Panel bodyClassName="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} size="sm" decorative />
+                    <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} color={event.author?.avatarColor ?? null} size="sm" decorative />
                     {event.author ? (
                         <Link href={`/m/member/${event.author.id}`} className="text-link hover:underline">
                             {event.author.name}

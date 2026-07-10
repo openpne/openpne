@@ -14,7 +14,7 @@ interface ProfileField {
 }
 
 interface ProfilePage {
-    owner: { id: number; name: string; avatarUrl: string | null };
+    owner: { id: number; name: string; avatarUrl: string | null; avatarColor: string | null };
     isSelf: boolean;
     age: number | null;
     /** null = own profile or guest viewer. */
@@ -43,7 +43,7 @@ export default function MemberShow() {
                         {owner.avatarUrl ? (
                             <img src={owner.avatarUrl} alt="" className="size-20 rounded-md object-cover" />
                         ) : (
-                            <InitialBadge aria-hidden name={owner.name} className="size-20 rounded-md text-2xl" />
+                            <InitialBadge aria-hidden name={owner.name} color={owner.avatarColor} className="size-20 rounded-md text-2xl" />
                         )}
                         {isSelf && (
                             <Link href="/m/member/avatar" className="text-xs text-link hover:underline">

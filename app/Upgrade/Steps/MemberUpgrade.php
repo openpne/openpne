@@ -57,9 +57,11 @@ class MemberUpgrade extends UpgradeStep
     {
         // No OpenPNE 3 source; rely on the schema default (null). password_scheme is set
         // by the runner's post-walk wrap pass, not this step. The two_factor_* columns are
-        // opt-in MFA state a member sets up post-migration.
+        // opt-in MFA state a member sets up post-migration; avatar_color is likewise an
+        // OP4-native choice.
         return ['email_verified_at', 'password_scheme', 'remember_token',
-            'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at'];
+            'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
+            'avatar_color'];
     }
 
     public function gaps(): array

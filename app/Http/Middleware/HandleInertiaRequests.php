@@ -34,6 +34,7 @@ class HandleInertiaRequests extends Middleware
                     'name' => $user->name,
                     'email' => $user->email,
                     'imageUrl' => $user->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                    'avatarColor' => $user->avatar_color?->hex(),
                 ] : null,
             ],
             // Shell nav badges: attention counts for the signed-in member, memoized per request so the

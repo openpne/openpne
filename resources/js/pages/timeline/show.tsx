@@ -53,7 +53,7 @@ export default function TimelineShow() {
             <Panel bodyClassName="space-y-2">
                 <div className="flex items-center justify-between gap-3 text-sm">
                     <Link href={`/m/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 font-medium text-link hover:underline">
-                        <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} size="sm" decorative />
+                        <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="sm" decorative />
                         <span className="truncate">{post.author.name}</span>
                     </Link>
                     <span className="shrink-0 text-muted-foreground">{formatDateTime(post.createdAt)}</span>

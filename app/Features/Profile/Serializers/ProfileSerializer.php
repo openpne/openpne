@@ -12,7 +12,7 @@ class ProfileSerializer
     /**
      * @param  'friend'|'sent'|'received'|'none'|null  $friendStatus  null = self or guest viewer
      * @param  Collection<int, ProfileFieldValue>  $fields
-     * @return array{owner: array{id: int, name: string, avatarUrl: ?string}, isSelf: bool, age: ?int, friendStatus: ?string, fields: list<array{name: string, caption: string, value: string}>}
+     * @return array{owner: array{id: int, name: string, avatarUrl: ?string, avatarColor: ?string}, isSelf: bool, age: ?int, friendStatus: ?string, fields: list<array{name: string, caption: string, value: string}>}
      */
     public static function page(Member $owner, Collection $fields, bool $isSelf, string $lang, ?int $age, ?string $friendStatus = null): array
     {
@@ -21,6 +21,7 @@ class ProfileSerializer
                 'id' => $owner->getKey(),
                 'name' => $owner->name,
                 'avatarUrl' => $owner->avatar?->file?->thumbnailUrl(120, 120, square: true),
+                'avatarColor' => $owner->avatar_color?->hex(),
             ],
             'isSelf' => $isSelf,
             'age' => $age,

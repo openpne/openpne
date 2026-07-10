@@ -12,7 +12,7 @@ export function DiaryRow({ diary, showAuthor = false, actions }: { diary: DiaryS
     return (
         <EntryRow
             href={`/m/diary/${diary.id}`}
-            leading={showAuthor ? <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} size="sm" decorative /> : undefined}
+            leading={showAuthor ? <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} size="sm" decorative /> : undefined}
             title={diary.title}
             meta={[showAuthor && diary.author.name, formatDate(diary.createdAt)]}
             commentCount={diary.commentCount}

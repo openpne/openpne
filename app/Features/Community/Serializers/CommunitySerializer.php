@@ -62,6 +62,7 @@ class CommunitySerializer
             'id' => $member->getKey(),
             'name' => $member->name,
             'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'avatarColor' => $member->avatar_color?->hex(),
             'role' => $membership->role->slug(),
         ];
     }
@@ -108,7 +109,7 @@ class CommunitySerializer
      * A pending join applicant: the member identity only (the approval queue shows name + actions).
      * Requires avatar.file to be loaded so a list is not an N+1.
      *
-     * @return array{id: int, name: string, imageUrl: string|null}
+     * @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}
      */
     public static function applicant(Member $member): array
     {
@@ -116,6 +117,7 @@ class CommunitySerializer
             'id' => $member->getKey(),
             'name' => $member->name,
             'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'avatarColor' => $member->avatar_color?->hex(),
         ];
     }
 

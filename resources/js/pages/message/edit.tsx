@@ -53,7 +53,7 @@ export default function MessageEdit() {
                     {draft.recipient && (
                         <div className="flex items-center gap-2 text-sm">
                             <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
-                            <Avatar id={draft.recipient.id} name={draft.recipient.name} src={draft.recipient.imageUrl} size="sm" decorative />
+                            <Avatar id={draft.recipient.id} name={draft.recipient.name} src={draft.recipient.imageUrl} color={draft.recipient.avatarColor} size="sm" decorative />
                             <Link href={`/m/member/${draft.recipient.id}`} className="text-link hover:underline">
                                 {draft.recipient.name}
                             </Link>

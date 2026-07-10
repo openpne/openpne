@@ -6,6 +6,7 @@ use App\Models\Concerns\ClearsPasswordScheme;
 use App\Notifications\Auth\ResetPasswordNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\AvatarColor;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
 use App\Support\Visibility;
@@ -60,6 +61,7 @@ class Member extends Authenticatable
             'is_login_rejected' => 'boolean',
             'profile_visibility' => Visibility::class,
             'two_factor_confirmed_at' => 'datetime',
+            'avatar_color' => AvatarColor::class,
         ];
     }
 
