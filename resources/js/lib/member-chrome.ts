@@ -293,9 +293,12 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { community } = props as unknown as { community: CommunityRef };
         return { mode: 'contextual', title: t('Pending members'), context: communityContext(community) };
     },
+    // Edit mode crumbs to the community; create mode to the hub the create action lives on.
     'community/edit': (props) => {
         const { community } = props as unknown as { community: CommunityRef | null };
-        return community ? { context: communityContext(community) } : {};
+        return community
+            ? { context: communityContext(community) }
+            : { context: [{ href: '/m/community/search', label: COMMUNITIES }] };
     },
     // The h1-as-link pattern these replaced put the community/event name in the h1 itself; the
     // crumb now carries it, so the h1 shrinks to the plain section label (existing keys reused).
@@ -359,7 +362,12 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             gap: '6',
             context:
                 parentId !== null && parentSubject !== null
-                    ? [MESSAGE_BOX_PARENT.receive, { href: `/m/message/read/${parentId}`, label: parentSubject }]
+                    ? [
+                          MESSAGE_BOX_PARENT.receive,
+                          // Legacy subjects can be empty; fall back as the box pages do so the
+                          // crumb link keeps an accessible name.
+                          { href: `/m/message/read/${parentId}`, label: parentSubject || t('(No subject)') },
+                      ]
                     : [{ href: '/m/message', label: MESSAGES }],
         };
     },
