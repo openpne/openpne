@@ -59,7 +59,7 @@ export interface Chrome {
 
 export interface NavSection {
     href: string;
-    /** Canonical URL prefix marking this section active (NavItems normalizes legacy /m/ URLs first). */
+    /** Canonical URL prefix marking this section active. */
     match: string;
     icon: Icon;
     label: ChromeLabel;

@@ -74,7 +74,7 @@ class TimelineController extends Controller
         // A reply permalink re-centered to its thread root; send it to the root's canonical URL so a
         // thread has one address.
         if ($post->getKey() !== $timelinePost) {
-            return redirect()->route(SurfaceResolver::redirectName($request, 'timeline.show'), ['timelinePost' => $post->getKey()]);
+            return redirect()->route('timeline.show', ['timelinePost' => $post->getKey()]);
         }
 
         // ShowTimelinePost already gated the block (null → 404 above); record the author for the
@@ -122,7 +122,7 @@ class TimelineController extends Controller
         $action($viewer, $request->toData(), $request->file('image'));
 
         return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'timeline.member'), ['member' => $viewer->getKey()])
+            ->route('timeline.member', ['member' => $viewer->getKey()])
             ->with('status', __('Posted.'));
     }
 
@@ -137,7 +137,7 @@ class TimelineController extends Controller
         $action($viewer, $root, $request->validated('body'));
 
         return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'timeline.show'), ['timelinePost' => $root->getKey()])
+            ->route('timeline.show', ['timelinePost' => $root->getKey()])
             ->with('status', __('Reply posted.'));
     }
 
@@ -164,12 +164,12 @@ class TimelineController extends Controller
 
         if ($parentId !== null) {
             return redirect()
-                ->route(SurfaceResolver::redirectName($request, 'timeline.show'), ['timelinePost' => $parentId])
+                ->route('timeline.show', ['timelinePost' => $parentId])
                 ->with('status', __('Reply deleted.'));
         }
 
         return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'timeline.member'), ['member' => $viewer->getKey()])
+            ->route('timeline.member', ['member' => $viewer->getKey()])
             ->with('status', __('Post deleted.'));
     }
 

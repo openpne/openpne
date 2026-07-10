@@ -29,7 +29,7 @@ class DiaryCommentController extends Controller
         $action($viewer, $found, $request->validated('body'), $request->file('images', []));
 
         return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'diary.show'), $found)
+            ->route('diary.show', $found)
             ->with('status', __('Comment posted.'));
     }
 
@@ -60,7 +60,7 @@ class DiaryCommentController extends Controller
         }
 
         return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'diary.show'), $diary)
+            ->route('diary.show', $diary)
             ->with('status', __('The comment was deleted.'));
     }
 

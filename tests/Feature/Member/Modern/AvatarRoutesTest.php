@@ -13,18 +13,24 @@ class AvatarRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     public function test_guests_are_redirected_to_login(): void
     {
-        $this->get('/m/member/avatar')->assertRedirect('/login');
-        $this->post('/m/member/avatar')->assertRedirect('/login');
-        $this->delete('/m/member/avatar')->assertRedirect('/login');
-        $this->post('/m/member/avatar/color')->assertRedirect('/login');
+        $this->get('/member/avatar')->assertRedirect('/login');
+        $this->post('/member/avatar')->assertRedirect('/login');
+        $this->delete('/member/avatar')->assertRedirect('/login');
+        $this->post('/member/avatar/color')->assertRedirect('/login');
     }
 
     public function test_modern_edit_renders_inertia_with_null_avatar_when_unset(): void
     {
         $this->actingAs(Member::factory()->create())
-            ->get('/m/member/avatar')
+            ->get('/member/avatar')
             ->assertInertia(fn ($page) => $page->component('member/avatar')->where('avatar', null));
     }
 
@@ -34,7 +40,7 @@ class AvatarRoutesTest extends TestCase
         app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 100, 100));
 
         $this->actingAs($member)
-            ->get('/m/member/avatar')
+            ->get('/member/avatar')
             ->assertInertia(fn ($page) => $page
                 ->component('member/avatar')
                 ->has('avatar.url')
@@ -42,25 +48,25 @@ class AvatarRoutesTest extends TestCase
             );
     }
 
-    public function test_modern_upload_stores_the_avatar_and_redirects_to_the_modern_editor(): void
+    public function test_upload_stores_the_avatar_and_redirects_to_the_editor(): void
     {
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->post('/m/member/avatar', ['image' => UploadedFile::fake()->image('me.png', 20, 20)])
-            ->assertRedirect(route('member.modern.avatar.edit'));
+            ->post('/member/avatar', ['image' => UploadedFile::fake()->image('me.png', 20, 20)])
+            ->assertRedirect(route('member.avatar.edit'));
 
         $this->assertNotNull($member->fresh()->avatar);
     }
 
-    public function test_modern_remove_clears_the_avatar_and_redirects_to_the_modern_editor(): void
+    public function test_remove_clears_the_avatar_and_redirects_to_the_editor(): void
     {
         $member = Member::factory()->create();
         app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 20, 20));
 
         $this->actingAs($member)
-            ->delete('/m/member/avatar')
-            ->assertRedirect(route('member.modern.avatar.edit'));
+            ->delete('/member/avatar')
+            ->assertRedirect(route('member.avatar.edit'));
 
         $this->assertSame(0, $member->fresh()->avatar()->count());
     }
@@ -80,7 +86,7 @@ class AvatarRoutesTest extends TestCase
         $member->forceFill(['avatar_color' => AvatarColor::Teal])->save();
 
         $this->actingAs($member)
-            ->get('/m/member/avatar')
+            ->get('/member/avatar')
             ->assertInertia(fn ($page) => $page
                 ->component('member/avatar')
                 ->where('badgeColor.value', 'teal')
@@ -91,13 +97,13 @@ class AvatarRoutesTest extends TestCase
             );
     }
 
-    public function test_saving_a_color_persists_the_slug_and_redirects_to_the_modern_editor(): void
+    public function test_saving_a_color_persists_the_slug_and_redirects_to_the_editor(): void
     {
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->post('/m/member/avatar/color', ['avatar_color' => 'teal'])
-            ->assertRedirect(route('member.modern.avatar.edit'));
+            ->post('/member/avatar/color', ['avatar_color' => 'teal'])
+            ->assertRedirect(route('member.avatar.edit'));
 
         $this->assertSame(AvatarColor::Teal, $member->fresh()->avatar_color);
     }
@@ -108,8 +114,8 @@ class AvatarRoutesTest extends TestCase
         $member->forceFill(['avatar_color' => AvatarColor::Pink])->save();
 
         $this->actingAs($member)
-            ->post('/m/member/avatar/color', ['avatar_color' => null])
-            ->assertRedirect(route('member.modern.avatar.edit'));
+            ->post('/member/avatar/color', ['avatar_color' => null])
+            ->assertRedirect(route('member.avatar.edit'));
 
         $this->assertNull($member->fresh()->avatar_color);
     }
@@ -119,8 +125,8 @@ class AvatarRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->from('/m/member/avatar')
-            ->post('/m/member/avatar/color', ['avatar_color' => '#ff0000'])
+            ->from('/member/avatar')
+            ->post('/member/avatar/color', ['avatar_color' => '#ff0000'])
             ->assertSessionHasErrors('avatar_color');
 
         $this->assertNull($member->fresh()->avatar_color);

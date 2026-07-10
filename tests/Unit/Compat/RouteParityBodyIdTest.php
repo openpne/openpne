@@ -7,7 +7,6 @@ use App\Compat\Parities\CommunityTopicRouteParity;
 use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\Parities\FriendRouteParity;
 use App\Compat\Parities\MemberRouteParity;
-use App\Support\SurfaceResolver;
 use PHPUnit\Framework\TestCase;
 
 class RouteParityBodyIdTest extends TestCase
@@ -116,18 +115,5 @@ class RouteParityBodyIdTest extends TestCase
         // Form submits render no <body>.
         $this->assertNull($parity->bodyId('member.avatar.update'));
         $this->assertNull($parity->bodyId('member.profile.update'));
-    }
-
-    public function test_modern_route_name_resolves_via_canonical_form(): void
-    {
-        // A /m/* route that falls back to Classic carries the modern name; canonicalizing it
-        // (diary.modern.* -> diary.*) lets the parity derive the same OpenPNE 3 body id.
-        $parity = new DiaryRouteParity;
-
-        $this->assertNull($parity->bodyId('diary.modern.list_member'));
-        $this->assertSame(
-            'page_diary_listMember',
-            $parity->bodyId(SurfaceResolver::canonicalName('diary.modern.list_member')),
-        );
     }
 }

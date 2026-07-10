@@ -34,11 +34,12 @@ class MemberProfileRoutesTest extends TestCase
 
     public function test_modern_renders_the_inertia_component(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         $this->fieldFor($owner, Visibility::Members, 'v');
 
-        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/show')
                 ->where('profile.owner.id', $owner->getKey())
@@ -49,11 +50,12 @@ class MemberProfileRoutesTest extends TestCase
 
     public function test_modern_owner_carries_the_chosen_badge_color_as_hex(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $owner = Member::factory()->create();
         $owner->forceFill(['avatar_color' => AvatarColor::Green])->save();
         $viewer = Member::factory()->create();
 
-        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/show')
                 ->where('profile.owner.avatarColor', '#15803d')
@@ -107,10 +109,11 @@ class MemberProfileRoutesTest extends TestCase
 
     public function test_a_stranger_profile_offers_the_friend_request_entry(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
 
-        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/show')
                 ->where('profile.friendStatus', 'none'));
@@ -118,6 +121,7 @@ class MemberProfileRoutesTest extends TestCase
 
     public function test_a_friend_profile_has_no_request_entry(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         DB::table('friendships')->insert([
@@ -125,42 +129,45 @@ class MemberProfileRoutesTest extends TestCase
             ['member_id' => $viewer->getKey(), 'friend_id' => $owner->getKey()],
         ]);
 
-        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('profile.friendStatus', 'friend'));
     }
 
     public function test_a_sent_request_shows_as_pending(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         DB::table('friend_requests')->insert([
             ['requester_id' => $viewer->getKey(), 'target_id' => $owner->getKey()],
         ]);
 
-        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('profile.friendStatus', 'sent'));
     }
 
     public function test_a_received_request_is_flagged(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
         DB::table('friend_requests')->insert([
             ['requester_id' => $owner->getKey(), 'target_id' => $viewer->getKey()],
         ]);
 
-        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('profile.friendStatus', 'received'));
     }
 
     public function test_own_profile_has_no_friend_status(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $owner = Member::factory()->create();
 
-        $this->actingAs($owner)->get("/m/member/{$owner->getKey()}")
+        $this->actingAs($owner)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('profile.friendStatus', null));
     }
@@ -173,10 +180,12 @@ class MemberProfileRoutesTest extends TestCase
         $viewer = Member::factory()->create();
         DB::table('member_blocks')->insert(['blocker_id' => $viewer->getKey(), 'blocked_id' => $owner->getKey()]);
 
-        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+        config(['openpne.surface_mode' => 'modern_default']);
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('profile.friendStatus', null));
 
+        config(['openpne.surface_mode' => 'classic_default']);
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertOk()
             ->assertDontSee('informationAboutThisIsYourProfilePage');
@@ -252,13 +261,14 @@ class MemberProfileRoutesTest extends TestCase
 
     public function test_modern_payload_carries_the_gated_age(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $this->travelTo(Carbon::parse('2026-06-24'));
         $owner = Member::factory()->create();
         $owner->setPreference(PreferenceKey::AgeVisibility, Visibility::Members);
         $viewer = Member::factory()->create();
         $this->giveBirthday($owner, '1990-06-23');
 
-        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/show')
                 ->where('profile.age', 36)

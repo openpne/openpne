@@ -15,6 +15,12 @@ class CommunityEventCommentRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
     {
         $member = Member::factory()->create();
@@ -33,8 +39,8 @@ class CommunityEventCommentRoutesTest extends TestCase
         $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
         $comment = CommunityEventComment::factory()->create(['community_event_id' => $event->getKey(), 'number' => 1]);
 
-        $this->post(route('communityEvent.modern.comment.store', $event))->assertRedirect('/login');
-        $this->post(route('communityEvent.modern.comment.delete', $comment))->assertRedirect('/login');
+        $this->post(route('communityEvent.comment.store', $event))->assertRedirect('/login');
+        $this->post(route('communityEvent.comment.delete', $comment))->assertRedirect('/login');
     }
 
     public function test_participate_button_joins_the_roster_and_saves_the_comment(): void
@@ -45,8 +51,8 @@ class CommunityEventCommentRoutesTest extends TestCase
 
         // No `comment` field → OpenPNE 3 toggles the roster (here: join).
         $this->actingAs($member)
-            ->post(route('communityEvent.modern.comment.store', $event), ['body' => 'Count me in'])
-            ->assertRedirect(route('communityEvent.modern.show', $event));
+            ->post(route('communityEvent.comment.store', $event), ['body' => 'Count me in'])
+            ->assertRedirect(route('communityEvent.show', $event));
 
         $this->assertDatabaseHas('community_event_members', [
             'community_event_id' => $event->getKey(),
@@ -67,8 +73,8 @@ class CommunityEventCommentRoutesTest extends TestCase
         $event->participants()->attach($member);
 
         $this->actingAs($member)
-            ->post(route('communityEvent.modern.comment.store', $event), ['body' => 'Cannot make it after all'])
-            ->assertRedirect(route('communityEvent.modern.show', $event));
+            ->post(route('communityEvent.comment.store', $event), ['body' => 'Cannot make it after all'])
+            ->assertRedirect(route('communityEvent.show', $event));
 
         $this->assertDatabaseMissing('community_event_members', [
             'community_event_id' => $event->getKey(),
@@ -84,8 +90,8 @@ class CommunityEventCommentRoutesTest extends TestCase
 
         // `comment` field present → comment only, no roster toggle.
         $this->actingAs($member)
-            ->post(route('communityEvent.modern.comment.store', $event), ['body' => 'Just a question', 'comment' => '1'])
-            ->assertRedirect(route('communityEvent.modern.show', $event));
+            ->post(route('communityEvent.comment.store', $event), ['body' => 'Just a question', 'comment' => '1'])
+            ->assertRedirect(route('communityEvent.show', $event));
 
         $this->assertDatabaseHas('community_event_comments', [
             'community_event_id' => $event->getKey(),
@@ -109,8 +115,8 @@ class CommunityEventCommentRoutesTest extends TestCase
         ]);
 
         $this->actingAs($member)
-            ->post(route('communityEvent.modern.comment.store', $event), ['body' => 'Too late'])
-            ->assertRedirect(route('communityEvent.modern.show', $event))
+            ->post(route('communityEvent.comment.store', $event), ['body' => 'Too late'])
+            ->assertRedirect(route('communityEvent.show', $event))
             ->assertSessionHas('error');
 
         $this->assertDatabaseMissing('community_event_members', [
@@ -129,8 +135,8 @@ class CommunityEventCommentRoutesTest extends TestCase
         $event->participants()->attach($taken);
 
         $this->actingAs($latecomer)
-            ->post(route('communityEvent.modern.comment.store', $event), ['body' => 'Any room?'])
-            ->assertRedirect(route('communityEvent.modern.show', $event))
+            ->post(route('communityEvent.comment.store', $event), ['body' => 'Any room?'])
+            ->assertRedirect(route('communityEvent.show', $event))
             ->assertSessionHas('error');
 
         $this->assertDatabaseMissing('community_event_members', [
@@ -146,12 +152,12 @@ class CommunityEventCommentRoutesTest extends TestCase
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
-            ->post(route('communityEvent.modern.comment.store', $event), ['body' => 'intruding'])
+            ->post(route('communityEvent.comment.store', $event), ['body' => 'intruding'])
             ->assertNotFound();
         $this->assertDatabaseCount('community_event_comments', 0);
     }
 
-    public function test_modern_comment_delete_removes_the_comment_and_redirects_to_modern_show(): void
+    public function test_modern_comment_delete_removes_the_comment_and_redirects_to_show(): void
     {
         $community = Community::factory()->create();
         $member = $this->joined($community);
@@ -163,8 +169,8 @@ class CommunityEventCommentRoutesTest extends TestCase
         ]);
 
         $this->actingAs($member)
-            ->post(route('communityEvent.modern.comment.delete', $comment))
-            ->assertRedirect(route('communityEvent.modern.show', $event));
+            ->post(route('communityEvent.comment.delete', $comment))
+            ->assertRedirect(route('communityEvent.show', $event));
 
         $this->assertDatabaseMissing('community_event_comments', ['id' => $comment->getKey()]);
     }
@@ -182,7 +188,7 @@ class CommunityEventCommentRoutesTest extends TestCase
         $other = $this->joined($community);
 
         $this->actingAs($other)
-            ->post(route('communityEvent.modern.comment.delete', $comment))
+            ->post(route('communityEvent.comment.delete', $comment))
             ->assertNotFound();
         $this->assertDatabaseHas('community_event_comments', ['id' => $comment->getKey()]);
     }

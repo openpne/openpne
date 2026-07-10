@@ -111,7 +111,7 @@ class ProfileController extends Controller
         }
 
         return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'member.profile.edit'))
+            ->route('member.profile.edit')
             ->with('status', __('Profile updated.'));
     }
 

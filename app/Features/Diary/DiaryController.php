@@ -209,7 +209,7 @@ class DiaryController extends Controller
         $diary = $action($this->viewer(), $request->toData(), $request->file('images', []));
 
         return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'diary.show'), $diary)
+            ->route('diary.show', $diary)
             ->with('status', __('%Diary% posted.'));
     }
 
@@ -247,7 +247,7 @@ class DiaryController extends Controller
         }
 
         return redirect()
-            ->route(SurfaceResolver::redirectName($request, 'diary.show'), $diary)
+            ->route('diary.show', $diary)
             ->with('status', __('%Diary% updated.'));
     }
 
@@ -277,7 +277,7 @@ class DiaryController extends Controller
 
     private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
     {
-        $name = SurfaceResolver::redirectName($request, $canonicalName);
+        $name = $canonicalName;
         $redirect = redirect()->route($name);
         if ($status !== null) {
             $redirect = $redirect->with('status', $status);

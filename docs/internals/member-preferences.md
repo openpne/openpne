@@ -45,7 +45,7 @@ row, back to default-following). `setPreference($default)` is **not** the same a
 ## The config page
 
 The page is Classic + Modern ([`MemberConfigController`](../../app/Features/Member/MemberConfigController.php),
-canonical `member.config` + `/m/*` siblings). **Each section posts independently** — diary default
+canonical `member.config`). **Each section posts independently** — diary default
 audience, age visibility, language, surface — so saving one never rewrites another. On Modern the
 preference radios apply on selection with inline per-control feedback, and the controller omits the
 page flash for those posts (it would announce the same save twice); Classic keeps an explicit
@@ -73,18 +73,19 @@ out of the write path.
   page's own form.
 - **Surface** is a **binary** Classic/Modern choice, preselected to the member's current surface
   ([`SurfaceResolver::canonicalSurface()`](../../app/Support/SurfaceResolver.php) — resolve() minus
-  the config page's own `/m/*` opt-in, but still honouring the modern_status / modern_only hard
-  gates so a member already forced onto a surface is shown that surface). There is deliberately
+  the Inertia-client stickiness, so it reflects what a fresh page load gets, while still honouring
+  the modern_status / modern_only hard gates so a member already forced onto a surface is shown
+  that surface). There is deliberately
   **no user-facing "follow the default" option**: that abstract state has no user-side signal to
   follow (unlike a device-linked dark-mode "auto") and tested poorly. The tri-state still exists in
   data, preserved by a server-side rule: `updateSurface()` pins only an actual change (chosen ≠
   current), so saving the surface you are already on is a no-op — an unset member stays unset and
   the operator keeps the ability to move them. This is the binary UI's equivalent of a
   "disabled until changed" button, enforced identically on both surfaces (the Classic surface is
-  script-free). After a real change the controller lands the member on the chosen surface's own
-  config URL — Modern → `/m/member/config`, Classic → canonical `/member/config` — because an
-  explicit `/m/*` URL outranks the member preference in resolution, so a Classic choice **must**
-  leave `/m/*` or the page would stay Modern. Under `modern_only` the section is not served at all —
+  script-free). After a real change the controller lands the member on the config page through a full page load
+  (`Inertia::location`): the just-written preference resolves the chosen surface there, and the
+  full load re-renders the whole shell — an XHR redirect would keep the Modern SPA alive on a
+  Classic choice (an Inertia navigation is always served Modern). Under `modern_only` the section is not served at all —
   the serializer omits it and `updateSurface()` 403s a crafted POST — so no latent Classic
   preference can be pinned while Classic is unavailable.
 

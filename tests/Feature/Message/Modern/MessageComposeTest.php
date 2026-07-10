@@ -16,14 +16,20 @@ class MessageComposeTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     public function test_guests_are_redirected_to_login(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();
         $message = app(SendMessage::class)($sender, new MessageComposeData($recipient->getKey(), 'X', 'Y'), asDraft: false);
 
-        $this->get(route('message.modern.compose', ['id' => $recipient->getKey()]))->assertRedirect('/login');
-        $this->get(route('message.modern.reply', $message))->assertRedirect('/login');
-        $this->post(route('message.modern.compose.store'))->assertRedirect('/login');
+        $this->get(route('message.compose', ['id' => $recipient->getKey()]))->assertRedirect('/login');
+        $this->get(route('message.reply', $message))->assertRedirect('/login');
+        $this->post(route('message.compose.store'))->assertRedirect('/login');
     }
 
     public function test_modern_compose_renders_the_form_for_a_recipient(): void
@@ -31,7 +37,7 @@ class MessageComposeTest extends TestCase
         [$viewer, $recipient] = Member::factory()->count(2)->create();
 
         $this->actingAs($viewer)
-            ->get(route('message.modern.compose', ['id' => $recipient->getKey()]))
+            ->get(route('message.compose', ['id' => $recipient->getKey()]))
             ->assertInertia(fn ($page) => $page
                 ->component('message/compose')
                 ->where('recipient.id', $recipient->getKey())
@@ -47,8 +53,8 @@ class MessageComposeTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get(route('message.modern.compose', ['id' => $member->getKey()]))->assertNotFound();
-        $this->actingAs($member)->get(route('message.modern.compose', ['id' => 999999]))->assertNotFound();
+        $this->actingAs($member)->get(route('message.compose', ['id' => $member->getKey()]))->assertNotFound();
+        $this->actingAs($member)->get(route('message.compose', ['id' => 999999]))->assertNotFound();
     }
 
     public function test_modern_reply_prefills_the_thread_and_quoted_body(): void
@@ -58,7 +64,7 @@ class MessageComposeTest extends TestCase
         $original = app(SendMessage::class)($sender, new MessageComposeData($recipient->getKey(), 'Original', "Line one\nLine two"), asDraft: false);
 
         $this->actingAs($recipient)
-            ->get(route('message.modern.reply', $original))
+            ->get(route('message.reply', $original))
             ->assertInertia(fn ($page) => $page
                 ->component('message/compose')
                 ->where('recipient.id', $sender->getKey())
@@ -76,40 +82,40 @@ class MessageComposeTest extends TestCase
         [$sender, $recipient, $stranger] = Member::factory()->count(3)->create();
         $original = app(SendMessage::class)($sender, new MessageComposeData($recipient->getKey(), 'Original', 'Body'), asDraft: false);
 
-        $this->actingAs($stranger)->get(route('message.modern.reply', $original))->assertNotFound();
+        $this->actingAs($stranger)->get(route('message.reply', $original))->assertNotFound();
     }
 
-    public function test_modern_store_sends_and_redirects_to_the_modern_sent_box(): void
+    public function test_modern_store_sends_and_redirects_to_the_sent_box(): void
     {
         Notification::fake();
         [$sender, $recipient] = Member::factory()->count(2)->create();
 
         $this->actingAs($sender)
-            ->post(route('message.modern.compose.store'), [
+            ->post(route('message.compose.store'), [
                 'to' => $recipient->getKey(),
                 'subject' => 'Hello there',
                 'body' => 'Body text',
                 'action' => 'send',
             ])
-            ->assertRedirect(route('message.modern.send'));
+            ->assertRedirect(route('message.send'));
 
         $this->assertFalse(Message::firstOrFail()->is_draft);
         Notification::assertSentTo($recipient, MessageReceivedNotification::class);
     }
 
-    public function test_modern_store_saves_a_draft_and_redirects_to_the_modern_draft_box(): void
+    public function test_modern_store_saves_a_draft_and_redirects_to_the_draft_box(): void
     {
         Notification::fake();
         [$sender, $recipient] = Member::factory()->count(2)->create();
 
         $this->actingAs($sender)
-            ->post(route('message.modern.compose.store'), [
+            ->post(route('message.compose.store'), [
                 'to' => $recipient->getKey(),
                 'subject' => 'A draft',
                 'body' => 'Later',
                 'action' => 'draft',
             ])
-            ->assertRedirect(route('message.modern.draft'));
+            ->assertRedirect(route('message.draft'));
 
         $this->assertTrue(Message::firstOrFail()->is_draft);
         Notification::assertNothingSent();
@@ -121,13 +127,13 @@ class MessageComposeTest extends TestCase
         $recipient->forceFill(['is_login_rejected' => true])->save(); // a banned member cannot receive
 
         $this->actingAs($sender)
-            ->post(route('message.modern.compose.store'), [
+            ->post(route('message.compose.store'), [
                 'to' => $recipient->getKey(),
                 'subject' => 'Hi',
                 'body' => 'Body',
                 'action' => 'send',
             ])
-            ->assertRedirect(route('message.modern.send'))
+            ->assertRedirect(route('message.send'))
             ->assertSessionHas('error');
 
         $this->assertSame(0, Message::count());
@@ -140,7 +146,7 @@ class MessageComposeTest extends TestCase
         [$sender, $recipient] = Member::factory()->count(2)->create();
 
         $this->actingAs($sender)
-            ->post(route('message.modern.compose.store'), [
+            ->post(route('message.compose.store'), [
                 'to' => $recipient->getKey(),
                 'subject' => 'Too many',
                 'body' => 'Body',
