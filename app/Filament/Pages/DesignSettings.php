@@ -25,7 +25,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the OpenPNE 3 design customizations reflected in the Classic shell: custom CSS, the PC HTML
+ * Edit the design customizations reflected in the Classic shell: custom CSS, the PC HTML
  * insertion slots, and the footer HTML (logged-out / logged-in). `sns_settings` is authoritative —
  * every field is stored verbatim, with no trimming, so a stylesheet's leading @charset and any
  * significant whitespace survive. The typed registry is App\Support\SnsSettingKey (Design group).

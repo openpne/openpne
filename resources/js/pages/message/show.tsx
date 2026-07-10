@@ -36,7 +36,7 @@ export default function MessageShow() {
     const showPath = SHOW_PATH[message.box];
     const box = BOX[message.box];
     const counterpartyHeading = message.viewerIsSender ? t('Recipient') : t('Sender');
-    // OpenPNE 3 offers Reply on a received message whose sender still exists (the inbox counterparty).
+    // Reply is offered on a received message whose sender still exists (the inbox counterparty).
     const canReply = message.box === 'receive' && message.counterparties.length > 0;
 
     const trash = (path: string) => router.post(path);

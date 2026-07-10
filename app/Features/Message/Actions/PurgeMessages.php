@@ -8,7 +8,7 @@ use App\Models\MessageRecipient;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Purge the viewer's side of each trashed message (OpenPNE 3 message/delete on the dust box). Purge
+ * Purge the viewer's side of each trashed message. Purge
  * only ever follows trash, so it sets *_purged_at where *_deleted_at is already set — keeping the
  * purge⇒deleted invariant the boxes rely on. The row and any attached file bytes stay: the other
  * side may still hold the message, and a purged side simply loses its view (OpenPNE 3 left the bytes

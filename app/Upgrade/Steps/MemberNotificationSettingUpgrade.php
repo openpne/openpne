@@ -9,7 +9,8 @@ use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `member_config` notification opt-in rows → OpenPNE 4 `member_notification_settings`.
+ * OpenPNE 3 notification-extension opt-in rows (in `member_config`) → OpenPNE 4
+ * `member_notification_settings`.
  * The migrated source names are derived from NotificationKind × NotificationChannel
  * (NotificationKind::op3ConfigName()), so registering a kind is all it takes to migrate its two
  * keys — there is no second list here to drift. Every registered kind imports, wired or not:

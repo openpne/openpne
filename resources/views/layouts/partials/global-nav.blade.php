@@ -1,7 +1,7 @@
-{{-- OpenPNE 3 globalNav (admin Navigation data): the `secure_global` set for members, the
+{{-- The globalNav bar (admin Navigation data): the `secure_global` set for members, the
      `insecure_global` set for guests (a guest reaches the Classic layout on a web-public profile).
-     OpenPNE 3 ships no insecure_global rows, so when the guest set is empty we keep a Log In link
-     as a fallback entry into the site. --}}
+     The guest set is empty by default, so a Log In link is kept as a fallback entry into the
+     site. --}}
 @php
     $navType = auth()->check() ? 'secure_global' : 'insecure_global';
     $navItems = app(\App\Services\NavigationService::class)->visibleEntries($navType, app()->getLocale());

@@ -21,7 +21,6 @@
                 <ul class="diaryList">
                     @foreach ($diaries as $entry)
                         <li>
-                            {{-- OpenPNE 3 op_diary_get_title_and_count: truncated title + comment count. --}}
                             <a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a>
                             <span class="diaryDate">{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</span>
                             @if ($owner->is(auth()->user()))

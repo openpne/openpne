@@ -49,7 +49,7 @@ class ProfileController extends Controller
         // covers the Modern surface and the no-gadget fixed box.
         $age = $visibleAge($viewer, $member);
 
-        // Entry point for a friend request (OpenPNE 3 profile parity). memberSubject above only
+        // Entry point for a friend request. memberSubject above only
         // 404s the owner→viewer block; a viewer who blocks the owner still reaches this page, and
         // the friend-link form rejects any block direction — so hide the entry for both (null).
         $friendStatus = ($viewer !== null && ! $isSelf && ! BlockLookup::hasAnyBlockBetween($viewer, $member)) ? match (true) {

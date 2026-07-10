@@ -12,7 +12,7 @@
     <tr>
         <th><label for="{{ $fieldId }}">{{ $profile->getCaption($lang) }}@if ($profile->is_required)<span class="required" aria-label="required">*</span>@endif</label></th>
         <td>
-            {{-- OpenPNE 3 floats the field (.input) left and the visibility (.publicFlag) right. --}}
+            {{-- The skin floats the field (.input) left and the visibility (.publicFlag) right. --}}
             @if ($profile->is_edit_public_flag)<div class="input">@endif
 
             @switch($profile->form_type)

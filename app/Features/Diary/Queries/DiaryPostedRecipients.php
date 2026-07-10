@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The broadcast audience for a new diary (OpenPNE 3 PluginDiary::postInsert): the members who can see
+ * The broadcast audience for a new diary: the members who can see
  * it, chunked by the fan-out job. Audience by visibility — Open/Members → every active member,
  * Friends → the author's friends, Private → nobody. The author is excluded, banned members
  * (is_login_rejected, the receive gate used across the catalog) are excluded, and either-direction

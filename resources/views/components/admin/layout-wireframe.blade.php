@@ -1,9 +1,9 @@
 @props(['layout' => 'layoutA'])
 
 @php
-    // viewBox 240×200; panes mirror the OpenPNE 3 gadget zones (top / side = left column / contents /
-    // bottom). Geometry is carried from the prototype admin wireframes and recolored to currentColor so
-    // it tracks the surrounding text color (selected = primary, idle = gray) and works in light/dark.
+    // viewBox 240×200; panes mirror the gadget zones (top / side = left column / contents /
+    // bottom). Recolored to currentColor so it tracks the surrounding text color
+    // (selected = primary, idle = gray) and works in light/dark.
     $panes = match ($layout) {
         'layoutA' => [[14, 14, 212, 34, 'Top'], [14, 58, 64, 92, 'Side'], [86, 58, 140, 92, 'Contents'], [14, 160, 212, 28, 'Bottom']],
         'layoutB' => [[14, 14, 64, 136, 'Side'], [86, 14, 140, 136, 'Contents'], [14, 160, 212, 28, 'Bottom']],

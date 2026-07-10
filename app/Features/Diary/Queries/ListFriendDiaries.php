@@ -9,7 +9,7 @@ use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * OpenPNE 3 friend diary feed (action `listFriend`): diaries by the viewer's friends, newest
+ * The friend diary feed: diaries by the viewer's friends, newest
  * first. The threshold is Friends — a friend's Friends/Members/Open diaries all qualify, their
  * Private ones do not. No friends means an empty feed (whereIn on an empty set yields no rows).
  *

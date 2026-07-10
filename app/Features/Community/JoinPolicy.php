@@ -3,8 +3,7 @@
 namespace App\Features\Community;
 
 /**
- * How a member joins a community. Successor of OpenPNE 3's community_config
- * `register_policy` ('open' | 'close'), flattened onto a typed communities column.
+ * How a member joins a community.
  *
  * Values start at 1: OpenPNE 3 stored this as a string, so there is no numeric to
  * preserve, and a 0 case invites PHP falsy-comparison bugs. (Support\Visibility keeps a

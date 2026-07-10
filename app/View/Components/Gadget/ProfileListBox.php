@@ -9,7 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
 /**
- * OpenPNE 3 member/profileListBox: the subject member's profile values, filtered to what the
+ * The subject member's profile values, filtered to what the
  * current viewer may see. OpenPNE 3 always seeds the nickname row first, so the box renders even
  * for a member with no visible fields; the visible profile fields follow. The page-level
  * owner→viewer block is the controller's; here we only resolve per-field visibility.

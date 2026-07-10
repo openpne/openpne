@@ -3,8 +3,8 @@
 namespace App\Features\Message;
 
 /**
- * The four message boxes (OpenPNE 3 list `type`: receive/send/draft/dust). Centralises each box's
- * route names and labels so the controller, queries, list view, and sidemenu agree.
+ * The four message boxes. Centralises each box's route names and labels so the controller,
+ * queries, list view, and sidemenu agree.
  */
 enum MessageBox: string
 {
@@ -13,7 +13,7 @@ enum MessageBox: string
     case Draft = 'draft';
     case Trash = 'trash';
 
-    /** The list route (OpenPNE 3 @receiveList / @sendList / @draftList / @dustList). */
+    /** The list route. */
     public function listRoute(): string
     {
         return match ($this) {

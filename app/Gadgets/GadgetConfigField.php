@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Gadgets;
 
 /**
- * One configurable parameter of a gadget kind (OpenPNE 3 gadget.yml `config`). The same definition
+ * One configurable parameter of a gadget kind. The same definition
  * drives both the admin edit form and render-time typed reads, so the two cannot drift.
  */
 final class GadgetConfigField

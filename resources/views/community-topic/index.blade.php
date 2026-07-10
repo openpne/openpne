@@ -20,7 +20,6 @@
                 <ul class="topicList">
                     @foreach ($topics as $topic)
                         <li>
-                            {{-- OpenPNE 3 listCommunitySuccess: last-activity datetime + name (comment count). --}}
                             <span class="topicDate">{{ \App\Support\LocalizedDate::dateTime($topic->updated_at) }}</span>
                             <a href="{{ route('communityTopic.show', $topic) }}">{{ $topic->name }} ({{ $topic->comments_count }})</a>
                             @if ($topic->member)

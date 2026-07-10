@@ -3,9 +3,8 @@
 @section('title', __('Register'))
 
 @section('content')
-    {{-- OpenPNE 3 member/registerInput: the token-gated account form. The address is fixed by the
-         mailed token (shown, not editable); name + password + the registration profile fields are
-         entered here. --}}
+    {{-- The token-gated account form. The address is fixed by the mailed token (shown, not
+         editable); name + password + the registration profile fields are entered here. --}}
     <div class="dparts form" id="member_registerInput">
         <div class="partsHeading"><h3>{{ __('Register') }}</h3></div>
         <div class="parts">

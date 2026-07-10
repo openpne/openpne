@@ -10,8 +10,8 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin diary monitoring (OpenPNE 3 monitoring/diary + opDiaryPlugin pc_backend). List-only:
-// admins read/search and remove diaries, mirroring OpenPNE 3 which had no admin diary edit.
+// Admin diary monitoring. List-only: admins read/search and remove diaries, mirroring
+// OpenPNE 3 which had no admin diary edit.
 class DiaryResource extends Resource
 {
     protected static ?string $model = Diary::class;

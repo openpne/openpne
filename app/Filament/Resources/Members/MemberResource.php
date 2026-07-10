@@ -11,9 +11,9 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 
-// Admin member moderation (OpenPNE 3 pc_backend member module). List-only: admins read/search,
-// freeze logins (is_login_rejected), and withdraw members. No detail/edit page, mirroring OpenPNE 3
-// which kept member operations on the list. Nav group is the tentative `Content` moderation bucket.
+// Admin member moderation. List-only: admins read/search, freeze logins (is_login_rejected),
+// and withdraw members. No detail/edit page, mirroring OpenPNE 3 which kept member operations
+// on the list. Nav group is the tentative `Content` moderation bucket.
 class MemberResource extends Resource
 {
     protected static ?string $model = Member::class;

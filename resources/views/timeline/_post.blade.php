@@ -1,9 +1,8 @@
 {{-- A single timeline post card, shared by the member timeline and the home feed. OpenPNE 3 builds
-     each post client-side from the API (_timelineTemplate.php); the Classic adapter renders it
-     server-side. The delete control shows only on the viewer's own posts. --}}
+     each post client-side from the API; the Classic adapter renders it server-side. The delete
+     control shows only on the viewer's own posts. --}}
 <li class="timeline-post" data-timeline-id="{{ $post->getKey() }}">
     <div class="timeline-member-name">
-        {{-- OpenPNE 3 shows the @screen_name handle here; Classic shows the nickname. --}}
         <a href="{{ route('member.profile.show', $post->member) }}">{{ $post->member->name }}</a>
     </div>
     <div class="timeline-post-body"><x-user-text :value="$post->body" /></div>

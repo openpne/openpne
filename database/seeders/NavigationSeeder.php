@@ -39,7 +39,7 @@ class NavigationSeeder extends Seeder
         ['type' => 'friend', 'uri' => '/member/:id', 'source_uri' => '@member_profile', 'sort_order' => 10, 'ja' => 'ホーム', 'en' => 'Home'],
         ['type' => 'friend', 'uri' => '/diary/listMember/:id', 'source_uri' => 'diary/listMember', 'sort_order' => 15, 'ja' => '日記', 'en' => 'Diary'],
         ['type' => 'friend', 'uri' => '/friend/list', 'source_uri' => '@friend_list', 'sort_order' => 20, 'ja' => '%friend%リスト', 'en' => 'Friends'],
-        // OpenPNE 3 friend_navigation_message (message/sendToFriend): :id threads into the query.
+        // :id threads into the query rather than the path.
         ['type' => 'friend', 'uri' => '/message/sendToFriend?id=:id', 'source_uri' => 'message/sendToFriend', 'sort_order' => 25, 'ja' => 'メッセージを送る', 'en' => 'Send Message'],
 
         // community (rendered once the community localNav context is wired)

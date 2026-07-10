@@ -128,7 +128,7 @@ class EventActionsTest extends TestCase
         ]);
 
         // Changing only the capacity (not name/body) lifts the board (updated_at) but not the
-        // content timestamp (event_updated_at), matching OpenPNE 3 isEventModified.
+        // content timestamp (event_updated_at).
         app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event, ['capacity' => 50]));
 
         $fresh = $event->fresh();

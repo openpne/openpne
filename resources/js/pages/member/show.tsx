@@ -87,8 +87,8 @@ export default function MemberShow() {
                 )}
             </Panel>
 
-            {/* Jump to the owner's own content — same links whether the profile is the viewer's or not
-                (OpenPNE 3 profile parity). The list/joined routes accept ?id so they scope to this owner. */}
+            {/* Jump to the owner's own content — same links whether the profile is the viewer's or not.
+                The list/joined routes accept ?id so they scope to this owner. */}
             <Panel flush>
                 <List>
                     <ListRow href={`/m/diary/listMember/${owner.id}`} chevron>

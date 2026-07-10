@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** An RSVP row (OpenPNE 3 community_event_member): a member's presence on an event's roster. */
+/** An RSVP row: a member's presence on an event's roster. */
 #[Fillable(['community_event_id', 'member_id'])]
 class CommunityEventMember extends Model
 {

@@ -73,7 +73,7 @@ class SearchDiariesTest extends TestCase
 
         $result = (new SearchDiaries)($viewer, 'laravel');
 
-        // Friend-only/private diaries are out of the searchable tier, matching OpenPNE 3.
+        // Friend-only/private diaries are out of the searchable tier.
         $this->assertSame(1, $result->total());
     }
 

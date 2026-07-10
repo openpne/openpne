@@ -41,7 +41,7 @@ class ClassicProfileGadgetTest extends TestCase
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertOk()
-            ->assertSee('class="dparts listBox"', false) // OpenPNE 3 listBox parts wrapper
+            ->assertSee('class="dparts listBox"', false) // the listBox parts wrapper
             ->assertSee('a-visible-value')
             ->assertDontSee('id="member_profile"', false); // the fixed fallback box is gone
     }

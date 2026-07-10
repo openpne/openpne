@@ -8,8 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-// One image attached to a topic comment (successor of OpenPNE 3
-// `community_topic_comment_image`). A join row only — no timestamps; the File owns the bytes.
+// One image attached to a topic comment. A join row only — no timestamps; the File owns the bytes.
 #[Fillable(['post_id', 'file_id', 'number'])]
 class CommunityTopicCommentImage extends Model
 {

@@ -8,8 +8,8 @@ use App\Models\MessageRecipient;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Restore the viewer's side of each trashed message back to its box (OpenPNE 3
- * DeletedMessage::restoreMessage). The viewer is on exactly one side per message (self-addressing is
+ * Restore the viewer's side of each trashed message back to its box. The viewer is on exactly
+ * one side per message (self-addressing is
  * forbidden), so the two updates are disjoint per id: the sender side clears on messages, the
  * recipient side on message_recipients. A purged side stays gone — only a trashed-not-purged row
  * restores.

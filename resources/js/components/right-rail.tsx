@@ -8,7 +8,7 @@ import type { PageProps, RightRailItem } from '@/types';
 
 /**
  * Desktop-only (xl+) right rail: a member search box plus friends and joined-community thumbnail
- * grids (OpenPNE 3's sidemenu nineTables, brought back as a PC enhancement). Hidden below xl and for
+ * grids. Hidden below xl and for
  * guests; mobile reaches the same lists through the nav. The rail is nav chrome, so it lives in the
  * shell, not on any one page.
  */

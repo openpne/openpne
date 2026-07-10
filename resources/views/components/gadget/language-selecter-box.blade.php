@@ -1,6 +1,4 @@
-{{-- OpenPNE 3 default/languageSelecterBox: a locale switcher. Functional equivalent of OpenPNE 4
-     locale switching (POST /locale), not a byte-for-byte template port; wrapped in a box for the
-     side banner since OpenPNE 3 emitted no parts wrapper here. --}}
+{{-- A locale switcher (POST /locale), wrapped in a box for the side banner. --}}
 @props(['config' => [], 'subject' => null, 'partId' => null])
 <x-gadget-part :part-id="$partId" part-name="box" :title="__('Language')">
     <div class="body">

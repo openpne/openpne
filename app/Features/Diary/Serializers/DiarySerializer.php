@@ -28,8 +28,8 @@ class DiarySerializer
             // List/feed callers eager-load the counts; a single route-bound diary lazy-loads them
             // here so the values are never silently zero.
             'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
-            // The feed shows only a has-photos marker (OpenPNE 3 op_diary_image_icon), so the
-            // summary carries the boolean, not the images themselves.
+            // The feed shows only a has-photos marker, so the summary carries the boolean,
+            // not the images themselves.
             'hasImages' => ($diary->images_count ?? $diary->loadCount('images')->images_count) > 0,
             'author' => [
                 'id' => $diary->member->getKey(),

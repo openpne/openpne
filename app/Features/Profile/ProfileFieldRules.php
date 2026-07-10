@@ -56,7 +56,7 @@ class ProfileFieldRules
         return ["visibility.{$profile->getKey()}" => ['nullable', Rule::in($allowed)]];
     }
 
-    /** A unique input/textarea rejects a value another member already holds (OpenPNE 3 opValidatorProfile). */
+    /** A unique input/textarea rejects a value another member already holds. */
     public function isUniqueText(Profile $profile): bool
     {
         return $profile->is_unique && in_array($profile->form_type, ['input', 'textarea'], true);
@@ -74,7 +74,7 @@ class ProfileFieldRules
                 break;
             case 'date':
                 $rules[] = 'date';
-                // Enforce the admin-configured bounds (OpenPNE 3 set these on the date widget).
+                // Enforce the admin-configured bounds.
                 if ($profile->value_min !== null && $profile->value_min !== '') {
                     $rules[] = 'after_or_equal:'.$profile->value_min;
                 }

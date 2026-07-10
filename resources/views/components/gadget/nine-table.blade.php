@@ -1,5 +1,5 @@
-{{-- OpenPNE 3 nineTable: a row × col thumbnail grid (friend/community list). `items` are
-     ['url','imageUrl','name']; `type` (full|only_image|only_name) selects the photo/text rows. --}}
+{{-- A row × col thumbnail grid (friend/community list). `items` are ['url','imageUrl','name'];
+     `type` (full|only_image|only_name) selects the photo/text rows. --}}
 @props(['items' => [], 'rows' => 3, 'cols' => 3, 'type' => 'full'])
 @php($items = collect($items)->values())
 @php($cols = max(1, (int) $cols))

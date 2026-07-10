@@ -3,8 +3,8 @@
 @section('title', __('Register'))
 
 @section('content')
-    {{-- OpenPNE 3 opAuthMailAddress/requestRegisterURL: enter an address, a registration link is
-         mailed. The "sent" confirmation is a separate screen (register.sent). --}}
+    {{-- Enter an address, a registration link is mailed. The "sent" confirmation is a separate
+         screen (register.sent). --}}
     <div class="dparts" id="requestRegisterURL">
         <div class="partsHeading"><h3>{{ __('Register') }}</h3></div>
         <div class="parts">

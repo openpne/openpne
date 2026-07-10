@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 /**
- * Invite members by email (OpenPNE 3 admin batch invite). Each address is issued an admin-invite
+ * Invite members by email. Each address is issued an admin-invite
  * registration token and mailed the link, which the registrant completes like any invited
  * registration (no inviter, so no auto-friend). Reachable unless registration is suspended — an admin
  * may invite even in admin_only mode, where members cannot — and the issuance is gated again on send.

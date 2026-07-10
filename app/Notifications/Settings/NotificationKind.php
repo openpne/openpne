@@ -6,8 +6,9 @@ namespace App\Notifications\Settings;
 
 /**
  * The closed registry of member-configurable notification kinds (the notification catalog; its
- * OpenPNE 3 lineage is described in docs/internals/notifications.md). The case value is the
- * stored `member_notification_settings.kind`; each case's registry entry lives in definition().
+ * OpenPNE 3 notification-extension lineage is described in docs/internals/notifications.md).
+ * The case value is the stored `member_notification_settings.kind`; each case's registry entry
+ * lives in definition().
  *
  * Every importable catalog item is registered, wired or not, so the one-shot upgrade can
  * preserve every member's stored choice; only wired kinds (those with an OpenPNE 4 sender)
@@ -209,9 +210,9 @@ enum NotificationKind: string
     }
 
     /**
-     * The OpenPNE 3 member_config key for this kind on $channel, in the exact format the
-     * extension's settings form stored. The upgrade derives its imported name set from this,
-     * so there is no second list to keep in sync.
+     * The member_config key for this kind on $channel, in the exact format the OpenPNE 3
+     * notification extension's settings form stored. The upgrade derives its imported name set
+     * from this, so there is no second list to keep in sync.
      */
     public function op3ConfigName(NotificationChannel $channel): string
     {
