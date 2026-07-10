@@ -27,15 +27,16 @@ type Props = {
     name: string;
     /** Image URL, or null to fall back to the initial badge. */
     src: string | null;
-    /** The member's chosen badge color (hex), or null for the neutral badge. */
-    color?: string | null;
+    /** The member's chosen badge color (hex), or null for the neutral badge. Required so a call
+     *  site that forgets to thread it through fails type-check instead of silently graying out. */
+    color: string | null;
     size?: AvatarSize;
     /** Set when the name is already shown as adjacent text (list rows, rosters): the avatar becomes
      *  decorative so it isn't announced twice (avoids the image-redundant-alt a11y warning). */
     decorative?: boolean;
 };
 
-export function Avatar({ id, name, src, color = null, size = 'md', decorative = false }: Props) {
+export function Avatar({ id, name, src, color, size = 'md', decorative = false }: Props) {
     const baseCls = `${sizeClass[size]} shrink-0 rounded-full`;
     // Decorative: hide from the a11y tree (the adjacent text names the member). Otherwise expose the
     // name via alt / aria-label so a standalone avatar still has an accessible name.
