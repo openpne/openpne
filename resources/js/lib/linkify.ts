@@ -12,7 +12,7 @@ export type Segment = { type: 'text'; value: string } | { type: 'url'; href: str
 /** Bare http(s):// or www. URL, ending before whitespace, a tag/quote char, or trailing punctuation. */
 const URL = /(\b(?:https?:\/\/|www\.)[^\s<>"]+[^\s<>".,;:!?)\]])/giu;
 
-/** BodyText::VISIBLE_URL_LIMIT — OpenPNE 3 op_auto_link_text truncate_len. */
+/** BodyText::VISIBLE_URL_LIMIT. */
 const VISIBLE_URL_LIMIT = 57;
 
 export function linkify(text: string | null | undefined): Segment[] {

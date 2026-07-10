@@ -5,8 +5,8 @@
 @section('title', $title)
 
 @section('content')
-    {{-- OpenPNE 3 timelineProfile component (memberSuccess.php). OpenPNE 3 streams the posts
-         client-side from the API; the Classic adapter renders them server-side with a pager. --}}
+    {{-- OpenPNE 3 streams the posts client-side from the API; the Classic adapter renders them
+         server-side with a pager. --}}
     <div class="dparts profileTimeline" id="profileTimeline_{{ $owner->getKey() }}">
         <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="parts">

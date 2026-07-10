@@ -1,6 +1,4 @@
-{{-- OpenPNE 3 community/home Left column (homeSuccess op_sidemenu): the community image box
-     (communityImageBox) and the member grid (nineTable, admins first). The OpenPNE 3 admin crown
-     marker is deferred — its skin image is not yet ported. --}}
+{{-- The community image box and the member grid (nineTable, admins first). --}}
 @props(['community', 'members' => []])
 
 <div class="parts memberImageBox">

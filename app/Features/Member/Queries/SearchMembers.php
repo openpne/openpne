@@ -14,7 +14,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Member search over the configurable profile fields (OpenPNE 3 /member/search).
+ * Member search over the configurable profile fields.
  *
  * Each field filter is an EXISTS subquery on member_profiles, AND-connected. Matching is per
  * form_type and follows the storage model: a preset select/radio matches the choice key in
@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\DB;
  * that owner (self → all, friend → up to Friends, otherwise up to Members), so search cannot
  * probe a value the viewer could not otherwise see. Owners who block the viewer are excluded
  * entirely, and a forcibly-private field (default Private, not member-editable) is dropped from
- * the form because no one else can match on it (OpenPNE 3's is_check_public_flag).
+ * the form because no one else can match on it.
  */
 class SearchMembers
 {

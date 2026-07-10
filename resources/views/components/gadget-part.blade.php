@@ -1,6 +1,6 @@
-{{-- OpenPNE 3 parts wrapper (_partsLayout). `partName` is the parts class skins target
-     (e.g. nineTable, informationBox); `single` parts drop the inner div.parts. `partId` is the
-     kind's OpenPNE 3 DOM id (custom-CSS seam); null when the kind had none. --}}
+{{-- The parts wrapper. `partName` is the parts class skins target (e.g. nineTable,
+     informationBox); `single` parts drop the inner div.parts. `partId` is the kind's DOM id
+     (custom-CSS seam); null when the kind has none. --}}
 @props(['partId' => null, 'partName' => null, 'single' => false, 'title' => null])
 @php($outerClass = ($single ? 'parts' : 'dparts').($partName ? ' '.$partName : ''))
 @if ($single)

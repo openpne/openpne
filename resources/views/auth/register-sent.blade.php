@@ -3,8 +3,8 @@
 @section('title', __('Register'))
 
 @section('content')
-    {{-- OpenPNE 3 requestRegisterURLSuccess: neutral confirmation, shown whether or not the address
-         is already a member (enumeration-safe). --}}
+    {{-- Neutral confirmation, shown whether or not the address is already a member
+         (enumeration-safe). --}}
     <div class="dparts" id="requestRegisterURL">
         <div class="partsHeading"><h3>{{ __('Register') }}</h3></div>
         <div class="parts">

@@ -51,7 +51,7 @@ class CommunityRoutesTest extends TestCase
         $response = $this->actingAs($member)->get(route('community.show', $community));
 
         $response->assertOk();
-        $response->assertSee('id="LayoutA"', false);  // OpenPNE 3 community/home layout
+        $response->assertSee('id="LayoutA"', false);  // the community home layout
         $response->assertSee('id="Left"', false);      // the sidemenu column
         $response->assertSee('id="communityMembers"', false);
         $response->assertSee('AdminAlice');
@@ -70,7 +70,7 @@ class CommunityRoutesTest extends TestCase
         $response = $this->actingAs($applicant)->get(route('community.show', $community));
 
         $response->assertOk();
-        $response->assertSee('id="Top"', false); // OpenPNE 3 op_top, present only while pending
+        $response->assertSee('id="Top"', false); // the Top slot, present only while pending
         $response->assertSee('waiting for the participation approval', false);
     }
 

@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One recipient's receipt of a message (successor of OpenPNE 3 MessageSendList), carrying that
- * side's read state and trash state. read_at null = unread; the *_at columns mirror the sender-side
+ * One recipient's receipt of a message, carrying that side's read state and trash state.
+ * read_at null = unread; the *_at columns mirror the sender-side
  * trash columns on Message.
  */
 #[Fillable(['message_id', 'recipient_id', 'read_at'])]

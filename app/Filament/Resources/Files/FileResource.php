@@ -10,7 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin file monitor (OpenPNE 3 monitoring/fileList + monitoring/imageList). Lists every uploaded
+// Admin file monitor. Lists every uploaded
 // file across the morph-owned content; admins preview, download, and delete. Read-only (no create —
 // admin upload is a separate feature). Bytes are served by the admin-gated AdminFileController.
 class FileResource extends Resource

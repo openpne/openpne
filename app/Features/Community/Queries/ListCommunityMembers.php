@@ -7,7 +7,7 @@ use App\Models\CommunityMember;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * Confirmed members of a community (OpenPNE 3 community/memberList), admins first. No block
+ * Confirmed members of a community, admins first. No block
  * filtering — a community member list is a many-member set, and blocks are 1:1 (accepted gap).
  */
 class ListCommunityMembers

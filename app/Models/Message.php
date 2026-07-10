@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * A private message authored by its sender (successor of OpenPNE 3 SendMessageData). Per-recipient
- * delivery and read/trash state live on message_recipients; the sender's own trash state is on this
+ * A private message authored by its sender. Per-recipient delivery and read/trash state live
+ * on message_recipients; the sender's own trash state is on this
  * row. is_draft true = authored but not delivered. A message_recipients row means "delivered", so a
  * draft's pending recipient lives here in draft_recipient_id and is materialized into a receipt (and
  * cleared) when the draft is sent.
@@ -56,13 +56,13 @@ class Message extends Model
         return $this->hasMany(MessageFile::class)->orderBy('number');
     }
 
-    /** Direct reply parent (OpenPNE 3 return_message_id), or null. @return BelongsTo<Message, $this> */
+    /** Direct reply parent, or null. @return BelongsTo<Message, $this> */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
-    /** Thread root (OpenPNE 3 thread_message_id), or null. @return BelongsTo<Message, $this> */
+    /** Thread root, or null. @return BelongsTo<Message, $this> */
     public function thread(): BelongsTo
     {
         return $this->belongsTo(self::class, 'thread_id');

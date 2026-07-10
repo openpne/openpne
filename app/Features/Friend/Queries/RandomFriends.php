@@ -6,8 +6,8 @@ use App\Models\Member;
 use Illuminate\Support\Collection;
 
 /**
- * A random handful of the viewer's friends, for the right rail's friends grid (OpenPNE 3's
- * nineTable friend gadget). Random so the grid varies between visits rather than always showing the
+ * A random handful of the viewer's friends, for the right rail's friends grid. Random so the
+ * grid varies between visits rather than always showing the
  * same nine; the small-SNS scale makes ORDER BY RANDOM() cheap.
  */
 class RandomFriends

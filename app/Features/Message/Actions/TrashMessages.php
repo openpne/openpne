@@ -8,8 +8,8 @@ use App\Models\Message;
 use App\Models\MessageRecipient;
 
 /**
- * Move the viewer's side of each message in a box to the trash (OpenPNE 3 message/delete on the
- * receive/send/draft boxes). The box fixes the side: the inbox trashes the receipt, the sent and
+ * Move the viewer's side of each message in a box to the trash. The box fixes the side: the
+ * inbox trashes the receipt, the sent and
  * draft boxes trash the authored message. Set-based so one call covers a single message or a bulk
  * selection, and idempotent — an already-trashed row keeps its first moved-to-trash time, the column
  * the trash box sorts on.

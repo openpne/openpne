@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * One member's view of a message box (OpenPNE 3 message/list), newest first, as normalized
+ * One member's view of a message box, newest first, as normalized
  * MessageListItems. Each box draws from the side that owns its state: the inbox and the recipient
  * half of trash from message_recipients; sent/draft and the sender half of trash from messages. The
  * box conditions live in model scopes (Message::senderLive/Trashed, MessageRecipient::ofDelivered/

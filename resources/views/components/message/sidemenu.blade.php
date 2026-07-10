@@ -1,5 +1,5 @@
-{{-- OpenPNE 3 message/_sidemenu.php: the box nav (Inbox / Sent / Drafts / Trash). The current box
-     is not linked on a list page (OpenPNE 3 forceLink=false) and linked on a show page (forceLink=true). --}}
+{{-- The box nav (Inbox / Sent / Drafts / Trash). The current box is not linked on a list page
+     and is linked on a show page. --}}
 @props(['current', 'linkCurrent' => false])
 <div class="parts pageNav">
     <ul>

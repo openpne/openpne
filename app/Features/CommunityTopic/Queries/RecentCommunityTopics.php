@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 
 /**
  * The most recently active topics of a community, for the "recent topics" box on the community
- * home (OpenPNE 3 community/home). Same ordering as the board, capped at a few rows.
+ * home. Same ordering as the board, capped at a few rows.
  */
 class RecentCommunityTopics
 {

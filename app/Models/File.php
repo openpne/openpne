@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-// Metadata of an uploaded file (the `files` table, successor of OpenPNE 3 `file`).
+// Metadata of an uploaded file (the `files` table).
 //
 // The bytes are NOT an Eloquent relation on this model: they live in `file_bin`
 // and are reached only through the App\Files\FileStorage contract, so there is a

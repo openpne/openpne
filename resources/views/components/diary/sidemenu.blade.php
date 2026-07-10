@@ -1,6 +1,5 @@
-{{-- OpenPNE 3 diary _sidemenu.php Left column (memberImageBox): the author's avatar linked to
-     their profile, then their name. The name keeps the link so the profile stays reachable when
-     the author has no avatar. --}}
+{{-- The author's avatar linked to their profile, then their name. The name keeps the link so
+     the profile stays reachable when the author has no avatar. --}}
 <div class="parts memberImageBox">
     @php($avatar = $member->avatar?->file)
     @if ($avatar)
@@ -48,7 +47,6 @@
         <div class="partsHeading"><h3>{{ __('Recently Posted %Diaries%') }}</h3></div>
         <ul>
             @foreach ($recentDiaries as $entry)
-                {{-- OpenPNE 3 op_diary_get_title_and_count: truncated title + comment count. --}}
                 <li><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a></li>
             @endforeach
         </ul>

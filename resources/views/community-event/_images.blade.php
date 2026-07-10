@@ -1,6 +1,6 @@
-{{-- A post's attached images as square thumbnails linking to the full bytes, matching OpenPNE 3's
-     <ul class="photo"> markup. Each fetch is gated by FilePolicy, so a members-only community's
-     event images stay private. $images = the post's images (CommunityEventImage /
+{{-- A post's attached images as square thumbnails linking to the full bytes. The <ul class="photo">
+     markup is a theme/customer CSS seam. Each fetch is gated by FilePolicy, so a members-only
+     community's event images stay private. $images = the post's images (CommunityEventImage /
      CommunityEventCommentImage), number-ordered. --}}
 @if ($images->isNotEmpty())
     <ul class="photo">

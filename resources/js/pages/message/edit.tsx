@@ -29,7 +29,7 @@ export default function MessageEdit() {
     });
     const [active, setActive] = useState<'send' | 'draft' | null>(null);
 
-    // OpenPNE 3's two submit buttons (send / draft) as one form; transform stamps the chosen action.
+    // Two submit buttons (send / draft) as one form; transform stamps the chosen action.
     const submit = (action: 'send' | 'draft') => {
         setActive(action);
         form.transform((data) => ({ ...data, action }));

@@ -8,8 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
 /**
- * OpenPNE 3 community/joinListBox: the subject member's joined communities as a row × col
- * thumbnail grid.
+ * The subject member's joined communities as a row × col thumbnail grid.
  */
 class CommunityJoinListBox extends Component
 {

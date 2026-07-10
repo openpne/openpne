@@ -12,8 +12,8 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin board-topic moderation (OpenPNE 3 communityTopic/topicList). List + view (with the topic's
-// comments) + delete; no admin edit (OpenPNE 3 had none). The view page hosts the comments RM.
+// Admin board-topic moderation. List + view (with the topic's comments) + delete; no admin
+// edit (OpenPNE 3 had none). The view page hosts the comments RM.
 class CommunityTopicResource extends Resource
 {
     protected static ?string $model = CommunityTopic::class;

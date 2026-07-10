@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Throwable;
 
-// A banner image in the shared pool, pointing at a stored File (successor of OpenPNE 3
-// `banner_image`). The File's bytes are public (FilePolicy), since a banner shows to guests.
+// A banner image in the shared pool, pointing at a stored File. The File's bytes are public
+// (FilePolicy), since a banner shows to guests.
 // Deleting the row leaves the File; the delete action purges it explicitly (the files→banner_images
 // cascade only runs the other way).
 #[Fillable(['file_id', 'url', 'name'])]

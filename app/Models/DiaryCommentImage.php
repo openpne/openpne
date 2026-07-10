@@ -8,9 +8,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-// One image attached to a diary comment, pointing at a stored File (successor of OpenPNE 3
-// `diary_comment_image`). A join row only — no number (OpenPNE 3 has none) and no timestamps;
-// the bytes and their timestamps belong to the File, which cascades this row away when deleted.
+// One image attached to a diary comment, pointing at a stored File. A join row only — no number
+// (OpenPNE 3 has none) and no timestamps; the bytes and their timestamps belong to the File,
+// which cascades this row away when deleted.
 #[Fillable(['diary_comment_id', 'file_id'])]
 class DiaryCommentImage extends Model
 {

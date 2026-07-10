@@ -1,6 +1,6 @@
-{{-- OpenPNE 3 member/login form (_partsLogin, .loginForm table) with the ALTCHA / registration /
-     error behaviour. Shared by the fixed login page and the loginForm gadget. The box id is the
-     fixed OpenPNE 3 `loginForm` (one form per page), not a gadget-scoped id. --}}
+{{-- The login form with its ALTCHA / registration / error behaviour. Shared by the fixed login
+     page and the loginForm gadget. The box id is the fixed `loginForm` (one form per page), not
+     a gadget-scoped id. --}}
 <div class="dparts" id="loginForm">
     <div class="partsHeading"><h3>{{ __('Login') }}</h3></div>
     <div class="parts">

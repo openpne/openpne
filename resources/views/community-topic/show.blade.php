@@ -32,7 +32,7 @@
         <div class="dparts commentList" id="communityTopic_comment_list">
             <div class="partsHeading"><h3>{{ __('Comments') }}</h3></div>
             <div class="parts">
-                {{-- OpenPNE 3 communityTopicComment list: reversible pager (fixed size 20), order toggle. --}}
+                {{-- Reversible pager (fixed size 20), order toggle. --}}
                 @if ($thread->hasPages())
                     <div class="pagerRelative">
                         @if ($thread->ascending)

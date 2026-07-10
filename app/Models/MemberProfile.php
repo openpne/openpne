@@ -79,7 +79,7 @@ class MemberProfile extends Model
 
         if ($profile->form_type === 'date') {
             // The preset birthday shows month/day only; its birth year is revealed solely through
-            // the separately-gated age (App\Features\Profile\Queries\VisibleAge), matching OpenPNE 3.
+            // the separately-gated age (App\Features\Profile\Queries\VisibleAge).
             // Fail-closed: the birthday path never echoes the raw value (which could carry the year)
             // — it renders month/day from a parseable date or nothing.
             if ($profile->name === $presets->nameForKey('birthday')['name']) {

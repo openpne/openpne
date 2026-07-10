@@ -31,7 +31,7 @@ class ProfileEditTest extends TestCase
 
         $this->actingAs($member)->get('/member/edit/profile')
             ->assertOk()
-            ->assertSee('page_member_editProfile') // OpenPNE 3 body id from the route parity
+            ->assertSee('page_member_editProfile') // body id from the route parity
             ->assertSee('fav_food')
             ->assertSee('ramen');
     }

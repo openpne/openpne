@@ -10,7 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin diary-comment monitoring (OpenPNE 3 monitoring/diary comment). List-only: read/search/delete.
+// Admin diary-comment monitoring. List-only: read/search/delete.
 class DiaryCommentResource extends Resource
 {
     protected static ?string $model = DiaryComment::class;

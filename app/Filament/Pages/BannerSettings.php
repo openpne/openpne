@@ -27,7 +27,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
 
 /**
- * The Classic #topBanner config, one screen per placement (OpenPNE 3 design/banner). Each placement
+ * The Classic #topBanner config, one screen per placement. Each placement
  * either shows images picked from the shared pool (default, one at random per request) or operator
  * HTML (is_use_html, emitted raw — admin-trusted). The images themselves are uploaded and edited in
  * the Banner images resource; here you choose which of them each placement shows.

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * OpenPNE 3 diary "Recently Posted Diaries" feed (action `list`): every member's diaries
+ * The "Recently Posted Diaries" feed: every member's diaries
  * open to the membership at large, newest first. The threshold is fixed at Members — the
  * feed is the all-members tier, so a friend's Friends-only diary belongs to the friend feed,
  * not here. Open (web-public) sits below Members on the monotonic scale, so it is included.

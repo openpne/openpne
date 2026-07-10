@@ -19,7 +19,7 @@ final class ArchivePeriod
         public readonly string $label,
     ) {}
 
-    /** Null for an impossible date (e.g. 2026-02-30), so the caller can 404 like OpenPNE 3. */
+    /** Null for an impossible date (e.g. 2026-02-30), so the caller can 404. */
     public static function fromYearMonthDay(int $year, int $month, ?int $day = null): ?self
     {
         if (! checkdate($month, $day ?? 1, $year)) {

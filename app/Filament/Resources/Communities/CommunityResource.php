@@ -13,8 +13,8 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin community moderation (OpenPNE 3 community/list + delete). List + delete, plus an admin EDIT
-// (OpenPNE 3 had none) for fixing violating communities: name / description / category / policies.
+// Admin community moderation. List + delete, plus an admin EDIT (OpenPNE 3 had none) for
+// fixing violating communities: name / description / category / policies.
 class CommunityResource extends Resource
 {
     protected static ?string $model = Community::class;

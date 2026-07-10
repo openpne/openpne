@@ -3,8 +3,8 @@
 @section('title', __('Password Recovery'))
 
 @section('content')
-    {{-- OpenPNE 3 opAuthMailAddress/passwordRecovery: a single mail-address form. The "we have
-         emailed your reset link" status is flashed to session('status'), rendered by the shell. --}}
+    {{-- A single mail-address form. The "we have emailed your reset link" status is flashed to
+         session('status'), rendered by the shell. --}}
     <div class="dparts" id="passwordRecovery">
         <div class="partsHeading"><h3>{{ __('Password Recovery') }}</h3></div>
         <div class="parts">

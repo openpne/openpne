@@ -12,8 +12,8 @@ use App\Notifications\Message\MessageReceivedNotification;
 use Illuminate\Http\UploadedFile;
 
 /**
- * Edit one of the sender's own drafts: change its text, manage its image slots (OpenPNE 3-style:
- * remove selected images, add new ones into the freed slots), and either keep it a draft or send it.
+ * Edit one of the sender's own drafts: change its text, manage its image slots (remove selected
+ * images, add new ones into the freed slots), and either keep it a draft or send it.
  * The recipient is the one fixed when the draft was created (draft_recipient_id); sending materializes
  * its receipt and clears the column, so the message becomes delivered. Image bytes are rollback-safe
  * (new uploads compensated on failure; removed bytes purged only after commit). Sending notifies the

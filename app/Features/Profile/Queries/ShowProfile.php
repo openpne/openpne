@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
  * Diary's owner→viewer block. Each field's effective visibility (per-value flag, or the
  * field default when the field is not per-value editable / has no value flag) is compared
  * to the viewer's clearance via the shared monotonic Visibility scale. Fields whose
- * rendered value is empty are skipped, like OpenPNE 3's _profileListBox.
+ * rendered value is empty are skipped.
  *
  * A guest (null viewer) has Open clearance and additionally only sees fields flagged
  * is_public_web — the page-level "is this profile guest-reachable" gate is the controller's

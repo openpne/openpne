@@ -18,7 +18,7 @@ class UpdateCommunity
     public function __construct(private readonly PostImages $images) {}
 
     /**
-     * Edit a community's settings and, OpenPNE 3-style (CommunityFileForm), manage its single top
+     * Edit a community's settings and manage its single top
      * image: replace it with $image, or clear it when $removeImage is set. A new image's bytes are
      * rollback-safe; the replaced/removed File's bytes (irreversible on a disk backend) are purged
      * only after commit.
@@ -30,7 +30,7 @@ class UpdateCommunity
         }
 
         // Keeping the community's current category is always allowed, even if it is admin-only —
-        // only switching to a non-member-creatable category is refused (OpenPNE 3 checkCreatable).
+        // only switching to a non-member-creatable category is refused.
         $keepsCurrentCategory = $data->categoryId === $community->community_category_id;
         if (! $keepsCurrentCategory && ! CommunityCategory::memberCreatable($data->categoryId)) {
             throw new CommunityActionException(CommunityActionFailure::CategoryNotAllowed);

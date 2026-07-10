@@ -194,7 +194,7 @@ export default function CommunityEventShow() {
                         </Field>
                         <ImagesField id="comment_images" label={t('Images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
-                        {/* RSVP + comment share one form (OpenPNE 3): participate/cancel toggle the roster,
+                        {/* RSVP + comment share one form: participate/cancel toggle the roster,
                             comment-only skips it. A comment is required for every submit. */}
                         <div className="flex flex-wrap items-center gap-3">
                             {rosterOpen && isParticipant && (
