@@ -29,7 +29,7 @@ class CommunityEventSerializer
      * openDate is a date-only Y-m-d string, not an ISO datetime: rendering an ISO midnight with the
      * browser's timezone would shift the date a day west of UTC (Classic renders the stored date).
      *
-     * @return array{id: int, name: string, commentCount: int, participantCount: int, author: array{id: int, name: string, imageUrl: string|null}|null, updatedAt: string, openDate: string}
+     * @return array{id: int, name: string, commentCount: int, participantCount: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, updatedAt: string, openDate: string}
      */
     public static function summary(CommunityEvent $event): array
     {
@@ -49,7 +49,7 @@ class CommunityEventSerializer
      * the current roster size (the RSVP button state is computed by the controller). openDate and
      * applicationDeadline are date-only Y-m-d strings (see summary()); createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @return array{id: int, name: string, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
     public static function detail(CommunityEvent $event): array
     {
@@ -70,7 +70,7 @@ class CommunityEventSerializer
     }
 
     /**
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
      */
     public static function comment(CommunityEventComment $comment, Member $viewer): array
     {
@@ -136,7 +136,7 @@ class CommunityEventSerializer
      * A roster member (event participant list). Requires avatar.file to be loaded so a list is not an
      * N+1.
      *
-     * @return array{id: int, name: string, imageUrl: string|null}
+     * @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}
      */
     public static function participant(Member $member): array
     {
@@ -144,6 +144,7 @@ class CommunityEventSerializer
             'id' => $member->getKey(),
             'name' => $member->name,
             'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'avatarColor' => $member->avatar_color?->hex(),
         ];
     }
 
@@ -185,7 +186,7 @@ class CommunityEventSerializer
         ];
     }
 
-    /** @return array{id: int, name: string, imageUrl: string|null}|null */
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null */
     private static function author(?Member $member): ?array
     {
         if ($member === null) {
@@ -196,6 +197,7 @@ class CommunityEventSerializer
             'id' => $member->getKey(),
             'name' => $member->name,
             'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'avatarColor' => $member->avatar_color?->hex(),
         ];
     }
 

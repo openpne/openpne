@@ -5,6 +5,7 @@ namespace Tests\Feature\Profile;
 use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
+use App\Support\AvatarColor;
 use App\Support\PreferenceKey;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
@@ -41,7 +42,21 @@ class MemberProfileRoutesTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/show')
                 ->where('profile.owner.id', $owner->getKey())
+                ->where('profile.owner.avatarColor', null)
                 ->has('profile.fields', 1)
+            );
+    }
+
+    public function test_modern_owner_carries_the_chosen_badge_color_as_hex(): void
+    {
+        $owner = Member::factory()->create();
+        $owner->forceFill(['avatar_color' => AvatarColor::Emerald])->save();
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)->get("/m/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('member/show')
+                ->where('profile.owner.avatarColor', '#10b981')
             );
     }
 

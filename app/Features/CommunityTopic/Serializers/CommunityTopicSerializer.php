@@ -23,7 +23,7 @@ class CommunityTopicSerializer
      * A board row / recent-topics card: the title, comment count, author, and last-activity time
      * (updated_at, bumped by a new comment). Callers eager-load `comments_count` and `member`.
      *
-     * @return array{id: int, name: string, commentCount: int, author: array{id: int, name: string, imageUrl: string|null}|null, updatedAt: string}
+     * @return array{id: int, name: string, commentCount: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, updatedAt: string}
      */
     public static function summary(CommunityTopic $topic): array
     {
@@ -39,7 +39,7 @@ class CommunityTopicSerializer
     /**
      * The topic show shape: the full body and images plus the author and post time.
      *
-     * @return array{id: int, name: string, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, name: string, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string}
      */
     public static function detail(CommunityTopic $topic): array
     {
@@ -57,7 +57,7 @@ class CommunityTopicSerializer
      * A single comment. `deletable` is the viewer's delete permission (its author, or anyone who may
      * edit the topic), so the client renders the button without re-deriving the rule.
      *
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
      */
     public static function comment(CommunityTopicComment $comment, Member $viewer): array
     {
@@ -151,7 +151,7 @@ class CommunityTopicSerializer
         ];
     }
 
-    /** @return array{id: int, name: string, imageUrl: string|null}|null */
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null */
     private static function author(?Member $member): ?array
     {
         if ($member === null) {
@@ -162,6 +162,7 @@ class CommunityTopicSerializer
             'id' => $member->getKey(),
             'name' => $member->name,
             'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'avatarColor' => $member->avatar_color?->hex(),
         ];
     }
 }

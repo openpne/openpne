@@ -55,7 +55,7 @@ export default function DiaryShow() {
 
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} size="sm" decorative />
+                    <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} size="sm" decorative />
                     <Link href={`/m/member/${diary.author.id}`} className="text-link hover:underline">
                         {diary.author.name}
                     </Link>

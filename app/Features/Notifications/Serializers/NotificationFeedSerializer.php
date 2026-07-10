@@ -24,7 +24,7 @@ class NotificationFeedSerializer
 {
     /**
      * @param  LengthAwarePaginator<int, DatabaseNotification>  $rows
-     * @return array{data: list<array{id: string, kind: string, reason: ?string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string}}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @return array{data: list<array{id: string, kind: string, reason: ?string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string}}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
     public static function paginator(LengthAwarePaginator $rows): array
     {
@@ -93,7 +93,7 @@ class NotificationFeedSerializer
 
     /**
      * @param  Collection<int, Member>  $actors
-     * @return array{id: string, kind: string, reason: ?string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string}}
+     * @return array{id: string, kind: string, reason: ?string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string}}
      */
     private static function row(DatabaseNotification $row, Collection $actors): array
     {
@@ -110,6 +110,7 @@ class NotificationFeedSerializer
                 'id' => $actor->getKey(),
                 'name' => $actor->name,
                 'imageUrl' => $actor->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                'avatarColor' => $actor->avatar_color?->hex(),
             ],
         ];
     }

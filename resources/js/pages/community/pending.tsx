@@ -11,6 +11,7 @@ interface Applicant {
     id: number;
     name: string;
     imageUrl: string | null;
+    avatarColor: string | null;
 }
 
 interface PendingProps extends PageProps {
@@ -41,7 +42,7 @@ export default function CommunityPending() {
                         <List>
                             {applicants.data.map((applicant) => (
                                 <ListRow key={applicant.id}>
-                                    <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} size="md" decorative />
+                                    <Avatar id={applicant.id} name={applicant.name} src={applicant.imageUrl} color={applicant.avatarColor} size="md" decorative />
                                     <Link href={`/m/member/${applicant.id}`} className="min-w-0 flex-1 truncate text-link hover:underline">
                                         {applicant.name}
                                     </Link>

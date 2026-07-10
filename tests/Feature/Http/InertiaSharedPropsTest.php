@@ -4,6 +4,7 @@ namespace Tests\Feature\Http;
 
 use App\Features\Member\Actions\SetAvatar;
 use App\Models\Member;
+use App\Support\AvatarColor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -18,8 +19,19 @@ class InertiaSharedPropsTest extends TestCase
             ->get('/dashboard')
             ->assertInertia(fn ($page) => $page
                 ->where('auth.user.imageUrl', null)
+                ->where('auth.user.avatarColor', null)
                 ->where('snsLogo.color', '#2563eb')
                 ->where('snsLogo.url', null));
+    }
+
+    public function test_shared_props_carry_the_chosen_badge_color_as_hex(): void
+    {
+        $member = Member::factory()->create();
+        $member->forceFill(['avatar_color' => AvatarColor::Blue])->save();
+
+        $this->actingAs($member)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('auth.user.avatarColor', '#3b82f6'));
     }
 
     public function test_shared_props_carry_the_member_avatar_thumbnail(): void

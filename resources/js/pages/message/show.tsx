@@ -87,7 +87,7 @@ export default function MessageShow() {
                             <ul className="flex flex-wrap gap-x-4 gap-y-1">
                                 {message.counterparties.map((m) => (
                                     <li key={m.id} className="flex items-center gap-1">
-                                        <Avatar id={m.id} name={m.name} src={m.imageUrl} size="sm" decorative />
+                                        <Avatar id={m.id} name={m.name} src={m.imageUrl} color={m.avatarColor} size="sm" decorative />
                                         <Link href={`/m/member/${m.id}`} className="text-link hover:underline">
                                             {m.name}
                                         </Link>

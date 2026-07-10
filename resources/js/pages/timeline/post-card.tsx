@@ -33,7 +33,7 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
         <li className="space-y-2 px-5 py-4 text-foreground">
             <div className="flex items-center justify-between gap-3 text-sm">
                 <Link href={`/m/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 font-medium text-link hover:underline">
-                    <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} size="sm" decorative />
+                    <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="sm" decorative />
                     <span className="truncate">{post.author.name}</span>
                 </Link>
                 <div className="flex shrink-0 items-center gap-2 text-muted-foreground">

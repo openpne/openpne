@@ -67,7 +67,7 @@ export default function CommunityTopicShow() {
 
             <Panel bodyClassName="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} size="sm" decorative />
+                    <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} color={topic.author?.avatarColor ?? null} size="sm" decorative />
                     {topic.author ? (
                         <Link href={`/m/member/${topic.author.id}`} className="text-link hover:underline">
                             {topic.author.name}

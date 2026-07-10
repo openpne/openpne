@@ -21,7 +21,7 @@ class MessageSerializer
      * A box-list row (MessageListItem): the counterparty (From for the inbox, To otherwise), the
      * subject, the box-appropriate date, and unread (only ever true in the inbox).
      *
-     * @return array{id: int, counterparty: array{id: int, name: string, imageUrl: string|null}|null, subject: string, date: string, unread: bool}
+     * @return array{id: int, counterparty: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, subject: string, date: string, unread: bool}
      */
     public static function row(MessageListItem $item): array
     {
@@ -38,7 +38,7 @@ class MessageSerializer
      * The message show shape: the body and images plus the counterparties (To when the viewer sent
      * it, the single From otherwise), and the adjacent-message ids for the in-box pager.
      *
-     * @return array{id: int, subject: string, body: string, createdAt: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, counterparties: list<array{id: int, name: string, imageUrl: string|null}>, viewerIsSender: bool, box: string, previousId: int|null, nextId: int|null}
+     * @return array{id: int, subject: string, body: string, createdAt: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, counterparties: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}>, viewerIsSender: bool, box: string, previousId: int|null, nextId: int|null}
      */
     public static function view(MessageView $view): array
     {
@@ -62,7 +62,7 @@ class MessageSerializer
      * The draft edit-form shape: the editable text, the fixed recipient (null if withdrawn), and the
      * current images (each removable by id). Callers eager-load files.file and draftRecipient.
      *
-     * @return array{id: int, subject: string, body: string, recipient: array{id: int, name: string, imageUrl: string|null}|null, images: list<array{id: int, url: string, thumbnailUrl: string}>}
+     * @return array{id: int, subject: string, body: string, recipient: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, images: list<array{id: int, url: string, thumbnailUrl: string}>}
      */
     public static function draftForm(Message $draft): array
     {
@@ -109,19 +109,20 @@ class MessageSerializer
         ];
     }
 
-    /** @return array{id: int, name: string, imageUrl: string|null}|null */
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null */
     private static function member(?Member $member): ?array
     {
         return $member === null ? null : self::memberRef($member);
     }
 
-    /** A present member (e.g. a compose recipient), always non-null. @return array{id: int, name: string, imageUrl: string|null} */
+    /** A present member (e.g. a compose recipient), always non-null. @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null} */
     public static function memberRef(Member $member): array
     {
         return [
             'id' => $member->getKey(),
             'name' => $member->name,
             'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'avatarColor' => $member->avatar_color?->hex(),
         ];
     }
 }

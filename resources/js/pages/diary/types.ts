@@ -8,6 +8,7 @@ export interface DiaryAuthor {
 /** A diary's own author (feed/detail) carries an avatar; comment authors (DiaryAuthor) do not. */
 export interface DiaryFeedAuthor extends DiaryAuthor {
     imageUrl: string | null;
+    avatarColor: string | null;
 }
 
 export interface DiaryImage {

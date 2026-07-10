@@ -7,7 +7,9 @@ use App\Features\Member\Actions\SetAvatar;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\AvatarRequest;
+use App\Http\Requests\Member\UpdateAvatarColorRequest;
 use App\Models\Member;
+use App\Support\AvatarColor;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +30,10 @@ class MemberAvatarController extends Controller
     {
         return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn (): View => view('member.avatar', ['avatar' => $this->viewer()->avatar?->file]),
-            SurfaceResolver::MODERN => fn (): InertiaResponse => Inertia::render('member/avatar', ['avatar' => $this->avatarImage()]),
+            SurfaceResolver::MODERN => fn (): InertiaResponse => Inertia::render('member/avatar', [
+                'avatar' => $this->avatarImage(),
+                'badgeColor' => $this->badgeColor(),
+            ]),
         ]);
     }
 
@@ -48,6 +53,16 @@ class MemberAvatarController extends Controller
             ->with('status', __('Profile image removed.'));
     }
 
+    public function updateColor(UpdateAvatarColorRequest $request): RedirectResponse
+    {
+        // Not mass-assignable by design (same write path as locale); the request already
+        // validated the slug against the enum, null included.
+        $this->viewer()->forceFill(['avatar_color' => $request->validated('avatar_color')])->save();
+
+        return redirect()->route(SurfaceResolver::redirectName($request, 'member.avatar.edit'))
+            ->with('status', __('Badge color updated.'));
+    }
+
     /**
      * The viewer's avatar as the shared Modern image shape, or null when unset. thumbnailUrl is the
      * 180px square editor preview; url is the full-bytes (FilePolicy-gated) original.
@@ -59,6 +74,27 @@ class MemberAvatarController extends Controller
         $file = $this->viewer()->avatar?->file;
 
         return $file ? ['url' => $file->url(), 'thumbnailUrl' => $file->thumbnailUrl(180, 180, square: true)] : null;
+    }
+
+    /**
+     * The badge-color picker payload. `value` is the stored slug (what the POST validates), while
+     * each option carries the display hex — the client must never post a hex back.
+     *
+     * @return array{value: string|null, options: list<array{value: string, hex: string, label: string}>}
+     */
+    private function badgeColor(): array
+    {
+        return [
+            'value' => $this->viewer()->avatar_color?->value,
+            'options' => array_map(
+                static fn (AvatarColor $color): array => [
+                    'value' => $color->value,
+                    'hex' => $color->hex(),
+                    'label' => $color->label(),
+                ],
+                AvatarColor::cases(),
+            ),
+        ];
     }
 
     private function viewer(): Member

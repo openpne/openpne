@@ -72,7 +72,7 @@ export default function BlockList() {
                                 <ListRow key={blocked.id}>
                                     {/* Avatar identifies the member, but the name is not linked to their profile:
                                         the viewer chose to block them, so we don't surface a path back to it. */}
-                                    <Avatar id={blocked.id} name={blocked.name} src={blocked.imageUrl} size="sm" decorative />
+                                    <Avatar id={blocked.id} name={blocked.name} src={blocked.imageUrl} color={blocked.avatarColor} size="sm" decorative />
                                     <span className="min-w-0 flex-1 truncate text-foreground">{blocked.name}</span>
                                     {/* Unblock restores access (non-destructive), so it stays text-link, not destructive red. */}
                                     <Link href={`/m/block/remove/${blocked.id}`} className="shrink-0 text-sm text-link hover:underline">
