@@ -249,6 +249,11 @@ class CommunityController extends Controller
             return redirect()->route('community.show', $community);
         }
 
+        // Modern confirms joining inline — send a Modern viewer back to the community.
+        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+            return redirect()->route('community.show', $community);
+        }
+
         return $this->classic('community.join', ['community' => $community]);
     }
 
@@ -278,6 +283,11 @@ class CommunityController extends Controller
             return redirect()->route('community.show', $community);
         }
 
+        // Modern confirms leaving inline — send a Modern viewer back to the community.
+        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+            return redirect()->route('community.show', $community);
+        }
+
         return $this->classic('community.quit', ['community' => $community]);
     }
 
@@ -294,9 +304,14 @@ class CommunityController extends Controller
         return $this->redirectToShow($request, $community)->with('status', __('You have left this %community%.'));
     }
 
-    public function showDelete(Request $request, Community $community): View
+    public function showDelete(Request $request, Community $community): View|RedirectResponse
     {
         abort_unless(Gate::allows('delete', $community), 404);
+
+        // Modern confirms deletion inline — send a Modern viewer back to the community.
+        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+            return redirect()->route('community.show', $community);
+        }
 
         return $this->classic('community.delete', ['community' => $community]);
     }

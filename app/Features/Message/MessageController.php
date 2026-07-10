@@ -183,11 +183,16 @@ class MessageController extends Controller
         return redirect()->route(SurfaceResolver::redirectName($request, 'message.trash'))->with('status', __('The message was restored.'));
     }
 
-    /** Confirm purging a single trashed message (OpenPNE 3 deleteConfirmDustMessage). Classic-only — Modern confirms inline. */
-    public function purgeConfirm(int $message, ShowMessage $query): View
+    /** Confirm purging a single trashed message (OpenPNE 3 deleteConfirmDustMessage). Modern confirms inline. */
+    public function purgeConfirm(Request $request, int $message, ShowMessage $query): View|RedirectResponse
     {
         $view = $query($this->viewer(), MessageBox::Trash, $message);
         abort_if($view === null, 404);
+
+        // Modern confirms purging inline — send a Modern viewer back to the trashed message.
+        if (SurfaceResolver::resolve($request, 'message') === SurfaceResolver::MODERN) {
+            return redirect()->route('message.trash.show', ['message' => $message]);
+        }
 
         return $this->classic('message.purge_confirm', ['message' => $view->message]);
     }

@@ -176,9 +176,14 @@ class CommunityEventController extends Controller
         return $this->redirectToEvent($request, $event)->with('status', __('Event updated.'));
     }
 
-    public function showDelete(Request $request, CommunityEvent $event): View
+    public function showDelete(Request $request, CommunityEvent $event): View|RedirectResponse
     {
         abort_unless(Gate::allows('delete', $event), 404);
+
+        // Modern confirms deletion inline — send a Modern viewer back to the event.
+        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+            return redirect()->route('communityEvent.show', $event);
+        }
 
         return $this->classic('community-event.delete', ['event' => $event]);
     }

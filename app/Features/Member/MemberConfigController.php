@@ -200,7 +200,7 @@ class MemberConfigController extends Controller
      * renders a confirm page — the actual change is the POST, so a mail scanner or link prefetch
      * cannot consume the token and silently change the login identifier.
      */
-    public function confirmEmailForm(string $token): View|RedirectResponse
+    public function confirmEmailForm(Request $request, string $token): View|RedirectResponse|InertiaResponse
     {
         $pending = $this->pendingEmailChange($token);
         if ($pending === null) {
@@ -209,6 +209,12 @@ class MemberConfigController extends Controller
 
         if ($wrongMember = $this->rejectIfDifferentMember($pending)) {
             return $wrongMember;
+        }
+
+        // A token landing from mail, reachable logged-in or out — the Modern page is auth-shell
+        // (guest-safe), not member chrome.
+        if (SurfaceResolver::resolve($request, 'member') === SurfaceResolver::MODERN) {
+            return Inertia::render('auth/email-change-confirm', ['token' => $token, 'newEmail' => $pending->new_email]);
         }
 
         // Rendered in the Classic shell. The body class tracks the actual auth state so it matches the
@@ -281,11 +287,16 @@ class MemberConfigController extends Controller
      * so anyone holding the link may do it. The cancel is the POST below, so a mail scanner / prefetch
      * of this GET cannot void the change.
      */
-    public function cancelEmailForm(string $token): View|RedirectResponse
+    public function cancelEmailForm(Request $request, string $token): View|RedirectResponse|InertiaResponse
     {
         $pending = $this->pendingEmailChangeByCancelToken($token);
         if ($pending === null) {
             return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
+        }
+
+        // Same auth-shell reasoning as confirmEmailForm: a guest-reachable token landing from mail.
+        if (SurfaceResolver::resolve($request, 'member') === SurfaceResolver::MODERN) {
+            return Inertia::render('auth/email-change-cancel', ['token' => $token, 'newEmail' => $pending->new_email]);
         }
 
         return view('member.email-change-cancel', ['token' => $token, 'newEmail' => $pending->new_email])

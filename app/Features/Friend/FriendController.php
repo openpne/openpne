@@ -133,15 +133,20 @@ class FriendController extends Controller
         return $this->redirectAfterSubmit($request, 'friend.manage', status: __('%Friend% request rejected.'));
     }
 
-    public function showUnlink(Request $request, Member $member): View
+    public function showUnlink(Request $request, Member $member): View|RedirectResponse
     {
         $viewer = $this->viewer();
         if ($viewer->is($member) || ! $viewer->isFriendsWith($member)) {
             abort(404);
         }
+
+        // Modern confirms unfriend inline (Radix AlertDialog) — send a Modern viewer to the profile.
+        if (SurfaceResolver::resolve($request, 'friend') === SurfaceResolver::MODERN) {
+            return redirect()->route('member.profile.show', $member);
+        }
+
         $this->markLocalNavSubject($member); // the target's friend localNav
 
-        // Classic-only GET confirm page — Modern confirms unfriend inline (Radix AlertDialog).
         return $this->classic('friend.unlink', ['target' => $member]);
     }
 

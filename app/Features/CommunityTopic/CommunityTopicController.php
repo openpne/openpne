@@ -156,9 +156,14 @@ class CommunityTopicController extends Controller
         return $this->redirectToTopic($request, $topic)->with('status', __('%Topic% updated.'));
     }
 
-    public function showDelete(Request $request, CommunityTopic $topic): View
+    public function showDelete(Request $request, CommunityTopic $topic): View|RedirectResponse
     {
         abort_unless(Gate::allows('delete', $topic), 404);
+
+        // Modern confirms deletion inline — send a Modern viewer back to the topic.
+        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+            return redirect()->route('communityTopic.show', $topic);
+        }
 
         return $this->classic('community-topic.delete', ['topic' => $topic]);
     }
