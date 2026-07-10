@@ -26,7 +26,14 @@ export function NineTable({ items, shape }: { items: RightRailItem[]; shape: 'ro
                                 className={`aspect-square w-full object-cover ${rounded} transition group-hover:opacity-90`}
                             />
                         ) : (
-                            <InitialBadge aria-hidden name={item.name} className={`aspect-square w-full text-base ${rounded}`} />
+                            <InitialBadge
+                                aria-hidden
+                                name={item.name}
+                                // Chosen colors are a member feature; a community tile stays neutral even
+                                // if a colored item ever leaks into the square grid.
+                                color={shape === 'round' ? item.avatarColor : null}
+                                className={`aspect-square w-full text-base ${rounded}`}
+                            />
                         )}
                         <p className="mt-1 truncate text-[10px] text-muted-foreground transition group-hover:text-foreground">{item.name}</p>
                     </Link>

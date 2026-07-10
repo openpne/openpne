@@ -89,7 +89,7 @@ function TimelineRow({ post }: { post: TimelinePostEntry }) {
     return (
         <EntryRow
             href={`/m/timeline/${post.id}`}
-            leading={<Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} size="sm" decorative />}
+            leading={<Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="sm" decorative />}
             title={post.body}
             titleClassName="line-clamp-2 text-sm text-foreground"
             meta={[post.author.name, formatDate(post.createdAt)]}

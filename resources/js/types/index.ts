@@ -3,6 +3,7 @@ export interface AuthUser {
     name: string;
     email: string;
     imageUrl: string | null;
+    avatarColor: string | null;
 }
 
 export interface SnsLogo {
@@ -20,6 +21,9 @@ export interface RightRailItem {
     id: number;
     name: string;
     imageUrl: string | null;
+    /** Member rows carry the chosen badge color (hex); community rows are always null.
+     *  Required (not optional) so a serializer that forgets it fails type-check. */
+    avatarColor: string | null;
     href: string;
 }
 

@@ -174,7 +174,7 @@ export default function CommunityShow() {
                         {members.map((member) => (
                             <li key={member.id} className="w-16">
                                 <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
-                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} size="lg" decorative />
+                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="lg" decorative />
                                     <span className="w-full truncate text-center text-xs">{member.name}</span>
                                 </Link>
                             </li>

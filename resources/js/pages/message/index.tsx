@@ -122,6 +122,7 @@ export default function MessageIndex() {
                                         id={m.counterparty?.id ?? 0}
                                         name={m.counterparty?.name ?? ''}
                                         src={m.counterparty?.imageUrl ?? null}
+                                        color={m.counterparty?.avatarColor ?? null}
                                         size="sm"
                                         decorative
                                     />

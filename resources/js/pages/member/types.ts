@@ -71,6 +71,7 @@ export interface MemberRow {
     id: number;
     name: string;
     imageUrl: string | null;
+    avatarColor: string | null;
     /** Visible only when the viewer's clearance covers the field's visibility; null otherwise. */
     selfIntroduction: string | null;
 }

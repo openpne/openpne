@@ -22,6 +22,7 @@ export interface CommunityMemberRow {
     id: number; // member id
     name: string;
     imageUrl: string | null;
+    avatarColor: string | null;
     role: CommunityRoleSlug;
 }
 
@@ -46,6 +47,7 @@ export interface TopicAuthor {
     id: number;
     name: string;
     imageUrl: string | null; // null → Avatar renders the neutral initial badge
+    avatarColor: string | null;
 }
 
 export interface TopicImage {
@@ -133,6 +135,7 @@ export interface EventParticipant {
     id: number;
     name: string;
     imageUrl: string | null;
+    avatarColor: string | null;
 }
 
 export interface PaginatedEvents {

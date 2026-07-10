@@ -146,7 +146,7 @@ export default function MemberSearch() {
                                     // Top-align only when a self-introduction adds a second line; single-line rows stay centered.
                                     className={member.selfIntroduction ? 'items-start' : undefined}
                                 >
-                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} size="md" decorative />
+                                    <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="md" decorative />
                                     <div className="min-w-0 flex-1">
                                         <span className="block truncate text-foreground">{member.name}</span>
                                         {member.selfIntroduction && (
