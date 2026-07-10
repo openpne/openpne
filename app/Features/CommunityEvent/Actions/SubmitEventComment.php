@@ -32,7 +32,7 @@ class SubmitEventComment
      */
     public function __invoke(Member $member, CommunityEvent $event, string $body, array $images, bool $toggleRoster): ?bool
     {
-        // Commenting and RSVP share the same membership gate (OpenPNE 3 isCreatableCommunityEventComment).
+        // Commenting and RSVP share the same membership gate.
         if (! CommunityEventAccess::canComment($event, $member)) {
             throw new CommunityEventActionException(CommunityEventActionFailure::CannotComment);
         }

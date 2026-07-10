@@ -3,7 +3,7 @@ import { InitialBadge } from '@/components/initial-badge';
 import type { RightRailItem } from '@/types';
 
 /**
- * OpenPNE 3's nineTable gadget: a 3×3 grid of friend or community thumbnails with names. `round`
+ * A 3×3 grid of friend or community thumbnails with names. `round`
  * (friends, like the circular Avatar) vs `square` (communities, like CommunityImage) so a person and
  * a place read differently at a glance. Missing images fall back to a neutral initial badge. Items
  * are pre-shuffled server-side; this renders in order.

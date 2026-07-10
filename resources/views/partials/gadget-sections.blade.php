@@ -1,7 +1,6 @@
 {{-- Maps a context's gadget zones onto the Classic shell sections. An empty side zone is left
-     undefined so its structural div is omitted, matching OpenPNE 3's has_slot gating.
-     $contentTop (optional view name) renders ahead of the contents zone — the OpenPNE 3 op_top
-     slot equivalent for page-owned boxes that are not gadgets. --}}
+     undefined so its structural div is omitted. $contentTop (optional view name) renders ahead
+     of the contents zone, for page-owned boxes that are not gadgets. --}}
 @if (! empty($zones['top'] ?? []))
     @section('top')<x-gadget-zone :items="$zones['top']" />@endsection
 @endif

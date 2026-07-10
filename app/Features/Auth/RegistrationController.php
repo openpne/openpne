@@ -23,7 +23,7 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Multi-stage member registration (OpenPNE 3's email-confirmation flow). The email-entry half takes an
+ * Multi-stage member registration. The email-entry half takes an
  * address, mails a single-use token, and shows a neutral confirmation. The completion half renders the
  * token-gated form (name/password/profile) and creates the member on submit; the token's email is
  * authoritative throughout, so the address is never re-entered.

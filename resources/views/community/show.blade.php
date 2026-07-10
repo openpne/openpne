@@ -7,7 +7,7 @@
 @endsection
 
 @if ($isPending)
-    {{-- OpenPNE 3 community home op_top: the pending-approval notice, shown only while waiting. --}}
+    {{-- The pending-approval notice, shown only while waiting. --}}
     @section('top')
         <div class="dparts" id="community_pending">
             <div class="parts">
@@ -53,8 +53,8 @@
         </div>
     </div>
 
-    {{-- OpenPNE 3 community home: the recent-topics box links into the board. Shown only when the
-         viewer may read the board (a members-only board is hidden from non-members). --}}
+    {{-- The recent-topics box links into the board. Shown only when the viewer may read the
+         board (a members-only board is hidden from non-members). --}}
     @isset($recentTopics)
         <div class="dparts" id="community_recentTopics">
             <div class="partsHeading"><h3>{{ __('Recent %topics%') }}</h3></div>
@@ -83,8 +83,8 @@
         </div>
     @endisset
 
-    {{-- OpenPNE 3 community home: the recent-events box links into the event board, shown only when
-         the viewer may read the board (events share the topic read gate). --}}
+    {{-- The recent-events box links into the event board, shown only when the viewer may read
+         the board (events share the topic read gate). --}}
     @isset($recentEvents)
         <div class="dparts" id="community_recentEvents">
             <div class="partsHeading"><h3>{{ __('Recent events') }}</h3></div>

@@ -28,7 +28,7 @@
                 </tr>
                 <tr>
                     <th>{{ __('Area') }}</th>
-                    {{-- OpenPNE 3 runs the area through op_url_cmd, so a bare venue/online-meeting URL autolinks. --}}
+                    {{-- Rendered as user text so a bare venue/online-meeting URL autolinks. --}}
                     <td><x-user-text :value="$event->area" /></td>
                 </tr>
                 <tr>
@@ -68,7 +68,7 @@
         <div class="dparts commentList" id="communityEvent_comment_list">
             <div class="partsHeading"><h3>{{ __('Comments') }}</h3></div>
             <div class="parts">
-                {{-- OpenPNE 3 communityEventComment list: reversible pager (fixed size 20), order toggle. --}}
+                {{-- Reversible pager (fixed size 20), order toggle. --}}
                 @if ($thread->hasPages())
                     <div class="pagerRelative">
                         @if ($thread->ascending)
@@ -134,9 +134,9 @@
                     </table>
                     <div class="operation">
                         <ul class="moreInfo button">
-                            {{-- The participate/cancel button only shows while the roster is open
-                                 (OpenPNE 3 hides it once closed/expired, and hides "Participate" when
-                                 the viewer is already in or the event is full). --}}
+                            {{-- The participate/cancel button only shows while the roster is open:
+                                 hidden once closed/expired, and "Participate" is hidden when the
+                                 viewer is already in or the event is full. --}}
                             @if (! $isClosed && ! $isExpired)
                                 @if ($isParticipant)
                                     <li><input type="submit" name="cancel" class="input_submit" value="{{ __('Cancel to join') }}"></li>

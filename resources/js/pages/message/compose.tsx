@@ -13,7 +13,7 @@ import type { MessageMember } from './types';
 
 interface ComposeProps extends PageProps {
     recipient: MessageMember;
-    parentId: number | null; // reply links (OpenPNE 3 return_message_id / thread_message_id)
+    parentId: number | null; // reply links
     threadId: number | null;
     subject: string; // prefilled on reply ("Re: …")
     body: string; // prefilled on reply (the original quoted)
@@ -34,7 +34,7 @@ export default function MessageCompose() {
     });
     const [active, setActive] = useState<'send' | 'draft' | null>(null);
 
-    // OpenPNE 3's two submit buttons (send / draft) as one form; transform stamps the chosen action.
+    // Two submit buttons (send / draft) as one form; transform stamps the chosen action.
     const submit = (action: 'send' | 'draft') => {
         setActive(action);
         form.transform((data) => ({ ...data, action }));

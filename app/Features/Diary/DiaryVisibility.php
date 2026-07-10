@@ -29,7 +29,7 @@ final class DiaryVisibility
 
     /**
      * The audience to pre-select on the new-diary form for $member: their stored
-     * DiaryDefaultVisibility (OpenPNE 3's per-member default), clamped to the currently
+     * DiaryDefaultVisibility, clamped to the currently
      * selectable audiences so a stored Open never pre-selects once web-public is turned off.
      */
     public static function defaultFor(Member $member): Visibility

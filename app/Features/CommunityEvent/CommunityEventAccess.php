@@ -63,7 +63,7 @@ class CommunityEventAccess
             || CommunityMembership::isAdmin($community, $member);
     }
 
-    /** May the member comment? Any community member may (OpenPNE 3 isCreatableCommunityEventComment). */
+    /** May the member comment? Any community member may. */
     public static function canComment(CommunityEvent $event, Member $member): bool
     {
         return CommunityMembership::isMember($event->community, $member);
@@ -81,7 +81,7 @@ class CommunityEventAccess
 
     /**
      * May the member delete this comment? Its author may (unless withdrawn), or anyone who may edit
-     * the event (OpenPNE 3 CommunityEventComment::isDeletable).
+     * the event.
      */
     public static function canDeleteComment(CommunityEventComment $comment, Member $member): bool
     {

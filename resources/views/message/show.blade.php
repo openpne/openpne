@@ -71,7 +71,7 @@
             <div class="operation">
                 <ul class="moreInfo button">
                     @if ($view->box === \App\Features\Message\MessageBox::Receive)
-                        {{-- OpenPNE 3 shows Reply on a received message whose sender still exists. --}}
+                        {{-- Reply is shown on a received message whose sender still exists. --}}
                         @if ($view->message->sender !== null)
                             <li><a href="{{ route('message.reply', ['message' => $id]) }}" class="input_submit">{{ __('Reply') }}</a></li>
                         @endif

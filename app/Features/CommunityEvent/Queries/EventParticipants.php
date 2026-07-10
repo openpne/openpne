@@ -7,7 +7,7 @@ use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * An event's participant roster (OpenPNE 3 communityEvent/memberList), paged. Ordered by join time
+ * An event's participant roster, paged. Ordered by join time
  * so the roster reads in the order people signed up.
  */
 class EventParticipants

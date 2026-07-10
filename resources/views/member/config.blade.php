@@ -5,8 +5,8 @@
 
 @section('title', __('Settings'))
 
-{{-- OpenPNE 3 member/config is paginated by ?category= (LayoutB): the category nav fills the
-     sidemenu, the active category's form the center, or a "pick one" landing when none is selected. --}}
+{{-- Paginated by ?category=: the category nav fills the sidemenu, the active category's form
+     the center, or a "pick one" landing when none is selected. --}}
 @section('sidemenu')
     <x-member.config-sidemenu :current="$category" :age-available="$ageAvailable" />
 @endsection
@@ -103,8 +103,7 @@
 
         @case(MemberConfigCategory::General)
             {{-- Display surface (member_preferences[preferred_surface]); binary, preselected to the member's
-                 current surface. Saving the current one is a no-op server-side, so it never pins. OpenPNE
-                 4-native setting under OpenPNE 3's "general" catch-all category. --}}
+                 current surface. Saving the current one is a no-op server-side, so it never pins. --}}
             <div class="dparts form" id="member_config_surface">
                 <div class="partsHeading"><h3>{{ __('Display') }}</h3></div>
                 <div class="parts">
@@ -440,8 +439,7 @@
             @break
 
         @default
-            {{-- OpenPNE 3 landing (configInformation): no category selected, pick one from the nav.
-                 id is an OpenPNE 4-side hook, not an OpenPNE 3 parity claim. --}}
+            {{-- The landing screen: no category selected, pick one from the nav. --}}
             <div class="dparts" id="member_config_index">
                 <div class="partsHeading"><h3>{{ __('Change Settings') }}</h3></div>
                 <div class="parts">

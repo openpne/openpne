@@ -1,5 +1,4 @@
-{{-- OpenPNE 3 default/memberImageBox (single parts): the subject member's avatar (p.photo) and
-     name (p.text). --}}
+{{-- The subject member's avatar (p.photo) and name (p.text). --}}
 @props(['config' => [], 'subject' => null, 'partId' => null])
 @if ($subject)
     @php($avatar = $subject->avatar?->file)

@@ -9,7 +9,7 @@ use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * OpenPNE 3 diary search (action `search`): keyword search over the same all-member tier the
+ * Diary keyword search over the same all-member tier the
  * recent feed exposes (visibility <= Members, blocking owners excluded). Each whitespace-split
  * term must match the title or body; terms are AND-connected. An empty keyword applies no term
  * filter, so the page shows recent diaries — OpenPNE 3 forwarded an empty search to `list`.

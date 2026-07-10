@@ -16,7 +16,7 @@ class ClassicHomeTest extends TestCase
 
         $this->actingAs($member)->get('/')
             ->assertOk()
-            ->assertSee('id="page_member_home"', false) // OpenPNE 3 body-id hook
+            ->assertSee('id="page_member_home"', false) // body-id hook
             ->assertSee('id="home_index"', false)
             ->assertSee('Hanako');
     }

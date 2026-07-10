@@ -31,7 +31,7 @@ class DiarySidemenuParityTest extends TestCase
         $response->assertOk();
         $response->assertSee('id="LayoutB"', false);                                    // two-column layout
         $response->assertSee('id="Left"', false);                                       // sidemenu slot
-        $response->assertSee('class="parts memberImageBox"', false);                    // OpenPNE 3 hook
+        $response->assertSee('class="parts memberImageBox"', false);                    // skin hook
         $response->assertSee('href="'.route('member.profile.show', $owner).'"', false); // author profile link
         $response->assertSee('Recently Posted');                                        // recent box heading
         $response->assertSee('href="'.route('diary.show', $recent).'"', false);         // recent entry link
@@ -92,7 +92,7 @@ class DiarySidemenuParityTest extends TestCase
         $response = $this->actingAs($owner)->get("/diary/{$diary->getKey()}");
 
         $response->assertOk();
-        $response->assertSee('class="calendar"', false);                                            // OpenPNE 3 hook
+        $response->assertSee('class="calendar"', false);                                            // skin hook
         $response->assertSee('2026-03');                                                             // focused month
         $dayArchive = route('diary.list_member.archive', ['member' => $owner, 'year' => 2026, 'month' => 3, 'day' => 14]);
         $response->assertSee('>14</a>', false);                                                      // the 14th is linked

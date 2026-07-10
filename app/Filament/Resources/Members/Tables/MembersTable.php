@@ -68,7 +68,7 @@ class MembersTable
             ->defaultSort('id', 'desc');
     }
 
-    /** Freeze a member's login (OpenPNE 3 is_login_rejected). Never offered for the primary member. */
+    /** Freeze a member's login (is_login_rejected). Never offered for the primary member. */
     private static function banAction(): Action
     {
         return Action::make('ban')

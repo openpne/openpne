@@ -23,9 +23,10 @@ use Illuminate\Support\Facades\DB;
  * every recipient's channels from ONE opt-out query (the fanout index) rather than a per-recipient
  * cold read, then queues one DiaryPostedNotification per recipient with the decided channels.
  *
- * The two catalog kinds compose as OpenPNE 3 did (a union, which realises dependOnNot): a recipient is
- * mailed/fed if diary-new-post is on, OR they are one of the author's friends and the friends-only
- * variant is on. Rows are absent-means-on, so only the opted-out set is loaded.
+ * The two catalog kinds compose as the OpenPNE 3 notification extension did (a union, which realises
+ * dependOnNot): a recipient is mailed/fed if diary-new-post is on, OR they are one of the author's
+ * friends and the friends-only variant is on. Rows are absent-means-on, so only the opted-out set
+ * is loaded.
  */
 class BroadcastDiaryPosted implements ShouldQueue
 {

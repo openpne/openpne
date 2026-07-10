@@ -12,9 +12,9 @@ use App\Support\SnsSettingKey;
  */
 enum RegistrationMode: string
 {
-    case Open = 'open';            // OpenPNE 3 invite_mode=2: anyone may self-register at /register (behind the CAPTCHA).
-    case Invite = 'invite';        // OpenPNE 3 invite_mode=1 (default): members invite (/invite); no open self-registration entry.
-    case AdminOnly = 'admin_only'; // OpenPNE 3 invite_mode=0 + admin_invite: only an admin may invite; members cannot.
+    case Open = 'open';            // Anyone may self-register at /register (behind the CAPTCHA).
+    case Invite = 'invite';        // Members invite (/invite); no open self-registration entry.
+    case AdminOnly = 'admin_only'; // Only an admin may invite; members cannot.
     case Closed = 'closed';        // Registration suspended: even a valid token cannot complete.
 
     /**
@@ -44,13 +44,13 @@ enum RegistrationMode: string
         return $this === self::Open;
     }
 
-    /** Whether a logged-in member may invite others (OpenPNE 3 invite_mode >= member-invite). */
+    /** Whether a logged-in member may invite others. */
     public function allowsMemberInvite(): bool
     {
         return $this === self::Open || $this === self::Invite;
     }
 
-    /** Whether an admin may invite (OpenPNE 3 admin_invite: always, short of a global suspend). */
+    /** Whether an admin may invite: always, short of a global suspend. */
     public function allowsAdminInvite(): bool
     {
         return $this !== self::Closed;

@@ -8,8 +8,8 @@ use App\Models\Member;
 use Illuminate\Support\Collection;
 
 /**
- * The diary sidemenu's "Recently Posted Diaries" box (OpenPNE 3 Diary::getMemberDiaryList):
- * an author's own newest entries the viewer may see, with their comment count.
+ * The diary sidemenu's "Recently Posted Diaries" box: an author's own newest entries the
+ * viewer may see, with their comment count.
  */
 class RecentMemberDiaries
 {

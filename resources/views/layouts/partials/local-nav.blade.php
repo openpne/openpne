@@ -1,9 +1,8 @@
-{{-- OpenPNE 3 localNav (admin Navigation data, secure pages only): the `community` set on a
+{{-- The localNav bar (admin Navigation data, secure pages only): the `community` set on a
      community page, the `friend` set (the subject's id-scoped links) when viewing another member,
      the `default` set on the viewer's own pages. The community / subject is recorded by
-     Controller::markLocalNavCommunity / markLocalNavSubject (OpenPNE 3 sf_nav_type/sf_nav_id); the
-     renderer threads its id into a `:id` slot or as `?id=`. Community wins, as its module's
-     default_nav does in OpenPNE 3. --}}
+     Controller::markLocalNavCommunity / markLocalNavSubject; the renderer threads its id into a
+     `:id` slot or as `?id=`. Community wins over the subject. --}}
 @auth
     @php
         $navService = app(\App\Services\NavigationService::class);

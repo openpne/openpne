@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** A name/value setting for one Gadget (OpenPNE 3 `gadget_config`). */
+/** A name/value setting for one Gadget. */
 class GadgetConfig extends Model
 {
     public $timestamps = false;

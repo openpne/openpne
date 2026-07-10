@@ -1,5 +1,4 @@
-{{-- OpenPNE 3 member/profileListBox (listBox parts): the nickname row plus the subject's
-     viewer-visible profile values. --}}
+{{-- The nickname row plus the subject's viewer-visible profile values. --}}
 @if (count($rows))
     <x-gadget-part :part-id="$partId" part-name="listBox" :title="__('Profile')">
         <table>

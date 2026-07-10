@@ -20,7 +20,7 @@ class CommunityEventFactory extends Factory
             'name' => fake()->sentence(4),
             'body' => fake()->paragraphs(2, true),
             'event_updated_at' => null,
-            // A week out so the event is open for RSVP by default; date-only, like OpenPNE 3.
+            // A week out so the event is open for RSVP by default; date-only.
             'open_date' => now()->addWeek()->startOfDay(),
             'open_date_comment' => '13:00-15:00',
             'area' => fake()->city(),

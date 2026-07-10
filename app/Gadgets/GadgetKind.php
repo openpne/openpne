@@ -7,8 +7,8 @@ namespace App\Gadgets;
 use Illuminate\Support\Str;
 
 /**
- * A gadget kind — what a `gadgets.name` value renders as (OpenPNE 3 gadget definition: component,
- * config schema, viewable_privilege), registered in GadgetKindRegistry.
+ * A gadget kind — what a `gadgets.name` value renders as (component, config schema,
+ * viewable_privilege), registered in GadgetKindRegistry.
  */
 abstract class GadgetKind
 {

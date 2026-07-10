@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
 /**
- * A member-profile field definition (OpenPNE 3 `profile`).
+ * A member-profile field definition.
  *
  * Captions/info are localised in `profile_translations` keyed by (id, lang); preset fields
  * fall back to the config/preset_profile.php caption via __(). `op_preset_*` fields source

@@ -28,7 +28,7 @@ class ListNavigations extends ListRecords
 
     /**
      * One tab per navigation context, so each list (and its drag-reorder) stays scoped to a single
-     * type — OpenPNE 3's per-type navigation editor.
+     * type.
      *
      * @return array<string, Tab>
      */

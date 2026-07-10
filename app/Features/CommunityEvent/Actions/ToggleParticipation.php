@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 class ToggleParticipation
 {
     /**
-     * Join or leave an event's roster (OpenPNE 3 toggleEventMember). A closed or expired event
+     * Join or leave an event's roster. A closed or expired event
      * freezes the roster in both directions; a full event blocks only joining. Lock the event row so
      * the capacity check and the insert cannot race two joins past the cap.
      *

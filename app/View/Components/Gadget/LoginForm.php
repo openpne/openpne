@@ -8,7 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
 /**
- * OpenPNE 3 default/loginFormBox: the login form as a gadget. Reuses the shared login-form partial
+ * The login form as a gadget. Reuses the shared login-form partial
  * (CAPTCHA / registration / error behaviour) and re-resolves its render state from the request, so
  * the form is identical to the fixed login page.
  */

@@ -39,7 +39,7 @@ use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * The member's own settings page (OpenPNE 3 member/config), Classic + Modern. Each section is its
+ * The member's own settings page, Classic + Modern. Each section is its
  * own submit so saving one never rewrites another — in particular, the diary section shows the
  * read-time clamped default (DiaryVisibility::defaultFor), which must not be written back on an
  * unrelated change (it would collapse a stored Open once web-public is off).

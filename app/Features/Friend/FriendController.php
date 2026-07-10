@@ -82,7 +82,7 @@ class FriendController extends Controller
         if ($viewer->is($target) || BlockLookup::hasAnyBlockBetween($viewer, $target)) {
             abort(404);
         }
-        $this->markLocalNavSubject($target); // OpenPNE 3 friend module: the target's friend localNav
+        $this->markLocalNavSubject($target); // the target's friend localNav
         if ($viewer->isFriendsWith($target)) {
             return redirect()->route('friend.list');
         }
@@ -139,7 +139,7 @@ class FriendController extends Controller
         if ($viewer->is($member) || ! $viewer->isFriendsWith($member)) {
             abort(404);
         }
-        $this->markLocalNavSubject($member); // OpenPNE 3 friend module: the target's friend localNav
+        $this->markLocalNavSubject($member); // the target's friend localNav
 
         // Classic-only GET confirm page — Modern confirms unfriend inline (Radix AlertDialog).
         return $this->classic('friend.unlink', ['target' => $member]);

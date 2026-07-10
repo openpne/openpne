@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-// One timeline post (successor of OpenPNE 3 activity_data). A reply is a row whose in_reply_to_id
-// points at its parent; top-level posts leave it null.
+// One timeline post. A reply is a row whose in_reply_to_id points at its parent; top-level
+// posts leave it null.
 #[Fillable(['member_id', 'in_reply_to_id', 'body', 'visibility'])]
 class TimelinePost extends Model
 {

@@ -1,6 +1,6 @@
-{{-- OpenPNE 3 member/config category pageNav (configSuccess op_sidemenu): the settings categories,
-     the current one rendered as plain text, the rest linked to ?category=. The age category is
-     offered only while the site has a birthday profile item (no birthday → no age to gate). --}}
+{{-- The settings categories, the current one rendered as plain text, the rest linked to
+     ?category=. The age category is offered only while the site has a birthday profile item
+     (no birthday → no age to gate). --}}
 @props(['current' => null, 'ageAvailable' => true])
 <div class="parts pageNav">
     <ul>

@@ -56,11 +56,11 @@ class CommunityController extends Controller
         $viewer = $this->viewer();
         $role = CommunityMembership::roleOf($found, $viewer);
         $isPending = CommunityMembership::isPending($found, $viewer);
-        // The sidemenu member grid (OpenPNE 3 nineTable, 3×3), admins first like ListCommunityMembers.
+        // The sidemenu member grid (3×3), admins first like ListCommunityMembers.
         // Shared by the Classic grid and the Modern member preview.
         $sidebarMembers = $found->members()->with('member.avatar.file')
             ->orderByDesc('role')->orderBy('id')->limit(9)->get();
-        // The recent-topics / recent-events boxes (OpenPNE 3 community home) only show when the viewer
+        // The recent-topics / recent-events boxes only show when the viewer
         // may read that board; events share the topic read gate, so one check covers both. Modern
         // omits these until the board/event surfaces land (a follow-up), so no unlinkable content.
         $canViewBoard = CommunityTopicAccess::canViewBoard($found, $viewer);
@@ -408,7 +408,7 @@ class CommunityController extends Controller
             ->get();
     }
 
-    /** Every category, for the search filter (OpenPNE 3 CommunityFormFilter::getAllChildren()). */
+    /** Every category, for the search filter. */
     private function allCategories()
     {
         return CommunityCategory::query()
@@ -435,7 +435,7 @@ class CommunityController extends Controller
     /**
      * The edit form's category options: the member-creatable set plus the community's current
      * category if it is not in it, so an admin editing a community in an admin-only category can
-     * keep it instead of having it silently dropped (OpenPNE 3 CommunityForm).
+     * keep it instead of having it silently dropped.
      */
     private function editableCategories(?Community $community)
     {

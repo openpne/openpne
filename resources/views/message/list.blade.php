@@ -15,8 +15,8 @@
             @if ($messages->isEmpty())
                 <div class="body">{{ __('There are no messages') }}</div>
             @else
-                {{-- OpenPNE 3 MessageDeleteForm: the list is a form whose checked rows the buttons act
-                     on (trash from receive/send/draft, restore/purge from trash). --}}
+                {{-- The list is a form whose checked rows the buttons act on (trash from
+                     receive/send/draft, restore/purge from trash). --}}
                 <form method="POST" action="{{ route('message.bulk') }}" name="delete_message">
                     @csrf
                     <input type="hidden" name="box" value="{{ $box->value }}">

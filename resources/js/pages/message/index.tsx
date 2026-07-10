@@ -32,7 +32,7 @@ const SHOW_PATH: Record<MessageBoxSlug, (id: number) => string> = {
     draft: (id) => `/m/message/edit/${id}`,
 };
 
-// The bulk actions a box offers (OpenPNE 3 MessageDeleteForm): trash from the active boxes; restore
+// The bulk actions a box offers: trash from the active boxes; restore
 // or purge from the trash. `confirm` marks the destructive purge, which asks first.
 interface BulkAction {
     label: string;

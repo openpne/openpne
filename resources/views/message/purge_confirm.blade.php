@@ -3,7 +3,7 @@
 @section('title', __('Delete this message'))
 
 @section('content')
-    {{-- OpenPNE 3 deleteConfirm: a single trashed message purged for good after confirmation. --}}
+    {{-- A single trashed message purged for good after confirmation. --}}
     <div class="dparts box" id="formMessageDelete">
         <div class="parts">
             <div class="partsHeading"><h3>{{ __('Delete this message') }}</h3></div>

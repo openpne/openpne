@@ -7,10 +7,9 @@ use App\Services\GadgetService;
 use Illuminate\Database\Seeder;
 
 /**
- * OpenPNE 3's default PC gadget set (data/fixtures/005_import_gadgets.yml), with the OpenPNE 3
- * `type` split into OpenPNE 4 (context, zone). Mobile / smartphone types are dropped (those
- * frontends are out of scope). Config is left to each kind's defaults, as the fixture does. Runs on
- * db:seed, not migrate, so an existing install has no gadgets until seeded (pre-release).
+ * The default PC gadget set. Mobile / smartphone types are dropped (those frontends are out of
+ * scope). Config is left to each kind's defaults. Runs on db:seed, not migrate, so an existing
+ * install has no gadgets until seeded (pre-release).
  */
 class GadgetSeeder extends Seeder
 {

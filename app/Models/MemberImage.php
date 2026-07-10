@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-// Links a member to a stored File as a profile image (successor of OpenPNE 3
-// `member_image`). The bytes belong to the File; deleting the File cascades the row.
+// Links a member to a stored File as a profile image. The bytes belong to the File;
+// deleting the File cascades the row.
 #[Fillable(['member_id', 'file_id'])]
 class MemberImage extends Model
 {

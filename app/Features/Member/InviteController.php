@@ -17,7 +17,7 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Member invitation (OpenPNE 3 member/invite). A logged-in member enters an address; this issues a
+ * Member invitation. A logged-in member enters an address; this issues a
  * member-invite registration token (recording the inviter for the auto-friend on completion) and
  * mails the link. The mode gate lives in EnsureMemberInviteAllowed; the inviter is told whether the
  * address was already taken, which is fine — the caller is authenticated, so this is not the

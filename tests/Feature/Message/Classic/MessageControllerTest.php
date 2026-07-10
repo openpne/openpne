@@ -40,7 +40,7 @@ class MessageControllerTest extends TestCase
         $response = $this->actingAs($recipient)->get('/message/receiveList');
 
         $response->assertOk();
-        $response->assertSee('id="page_message_list"', false);              // OpenPNE 3 body id
+        $response->assertSee('id="page_message_list"', false);              // body id
         $response->assertSee('A friendly note');
         $response->assertSee("/member/{$sender->getKey()}", false);          // From link
         $response->assertSee(route('message.receive.show', ['message' => Message::first()->getKey()]), false);

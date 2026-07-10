@@ -14,7 +14,6 @@
             <p class="public">({{ __($diary->visibility->label()) }})</p>
         </div>
         <div class="parts">
-            {{-- OpenPNE 3 showSuccess.php: links to the author's adjacent diaries the viewer may see. --}}
             @if ($previousDiary || $nextDiary)
                 <div class="block prevNextLinkLine">
                     @if ($previousDiary)
@@ -30,7 +29,6 @@
             </p>
             <div class="diaryBody"><x-user-text :value="$diary->body" /></div>
 
-            {{-- OpenPNE 3 showSuccess.php: the diary's attached images as a thumbnail gallery. --}}
             @include('community-topic._images', ['images' => $diary->images])
 
             @if ($diary->member->is(auth()->user()))
@@ -46,7 +44,6 @@
         <div class="dparts commentList" id="diary_comment_list">
             <div class="partsHeading"><h3>{{ __('Comments') }}</h3></div>
             <div class="parts">
-                {{-- OpenPNE 3 diaryComment/_list.php: page-size switch + order toggle. --}}
                 @if ($thread->offersSizeSwitch())
                     <div class="pagerRelative">
                         @foreach ($thread->otherSizes() as $n)
@@ -128,7 +125,7 @@
         </div>
     </div>
 
-    {{-- OpenPNE 3 showSuccess.php: lineLinkToDiaryMemberList — back to the author's diary list. --}}
+    {{-- Back to the author's diary list. --}}
     <div class="line" id="lineLinkToDiaryMemberList">
         <a href="{{ route('diary.list_member', $diary->member) }}">{{ __(":name's %diary%", ['name' => $diary->member->name]) }}</a>
     </div>

@@ -25,7 +25,7 @@ class DiarySearchRoutesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('id="page_diary_search"', false);
-        // Search shares the feed template (OpenPNE 3's listSuccess.php serves both).
+        // Search shares the feed template.
         $response->assertSee('id="diary_feed"', false);
         $response->assertSee('name="keyword"', false);
         $response->assertSee('Search Results');

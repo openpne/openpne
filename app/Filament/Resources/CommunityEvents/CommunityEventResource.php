@@ -13,8 +13,8 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
-// Admin event moderation (OpenPNE 3 communityTopic/eventList). List + view (with the event's comments
-// and RSVP roster) + delete; no admin edit. The view page hosts the two relation managers.
+// Admin event moderation. List + view (with the event's comments and RSVP roster) + delete;
+// no admin edit. The view page hosts the two relation managers.
 class CommunityEventResource extends Resource
 {
     protected static ?string $model = CommunityEvent::class;

@@ -15,7 +15,7 @@ class UpdateDiary
     public function __construct(private readonly PostImages $images) {}
 
     /**
-     * Edit a diary's text and, OpenPNE 3-style, manage its image slots: remove the images in
+     * Edit a diary's text and manage its image slots: remove the images in
      * $removeImageIds and add $newImages into the freed slots (1..MAX). Image bytes are
      * rollback-safe — new uploads are compensated if the transaction fails, and removed images'
      * bytes (irreversible on a disk backend) are purged only after commit.

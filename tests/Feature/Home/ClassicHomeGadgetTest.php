@@ -36,7 +36,7 @@ class ClassicHomeGadgetTest extends TestCase
 
         $this->actingAs($member)->get('/')
             ->assertOk()
-            ->assertSee('id="freeArea_'.$gadget->id.'"', false) // kind-scoped OpenPNE 3 DOM id
+            ->assertSee('id="freeArea_'.$gadget->id.'"', false) // kind-scoped DOM id
             ->assertSee('Notice Board')
             ->assertSee('<p>FreeBody</p>', false) // trusted HTML rendered unescaped
             ->assertDontSee('id="home_index"', false); // the empty-state fallback is gone

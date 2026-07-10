@@ -3,19 +3,17 @@
 namespace App\Features\CommunityTopic;
 
 /**
- * Who may read a community's topics. Successor of OpenPNE 3's opCommunityTopicPlugin
- * community_config `public_flag` ('public' | 'auth_commu_member'), flattened onto a typed
- * communities column.
+ * Who may read a community's topics.
  *
  * Values start at 1 (the JoinPolicy convention): OpenPNE 3 stored this as a string, so there is
  * no numeric to preserve, and a 0 case invites PHP falsy-comparison bugs.
  */
 enum TopicReadAccess: int
 {
-    /** Any signed-in member may read (OpenPNE 3 'public'). */
+    /** Any signed-in member may read. */
     case Everyone = 1;
 
-    /** Only community members may read (OpenPNE 3 'auth_commu_member'). */
+    /** Only community members may read. */
     case MembersOnly = 2;
 
     /** String slug for serialization. Never pass the raw int to the frontend. */

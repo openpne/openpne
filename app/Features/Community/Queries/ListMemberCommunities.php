@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * Communities a member has confirmed-joined (OpenPNE 3 community/joinList). community_members
+ * Communities a member has confirmed-joined. community_members
  * holds confirmed members only, so pending applications never leak in.
  */
 class ListMemberCommunities

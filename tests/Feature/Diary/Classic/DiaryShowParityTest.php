@@ -63,7 +63,7 @@ class DiaryShowParityTest extends TestCase
 
         $this->actingAs($owner)->get("/diary/{$members->getKey()}")
             ->assertOk()
-            ->assertSee('class="public"', false) // OpenPNE 3 .public hook
+            ->assertSee('class="public"', false) // the .public skin hook
             ->assertSee('All members');          // Visibility::Members->label()
     }
 
@@ -84,7 +84,7 @@ class DiaryShowParityTest extends TestCase
 
         $this->actingAs($owner)->get("/diary/{$diary->getKey()}")
             ->assertOk()
-            ->assertSee('id="lineLinkToDiaryMemberList"', false) // OpenPNE 3 .line hook
+            ->assertSee('id="lineLinkToDiaryMemberList"', false) // the .line skin hook
             ->assertSee("/diary/listMember/{$owner->getKey()}", false);
     }
 
@@ -97,7 +97,7 @@ class DiaryShowParityTest extends TestCase
 
         $this->actingAs($owner)->get("/diary/{$current->getKey()}")
             ->assertOk()
-            ->assertSee('class="block prevNextLinkLine"', false) // OpenPNE 3 markup hook
+            ->assertSee('class="block prevNextLinkLine"', false) // markup hook
             ->assertSee('<p class="prev"><a href="'.route('diary.show', $older).'"', false)
             ->assertSee('<p class="next"><a href="'.route('diary.show', $newer).'"', false);
     }

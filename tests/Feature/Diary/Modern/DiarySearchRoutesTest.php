@@ -27,7 +27,7 @@ class DiarySearchRoutesTest extends TestCase
             'title' => 'Cooking notes', 'visibility' => Visibility::Members,
         ]);
 
-        // Search shares the feed component (OpenPNE 3's listSuccess.php serves both).
+        // Search shares the feed component.
         $this->actingAs($viewer)->get('/m/diary/search?keyword=laravel')
             ->assertInertia(fn ($page) => $page
                 ->component('diary/feed')

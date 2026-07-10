@@ -46,8 +46,8 @@ class MailTemplateNotificationTest extends TestCase
     {
         $mail = (new RegistrationLinkNotification('raw-token', 'en'))->toMail(new AnonymousNotifiable);
 
-        // OpenPNE 3 parity: text/plain only. An 'html' view would make Laravel emit a multipart/HTML
-        // mail, which clients then show as HTML and stop auto-linking bare URLs.
+        // text/plain only. An 'html' view would make Laravel emit a multipart/HTML mail, which
+        // clients then show as HTML and stop auto-linking bare URLs.
         $this->assertSame(['text' => 'mail.template-text'], $mail->view);
     }
 

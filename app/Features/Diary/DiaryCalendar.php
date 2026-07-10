@@ -5,7 +5,7 @@ namespace App\Features\Diary;
 use Carbon\CarbonImmutable;
 
 /**
- * A month grid for the diary sidemenu calendar (OpenPNE 3 Calendar_Month_Weekdays, Sunday-first).
+ * A month grid for the diary sidemenu calendar (Sunday-first).
  * Weeks are rows of seven cells; a null cell is padding from an adjacent month. Previous/next
  * month are always available — OpenPNE 3's calendar nav is unbounded.
  */

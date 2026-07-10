@@ -3,8 +3,8 @@
 @section('title', __('Password Recovery'))
 
 @section('content')
-    {{-- OpenPNE 3 opAuthMailAddress/passwordRecoveryComplete: enter a new password. The email is
-         read-only (carried from the reset link); the token is hidden. --}}
+    {{-- Enter a new password. The email is read-only (carried from the reset link); the token
+         is hidden. --}}
     <div class="dparts" id="passwordRecoveryComplete">
         <div class="partsHeading"><h3>{{ __('Password Recovery') }}</h3></div>
         <div class="parts">

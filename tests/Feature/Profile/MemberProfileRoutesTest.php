@@ -29,7 +29,7 @@ class MemberProfileRoutesTest extends TestCase
             ->assertOk()
             ->assertSee('Owner')
             ->assertSee('a-members-value')
-            ->assertSee('page_member_profile'); // OpenPNE 3 body id from the route parity
+            ->assertSee('page_member_profile'); // body id from the route parity
     }
 
     public function test_modern_renders_the_inertia_component(): void

@@ -7,7 +7,7 @@ use App\Models\CommunityTopic;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
- * A community's topic board (OpenPNE 3 communityTopic/listCommunity): most recently active first.
+ * A community's topic board: most recently active first.
  * updated_at is the activity key — a new comment touches it (CreateTopicComment), so a thread with
  * fresh replies sorts above an untouched one. id breaks ties for a stable order.
  */

@@ -88,7 +88,7 @@ export interface PaginatedTopics {
     meta: PaginationMeta;
 }
 
-// The comment thread pager (OpenPNE 3): id-ordered, fixed page size, reversible. `ascending` is the
+// The comment thread pager: id-ordered, fixed page size, reversible. `ascending` is the
 // current order; olderPage/newerPage are null when that direction has no more pages.
 export interface TopicThread {
     comments: TopicComment[];

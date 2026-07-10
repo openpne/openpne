@@ -8,7 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
 
 /**
- * OpenPNE 3 friend/friendListBox: the subject member's friends as a row × col thumbnail grid. The
+ * The subject member's friends as a row × col thumbnail grid. The
  * subject owns the list (home: the viewer; profile: the viewed member); a profile the viewer may
  * not see is already a 404 in the controller, so listing the owner's friends here is safe.
  */

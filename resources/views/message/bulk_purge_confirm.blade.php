@@ -3,8 +3,8 @@
 @section('title', __('Delete messages'))
 
 @section('content')
-    {{-- OpenPNE 3 deleteListConfirm: the trash bulk-purge re-submits the checked ids after
-         confirmation. Rendered from the bulk action, so the body id stays page_message_list. --}}
+    {{-- The trash bulk-purge re-submits the checked ids after confirmation. Rendered from the
+         bulk action, so the body id stays page_message_list. --}}
     <div class="dparts box" id="formMessageDeleteList">
         <div class="parts">
             <div class="partsHeading"><h3>{{ __('Delete messages') }}</h3></div>

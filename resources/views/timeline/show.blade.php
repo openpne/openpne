@@ -5,7 +5,6 @@
 @section('title', $title)
 
 @section('content')
-    {{-- OpenPNE 3 showSuccess.php: a post and its reply thread. --}}
     <div class="dparts" id="timeline_show">
         <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="parts">
@@ -52,7 +51,6 @@
                 </ul>
             @endif
 
-            {{-- OpenPNE 3 reply form (#timeline-post-comment-form). --}}
             <form method="POST" action="{{ route('timeline.reply.store', $post) }}" class="timeline-reply-form">
                 @csrf
                 <textarea name="body" maxlength="140" required></textarea>

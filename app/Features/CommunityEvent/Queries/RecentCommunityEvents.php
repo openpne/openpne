@@ -7,8 +7,8 @@ use App\Models\CommunityEvent;
 use Illuminate\Support\Collection;
 
 /**
- * The most recently active events of a community, for the "recent events" box on the community home
- * (OpenPNE 3 community/home). Same ordering as the list, capped at a few rows.
+ * The most recently active events of a community, for the "recent events" box on the community
+ * home. Same ordering as the list, capped at a few rows.
  */
 class RecentCommunityEvents
 {

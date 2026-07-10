@@ -41,10 +41,9 @@
                                     <a class="photo" href="{{ route('diary.show', $entry) }}"><img src="{{ $authorAvatar->thumbnailUrl(76, 76, square: true) }}" alt="{{ $entry->member->name }}"></a>
                                 @endif
                             @endif
-                            {{-- OpenPNE 3 op_diary_get_title_and_count: truncated title + comment count. --}}
                             <a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a>
-                            {{-- OpenPNE 3 op_diary_image_icon: a camera marker when the entry has photos.
-                                 OpenPNE 4 ships no gif; the .imageIcon hook lets themes/customers style it. --}}
+                            {{-- A camera marker when the entry has photos. OpenPNE 4 ships no gif;
+                                 the .imageIcon hook lets themes/customers style it. --}}
                             @if ($entry->images_count > 0)<span class="imageIcon" title="{{ __('This entry has photos') }}" aria-label="{{ __('This entry has photos') }}">📷</span>@endif
                             <span class="diaryAuthor">{{ $entry->member->name }}</span>
                             <span class="diaryDate">{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</span>
