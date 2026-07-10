@@ -97,8 +97,6 @@ Route::post('/admin/locale/session', function (Request $request) {
 // literal /member/* routes (avatar, config, profile) from matching the {member} wildcard.
 Route::get('/member/{member}', [ProfileController::class, 'show'])
     ->whereNumber('member')->name('member.profile.show');
-Route::get('/m/member/{member}', [ProfileController::class, 'show'])
-    ->whereNumber('member')->defaults('surface', 'modern')->name('member.modern.profile.show');
 // OpenPNE 3 member_profile_raw alias (/member/profile/id/:id/*) → canonical /member/{id}.
 // OpenPNE 3's trailing splat matched extra path segments; capture and ignore them so the
 // whole legacy URL space redirects instead of 404ing past the id.
@@ -263,31 +261,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/unlink/{member}', 'submitUnlink')->name('friend.unlink.submit');
     });
 
-    Route::prefix('m/friend')->controller(FriendController::class)->group(function () {
-        Route::get('/list', 'list')->defaults('surface', 'modern')->name('friend.modern.list');
-        Route::get('/manage', 'manage')->defaults('surface', 'modern')->name('friend.modern.manage');
-        Route::get('/link', 'showLink')->defaults('surface', 'modern')->name('friend.modern.link.show');
-        Route::post('/link', 'submitLink')->defaults('surface', 'modern')->name('friend.modern.link');
-        Route::post('/accept', 'submitAccept')->defaults('surface', 'modern')->name('friend.modern.accept');
-        Route::post('/reject', 'submitReject')->defaults('surface', 'modern')->name('friend.modern.reject');
-        // No GET unlink-confirm twin — Modern confirms unfriend inline (Radix AlertDialog).
-        Route::post('/unlink/{member}', 'submitUnlink')->defaults('surface', 'modern')->name('friend.modern.unlink.submit');
-    });
-
     Route::prefix('block')->controller(BlockController::class)->group(function () {
         Route::get('/list', 'list')->name('block.list');
         Route::get('/add', 'showAdd')->name('block.add.show');
         Route::post('/add', 'submitAdd')->name('block.add');
         Route::get('/remove/{member}', 'showRemove')->name('block.remove.show');
         Route::post('/remove/{member}', 'submitRemove')->name('block.remove.submit');
-    });
-
-    Route::prefix('m/block')->controller(BlockController::class)->group(function () {
-        Route::get('/list', 'list')->defaults('surface', 'modern')->name('block.modern.list');
-        Route::get('/add', 'showAdd')->defaults('surface', 'modern')->name('block.modern.add.show');
-        Route::post('/add', 'submitAdd')->defaults('surface', 'modern')->name('block.modern.add');
-        Route::get('/remove/{member}', 'showRemove')->defaults('surface', 'modern')->name('block.modern.remove.show');
-        Route::post('/remove/{member}', 'submitRemove')->defaults('surface', 'modern')->name('block.modern.remove.submit');
     });
 
     Route::prefix('diary')->controller(DiaryController::class)->group(function () {
@@ -317,27 +296,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('diary.comment.delete');
     });
 
-    Route::prefix('m/diary')->controller(DiaryController::class)->group(function () {
-        Route::get('/search', 'search')->defaults('surface', 'modern')->name('diary.modern.search');
-        Route::get('/list', 'list')->defaults('surface', 'modern')->name('diary.modern.list');
-        Route::get('/listFriend', 'listFriend')->defaults('surface', 'modern')->name('diary.modern.list_friend');
-        Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->defaults('surface', 'modern')->name('diary.modern.list_member');
-        Route::get('/listMember/{member}/{year}/{month}/{day?}', 'listMemberArchive')
-            ->where(['member' => '[0-9]+', 'year' => '[12][0-9]{3}', 'month' => '0?[1-9]|1[0-2]', 'day' => '0?[1-9]|[12][0-9]|3[01]'])
-            ->defaults('surface', 'modern')->name('diary.modern.list_member.archive');
-        Route::get('/new', 'new')->defaults('surface', 'modern')->name('diary.modern.new');
-        Route::post('/create', 'store')->defaults('surface', 'modern')->name('diary.modern.store');
-        Route::get('/edit/{diary}', 'edit')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.edit');
-        Route::post('/update/{diary}', 'update')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.update');
-        // No GET delete-confirm twin — Modern confirms delete inline (Radix AlertDialog).
-        Route::post('/delete/{diary}', 'delete')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.delete');
-        Route::get('/{diary}', 'show')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.show');
-    });
-
     Route::controller(DiaryCommentController::class)->group(function () {
-        Route::post('/m/diary/{diary}/comment/create', 'store')->whereNumber('diary')->defaults('surface', 'modern')->name('diary.modern.comment.store');
         // No GET delete-confirm twin — Modern confirms delete inline (Radix AlertDialog).
-        Route::post('/m/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->defaults('surface', 'modern')->name('diary.modern.comment.delete');
     });
 
     // OpenPNE 3 opTimelinePlugin: the cross-member home feed, a member's timeline, posting, and a
@@ -354,14 +314,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     });
 
     Route::controller(TimelineController::class)->group(function () {
-        Route::get('/m/timeline', 'index')->defaults('surface', 'modern')->name('timeline.modern.index');
-        Route::get('/m/member/{member}/timeline', 'member')->whereNumber('member')->defaults('surface', 'modern')->name('timeline.modern.member');
-        Route::get('/m/timeline/new', 'new')->defaults('surface', 'modern')->name('timeline.modern.new');
-        Route::post('/m/timeline/create', 'store')->defaults('surface', 'modern')->name('timeline.modern.store');
         // No GET delete-confirm twin — Modern confirms delete inline (Radix AlertDialog).
-        Route::post('/m/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.delete');
-        Route::post('/m/timeline/{timelinePost}/reply', 'storeReply')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.reply.store');
-        Route::get('/m/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->defaults('surface', 'modern')->name('timeline.modern.show');
     });
 
     // OpenPNE 3 linked the single-post permalink at /timeline/show/id/:id (reached via the global
@@ -384,18 +337,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])->name('member.config.withdrawal');
     Route::post('/member/config/email', [MemberConfigController::class, 'updateEmail'])
         ->middleware('throttle:email-change')->name('member.config.email');
-    Route::get('/m/member/config', [MemberConfigController::class, 'show'])
-        ->defaults('surface', 'modern')->name('member.modern.config');
-    Route::post('/m/member/config/diary', [MemberConfigController::class, 'updateDiary'])
-        ->defaults('surface', 'modern')->name('member.modern.config.diary');
-    Route::post('/m/member/config/surface', [MemberConfigController::class, 'updateSurface'])
-        ->defaults('surface', 'modern')->name('member.modern.config.surface');
-    Route::post('/m/member/config/password', [MemberConfigController::class, 'updatePassword'])
-        ->defaults('surface', 'modern')->name('member.modern.config.password');
-    Route::post('/m/member/config/withdrawal', [MemberConfigController::class, 'withdraw'])
-        ->defaults('surface', 'modern')->name('member.modern.config.withdrawal');
-    Route::post('/m/member/config/email', [MemberConfigController::class, 'updateEmail'])
-        ->defaults('surface', 'modern')->middleware('throttle:email-change')->name('member.modern.config.email');
 
     // Modern-only detail pages for the consequential account changes (email/password/withdrawal).
     // The settings page keeps a compact row per item; the forms live here, so a validation error
@@ -409,8 +350,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // as ?category=notification). Modern edits on a detail page with per-toggle saves.
     Route::get('/member/config/notifications', [NotificationSettingsController::class, 'edit'])->name('member.config.notifications.edit');
     Route::post('/member/config/notifications', [NotificationSettingsController::class, 'update'])->name('member.config.notifications');
-    Route::post('/m/member/config/notifications', [NotificationSettingsController::class, 'update'])
-        ->defaults('surface', 'modern')->name('member.modern.config.notifications');
 
     // Member two-factor management (OpenPNE 4-native; Classic serves it as ?category=mfa).
     // Re-auth is one current_password per flow (enable opens a window that covers confirm);
@@ -420,14 +359,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/member/config/mfa/confirm', 'confirm')->name('member.config.mfa.confirm');
         Route::post('/member/config/mfa/disable', 'disable')->name('member.config.mfa.disable');
         Route::post('/member/config/mfa/recovery-codes', 'regenerate')->name('member.config.mfa.recovery');
-        Route::post('/m/member/config/mfa/enable', 'enable')
-            ->defaults('surface', 'modern')->name('member.modern.config.mfa.enable');
-        Route::post('/m/member/config/mfa/confirm', 'confirm')
-            ->defaults('surface', 'modern')->name('member.modern.config.mfa.confirm');
-        Route::post('/m/member/config/mfa/disable', 'disable')
-            ->defaults('surface', 'modern')->name('member.modern.config.mfa.disable');
-        Route::post('/m/member/config/mfa/recovery-codes', 'regenerate')
-            ->defaults('surface', 'modern')->name('member.modern.config.mfa.recovery');
         // Modern-only detail page, like the email/password/withdrawal ones above.
         Route::get('/member/config/mfa', 'edit')->name('member.config.mfa.edit');
     });
@@ -437,12 +368,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/avatar', 'update')->name('member.avatar.update');
         Route::delete('/avatar', 'destroy')->name('member.avatar.destroy');
         Route::post('/avatar/color', 'updateColor')->name('member.avatar.color');
-    });
-    Route::prefix('m/member')->controller(MemberAvatarController::class)->group(function () {
-        Route::get('/avatar', 'edit')->defaults('surface', 'modern')->name('member.modern.avatar.edit');
-        Route::post('/avatar', 'update')->defaults('surface', 'modern')->name('member.modern.avatar.update');
-        Route::delete('/avatar', 'destroy')->defaults('surface', 'modern')->name('member.modern.avatar.destroy');
-        Route::post('/avatar/color', 'updateColor')->defaults('surface', 'modern')->name('member.modern.avatar.color');
     });
 
     // OpenPNE 3 served the avatar editor at /member/image/config; preserve the URL.
@@ -457,17 +382,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // OpenPNE 3 member/search (/member/search): search members by profile fields. Login-required
     // (members only); per-value visibility + block are enforced in SearchMembers.
     Route::get('/member/search', [MemberSearchController::class, 'search'])->name('member.search');
-    Route::get('/m/member/search', [MemberSearchController::class, 'search'])
-        ->defaults('surface', 'modern')->name('member.modern.search');
 
     // OpenPNE 3 member/editProfile (/member/edit/profile): the member edits their own profile
     // fields + per-value visibility. GET renders, POST saves — same URL as OpenPNE 3.
     Route::get('/member/edit/profile', [ProfileController::class, 'edit'])->name('member.profile.edit');
     Route::post('/member/edit/profile', [ProfileController::class, 'update'])->name('member.profile.update');
-    Route::get('/m/member/edit/profile', [ProfileController::class, 'edit'])
-        ->defaults('surface', 'modern')->name('member.modern.profile.edit');
-    Route::post('/m/member/edit/profile', [ProfileController::class, 'update'])
-        ->defaults('surface', 'modern')->name('member.modern.profile.update');
 
     // File byte delivery, bound by the opaque `name` token. FileController gates every
     // fetch through FilePolicy, so disk backends stream through the app too (never a
@@ -491,7 +410,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     // Community core (canonical / Classic). The literal routes precede the /{community} wildcard,
     // and {community} is digit-constrained, so a literal like /community/search can never be
-    // captured as a community id. The Modern twin (browse/join core) is the /m/community group below.
+    // captured as a community id.
     Route::prefix('community')->controller(CommunityController::class)->group(function () {
         Route::get('/search', 'search')->name('community.search');
         Route::get('/joinList', 'listMine')->name('community.list_mine');
@@ -512,26 +431,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/delete/{community}', 'showDelete')->whereNumber('community')->name('community.delete.show');
         Route::post('/delete/{community}', 'delete')->whereNumber('community')->name('community.delete');
         Route::get('/{community}', 'show')->whereNumber('community')->name('community.show');
-    });
-
-    // Community, Modern surface (/m/community/*): the browse/join core plus management — create/edit,
-    // delete, and the pending-member approval queue. join/quit/delete confirm inline (no GET confirm
-    // page). Literal routes precede the /{community} wildcard; every id is digit-constrained.
-    Route::prefix('m/community')->controller(CommunityController::class)->group(function () {
-        Route::get('/search', 'search')->defaults('surface', 'modern')->name('community.modern.search');
-        Route::get('/joined', 'listMine')->defaults('surface', 'modern')->name('community.modern.list_mine');
-        // One edit form + submit for both create and edit (?id= switches), mirroring the canonical
-        // community.edit / community.save so the Modern names round-trip (ModernRouteConventionTest).
-        Route::get('/edit', 'edit')->defaults('surface', 'modern')->name('community.modern.edit');
-        Route::post('/edit', 'save')->defaults('surface', 'modern')->name('community.modern.save');
-        Route::post('/{community}/delete', 'delete')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.delete');
-        Route::get('/{community}/members', 'members')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members');
-        Route::get('/{community}/pending', 'pendingMembers')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members.pending');
-        Route::post('/{community}/approve', 'approve')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members.approve');
-        Route::post('/{community}/decline', 'decline')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.members.decline');
-        Route::post('/{community}/join', 'join')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.join');
-        Route::post('/{community}/quit', 'quit')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.quit');
-        Route::get('/{community}', 'show')->whereNumber('community')->defaults('surface', 'modern')->name('community.modern.show');
     });
 
     // Community topic board (Classic only; Modern is none). Literal-prefix routes precede the
@@ -557,35 +456,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/communityTopic/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityTopic.comment.delete');
     });
 
-    // Community topic board, Modern surface. Names are the canonical topic names with a .modern.
-    // infix (ModernRouteConventionTest); no GET delete-confirm twin — Modern confirms inline. Each
-    // route carries a single route-model-bound id: implicit binding only resolves a model param when
-    // it is the sole one, so the board list keys off {community} and the topic pages off {topic},
-    // never both in one path (matching the Classic split of listCommunity/new by community vs the
-    // rest by topic).
-    Route::prefix('m/community/{community}/topic')->whereNumber('community')
-        ->controller(CommunityTopicController::class)->group(function () {
-            Route::get('/new', 'new')->defaults('surface', 'modern')->name('communityTopic.modern.new');
-            Route::post('/', 'store')->defaults('surface', 'modern')->name('communityTopic.modern.store');
-            Route::get('/', 'index')->defaults('surface', 'modern')->name('communityTopic.modern.index');
-        });
-
-    Route::prefix('m/community/topic')->whereNumber('topic')
-        ->controller(CommunityTopicController::class)->group(function () {
-            Route::get('/{topic}/edit', 'edit')->defaults('surface', 'modern')->name('communityTopic.modern.edit');
-            Route::post('/{topic}/edit', 'update')->defaults('surface', 'modern')->name('communityTopic.modern.update');
-            Route::post('/{topic}/delete', 'delete')->defaults('surface', 'modern')->name('communityTopic.modern.delete');
-            Route::get('/{topic}', 'show')->defaults('surface', 'modern')->name('communityTopic.modern.show');
-        });
-
-    // communityTopicComment, Modern surface: comment create keys off the topic id, delete off the
-    // comment id (literal /comment/* never collides with the numeric topic). No GET confirm twin.
-    Route::prefix('m/community/topic')->whereNumber(['topic', 'comment'])
-        ->controller(CommunityTopicCommentController::class)->group(function () {
-            Route::post('/{topic}/comment', 'store')->defaults('surface', 'modern')->name('communityTopic.modern.comment.store');
-            Route::post('/comment/{comment}/delete', 'delete')->defaults('surface', 'modern')->name('communityTopic.modern.comment.delete');
-        });
-
     // Community events (Classic only; Modern is none). Same literal-before-wildcard rule as the topic
     // board: listCommunity/new/create take a community id, the rest an event id, and {event} is
     // digit-constrained, so /communityEvent/memberList-style literals can never be read as an event id.
@@ -610,39 +480,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/communityEvent/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityEvent.comment.delete');
     });
 
-    // Community events, Modern surface. Names are the canonical event names with a .modern. infix
-    // (ModernRouteConventionTest); no GET delete-confirm twin — Modern confirms inline. Each route
-    // carries a single route-model-bound id: the board keys off {community}, the event pages off
-    // {event}, never both in one path (implicit binding resolves a model param only as the sole one).
-    Route::prefix('m/community/{community}/event')->whereNumber('community')
-        ->controller(CommunityEventController::class)->group(function () {
-            Route::get('/new', 'new')->defaults('surface', 'modern')->name('communityEvent.modern.new');
-            Route::post('/', 'store')->defaults('surface', 'modern')->name('communityEvent.modern.store');
-            Route::get('/', 'index')->defaults('surface', 'modern')->name('communityEvent.modern.index');
-        });
-
-    Route::prefix('m/community/event')->whereNumber('event')
-        ->controller(CommunityEventController::class)->group(function () {
-            Route::get('/{event}/edit', 'edit')->defaults('surface', 'modern')->name('communityEvent.modern.edit');
-            Route::post('/{event}/edit', 'update')->defaults('surface', 'modern')->name('communityEvent.modern.update');
-            Route::post('/{event}/delete', 'delete')->defaults('surface', 'modern')->name('communityEvent.modern.delete');
-            Route::get('/{event}/members', 'memberList')->defaults('surface', 'modern')->name('communityEvent.modern.member_list');
-            Route::get('/{event}', 'show')->defaults('surface', 'modern')->name('communityEvent.modern.show');
-        });
-
-    // communityEventComment, Modern surface: comment/RSVP create keys off the event id, delete off the
-    // comment id (literal /comment/* never collides with the numeric event). No GET confirm twin.
-    Route::prefix('m/community/event')->whereNumber(['event', 'comment'])
-        ->controller(CommunityEventCommentController::class)->group(function () {
-            Route::post('/{event}/comment', 'store')->defaults('surface', 'modern')->name('communityEvent.modern.comment.store');
-            Route::post('/comment/{comment}/delete', 'delete')->defaults('surface', 'modern')->name('communityEvent.modern.comment.delete');
-        });
-
     // Private messages. The four boxes plus a per-box show page. OpenPNE 3 keyed show by message id
     // with the box in the path (/message/read|check|checkDelete/:id); those URLs are preserved.
-    // /message and /message/index land on the inbox. The read and compose pages (boxes, show, compose,
-    // reply) also serve Modern via the /m/message twins below; draft editing and the trash write
-    // surface stay Classic-only for now.
+    // /message and /message/index land on the inbox.
     Route::prefix('message')->controller(MessageController::class)->group(function () {
         Route::get('/', 'index')->name('message.index');
         Route::get('/index', 'index');
@@ -670,36 +510,33 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/deleteComplete/{message}', 'purge')->whereNumber('message')->name('message.trash.purge');
         Route::post('/bulk', 'bulk')->name('message.bulk');
     });
-
-    // Modern twins for the message read + compose + management surfaces (single-message and bulk).
-    // Same controller, same OpenPNE 3 path shapes under /m/message; only the GET purge-confirm pages
-    // remain Classic-only (Modern confirms inline).
-    Route::prefix('m/message')->controller(MessageController::class)->group(function () {
-        Route::get('/', 'index')->defaults('surface', 'modern')->name('message.modern.index');
-        Route::get('/receiveList', 'receive')->defaults('surface', 'modern')->name('message.modern.receive');
-        Route::get('/sendList', 'send')->defaults('surface', 'modern')->name('message.modern.send');
-        Route::get('/draftList', 'draft')->defaults('surface', 'modern')->name('message.modern.draft');
-        Route::get('/dustList', 'trash')->defaults('surface', 'modern')->name('message.modern.trash');
-        Route::get('/sendToFriend', 'compose')->defaults('surface', 'modern')->name('message.modern.compose');
-        Route::post('/sendToFriend', 'store')->defaults('surface', 'modern')->name('message.modern.compose.store');
-        Route::get('/reply/{message}', 'reply')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.reply');
-        Route::get('/edit/{message}', 'edit')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.draft.edit');
-        Route::post('/edit/{message}', 'update')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.draft.update');
-        Route::get('/read/{message}', 'showReceived')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.receive.show');
-        Route::get('/check/{message}', 'showSent')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.send.show');
-        Route::get('/checkDelete/{message}', 'showTrashed')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.trash.show');
-        Route::post('/deleteReceiveMessage/{message}', 'trashReceived')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.receive.trash');
-        Route::post('/deleteSendMessage/{message}', 'trashSent')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.send.trash');
-        Route::post('/restore/{message}', 'restore')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.trash.restore');
-        Route::post('/deleteComplete/{message}', 'purge')->whereNumber('message')->defaults('surface', 'modern')->name('message.modern.trash.purge');
-        Route::post('/bulk', 'bulk')->defaults('surface', 'modern')->name('message.modern.bulk');
-    });
 });
 
-// Transition-era compat: the retired /m/ Modern URL space permanently redirects to the canonical
-// URL (308 keeps the method for stale in-flight forms; the query string rides along). Registered
-// last so any still-live /m/ route wins, and carries no surface default — the canonical target
-// resolves the surface from viewer state.
+// Retired Modern GET shapes that do not map onto their canonical URL by dropping the /m prefix:
+// the RESTful community shapes redirect to the canonical (OpenPNE 3) shapes explicitly, ahead of
+// the prefix-stripping catch-all. GET only — a retired POST shape has no path-rewritable canonical
+// form and 404s (never persisted, so the only sources are stale in-flight forms). The original
+// query string rides along, like the catch-all ('&' when the target already carries ?id=).
+$mCompat = fn (string $target) => redirect()->to(
+    $target.(($qs = request()->getQueryString()) === null ? '' : (str_contains($target, '?') ? '&' : '?').$qs), 308
+);
+Route::get('/m/community/joined', fn () => $mCompat('/community/joinList'));
+Route::get('/m/community/topic/{topic}', fn (int $topic) => $mCompat("/communityTopic/{$topic}"))->whereNumber('topic');
+Route::get('/m/community/topic/{topic}/edit', fn (int $topic) => $mCompat("/communityTopic/edit/{$topic}"))->whereNumber('topic');
+Route::get('/m/community/event/{event}', fn (int $event) => $mCompat("/communityEvent/{$event}"))->whereNumber('event');
+Route::get('/m/community/event/{event}/edit', fn (int $event) => $mCompat("/communityEvent/edit/{$event}"))->whereNumber('event');
+Route::get('/m/community/event/{event}/members', fn (int $event) => $mCompat("/communityEvent/{$event}/memberList"))->whereNumber('event');
+Route::get('/m/community/{community}/members', fn (int $community) => $mCompat("/community/member/list?id={$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/pending', fn (int $community) => $mCompat("/community/member/pending?id={$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/topic', fn (int $community) => $mCompat("/communityTopic/listCommunity/{$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/topic/new', fn (int $community) => $mCompat("/communityTopic/new/{$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/event', fn (int $community) => $mCompat("/communityEvent/listCommunity/{$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/event/new', fn (int $community) => $mCompat("/communityEvent/new/{$community}"))->whereNumber('community');
+
+// Transition-era compat: the rest of the retired /m/ Modern URL space maps onto canonical URLs by
+// dropping the prefix — one permanent catch-all (308 keeps the method for stale in-flight forms;
+// the query string rides along). Carries no surface default — the canonical target resolves the
+// surface from viewer state.
 Route::any('/m/{path?}', function (Request $request, string $path = '') {
     $query = $request->getQueryString();
 

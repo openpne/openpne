@@ -136,11 +136,12 @@ class MemberMfaManagementTest extends TestCase
     {
         // The detail page's disabled state is the set-up form again — it reads as "do it again",
         // not "it is now off". The hub announces the change without scrolling.
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = $this->memberWithTwoFactor();
 
         $this->actingAs($member)
-            ->post('/m/member/config/mfa/disable', ['current_password' => 'password'])
-            ->assertRedirect('/m/member/config')
+            ->post('/member/config/mfa/disable', ['current_password' => 'password'])
+            ->assertRedirect('/member/config')
             ->assertSessionHas('status');
     }
 
@@ -258,9 +259,10 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_the_settings_hub_shows_only_the_enabled_flag(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = $this->memberWithTwoFactor();
 
-        $response = $this->actingAs($member)->get('/m/member/config');
+        $response = $this->actingAs($member)->get('/member/config');
 
         $response->assertInertia(fn (Assert $page) => $page
             ->component('member/config')
@@ -395,10 +397,11 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_modern_posts_redirect_to_the_modern_detail_page(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->post('/m/member/config/mfa/enable', ['current_password' => 'password'])
+            ->post('/member/config/mfa/enable', ['current_password' => 'password'])
             ->assertRedirect('/member/config/mfa');
     }
 

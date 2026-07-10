@@ -163,7 +163,7 @@ class FriendController extends Controller
 
     private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
     {
-        $name = SurfaceResolver::redirectName($request, $canonicalName);
+        $name = $canonicalName;
 
         $redirect = redirect()->route($name);
         if ($status !== null) {

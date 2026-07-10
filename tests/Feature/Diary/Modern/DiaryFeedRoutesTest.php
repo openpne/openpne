@@ -13,10 +13,16 @@ class DiaryFeedRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     public function test_guests_are_redirected_to_login(): void
     {
-        $this->get('/m/diary/list')->assertRedirect('/login');
-        $this->get('/m/diary/listFriend')->assertRedirect('/login');
+        $this->get('/diary/list')->assertRedirect('/login');
+        $this->get('/diary/listFriend')->assertRedirect('/login');
     }
 
     public function test_recent_feed_renders_inertia_with_recent_variant(): void
@@ -29,7 +35,7 @@ class DiaryFeedRoutesTest extends TestCase
             'visibility' => Visibility::Members,
         ]);
 
-        $this->actingAs($viewer)->get('/m/diary/list')
+        $this->actingAs($viewer)->get('/diary/list')
             ->assertInertia(fn ($page) => $page
                 ->component('diary/feed')
                 ->where('variant', 'recent')
@@ -53,7 +59,7 @@ class DiaryFeedRoutesTest extends TestCase
             'visibility' => Visibility::Friends,
         ]);
 
-        $this->actingAs($viewer)->get('/m/diary/listFriend')
+        $this->actingAs($viewer)->get('/diary/listFriend')
             ->assertInertia(fn ($page) => $page
                 ->component('diary/feed')
                 ->where('variant', 'friends')
@@ -75,7 +81,7 @@ class DiaryFeedRoutesTest extends TestCase
             'blocked_id' => $viewer->getKey(),
         ]);
 
-        $this->actingAs($viewer)->get('/m/diary/list')
+        $this->actingAs($viewer)->get('/diary/list')
             ->assertInertia(fn ($page) => $page->has('diaries.data', 0));
     }
 }

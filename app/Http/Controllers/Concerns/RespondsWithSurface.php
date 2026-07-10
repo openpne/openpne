@@ -23,12 +23,9 @@ trait RespondsWithSurface
         $response = $responders[SurfaceResolver::resolve($request, $feature)]();
 
         // Classic body id is the OpenPNE 3 page_{module}_{action} hook, derived from the route
-        // parity so it stays faithful to OpenPNE 3 (the controller holds no copy). Canonicalize
-        // first: a /m/* route that fell back to Classic carries the modern name, which the parity
-        // keys by canonical name.
+        // parity so it stays faithful to OpenPNE 3 (the controller holds no copy).
         if ($response instanceof View) {
-            $name = SurfaceResolver::canonicalName($bodyIdRoute ?? $request->route()->getName());
-            $response->with('pageId', RouteParityRegistry::bodyId($name));
+            $response->with('pageId', RouteParityRegistry::bodyId($bodyIdRoute ?? $request->route()->getName()));
         }
 
         return $response;

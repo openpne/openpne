@@ -236,7 +236,7 @@ class CommunityController extends Controller
             return back()->withInput()->with('error', $this->messageFor($e->reason));
         }
 
-        return $this->redirectToShow($request, $community)
+        return $this->redirectToShow($community)
             ->with('status', __('%Community% settings saved.'));
     }
 
@@ -264,14 +264,14 @@ class CommunityController extends Controller
         try {
             $action($this->viewer(), $community);
         } catch (CommunityActionException $e) {
-            return $this->redirectToShow($request, $community)->with('error', $this->messageFor($e->reason));
+            return $this->redirectToShow($community)->with('error', $this->messageFor($e->reason));
         }
 
         $status = $community->register_policy === JoinPolicy::Approval
             ? __('Your join request has been sent.')
             : __('You have joined this %community%.');
 
-        return $this->redirectToShow($request, $community)->with('status', $status);
+        return $this->redirectToShow($community)->with('status', $status);
     }
 
     public function showQuit(Request $request): View|RedirectResponse
@@ -298,10 +298,10 @@ class CommunityController extends Controller
         try {
             $action($this->viewer(), $community);
         } catch (CommunityActionException $e) {
-            return $this->redirectToShow($request, $community)->with('error', $this->messageFor($e->reason));
+            return $this->redirectToShow($community)->with('error', $this->messageFor($e->reason));
         }
 
-        return $this->redirectToShow($request, $community)->with('status', __('You have left this %community%.'));
+        return $this->redirectToShow($community)->with('status', __('You have left this %community%.'));
     }
 
     public function showDelete(Request $request, Community $community): View|RedirectResponse
@@ -321,7 +321,7 @@ class CommunityController extends Controller
         abort_unless(Gate::allows('delete', $community), 404);
         $action($this->viewer(), $community);
 
-        return redirect()->route(SurfaceResolver::redirectName($request, 'community.search'))
+        return redirect()->route('community.search')
             ->with('status', __('%Community% deleted.'));
     }
 
@@ -367,26 +367,20 @@ class CommunityController extends Controller
         try {
             $run($community, $applicant);
         } catch (CommunityActionException $e) {
-            return $this->redirectToPending($request, $community)->with('error', $this->messageFor($e->reason));
+            return $this->redirectToPending($community)->with('error', $this->messageFor($e->reason));
         }
 
-        return $this->redirectToPending($request, $community)->with('status', $status);
+        return $this->redirectToPending($community)->with('status', $status);
     }
 
-    private function redirectToPending(Request $request, Community $community): RedirectResponse
+    private function redirectToPending(Community $community): RedirectResponse
     {
-        // Modern keys the community off the path; canonical Classic keys it off ?id=.
-        if ($request->route('surface') === SurfaceResolver::MODERN) {
-            return redirect()->route('community.modern.members.pending', $community);
-        }
-
         return redirect()->route('community.members.pending', ['id' => $community->getKey()]);
     }
 
-    /** Redirect to the community top page on the surface the request came from (Modern -> /m/*). */
-    private function redirectToShow(Request $request, Community $community): RedirectResponse
+    private function redirectToShow(Community $community): RedirectResponse
     {
-        return redirect()->route(SurfaceResolver::redirectName($request, 'community.show'), $community);
+        return redirect()->route('community.show', $community);
     }
 
     /**

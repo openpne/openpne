@@ -210,7 +210,7 @@ class ModernOnlyCoverageTest extends TestCase
             if (! in_array('GET', $route->methods(), true)) {
                 continue;
             }
-            if (str_contains($name, '.modern.') || str_contains($uri, '{') || str_starts_with($uri, 'admin')) {
+            if (str_contains($uri, '{') || str_starts_with($uri, 'admin')) {
                 continue;
             }
             // Member-guarded only.

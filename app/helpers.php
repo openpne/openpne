@@ -6,7 +6,6 @@ use App\Compat\RouteParityRegistry;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
-use App\Support\SurfaceResolver;
 
 if (! function_exists('sns_name')) {
     /** Site SNS name (header/logo, page titles, mail), or the configured app name by default. */
@@ -91,7 +90,7 @@ if (! function_exists('classic_layout')) {
 
         return $name === null
             ? 'C'
-            : RouteParityRegistry::layout(SurfaceResolver::canonicalName($name)) ?? 'C';
+            : RouteParityRegistry::layout($name) ?? 'C';
     }
 }
 

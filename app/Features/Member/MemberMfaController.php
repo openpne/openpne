@@ -128,12 +128,12 @@ class MemberMfaController extends Controller
         $viewer->notify(new MfaDisabledNotification($viewer->locale ?? app()->getLocale()));
 
         $status = __('Two-factor authentication has been disabled.');
-        if (SurfaceResolver::redirectName($request, 'member.config') === 'member.config') {
+        if (SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC) {
             return redirect()->route('member.config', ['category' => MemberConfigCategory::Mfa->value])
                 ->with('status', $status);
         }
 
-        return redirect()->route('member.modern.config')->with('status', $status);
+        return redirect()->route('member.config')->with('status', $status);
     }
 
     public function regenerate(MfaManagementRequest $request, GenerateNewRecoveryCodes $generate): RedirectResponse
@@ -153,8 +153,7 @@ class MemberMfaController extends Controller
     /** Back to this surface's two-factor screen: the Classic category page or the Modern detail page. */
     private function mfaRedirect(Request $request, ?string $status = null): RedirectResponse
     {
-        $name = SurfaceResolver::redirectName($request, 'member.config');
-        $redirect = $name === 'member.config'
+        $redirect = SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC
             ? redirect()->route('member.config', ['category' => MemberConfigCategory::Mfa->value])
             : redirect()->route('member.config.mfa.edit');
 

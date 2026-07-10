@@ -188,10 +188,11 @@ class MemberConfigController extends Controller
         $requestChange($this->viewer(), $request->validated('new_email'));
 
         // members.email is unchanged until confirmation; tell the member to open the link just mailed.
-        $name = SurfaceResolver::redirectName($request, 'member.config');
-        $params = $name === 'member.config' ? ['category' => MemberConfigCategory::Email->value] : [];
+        $params = SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC
+            ? ['category' => MemberConfigCategory::Email->value]
+            : [];
 
-        return redirect()->route($name, $params)
+        return redirect()->route('member.config', $params)
             ->with('status', __('We sent a confirmation link to your new email address. Open it to finish the change.'));
     }
 
@@ -403,11 +404,11 @@ class MemberConfigController extends Controller
             $request->session()->flash('status', __('Settings updated.'));
         }
 
-        // Land on the chosen surface's own config page so the whole shell re-renders there. An
-        // explicit /m/* URL is top of SurfaceResolver's order, so a Classic choice MUST leave /m/*
-        // for the canonical route, or the page would stay Modern.
+        // Land on the config page through a full page load (Inertia::location below): the
+        // just-written preference resolves the chosen surface there, and the full load re-renders
+        // the whole shell — an XHR redirect would keep the Modern SPA alive on a Classic choice.
         $target = $chosen === Surface::Modern
-            ? route('member.modern.config')
+            ? route('member.config')
             : route('member.config', ['category' => MemberConfigCategory::General->value]);
 
         return $request->hasHeader('X-Inertia') ? Inertia::location($target) : redirect($target);
@@ -423,9 +424,8 @@ class MemberConfigController extends Controller
      */
     private function savedRedirect(Request $request, MemberConfigCategory $category, bool $flashOnModern = true): RedirectResponse
     {
-        $name = SurfaceResolver::redirectName($request, 'member.config');
-        $isClassic = $name === 'member.config';
-        $redirect = redirect()->route($name, $isClassic ? ['category' => $category->value] : []);
+        $isClassic = SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC;
+        $redirect = redirect()->route('member.config', $isClassic ? ['category' => $category->value] : []);
 
         return $isClassic || $flashOnModern ? $redirect->with('status', __('Settings updated.')) : $redirect;
     }

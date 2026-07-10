@@ -40,10 +40,11 @@ class MemberSearchTest extends TestCase
 
     public function test_modern_search_renders(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $viewer = Member::factory()->create();
         Member::factory()->create();
 
-        $this->actingAs($viewer)->get('/m/member/search')
+        $this->actingAs($viewer)->get('/member/search')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/search')
                 ->has('members.data')
@@ -301,10 +302,11 @@ class MemberSearchTest extends TestCase
 
     public function test_modern_search_carries_the_visible_self_introduction(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $viewer = Member::factory()->create(['created_at' => now()->subMinute()]); // older, so the owner sorts first
         $owner = $this->memberWithIntro($this->selfIntroProfile(), 'Nice to meet you', Visibility::Members);
 
-        $this->actingAs($viewer)->get('/m/member/search')
+        $this->actingAs($viewer)->get('/member/search')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/search')
                 ->where('members.data.0.id', $owner->getKey())
@@ -313,6 +315,7 @@ class MemberSearchTest extends TestCase
 
     public function test_self_introduction_column_does_not_scale_queries_with_result_count(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $viewer = Member::factory()->create();
         $profile = $this->selfIntroProfile();
         foreach (range(1, 8) as $i) {
@@ -320,7 +323,7 @@ class MemberSearchTest extends TestCase
         }
 
         DB::enableQueryLog();
-        $this->actingAs($viewer)->get('/m/member/search')->assertOk();
+        $this->actingAs($viewer)->get('/member/search')->assertOk();
         $queries = count(DB::getQueryLog());
         DB::disableQueryLog();
 

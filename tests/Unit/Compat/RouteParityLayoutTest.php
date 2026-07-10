@@ -5,7 +5,6 @@ namespace Tests\Unit\Compat;
 use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\Parities\MessageRouteParity;
 use App\Compat\RouteParityRegistry;
-use App\Support\SurfaceResolver;
 use PHPUnit\Framework\TestCase;
 
 class RouteParityLayoutTest extends TestCase
@@ -58,14 +57,6 @@ class RouteParityLayoutTest extends TestCase
         // A screen with no non-default entry resolves to null; the shell falls back to layoutC.
         $this->assertNull(RouteParityRegistry::layout('friend.list'));
         $this->assertNull(RouteParityRegistry::layout('community.edit'));
-    }
-
-    public function test_modern_route_resolves_via_its_canonical_form(): void
-    {
-        $this->assertSame(
-            'B',
-            RouteParityRegistry::layout(SurfaceResolver::canonicalName('diary.modern.list_member')),
-        );
     }
 
     public function test_two_column_classic_views_are_a_locked_set(): void

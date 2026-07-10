@@ -38,10 +38,11 @@ class ProfileEditTest extends TestCase
 
     public function test_modern_edit_page_renders_the_form(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
         Profile::factory()->create(['form_type' => 'input']);
 
-        $this->actingAs($member)->get('/m/member/edit/profile')
+        $this->actingAs($member)->get('/member/edit/profile')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/edit-profile')
                 ->where('form.name', $member->name)
@@ -51,10 +52,11 @@ class ProfileEditTest extends TestCase
 
     public function test_the_age_visibility_block_is_offered_with_a_birthday_item(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
         Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
 
-        $this->actingAs($member)->get('/m/member/edit/profile')
+        $this->actingAs($member)->get('/member/edit/profile')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('form.age.value', Visibility::Private->value) // default Private (fail-closed)
                 // Members/Friends/Private — Open is absent while web-public age is off.
@@ -63,11 +65,12 @@ class ProfileEditTest extends TestCase
 
     public function test_the_age_visibility_block_includes_web_public_when_enabled(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $this->setSnsSetting(SnsSettingKey::AllowWebPublicAge, true);
         $member = Member::factory()->create();
         Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
 
-        $this->actingAs($member)->get('/m/member/edit/profile')
+        $this->actingAs($member)->get('/member/edit/profile')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('form.age.options', fn ($options) => collect($options)->pluck('value')->all() === [0, 1, 2, 3]));
     }
@@ -76,10 +79,11 @@ class ProfileEditTest extends TestCase
     {
         // is_disp_config off removes the birthday field from the edit form, but the item still
         // exists, so the age gate stays reachable (the client renders the block at the form's end).
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
         Profile::factory()->preset('birthday')->create(['form_type' => 'date', 'is_disp_config' => false]);
 
-        $this->actingAs($member)->get('/m/member/edit/profile')
+        $this->actingAs($member)->get('/member/edit/profile')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('form.fields', 0)
                 ->where('form.age.value', Visibility::Private->value));
@@ -87,10 +91,11 @@ class ProfileEditTest extends TestCase
 
     public function test_the_age_visibility_block_is_absent_without_a_birthday_item(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
         Profile::factory()->create(['form_type' => 'input']); // some field, but no birthday → no age
 
-        $this->actingAs($member)->get('/m/member/edit/profile')
+        $this->actingAs($member)->get('/member/edit/profile')
             ->assertInertia(fn (AssertableInertia $page) => $page->where('form.age', null));
     }
 
@@ -386,7 +391,8 @@ class ProfileEditTest extends TestCase
             'value' => 'x', 'visibility' => Visibility::Open,
         ]);
 
-        $this->actingAs($member)->get('/m/member/edit/profile')
+        config(['openpne.surface_mode' => 'modern_default']);
+        $this->actingAs($member)->get('/member/edit/profile')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('form.fields.0.visibility', Visibility::Members->value)
             );

@@ -12,6 +12,12 @@ class MessageRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     private function deliver(Member $sender, Member $recipient, array $message = [], array $receipt = []): Message
     {
         $m = Message::factory()->create([...['sender_id' => $sender->getKey()], ...$message]);
@@ -24,19 +30,19 @@ class MessageRoutesTest extends TestCase
     {
         $message = $this->deliver(...Member::factory()->count(2)->create()->all());
 
-        $this->get('/m/message')->assertRedirect('/login');
-        $this->get('/m/message/receiveList')->assertRedirect('/login');
-        $this->get('/m/message/sendList')->assertRedirect('/login');
-        $this->get('/m/message/draftList')->assertRedirect('/login');
-        $this->get('/m/message/dustList')->assertRedirect('/login');
-        $this->get(route('message.modern.receive.show', $message))->assertRedirect('/login');
+        $this->get('/message')->assertRedirect('/login');
+        $this->get('/message/receiveList')->assertRedirect('/login');
+        $this->get('/message/sendList')->assertRedirect('/login');
+        $this->get('/message/draftList')->assertRedirect('/login');
+        $this->get('/message/dustList')->assertRedirect('/login');
+        $this->get(route('message.receive.show', $message))->assertRedirect('/login');
     }
 
-    public function test_modern_index_redirects_to_the_modern_inbox(): void
+    public function test_modern_index_redirects_to_the_inbox(): void
     {
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/m/message')->assertRedirect(route('message.modern.receive'));
+        $this->actingAs($member)->get('/message')->assertRedirect(route('message.receive'));
     }
 
     public function test_modern_inbox_lists_the_sender_subject_and_unread_state(): void
@@ -45,7 +51,7 @@ class MessageRoutesTest extends TestCase
         $this->deliver($sender, $recipient, ['subject' => 'A friendly note']);
 
         $this->actingAs($recipient)
-            ->get(route('message.modern.receive'))
+            ->get(route('message.receive'))
             ->assertInertia(fn ($page) => $page
                 ->component('message/index')
                 ->where('box', 'receive')
@@ -63,7 +69,7 @@ class MessageRoutesTest extends TestCase
         $sender->delete(); // nullOnDelete leaves the message with a null sender
 
         $this->actingAs($recipient)
-            ->get(route('message.modern.receive'))
+            ->get(route('message.receive'))
             ->assertInertia(fn ($page) => $page
                 ->has('messages.data', 1)
                 ->where('messages.data.0.counterparty', null)
@@ -76,7 +82,7 @@ class MessageRoutesTest extends TestCase
         $this->deliver($sender, $recipient, ['subject' => 'Sent one']);
 
         $this->actingAs($sender)
-            ->get(route('message.modern.send'))
+            ->get(route('message.send'))
             ->assertInertia(fn ($page) => $page
                 ->component('message/index')
                 ->where('box', 'sent')
@@ -96,7 +102,7 @@ class MessageRoutesTest extends TestCase
         ]);
 
         $this->actingAs($author)
-            ->get(route('message.modern.draft'))
+            ->get(route('message.draft'))
             ->assertInertia(fn ($page) => $page
                 ->component('message/index')
                 ->where('box', 'draft')
@@ -111,7 +117,7 @@ class MessageRoutesTest extends TestCase
         $this->deliver($sender, $recipient, ['subject' => 'Tossed'], ['recipient_deleted_at' => now()]);
 
         $this->actingAs($recipient)
-            ->get(route('message.modern.trash'))
+            ->get(route('message.trash'))
             ->assertInertia(fn ($page) => $page
                 ->component('message/index')
                 ->where('box', 'trash')
@@ -125,7 +131,7 @@ class MessageRoutesTest extends TestCase
         $message = $this->deliver($sender, $recipient, ['subject' => 'Read me', 'body' => 'Body text here']);
 
         $this->actingAs($recipient)
-            ->get(route('message.modern.receive.show', $message))
+            ->get(route('message.receive.show', $message))
             ->assertInertia(fn ($page) => $page
                 ->component('message/show')
                 ->where('message.id', $message->getKey())
@@ -145,7 +151,7 @@ class MessageRoutesTest extends TestCase
         $message = $this->deliver($sender, $recipient);
 
         $this->actingAs($sender)
-            ->get(route('message.modern.send.show', $message))
+            ->get(route('message.send.show', $message))
             ->assertInertia(fn ($page) => $page
                 ->component('message/show')
                 ->where('message.viewerIsSender', true)
@@ -161,7 +167,7 @@ class MessageRoutesTest extends TestCase
         $last = $this->deliver($sender, $recipient);
 
         $this->actingAs($recipient)
-            ->get(route('message.modern.receive.show', $middle))
+            ->get(route('message.receive.show', $middle))
             ->assertInertia(fn ($page) => $page
                 ->where('message.previousId', $first->getKey())
                 ->where('message.nextId', $last->getKey())
@@ -173,7 +179,7 @@ class MessageRoutesTest extends TestCase
         [$sender, $recipient, $stranger] = Member::factory()->count(3)->create();
         $message = $this->deliver($sender, $recipient);
 
-        $this->actingAs($stranger)->get(route('message.modern.receive.show', $message))->assertNotFound();
+        $this->actingAs($stranger)->get(route('message.receive.show', $message))->assertNotFound();
     }
 
     public function test_modern_sent_show_404s_for_the_wrong_box(): void
@@ -182,7 +188,7 @@ class MessageRoutesTest extends TestCase
         $message = $this->deliver($sender, $recipient);
 
         // The recipient is not the sender, so the message is not in their sent box.
-        $this->actingAs($recipient)->get(route('message.modern.send.show', $message))->assertNotFound();
+        $this->actingAs($recipient)->get(route('message.send.show', $message))->assertNotFound();
     }
 
     public function test_modern_only_serves_the_canonical_message_boxes_as_inertia(): void

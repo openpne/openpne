@@ -12,15 +12,21 @@ class CommunityRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login_for_modern_routes(): void
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
+    public function test_guests_are_redirected_to_login(): void
     {
         $community = Community::factory()->create();
 
-        $this->get('/m/community/search')->assertRedirect('/login');
-        $this->get('/m/community/joined')->assertRedirect('/login');
-        $this->get("/m/community/{$community->getKey()}")->assertRedirect('/login');
-        $this->get("/m/community/{$community->getKey()}/members")->assertRedirect('/login');
-        $this->post("/m/community/{$community->getKey()}/join")->assertRedirect('/login');
+        $this->get('/community/search')->assertRedirect('/login');
+        $this->get('/community/joinList')->assertRedirect('/login');
+        $this->get("/community/{$community->getKey()}")->assertRedirect('/login');
+        $this->get("/community/member/list?id={$community->getKey()}")->assertRedirect('/login');
+        $this->post('/community/join', ['id' => $community->getKey()])->assertRedirect('/login');
     }
 
     public function test_modern_search_renders_inertia_component(): void
@@ -28,7 +34,7 @@ class CommunityRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->get('/m/community/search')
+            ->get('/community/search')
             ->assertInertia(fn ($page) => $page->component('community/search')->has('communities.data'));
     }
 
@@ -37,7 +43,7 @@ class CommunityRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->get('/m/community/joined')
+            ->get('/community/joinList')
             ->assertInertia(fn ($page) => $page
                 ->component('community/list')
                 ->where('isOwner', true)
@@ -51,7 +57,7 @@ class CommunityRoutesTest extends TestCase
         $community = Community::factory()->create();
 
         $this->actingAs($member)
-            ->get("/m/community/{$community->getKey()}")
+            ->get("/community/{$community->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->component('community/show')
                 ->where('community.id', $community->getKey())
@@ -66,7 +72,7 @@ class CommunityRoutesTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/m/community/999999')->assertNotFound();
+        $this->actingAs($member)->get('/community/999999')->assertNotFound();
     }
 
     public function test_modern_members_serializes_role_as_string_slug(): void
@@ -79,7 +85,7 @@ class CommunityRoutesTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get("/m/community/{$community->getKey()}/members")
+            ->get("/community/member/list?id={$community->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->component('community/members')
                 ->where('members.data.0.role', 'admin')
@@ -87,14 +93,14 @@ class CommunityRoutesTest extends TestCase
             );
     }
 
-    public function test_modern_join_creates_membership_and_redirects_to_modern_show(): void
+    public function test_modern_join_creates_membership_and_redirects_to_show(): void
     {
         $member = Member::factory()->create();
         $community = Community::factory()->create(); // Open policy
 
         $this->actingAs($member)
-            ->post("/m/community/{$community->getKey()}/join")
-            ->assertRedirect(route('community.modern.show', $community));
+            ->post('/community/join', ['id' => $community->getKey()])
+            ->assertRedirect(route('community.show', $community));
 
         $this->assertDatabaseHas('community_members', [
             'community_id' => $community->getKey(),
@@ -102,7 +108,7 @@ class CommunityRoutesTest extends TestCase
         ]);
     }
 
-    public function test_modern_quit_removes_membership_and_redirects_to_modern_show(): void
+    public function test_modern_quit_removes_membership_and_redirects_to_show(): void
     {
         $member = Member::factory()->create();
         $community = Community::factory()->create();
@@ -114,8 +120,8 @@ class CommunityRoutesTest extends TestCase
         ]);
 
         $this->actingAs($member)
-            ->post("/m/community/{$community->getKey()}/quit")
-            ->assertRedirect(route('community.modern.show', $community));
+            ->post('/community/quit', ['id' => $community->getKey()])
+            ->assertRedirect(route('community.show', $community));
 
         $this->assertDatabaseMissing('community_members', [
             'community_id' => $community->getKey(),
@@ -125,7 +131,8 @@ class CommunityRoutesTest extends TestCase
 
     public function test_modern_only_serves_inertia_on_the_canonical_show_route(): void
     {
-        // With no /m opt-in, modern_only still resolves the canonical community route to Modern.
+        // modern_only (as opposed to the suite's modern_default pin) also resolves the canonical
+        // community route to Modern.
         config()->set('openpne.surface_mode', 'modern_only');
         $member = Member::factory()->create();
         $community = Community::factory()->create();

@@ -13,14 +13,20 @@ class CommunityManagementRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     public function test_guests_are_redirected_to_login(): void
     {
         $community = Community::factory()->create();
 
-        $this->get('/m/community/edit')->assertRedirect('/login');
-        $this->post('/m/community/edit')->assertRedirect('/login');
-        $this->post("/m/community/{$community->getKey()}/delete")->assertRedirect('/login');
-        $this->get("/m/community/{$community->getKey()}/pending")->assertRedirect('/login');
+        $this->get('/community/edit')->assertRedirect('/login');
+        $this->post('/community/edit')->assertRedirect('/login');
+        $this->post("/community/delete/{$community->getKey()}")->assertRedirect('/login');
+        $this->get("/community/member/pending?id={$community->getKey()}")->assertRedirect('/login');
     }
 
     public function test_modern_new_renders_create_form_with_null_community(): void
@@ -28,7 +34,7 @@ class CommunityManagementRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->get('/m/community/edit')
+            ->get('/community/edit')
             ->assertInertia(fn ($page) => $page
                 ->component('community/edit')
                 ->where('community', null)
@@ -44,7 +50,7 @@ class CommunityManagementRoutesTest extends TestCase
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
         $this->actingAs($admin)
-            ->get("/m/community/edit?id={$community->getKey()}")
+            ->get("/community/edit?id={$community->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->component('community/edit')
                 ->where('community.id', $community->getKey())
@@ -57,20 +63,20 @@ class CommunityManagementRoutesTest extends TestCase
         $stranger = Member::factory()->create();
         $community = Community::factory()->create();
 
-        $this->actingAs($stranger)->get("/m/community/edit?id={$community->getKey()}")->assertNotFound();
+        $this->actingAs($stranger)->get("/community/edit?id={$community->getKey()}")->assertNotFound();
     }
 
-    public function test_modern_create_stores_community_and_redirects_to_modern_show(): void
+    public function test_modern_create_stores_community_and_redirects_to_show(): void
     {
         $member = Member::factory()->create();
 
-        $response = $this->actingAs($member)->post('/m/community/edit', [
+        $response = $this->actingAs($member)->post('/community/edit', [
             'name' => 'Modern Community',
             'register_policy' => 1,
         ]);
 
         $community = Community::where('name', 'Modern Community')->firstOrFail();
-        $response->assertRedirect(route('community.modern.show', $community));
+        $response->assertRedirect(route('community.show', $community));
         // The creator is seeded as admin.
         $this->assertDatabaseHas('community_members', [
             'community_id' => $community->getKey(),
@@ -83,7 +89,7 @@ class CommunityManagementRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         // No is_join_notification_enabled in the payload → the default-on contract (not a silent off).
-        $this->actingAs($member)->post('/m/community/edit', [
+        $this->actingAs($member)->post('/community/edit', [
             'name' => 'Defaulted Community',
             'register_policy' => 1,
         ])->assertRedirect();
@@ -98,7 +104,7 @@ class CommunityManagementRoutesTest extends TestCase
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
         $this->actingAs($admin)
-            ->get("/m/community/edit?id={$community->getKey()}")
+            ->get("/community/edit?id={$community->getKey()}")
             ->assertInertia(fn ($page) => $page->where('community.isJoinNotificationEnabled', false));
     }
 
@@ -108,39 +114,39 @@ class CommunityManagementRoutesTest extends TestCase
         $community = Community::factory()->create(['is_join_notification_enabled' => true]);
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
-        $this->actingAs($admin)->post("/m/community/edit?id={$community->getKey()}", [
+        $this->actingAs($admin)->post("/community/edit?id={$community->getKey()}", [
             'name' => $community->name,
             'register_policy' => $community->register_policy->value,
             'is_join_notification_enabled' => false,
-        ])->assertRedirect(route('community.modern.show', $community));
+        ])->assertRedirect(route('community.show', $community));
 
         $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'is_join_notification_enabled' => false]);
     }
 
     public function test_modern_update_keeps_the_same_name_without_a_unique_error(): void
     {
-        // Regression guard: CommunityRequest must read the id from the /m path, not only ?id=,
+        // Regression guard: CommunityRequest must resolve the community from ?id=,
         // so re-saving without changing the name does not trip the unique-name rule.
         $admin = Member::factory()->create();
         $community = Community::factory()->create(['name' => 'Steady Name']);
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
         $this->actingAs($admin)
-            ->post("/m/community/edit?id={$community->getKey()}", ['name' => 'Steady Name', 'register_policy' => 2])
-            ->assertRedirect(route('community.modern.show', $community));
+            ->post("/community/edit?id={$community->getKey()}", ['name' => 'Steady Name', 'register_policy' => 2])
+            ->assertRedirect(route('community.show', $community));
 
         $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'register_policy' => 2]);
     }
 
-    public function test_modern_delete_removes_community_and_redirects_to_modern_search(): void
+    public function test_modern_delete_removes_community_and_redirects_to_search(): void
     {
         $admin = Member::factory()->create();
         $community = Community::factory()->create();
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
         $this->actingAs($admin)
-            ->post("/m/community/{$community->getKey()}/delete")
-            ->assertRedirect(route('community.modern.search'));
+            ->post("/community/delete/{$community->getKey()}")
+            ->assertRedirect(route('community.search'));
 
         $this->assertDatabaseMissing('communities', ['id' => $community->getKey()]);
     }
@@ -152,7 +158,7 @@ class CommunityManagementRoutesTest extends TestCase
         $community = Community::factory()->create();
         CommunityMember::factory()->subAdmin()->create(['community_id' => $community->getKey(), 'member_id' => $subAdmin->getKey()]);
 
-        $this->actingAs($subAdmin)->post("/m/community/{$community->getKey()}/delete")->assertNotFound();
+        $this->actingAs($subAdmin)->post("/community/delete/{$community->getKey()}")->assertNotFound();
     }
 
     public function test_modern_pending_and_approve(): void
@@ -164,15 +170,15 @@ class CommunityManagementRoutesTest extends TestCase
         app(JoinCommunity::class)($applicant, $community);
 
         $this->actingAs($admin)
-            ->get("/m/community/{$community->getKey()}/pending")
+            ->get("/community/member/pending?id={$community->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->component('community/pending')
                 ->where('applicants.data.0.id', $applicant->getKey())
             );
 
         $this->actingAs($admin)
-            ->post("/m/community/{$community->getKey()}/approve", ['member_id' => $applicant->getKey()])
-            ->assertRedirect(route('community.modern.members.pending', $community));
+            ->post('/community/member/approve', ['id' => $community->getKey(), 'member_id' => $applicant->getKey()])
+            ->assertRedirect(route('community.members.pending', ['id' => $community->getKey()]));
 
         $this->assertDatabaseHas('community_members', [
             'community_id' => $community->getKey(),
@@ -189,6 +195,6 @@ class CommunityManagementRoutesTest extends TestCase
         $stranger = Member::factory()->create();
         $community = Community::factory()->create();
 
-        $this->actingAs($stranger)->get("/m/community/{$community->getKey()}/pending")->assertNotFound();
+        $this->actingAs($stranger)->get("/community/member/pending?id={$community->getKey()}")->assertNotFound();
     }
 }

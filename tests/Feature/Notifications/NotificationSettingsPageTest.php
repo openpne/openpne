@@ -48,10 +48,11 @@ class NotificationSettingsPageTest extends TestCase
 
     public function test_modern_single_toggle_saves_and_returns_to_the_detail_page(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->post('/m/member/config/notifications', ['settings' => ['friend_link_confirm' => ['mail' => false]]])
+            ->post('/member/config/notifications', ['settings' => ['friend_link_confirm' => ['mail' => false]]])
             ->assertRedirect(route('member.config.notifications.edit'));
 
         $this->assertFalse($member->fresh()->wantsNotification(NotificationKind::FriendLinkConfirm, NotificationChannel::Mail));
@@ -86,7 +87,7 @@ class NotificationSettingsPageTest extends TestCase
 
         $this->actingAs($member)
             ->from('/member/config/notifications')
-            ->post('/m/member/config/notifications', ['settings' => ['timeline_new_post' => ['mail' => false]]])
+            ->post('/member/config/notifications', ['settings' => ['timeline_new_post' => ['mail' => false]]])
             ->assertSessionHasErrors('settings');
 
         $this->assertDatabaseCount('member_notification_settings', 0);
@@ -98,7 +99,7 @@ class NotificationSettingsPageTest extends TestCase
 
         $this->actingAs($member)
             ->from('/member/config/notifications')
-            ->post('/m/member/config/notifications', ['settings' => ['message_new' => ['push' => true]]])
+            ->post('/member/config/notifications', ['settings' => ['message_new' => ['push' => true]]])
             ->assertSessionHasErrors('settings.message_new');
 
         $this->assertDatabaseCount('member_notification_settings', 0);

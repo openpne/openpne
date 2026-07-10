@@ -12,6 +12,12 @@ class MessageBulkTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     /** A delivered message: the sender's row plus the recipient's receipt. */
     private function delivered(Member $sender, Member $recipient, array $receipt = []): array
     {
@@ -23,31 +29,31 @@ class MessageBulkTest extends TestCase
 
     public function test_guests_are_redirected_to_login(): void
     {
-        $this->post(route('message.modern.bulk'), ['box' => 'receive', 'action' => 'delete', 'ids' => [1]])->assertRedirect('/login');
+        $this->post(route('message.bulk'), ['box' => 'receive', 'action' => 'delete', 'ids' => [1]])->assertRedirect('/login');
     }
 
-    public function test_modern_bulk_trash_from_the_inbox_redirects_to_the_modern_inbox(): void
+    public function test_modern_bulk_trash_from_the_inbox_redirects_to_the_inbox(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();
         [$a, $receiptA] = $this->delivered($sender, $recipient);
         [$b, $receiptB] = $this->delivered($sender, $recipient);
 
         $this->actingAs($recipient)
-            ->post(route('message.modern.bulk'), ['box' => 'receive', 'action' => 'delete', 'ids' => [$a->getKey(), $b->getKey()]])
-            ->assertRedirect(route('message.modern.receive'));
+            ->post(route('message.bulk'), ['box' => 'receive', 'action' => 'delete', 'ids' => [$a->getKey(), $b->getKey()]])
+            ->assertRedirect(route('message.receive'));
 
         $this->assertNotNull($receiptA->fresh()->recipient_deleted_at);
         $this->assertNotNull($receiptB->fresh()->recipient_deleted_at);
     }
 
-    public function test_modern_bulk_restore_from_the_trash_redirects_to_the_modern_trash(): void
+    public function test_modern_bulk_restore_from_the_trash_redirects_to_the_trash(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();
         [, $receipt] = $this->delivered($sender, $recipient, ['recipient_deleted_at' => now()]);
 
         $this->actingAs($recipient)
-            ->post(route('message.modern.bulk'), ['box' => 'trash', 'action' => 'restore', 'ids' => [$receipt->message_id]])
-            ->assertRedirect(route('message.modern.trash'));
+            ->post(route('message.bulk'), ['box' => 'trash', 'action' => 'restore', 'ids' => [$receipt->message_id]])
+            ->assertRedirect(route('message.trash'));
 
         $this->assertNull($receipt->fresh()->recipient_deleted_at);
     }
@@ -58,8 +64,8 @@ class MessageBulkTest extends TestCase
         [$message, $receipt] = $this->delivered($sender, $recipient, ['recipient_deleted_at' => now()]);
 
         $this->actingAs($recipient)
-            ->post(route('message.modern.bulk'), ['box' => 'trash', 'action' => 'purge', 'confirm' => true, 'ids' => [$message->getKey()]])
-            ->assertRedirect(route('message.modern.trash'));
+            ->post(route('message.bulk'), ['box' => 'trash', 'action' => 'purge', 'confirm' => true, 'ids' => [$message->getKey()]])
+            ->assertRedirect(route('message.trash'));
 
         $this->assertNotNull($receipt->fresh()->recipient_purged_at);
         $this->assertDatabaseHas('messages', ['id' => $message->getKey()]); // the sender's copy is untouched
@@ -73,8 +79,8 @@ class MessageBulkTest extends TestCase
         [$message, $receipt] = $this->delivered($sender, $recipient, ['recipient_deleted_at' => now()]);
 
         $this->actingAs($recipient)
-            ->post(route('message.modern.bulk'), ['box' => 'trash', 'action' => 'purge', 'ids' => [$message->getKey()]])
-            ->assertRedirect(route('message.modern.trash'));
+            ->post(route('message.bulk'), ['box' => 'trash', 'action' => 'purge', 'ids' => [$message->getKey()]])
+            ->assertRedirect(route('message.trash'));
 
         $this->assertNull($receipt->fresh()->recipient_purged_at);
     }
@@ -84,7 +90,7 @@ class MessageBulkTest extends TestCase
         $recipient = Member::factory()->create();
 
         $this->actingAs($recipient)
-            ->post(route('message.modern.bulk'), ['box' => 'receive', 'action' => 'purge', 'ids' => [1]])
+            ->post(route('message.bulk'), ['box' => 'receive', 'action' => 'purge', 'ids' => [1]])
             ->assertSessionHasErrors('action');
     }
 
@@ -94,8 +100,8 @@ class MessageBulkTest extends TestCase
         [, $receipt] = $this->delivered($sender, $recipient);
 
         $this->actingAs($recipient)
-            ->post(route('message.modern.bulk'), ['box' => 'receive', 'action' => 'delete', 'ids' => []])
-            ->assertRedirect(route('message.modern.receive'));
+            ->post(route('message.bulk'), ['box' => 'receive', 'action' => 'delete', 'ids' => []])
+            ->assertRedirect(route('message.receive'));
 
         $this->assertNull($receipt->fresh()->recipient_deleted_at);
     }

@@ -68,7 +68,7 @@ class CommunityTopicCommentController extends Controller
     /** Redirect to the topic show page on the surface the request came from (both key off {topic}). */
     private function redirectToTopic(Request $request, CommunityTopic $topic): RedirectResponse
     {
-        return redirect()->route(SurfaceResolver::redirectName($request, 'communityTopic.show'), $topic);
+        return redirect()->route('communityTopic.show', $topic);
     }
 
     private function viewer(): Member

@@ -44,12 +44,42 @@ class MPrefixRedirectTest extends TestCase
             ->assertRedirect('/');
     }
 
-    public function test_a_live_m_route_is_not_shadowed_by_the_catch_all(): void
+    public function test_a_retired_surface_twin_url_falls_through_to_the_catch_all(): void
     {
-        // The surface twins still registered under /m/ must keep winning (registration order)
-        // until they are removed.
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/m/friend/list')->assertOk();
+        $this->actingAs($member)->get('/m/friend/list')
+            ->assertStatus(308)
+            ->assertRedirect('/friend/list');
+    }
+
+    /**
+     * The retired RESTful Modern GET shapes do not map onto their canonical URL by dropping the
+     * prefix; each has an explicit redirect ahead of the catch-all. (Their POST siblings have no
+     * path-rewritable canonical form and 404 — never persisted, so only stale in-flight forms.)
+     */
+    public function test_a_reshaped_modern_get_url_redirects_to_its_canonical_shape(): void
+    {
+        $cases = [
+            '/m/community/joined' => '/community/joinList',
+            '/m/community/joined?id=7' => '/community/joinList?id=7',
+            '/m/community/topic/5?order=asc&page=2' => '/communityTopic/5?order=asc&page=2',
+            '/m/community/9/members' => '/community/member/list?id=9',
+            '/m/community/9/members?page=2' => '/community/member/list?id=9&page=2',
+            '/m/community/9/pending' => '/community/member/pending?id=9',
+            '/m/community/9/topic' => '/communityTopic/listCommunity/9',
+            '/m/community/9/topic/new' => '/communityTopic/new/9',
+            '/m/community/topic/5' => '/communityTopic/5',
+            '/m/community/topic/5/edit' => '/communityTopic/edit/5',
+            '/m/community/9/event' => '/communityEvent/listCommunity/9',
+            '/m/community/9/event/new' => '/communityEvent/new/9',
+            '/m/community/event/5' => '/communityEvent/5',
+            '/m/community/event/5/edit' => '/communityEvent/edit/5',
+            '/m/community/event/5/members' => '/communityEvent/5/memberList',
+        ];
+
+        foreach ($cases as $from => $to) {
+            $this->get($from)->assertStatus(308)->assertRedirect($to);
+        }
     }
 }

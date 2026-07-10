@@ -15,6 +15,12 @@ class CommunityTopicCommentRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
     {
         $member = Member::factory()->create();
@@ -33,21 +39,21 @@ class CommunityTopicCommentRoutesTest extends TestCase
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
         $comment = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'number' => 1]);
 
-        $this->post(route('communityTopic.modern.comment.store', $topic))
+        $this->post(route('communityTopic.comment.store', $topic))
             ->assertRedirect('/login');
-        $this->post(route('communityTopic.modern.comment.delete', $comment))
+        $this->post(route('communityTopic.comment.delete', $comment))
             ->assertRedirect('/login');
     }
 
-    public function test_modern_comment_store_creates_a_comment_and_redirects_to_modern_show(): void
+    public function test_modern_comment_store_creates_a_comment_and_redirects_to_show(): void
     {
         $community = Community::factory()->create();
         $member = $this->joined($community);
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
 
         $this->actingAs($member)
-            ->post(route('communityTopic.modern.comment.store', $topic), ['body' => 'A modern reply'])
-            ->assertRedirect(route('communityTopic.modern.show', $topic));
+            ->post(route('communityTopic.comment.store', $topic), ['body' => 'A modern reply'])
+            ->assertRedirect(route('communityTopic.show', $topic));
 
         $this->assertDatabaseHas('community_topic_comments', [
             'community_topic_id' => $topic->getKey(),
@@ -63,12 +69,12 @@ class CommunityTopicCommentRoutesTest extends TestCase
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
-            ->post(route('communityTopic.modern.comment.store', $topic), ['body' => 'intruding'])
+            ->post(route('communityTopic.comment.store', $topic), ['body' => 'intruding'])
             ->assertNotFound();
         $this->assertDatabaseCount('community_topic_comments', 0);
     }
 
-    public function test_modern_comment_delete_removes_the_comment_and_redirects_to_modern_show(): void
+    public function test_modern_comment_delete_removes_the_comment_and_redirects_to_show(): void
     {
         $community = Community::factory()->create();
         $member = $this->joined($community);
@@ -80,8 +86,8 @@ class CommunityTopicCommentRoutesTest extends TestCase
         ]);
 
         $this->actingAs($member)
-            ->post(route('communityTopic.modern.comment.delete', $comment))
-            ->assertRedirect(route('communityTopic.modern.show', $topic));
+            ->post(route('communityTopic.comment.delete', $comment))
+            ->assertRedirect(route('communityTopic.show', $topic));
 
         $this->assertDatabaseMissing('community_topic_comments', ['id' => $comment->getKey()]);
     }
@@ -100,7 +106,7 @@ class CommunityTopicCommentRoutesTest extends TestCase
         $other = $this->joined($community);
 
         $this->actingAs($other)
-            ->post(route('communityTopic.modern.comment.delete', $comment))
+            ->post(route('communityTopic.comment.delete', $comment))
             ->assertNotFound();
         $this->assertDatabaseHas('community_topic_comments', ['id' => $comment->getKey()]);
     }

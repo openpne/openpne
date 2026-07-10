@@ -11,13 +11,19 @@ class TimelineRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login_for_modern_routes(): void
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
+    public function test_guests_are_redirected_to_login(): void
     {
         $member = Member::factory()->create();
         $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
 
-        $this->get("/m/member/{$member->getKey()}/timeline")->assertRedirect('/login');
-        $this->get("/m/timeline/{$post->getKey()}")->assertRedirect('/login');
+        $this->get("/member/{$member->getKey()}/timeline")->assertRedirect('/login');
+        $this->get("/timeline/{$post->getKey()}")->assertRedirect('/login');
     }
 
     public function test_modern_member_renders_inertia_component(): void
@@ -25,7 +31,7 @@ class TimelineRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->get("/m/member/{$member->getKey()}/timeline")
+            ->get("/member/{$member->getKey()}/timeline")
             ->assertInertia(fn ($page) => $page->component('timeline/member'));
     }
 
@@ -36,7 +42,7 @@ class TimelineRoutesTest extends TestCase
         TimelinePost::factory()->count(3)->create(['member_id' => $member->getKey(), 'in_reply_to_id' => $post->getKey()]);
 
         $this->actingAs($member)
-            ->get("/m/member/{$member->getKey()}/timeline")
+            ->get("/member/{$member->getKey()}/timeline")
             ->assertInertia(fn ($page) => $page
                 ->has('posts.data', 1) // replies are not separate rows
                 ->where('posts.data.0.id', $post->getKey())
@@ -44,14 +50,14 @@ class TimelineRoutesTest extends TestCase
             );
     }
 
-    public function test_modern_member_falls_back_to_classic_with_op3_body_id(): void
+    public function test_member_timeline_falls_back_to_classic_with_op3_body_id(): void
     {
-        // When timeline is not native, a /m/* route falls back to Classic; the body id must
-        // still be the OpenPNE 3 hook derived from the canonical route, not empty.
+        // When timeline is not native, the canonical route falls back to Classic; the body id
+        // must still be the OpenPNE 3 hook, not empty.
         config()->set('features.timeline.modern_status', 'fallback');
         $member = Member::factory()->create();
 
-        $response = $this->actingAs($member)->get("/m/member/{$member->getKey()}/timeline");
+        $response = $this->actingAs($member)->get("/member/{$member->getKey()}/timeline");
 
         $response->assertOk();
         $response->assertSee('id="page_timeline_member"', false);
@@ -63,7 +69,7 @@ class TimelineRoutesTest extends TestCase
         $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
 
         $this->actingAs($member)
-            ->get("/m/timeline/{$post->getKey()}")
+            ->get("/timeline/{$post->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->component('timeline/show')
                 ->has('post.id')
@@ -78,7 +84,7 @@ class TimelineRoutesTest extends TestCase
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
         $post = TimelinePost::factory()->private()->create(['member_id' => $bob->getKey()]);
 
-        $this->actingAs($alice)->get("/m/timeline/{$post->getKey()}")->assertNotFound();
+        $this->actingAs($alice)->get("/timeline/{$post->getKey()}")->assertNotFound();
     }
 
     public function test_visibility_slug_is_string_in_inertia_props(): void
@@ -87,7 +93,7 @@ class TimelineRoutesTest extends TestCase
         $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
 
         $this->actingAs($member)
-            ->get("/m/timeline/{$post->getKey()}")
+            ->get("/timeline/{$post->getKey()}")
             ->assertInertia(fn ($page) => $page->where('post.visibility', 'members'));
     }
 }

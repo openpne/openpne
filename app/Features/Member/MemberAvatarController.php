@@ -20,7 +20,7 @@ use Inertia\Response as InertiaResponse;
 /**
  * Member profile image (avatar), on both surfaces: the Classic editor and the Modern Inertia page
  * share one upload/remove backend (SetAvatar / RemoveAvatar). Post-submit redirects stay on the
- * surface they came from via SurfaceResolver::redirectName.
+ * surface they came from.
  */
 class MemberAvatarController extends Controller
 {
@@ -41,7 +41,7 @@ class MemberAvatarController extends Controller
     {
         $action($this->viewer(), $request->file('image'));
 
-        return redirect()->route(SurfaceResolver::redirectName($request, 'member.avatar.edit'))
+        return redirect()->route('member.avatar.edit')
             ->with('status', __('Profile image updated.'));
     }
 
@@ -49,7 +49,7 @@ class MemberAvatarController extends Controller
     {
         $action($this->viewer());
 
-        return redirect()->route(SurfaceResolver::redirectName($request, 'member.avatar.edit'))
+        return redirect()->route('member.avatar.edit')
             ->with('status', __('Profile image removed.'));
     }
 
@@ -59,7 +59,7 @@ class MemberAvatarController extends Controller
         // validated the slug against the enum, null included.
         $this->viewer()->forceFill(['avatar_color' => $request->validated('avatar_color')])->save();
 
-        return redirect()->route(SurfaceResolver::redirectName($request, 'member.avatar.edit'))
+        return redirect()->route('member.avatar.edit')
             ->with('status', __('Badge color updated.'));
     }
 

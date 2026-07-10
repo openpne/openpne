@@ -43,7 +43,7 @@ class MessageController extends Controller
     /** OpenPNE 3 message/index forwards to the inbox (staying on the request's surface). */
     public function index(Request $request): RedirectResponse
     {
-        return redirect()->route(SurfaceResolver::redirectName($request, 'message.receive'));
+        return redirect()->route('message.receive');
     }
 
     public function receive(Request $request, ListMessages $query): View|InertiaResponse
@@ -164,7 +164,7 @@ class MessageController extends Controller
     {
         abort_if($action($this->viewer(), MessageBox::Receive, [$message]) === 0, 404);
 
-        return redirect()->route(SurfaceResolver::redirectName($request, 'message.receive'))->with('status', __('The message was moved to the trash.'));
+        return redirect()->route('message.receive')->with('status', __('The message was moved to the trash.'));
     }
 
     /** Move a sent message to the trash (OpenPNE 3 deleteSendMessage). */
@@ -172,7 +172,7 @@ class MessageController extends Controller
     {
         abort_if($action($this->viewer(), MessageBox::Sent, [$message]) === 0, 404);
 
-        return redirect()->route(SurfaceResolver::redirectName($request, 'message.send'))->with('status', __('The message was moved to the trash.'));
+        return redirect()->route('message.send')->with('status', __('The message was moved to the trash.'));
     }
 
     /** Restore a trashed message to its box (OpenPNE 3 restore). */
@@ -180,7 +180,7 @@ class MessageController extends Controller
     {
         abort_if($action($this->viewer(), [$message]) === 0, 404);
 
-        return redirect()->route(SurfaceResolver::redirectName($request, 'message.trash'))->with('status', __('The message was restored.'));
+        return redirect()->route('message.trash')->with('status', __('The message was restored.'));
     }
 
     /** Confirm purging a single trashed message (OpenPNE 3 deleteConfirmDustMessage). Modern confirms inline. */
@@ -202,7 +202,7 @@ class MessageController extends Controller
     {
         abort_if($action($this->viewer(), [$message]) === 0, 404);
 
-        return redirect()->route(SurfaceResolver::redirectName($request, 'message.trash'))->with('status', __('The message was deleted.'));
+        return redirect()->route('message.trash')->with('status', __('The message was deleted.'));
     }
 
     /**
@@ -216,16 +216,16 @@ class MessageController extends Controller
         $viewer = $this->viewer();
         $box = $request->box();
         $ids = $request->ids();
-        $trashList = SurfaceResolver::redirectName($request, 'message.trash');
+        $trashList = 'message.trash';
 
         if ($ids === []) {
-            return redirect()->route(SurfaceResolver::redirectName($request, $box->listRoute()));
+            return redirect()->route($box->listRoute());
         }
 
         if ($box !== MessageBox::Trash) {
             $trash($viewer, $box, $ids);
 
-            return redirect()->route(SurfaceResolver::redirectName($request, $box->listRoute()))->with('status', __('The message was moved to the trash.'));
+            return redirect()->route($box->listRoute())->with('status', __('The message was moved to the trash.'));
         }
 
         if ($request->action() === 'restore') {
@@ -295,15 +295,15 @@ class MessageController extends Controller
     private function afterWrite(Request $request, bool $isDraft): RedirectResponse
     {
         return $isDraft
-            ? redirect()->route(SurfaceResolver::redirectName($request, 'message.draft'))->with('status', __('The message was saved successfully.'))
-            : redirect()->route(SurfaceResolver::redirectName($request, 'message.send'))->with('status', __('The message was sent successfully.'));
+            ? redirect()->route('message.draft')->with('status', __('The message was saved successfully.'))
+            : redirect()->route('message.send')->with('status', __('The message was sent successfully.'));
     }
 
     /** OpenPNE 3 flashes an error and returns to the sent box when a send is blocked. */
     private function failed(Request $request, MessageActionException $e): RedirectResponse
     {
         if ($e->reason === MessageActionFailure::CannotSend) {
-            return redirect()->route(SurfaceResolver::redirectName($request, 'message.send'))->with('error', __('Cannot send the message.'));
+            return redirect()->route('message.send')->with('error', __('Cannot send the message.'));
         }
 
         abort(404); // too many images: a payload past the cross-field cap

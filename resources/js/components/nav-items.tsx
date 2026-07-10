@@ -13,14 +13,11 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
     const t = useT();
     const { url, props } = usePage<PageProps>();
     const unread = props.unread;
-    // Legacy /m/ URLs still render until their routes are removed; normalize so the canonical
-    // match prefixes cover both URL spaces.
-    const path = url.startsWith('/m/') ? url.slice(2) : url;
 
     return (
         <ul className="flex flex-col gap-1">
             {NAV_SECTIONS.map(({ href, icon: Icon, label, match, badge }) => {
-                const active = path.startsWith(match);
+                const active = url.startsWith(match);
                 const count = badge ? (unread?.[badge.count] ?? 0) : 0;
                 return (
                     <li key={href}>

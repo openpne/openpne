@@ -8,35 +8,34 @@ use RecursiveIteratorIterator;
 use Tests\TestCase;
 
 /**
- * Guards against /m/ URL literals re-entering the frontend or application code: the Modern surface
- * emits canonical URLs only, and a persisted or outbound URL must be canonical
- * (docs/internals/classic-compatibility.md, key invariant #2 — structural here, not a review item).
- *
- * Scope is resources/js + app; the /m/ route registrations in routes/web.php (the transition-era
- * surface twins and the compat.m_prefix redirect) and the test suites that drive them are removed
- * separately, after which this guard extends to those trees.
+ * Guards against /m/ URL literals re-entering the codebase: the retired Modern URL space is served
+ * only by the compat redirects, every emitted URL is canonical, and a persisted or outbound URL
+ * must be canonical (docs/internals/classic-compatibility.md, key invariant #2 — structural here,
+ * not a review item).
  */
 class MPrefixLiteralGuardTest extends TestCase
 {
-    /** A quoted string literal starting a /m/ path (or bare '/m'). */
+    /** A quoted string literal starting a /m/ path (or the bare two-character prefix). */
     private const M_PREFIX_LITERAL_TS = '~[\'"`]/m(?:/|[\'"`])~';
 
     /** PHP variant: no template literals, and a backtick in a docblock is markdown, not a string. */
     private const M_PREFIX_LITERAL_PHP = '~[\'"]/m(?:/|[\'"])~';
 
     /**
-     * Deliberate transitional references, each removed with the /m/ routes. Only shrink this list.
-     * - nav-items.tsx: normalizes a legacy /m/ URL so canonical nav matches cover both URL spaces.
+     * The two homes of the permanent /m/ compat surface. Only shrink this list.
+     * - routes/web.php: the compat redirects themselves (reshaped GETs + the catch-all).
+     * - MPrefixRedirectTest: drives those redirects.
      */
     private const ALLOWLIST = [
-        'resources/js/components/nav-items.tsx',
+        'routes/web.php',
+        'tests/Feature/Compat/MPrefixRedirectTest.php',
     ];
 
     public function test_no_m_prefix_literal_outside_the_allowlist(): void
     {
         $violations = [];
 
-        foreach ([resource_path('js'), app_path()] as $base) {
+        foreach ([resource_path('js'), app_path(), base_path('routes'), base_path('tests')] as $base) {
             $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($base, FilesystemIterator::SKIP_DOTS));
             foreach ($it as $file) {
                 if (! $file->isFile() || ! preg_match('/\.(?:tsx?|php)$/', $file->getFilename())) {

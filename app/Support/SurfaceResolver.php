@@ -7,9 +7,10 @@ use App\Services\SnsSettingService;
 use Illuminate\Http\Request;
 
 /**
- * Decides whether a canonical feature route renders the Classic or Modern
- * surface, and maps a canonical route name to its Modern sibling on redirect.
- * Shared by every feature controller that serves both surfaces (Friend, Block).
+ * Decides whether a canonical feature route renders the Classic or Modern surface. URLs carry no
+ * surface — the surface is an attribute of the viewer (install mode, durable member choice) and of
+ * the client (an Inertia navigation is always Modern). Shared by every feature controller that
+ * serves both surfaces.
  */
 class SurfaceResolver
 {
@@ -31,21 +32,16 @@ class SurfaceResolver
             return self::MODERN;
         }
 
-        // An explicit /m/* route opts into Modern, above everything except a non-native feature.
-        if ($request->route('surface') === self::MODERN) {
-            return self::MODERN;
-        }
-
         return self::canonicalSurface($request, $feature);
     }
 
     /**
-     * The surface a member gets on a CANONICAL route — resolve() minus the explicit /m/* opt-in.
-     * Still honours the hard gates (a non-native feature is Classic, modern_only is Modern) before
-     * the member's durable choice / session toggle / the mode's default surface. The member config
-     * page uses this both for the surface it preselects and for its "saving the current surface is a
-     * no-op" check, so the form reflects what the member actually sees when browsing normally — not
-     * the /m URL the page itself may be on, and not the bare default when a hard gate overrides it.
+     * The surface the VIEWER resolves to — resolve() minus the Inertia-client stickiness. Honours
+     * the hard gates (a non-native feature is Classic, modern_only is Modern) before the member's
+     * durable choice / the mode's default surface. The member config page uses this both for the
+     * surface it preselects and for its "saving the current surface is a no-op" check, so the form
+     * reflects what the member gets on a fresh page load — not the SPA session the page is in, and
+     * not the bare default when a hard gate overrides it.
      */
     public static function canonicalSurface(Request $request, string $feature): string
     {
@@ -58,16 +54,10 @@ class SurfaceResolver
             return self::MODERN;
         }
 
-        // A member's durable choice (member_preferences) outranks the transient session toggle and
-        // the mode's default surface.
+        // A member's durable choice (member_preferences) outranks the mode's default surface.
         $member = $request->user('member');
         if ($member instanceof Member && ($preferred = $member->preferredSurface()) !== null) {
             return $preferred->value;
-        }
-
-        $override = $request->session()->get('migration_ui_override');
-        if (in_array($override, [self::CLASSIC, self::MODERN], true)) {
-            return $override;
         }
 
         return $mode->defaultSurface()->value;
@@ -83,35 +73,5 @@ class SurfaceResolver
     private static function surfaceMode(): SurfaceMode
     {
         return app(SnsSettingService::class)->get(SnsSettingKey::SurfaceMode);
-    }
-
-    /**
-     * On a Modern route, maps `friend.list` -> `friend.modern.list` so a
-     * post-submit redirect stays on the surface it came from. Consumers must
-     * name routes `{feature}.{rest}` <-> `{feature}.modern.{rest}`.
-     */
-    public static function redirectName(Request $request, string $canonicalName): string
-    {
-        if ($request->route('surface') !== self::MODERN) {
-            return $canonicalName;
-        }
-
-        $feature = strstr($canonicalName, '.', true);
-        if ($feature === false) {
-            return $canonicalName;
-        }
-
-        return $feature.'.modern.'.substr($canonicalName, strlen($feature) + 1);
-    }
-
-    /**
-     * Inverse of the modern-route convention: `friend.modern.list` -> `friend.list`.
-     * Canonical names (no `.modern.` infix) pass through unchanged. Lets a controller
-     * key parity/body-id lookups by canonical name even when a `/m/*` route ran and
-     * fell back to Classic.
-     */
-    public static function canonicalName(string $routeName): string
-    {
-        return str_replace('.modern.', '.', $routeName);
     }
 }

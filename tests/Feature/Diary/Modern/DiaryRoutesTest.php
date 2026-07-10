@@ -11,12 +11,18 @@ class DiaryRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login_for_modern_routes(): void
+    protected function setUp(): void
     {
-        $this->get('/m/diary/listMember')->assertRedirect('/login');
-        $this->get('/m/diary/new')->assertRedirect('/login');
-        $this->post('/m/diary/create')->assertRedirect('/login');
-        $this->get('/m/diary/1')->assertRedirect('/login');
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
+    public function test_guests_are_redirected_to_login(): void
+    {
+        $this->get('/diary/listMember')->assertRedirect('/login');
+        $this->get('/diary/new')->assertRedirect('/login');
+        $this->post('/diary/create')->assertRedirect('/login');
+        $this->get('/diary/1')->assertRedirect('/login');
     }
 
     public function test_modern_list_member_renders_inertia_component(): void
@@ -24,18 +30,18 @@ class DiaryRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->get('/m/diary/listMember')
+            ->get('/diary/listMember')
             ->assertInertia(fn ($page) => $page->component('diary/list'));
     }
 
     public function test_modern_status_fallback_renders_classic_with_op3_body_id(): void
     {
-        // When diary is not native, a /m/* route falls back to Classic; the body id must
-        // still be the OpenPNE 3 hook derived from the canonical route, not empty.
+        // When diary is not native, the canonical route falls back to Classic; the body id
+        // must still be the OpenPNE 3 hook, not empty.
         config()->set('features.diary.modern_status', 'fallback');
         $member = Member::factory()->create();
 
-        $response = $this->actingAs($member)->get('/m/diary/listMember');
+        $response = $this->actingAs($member)->get('/diary/listMember');
 
         $response->assertOk();
         $response->assertSee('id="page_diary_listMember"', false);
@@ -46,7 +52,7 @@ class DiaryRoutesTest extends TestCase
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->get('/m/diary/new')
+            ->get('/diary/new')
             ->assertInertia(fn ($page) => $page->component('diary/new'));
     }
 
@@ -56,7 +62,7 @@ class DiaryRoutesTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $member->getKey()]);
 
         $this->actingAs($member)
-            ->get("/m/diary/{$diary->getKey()}")
+            ->get("/diary/{$diary->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->component('diary/show')
                 ->has('diary.id')
@@ -75,7 +81,7 @@ class DiaryRoutesTest extends TestCase
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
         $diary = Diary::factory()->private()->create(['member_id' => $bob->getKey()]);
 
-        $this->actingAs($alice)->get("/m/diary/{$diary->getKey()}")->assertNotFound();
+        $this->actingAs($alice)->get("/diary/{$diary->getKey()}")->assertNotFound();
     }
 
     public function test_modern_edit_renders_inertia_component_for_owner(): void
@@ -84,34 +90,33 @@ class DiaryRoutesTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $member->getKey()]);
 
         $this->actingAs($member)
-            ->get("/m/diary/edit/{$diary->getKey()}")
+            ->get("/diary/edit/{$diary->getKey()}")
             ->assertInertia(fn ($page) => $page->component('diary/edit'));
     }
 
-    public function test_modern_store_creates_diary_and_redirects_to_modern_show(): void
+    public function test_modern_store_creates_diary_and_redirects_to_show(): void
     {
         $member = Member::factory()->create();
 
-        $response = $this->actingAs($member)->post('/m/diary/create', [
+        $response = $this->actingAs($member)->post('/diary/create', [
             'title' => 'Modern diary',
             'body' => 'Content',
             'visibility' => '1',
         ]);
 
-        $response->assertRedirect();
         $this->assertDatabaseHas('diaries', ['title' => 'Modern diary']);
-        // Redirect should point to the modern show route (/m/diary/{id}).
-        $this->assertStringContainsString('/m/diary/', $response->headers->get('Location') ?? '');
+        $diary = Diary::query()->where('title', 'Modern diary')->firstOrFail();
+        $response->assertRedirect(route('diary.show', $diary));
     }
 
-    public function test_modern_delete_removes_diary_and_redirects_to_modern_list(): void
+    public function test_modern_delete_removes_diary_and_redirects_to_list(): void
     {
         $member = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $member->getKey()]);
 
-        $response = $this->actingAs($member)->post("/m/diary/delete/{$diary->getKey()}");
+        $response = $this->actingAs($member)->post("/diary/delete/{$diary->getKey()}");
 
-        $response->assertRedirect(route('diary.modern.list_member'));
+        $response->assertRedirect(route('diary.list_member'));
         $this->assertDatabaseMissing('diaries', ['id' => $diary->getKey()]);
     }
 
@@ -121,7 +126,7 @@ class DiaryRoutesTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
 
         $this->actingAs(Member::factory()->create())
-            ->post("/m/diary/delete/{$diary->getKey()}")
+            ->post("/diary/delete/{$diary->getKey()}")
             ->assertNotFound();
         $this->assertDatabaseHas('diaries', ['id' => $diary->getKey()]);
     }
@@ -132,7 +137,7 @@ class DiaryRoutesTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $member->getKey()]);
 
         $this->actingAs($member)
-            ->get("/m/diary/{$diary->getKey()}")
+            ->get("/diary/{$diary->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->where('diary.visibility', 'members')
             );

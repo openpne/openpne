@@ -81,7 +81,7 @@ class CommunityEventCommentController extends Controller
     /** Redirect to the event show page on the surface the request came from (both key off {event}). */
     private function redirectToEvent(Request $request, CommunityEvent $event): RedirectResponse
     {
-        return redirect()->route(SurfaceResolver::redirectName($request, 'communityEvent.show'), $event);
+        return redirect()->route('communityEvent.show', $event);
     }
 
     private function isRosterGuard(CommunityEventActionFailure $reason): bool

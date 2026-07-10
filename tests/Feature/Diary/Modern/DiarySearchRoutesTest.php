@@ -12,9 +12,15 @@ class DiarySearchRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     public function test_guest_is_redirected_to_login(): void
     {
-        $this->get('/m/diary/search')->assertRedirect('/login');
+        $this->get('/diary/search')->assertRedirect('/login');
     }
 
     public function test_search_renders_inertia_with_keyword_and_filtered_results(): void
@@ -28,7 +34,7 @@ class DiarySearchRoutesTest extends TestCase
         ]);
 
         // Search shares the feed component.
-        $this->actingAs($viewer)->get('/m/diary/search?keyword=laravel')
+        $this->actingAs($viewer)->get('/diary/search?keyword=laravel')
             ->assertInertia(fn ($page) => $page
                 ->component('diary/feed')
                 ->where('variant', 'search')

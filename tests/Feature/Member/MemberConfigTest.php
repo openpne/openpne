@@ -104,13 +104,14 @@ class MemberConfigTest extends TestCase
 
     public function test_the_modern_page_renders_the_inertia_component(): void
     {
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/m/member/config')
+        $this->actingAs($member)->get('/member/config')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('member/config')
-                ->where('form.surface.value', 'classic') // preselected to the current surface (mode default)
+                ->where('form.surface.value', 'modern') // preselected to the current surface (mode default)
                 ->where('form.surface.options', fn ($options) => count($options) === 2) // binary: no "default" option
                 ->has('form.diary.options')
                 // Age visibility moved next to the birthday on the Modern profile-edit form.
@@ -267,14 +268,14 @@ class MemberConfigTest extends TestCase
             ->assertOk()->assertSee('id="page_friend_list"', false);
     }
 
-    public function test_a_classic_choice_from_the_modern_page_lands_on_the_canonical_url(): void
+    public function test_a_classic_choice_from_the_modern_surface_lands_on_the_classic_config_page(): void
     {
-        // The explicit /m/* URL is top of SurfaceResolver's order, so a Classic choice must leave it
-        // for the canonical config URL, or the page would stay Modern (Codex High 2).
+        // Choosing Classic must land on the Classic category page, not back on a Modern render —
+        // the just-written preference resolves the chosen surface on the redirect target.
         $member = Member::factory()->create();
         $member->setPreferredSurface(Surface::Modern); // currently Modern, so choosing Classic is a real change
 
-        $this->actingAs($member)->post('/m/member/config/surface', ['preferred_surface' => 'classic'])
+        $this->actingAs($member)->post('/member/config/surface', ['preferred_surface' => 'classic'])
             ->assertRedirect(route('member.config', ['category' => 'general']));
 
         $this->assertDatabaseHas('member_preferences', [
@@ -290,7 +291,7 @@ class MemberConfigTest extends TestCase
         config(['openpne.surface_mode' => 'modern_only']);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/m/member/config')
+        $this->actingAs($member)->get('/member/config')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->missing('form.surface'));
 
@@ -321,10 +322,11 @@ class MemberConfigTest extends TestCase
 
     public function test_modern_ignores_the_category_query_and_stays_single_page(): void
     {
-        // The /m/* URL forces Modern; ?category= is a Classic concept and must not 404 or branch.
+        // ?category= is a Classic concept; a Modern-resolved request must not 404 or branch on it.
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/m/member/config?category=zzz')
+        $this->actingAs($member)->get('/member/config?category=zzz')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page->component('member/config'));
     }
@@ -332,22 +334,24 @@ class MemberConfigTest extends TestCase
     public function test_a_modern_save_redirect_carries_no_category(): void
     {
         // The diary POST is shared with Modern; the category param is gated to the Classic target.
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->post('/m/member/config/diary', [
+        $this->actingAs($member)->post('/member/config/diary', [
             'diary_default_visibility' => (string) Visibility::Friends->value,
-        ])->assertRedirect(route('member.modern.config'));
+        ])->assertRedirect(route('member.config'));
     }
 
     public function test_a_modern_preference_save_suppresses_the_page_flash(): void
     {
         // Modern announces the instant-apply diary preference inline next to the control; the
         // page flash is dropped so one save is never announced twice.
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->post('/m/member/config/diary', [
+        $this->actingAs($member)->post('/member/config/diary', [
             'diary_default_visibility' => (string) Visibility::Friends->value,
-        ])->assertRedirect(route('member.modern.config'))->assertSessionMissing('status');
+        ])->assertRedirect(route('member.config'))->assertSessionMissing('status');
     }
 
     public function test_a_classic_preference_save_keeps_the_page_flash(): void
@@ -424,11 +428,12 @@ class MemberConfigTest extends TestCase
     {
         // The detail page is short, so the redirected-back errors are visible without scrolling —
         // the reason these forms are not inline on the settings hub.
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
         $this->actingAs($member)
             ->from('/member/config/password')
-            ->post('/m/member/config/password', [
+            ->post('/member/config/password', [
                 'current_password' => 'not-the-password',
                 'password' => 'new-secret-pass',
                 'password_confirmation' => 'new-secret-pass',
@@ -517,16 +522,17 @@ class MemberConfigTest extends TestCase
         $this->get('/member/config')->assertOk();
     }
 
-    public function test_a_modern_password_save_redirects_to_the_modern_config(): void
+    public function test_a_modern_password_save_redirects_to_the_bare_config(): void
     {
         // Unlike the instant-apply preferences, the explicit password form keeps its flash on Modern.
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->post('/m/member/config/password', [
+        $this->actingAs($member)->post('/member/config/password', [
             'current_password' => 'password',
             'password' => 'new-secret-pass',
             'password_confirmation' => 'new-secret-pass',
-        ])->assertRedirect(route('member.modern.config'))->assertSessionHas('status');
+        ])->assertRedirect(route('member.config'))->assertSessionHas('status');
 
         $this->assertTrue(Hash::check('new-secret-pass', $member->fresh()->password));
     }
@@ -621,19 +627,6 @@ class MemberConfigTest extends TestCase
 
         $this->actingAs($member)->get('/leave')
             ->assertRedirect(route('member.config', ['category' => 'withdrawal']));
-    }
-
-    public function test_the_modern_withdrawal_route_deletes_the_member(): void
-    {
-        Member::factory()->create(['id' => 1]);
-        $member = Member::factory()->create();
-
-        $this->actingAs($member)->post('/m/member/config/withdrawal', [
-            'password' => 'password',
-            'confirm' => '1',
-        ])->assertRedirect(route('login'));
-
-        $this->assertDatabaseMissing('members', ['id' => $member->id]);
     }
 
     public function test_withdrawing_purges_the_members_database_sessions(): void
@@ -855,15 +848,16 @@ class MemberConfigTest extends TestCase
             ->assertRedirect(route('member.config', ['category' => 'email']));
     }
 
-    public function test_a_modern_email_change_request_redirects_to_the_modern_config(): void
+    public function test_a_modern_email_change_request_redirects_to_the_bare_config(): void
     {
         Notification::fake();
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->post('/m/member/config/email', [
+        $this->actingAs($member)->post('/member/config/email', [
             'password' => 'password',
             'new_email' => 'new@example.com',
-        ])->assertRedirect(route('member.modern.config'));
+        ])->assertRedirect(route('member.config'));
 
         $this->assertDatabaseHas('email_change_requests', ['member_id' => $member->id, 'new_email' => 'new@example.com']);
     }

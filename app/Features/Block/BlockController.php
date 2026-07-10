@@ -96,7 +96,7 @@ class BlockController extends Controller
 
     private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
     {
-        $redirect = redirect()->route(SurfaceResolver::redirectName($request, $canonicalName));
+        $redirect = redirect()->route($canonicalName);
         if ($status !== null) {
             $redirect = $redirect->with('status', $status);
         }

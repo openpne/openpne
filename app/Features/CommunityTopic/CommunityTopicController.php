@@ -179,14 +179,14 @@ class CommunityTopicController extends Controller
         }
 
         // OpenPNE 3 returns to the community home after deleting a topic.
-        return redirect()->route(SurfaceResolver::redirectName($request, 'community.show'), $community)
+        return redirect()->route('community.show', $community)
             ->with('status', __('%Topic% deleted.'));
     }
 
     /** Redirect to the topic show page on the surface the request came from (both key off {topic}). */
     private function redirectToTopic(Request $request, CommunityTopic $topic): RedirectResponse
     {
-        return redirect()->route(SurfaceResolver::redirectName($request, 'communityTopic.show'), $topic);
+        return redirect()->route('communityTopic.show', $topic);
     }
 
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
