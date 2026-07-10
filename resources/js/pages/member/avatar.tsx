@@ -45,7 +45,7 @@ export default function MemberAvatar() {
 
             <Panel bodyClassName="space-y-4">
                 {avatar ? (
-                    <img src={avatar.thumbnailUrl} alt={t('Profile image')} className="size-32 rounded-md object-cover" />
+                    <img src={avatar.thumbnailUrl} alt={t('Profile image')} className="size-32 rounded-full object-cover" />
                 ) : (
                     // Preview the badge others see, so the caption is not the only answer to "what shows now?".
                     <div className="space-y-2">
@@ -54,7 +54,7 @@ export default function MemberAvatar() {
                             aria-label={auth.user.name}
                             name={auth.user.name}
                             color={tentativeHex}
-                            className="size-32 rounded-md text-4xl"
+                            className="size-32 rounded-full text-4xl"
                         />
                         <p className="text-sm text-muted-foreground">{t('No profile image set.')}</p>
                     </div>
