@@ -37,9 +37,14 @@ class CommunityTopicCommentController extends Controller
         return $this->redirectToTopic($request, $found)->with('status', __('Comment posted.'));
     }
 
-    public function showDelete(Request $request, CommunityTopicComment $comment): View
+    public function showDelete(Request $request, CommunityTopicComment $comment): View|RedirectResponse
     {
         abort_unless(CommunityTopicAccess::canDeleteComment($comment, $this->viewer()), 404);
+
+        // Modern confirms deletion inline — send a Modern viewer back to the topic.
+        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+            return redirect()->route('communityTopic.show', $comment->topic);
+        }
 
         return view('community-topic.comment-delete', [
             'comment' => $comment,
