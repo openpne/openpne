@@ -8,6 +8,7 @@ use App\Http\Requests\Member\UpdateNotificationSettingsRequest;
 use App\Models\Member;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -43,7 +44,7 @@ class NotificationSettingsController
 
         // Modern returns to the detail page silently (the inline SavedIndicator is the feedback);
         // Classic returns to its category page with the usual flash.
-        return $request->routeIs('member.modern.*')
+        return SurfaceResolver::resolve($request, 'member') === SurfaceResolver::MODERN
             ? redirect()->route('member.config.notifications.edit')
             : redirect()
                 ->route('member.config', ['category' => MemberConfigCategory::Notification->value])

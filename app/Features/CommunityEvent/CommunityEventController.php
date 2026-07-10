@@ -199,7 +199,7 @@ class CommunityEventController extends Controller
         }
 
         // OpenPNE 3 returns to the community home after deleting an event.
-        return redirect()->route(SurfaceResolver::redirectName($request, 'community.show'), $community)
+        return redirect()->route('community.show', $community)
             ->with('status', __('Event deleted.'));
     }
 
@@ -232,7 +232,7 @@ class CommunityEventController extends Controller
     /** Redirect to the event show page on the surface the request came from (both key off {event}). */
     private function redirectToEvent(Request $request, CommunityEvent $event): RedirectResponse
     {
-        return redirect()->route(SurfaceResolver::redirectName($request, 'communityEvent.show'), $event);
+        return redirect()->route('communityEvent.show', $event);
     }
 
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */

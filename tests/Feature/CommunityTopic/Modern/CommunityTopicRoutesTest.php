@@ -16,6 +16,12 @@ class CommunityTopicRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
     {
         $member = Member::factory()->create();
@@ -33,12 +39,12 @@ class CommunityTopicRoutesTest extends TestCase
         $community = Community::factory()->create();
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
 
-        $this->get(route('communityTopic.modern.index', $community))->assertRedirect('/login');
-        $this->get(route('communityTopic.modern.new', $community))->assertRedirect('/login');
-        $this->get(route('communityTopic.modern.show', $topic))->assertRedirect('/login');
-        $this->post(route('communityTopic.modern.store', $community))->assertRedirect('/login');
-        $this->get(route('communityTopic.modern.edit', $topic))->assertRedirect('/login');
-        $this->post(route('communityTopic.modern.delete', $topic))->assertRedirect('/login');
+        $this->get(route('communityTopic.index', $community))->assertRedirect('/login');
+        $this->get(route('communityTopic.new', $community))->assertRedirect('/login');
+        $this->get(route('communityTopic.show', $topic))->assertRedirect('/login');
+        $this->post(route('communityTopic.store', $community))->assertRedirect('/login');
+        $this->get(route('communityTopic.edit', $topic))->assertRedirect('/login');
+        $this->post(route('communityTopic.delete', $topic))->assertRedirect('/login');
     }
 
     public function test_modern_index_renders_the_board(): void
@@ -48,7 +54,7 @@ class CommunityTopicRoutesTest extends TestCase
         CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
 
         $this->actingAs($member)
-            ->get(route('communityTopic.modern.index', $community))
+            ->get(route('communityTopic.index', $community))
             ->assertInertia(fn ($page) => $page
                 ->component('community/topic/index')
                 ->where('community.id', $community->getKey())
@@ -70,7 +76,7 @@ class CommunityTopicRoutesTest extends TestCase
         ]);
 
         $this->actingAs($author)
-            ->get(route('communityTopic.modern.show', $topic))
+            ->get(route('communityTopic.show', $topic))
             ->assertInertia(fn ($page) => $page
                 ->component('community/topic/show')
                 ->where('topic.id', $topic->getKey())
@@ -94,7 +100,7 @@ class CommunityTopicRoutesTest extends TestCase
         $third = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => 2]);
 
         $this->actingAs($author)
-            ->get(route('communityTopic.modern.show', $topic))
+            ->get(route('communityTopic.show', $topic))
             ->assertInertia(fn ($page) => $page
                 ->where('thread.comments.0.id', $first->getKey())
                 ->where('thread.comments.1.id', $second->getKey())
@@ -113,7 +119,7 @@ class CommunityTopicRoutesTest extends TestCase
         }
 
         $this->actingAs($author)
-            ->get(route('communityTopic.modern.show', $topic))
+            ->get(route('communityTopic.show', $topic))
             ->assertInertia(fn ($page) => $page
                 ->where('thread.total', 25)
                 ->where('thread.lastPage', 2)
@@ -122,7 +128,7 @@ class CommunityTopicRoutesTest extends TestCase
             );
 
         $this->actingAs($author)
-            ->get(route('communityTopic.modern.show', ['topic' => $topic, 'page' => 2]))
+            ->get(route('communityTopic.show', ['topic' => $topic, 'page' => 2]))
             ->assertInertia(fn ($page) => $page->has('thread.comments', 5));
     }
 
@@ -133,7 +139,7 @@ class CommunityTopicRoutesTest extends TestCase
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
-            ->get(route('communityTopic.modern.show', $topic))
+            ->get(route('communityTopic.show', $topic))
             ->assertNotFound();
     }
 
@@ -143,7 +149,7 @@ class CommunityTopicRoutesTest extends TestCase
         $member = $this->joined($community);
 
         $this->actingAs($member)
-            ->get(route('communityTopic.modern.new', $community))
+            ->get(route('communityTopic.new', $community))
             ->assertInertia(fn ($page) => $page
                 ->component('community/topic/edit')
                 ->where('community.id', $community->getKey())
@@ -156,21 +162,21 @@ class CommunityTopicRoutesTest extends TestCase
         $community = Community::factory()->create();
         $stranger = Member::factory()->create();
 
-        $this->actingAs($stranger)->get(route('communityTopic.modern.new', $community))->assertNotFound();
+        $this->actingAs($stranger)->get(route('communityTopic.new', $community))->assertNotFound();
     }
 
-    public function test_modern_store_creates_a_topic_and_redirects_to_modern_show(): void
+    public function test_modern_store_creates_a_topic_and_redirects_to_show(): void
     {
         $community = Community::factory()->create();
         $member = $this->joined($community);
 
-        $response = $this->actingAs($member)->post(route('communityTopic.modern.store', $community), [
+        $response = $this->actingAs($member)->post(route('communityTopic.store', $community), [
             'name' => 'Modern Topic',
             'body' => 'Hello board',
         ]);
 
         $topic = CommunityTopic::where('name', 'Modern Topic')->firstOrFail();
-        $response->assertRedirect(route('communityTopic.modern.show', $topic));
+        $response->assertRedirect(route('communityTopic.show', $topic));
         $this->assertDatabaseHas('community_topics', [
             'id' => $topic->getKey(),
             'community_id' => $community->getKey(),
@@ -185,7 +191,7 @@ class CommunityTopicRoutesTest extends TestCase
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
-            ->get(route('communityTopic.modern.edit', $topic))
+            ->get(route('communityTopic.edit', $topic))
             ->assertInertia(fn ($page) => $page
                 ->component('community/topic/edit')
                 ->where('topic.id', $topic->getKey())
@@ -201,35 +207,35 @@ class CommunityTopicRoutesTest extends TestCase
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
-            ->get(route('communityTopic.modern.edit', $topic))
+            ->get(route('communityTopic.edit', $topic))
             ->assertNotFound();
     }
 
-    public function test_modern_update_edits_the_topic_and_redirects_to_modern_show(): void
+    public function test_modern_update_edits_the_topic_and_redirects_to_show(): void
     {
         $community = Community::factory()->create();
         $author = $this->joined($community);
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
-            ->post(route('communityTopic.modern.update', $topic), [
+            ->post(route('communityTopic.update', $topic), [
                 'name' => 'Renamed',
                 'body' => 'Rewritten',
             ])
-            ->assertRedirect(route('communityTopic.modern.show', $topic));
+            ->assertRedirect(route('communityTopic.show', $topic));
 
         $this->assertDatabaseHas('community_topics', ['id' => $topic->getKey(), 'name' => 'Renamed', 'body' => 'Rewritten']);
     }
 
-    public function test_modern_delete_removes_the_topic_and_redirects_to_the_modern_community(): void
+    public function test_modern_delete_removes_the_topic_and_redirects_to_the_community(): void
     {
         $community = Community::factory()->create();
         $author = $this->joined($community);
         $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
-            ->post(route('communityTopic.modern.delete', $topic))
-            ->assertRedirect(route('community.modern.show', $community));
+            ->post(route('communityTopic.delete', $topic))
+            ->assertRedirect(route('community.show', $community));
 
         $this->assertDatabaseMissing('community_topics', ['id' => $topic->getKey()]);
     }
@@ -242,7 +248,7 @@ class CommunityTopicRoutesTest extends TestCase
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
-            ->post(route('communityTopic.modern.delete', $topic))
+            ->post(route('communityTopic.delete', $topic))
             ->assertNotFound();
         $this->assertDatabaseHas('community_topics', ['id' => $topic->getKey()]);
     }

@@ -12,10 +12,16 @@ class DiaryCommentRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login_for_modern_comment_routes(): void
+    protected function setUp(): void
     {
-        $this->post('/m/diary/1/comment/create')->assertRedirect('/login');
-        $this->post('/m/diary/comment/delete/1')->assertRedirect('/login');
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
+    public function test_guests_are_redirected_to_login_for_comment_routes(): void
+    {
+        $this->post('/diary/1/comment/create')->assertRedirect('/login');
+        $this->post('/diary/comment/delete/1')->assertRedirect('/login');
     }
 
     public function test_modern_show_includes_comments_in_props(): void
@@ -28,7 +34,7 @@ class DiaryCommentRoutesTest extends TestCase
         ]);
         $viewer = Member::factory()->create();
 
-        $this->actingAs($viewer)->get("/m/diary/{$diary->getKey()}")
+        $this->actingAs($viewer)->get("/diary/{$diary->getKey()}")
             ->assertInertia(fn ($page) => $page
                 ->component('diary/show')
                 ->has('comments', 1)
@@ -47,7 +53,7 @@ class DiaryCommentRoutesTest extends TestCase
             'diary_id' => $diary->getKey(), 'member_id' => $author->getKey(),
         ]);
 
-        $this->actingAs($author)->get("/m/diary/{$diary->getKey()}")
+        $this->actingAs($author)->get("/diary/{$diary->getKey()}")
             ->assertInertia(fn ($page) => $page->where('comments.0.deletable', true));
     }
 
@@ -56,19 +62,19 @@ class DiaryCommentRoutesTest extends TestCase
         $diary = Diary::factory()->create();
         DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'member_id' => null]);
 
-        $this->actingAs(Member::factory()->create())->get("/m/diary/{$diary->getKey()}")
+        $this->actingAs(Member::factory()->create())->get("/diary/{$diary->getKey()}")
             ->assertInertia(fn ($page) => $page->where('comments.0.author', null));
     }
 
-    public function test_modern_store_creates_comment_and_redirects_to_modern_show(): void
+    public function test_modern_store_creates_comment_and_redirects_to_show(): void
     {
         $diary = Diary::factory()->create();
         $member = Member::factory()->create();
 
         $response = $this->actingAs($member)
-            ->post("/m/diary/{$diary->getKey()}/comment/create", ['body' => 'Nice']);
+            ->post("/diary/{$diary->getKey()}/comment/create", ['body' => 'Nice']);
 
-        $response->assertRedirect("/m/diary/{$diary->getKey()}");
+        $response->assertRedirect("/diary/{$diary->getKey()}");
         $this->assertDatabaseHas('diary_comments', [
             'diary_id' => $diary->getKey(), 'member_id' => $member->getKey(), 'body' => 'Nice',
         ]);
@@ -81,7 +87,7 @@ class DiaryCommentRoutesTest extends TestCase
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
-            ->post("/m/diary/{$diary->getKey()}/comment/create", ['body' => 'x'])
+            ->post("/diary/{$diary->getKey()}/comment/create", ['body' => 'x'])
             ->assertNotFound();
     }
 
@@ -93,12 +99,12 @@ class DiaryCommentRoutesTest extends TestCase
         ]);
 
         $this->actingAs(Member::factory()->create())
-            ->post("/m/diary/comment/delete/{$comment->getKey()}")
+            ->post("/diary/comment/delete/{$comment->getKey()}")
             ->assertNotFound();
         $this->assertDatabaseHas('diary_comments', ['id' => $comment->getKey()]);
     }
 
-    public function test_modern_delete_removes_comment_and_redirects_to_modern_show(): void
+    public function test_modern_delete_removes_comment_and_redirects_to_show(): void
     {
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
@@ -106,9 +112,9 @@ class DiaryCommentRoutesTest extends TestCase
             'diary_id' => $diary->getKey(), 'member_id' => Member::factory()->create()->getKey(),
         ]);
 
-        $response = $this->actingAs($owner)->post("/m/diary/comment/delete/{$comment->getKey()}");
+        $response = $this->actingAs($owner)->post("/diary/comment/delete/{$comment->getKey()}");
 
-        $response->assertRedirect("/m/diary/{$diary->getKey()}");
+        $response->assertRedirect("/diary/{$diary->getKey()}");
         $this->assertDatabaseMissing('diary_comments', ['id' => $comment->getKey()]);
     }
 }

@@ -62,13 +62,13 @@ Controller / FormRequest -> Data -> Action / Query -> model changes or payload
 
 ## Surface selection
 
-A feature that serves both Classic and Modern registers two route groups: a
-**canonical** group (e.g. `/friend/list`) and a `/m/*` **Modern** group whose
-routes set `->defaults('surface', 'modern')` and are named `{feature}.modern.{rest}`
-(see [`routes/web.php`](../../routes/web.php)). The controller is a single class
-per feature; it picks the surface via
-[`SurfaceResolver`](../../app/Support/SurfaceResolver.php) rather than branching by
-route group:
+A feature that serves both Classic and Modern registers one **canonical** route
+group (e.g. `/friend/list`); URLs carry no surface, and the retired `/m/*` Modern
+URL space permanently redirects to the canonical URLs
+([`routes/web.php`](../../routes/web.php), guarded by
+[`RouteSpaceGuardTest`](../../tests/Feature/Compat/RouteSpaceGuardTest.php)). The
+controller is a single class per feature; it picks the surface via
+[`SurfaceResolver`](../../app/Support/SurfaceResolver.php):
 
 ```php
 return $this->respondWith($request, [
@@ -79,14 +79,19 @@ return $this->respondWith($request, [
 
 `SurfaceResolver::resolve()` decides Classic vs Modern in priority order:
 
-1. the feature's `modern_status` (anything other than `native` forces Classic);
-2. an explicit `/m/*` route (`route('surface') === 'modern'`);
+1. the feature's `modern_status` (anything other than `native` forces Classic —
+   note this is the one documented exception to "`modern_only` never serves
+   Classic"; today it is a dormant seam with no `config/features.php`, revisit the
+   interaction if that config materializes);
+2. an Inertia navigation (the `X-Inertia` header): it can only originate from the
+   Modern SPA, which cannot consume Classic Blade, so it is always served Modern —
+   a Modern session sticks across links; a deliberate Modern→Classic handoff (the
+   surface picker) goes through `Inertia::location`, a full page load;
 3. the install's [`surface_mode`](../../app/Support/SurfaceMode.php) when it is `modern_only` (Classic is not served);
 4. a member's **durable** surface choice
    ([`PreferenceKey::PreferredSurface`](../../app/Support/PreferenceKey.php), see
    [member-preferences.md](member-preferences.md));
-5. a per-member `migration_ui_override` held in the session;
-6. the `surface_mode`'s default surface (`classic_default` → Classic, `modern_default` → Modern).
+5. the `surface_mode`'s default surface (`classic_default` → Classic, `modern_default` → Modern).
 
 `surface_mode` is a single [`SurfaceMode`](../../app/Support/SurfaceMode.php) value
 (`modern_only` | `classic_default` | `modern_default`) that folds "is Classic served?"
@@ -99,16 +104,11 @@ upgrade writes a `classic_default` row so a migrated site keeps its Classic look
 ([`UpgradeRunner`](../../app/Upgrade/Runner/UpgradeRunner.php)), and `openpne:surface-mode`
 switches a live site.
 
-The selection logic is wired into every dual-surface controller. Two inputs still
-fall back to built-in defaults: there is no `config/features.php` (so `modern_status`
-defaults to `native`), and nothing writes the session `migration_ui_override`. The
-durable member choice (4) **is** writable — the member config page sets it — so a
-member can opt into Modern persistently.
-
-`SurfaceResolver::redirectName()` keeps a post-submit redirect on the surface it
-came from by mapping `friend.list` ⇄ `friend.modern.list`; `canonicalName()` is
-the inverse, so a `/m/*` route that fell back to Classic still resolves its
-parity/body-id lookups by canonical name.
+The selection logic is wired into every dual-surface controller. There is no
+`config/features.php`, so `modern_status` defaults to `native`. The durable member
+choice (4) is writable — the member config page sets it — so a member can opt into
+either surface persistently. A post-submit redirect targets the canonical route
+name; the follow-up GET resolves the surface the same way as any other request.
 
 A feature's **Modern status** is described with four values — `native`,
 `fallback`, `island`, `none`. These are a product vocabulary for how far Modern
@@ -232,8 +232,9 @@ invariant.
    a controller, view, or Filament Resource.
 4. A model MUST reach the Modern surface through a Serializer, not Eloquent
    `toArray()`, so the exposed columns stay explicit.
-5. A `/m/*` route MUST set `->defaults('surface', 'modern')` and be named
-   `{feature}.modern.{rest}`, so `SurfaceResolver` redirect/canonical mapping holds.
+5. A route MUST NOT live under `/m/`, carry a `surface` route default, or use a
+   `.modern.` route name — the URL space is canonical-only and the surface is
+   resolved per request (`RouteSpaceGuardTest`).
 6. A `Delete*` Action that checks the acting member MUST keep the deletion +
    cleanup in an author-less `purge(…)` the admin panel calls; `__invoke` only
    adds the member-actor check. The cleanup is not duplicated in the Resource.

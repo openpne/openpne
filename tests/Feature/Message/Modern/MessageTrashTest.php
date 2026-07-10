@@ -16,6 +16,12 @@ class MessageTrashTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
     /** A delivered message: the sender's row plus the recipient's receipt. */
     private function delivered(Member $sender, Member $recipient): array
     {
@@ -39,10 +45,10 @@ class MessageTrashTest extends TestCase
         [$message] = $this->delivered($sender, $recipient);
         $draft = $this->draftTo($sender, $recipient);
 
-        $this->get(route('message.modern.draft.edit', $draft))->assertRedirect('/login');
-        $this->post(route('message.modern.receive.trash', $message))->assertRedirect('/login');
-        $this->post(route('message.modern.trash.restore', $message))->assertRedirect('/login');
-        $this->post(route('message.modern.trash.purge', $message))->assertRedirect('/login');
+        $this->get(route('message.draft.edit', $draft))->assertRedirect('/login');
+        $this->post(route('message.receive.trash', $message))->assertRedirect('/login');
+        $this->post(route('message.trash.restore', $message))->assertRedirect('/login');
+        $this->post(route('message.trash.purge', $message))->assertRedirect('/login');
     }
 
     public function test_modern_draft_edit_renders_the_form_for_the_owner(): void
@@ -51,7 +57,7 @@ class MessageTrashTest extends TestCase
         $draft = $this->draftTo($sender, $recipient);
 
         $this->actingAs($sender)
-            ->get(route('message.modern.draft.edit', $draft))
+            ->get(route('message.draft.edit', $draft))
             ->assertInertia(fn ($page) => $page
                 ->component('message/edit')
                 ->where('draft.id', $draft->getKey())
@@ -66,84 +72,84 @@ class MessageTrashTest extends TestCase
         [$sender, $recipient, $stranger] = Member::factory()->count(3)->create();
         $draft = $this->draftTo($sender, $recipient);
 
-        $this->actingAs($stranger)->get(route('message.modern.draft.edit', $draft))->assertNotFound();
+        $this->actingAs($stranger)->get(route('message.draft.edit', $draft))->assertNotFound();
     }
 
-    public function test_modern_draft_update_sends_and_redirects_to_the_modern_sent_box(): void
+    public function test_modern_draft_update_sends_and_redirects_to_the_sent_box(): void
     {
         Notification::fake();
         [$sender, $recipient] = Member::factory()->count(2)->create();
         $draft = $this->draftTo($sender, $recipient);
 
         $this->actingAs($sender)
-            ->post(route('message.modern.draft.update', $draft), ['subject' => 'Draft', 'body' => 'Body', 'action' => 'send'])
-            ->assertRedirect(route('message.modern.send'));
+            ->post(route('message.draft.update', $draft), ['subject' => 'Draft', 'body' => 'Body', 'action' => 'send'])
+            ->assertRedirect(route('message.send'));
 
         $this->assertFalse($draft->fresh()->is_draft);
         Notification::assertSentTo($recipient, MessageReceivedNotification::class);
     }
 
-    public function test_modern_draft_update_keeps_a_draft_and_redirects_to_the_modern_draft_box(): void
+    public function test_modern_draft_update_keeps_a_draft_and_redirects_to_the_draft_box(): void
     {
         Notification::fake();
         [$sender, $recipient] = Member::factory()->count(2)->create();
         $draft = $this->draftTo($sender, $recipient);
 
         $this->actingAs($sender)
-            ->post(route('message.modern.draft.update', $draft), ['subject' => 'Edited', 'body' => 'Body', 'action' => 'draft'])
-            ->assertRedirect(route('message.modern.draft'));
+            ->post(route('message.draft.update', $draft), ['subject' => 'Edited', 'body' => 'Body', 'action' => 'draft'])
+            ->assertRedirect(route('message.draft'));
 
         $this->assertTrue($draft->fresh()->is_draft);
         $this->assertSame('Edited', $draft->fresh()->subject);
         Notification::assertNothingSent();
     }
 
-    public function test_modern_trash_received_redirects_to_the_modern_inbox(): void
+    public function test_modern_trash_received_redirects_to_the_inbox(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();
         [$message, $receipt] = $this->delivered($sender, $recipient);
 
         $this->actingAs($recipient)
-            ->post(route('message.modern.receive.trash', $message))
-            ->assertRedirect(route('message.modern.receive'));
+            ->post(route('message.receive.trash', $message))
+            ->assertRedirect(route('message.receive'));
 
         $this->assertNotNull($receipt->fresh()->recipient_deleted_at);
     }
 
-    public function test_modern_trash_sent_redirects_to_the_modern_sent_box(): void
+    public function test_modern_trash_sent_redirects_to_the_sent_box(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();
         [$message] = $this->delivered($sender, $recipient);
 
         $this->actingAs($sender)
-            ->post(route('message.modern.send.trash', $message))
-            ->assertRedirect(route('message.modern.send'));
+            ->post(route('message.send.trash', $message))
+            ->assertRedirect(route('message.send'));
 
         $this->assertNotNull($message->fresh()->sender_deleted_at);
     }
 
-    public function test_modern_restore_redirects_to_the_modern_trash(): void
+    public function test_modern_restore_redirects_to_the_trash(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();
         [$message, $receipt] = $this->delivered($sender, $recipient);
         $receipt->forceFill(['recipient_deleted_at' => now()])->save();
 
         $this->actingAs($recipient)
-            ->post(route('message.modern.trash.restore', $message))
-            ->assertRedirect(route('message.modern.trash'));
+            ->post(route('message.trash.restore', $message))
+            ->assertRedirect(route('message.trash'));
 
         $this->assertNull($receipt->fresh()->recipient_deleted_at);
     }
 
-    public function test_modern_purge_removes_the_viewers_copy_and_redirects_to_the_modern_trash(): void
+    public function test_modern_purge_removes_the_viewers_copy_and_redirects_to_the_trash(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();
         [$message, $receipt] = $this->delivered($sender, $recipient);
         $receipt->forceFill(['recipient_deleted_at' => now()])->save();
 
         $this->actingAs($recipient)
-            ->post(route('message.modern.trash.purge', $message))
-            ->assertRedirect(route('message.modern.trash'));
+            ->post(route('message.trash.purge', $message))
+            ->assertRedirect(route('message.trash'));
 
         $this->assertNotNull($receipt->fresh()->recipient_purged_at);
         $this->assertDatabaseHas('messages', ['id' => $message->getKey()]); // the sender's copy is untouched
@@ -154,8 +160,8 @@ class MessageTrashTest extends TestCase
         [$sender, $recipient, $stranger] = Member::factory()->count(3)->create();
         [$message] = $this->delivered($sender, $recipient);
 
-        $this->actingAs($stranger)->post(route('message.modern.receive.trash', $message))->assertNotFound();
-        $this->actingAs($stranger)->post(route('message.modern.send.trash', $message))->assertNotFound();
+        $this->actingAs($stranger)->post(route('message.receive.trash', $message))->assertNotFound();
+        $this->actingAs($stranger)->post(route('message.send.trash', $message))->assertNotFound();
     }
 
     public function test_modern_only_serves_the_canonical_draft_edit_as_inertia(): void

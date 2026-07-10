@@ -30,23 +30,27 @@ change when the surface does.
   e.g. the OpenPNE 3 access-block URL `/member/config?category=accessBlock` 302s to
   the canonical `block.list` ([`routes/web.php`](../../routes/web.php)).
 - Persisted URLs — saved links, mail, notifications — use the canonical URL.
-- `/m/*` is a transition-era, opt-in Modern entry point. It is **not** persisted in
-  data, mail, notifications, or external shares; once a feature's Modern is
-  promoted to the canonical route, `/m/*` becomes a redirect candidate.
+- `/m/*` — the transition-era Modern URL space — is retired. The whole prefix
+  permanently redirects (308) to the canonical URL: a prefix-stripping catch-all
+  (`compat.m_prefix`) plus explicit redirects for the retired RESTful community GET
+  shapes ([`routes/web.php`](../../routes/web.php)). No code emits a `/m/` URL;
+  [`MPrefixLiteralGuardTest`](../../tests/Feature/Frontend/MPrefixLiteralGuardTest.php)
+  fails on any quoted `/m/` literal outside those redirects.
 
 ## Response selection
 
 `SurfaceResolver::resolve()` chooses Classic or Modern for a canonical route in
-priority order: the feature's `modern_status` → an explicit `/m/*` route → the
-install's [`surface_mode`](../../app/Support/SurfaceMode.php) when `modern_only` → a
-member's durable surface choice → a per-member session override → the `surface_mode`
-default surface. The full chain is documented in
+priority order: the feature's `modern_status` → an Inertia navigation (the
+`X-Inertia` header: it can only come from the Modern SPA, which cannot consume
+Classic Blade, so it is always served Modern) → the install's
+[`surface_mode`](../../app/Support/SurfaceMode.php) when `modern_only` → a member's
+durable surface choice → the `surface_mode` default surface. The URL carries no
+surface. The full chain is documented in
 [feature-modules.md](feature-modules.md#surface-selection). `surface_mode` is
 DB-authoritative (`SnsSettingKey::SurfaceMode`, config as the absent-row fallback): a
 fresh install resolves to the config default — `modern_only`, since a new site has no
 Classic heritage — while the OpenPNE 3 → 4 upgrade writes a `classic_default` row so a
-migrated site keeps its Classic look. Under `classic_default`, absent a member choice a
-canonical route renders Classic and its `/m/*` sibling renders Modern.
+migrated site keeps its Classic look.
 
 Under `modern_only` the Classic surface is never served, so its operator configuration
 (the "Appearance (Classic)" admin settings) and the member config page's surface picker
@@ -56,12 +60,6 @@ The root (`/`) is the canonical OpenPNE 3 `member/home`: the same resolver rende
 Classic home or redirects to the Modern dashboard, and it is where login and registration
 land. `/member` aliases it. Both are recorded in the [member route
 parity](../../app/Compat/Parities/MemberRouteParity.php).
-
-The session override (`migration_ui_override`) is a minimal, transient safety valve
-for the migration period — it lets an individual try Modern, or fall back to
-Classic, for the current session only. It has no writer yet. The **durable**
-per-member preference that outranks it is the member config page's surface setting
-([member-preferences.md](member-preferences.md)).
 
 ## Rendering compatibility
 
@@ -218,7 +216,8 @@ and customization smoke are added as the Classic surface grows.
 
 Some red flags are grep-able and belong in review or a static check:
 
-- `/m/*` appearing in a saved URL, mail template, or notification payload.
+- any quoted `/m/` URL literal (now guard-tested by `MPrefixLiteralGuardTest`, not
+  a review item).
 - Modern code importing/including `dparts`, `LayoutA`–`LayoutE`, or opSkin hooks.
 - Business logic or side effects written directly in a Classic or Modern controller
   instead of the shared Action/Query.
@@ -239,7 +238,8 @@ the adapter; the domain rule behind it stays in the feature module.
    compatibility URL that redirects/resolves to the same content with the relation
    recorded in the route parity.
 2. A persisted or outbound URL (saved link, mail, notification) MUST be the
-   canonical URL, never a `/m/*` URL.
+   canonical URL, never a `/m/*` URL — structural now that no route or emitter
+   carries the prefix (`RouteSpaceGuardTest`, `MPrefixLiteralGuardTest`).
 3. The Classic `<body id>` MUST come from the route parity, not a copy in the
    controller, so it stays faithful to OpenPNE 3's `page_{module}_{action}`.
 4. Modern MUST NOT inherit Classic's HTML-compatibility structures
