@@ -41,9 +41,9 @@ export default function MemberShow() {
                         shown even without an avatar yet, so a first image can be set. */}
                     <div className="flex flex-col items-center gap-1">
                         {owner.avatarUrl ? (
-                            <img src={owner.avatarUrl} alt="" className="size-20 rounded-md object-cover" />
+                            <img src={owner.avatarUrl} alt="" className="size-20 rounded-full object-cover" />
                         ) : (
-                            <InitialBadge aria-hidden name={owner.name} color={owner.avatarColor} className="size-20 rounded-md text-2xl" />
+                            <InitialBadge aria-hidden name={owner.name} color={owner.avatarColor} className="size-20 rounded-full text-2xl" />
                         )}
                         {isSelf && (
                             <Link href="/m/member/avatar" className="text-xs text-link hover:underline">
