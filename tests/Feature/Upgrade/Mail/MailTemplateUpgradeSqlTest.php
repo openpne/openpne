@@ -78,7 +78,8 @@ class MailTemplateUpgradeSqlTest extends TestCase
 
     public function test_an_imported_openpne3_message_body_renders_with_its_flat_variables(): void
     {
-        // The OpenPNE 3 notifyNewMessage sample uses flat names (member_name/message_subject/…);
+        // The OpenPNE 3 notification extension's notifyNewMessage sample uses flat names
+        // (member_name/message_subject/…);
         // the OpenPNE 4 notification context must keep providing them so imported wording renders.
         $this->seedMail(6, 'pc_notifyNewMessage');
         $this->seedTranslation(6, 'ja_JP', '新着メッセージ「{{ message_subject }}」', "{{ member_name }}>>\n\n{{ message_body }}\n\n{{ url }}");
