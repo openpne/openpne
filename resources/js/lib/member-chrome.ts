@@ -147,7 +147,9 @@ interface MemberRef {
 }
 
 // A contextual page about another member (their diary archive, friends, communities): crumb back
-// to that member's profile, the closest thing those lists have to a canonical parent.
+// to that member's profile, the closest thing those lists have to a canonical parent. The crumb is
+// the one place the chrome shows the member's name — titles stay generic (FRIENDS, not ":name's
+// %friends%") so the same string never renders twice back to back.
 const memberContext = (member: MemberRef): Chrome['context'] => [
     { href: `/m/member/${member.id}`, label: member.name },
 ];
@@ -229,7 +231,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                   tabs: communityTabs('joined'),
                   action: CREATE_COMMUNITY,
               }
-            : { mode: 'contextual', title: t(":name's %communities%", { name: owner.name }), context: memberContext(owner) };
+            : { mode: 'contextual', title: COMMUNITIES, context: memberContext(owner) };
     },
     'community/recent': () => ({
         mode: 'section',
@@ -319,10 +321,10 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
             ? { mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }
-            : { mode: 'contextual', title: t(":name's %activity%", { name: owner.name }), context: memberContext(owner) };
+            : { mode: 'contextual', title: ACTIVITY, context: memberContext(owner) };
     },
-    // Crumb label is the bare author name (as diary/list's crumb is): the page's own h1 already
-    // reads ":name's %activity%", so the full phrase here would render twice back to back.
+    // Crumb label is the bare author name, the post card right below carries the same name as
+    // content; the page's h1 is a generic post label so nothing renders twice.
     'timeline/show': (props) => {
         const { post } = props as unknown as { post: { author: MemberRef } };
         return {
@@ -333,7 +335,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
             ? { mode: 'section', title: FRIENDS, tabsLabel: FRIENDS, tabs: friendTabs('list') }
-            : { mode: 'contextual', title: t(":name's %friends%", { name: owner.name }), context: memberContext(owner) };
+            : { mode: 'contextual', title: FRIENDS, context: memberContext(owner) };
     },
     'friend/manage': () => ({
         mode: 'section',

@@ -25,7 +25,9 @@ export default function TimelineShow() {
     const t = useT();
     const confirm = useConfirm();
     const { post, replies, viewerId } = usePage<ShowProps>().props;
-    const title = t(":name's %activity%", { name: post.author.name });
+    // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
+    // already in the crumb above and on the post card below.
+    const headTitle = t(":name's %activity%", { name: post.author.name });
     const form = useForm({ body: '' });
 
     const submitReply = (e: FormEvent) => {
@@ -47,8 +49,8 @@ export default function TimelineShow() {
 
     return (
         <>
-            <Head title={title} />
-            <h1 className="break-words text-xl font-semibold">{title}</h1>
+            <Head title={headTitle} />
+            <h1 className="break-words text-xl font-semibold">{t('Post detail')}</h1>
 
             <Panel bodyClassName="space-y-2">
                 <div className="flex items-center justify-between gap-3 text-sm">
