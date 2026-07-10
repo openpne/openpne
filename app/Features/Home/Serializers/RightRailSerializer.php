@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 /**
  * The shell's right rail (xl+ only): the viewer's friends and joined communities as thumbnail grids.
  * A person carries a circular avatar, a community a square image, so each item ships the URL and its
- * deep link; the client falls back to an id-colored initial when the image is null.
+ * deep link; the client falls back to a neutral initial badge when the image is null.
  */
 class RightRailSerializer
 {

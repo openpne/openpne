@@ -4,7 +4,8 @@ import type { PageProps } from '@/types';
 
 /**
  * SNS brand mark: the admin logo image when set, else the SNS name's initial on the configured
- * color badge (WCAG-aware text color). Shares the initial/contrast helpers with Avatar.
+ * color badge (WCAG-aware text color). Unlike the member and community fallbacks, the color here is
+ * one the admin chose, so the mark stays chromatic.
  */
 export function BrandMark({ size = 'md', className = '' }: { size?: 'sm' | 'md' | 'lg'; className?: string }) {
     const { name, snsLogo } = usePage<PageProps>().props;

@@ -88,7 +88,7 @@ export default function CommunitySearch() {
                         <List>
                             {communities.data.map((community) => (
                                 <ListRow key={community.id} href={`/m/community/${community.id}`} chevron>
-                                    <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-12" decorative />
+                                    <CommunityImage name={community.name} src={community.imageUrl} className="size-12" decorative />
                                     <div className="min-w-0 flex-1">
                                         <p className="font-medium text-foreground">{community.name}</p>
                                         <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">

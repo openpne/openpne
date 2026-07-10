@@ -9,7 +9,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * Modern surface shapes for the Community feature. imageUrl is null (never '') when there is no
- * image so CommunityImage/Avatar fall back to their id-colored initial badge; role and policy are
+ * image so CommunityImage/Avatar fall back to their neutral initial badge; role and policy are
  * string slugs, never raw ints, to avoid JS falsy-zero bugs. Viewer-specific authorization
  * (role/isPending/canManage/canJoin) is a top-level controller prop, not part of these shapes.
  */

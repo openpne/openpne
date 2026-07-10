@@ -48,7 +48,7 @@ export default function CommunityShow() {
 
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-start gap-4">
-                    <CommunityImage id={community.id} name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
+                    <CommunityImage name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
                     <div className="min-w-0 flex-1">
                         <h1 className="break-words text-xl font-semibold">{community.name}</h1>
                         {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}

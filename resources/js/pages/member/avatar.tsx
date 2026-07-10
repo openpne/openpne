@@ -1,22 +1,25 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
+import { InitialBadge } from '@/components/initial-badge';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-import type { PageProps } from '@/types';
+import type { AuthUser, PageProps } from '@/types';
 
 interface AvatarImage {
     url: string; // full bytes (FilePolicy-gated)
     thumbnailUrl: string; // 180×180 square preview
 }
 
-interface AvatarProps extends PageProps {
+// The route is auth-gated, so narrow `auth.user` away from PageProps' nullable shape.
+type AvatarProps = PageProps & {
+    auth: { user: AuthUser };
     avatar: AvatarImage | null;
-}
+};
 
 export default function MemberAvatar() {
     const t = useT();
-    const { avatar } = usePage<AvatarProps>().props;
+    const { avatar, auth } = usePage<AvatarProps>().props;
 
     const upload = useForm<{ image: File | null }>({ image: null });
     const remove = useForm({});
@@ -30,7 +33,11 @@ export default function MemberAvatar() {
                 {avatar ? (
                     <img src={avatar.thumbnailUrl} alt={t('Profile image')} className="size-32 rounded-md object-cover" />
                 ) : (
-                    <p className="text-sm text-muted-foreground">{t('No profile image set.')}</p>
+                    // Preview the badge others see, so the caption is not the only answer to "what shows now?".
+                    <div className="space-y-2">
+                        <InitialBadge role="img" aria-label={auth.user.name} name={auth.user.name} className="size-32 rounded-md text-4xl" />
+                        <p className="text-sm text-muted-foreground">{t('No profile image set.')}</p>
+                    </div>
                 )}
 
                 <form

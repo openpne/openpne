@@ -1,8 +1,8 @@
-import { computeInitial, pickPaletteColor, pickReadableTextColor } from '@/lib/identity-mark';
+import { InitialBadge } from '@/components/initial-badge';
 
 /**
- * Circular member avatar. Renders the image when `src` is set, otherwise an initial badge colored
- * by member id (stable across renames). The circle shape distinguishes it from a community image.
+ * Circular member avatar. Renders the image when `src` is set, otherwise a neutral initial badge.
+ * The circle shape distinguishes it from a community image.
  */
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg';
 
@@ -21,8 +21,8 @@ const textSizeClass: Record<AvatarSize, string> = {
 };
 
 type Props = {
-    /** Member id, hashed to the badge color. Pass `0` (e.g. `author?.id ?? 0`) for a withdrawn
-     *  member so it renders a neutral placeholder instead of a colored badge. */
+    /** Member id. Pass `0` (e.g. `author?.id ?? 0`) for a withdrawn member so it renders a blank
+     *  badge — the absent initial is what tells it apart from a member who set no image. */
     id: number;
     name: string;
     /** Image URL, or null to fall back to the initial badge. */
@@ -48,16 +48,5 @@ export function Avatar({ id, name, src, size = 'md', decorative = false }: Props
         return <span className={`${baseCls} inline-block bg-muted`} {...semantics} />;
     }
 
-    const bgColor = pickPaletteColor(id);
-    const textColorClass = pickReadableTextColor(bgColor);
-
-    return (
-        <span
-            className={`${baseCls} inline-flex items-center justify-center font-bold leading-none ${textColorClass} ${textSizeClass[size]}`}
-            style={{ backgroundColor: bgColor }}
-            {...semantics}
-        >
-            {computeInitial(name)}
-        </span>
-    );
+    return <InitialBadge name={name} className={`${baseCls} ${textSizeClass[size]}`} {...semantics} />;
 }
