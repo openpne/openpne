@@ -10,7 +10,7 @@ export type MessageBoxSlug = 'receive' | 'sent' | 'draft' | 'trash';
 export interface MessageMember {
     id: number;
     name: string;
-    imageUrl: string | null; // null → Avatar renders the id-colored initial badge
+    imageUrl: string | null; // null → Avatar renders the neutral initial badge
 }
 
 export interface MessageRow {

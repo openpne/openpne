@@ -84,7 +84,7 @@ function Pending({ qrCode, secret, requiresPassword }: { qrCode: string; secret:
             </p>
             <p className="text-sm text-foreground">{t('Scan the following QR code with your authenticator app:')}</p>
             {/* The padding is the QR quiet zone: it must stay the QR's own background color in both
-                themes (functional, not thematic — an inline style like the identity-mark colors). */}
+                themes (functional, not thematic — an inline style like BrandMark's configured color). */}
             <img
                 src={qrCode}
                 alt={t('QR code for your authenticator app')}
