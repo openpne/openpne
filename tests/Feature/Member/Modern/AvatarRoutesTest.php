@@ -85,8 +85,8 @@ class AvatarRoutesTest extends TestCase
                 ->component('member/avatar')
                 ->where('badgeColor.value', 'teal')
                 ->count('badgeColor.options', count(AvatarColor::cases()))
-                ->where('badgeColor.options.0.value', 'red')
-                ->where('badgeColor.options.0.hex', '#ef4444')
+                ->where('badgeColor.options.0.value', 'gray')
+                ->where('badgeColor.options.0.hex', '#78716c')
                 ->has('badgeColor.options.0.label')
             );
     }

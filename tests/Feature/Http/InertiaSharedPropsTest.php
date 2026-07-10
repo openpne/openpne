@@ -31,7 +31,7 @@ class InertiaSharedPropsTest extends TestCase
 
         $this->actingAs($member)
             ->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->where('auth.user.avatarColor', '#3b82f6'));
+            ->assertInertia(fn ($page) => $page->where('auth.user.avatarColor', '#2563eb'));
     }
 
     public function test_shared_props_carry_the_member_avatar_thumbnail(): void
