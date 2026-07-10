@@ -22,7 +22,9 @@ export default function DiaryList() {
     const t = useT();
     const confirm = useConfirm();
     const { owner, isOwner, diaries, period } = usePage<ListProps>().props;
-    const title = isOwner ? t('%Diary%') : t(":name's %diary%", { name: owner.name });
+    // The tab title keeps the owner context; the on-screen heading is generic — for another
+    // member's archive the owner's name is already in the crumb above.
+    const headTitle = isOwner ? t('%Diary%') : t(":name's %diary%", { name: owner.name });
 
     const deleteDiary = async (id: number, diaryTitle: string) => {
         if (await confirm({ title: t('Delete this %diary%?'), description: diaryTitle, confirmLabel: t('Delete'), danger: true })) {
@@ -32,11 +34,11 @@ export default function DiaryList() {
 
     return (
         <>
-            <Head title={title} />
+            <Head title={headTitle} />
             <PageHeading
                 title={
                     <>
-                        {title}
+                        {t('%Diary%')}
                         {period && (
                             <span className="ml-2 text-base font-normal text-muted-foreground">{period}</span>
                         )}

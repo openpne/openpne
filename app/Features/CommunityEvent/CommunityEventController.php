@@ -212,10 +212,15 @@ class CommunityEventController extends Controller
                     'participants' => $participants,
                 ]);
             },
-            SurfaceResolver::MODERN => fn () => Inertia::render('community/event/members', [
-                'event' => CommunityEventSerializer::detail($event),
-                'participants' => CommunityEventSerializer::participantPaginator($participants),
-            ]),
+            SurfaceResolver::MODERN => function () use ($event, $participants) {
+                $event->loadMissing('community');
+
+                return Inertia::render('community/event/members', [
+                    'community' => CommunitySerializer::summary($event->community),
+                    'event' => CommunityEventSerializer::detail($event),
+                    'participants' => CommunityEventSerializer::participantPaginator($participants),
+                ]);
+            },
         ]);
     }
 

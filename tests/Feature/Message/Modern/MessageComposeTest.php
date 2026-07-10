@@ -39,6 +39,7 @@ class MessageComposeTest extends TestCase
                 ->where('threadId', null)
                 ->where('subject', '')
                 ->where('body', '')
+                ->where('parentSubject', null)
             );
     }
 
@@ -65,6 +66,7 @@ class MessageComposeTest extends TestCase
                 ->where('threadId', $original->getKey())
                 ->where('subject', 'Re:Original')
                 ->where('body', "> Line one\n> Line two")
+                ->where('parentSubject', 'Original')
             );
     }
 

@@ -4,27 +4,19 @@ import { Pagination } from '@/components/pagination';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunitySummary, PaginatedCommunityMembers } from './types';
+import type { PaginatedCommunityMembers } from './types';
 
 interface MembersProps extends PageProps {
-    community: CommunitySummary;
     members: PaginatedCommunityMembers;
 }
 
 export default function CommunityMembers() {
     const t = useT();
-    const { community, members } = usePage<MembersProps>().props;
+    const { members } = usePage<MembersProps>().props;
 
     return (
         <>
             <Head title={t('Members')} />
-            <h1 className="break-words text-xl font-semibold text-foreground">
-                <Link href={`/m/community/${community.id}`} className="hover:underline">
-                    {community.name}
-                </Link>
-                {' — '}
-                {t('Members')}
-            </h1>
 
             <Panel>
                 <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">

@@ -1,4 +1,4 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
@@ -57,16 +57,10 @@ export default function CommunityEventEdit() {
     };
 
     const title = isEdit ? t('Edit event') : t('Create an event');
-    const backHref = isEdit ? `/m/community/event/${event.id}` : `/m/community/${community.id}/event`;
 
     return (
         <>
             <Head title={title} />
-            <p className="text-sm">
-                <Link href={backHref} className="text-muted-foreground hover:text-foreground hover:underline">
-                    {community.name}
-                </Link>
-            </p>
             <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
 
             <Panel>

@@ -22,19 +22,11 @@ const SHOW_PATH: Record<MessageBoxSlug, (id: number) => string> = {
     draft: (id) => `/m/message/read/${id}`, // unreachable: a draft has no show page
 };
 
-const BOX: Record<MessageBoxSlug, { label: string; path: string }> = {
-    receive: { label: 'Inbox', path: '/m/message/receiveList' },
-    sent: { label: 'Sent Message', path: '/m/message/sendList' },
-    draft: { label: 'Drafts', path: '/m/message/draftList' },
-    trash: { label: 'Trash', path: '/m/message/dustList' },
-};
-
 export default function MessageShow() {
     const t = useT();
     const confirm = useConfirm();
     const { message } = usePage<ShowProps>().props;
     const showPath = SHOW_PATH[message.box];
-    const box = BOX[message.box];
     const counterpartyHeading = message.viewerIsSender ? t('Recipient') : t('Sender');
     // Reply is offered on a received message whose sender still exists (the inbox counterparty).
     const canReply = message.box === 'receive' && message.counterparties.length > 0;
@@ -49,12 +41,6 @@ export default function MessageShow() {
     return (
         <>
             <Head title={message.subject || t('(No subject)')} />
-
-            <p className="text-sm">
-                <Link href={box.path} className="text-muted-foreground hover:text-foreground hover:underline">
-                    &larr; {t(box.label)}
-                </Link>
-            </p>
 
             {(message.previousId !== null || message.nextId !== null) && (
                 <nav className="flex justify-between text-sm" aria-label={t('Message navigation')}>

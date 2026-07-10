@@ -119,6 +119,7 @@ class MessageController extends Controller
             // Reply prefills "Re:" + the original subject and the body quoted line-by-line.
             subject: 'Re:'.(string) $original->subject,
             body: $this->quote((string) $original->body),
+            parentSubject: (string) $original->subject,
         );
     }
 
@@ -243,7 +244,7 @@ class MessageController extends Controller
         return redirect()->route($trashList)->with('status', __('The message was deleted.'));
     }
 
-    private function composeForm(Request $request, Member $recipient, ?int $parentId = null, ?int $threadId = null, string $subject = '', string $body = ''): View|InertiaResponse
+    private function composeForm(Request $request, Member $recipient, ?int $parentId = null, ?int $threadId = null, string $subject = '', string $body = '', ?string $parentSubject = null): View|InertiaResponse
     {
         return $this->respondWith($request, 'message', [
             SurfaceResolver::CLASSIC => fn () => view('message.compose', [
@@ -253,7 +254,7 @@ class MessageController extends Controller
                 'subject' => $subject,
                 'body' => $body,
             ]),
-            SurfaceResolver::MODERN => function () use ($recipient, $parentId, $threadId, $subject, $body) {
+            SurfaceResolver::MODERN => function () use ($recipient, $parentId, $threadId, $subject, $body, $parentSubject) {
                 $recipient->loadMissing('avatar.file');
 
                 return Inertia::render('message/compose', [
@@ -262,6 +263,9 @@ class MessageController extends Controller
                     'threadId' => $threadId,
                     'subject' => $subject,
                     'body' => $body,
+                    // The reply crumb's label (the original subject, before the "Re:" prefix above);
+                    // null on a fresh compose.
+                    'parentSubject' => $parentSubject,
                 ]);
             },
         ]);

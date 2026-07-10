@@ -4,27 +4,19 @@ import { Pagination } from '@/components/pagination';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { EventDetail, PaginatedEventParticipants } from '../types';
+import type { PaginatedEventParticipants } from '../types';
 
 interface MembersProps extends PageProps {
-    event: EventDetail;
     participants: PaginatedEventParticipants;
 }
 
 export default function CommunityEventMembers() {
     const t = useT();
-    const { event, participants } = usePage<MembersProps>().props;
+    const { participants } = usePage<MembersProps>().props;
 
     return (
         <>
             <Head title={t('Count of Member')} />
-            <h1 className="break-words text-xl font-semibold text-foreground">
-                <Link href={`/m/community/event/${event.id}`} className="hover:underline">
-                    {event.name}
-                </Link>
-                {' — '}
-                {t('Count of Member')}
-            </h1>
 
             {participants.data.length === 0 ? (
                 <Panel>
