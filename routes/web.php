@@ -515,21 +515,23 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 // Retired Modern GET shapes that do not map onto their canonical URL by dropping the /m prefix:
 // the RESTful community shapes redirect to the canonical (OpenPNE 3) shapes explicitly, ahead of
 // the prefix-stripping catch-all. GET only — a retired POST shape has no path-rewritable canonical
-// form and 404s (never persisted, so the only sources are stale in-flight forms).
-Route::get('/m/community/joined', fn (Request $request) => redirect()->to(
-    '/community/joinList'.(($qs = $request->getQueryString()) === null ? '' : '?'.$qs), 308
-));
-Route::get('/m/community/topic/{topic}', fn (int $topic) => redirect()->to("/communityTopic/{$topic}", 308))->whereNumber('topic');
-Route::get('/m/community/topic/{topic}/edit', fn (int $topic) => redirect()->to("/communityTopic/edit/{$topic}", 308))->whereNumber('topic');
-Route::get('/m/community/event/{event}', fn (int $event) => redirect()->to("/communityEvent/{$event}", 308))->whereNumber('event');
-Route::get('/m/community/event/{event}/edit', fn (int $event) => redirect()->to("/communityEvent/edit/{$event}", 308))->whereNumber('event');
-Route::get('/m/community/event/{event}/members', fn (int $event) => redirect()->to("/communityEvent/{$event}/memberList", 308))->whereNumber('event');
-Route::get('/m/community/{community}/members', fn (int $community) => redirect()->to("/community/member/list?id={$community}", 308))->whereNumber('community');
-Route::get('/m/community/{community}/pending', fn (int $community) => redirect()->to("/community/member/pending?id={$community}", 308))->whereNumber('community');
-Route::get('/m/community/{community}/topic', fn (int $community) => redirect()->to("/communityTopic/listCommunity/{$community}", 308))->whereNumber('community');
-Route::get('/m/community/{community}/topic/new', fn (int $community) => redirect()->to("/communityTopic/new/{$community}", 308))->whereNumber('community');
-Route::get('/m/community/{community}/event', fn (int $community) => redirect()->to("/communityEvent/listCommunity/{$community}", 308))->whereNumber('community');
-Route::get('/m/community/{community}/event/new', fn (int $community) => redirect()->to("/communityEvent/new/{$community}", 308))->whereNumber('community');
+// form and 404s (never persisted, so the only sources are stale in-flight forms). The original
+// query string rides along, like the catch-all ('&' when the target already carries ?id=).
+$mCompat = fn (string $target) => redirect()->to(
+    $target.(($qs = request()->getQueryString()) === null ? '' : (str_contains($target, '?') ? '&' : '?').$qs), 308
+);
+Route::get('/m/community/joined', fn () => $mCompat('/community/joinList'));
+Route::get('/m/community/topic/{topic}', fn (int $topic) => $mCompat("/communityTopic/{$topic}"))->whereNumber('topic');
+Route::get('/m/community/topic/{topic}/edit', fn (int $topic) => $mCompat("/communityTopic/edit/{$topic}"))->whereNumber('topic');
+Route::get('/m/community/event/{event}', fn (int $event) => $mCompat("/communityEvent/{$event}"))->whereNumber('event');
+Route::get('/m/community/event/{event}/edit', fn (int $event) => $mCompat("/communityEvent/edit/{$event}"))->whereNumber('event');
+Route::get('/m/community/event/{event}/members', fn (int $event) => $mCompat("/communityEvent/{$event}/memberList"))->whereNumber('event');
+Route::get('/m/community/{community}/members', fn (int $community) => $mCompat("/community/member/list?id={$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/pending', fn (int $community) => $mCompat("/community/member/pending?id={$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/topic', fn (int $community) => $mCompat("/communityTopic/listCommunity/{$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/topic/new', fn (int $community) => $mCompat("/communityTopic/new/{$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/event', fn (int $community) => $mCompat("/communityEvent/listCommunity/{$community}"))->whereNumber('community');
+Route::get('/m/community/{community}/event/new', fn (int $community) => $mCompat("/communityEvent/new/{$community}"))->whereNumber('community');
 
 // Transition-era compat: the rest of the retired /m/ Modern URL space maps onto canonical URLs by
 // dropping the prefix — one permanent catch-all (308 keeps the method for stale in-flight forms;
