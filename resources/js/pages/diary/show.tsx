@@ -30,7 +30,7 @@ export default function DiaryShow() {
     const form = useForm({ body: '', images: [] as File[] });
     const submitComment = (e: FormEvent) => {
         e.preventDefault();
-        form.post(`/m/diary/${diary.id}/comment/create`, {
+        form.post(`/diary/${diary.id}/comment/create`, {
             forceFormData: true,
             onSuccess: () => form.reset('body', 'images'),
         });
@@ -38,13 +38,13 @@ export default function DiaryShow() {
 
     const deleteDiary = async () => {
         if (await confirm({ title: t('Delete this %diary%?'), description: diary.title, confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/diary/delete/${diary.id}`);
+            router.post(`/diary/delete/${diary.id}`);
         }
     };
 
     const deleteComment = async (commentId: number) => {
         if (await confirm({ title: t('Delete this comment?'), confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/diary/comment/delete/${commentId}`, {}, { preserveScroll: true });
+            router.post(`/diary/comment/delete/${commentId}`, {}, { preserveScroll: true });
         }
     };
 
@@ -56,7 +56,7 @@ export default function DiaryShow() {
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} size="sm" decorative />
-                    <Link href={`/m/member/${diary.author.id}`} className="text-link hover:underline">
+                    <Link href={`/member/${diary.author.id}`} className="text-link hover:underline">
                         {diary.author.name}
                     </Link>
                     <span>&mdash; {formatDateTime(diary.createdAt)}</span>
@@ -70,7 +70,7 @@ export default function DiaryShow() {
 
                 {isOwner && (
                     <div className="flex gap-4 text-sm">
-                        <Link href={`/m/diary/edit/${diary.id}`} className="text-link hover:underline">
+                        <Link href={`/diary/edit/${diary.id}`} className="text-link hover:underline">
                             {t('Edit')}
                         </Link>
                         <button type="button" onClick={deleteDiary} className={dangerActionClass}>
@@ -91,7 +91,7 @@ export default function DiaryShow() {
                                 <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
                                     <span className="font-medium">#{comment.number}</span>
                                     {comment.author ? (
-                                        <Link href={`/m/member/${comment.author.id}`} className="truncate text-link hover:underline">
+                                        <Link href={`/member/${comment.author.id}`} className="truncate text-link hover:underline">
                                             {comment.author.name}
                                         </Link>
                                     ) : (

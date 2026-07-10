@@ -103,7 +103,7 @@ export default function MemberConfig() {
     // per-control feedback that replaces the page flash, which the server omits for these on Modern.
     const saveDiary = (value: string) => {
         diary.setData('diary_default_visibility', value);
-        diary.post('/m/member/config/diary', { preserveScroll: true });
+        diary.post('/member/config/diary', { preserveScroll: true });
     };
     // The locale switch responds with a hard navigation (the page reloading in the chosen language
     // is the feedback), so no SavedIndicator here.
@@ -124,7 +124,7 @@ export default function MemberConfig() {
                             title={t('Profile')}
                             value={auth.user.name}
                             action={
-                                <ActionLink href="/m/member/edit/profile" variant="outline" size="sm">
+                                <ActionLink href="/member/edit/profile" variant="outline" size="sm">
                                     {t('Edit')}
                                 </ActionLink>
                             }
@@ -135,7 +135,7 @@ export default function MemberConfig() {
                             title={t('Profile image')}
                             value={<Avatar id={auth.user.id} name={auth.user.name} src={auth.user.imageUrl} color={auth.user.avatarColor} size="sm" decorative />}
                             action={
-                                <ActionLink href="/m/member/avatar" variant="outline" size="sm">
+                                <ActionLink href="/member/avatar" variant="outline" size="sm">
                                     {t('Change')}
                                 </ActionLink>
                             }
@@ -226,7 +226,7 @@ export default function MemberConfig() {
                         <form
                             onSubmit={(e) => {
                                 e.preventDefault();
-                                surface.post('/m/member/config/surface');
+                                surface.post('/member/config/surface');
                             }}
                         >
                             <FormSection title={t('Display')} headingLevel="h3">

@@ -30,7 +30,7 @@ export default function CommunityTopicEdit() {
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        form.post(isEdit ? `/m/community/topic/${topic.id}/edit` : `/m/community/${community.id}/topic`, {
+        form.post(isEdit ? `/communityTopic/update/${topic.id}` : `/communityTopic/create/${community.id}`, {
             forceFormData: true,
         });
     };

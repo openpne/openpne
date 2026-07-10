@@ -29,7 +29,7 @@ export default function CommunitySearch() {
         e.preventDefault();
         // 0 / empty means "no filter" — drop them so the URL stays clean and the pager query matches.
         router.get(
-            '/m/community/search',
+            '/community/search',
             { keyword: form.keyword || undefined, category_id: form.categoryId || undefined },
             {
                 preserveState: true,
@@ -87,7 +87,7 @@ export default function CommunitySearch() {
                     <Panel flush>
                         <List>
                             {communities.data.map((community) => (
-                                <ListRow key={community.id} href={`/m/community/${community.id}`} chevron>
+                                <ListRow key={community.id} href={`/community/${community.id}`} chevron>
                                     <CommunityImage name={community.name} src={community.imageUrl} className="size-12" decorative />
                                     <div className="min-w-0 flex-1">
                                         <p className="font-medium text-foreground">{community.name}</p>

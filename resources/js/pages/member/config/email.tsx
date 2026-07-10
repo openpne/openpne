@@ -18,7 +18,7 @@ export default function ConfigEmail({ email }: Props) {
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
-                    form.post('/m/member/config/email');
+                    form.post('/member/config/email');
                 }}
             >
                 <div className="space-y-4">

@@ -34,13 +34,13 @@ export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="top" className="w-64">
                 <DropdownMenuItem asChild>
-                    <Link href={`/m/member/${user.id}`}>
+                    <Link href={`/member/${user.id}`}>
                         <User className="size-4 shrink-0 text-muted-foreground" />
                         <span className="flex-1">{t('View my profile')}</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                    <Link href="/m/member/config">
+                    <Link href="/member/config">
                         <Settings className="size-4 shrink-0 text-muted-foreground" />
                         <span className="flex-1">{t('Settings')}</span>
                     </Link>

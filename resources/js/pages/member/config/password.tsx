@@ -14,7 +14,7 @@ export default function ConfigPassword() {
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
-                    form.post('/m/member/config/password');
+                    form.post('/member/config/password');
                 }}
             >
                 <div className="space-y-4">

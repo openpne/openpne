@@ -66,7 +66,7 @@ class NotificationFeedSerializer
         $data = $row->data;
 
         return match ($data['kind'] ?? null) {
-            'friend_requested' => '/m/friend/manage',
+            'friend_requested' => '/friend/manage',
             'friend_request_accepted' => self::profileUrl($data['accepter_id'] ?? null),
             'message_received' => self::messageUrl($row, $data['message_id'] ?? null),
             'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
@@ -121,7 +121,7 @@ class NotificationFeedSerializer
             return null;
         }
 
-        return '/m/member/'.$memberId;
+        return '/member/'.$memberId;
     }
 
     /** A dissolved community counts as gone; the recipient is an admin, so no extra view gate. */
@@ -131,7 +131,7 @@ class NotificationFeedSerializer
             return null;
         }
 
-        return '/m/community/'.$communityId;
+        return '/community/'.$communityId;
     }
 
     /** A deleted diary — or one the recipient can no longer view — counts as gone. */
@@ -145,7 +145,7 @@ class NotificationFeedSerializer
         $viewer = Member::find($row->notifiable_id);
 
         return $viewer !== null && DiaryAccess::canView($viewer, $diary)
-            ? '/m/diary/'.$diary->getKey()
+            ? '/diary/'.$diary->getKey()
             : null;
     }
 
@@ -160,7 +160,7 @@ class NotificationFeedSerializer
         $viewer = Member::find($row->notifiable_id);
 
         return $viewer !== null && CommunityTopicAccess::canViewTopic($topic, $viewer)
-            ? '/m/community/topic/'.$topic->getKey()
+            ? '/communityTopic/'.$topic->getKey()
             : null;
     }
 
@@ -175,7 +175,7 @@ class NotificationFeedSerializer
         $viewer = Member::find($row->notifiable_id);
 
         return $viewer !== null && CommunityEventAccess::canViewEvent($event, $viewer)
-            ? '/m/community/event/'.$event->getKey()
+            ? '/communityEvent/'.$event->getKey()
             : null;
     }
 
@@ -194,6 +194,6 @@ class NotificationFeedSerializer
             ->where('message_id', $messageId)
             ->exists();
 
-        return $stillInInbox ? '/m/message/read/'.$messageId : null;
+        return $stillInInbox ? '/message/read/'.$messageId : null;
     }
 }

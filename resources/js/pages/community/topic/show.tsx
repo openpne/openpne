@@ -34,13 +34,13 @@ export default function CommunityTopicShow() {
         if (ascending) params.set('order', 'asc');
         if (page > 1) params.set('page', String(page));
         const qs = params.toString();
-        return `/m/community/topic/${topic.id}${qs ? `?${qs}` : ''}`;
+        return `/communityTopic/${topic.id}${qs ? `?${qs}` : ''}`;
     };
 
     const form = useForm({ body: '', images: [] as File[] });
     const submitComment = (e: FormEvent) => {
         e.preventDefault();
-        form.post(`/m/community/topic/${topic.id}/comment`, {
+        form.post(`/communityTopic/${topic.id}/comment/create`, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => form.reset('body', 'images'),
@@ -49,13 +49,13 @@ export default function CommunityTopicShow() {
 
     const deleteTopic = async () => {
         if (await confirm({ title: t('Delete this %topic%?'), description: topic.name, confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/community/topic/${topic.id}/delete`);
+            router.post(`/communityTopic/delete/${topic.id}`);
         }
     };
 
     const deleteComment = async (commentId: number) => {
         if (await confirm({ title: t('Delete this comment?'), confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/community/topic/comment/${commentId}/delete`, {}, { preserveScroll: true });
+            router.post(`/communityTopic/comment/delete/${commentId}`, {}, { preserveScroll: true });
         }
     };
 
@@ -69,7 +69,7 @@ export default function CommunityTopicShow() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} color={topic.author?.avatarColor ?? null} size="sm" decorative />
                     {topic.author ? (
-                        <Link href={`/m/member/${topic.author.id}`} className="text-link hover:underline">
+                        <Link href={`/member/${topic.author.id}`} className="text-link hover:underline">
                             {topic.author.name}
                         </Link>
                     ) : (
@@ -85,7 +85,7 @@ export default function CommunityTopicShow() {
 
                 {canEdit && (
                     <div className="flex gap-4 text-sm">
-                        <Link href={`/m/community/topic/${topic.id}/edit`} className="text-link hover:underline">
+                        <Link href={`/communityTopic/edit/${topic.id}`} className="text-link hover:underline">
                             {t('Edit')}
                         </Link>
                         <button type="button" onClick={deleteTopic} className={dangerActionClass}>
@@ -127,7 +127,7 @@ export default function CommunityTopicShow() {
                                 <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
                                     <span className="font-medium">#{comment.number}</span>
                                     {comment.author ? (
-                                        <Link href={`/m/member/${comment.author.id}`} className="text-link hover:underline">
+                                        <Link href={`/member/${comment.author.id}`} className="text-link hover:underline">
                                             {comment.author.name}
                                         </Link>
                                     ) : (

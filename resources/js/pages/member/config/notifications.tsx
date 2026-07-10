@@ -45,7 +45,7 @@ export default function NotificationSettings() {
     const save = (settings: Record<string, Partial<Record<Channel, boolean>>>) => {
         setSaving(true);
         router.post(
-            '/m/member/config/notifications',
+            '/member/config/notifications',
             { settings },
             {
                 preserveScroll: true,

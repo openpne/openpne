@@ -25,20 +25,20 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
 
     const deletePost = async () => {
         if (await confirm({ title: t('Delete this post?'), confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/m/timeline/delete/${post.id}`);
+            router.post(`/timeline/delete/${post.id}`);
         }
     };
 
     return (
         <li className="space-y-2 px-5 py-4 text-foreground">
             <div className="flex items-center justify-between gap-3 text-sm">
-                <Link href={`/m/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 font-medium text-link hover:underline">
+                <Link href={`/member/${post.author.id}/timeline`} className="flex min-w-0 items-center gap-2 font-medium text-link hover:underline">
                     <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="sm" decorative />
                     <span className="truncate">{post.author.name}</span>
                 </Link>
                 <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
                     <CountBadge icon={MessageCircle} count={post.replyCount} srLabel={t(':count replies', { count: post.replyCount })} />
-                    <Link href={`/m/timeline/${post.id}`} className="hover:text-foreground hover:underline">
+                    <Link href={`/timeline/${post.id}`} className="hover:text-foreground hover:underline">
                         {formatDateTime(post.createdAt)}
                     </Link>
                 </div>

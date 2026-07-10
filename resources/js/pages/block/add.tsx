@@ -18,7 +18,7 @@ export default function BlockAdd() {
     function submit() {
         setSubmitting(true);
         router.post(
-            "/m/block/add",
+            "/block/add",
             { target_id: target.id },
             { onFinish: () => setSubmitting(false) },
         );
@@ -38,7 +38,7 @@ export default function BlockAdd() {
                     <Button type="button" variant="destructive" onClick={submit} loading={submitting}>
                         {title}
                     </Button>
-                    <Link href="/m/block/list" className="text-sm text-link hover:underline">
+                    <Link href="/block/list" className="text-sm text-link hover:underline">
                         {t("Cancel")}
                     </Link>
                 </div>

@@ -32,7 +32,7 @@ export default function DiaryFeed() {
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        form.get('/m/diary/search', { preserveState: true });
+        form.get('/diary/search', { preserveState: true });
     };
 
     return (

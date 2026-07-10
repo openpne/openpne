@@ -33,7 +33,7 @@ export default function MessageEdit() {
     const submit = (action: 'send' | 'draft') => {
         setActive(action);
         form.transform((data) => ({ ...data, action }));
-        form.post(`/m/message/edit/${draft.id}`, { forceFormData: true, onFinish: () => setActive(null) });
+        form.post(`/message/edit/${draft.id}`, { forceFormData: true, onFinish: () => setActive(null) });
     };
 
     const toggleRemove = (id: number, checked: boolean) => {
@@ -54,7 +54,7 @@ export default function MessageEdit() {
                         <div className="flex items-center gap-2 text-sm">
                             <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
                             <Avatar id={draft.recipient.id} name={draft.recipient.name} src={draft.recipient.imageUrl} color={draft.recipient.avatarColor} size="sm" decorative />
-                            <Link href={`/m/member/${draft.recipient.id}`} className="text-link hover:underline">
+                            <Link href={`/member/${draft.recipient.id}`} className="text-link hover:underline">
                                 {draft.recipient.name}
                             </Link>
                         </div>

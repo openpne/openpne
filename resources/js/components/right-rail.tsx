@@ -28,13 +28,13 @@ export function RightRail() {
             <SearchBox />
 
             {rightRail.friends.length > 0 && (
-                <RailSection title={t('%Friends%')} viewAllHref="/m/friend/list">
+                <RailSection title={t('%Friends%')} viewAllHref="/friend/list">
                     <NineTable items={rightRail.friends} shape="round" />
                 </RailSection>
             )}
 
             {rightRail.joinedCommunities.length > 0 && (
-                <RailSection title={t('Joined %communities%')} viewAllHref="/m/community/joined">
+                <RailSection title={t('Joined %communities%')} viewAllHref="/community/joinList">
                     <NineTable items={rightRail.joinedCommunities} shape="square" />
                 </RailSection>
             )}
@@ -67,7 +67,7 @@ function SearchBox() {
         if (form.data.name.trim() === '') {
             return;
         }
-        form.get('/m/member/search', { preserveScroll: true });
+        form.get('/member/search', { preserveScroll: true });
     };
 
     return (

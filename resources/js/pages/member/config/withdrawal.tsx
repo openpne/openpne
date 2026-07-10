@@ -14,7 +14,7 @@ export default function ConfigWithdrawal() {
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
-                    form.post('/m/member/config/withdrawal');
+                    form.post('/member/config/withdrawal');
                 }}
             >
                 <div className="space-y-4">

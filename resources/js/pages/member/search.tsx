@@ -49,7 +49,7 @@ export default function MemberSearch() {
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        router.get('/m/member/search', { name, profile, date, monthday, age }, {
+        router.get('/member/search', { name, profile, date, monthday, age }, {
             preserveState: false,
             onStart: () => setSearching(true),
             onFinish: () => setSearching(false),
@@ -141,7 +141,7 @@ export default function MemberSearch() {
                             {members.data.map((member) => (
                                 <ListRow
                                     key={member.id}
-                                    href={`/m/member/${member.id}`}
+                                    href={`/member/${member.id}`}
                                     chevron
                                     // Top-align only when a self-introduction adds a second line; single-line rows stay centered.
                                     className={member.selfIntroduction ? 'items-start' : undefined}

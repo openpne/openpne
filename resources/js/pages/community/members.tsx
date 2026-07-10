@@ -22,7 +22,7 @@ export default function CommunityMembers() {
                 <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
                     {members.data.map((member) => (
                         <li key={member.id}>
-                            <Link href={`/m/member/${member.id}`} className="flex flex-col items-center gap-1">
+                            <Link href={`/member/${member.id}`} className="flex flex-col items-center gap-1">
                                 <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="lg" decorative />
                                 <span className="w-full truncate text-center text-sm">{member.name}</span>
                             </Link>

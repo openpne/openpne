@@ -29,9 +29,9 @@ class RightRailSharedPropTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->has('rightRail.friends', 1)
                 ->where('rightRail.friends.0.id', $friend->getKey())
-                ->where('rightRail.friends.0.href', "/m/member/{$friend->getKey()}")
+                ->where('rightRail.friends.0.href', "/member/{$friend->getKey()}")
                 ->has('rightRail.joinedCommunities', 1)
-                ->where('rightRail.joinedCommunities.0.href', "/m/community/{$community->getKey()}")
+                ->where('rightRail.joinedCommunities.0.href', "/community/{$community->getKey()}")
             );
     }
 

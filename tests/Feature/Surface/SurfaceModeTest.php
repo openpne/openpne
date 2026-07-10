@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Surface;
 
+use App\Models\Member;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use App\Support\SurfaceMode;
 use App\Support\SurfaceResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Inertia;
 use Tests\TestCase;
 
 /**
@@ -77,5 +79,31 @@ class SurfaceModeTest extends TestCase
         $this->artisan('openpne:surface-mode', ['mode' => 'bogus'])->assertFailed();
 
         $this->assertDatabaseMissing('sns_settings', ['key' => 'surface_mode']);
+    }
+
+    /**
+     * An Inertia navigation can only come from the Modern SPA, so it is always served Modern:
+     * a Classic Blade body would be rejected by the Inertia client. This is what keeps a Modern
+     * session on a coexistence install (no durable preference) from breaking the moment it follows
+     * a canonical link. Deliberate Modern→Classic handoffs use Inertia::location (full page load).
+     */
+    public function test_an_inertia_navigation_is_always_served_modern(): void
+    {
+        // classic_default (the test env default), member with no surface preference.
+        $member = Member::factory()->create();
+
+        // Full page load: resolves to Classic.
+        $this->actingAs($member)->get('/friend/list')
+            ->assertOk()
+            ->assertSee('id="page_friend_list"', false);
+
+        // The same canonical URL as an Inertia request: must be Modern.
+        $headers = ['X-Inertia' => 'true'];
+        if (($version = Inertia::getVersion()) !== null) {
+            $headers['X-Inertia-Version'] = $version;
+        }
+        $this->actingAs($member)->get('/friend/list', $headers)
+            ->assertOk()
+            ->assertJsonPath('component', 'friend/list');
     }
 }

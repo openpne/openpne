@@ -23,7 +23,7 @@ export default function FriendList() {
 
     const unlinkFriend = async (id: number, name: string) => {
         if (await confirm({ title: t('Remove :name from your %friends%?', { name }), confirmLabel: t('Remove %friend%'), danger: true })) {
-            router.post(`/m/friend/unlink/${id}`);
+            router.post(`/friend/unlink/${id}`);
         }
     };
 
@@ -40,7 +40,7 @@ export default function FriendList() {
                         <List>
                             {friends.data.map((friend) => (
                                 <ListRow key={friend.id}>
-                                    <Link href={`/m/member/${friend.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
+                                    <Link href={`/member/${friend.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
                                         <Avatar id={friend.id} name={friend.name} src={friend.imageUrl} color={friend.avatarColor} size="sm" decorative />
                                         <span className="min-w-0 flex-1 truncate">{friend.name}</span>
                                     </Link>

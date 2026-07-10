@@ -26,7 +26,7 @@ class RightRailSerializer
                 'name' => $m->name,
                 'imageUrl' => $m->avatar?->file?->thumbnailUrl(76, 76, square: true),
                 'avatarColor' => $m->avatar_color?->hex(),
-                'href' => "/m/member/{$m->getKey()}",
+                'href' => "/member/{$m->getKey()}",
             ])->all(),
             'joinedCommunities' => $communities->map(fn (Community $c): array => [
                 'id' => $c->getKey(),
@@ -34,7 +34,7 @@ class RightRailSerializer
                 'imageUrl' => $c->image?->thumbnailUrl(120, 120, square: true),
                 // Communities have no chosen badge color; the shared RightRailItem shape keeps the key.
                 'avatarColor' => null,
-                'href' => "/m/community/{$c->getKey()}",
+                'href' => "/community/{$c->getKey()}",
             ])->all(),
         ];
     }

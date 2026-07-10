@@ -47,7 +47,7 @@ export default function CommunityEventEdit() {
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        form.post(isEdit ? `/m/community/event/${event.id}/edit` : `/m/community/${community.id}/event`, {
+        form.post(isEdit ? `/communityEvent/update/${event.id}` : `/communityEvent/create/${community.id}`, {
             forceFormData: true,
         });
     };

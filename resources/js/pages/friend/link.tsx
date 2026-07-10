@@ -18,7 +18,7 @@ export default function FriendLink() {
     function submit() {
         setSubmitting(true);
         router.post(
-            '/m/friend/link',
+            '/friend/link',
             { target_id: target.id },
             { onFinish: () => setSubmitting(false) },
         );
@@ -38,7 +38,7 @@ export default function FriendLink() {
                     <Button type="button" onClick={submit} loading={submitting}>
                         {t('Send request')}
                     </Button>
-                    <Link href="/m/friend/list" className="text-sm text-link hover:underline">
+                    <Link href="/friend/list" className="text-sm text-link hover:underline">
                         {t('Cancel')}
                     </Link>
                 </div>

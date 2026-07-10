@@ -27,7 +27,7 @@ export function LeftNav() {
                     <nav className="flex-1 overflow-y-auto">
                         <NavItems />
                     </nav>
-                    <ActionLink href="/m/diary/new" className="rounded-full">
+                    <ActionLink href="/diary/new" className="rounded-full">
                         <Pencil className="size-5" strokeWidth={2.25} />
                         {t('Post %diary%')}
                     </ActionLink>
