@@ -17,7 +17,7 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
     return (
         <ul className="flex flex-col gap-1">
             {NAV_SECTIONS.map(({ href, icon: Icon, label, match, badge }) => {
-                const active = url.startsWith(match);
+                const active = (Array.isArray(match) ? match : [match]).some((prefix) => url.startsWith(prefix));
                 const count = badge ? (unread?.[badge.count] ?? 0) : 0;
                 return (
                     <li key={href}>

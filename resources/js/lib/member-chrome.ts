@@ -59,7 +59,8 @@ export interface Chrome {
 
 export interface NavSection {
     href: string;
-    match: string;
+    /** URL prefix(es) marking this section active — plural while a section spans the canonical and /m/ URL spaces. */
+    match: string | string[];
     icon: Icon;
     label: ChromeLabel;
     badge?: { count: 'friendRequests' | 'unreadMessages' | 'notifications'; label: ChromeLabel };
@@ -78,7 +79,7 @@ const SETTINGS = t('Settings');
 /** Nav order and metadata (Home is the brand row, so it is omitted). */
 export const NAV_SECTIONS: NavSection[] = [
     { href: '/m/diary/list', match: '/m/diary', icon: BookOpen, label: DIARIES },
-    { href: '/m/community/search', match: '/m/community', icon: Users, label: COMMUNITIES },
+    { href: '/m/community/search', match: ['/m/community', '/community/recent'], icon: Users, label: COMMUNITIES },
     { href: '/m/timeline', match: '/m/timeline', icon: Activity, label: ACTIVITY },
     {
         href: '/m/friend/list',
@@ -95,14 +96,14 @@ export const NAV_SECTIONS: NavSection[] = [
         badge: { count: 'unreadMessages', label: t(':count unread messages') },
     },
     {
-        href: '/m/notifications',
-        match: '/m/notifications',
+        href: '/notifications',
+        match: '/notifications',
         icon: Bell,
         label: NOTIFICATIONS,
         badge: { count: 'notifications', label: t(':count unread notifications') },
     },
     { href: '/m/member/search', match: '/m/member/search', icon: Search, label: MEMBER_SEARCH },
-    { href: '/m/member/config', match: '/m/member/config', icon: Settings, label: SETTINGS },
+    { href: '/m/member/config', match: ['/m/member/config', '/member/config'], icon: Settings, label: SETTINGS },
 ];
 
 const WRITE_DIARY: ChromeAction = { href: '/m/diary/new', label: t('Write a %diary%'), icon: Pencil };
@@ -112,7 +113,7 @@ const CREATE_COMMUNITY: ChromeAction = { href: '/m/community/edit', label: t('Cr
 const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
     { href: '/m/community/search', label: t('All'), active: active === 'browse' },
     { href: '/m/community/joined', label: t('Joined'), active: active === 'joined' },
-    { href: '/m/community/recent', label: t('Recent activity'), active: active === 'recent' },
+    { href: '/community/recent', label: t('Recent activity'), active: active === 'recent' },
 ];
 
 const friendTabs = (active: 'list' | 'manage'): ChromeTab[] => [

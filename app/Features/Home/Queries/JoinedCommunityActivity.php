@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 /**
  * The home dashboard's cross-community activity digest: the viewer's joined communities' most recent
  * topics and events, merged newest-first. Each source is queried for $limit rows, so the merged top
- * $limit is correct across both. Also backs the /m/community/recent page with a larger cap.
+ * $limit is correct across both. Also backs the /community/recent page with a larger cap.
  */
 class JoinedCommunityActivity
 {

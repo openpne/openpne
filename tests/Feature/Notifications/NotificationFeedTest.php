@@ -31,7 +31,7 @@ class NotificationFeedTest extends TestCase
         $older = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()], createdAt: now()->subHour());
         $newer = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => 12], createdAt: now());
 
-        $this->actingAs($viewer)->get('/m/notifications')
+        $this->actingAs($viewer)->get('/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('notifications/index')
@@ -49,7 +49,7 @@ class NotificationFeedTest extends TestCase
         [$viewer, $other, $actor] = Member::factory()->count(3)->create()->all();
         $this->seedRow($other, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
-        $this->actingAs($viewer)->get('/m/notifications')
+        $this->actingAs($viewer)->get('/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->where('feed.meta.total', 0));
     }
@@ -60,7 +60,7 @@ class NotificationFeedTest extends TestCase
         $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
         $actor->delete();
 
-        $this->actingAs($viewer)->get('/m/notifications')
+        $this->actingAs($viewer)->get('/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->where('feed.data.0.actor', null));
     }
@@ -72,7 +72,7 @@ class NotificationFeedTest extends TestCase
         MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
         $row = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => $message->getKey()]);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect('/m/message/read/'.$message->getKey());
 
         $this->assertNotNull($row->fresh()->read_at);
@@ -85,7 +85,7 @@ class NotificationFeedTest extends TestCase
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
         $row = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => 34]);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
 
         $this->assertNotNull($row->fresh()->read_at);
@@ -96,7 +96,7 @@ class NotificationFeedTest extends TestCase
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
         $row = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect('/m/friend/manage');
     }
 
@@ -106,7 +106,7 @@ class NotificationFeedTest extends TestCase
         $row = $this->seedRow($viewer, 'friend_request_accepted', ['accepter_id' => $actor->getKey()]);
         $actor->delete();
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
 
         $this->assertNotNull($row->fresh()->read_at);
@@ -118,7 +118,7 @@ class NotificationFeedTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $viewer->getKey()]);
         $row = $this->seedRow($viewer, 'diary_commented', ['commenter_id' => $actor->getKey(), 'diary_id' => $diary->getKey(), 'reason' => 'reply']);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect('/m/diary/'.$diary->getKey());
     }
 
@@ -128,7 +128,7 @@ class NotificationFeedTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $author->getKey()]);
         $row = $this->seedRow($viewer, 'diary_posted', ['author_id' => $author->getKey(), 'diary_id' => $diary->getKey()]);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect('/m/diary/'.$diary->getKey());
     }
 
@@ -140,9 +140,9 @@ class NotificationFeedTest extends TestCase
         $gone = $this->seedRow($viewer, 'diary_commented', ['commenter_id' => $actor->getKey(), 'diary_id' => 424242, 'reason' => 'related']);
         $unviewable = $this->seedRow($viewer, 'diary_commented', ['commenter_id' => $actor->getKey(), 'diary_id' => $hidden->getKey(), 'reason' => 'related']);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$gone->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$gone->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
-        $this->actingAs($viewer)->post("/m/notifications/{$unviewable->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$unviewable->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
     }
 
@@ -152,7 +152,7 @@ class NotificationFeedTest extends TestCase
         $topic = CommunityTopic::factory()->create(['member_id' => $viewer->getKey()]);
         $row = $this->seedRow($viewer, 'community_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $topic->getKey(), 'reason' => 'reply']);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect('/m/community/topic/'.$topic->getKey());
     }
 
@@ -164,9 +164,9 @@ class NotificationFeedTest extends TestCase
         $topicRow = $this->seedRow($viewer, 'community_topic_posted', ['author_id' => $author->getKey(), 'topic_id' => $topic->getKey()]);
         $eventRow = $this->seedRow($viewer, 'community_event_posted', ['author_id' => $author->getKey(), 'event_id' => $event->getKey()]);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$topicRow->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$topicRow->getKey()}/open")
             ->assertRedirect('/m/community/topic/'.$topic->getKey());
-        $this->actingAs($viewer)->post("/m/notifications/{$eventRow->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$eventRow->getKey()}/open")
             ->assertRedirect('/m/community/event/'.$event->getKey());
     }
 
@@ -179,9 +179,9 @@ class NotificationFeedTest extends TestCase
         $gone = $this->seedRow($viewer, 'community_event_commented', ['commenter_id' => $actor->getKey(), 'event_id' => 424242, 'reason' => 'reply']);
         $unreadable = $this->seedRow($viewer, 'community_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $hidden->getKey(), 'reason' => 'related']);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$gone->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$gone->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
-        $this->actingAs($viewer)->post("/m/notifications/{$unreadable->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$unreadable->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
     }
 
@@ -191,7 +191,7 @@ class NotificationFeedTest extends TestCase
         $community = Community::factory()->create();
         $row = $this->seedRow($viewer, 'community_joined', ['new_member_id' => $joiner->getKey(), 'community_id' => $community->getKey()]);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect('/m/community/'.$community->getKey());
     }
 
@@ -200,7 +200,7 @@ class NotificationFeedTest extends TestCase
         [$viewer, $joiner] = Member::factory()->count(2)->create()->all();
         $row = $this->seedRow($viewer, 'community_joined', ['new_member_id' => $joiner->getKey(), 'community_id' => 424242]);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
     }
 
@@ -209,7 +209,7 @@ class NotificationFeedTest extends TestCase
         [$viewer, $other, $actor] = Member::factory()->count(3)->create()->all();
         $row = $this->seedRow($other, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
-        $this->actingAs($viewer)->post("/m/notifications/{$row->getKey()}/open")->assertNotFound();
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")->assertNotFound();
 
         $this->assertNull($row->fresh()->read_at);
     }
@@ -220,8 +220,8 @@ class NotificationFeedTest extends TestCase
         $mine = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
         $theirs = $this->seedRow($other, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
-        $this->actingAs($viewer)->from('/m/notifications')->post('/m/notifications/read-all')
-            ->assertRedirect('/m/notifications');
+        $this->actingAs($viewer)->from('/notifications')->post('/notifications/read-all')
+            ->assertRedirect('/notifications');
 
         $this->assertNotNull($mine->fresh()->read_at);
         $this->assertNull($theirs->fresh()->read_at);
@@ -247,7 +247,7 @@ class NotificationFeedTest extends TestCase
         DB::table('friend_requests')->insert(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey()]);
         $this->seedRow($viewer, 'friend_requested', ['requester_id' => $requester->getKey()]);
 
-        $this->actingAs($viewer)->post('/m/notifications/read-all');
+        $this->actingAs($viewer)->post('/notifications/read-all');
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page

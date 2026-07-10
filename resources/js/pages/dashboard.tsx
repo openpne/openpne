@@ -162,7 +162,7 @@ export default function Dashboard() {
                     )}
 
                     {communityActivity.length > 0 && (
-                        <DigestSection title={t('Recent %community% activity')} viewAllHref="/m/community/recent">
+                        <DigestSection title={t('Recent %community% activity')} viewAllHref="/community/recent">
                             {communityActivity.map((entry) => (
                                 <ActivityRow key={`${entry.kind}-${entry.id}`} entry={entry} />
                             ))}

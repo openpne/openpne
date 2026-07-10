@@ -268,7 +268,7 @@ export default function MemberConfig() {
                         title={t('Notifications')}
                         value={t('Choose which notifications you receive, in-app and by email.')}
                         action={
-                            <ActionLink href="/m/member/config/notifications" variant="outline" size="sm">
+                            <ActionLink href="/member/config/notifications" variant="outline" size="sm">
                                 {t('Edit')}
                             </ActionLink>
                         }
@@ -285,7 +285,7 @@ export default function MemberConfig() {
                         title={t('Email address')}
                         value={form.email.value}
                         action={
-                            <ActionLink href="/m/member/config/email" variant="outline" size="sm">
+                            <ActionLink href="/member/config/email" variant="outline" size="sm">
                                 {t('Change')}
                             </ActionLink>
                         }
@@ -295,7 +295,7 @@ export default function MemberConfig() {
                     <DetailRow
                         title={t('Password')}
                         action={
-                            <ActionLink href="/m/member/config/password" variant="outline" size="sm">
+                            <ActionLink href="/member/config/password" variant="outline" size="sm">
                                 {t('Change')}
                             </ActionLink>
                         }
@@ -306,7 +306,7 @@ export default function MemberConfig() {
                         title={t('Two-factor authentication')}
                         value={form.mfa.enabled ? t('Enabled') : t('Not enabled')}
                         action={
-                            <ActionLink href="/m/member/config/mfa" variant="outline" size="sm">
+                            <ActionLink href="/member/config/mfa" variant="outline" size="sm">
                                 {t('Manage')}
                             </ActionLink>
                         }
@@ -320,7 +320,7 @@ export default function MemberConfig() {
                         <p className="text-sm text-muted-foreground">
                             {t('Withdrawing permanently deletes your account and cannot be undone.')}
                         </p>
-                        <DangerLink href="/m/member/config/withdrawal">{t('Proceed to withdrawal')}</DangerLink>
+                        <DangerLink href="/member/config/withdrawal">{t('Proceed to withdrawal')}</DangerLink>
                     </div>
                 </GroupItem>
             </SettingsGroup>

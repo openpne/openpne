@@ -76,7 +76,7 @@ export default function NotificationsIndex() {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => router.post('/m/notifications/read-all', {}, { preserveScroll: true })}
+                        onClick={() => router.post('/notifications/read-all', {}, { preserveScroll: true })}
                     >
                         {t('Mark all as read')}
                     </Button>
@@ -94,7 +94,7 @@ export default function NotificationsIndex() {
                                 <Link
                                     method="post"
                                     as="button"
-                                    href={`/m/notifications/${item.id}/open`}
+                                    href={`/notifications/${item.id}/open`}
                                     className="flex min-h-11 w-full items-center gap-3 px-5 py-3 text-left text-foreground transition-colors hover:bg-muted/40 active:bg-muted/60"
                                 >
                                     <Avatar
