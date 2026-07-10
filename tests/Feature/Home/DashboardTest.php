@@ -95,7 +95,7 @@ class DashboardTest extends TestCase
         $event->participants()->attach([$viewer->getKey(), Member::factory()->create()->getKey()]);
 
         $this->actingAs($viewer)
-            ->get('/m/community/recent')
+            ->get('/community/recent')
             ->assertInertia(fn ($page) => $page
                 ->component('community/recent')
                 ->where('activity.0.kind', 'event')

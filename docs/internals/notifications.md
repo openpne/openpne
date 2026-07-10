@@ -18,7 +18,7 @@ document covers the delivery model around it.
 3. **Per-event records** — one row per event in the standard Laravel `notifications` table
    (the `database` channel of each notification class), carrying a `kind` discriminator plus
    entity ids. Read state is the row's own `read_at`. Read by the feed
-   ([`app/Features/Notifications/`](../../app/Features/Notifications), `/m/notifications`,
+   ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`,
    Modern-only): rows are hydrated at render time from their ids (a withdrawn actor degrades to
    a fallback label), opening a row marks it read and redirects to its target, and viewing the
    feed marks nothing — only opening a row or the explicit mark-all does. The nav badge is the
