@@ -205,6 +205,51 @@ Deliberately not set:
 - **`Cross-Origin-Resource-Policy`** — web-public avatars and banners are
   served for cross-origin embedding, which `same-origin` would break.
 
+## Uploaded image metadata
+
+Files are delivered as original bytes (above), so an uploaded photo's EXIF —
+GPS coordinates included — would reach every viewer. Every upload funnels
+through [`FileUploader`](../../app/Files/FileUploader.php), which strips
+metadata from `image/jpeg`, `image/png` and `image/webp` before `byte_size` is
+captured, via [`ImageMetadataStripper`](../../app/Files/ImageMetadataStripper.php).
+The strip is lossless — it rewrites the container, never re-encoding the image
+data — so there is no quality loss.
+
+Per format:
+
+- **JPEG** — an allow-list segment walk (SOI→EOI). Structural markers are kept;
+  among the APP segments only JFIF/JFXX (APP0), ICC (APP2) and Adobe (APP14,
+  the CMYK/YCCK transform flag) survive. EXIF (APP1), XMP and every other APPn,
+  plus comments (COM), are dropped — including markers placed between scans of a
+  progressive JPEG.
+- **PNG** — a chunk walk dropping `eXIf`/`tEXt`/`zTXt`/`iTXt` (XMP rides
+  `iTXt`); `iCCP`/`gAMA` and all image chunks are kept. Each chunk's CRC is
+  verified while walking.
+- **WebP** — a RIFF walk dropping the `EXIF` and `XMP ` chunks and clearing only
+  the EXIF/XMP flag bits of a `VP8X` chunk (ICC/alpha/animation left intact).
+
+Colour-critical segments (ICC/Adobe) are deliberately kept so stripping never
+shifts colours. **EXIF Orientation** is preserved: it is read before stripping
+and re-emitted as a minimal one-tag APP1 after SOI, because both original
+display and thumbnail generation ([`ImageCache`](../../app/Files/ImageCache.php),
+intervention/image auto-orient) rotate from it. Thumbnail rotation needs
+`ext-exif` at runtime — intervention reads Orientation only when
+`exif_read_data` exists and silently skips rotation otherwise (the stripper
+itself parses TIFF by hand and does not need the extension).
+
+Accepted residuals: GIF passes through untouched (no standard geo metadata), and
+WebP loses Orientation (EXIF-bearing camera WebP is effectively nonexistent).
+
+The strip **fails closed** — a structurally unparseable image throws rather than
+storing the original bytes (upstream validation already cleared magic bytes and
+dimensions, so an unparseable container is corrupt or adversarial, and a privacy
+control must not silently pass it through). The upload paths convert this to an
+inline form-validation error, never a 500.
+
+Toggle with `OPENPNE_STRIP_IMAGE_METADATA` (default on); turn it off to retain
+EXIF (e.g. a photography community). OpenPNE 3-imported files bypass this
+pipeline (a table-level move, not a re-upload) and are not stripped.
+
 ## Cookies
 
 When `session.secure` is on (explicit `SESSION_SECURE_COOKIE`, or `force_https`),

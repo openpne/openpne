@@ -881,6 +881,7 @@
     "The field name cannot start with \"op_preset_\".": "項目名の先頭に「op_preset_」は使えません。",
     "The following template syntax is available:": "以下のテンプレート書式が使えます：",
     "The given data was invalid.": "指定されたデータは無効でした。",
+    "The image could not be processed safely. Re-saving it with an image editor may fix it.": "この画像は安全に処理できませんでした。画像編集アプリ等で保存し直すと解決する場合があります。",
     "The inviter’s name (member or admin invitations).": "招待者の名前（メンバー／管理者招待）。",
     "The login form, shown to logged-out visitors.": "ログインフォーム（未ログインの訪問者に表示）。",
     "The member can log in again": "このメンバーは再びログインできます",
