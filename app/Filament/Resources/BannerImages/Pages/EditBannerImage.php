@@ -6,9 +6,12 @@ use App\Features\Banner\Actions\DeleteBannerImage;
 use App\Features\Banner\Actions\UpdateBannerImage;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Files\FormUpload;
+use App\Files\ImageMetadataStripException;
 use App\Models\BannerImage;
 use Filament\Actions\DeleteAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
 
 class EditBannerImage extends EditRecord
@@ -54,12 +57,20 @@ class EditBannerImage extends EditRecord
         // Null when the upload was left blank — keep the current image.
         $upload = FormUpload::single($data['image'] ?? null);
 
-        return app(UpdateBannerImage::class)(
-            $record,
-            $data['url'] ?? null,
-            $data['name'] ?? null,
-            null,
-            $upload,
-        );
+        try {
+            return app(UpdateBannerImage::class)(
+                $record,
+                $data['url'] ?? null,
+                $data['name'] ?? null,
+                null,
+                $upload,
+            );
+        } catch (ImageMetadataStripException) {
+            // Surface a fail-closed strip as a danger notification + halt (Filament rolls the edit
+            // back) rather than a 500; the current image is untouched.
+            Notification::make()->danger()->title(ImageMetadataStripException::userMessage())->send();
+
+            throw new Halt;
+        }
     }
 }

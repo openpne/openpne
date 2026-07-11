@@ -4,6 +4,7 @@ namespace App\Features\Member;
 
 use App\Features\Member\Actions\RemoveAvatar;
 use App\Features\Member\Actions\SetAvatar;
+use App\Files\ImageMetadataStripException;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\AvatarRequest;
@@ -13,6 +14,7 @@ use App\Support\AvatarColor;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -39,7 +41,13 @@ class MemberAvatarController extends Controller
 
     public function update(AvatarRequest $request, SetAvatar $action): RedirectResponse
     {
-        $action($this->viewer(), $request->file('image'));
+        try {
+            $action($this->viewer(), $request->file('image'));
+        } catch (ImageMetadataStripException) {
+            // SetAvatar uses FileUploader directly (no PostImages), so convert the fail-closed strip
+            // to a validation error on the submitted field ('image', the avatar picker) here.
+            throw ValidationException::withMessages(['image' => [ImageMetadataStripException::userMessage()]]);
+        }
 
         return redirect()->route('member.avatar.edit')
             ->with('status', __('Profile image updated.'));
