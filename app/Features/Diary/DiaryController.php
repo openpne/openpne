@@ -14,6 +14,7 @@ use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\SearchDiaries;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\DiarySerializer;
+use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Diary\StoreDiaryRequest;
@@ -239,8 +240,7 @@ class DiaryController extends Controller
                 $this->viewer(),
                 $diary,
                 $request->toData(),
-                $request->file('images', []),
-                $request->input('remove_images', []),
+                ImageEdit::fromRequest($request),
             );
         } catch (DiaryActionException) {
             abort(404);

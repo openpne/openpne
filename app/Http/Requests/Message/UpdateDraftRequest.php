@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Message;
 
+use App\Files\ImageEdit;
 use App\Files\PostImages;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Member;
@@ -53,10 +54,9 @@ class UpdateDraftRequest extends FormRequest
     }
 
     /**
-     * Cross-field cap: the images kept (current minus the ones being removed) plus the new uploads
-     * may not exceed MAX_IMAGES, so an ordinary add-without-removing past the cap is a validation
-     * error rather than a 404 from the action. remove_images ids that aren't this draft's are
-     * ignored, so a bogus id cannot inflate the kept count downwards.
+     * Cross-field cap: the images kept after the edit plus the new uploads may not exceed MAX_IMAGES,
+     * so an ordinary add-without-removing past the cap is a validation error rather than a 404 from
+     * the action.
      */
     public function withValidator(Validator $validator): void
     {
@@ -66,11 +66,7 @@ class UpdateDraftRequest extends FormRequest
                 return;
             }
 
-            $currentIds = $draft->files()->pluck('id')->all();
-            $removing = array_unique(array_intersect(array_map('intval', (array) $this->input('remove_images', [])), $currentIds));
-            $kept = count($currentIds) - count($removing);
-
-            if ($kept + count($this->file('images', [])) > PostImages::MAX_IMAGES) {
+            if (ImageEdit::fromRequest($this)->exceedsCap($draft->files()->pluck('id')->all())) {
                 $validator->errors()->add('images', __('A message can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
             }
         });

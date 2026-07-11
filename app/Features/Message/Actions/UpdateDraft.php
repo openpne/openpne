@@ -5,11 +5,11 @@ namespace App\Features\Message\Actions;
 use App\Features\Message\Exceptions\MessageActionException;
 use App\Features\Message\Exceptions\MessageActionFailure;
 use App\Features\Message\MessageAccess;
+use App\Files\ImageEdit;
 use App\Files\PostImages;
 use App\Models\Member;
 use App\Models\Message;
 use App\Notifications\Message\MessageReceivedNotification;
-use Illuminate\Http\UploadedFile;
 
 /**
  * Edit one of the sender's own drafts: change its text, manage its image slots (remove selected
@@ -23,11 +23,7 @@ class UpdateDraft
 {
     public function __construct(private readonly PostImages $images) {}
 
-    /**
-     * @param  array<int, UploadedFile>  $newImages  images to add, into the lowest free slots
-     * @param  array<int, int|string>  $removeImageIds  ids of this draft's images to remove
-     */
-    public function __invoke(Member $sender, Message $draft, string $subject, string $body, bool $asDraft, array $newImages = [], array $removeImageIds = []): Message
+    public function __invoke(Member $sender, Message $draft, string $subject, string $body, bool $asDraft, ImageEdit $images): Message
     {
         // The viewer's own, still a draft, and not trashed/purged (OpenPNE 3 isDraftOwner rejects a
         // deleted draft).
@@ -39,7 +35,7 @@ class UpdateDraft
             throw new MessageActionException(MessageActionFailure::CannotSend);
         }
 
-        $removedFiles = $this->images->compensating(function (callable $store) use ($sender, $draft, $recipient, $subject, $body, $asDraft, $newImages, $removeImageIds): array {
+        $removedFiles = $this->images->compensating(function (callable $store) use ($sender, $draft, $recipient, $subject, $body, $asDraft, $images): array {
             // Re-read under the lock and re-check the fresh state — not the stale $draft read before the
             // lock. This serializes concurrent edits (so two adds can't claim the same image slot) and,
             // crucially, stops a double-submitted send: a racing send commits is_draft=false first, then
@@ -61,16 +57,16 @@ class UpdateDraft
             }
 
             // Drop the selected images (this draft's only). Keep their Files to purge after commit.
-            $removed = $draft->files()->whereKey(array_unique($removeImageIds))->with('file')->get();
+            $removed = $draft->files()->whereKey($images->removals)->with('file')->get();
             $draft->files()->whereKey($removed->modelKeys())->delete();
 
             // Add the new uploads into the lowest free slots, rechecking the count under the lock.
             $used = $draft->files()->pluck('number')->all();
             $free = array_values(array_diff(range(1, PostImages::MAX_IMAGES), $used));
-            if (count($newImages) > count($free)) {
+            if (count($images->additions) > count($free)) {
                 throw new MessageActionException(MessageActionFailure::TooManyImages);
             }
-            foreach (array_values($newImages) as $index => $upload) {
+            foreach ($images->additions as $index => $upload) {
                 $file = $store($upload, 'message', (int) $draft->getKey());
                 $draft->files()->create(['file_id' => $file->getKey(), 'number' => $free[$index]]);
             }

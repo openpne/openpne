@@ -9,6 +9,7 @@ use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
+use App\Files\ImageEdit;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventImage;
@@ -181,7 +182,7 @@ class CommunityEventEditImagesTest extends TestCase
         // Backstop against a lost concurrency race: more uploads than free slots fails cleanly
         // instead of indexing past the free-slot list.
         $this->expectException(CommunityEventActionException::class);
-        app(UpdateEvent::class)($author, $event, $this->form(), [$this->fake('c.png'), $this->fake('d.png')], []);
+        app(UpdateEvent::class)($author, $event, $this->form(), ImageEdit::of([$this->fake('c.png'), $this->fake('d.png')]));
     }
 
     public function test_a_remove_id_from_another_event_is_ignored(): void
@@ -229,7 +230,7 @@ class CommunityEventEditImagesTest extends TestCase
         }));
 
         try {
-            app(UpdateEvent::class)($author, $event->fresh(), $this->form(), [$this->fake('a.png'), $this->fake('b.png')], [$image1->id]);
+            app(UpdateEvent::class)($author, $event->fresh(), $this->form(), ImageEdit::of([$this->fake('a.png'), $this->fake('b.png')], [$image1->id]));
             $this->fail('expected the failed image store to throw');
         } catch (RuntimeException) {
             // expected

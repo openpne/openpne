@@ -13,6 +13,7 @@ use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionFailure;
 use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Files\ImageEdit;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
@@ -106,11 +107,11 @@ class EventActionsTest extends TestCase
         ]);
 
         // No-op edit (same content) does not touch the timestamps.
-        app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event));
+        app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event), ImageEdit::none());
         $this->assertTrue($event->fresh()->updated_at->lessThan(now()->subHour()));
 
         // A name change bumps both updated_at (board key) and event_updated_at.
-        app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event, ['name' => 'Edited']));
+        app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event, ['name' => 'Edited']), ImageEdit::none());
         $fresh = $event->fresh();
         $this->assertSame('Edited', $fresh->name);
         $this->assertTrue($fresh->updated_at->greaterThan(now()->subMinute()));
@@ -129,7 +130,7 @@ class EventActionsTest extends TestCase
 
         // Changing only the capacity (not name/body) lifts the board (updated_at) but not the
         // content timestamp (event_updated_at).
-        app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event, ['capacity' => 50]));
+        app(UpdateEvent::class)($author, $event->fresh(), $this->formData($event, ['capacity' => 50]), ImageEdit::none());
 
         $fresh = $event->fresh();
         $this->assertSame(50, $fresh->capacity);
@@ -145,7 +146,7 @@ class EventActionsTest extends TestCase
         $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
 
         $this->assertFails(
-            fn () => app(UpdateEvent::class)($other, $event, $this->formData($event, ['name' => 'Hijack'])),
+            fn () => app(UpdateEvent::class)($other, $event, $this->formData($event, ['name' => 'Hijack']), ImageEdit::none()),
             CommunityEventActionFailure::CannotEdit,
         );
     }

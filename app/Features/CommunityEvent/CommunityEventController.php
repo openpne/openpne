@@ -12,6 +12,7 @@ use App\Features\CommunityEvent\Queries\EventParticipants;
 use App\Features\CommunityEvent\Queries\ListCommunityEvents;
 use App\Features\CommunityEvent\Queries\ShowEvent;
 use App\Features\CommunityEvent\Serializers\CommunityEventSerializer;
+use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommunityEvent\StoreEventRequest;
@@ -168,7 +169,7 @@ class CommunityEventController extends Controller
     public function update(UpdateEventRequest $request, CommunityEvent $event, UpdateEvent $action): RedirectResponse
     {
         try {
-            $action($this->viewer(), $event, $request->toData(), $request->file('images', []), $request->input('remove_images', []));
+            $action($this->viewer(), $event, $request->toData(), ImageEdit::fromRequest($request));
         } catch (CommunityEventActionException) {
             abort(404);
         }

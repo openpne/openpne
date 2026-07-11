@@ -1,8 +1,8 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Panel } from '@/components/ui/surface';
@@ -93,26 +93,7 @@ export default function CommunityEventEdit() {
                         <Textarea id="body" required rows={8} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
                     </Field>
 
-                    {isEdit && event.images.length > 0 && (
-                        <fieldset className="space-y-2">
-                            <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
-                            <ul className="flex flex-wrap gap-3">
-                                {event.images.map((image, i) => (
-                                    <li key={image.id} className="space-y-1 text-center">
-                                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
-                                        <label className="flex items-center justify-center gap-1 text-sm text-foreground">
-                                            <Checkbox
-                                                aria-label={`${t('Delete')} ${t('Image')} ${i + 1}`}
-                                                checked={form.data.remove_images.includes(image.id)}
-                                                onChange={(e) => toggleRemove(image.id, e.target.checked)}
-                                            />
-                                            {t('Delete')}
-                                        </label>
-                                    </li>
-                                ))}
-                            </ul>
-                        </fieldset>
-                    )}
+                    <CurrentImagesField images={event?.images ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />
 
                     <ImagesField id="images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 

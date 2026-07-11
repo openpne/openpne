@@ -8,6 +8,7 @@ use App\Features\Diary\Data\DiaryFormData;
 use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
+use App\Files\ImageEdit;
 use App\Models\Diary;
 use App\Models\DiaryImage;
 use App\Models\File;
@@ -141,7 +142,7 @@ class DiaryEditImagesTest extends TestCase
         // Concurrency-race backstop: more uploads than free slots fails cleanly rather than indexing
         // past the free-slot list.
         $this->expectException(DiaryActionException::class);
-        app(UpdateDiary::class)($author, $diary, new DiaryFormData('Title', 'Body', Visibility::Members), [$this->fake('c.png'), $this->fake('d.png')], []);
+        app(UpdateDiary::class)($author, $diary, new DiaryFormData('Title', 'Body', Visibility::Members), ImageEdit::of([$this->fake('c.png'), $this->fake('d.png')]));
     }
 
     public function test_a_failed_added_image_rolls_back_the_removal_and_leaves_no_orphan(): void
@@ -170,7 +171,7 @@ class DiaryEditImagesTest extends TestCase
         }));
 
         try {
-            app(UpdateDiary::class)($author, $diary->fresh(), new DiaryFormData('Title', 'Body', Visibility::Members), [$this->fake('a.png'), $this->fake('b.png')], [$image1->id]);
+            app(UpdateDiary::class)($author, $diary->fresh(), new DiaryFormData('Title', 'Body', Visibility::Members), ImageEdit::of([$this->fake('a.png'), $this->fake('b.png')], [$image1->id]));
             $this->fail('expected the failed image store to throw');
         } catch (RuntimeException) {
             // expected

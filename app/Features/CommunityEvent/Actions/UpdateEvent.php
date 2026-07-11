@@ -6,10 +6,10 @@ use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionFailure;
+use App\Files\ImageEdit;
 use App\Files\PostImages;
 use App\Models\CommunityEvent;
 use App\Models\Member;
-use Illuminate\Http\UploadedFile;
 
 class UpdateEvent
 {
@@ -17,20 +17,17 @@ class UpdateEvent
 
     /**
      * Edit an event's fields and manage its image slots: remove the images in
-     * $removeImageIds and add $newImages into the freed slots (1..MAX). Image bytes are rollback-safe
-     * — new uploads are compensated if the transaction fails, and removed images' bytes (irreversible
-     * on a disk backend) are purged only after commit.
-     *
-     * @param  array<int, UploadedFile>  $newImages  images to add, into the lowest free slots
-     * @param  array<int, int|string>  $removeImageIds  ids of this event's images to remove
+     * $images->removals and add $images->additions into the freed slots (1..MAX). Image bytes are
+     * rollback-safe — new uploads are compensated if the transaction fails, and removed images' bytes
+     * (irreversible on a disk backend) are purged only after commit.
      */
-    public function __invoke(Member $actor, CommunityEvent $event, CommunityEventFormData $data, array $newImages = [], array $removeImageIds = []): CommunityEvent
+    public function __invoke(Member $actor, CommunityEvent $event, CommunityEventFormData $data, ImageEdit $images): CommunityEvent
     {
         if (! CommunityEventAccess::canEditEvent($event, $actor)) {
             throw new CommunityEventActionException(CommunityEventActionFailure::CannotEdit);
         }
 
-        $removedFiles = $this->images->compensating(function (callable $store) use ($event, $data, $newImages, $removeImageIds): array {
+        $removedFiles = $this->images->compensating(function (callable $store) use ($event, $data, $images): array {
             // Serialize concurrent edits of this event: the free-slot read below and the inserts must
             // not interleave with another edit, or both could claim the same slot (number is not
             // unique) or push past the image cap.
@@ -56,7 +53,7 @@ class UpdateEvent
 
             // Drop the selected images (this event's only — an id from another event is ignored).
             // Keep their Files to purge after commit; here only the link row is removed.
-            $removed = $event->images()->whereKey(array_unique($removeImageIds))->with('file')->get();
+            $removed = $event->images()->whereKey($images->removals)->with('file')->get();
             $event->images()->whereKey($removed->modelKeys())->delete();
 
             // Add the new uploads into the lowest free slots. Recheck the count under the lock: the
@@ -65,10 +62,10 @@ class UpdateEvent
             // rather than index past $free.
             $used = $event->images()->pluck('number')->all();
             $free = array_values(array_diff(range(1, PostImages::MAX_IMAGES), $used));
-            if (count($newImages) > count($free)) {
+            if (count($images->additions) > count($free)) {
                 throw new CommunityEventActionException(CommunityEventActionFailure::TooManyImages);
             }
-            foreach (array_values($newImages) as $index => $upload) {
+            foreach ($images->additions as $index => $upload) {
                 $file = $store($upload, 'communityEvent', (int) $event->getKey());
                 $event->images()->create(['file_id' => $file->getKey(), 'number' => $free[$index]]);
             }

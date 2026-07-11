@@ -11,6 +11,7 @@ use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Features\CommunityTopic\Queries\ListCommunityTopics;
 use App\Features\CommunityTopic\Queries\ShowTopic;
 use App\Features\CommunityTopic\Serializers\CommunityTopicSerializer;
+use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommunityTopic\StoreTopicRequest;
@@ -148,7 +149,7 @@ class CommunityTopicController extends Controller
     public function update(UpdateTopicRequest $request, CommunityTopic $topic, UpdateTopic $action): RedirectResponse
     {
         try {
-            $action($this->viewer(), $topic, $request->toData(), $request->file('images', []), $request->input('remove_images', []));
+            $action($this->viewer(), $topic, $request->toData(), ImageEdit::fromRequest($request));
         } catch (CommunityTopicActionException) {
             abort(404);
         }

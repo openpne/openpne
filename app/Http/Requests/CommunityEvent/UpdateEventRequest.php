@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CommunityEvent;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
+use App\Files\ImageEdit;
 use App\Files\PostImages;
 use App\Models\CommunityEvent;
 use App\Models\Member;
@@ -46,8 +47,7 @@ class UpdateEventRequest extends StoreEventRequest
 
     /**
      * Keep the inherited deadline ≤ open_date check and add the image cross-field cap: the images
-     * kept (current minus the ones being removed) plus the new uploads may not exceed MAX_IMAGES.
-     * remove_images ids that aren't this event's are ignored, so a bogus id can't inflate the count.
+     * kept after the edit plus the new uploads may not exceed MAX_IMAGES.
      */
     public function withValidator(Validator $validator): void
     {
@@ -59,13 +59,7 @@ class UpdateEventRequest extends StoreEventRequest
                 return;
             }
 
-            $currentIds = $event->images()->pluck('id')->all();
-            // array_unique first: a crafted remove_images=[id, id] must not count one image twice
-            // and so undercount what is kept, slipping the cap.
-            $removing = array_unique(array_intersect(array_map('intval', (array) $this->input('remove_images', [])), $currentIds));
-            $kept = count($currentIds) - count($removing);
-
-            if ($kept + count($this->file('images', [])) > PostImages::MAX_IMAGES) {
+            if (ImageEdit::fromRequest($this)->exceedsCap($event->images()->pluck('id')->all())) {
                 $validator->errors()->add('images', __('An event can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
             }
         });
