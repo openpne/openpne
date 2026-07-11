@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use PragmaRX\Google2FA\Google2FA;
+use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
 /**
@@ -22,7 +23,14 @@ use Tests\TestCase;
  */
 class SecurityChangeNotificationTest extends TestCase
 {
+    use CapturesSecurityLog;
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->captureSecurityLog();
+    }
 
     private function memberWithTwoFactor(): Member
     {
@@ -54,6 +62,8 @@ class SecurityChangeNotificationTest extends TestCase
             PasswordChangedNotification::class,
             fn (PasswordChangedNotification $n, array $channels) => $channels === ['mail'],
         );
+
+        $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('password.changed')['member_id']);
     }
 
     public function test_resetting_a_forgotten_password_notifies_the_member(): void
@@ -78,6 +88,7 @@ class SecurityChangeNotificationTest extends TestCase
         $this->post('/member/config/mfa/confirm', ['code' => $this->currentOtp($member->fresh())]);
 
         Notification::assertSentTo($member, MfaEnabledNotification::class);
+        $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('mfa.enabled')['member_id']);
     }
 
     public function test_disabling_a_live_factor_notifies_the_member(): void
@@ -88,6 +99,7 @@ class SecurityChangeNotificationTest extends TestCase
         $this->actingAs($member)->post('/member/config/mfa/disable', ['current_password' => 'password']);
 
         Notification::assertSentTo($member, MfaDisabledNotification::class);
+        $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('mfa.disabled')['member_id']);
     }
 
     public function test_cancelling_a_pending_setup_sends_no_disable_alert(): void

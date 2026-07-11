@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Auth\SessionRevocation;
 use App\Models\AdminUser;
+use App\Support\SecurityLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -30,6 +31,10 @@ class DisableAdminMfaCommand extends Command
             return self::FAILURE;
         }
 
+        // Read before clearing: only a live factor's removal is a real event to log (parity with
+        // the member command, which reads $wasEnabled for the same reason).
+        $wasEnabled = filled($admin->getAppAuthenticationSecret());
+
         // All-or-nothing: clearing the factor and revoking sessions must not half-apply.
         DB::transaction(function () use ($admin): void {
             $admin->saveAppAuthenticationSecret(null);
@@ -39,6 +44,10 @@ class DisableAdminMfaCommand extends Command
             // outlive the reset. The operator is at the CLI, not in a browser, so revoke all.
             SessionRevocation::revokeAdmin($admin);
         });
+
+        if ($wasEnabled) {
+            SecurityLog::event('mfa.disabled', ['guard' => 'admin', 'username' => $username, 'via' => 'cli']);
+        }
 
         $this->info("Two-factor authentication for administrator [{$username}] has been disabled and their sessions revoked.");
 

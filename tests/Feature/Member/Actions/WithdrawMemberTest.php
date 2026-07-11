@@ -18,11 +18,12 @@ use App\Models\MessageRecipient;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
 class WithdrawMemberTest extends TestCase
 {
-    use RefreshDatabase;
+    use CapturesSecurityLog, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -43,11 +44,15 @@ class WithdrawMemberTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $member->getKey()]);
         $membership = CommunityMember::factory()->create(['member_id' => $member->getKey()]);
 
+        $this->captureSecurityLog();
         $this->withdraw($member);
 
         $this->assertModelMissing($member);
         $this->assertModelMissing($diary);
         $this->assertModelMissing($membership);
+
+        $context = $this->assertOneSecurityEvent('member.withdrawn');
+        $this->assertSame('self', $context['actor']);
     }
 
     public function test_purges_image_bytes_of_owned_diaries_and_timeline_posts(): void

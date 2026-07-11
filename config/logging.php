@@ -54,8 +54,20 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => explode(',', (string) env('LOG_STACK', 'daily')),
             'ignore_exceptions' => false,
+        ],
+
+        // Security event trail (App\Support\SecurityLog + the Security listeners). Kept off the
+        // app stack so it can be tailed/shipped on its own and is unaffected by LOG_STACK. Level
+        // and retention are fixed here rather than env-driven: an operator must not be able to
+        // silence the audit trail via LOG_LEVEL. See docs/internals/logging.md.
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'info',
+            'days' => (int) env('LOG_SECURITY_DAYS', 90),
+            'replace_placeholders' => true,
         ],
 
         'single' => [

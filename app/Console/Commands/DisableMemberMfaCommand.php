@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Auth\SessionRevocation;
 use App\Models\Member;
 use App\Notifications\Member\MfaDisabledNotification;
+use App\Support\SecurityLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
@@ -46,6 +47,8 @@ class DisableMemberMfaCommand extends Command
         });
 
         if ($wasEnabled) {
+            // Log before the alert: the fallible enqueue must not suppress the audit record.
+            SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $member->getKey(), 'via' => 'cli']);
             $member->notify(new MfaDisabledNotification($member->locale ?? config('app.locale')));
         }
 
