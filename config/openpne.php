@@ -120,6 +120,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Password policy
+    |--------------------------------------------------------------------------
+    |
+    | 'blocklist' gates the guessability checks that the length policy layers on
+    | (App\Providers\AppServiceProvider): the bundled common-password blocklist
+    | and the context-word check (site name / email local part / member name /
+    | admin username). It defaults on; a dev environment can opt out. The minimum
+    | length and the 72-byte bcrypt cap always apply. See docs/internals/security.md.
+    |
+    */
+
+    'password' => [
+        'blocklist' => (bool) env('OPENPNE_PASSWORD_BLOCKLIST', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Login abuse
     |--------------------------------------------------------------------------
     |

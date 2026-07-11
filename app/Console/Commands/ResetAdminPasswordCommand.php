@@ -31,7 +31,7 @@ class ResetAdminPasswordCommand extends Command
             return self::FAILURE;
         }
 
-        $password = $this->resolveValidatedPassword();
+        $password = $this->resolveValidatedPassword($username);
         if ($password === null) {
             return self::FAILURE;
         }

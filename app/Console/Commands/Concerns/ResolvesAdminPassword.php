@@ -14,7 +14,7 @@ use Illuminate\Validation\Rules\Password;
  */
 trait ResolvesAdminPassword
 {
-    private function resolveValidatedPassword(): ?string
+    private function resolveValidatedPassword(string $username): ?string
     {
         $fromEnv = getenv('OPENPNE_ADMIN_PASSWORD');
         if (is_string($fromEnv) && $fromEnv !== '') {
@@ -24,8 +24,9 @@ trait ResolvesAdminPassword
             $confirmation = (string) $this->secret('Confirm password');
         }
 
+        // The username lets the context-word rule reject a password that embeds it.
         $validator = Validator::make(
-            ['password' => $password, 'password_confirmation' => $confirmation],
+            ['username' => $username, 'password' => $password, 'password_confirmation' => $confirmation],
             ['password' => ['required', 'string', Password::default(), 'confirmed']],
         );
 
