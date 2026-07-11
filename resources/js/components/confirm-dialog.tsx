@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { AlertDialog } from 'radix-ui';
+import { useT } from '@/lib/i18n';
 
 export type ConfirmOptions = {
     title: string;
@@ -34,6 +35,7 @@ export function useConfirm() {
  * the action (and any loading UI) after an awaited true.
  */
 export function ConfirmDialogHost() {
+    const t = useT();
     const [opts, setOpts] = useState<ResolvedOptions | null>(null);
 
     useEffect(() => {
@@ -75,7 +77,7 @@ export function ConfirmDialogHost() {
                             </div>
                             <div className="flex flex-col-reverse gap-2 border-t border-border px-5 py-3 sm:flex-row sm:justify-end">
                                 <AlertDialog.Cancel className="inline-flex min-h-11 items-center justify-center rounded-md bg-secondary px-5 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                                    {opts.cancelLabel ?? 'Cancel'}
+                                    {opts.cancelLabel ?? t('Cancel')}
                                 </AlertDialog.Cancel>
                                 <AlertDialog.Action
                                     onClick={() => settle(true)}
@@ -85,7 +87,7 @@ export function ConfirmDialogHost() {
                                             : 'bg-primary text-primary-foreground hover:bg-primary/90'
                                     }`}
                                 >
-                                    {opts.confirmLabel ?? 'OK'}
+                                    {opts.confirmLabel ?? t('OK')}
                                 </AlertDialog.Action>
                             </div>
                         </>
