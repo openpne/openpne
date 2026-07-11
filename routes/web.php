@@ -254,8 +254,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/list', 'list')->name('friend.list');
         Route::get('/manage', 'manage')->name('friend.manage');
         Route::get('/link', 'showLink')->name('friend.link.show');
-        Route::post('/link', 'submitLink')->name('friend.link');
-        Route::post('/accept', 'submitAccept')->name('friend.accept');
+        Route::post('/link', 'submitLink')->middleware('throttle:friend-request')->name('friend.link');
+        Route::post('/accept', 'submitAccept')->middleware('throttle:friend-request')->name('friend.accept');
         Route::post('/reject', 'submitReject')->name('friend.reject');
         Route::get('/unlink/{member}', 'showUnlink')->name('friend.unlink.show');
         Route::post('/unlink/{member}', 'submitUnlink')->name('friend.unlink.submit');
@@ -280,9 +280,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->where(['member' => '[0-9]+', 'year' => '[12][0-9]{3}', 'month' => '0?[1-9]|1[0-2]', 'day' => '0?[1-9]|[12][0-9]|3[01]'])
             ->name('diary.list_member.archive');
         Route::get('/new', 'new')->name('diary.new');
-        Route::post('/create', 'store')->name('diary.store');
+        Route::post('/create', 'store')->middleware('throttle:posting')->name('diary.store');
         Route::get('/edit/{diary}', 'edit')->whereNumber('diary')->name('diary.edit');
-        Route::post('/update/{diary}', 'update')->whereNumber('diary')->name('diary.update');
+        Route::post('/update/{diary}', 'update')->whereNumber('diary')->middleware('throttle:posting')->name('diary.update');
         Route::get('/deleteConfirm/{diary}', 'showDelete')->whereNumber('diary')->name('diary.delete.show');
         Route::post('/delete/{diary}', 'delete')->whereNumber('diary')->name('diary.delete');
         Route::get('/{diary}', 'show')->whereNumber('diary')->name('diary.show');
@@ -291,7 +291,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // OpenPNE 3 diaryComment module. create keys off the diary id; deleteConfirm/delete key
     // off the comment id (literal /diary/comment/* never collides with diary.show's numeric id).
     Route::controller(DiaryCommentController::class)->group(function () {
-        Route::post('/diary/{diary}/comment/create', 'store')->whereNumber('diary')->name('diary.comment.store');
+        Route::post('/diary/{diary}/comment/create', 'store')->whereNumber('diary')->middleware('throttle:posting')->name('diary.comment.store');
         Route::get('/diary/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('diary.comment.delete.show');
         Route::post('/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('diary.comment.delete');
     });
@@ -306,10 +306,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/timeline', 'index')->name('timeline.index');
         Route::get('/member/{member}/timeline', 'member')->whereNumber('member')->name('timeline.member');
         Route::get('/timeline/new', 'new')->name('timeline.new');
-        Route::post('/timeline/create', 'store')->name('timeline.store');
+        Route::post('/timeline/create', 'store')->middleware('throttle:posting')->name('timeline.store');
         Route::get('/timeline/deleteConfirm/{timelinePost}', 'showDelete')->whereNumber('timelinePost')->name('timeline.delete.show');
         Route::post('/timeline/delete/{timelinePost}', 'delete')->whereNumber('timelinePost')->name('timeline.delete');
-        Route::post('/timeline/{timelinePost}/reply', 'storeReply')->whereNumber('timelinePost')->name('timeline.reply.store');
+        Route::post('/timeline/{timelinePost}/reply', 'storeReply')->whereNumber('timelinePost')->middleware('throttle:posting')->name('timeline.reply.store');
         Route::get('/timeline/{timelinePost}', 'show')->whereNumber('timelinePost')->name('timeline.show');
     });
 
@@ -419,14 +419,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/edit', 'save')->name('community.save');
         // join / quit: GET confirm, POST submit (community id via ?id=).
         Route::get('/join', 'showJoin')->name('community.join.show');
-        Route::post('/join', 'join')->name('community.join');
+        Route::post('/join', 'join')->middleware('throttle:community-join')->name('community.join');
         Route::get('/quit', 'showQuit')->name('community.quit.show');
         Route::post('/quit', 'quit')->name('community.quit');
         // Member roster + pending-member approval.
         Route::get('/member/list', 'members')->name('community.members');
         Route::get('/member/pending', 'pendingMembers')->name('community.members.pending');
-        Route::post('/member/approve', 'approve')->name('community.members.approve');
-        Route::post('/member/decline', 'decline')->name('community.members.decline');
+        Route::post('/member/approve', 'approve')->middleware('throttle:community-join')->name('community.members.approve');
+        Route::post('/member/decline', 'decline')->middleware('throttle:community-join')->name('community.members.decline');
         // delete: GET confirm, POST submit (community id in the path, as in OpenPNE 3).
         Route::get('/delete/{community}', 'showDelete')->whereNumber('community')->name('community.delete.show');
         Route::post('/delete/{community}', 'delete')->whereNumber('community')->name('community.delete');
@@ -440,9 +440,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::prefix('communityTopic')->controller(CommunityTopicController::class)->group(function () {
         Route::get('/listCommunity/{community}', 'index')->whereNumber('community')->name('communityTopic.index');
         Route::get('/new/{community}', 'new')->whereNumber('community')->name('communityTopic.new');
-        Route::post('/create/{community}', 'store')->whereNumber('community')->name('communityTopic.store');
+        Route::post('/create/{community}', 'store')->whereNumber('community')->middleware('throttle:posting')->name('communityTopic.store');
         Route::get('/edit/{topic}', 'edit')->whereNumber('topic')->name('communityTopic.edit');
-        Route::post('/update/{topic}', 'update')->whereNumber('topic')->name('communityTopic.update');
+        Route::post('/update/{topic}', 'update')->whereNumber('topic')->middleware('throttle:posting')->name('communityTopic.update');
         Route::get('/deleteConfirm/{topic}', 'showDelete')->whereNumber('topic')->name('communityTopic.delete.show');
         Route::post('/delete/{topic}', 'delete')->whereNumber('topic')->name('communityTopic.delete');
         Route::get('/{topic}', 'show')->whereNumber('topic')->name('communityTopic.show');
@@ -451,7 +451,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // communityTopicComment module. create keys off the topic id; deleteConfirm/delete key off the
     // comment id (literal /communityTopic/comment/* never collides with the numeric topic show).
     Route::controller(CommunityTopicCommentController::class)->group(function () {
-        Route::post('/communityTopic/{topic}/comment/create', 'store')->whereNumber('topic')->name('communityTopic.comment.store');
+        Route::post('/communityTopic/{topic}/comment/create', 'store')->whereNumber('topic')->middleware('throttle:posting')->name('communityTopic.comment.store');
         Route::get('/communityTopic/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityTopic.comment.delete.show');
         Route::post('/communityTopic/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityTopic.comment.delete');
     });
@@ -462,9 +462,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::prefix('communityEvent')->controller(CommunityEventController::class)->group(function () {
         Route::get('/listCommunity/{community}', 'index')->whereNumber('community')->name('communityEvent.index');
         Route::get('/new/{community}', 'new')->whereNumber('community')->name('communityEvent.new');
-        Route::post('/create/{community}', 'store')->whereNumber('community')->name('communityEvent.store');
+        Route::post('/create/{community}', 'store')->whereNumber('community')->middleware('throttle:posting')->name('communityEvent.store');
         Route::get('/edit/{event}', 'edit')->whereNumber('event')->name('communityEvent.edit');
-        Route::post('/update/{event}', 'update')->whereNumber('event')->name('communityEvent.update');
+        Route::post('/update/{event}', 'update')->whereNumber('event')->middleware('throttle:posting')->name('communityEvent.update');
         Route::get('/deleteConfirm/{event}', 'showDelete')->whereNumber('event')->name('communityEvent.delete.show');
         Route::post('/delete/{event}', 'delete')->whereNumber('event')->name('communityEvent.delete');
         Route::get('/{event}/memberList', 'memberList')->whereNumber('event')->name('communityEvent.member_list');
@@ -475,7 +475,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // deleteConfirm/delete key off the comment id (literal /communityEvent/comment/* never collides
     // with the numeric event show).
     Route::controller(CommunityEventCommentController::class)->group(function () {
-        Route::post('/communityEvent/{event}/comment/create', 'store')->whereNumber('event')->name('communityEvent.comment.store');
+        Route::post('/communityEvent/{event}/comment/create', 'store')->whereNumber('event')->middleware('throttle:posting')->name('communityEvent.comment.store');
         Route::get('/communityEvent/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityEvent.comment.delete.show');
         Route::post('/communityEvent/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityEvent.comment.delete');
     });
@@ -493,10 +493,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // Compose (sendToFriend?id=), reply, and draft edit. OpenPNE 3 reached these through the
         // module/action fallback (no named route); the path shape is preserved.
         Route::get('/sendToFriend', 'compose')->name('message.compose');
-        Route::post('/sendToFriend', 'store')->name('message.compose.store');
+        Route::post('/sendToFriend', 'store')->middleware('throttle:message-send')->name('message.compose.store');
         Route::get('/reply/{message}', 'reply')->whereNumber('message')->name('message.reply');
         Route::get('/edit/{message}', 'edit')->whereNumber('message')->name('message.draft.edit');
-        Route::post('/edit/{message}', 'update')->whereNumber('message')->name('message.draft.update');
+        // The final send passes through this POST; if compose ever gains autosave the per-member limit must be revisited.
+        Route::post('/edit/{message}', 'update')->whereNumber('message')->middleware('throttle:message-send')->name('message.draft.update');
         Route::get('/read/{message}', 'showReceived')->whereNumber('message')->name('message.receive.show');
         Route::get('/check/{message}', 'showSent')->whereNumber('message')->name('message.send.show');
         Route::get('/checkDelete/{message}', 'showTrashed')->whereNumber('message')->name('message.trash.show');
