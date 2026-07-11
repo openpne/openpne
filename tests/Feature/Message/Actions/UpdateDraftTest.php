@@ -5,6 +5,7 @@ namespace Tests\Feature\Message\Actions;
 use App\Features\Message\Actions\SendMessage;
 use App\Features\Message\Actions\UpdateDraft;
 use App\Features\Message\MessageComposeData;
+use App\Files\ImageEdit;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
@@ -34,7 +35,7 @@ class UpdateDraftTest extends TestCase
         $sender = Member::factory()->create();
         $draft = $this->draft($sender);
 
-        app(UpdateDraft::class)($sender, $draft, 'New subject', 'New body', asDraft: true);
+        app(UpdateDraft::class)($sender, $draft, 'New subject', 'New body', asDraft: true, images: ImageEdit::none());
 
         $this->assertDatabaseHas('messages', ['id' => $draft->getKey(), 'subject' => 'New subject', 'is_draft' => true]);
         Notification::assertNothingSent();
@@ -47,7 +48,7 @@ class UpdateDraftTest extends TestCase
         $draft = $this->draft($sender);
         $recipient = $draft->draftRecipient; // a draft holds its recipient here, not in a receipt
 
-        app(UpdateDraft::class)($sender, $draft, 'Subject', 'Body', asDraft: false);
+        app(UpdateDraft::class)($sender, $draft, 'Subject', 'Body', asDraft: false, images: ImageEdit::none());
 
         $this->assertFalse($draft->fresh()->is_draft);
         // Sending materializes the receipt and clears the draft-only column.
@@ -64,8 +65,7 @@ class UpdateDraftTest extends TestCase
         $removeId = $draft->files()->where('number', 1)->value('id');
 
         app(UpdateDraft::class)($sender, $draft, 'Subject', 'Body', asDraft: true,
-            newImages: [UploadedFile::fake()->image('c.png', 20, 20)],
-            removeImageIds: [$removeId]);
+            images: ImageEdit::of([UploadedFile::fake()->image('c.png', 20, 20)], [$removeId]));
 
         // Slot 2 stays; slot 1 freed then taken by the new upload.
         $this->assertEqualsCanonicalizing([1, 2], $draft->files()->pluck('number')->all());
@@ -79,7 +79,7 @@ class UpdateDraftTest extends TestCase
         $stranger = Member::factory()->create();
 
         $this->expectException(NotFoundHttpException::class);
-        app(UpdateDraft::class)($stranger, $draft, 'X', 'Y', asDraft: true);
+        app(UpdateDraft::class)($stranger, $draft, 'X', 'Y', asDraft: true, images: ImageEdit::none());
     }
 
     public function test_a_racing_second_send_does_not_duplicate_the_receipt(): void
@@ -89,12 +89,12 @@ class UpdateDraftTest extends TestCase
         $draft = $this->draft($sender);
         $stale = Message::findOrFail($draft->getKey()); // a second handle, still a draft in memory
 
-        app(UpdateDraft::class)($sender, $draft, 'S', 'B', asDraft: false); // first send delivers it
+        app(UpdateDraft::class)($sender, $draft, 'S', 'B', asDraft: false, images: ImageEdit::none()); // first send delivers it
         $this->assertSame(1, MessageRecipient::where('message_id', $draft->getKey())->count());
 
         // The racing send works the stale handle; under the lock it re-reads a non-draft and aborts.
         try {
-            app(UpdateDraft::class)($sender, $stale, 'S', 'B', asDraft: false);
+            app(UpdateDraft::class)($sender, $stale, 'S', 'B', asDraft: false, images: ImageEdit::none());
             $this->fail('Expected the stale concurrent send to abort.');
         } catch (NotFoundHttpException) {
             // expected

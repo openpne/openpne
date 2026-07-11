@@ -9,6 +9,7 @@ use App\Features\CommunityTopic\Data\CommunityTopicFormData;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
+use App\Files\ImageEdit;
 use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
@@ -170,7 +171,7 @@ class CommunityTopicEditImagesTest extends TestCase
         // Backstop against a lost concurrency race: more uploads than free slots fails cleanly
         // instead of indexing past the free-slot list.
         $this->expectException(CommunityTopicActionException::class);
-        app(UpdateTopic::class)($author, $topic, $this->form(), [$this->fake('c.png'), $this->fake('d.png')], []);
+        app(UpdateTopic::class)($author, $topic, $this->form(), ImageEdit::of([$this->fake('c.png'), $this->fake('d.png')]));
     }
 
     public function test_a_remove_id_from_another_topic_is_ignored(): void
@@ -220,7 +221,7 @@ class CommunityTopicEditImagesTest extends TestCase
         }));
 
         try {
-            app(UpdateTopic::class)($author, $topic->fresh(), $this->form(), [$this->fake('a.png'), $this->fake('b.png')], [$image1->id]);
+            app(UpdateTopic::class)($author, $topic->fresh(), $this->form(), ImageEdit::of([$this->fake('a.png'), $this->fake('b.png')], [$image1->id]));
             $this->fail('expected the failed image store to throw');
         } catch (RuntimeException) {
             // expected

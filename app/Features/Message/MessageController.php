@@ -13,6 +13,7 @@ use App\Features\Message\Exceptions\MessageActionFailure;
 use App\Features\Message\Queries\ListMessages;
 use App\Features\Message\Queries\ShowMessage;
 use App\Features\Message\Serializers\MessageSerializer;
+use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Message\BulkMessageRequest;
@@ -150,7 +151,7 @@ class MessageController extends Controller
             $action(
                 $this->viewer(), $draft,
                 (string) $request->validated('subject'), (string) $request->validated('body'),
-                $request->asDraft(), $request->file('images', []), $request->input('remove_images', []),
+                $request->asDraft(), ImageEdit::fromRequest($request),
             );
         } catch (MessageActionException $e) {
             return $this->failed($request, $e);
