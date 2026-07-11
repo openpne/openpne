@@ -86,16 +86,18 @@ class WithdrawMember
 
         $member->delete();
 
-        MemberWithdrawn::dispatch($memberId, $name, $email, $locale);
-
-        // Logged here once so it covers both callers (self-withdrawal and the Filament DeleteAction).
-        // The self path has already logged the member out, so only an admin remains on a guard here.
+        // Logged here once so it covers both callers (self-withdrawal and the Filament DeleteAction),
+        // and before the event dispatch — enqueueing its listeners is fallible and must not suppress
+        // the audit record of an already-durable deletion. The self path has already logged the member
+        // out, so only an admin remains on a guard here.
         $adminUsername = auth('admin')->user()?->username;
         SecurityLog::event('member.withdrawn', [
             'member_id' => $memberId,
             'actor' => $adminUsername === null ? 'self' : 'admin',
             'admin_username' => $adminUsername,
         ]);
+
+        MemberWithdrawn::dispatch($memberId, $name, $email, $locale);
     }
 
     /**

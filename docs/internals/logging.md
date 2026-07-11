@@ -23,7 +23,9 @@ Deployers tailing `laravel.log` must switch to the dated filenames.
 Every event additionally carries `ip` and (truncated) `user_agent` when raised in an HTTP request;
 a console command adds neither. Listeners live in
 [`app/Listeners/Security/`](../../app/Listeners/Security) (auto-discovered by their `handle()` type
-hint, all synchronous — see below); seams are direct `SecurityLog::event()` calls.
+hint, all synchronous — see below); seams are direct `SecurityLog::event()` calls. A seam logs
+immediately after the durable mutation and **before** any notification/event dispatch: enqueueing is
+fallible and must not be able to suppress the audit record of a change that already happened.
 
 | Event | Source | Context (beyond ip/user_agent) |
 |---|---|---|
@@ -39,7 +41,7 @@ hint, all synchronous — see below); seams are direct `SecurityLog::event()` ca
 | `mfa.recovery_codes_regenerated` | seam: `MemberMfaController::regenerate`, `AdminAppAuthentication` regenerate | `guard`, `member_id`\|`username` |
 | `mfa.recovery_code_used` | listener `LogRecoveryCodeReplaced` (member); seam `AdminAppAuthentication::verifyRecoveryCode` (admin) | `guard`, `member_id`\|`username` |
 | `password.changed` | seam: `MemberConfigController::updatePassword`, `ResetAdminPasswordCommand` | `guard`, `member_id`\|`username`, `via` (cli) |
-| `email.change_requested` | seam: `MemberConfigController::updateEmail` | `guard`, `member_id`, `new_email` |
+| `email.change_requested` | seam: `RequestEmailChange` (action) | `guard`, `member_id`, `new_email` |
 | `email.changed` | seam: `MemberConfigController::confirmEmail` | `guard`, `member_id`, `old_email`, `new_email` |
 | `email.change_cancelled` | seam: `MemberConfigController::cancelEmail` | `guard`, `member_id`, `new_email` |
 | `member.withdrawn` | seam: `WithdrawMember` | `member_id`, `actor` (self\|admin), `admin_username` |
@@ -97,7 +99,8 @@ reorder relative to the request that caused them.
 
 Member TOTP failures log (`mfa.failed`, via Fortify's event). The admin panel has no equivalent
 event, and the only seam — overriding `AppAuthentication::verifyCode` — also fires during set-up and
-disable, so it would log a fat-fingered code during enrolment as a "failure". The observability is
-instead carried by Filament's own login `Failed` event and the `throttle.hit` hook (Filament
-rate-limits the MFA challenge). Admin recovery-*code* use is logged (a distinct seam,
-`verifyRecoveryCode`, that only fires on a real spent code).
+disable, so it would log a fat-fingered code during enrolment as a "failure". This is an accepted
+blind spot: a wrong code at the admin login challenge fires no framework event (Filament's `Failed`
+covers only the password step), and Filament's own MFA rate limit surfaces as a Livewire
+notification, not an HTTP 429, so it produces no `throttle.hit` either. Admin recovery-*code* use is
+logged (a distinct seam, `verifyRecoveryCode`, that only fires on a real spent code).

@@ -47,8 +47,9 @@ class DisableMemberMfaCommand extends Command
         });
 
         if ($wasEnabled) {
-            $member->notify(new MfaDisabledNotification($member->locale ?? config('app.locale')));
+            // Log before the alert: the fallible enqueue must not suppress the audit record.
             SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $member->getKey(), 'via' => 'cli']);
+            $member->notify(new MfaDisabledNotification($member->locale ?? config('app.locale')));
         }
 
         $this->info("Two-factor authentication for member [{$email}] has been disabled and their sessions revoked.");

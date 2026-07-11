@@ -178,9 +178,12 @@ class MemberConfigController extends Controller
         // attacker still holds a live confirmation token for the new address.
         EmailChangeRequest::where('member_id', $viewer->getKey())->delete();
 
+        // Log before the alert: enqueueing the notification is fallible and must not be able to
+        // suppress the audit record of a change that is already durable.
+        SecurityLog::event('password.changed', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
+
         // Security alert to the member's own address (takeover detection).
         $viewer->notify(new PasswordChangedNotification($viewer->locale ?? app()->getLocale()));
-        SecurityLog::event('password.changed', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
 
         return $this->savedRedirect($request, MemberConfigCategory::Password);
     }
@@ -189,14 +192,9 @@ class MemberConfigController extends Controller
     {
         $viewer = $this->viewer();
         $newEmail = (string) $request->validated('new_email');
+        // email.change_requested is logged inside the action, between the durable token write and
+        // the fallible notification sends.
         $requestChange($viewer, $newEmail);
-
-        // The new address is the subject of the change, so it is logged (contrast: passwords never are).
-        SecurityLog::event('email.change_requested', [
-            'guard' => 'member',
-            'member_id' => $viewer->getKey(),
-            'new_email' => $newEmail,
-        ]);
 
         // members.email is unchanged until confirmation; tell the member to open the link just mailed.
         $params = SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC

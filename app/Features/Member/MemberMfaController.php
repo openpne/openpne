@@ -87,9 +87,10 @@ class MemberMfaController extends Controller
         MfaSetupReauth::clear($request->session());
         $request->session()->flash(MemberMfaSerializer::SHOW_RECOVERY_CODES, true);
 
-        // After the factor is live: a security alert to the member's own address (takeover detection).
-        $viewer->notify(new MfaEnabledNotification($viewer->locale ?? app()->getLocale()));
+        // The factor is live: log first (enqueueing the alert is fallible and must not suppress the
+        // audit record), then the security alert to the member's own address (takeover detection).
         SecurityLog::event('mfa.enabled', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
+        $viewer->notify(new MfaEnabledNotification($viewer->locale ?? app()->getLocale()));
 
         return $this->mfaRedirect($request, __('Two-factor authentication is now enabled.'));
     }
@@ -126,9 +127,10 @@ class MemberMfaController extends Controller
             return $this->mfaRedirect($request);
         }
 
-        // The removed factor was live: a security alert to the member's own address.
-        $viewer->notify(new MfaDisabledNotification($viewer->locale ?? app()->getLocale()));
+        // The removed factor was live: log first (fallible enqueue must not suppress the audit
+        // record), then the security alert to the member's own address.
         SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
+        $viewer->notify(new MfaDisabledNotification($viewer->locale ?? app()->getLocale()));
 
         $status = __('Two-factor authentication has been disabled.');
         if (SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC) {

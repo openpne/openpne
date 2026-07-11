@@ -85,13 +85,33 @@ class AdminAppAuthentication extends AppAuthentication
             };
 
             if ($event !== null) {
-                $action->after(function () use ($action, $event): void {
+                // Filament runs after() even when the action body no-ops (e.g. set-up args minted
+                // for a different admin are discarded without saving), so the hooks compare the
+                // persisted columns around the body and skip both the log and the revocation
+                // unless a real change happened. Raw column reads: no need to decrypt to compare.
+                $before = (object) ['secret' => null, 'codes' => null];
+
+                $action->before(function () use ($before): void {
+                    [$before->secret, $before->codes] = self::persistedFactorState();
+                });
+
+                $action->after(function () use ($event, $before): void {
                     $admin = Filament::auth()->user();
                     if (! $admin instanceof AdminUser) {
                         return;
                     }
 
-                    if ($action->getName() !== 'regenerateAppAuthenticationRecoveryCodes') {
+                    [$secret, $codes] = self::persistedFactorState();
+                    $changed = match ($event) {
+                        'mfa.enabled' => blank($before->secret) && filled($secret),
+                        'mfa.disabled' => filled($before->secret) && blank($secret),
+                        default => $codes !== $before->codes,
+                    };
+                    if (! $changed) {
+                        return;
+                    }
+
+                    if ($event !== 'mfa.recovery_codes_regenerated') {
                         // Keep the session that just made the change; drop every other device.
                         SessionRevocation::revokeAdmin($admin, session()->getId());
                     }
@@ -102,5 +122,21 @@ class AdminAppAuthentication extends AppAuthentication
 
             return $action;
         }, parent::getActions());
+    }
+
+    /**
+     * The acting admin's MFA columns as persisted right now — a fresh query, not the cached auth
+     * instance, whose attributes may not reflect what the action body saved (or declined to save).
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private static function persistedFactorState(): array
+    {
+        $fresh = AdminUser::query()->find(Filament::auth()->id());
+
+        return [
+            $fresh?->getRawOriginal('app_authentication_secret'),
+            $fresh?->getRawOriginal('app_authentication_recovery_codes'),
+        ];
     }
 }
