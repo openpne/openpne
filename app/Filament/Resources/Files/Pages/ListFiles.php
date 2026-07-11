@@ -5,11 +5,13 @@ namespace App\Filament\Resources\Files\Pages;
 use App\Filament\Resources\Files\FileResource;
 use App\Files\FileUploader;
 use App\Files\FormUpload;
+use App\Files\ImageMetadataStripException;
 use App\Models\File;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 
 class ListFiles extends ListRecords
@@ -46,7 +48,14 @@ class ListFiles extends ListRecords
                     $upload = FormUpload::single($data['image'] ?? null);
                     abort_unless($upload !== null, 422);
 
-                    $file = app(FileUploader::class)->store($upload, explicitVisibility: File::VISIBILITY_PUBLIC);
+                    try {
+                        $file = app(FileUploader::class)->store($upload, explicitVisibility: File::VISIBILITY_PUBLIC);
+                    } catch (ImageMetadataStripException) {
+                        // Don't 500 the panel on a fail-closed strip: notify and halt the action.
+                        Notification::make()->danger()->title(ImageMetadataStripException::userMessage())->send();
+
+                        throw new Halt;
+                    }
 
                     Notification::make()
                         ->success()

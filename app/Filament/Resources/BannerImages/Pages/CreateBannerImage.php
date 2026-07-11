@@ -6,9 +6,11 @@ use App\Features\Banner\Actions\StoreBannerImage;
 use App\Filament\Pages\BannerSettings;
 use App\Filament\Resources\BannerImages\BannerImageResource;
 use App\Files\FormUpload;
+use App\Files\ImageMetadataStripException;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
 
 class CreateBannerImage extends CreateRecord
@@ -46,10 +48,18 @@ class CreateBannerImage extends CreateRecord
         $upload = FormUpload::single($data['image'] ?? null);
         abort_unless($upload !== null, 422);
 
-        return app(StoreBannerImage::class)(
-            $upload,
-            $data['url'] ?? null,
-            $data['name'] ?? null,
-        );
+        try {
+            return app(StoreBannerImage::class)(
+                $upload,
+                $data['url'] ?? null,
+                $data['name'] ?? null,
+            );
+        } catch (ImageMetadataStripException) {
+            // A fail-closed strip must not 500 the panel: show it as a danger notification and halt
+            // (Filament rolls the create back), keeping the form open with the upload to retry.
+            Notification::make()->danger()->title(ImageMetadataStripException::userMessage())->send();
+
+            throw new Halt;
+        }
     }
 }

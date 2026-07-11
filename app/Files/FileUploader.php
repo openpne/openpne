@@ -22,25 +22,39 @@ use Throwable;
  */
 class FileUploader
 {
-    public function __construct(private readonly FileStorage $storage) {}
+    /** MIME types the metadata stripper rewrites in memory before storing (gif and non-images bypass). */
+    private const STRIPPABLE = ['image/jpeg', 'image/png', 'image/webp'];
+
+    public function __construct(
+        private readonly FileStorage $storage,
+        private readonly ImageMetadataStripper $stripper,
+    ) {}
 
     public function store(UploadedFile $upload, ?string $relatedType = null, ?int $relatedId = null, ?string $explicitVisibility = null): File
     {
+        $type = $upload->getMimeType() ?? 'application/octet-stream';
+        // Strip EXIF/GPS (and XMP/comments) before byte_size is captured, so the delivery
+        // Content-Length matches the stored, stripped length. May throw ImageMetadataStripException
+        // (fail-closed) — left to propagate; the caller converts it to a field validation error.
+        $stripped = $this->shouldStrip($type)
+            ? $this->stripper->strip((string) file_get_contents($upload->getRealPath()), $type)
+            : null;
+
         $file = new File([
             // Opaque, backend-agnostic storage key and URL token (collision is
             // caught by the files.name unique index).
             'name' => Str::random(40),
-            'type' => $upload->getMimeType() ?? 'application/octet-stream',
+            'type' => $type,
             'original_filename' => $upload->getClientOriginalName(),
             'related_entity_type' => $relatedType,
             'related_entity_id' => $relatedId,
             // null = inherit visibility from the owner; an ownerless admin asset passes 'public' so
             // FilePolicy serves it (an ownerless file is otherwise fail-closed denied).
             'explicit_visibility' => $explicitVisibility,
-            'byte_size' => (int) $upload->getSize(),
+            'byte_size' => $stripped !== null ? strlen($stripped) : (int) $upload->getSize(),
         ]);
 
-        $stream = fopen($upload->getRealPath(), 'rb');
+        $stream = $stripped !== null ? $this->memoryStream($stripped) : fopen($upload->getRealPath(), 'rb');
 
         if ($stream === false) {
             throw new RuntimeException("Unable to open the uploaded file [{$file->name}].");
@@ -75,5 +89,23 @@ class FileUploader
         }
 
         return $file;
+    }
+
+    private function shouldStrip(string $mime): bool
+    {
+        return (bool) config('openpne.images.strip_metadata') && in_array($mime, self::STRIPPABLE, true);
+    }
+
+    /**
+     * @return resource
+     */
+    private function memoryStream(string $bytes)
+    {
+        $stream = fopen('php://temp', 'r+b');
+        assert($stream !== false);
+        fwrite($stream, $bytes);
+        rewind($stream);
+
+        return $stream;
     }
 }

@@ -31,6 +31,7 @@
         "roave/security-advisories": "dev-latest"
     },
     "suggest": {
+        "ext-exif": "Required for thumbnails of rotated photos to render upright: intervention/image reads EXIF Orientation only when exif_read_data exists.",
         "ext-gd": "Required to generate image thumbnails with the default GD driver (openpne.images.driver=gd).",
         "ext-imagick": "Required to generate image thumbnails with the ImageMagick driver (openpne.images.driver=imagick).",
         "intervention/image-driver-vips": "High-performance, low-memory thumbnail generation with the libvips driver (openpne.images.driver=vips); also needs ext-ffi and the libvips system library."

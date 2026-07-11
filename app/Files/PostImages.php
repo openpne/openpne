@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
@@ -42,7 +43,12 @@ class PostImages
     {
         $stored = [];
         $store = function (UploadedFile $upload, string $relatedType, int $relatedId) use (&$stored): File {
-            $file = $this->uploader->store($upload, $relatedType, $relatedId);
+            try {
+                // count($stored) is this upload's 0-based slot (nothing tracked yet for it).
+                $file = $this->uploader->store($upload, $relatedType, $relatedId);
+            } catch (ImageMetadataStripException $e) {
+                throw $this->stripFailed($relatedType, count($stored), $e);
+            }
             $stored[] = $file;
 
             return $file;
@@ -82,5 +88,26 @@ class PostImages
 
             return $post;
         });
+    }
+
+    /**
+     * Turn a fail-closed strip into a validation error on the field the member submitted, so the
+     * form shows an inline message instead of a 500. The `images[]` forms key `images.{slot}` (the
+     * shared picker surfaces both `images` and `images.N`); the single-image forms key `image`. A
+     * related type with no member field (e.g. bannerImage from the admin panel) keeps the raw
+     * exception, which its own Filament caller converts.
+     */
+    private function stripFailed(string $relatedType, int $slot, ImageMetadataStripException $e): Throwable
+    {
+        $field = match ($relatedType) {
+            'timelinePost', 'community' => 'image',
+            'diary', 'diaryComment', 'communityTopic', 'communityTopicComment',
+            'communityEvent', 'communityEventComment', 'message' => 'images.'.$slot,
+            default => null,
+        };
+
+        return $field === null
+            ? $e
+            : ValidationException::withMessages([$field => [ImageMetadataStripException::userMessage()]]);
     }
 }

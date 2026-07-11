@@ -8,9 +8,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Use install-php-extensions to install Laravel-required extensions.
+# Use install-php-extensions to install Laravel-required extensions. exif is load-bearing for
+# thumbnails: intervention/image reads EXIF Orientation only when exif_read_data exists, and
+# silently skips auto-rotation otherwise (phone photos would render sideways).
 ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
-RUN install-php-extensions intl bcmath zip gd pdo_mysql pdo_sqlite opcache
+RUN install-php-extensions intl bcmath zip exif gd pdo_mysql pdo_sqlite opcache
 
 # composer
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
