@@ -103,6 +103,7 @@ class FortifyServiceProvider extends ServiceProvider
             fn () => Inertia::render('auth/two-factor-challenge'),
         ));
 
+        // Auth-flow rate limiters (content/social write limiters live in AppServiceProvider).
         RateLimiter::for('login', function (Request $request) {
             // In the challenge phase the proof-of-work + single-use solution is the throttle, so a
             // solved challenge lifts the per-minute cap — otherwise the solved retry would be 429'd

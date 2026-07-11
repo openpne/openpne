@@ -29,9 +29,13 @@ use App\Rules\NotContextWord;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
 use App\Translation\TermTranslator;
+use Closure;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Translation\Translator;
@@ -137,5 +141,46 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Member::class, MemberPolicy::class);
 
         Member::observe(MemberObserver::class);
+
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * Named limiters for the content-posting and mail-triggering member writes (auth-flow limiters
+     * live in FortifyServiceProvider). Attached per route in routes/web.php.
+     */
+    private function configureRateLimiting(): void
+    {
+        RateLimiter::for('posting', $this->writeLimiter('posting', 'posting', 'posting_ip'));
+        RateLimiter::for('message-send', $this->writeLimiter('message', 'message', 'message_ip'));
+        RateLimiter::for('friend-request', $this->writeLimiter('friend', 'friend', 'friend_ip'));
+        RateLimiter::for('community-join', $this->writeLimiter('community', 'community', 'community_ip'));
+    }
+
+    /**
+     * A two-limb write limiter: a per-member cap (primary) and a looser per-IP cap keyed under
+     * distinct prefixes. Config is read per request so an env override — and the tests' config()
+     * lever — take effect. A disabled (0) limb is OMITTED from the array rather than passed as
+     * Limit::none(): ThrottleRequests bypasses only a none() returned as the sole response, so a
+     * none() inside the array degrades to a shared-key PHP_INT_MAX limit instead of a bypass
+     * (Illuminate\Routing\Middleware\ThrottleRequests::handleRequestUsingNamedLimiter). When both
+     * limbs are disabled the sole none() is the correct unlimited signal.
+     */
+    private function writeLimiter(string $prefix, string $perMemberKey, string $perIpKey): Closure
+    {
+        return function (Request $request) use ($prefix, $perMemberKey, $perIpKey): array|Limit {
+            $perMember = max(0, (int) config("openpne.throttle.{$perMemberKey}"));
+            $perIp = max(0, (int) config("openpne.throttle.{$perIpKey}"));
+
+            $limits = [];
+            if ($perMember > 0) {
+                $limits[] = Limit::perMinute($perMember)->by($prefix.'|'.($request->user()?->getKey() ?? $request->ip()));
+            }
+            if ($perIp > 0) {
+                $limits[] = Limit::perMinute($perIp)->by($prefix.'-ip|'.$request->ip());
+            }
+
+            return $limits === [] ? Limit::none() : $limits;
+        };
     }
 }

@@ -162,6 +162,25 @@ ambiguous (unknown account, or one already on the default cost). The signal
 disappears on the account's first login and is accepted for the migration
 window.
 
+## Write rate limits
+
+Content-posting and mail-triggering member writes carry named per-minute limiters
+([`AppServiceProvider`](../../app/Providers/AppServiceProvider.php)), attached per route in
+`routes/web.php` and pinned by `WriteThrottleRoutesTest`. Each has two limbs: a per-member cap
+(primary) and a looser per-IP cap that bounds multi-account abuse from one address.
+
+| Limiter | Default (member / IP per min) | Key shape | Routes |
+|---|---|---|---|
+| `posting` | 30 / 60 | member id / client IP | diary, community topic and event create + update, their comment posts, timeline post + reply (11) |
+| `message-send` | 10 / 30 | member id / client IP | message compose send, draft-edit send (2) |
+| `friend-request` | 15 / 40 | member id / client IP | friend link request, accept (2) |
+| `community-join` | 15 / 40 | member id / client IP | community join, member approve, member decline (3) |
+
+The defaults are deliberately loose: tuning waits until the security event log gives 429
+observability. Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist for shared-NAT /
+proxy deployments where the per-IP limb should be relaxed or turned off. A throttled request renders
+the framework default 429 page for now (no custom surface).
+
 ## Response headers
 
 [`SecurityHeaders`](../../app/Http/Middleware/SecurityHeaders.php) sets the
