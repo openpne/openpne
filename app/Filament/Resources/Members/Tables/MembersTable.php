@@ -2,11 +2,11 @@
 
 namespace App\Filament\Resources\Members\Tables;
 
-use App\Auth\SessionRevocation;
+use App\Features\Member\Actions\AllowMemberLogin;
+use App\Features\Member\Actions\RejectMemberLogin;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Filament\Resources\Members\MemberResource;
 use App\Models\Member;
-use App\Support\SecurityLog;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
@@ -15,7 +15,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\DB;
 
 class MembersTable
 {
@@ -86,20 +85,7 @@ class MembersTable
                 }
             })
             ->action(function (Member $record): void {
-                // One transaction: the flag only blocks the NEXT login, so a frozen member's
-                // live sessions and remember-me cookies must die with it — a ban that set the
-                // flag but failed the revocation would look complete while the member stays
-                // signed in.
-                DB::transaction(function () use ($record): void {
-                    // Direct assignment: is_login_rejected is outside the model's mass-assignable set.
-                    $record->is_login_rejected = true;
-                    $record->save();
-                    SessionRevocation::revokeMember($record);
-                });
-                SecurityLog::event('member.banned', [
-                    'member_id' => $record->getKey(),
-                    'admin_username' => auth('admin')->user()?->username,
-                ]);
+                app(RejectMemberLogin::class)($record);
                 Notification::make()
                     ->title(__('The member can no longer log in'))
                     ->success()
@@ -116,12 +102,7 @@ class MembersTable
             ->requiresConfirmation()
             ->visible(fn (Member $record): bool => (bool) $record->is_login_rejected)
             ->action(function (Member $record): void {
-                $record->is_login_rejected = false;
-                $record->save();
-                SecurityLog::event('member.unbanned', [
-                    'member_id' => $record->getKey(),
-                    'admin_username' => auth('admin')->user()?->username,
-                ]);
+                app(AllowMemberLogin::class)($record);
                 Notification::make()
                     ->title(__('The member can log in again'))
                     ->success()
