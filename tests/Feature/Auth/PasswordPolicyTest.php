@@ -30,7 +30,7 @@ class PasswordPolicyTest extends TestCase
     public function test_the_default_policy_bounds_length_in_bytes(): void
     {
         $this->assertFalse($this->passes('seven77'));
-        $this->assertTrue($this->passes('eight888'));
+        $this->assertTrue($this->passes('ztr9kqwm')); // 8 chars, not on the common-password blocklist
         $this->assertTrue($this->passes(str_repeat('a', 72)));
         $this->assertFalse($this->passes(str_repeat('a', 73)));
 

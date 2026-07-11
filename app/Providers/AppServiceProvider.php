@@ -24,6 +24,8 @@ use App\Observers\MemberObserver;
 use App\Policies\FilePolicy;
 use App\Policies\MemberPolicy;
 use App\Rules\MaxBytes;
+use App\Rules\NotCommonPassword;
+use App\Rules\NotContextWord;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
 use App\Translation\TermTranslator;
@@ -100,11 +102,20 @@ class AppServiceProvider extends ServiceProvider
         // wrapper to a plain bcrypt (see LegacyEloquentUserProvider).
         Auth::provider('legacy-eloquent', fn ($app, array $config): LegacyEloquentUserProvider => new LegacyEloquentUserProvider($app['hash'], $config['model']));
 
-        // The single password policy — every path validates via Password::default(), so
-        // this is the one place the bounds live. Min 8 and the 72-BYTE cap (bcrypt reads
-        // nothing past its 72nd input byte; characters would under-count multibyte) are
-        // documented with the standards rationale in docs/internals/security.md.
-        Password::defaults(fn (): Password => Password::min(8)->rules([new MaxBytes(72)]));
+        // The single password policy — every path validates via Password::default(), so this is the
+        // one place the bounds live. Min 8 and the 72-BYTE cap (bcrypt reads nothing past its 72nd
+        // input byte; characters would under-count multibyte) always apply; the guessability checks
+        // (common-password blocklist + context words) are gated by OPENPNE_PASSWORD_BLOCKLIST so a dev
+        // environment can opt out. Rationale and standards in docs/internals/security.md.
+        Password::defaults(function (): Password {
+            $rules = [new MaxBytes(72)];
+            if (config('openpne.password.blocklist')) {
+                $rules[] = new NotCommonPassword;
+                $rules[] = new NotContextWord;
+            }
+
+            return Password::min(8)->rules($rules);
+        });
 
         // Stable morph alias so a file's owner is stored as `member`, not the FQCN;
         // FilePolicy resolves the owning entity through this map.

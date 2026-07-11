@@ -25,7 +25,9 @@ class ResetMemberPassword implements ResetsUserPasswords
      */
     public function reset(Member $member, array $input): void
     {
-        Validator::make($input, [
+        // Supply the member's name (email is already in $input) so the context-word rule can reject a
+        // password that embeds either.
+        Validator::make(['name' => $member->name] + $input, [
             'password' => $this->passwordRules(),
         ])->validate();
 
