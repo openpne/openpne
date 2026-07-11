@@ -73,10 +73,11 @@ class WriteThrottleBehaviorTest extends TestCase
     }
 
     /**
-     * Post as a member on a clean session so AuthenticateSession (an earlier middleware than the
-     * throttle) never faults on a password hash left by a previous member — that would 302 to login
-     * before the throttle runs. The rate-limiter state lives in the cache store, so flushing the
-     * session does not reset the counters under test.
+     * Post as a member on a clean session so AuthenticateSession never faults on a password hash
+     * left by a previous member — its 302-to-login would replace the response this test asserts on
+     * (ThrottleRequests runs first, so the hit still counts, but the status would lie). The
+     * rate-limiter state lives in the cache store, so flushing the session does not reset the
+     * counters under test.
      */
     private function postAs(Member $member, string $uri): TestResponse
     {
