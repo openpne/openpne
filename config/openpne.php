@@ -155,6 +155,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Write-action throttling
+    |--------------------------------------------------------------------------
+    |
+    | Per-minute caps on the content-posting and mail-triggering member writes,
+    | applied by the named limiters in App\Providers\AppServiceProvider. Each
+    | limiter has two limbs: the per-member cap is the primary control; the
+    | per-IP cap (set 2-3x looser) bounds multi-account abuse from one address.
+    | Any limb set to 0 is disabled — set the per-IP limb to 0 behind a shared
+    | NAT / proxy where many members share an address. The values are
+    | deliberately loose: tuning waits until the security event log surfaces 429s.
+    |
+    */
+
+    'throttle' => [
+        'posting' => (int) env('OPENPNE_THROTTLE_POSTING', 30),
+        'posting_ip' => (int) env('OPENPNE_THROTTLE_POSTING_IP', 60),
+        'message' => (int) env('OPENPNE_THROTTLE_MESSAGE', 10),
+        'message_ip' => (int) env('OPENPNE_THROTTLE_MESSAGE_IP', 30),
+        'friend' => (int) env('OPENPNE_THROTTLE_FRIEND', 15),
+        'friend_ip' => (int) env('OPENPNE_THROTTLE_FRIEND_IP', 40),
+        'community' => (int) env('OPENPNE_THROTTLE_COMMUNITY', 15),
+        'community_ip' => (int) env('OPENPNE_THROTTLE_COMMUNITY_IP', 40),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | CAPTCHA
     |--------------------------------------------------------------------------
     |
