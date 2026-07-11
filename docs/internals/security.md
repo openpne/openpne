@@ -130,6 +130,23 @@ admin panel forms, the admin CLI commands) validates through `Password::default(
   (`App\Rules\MaxBytes`).
 - **No composition rules** (required symbol/case classes) — NIST SP 800-63B-4
   says verifiers SHALL NOT impose them.
+- **Commonly-used-password blocklist** — NIST SP 800-63B-4 §3.1.1.2 SHALL,
+  ASVS 5.0 6.2.4 (L1). Rejected case-insensitively against a bundled offline
+  list (no external service): a SecLists-derived top 100,000 of entries ≥8
+  characters, provenance and regeneration in
+  [`resources/data/README.md`](../../resources/data/README.md)
+  (`App\Rules\NotCommonPassword`).
+- **Context words** — ASVS 5.0 6.2.4. Rejects a password that contains, case-
+  insensitively, a ≥4-character subtoken of the site name, the member's name or
+  email local part, or the admin username (`App\Rules\NotContextWord`). Context
+  is resolved best-effort — anything unresolvable (e.g. no schema mid-install)
+  is skipped rather than blocking. Accepted trade-off: a member whose name is a
+  common ≥4-character word cannot embed it in a password.
+
+Both guessability checks are gated by `OPENPNE_PASSWORD_BLOCKLIST` (default on);
+disabling it drops only these two — the minimum length and the byte cap always
+apply. The blocklist is never fetched at build or in CI; its regeneration policy
+lives with the data (see the README above).
 
 Login response time does not reveal whether an account exists: every
 credential rejection that skips hash verification (unknown email/username,
