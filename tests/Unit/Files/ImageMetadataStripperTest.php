@@ -138,6 +138,39 @@ class ImageMetadataStripperTest extends TestCase
         $this->assertSame($gif, $this->stripper->strip($gif, 'image/gif'));
     }
 
+    public function test_webp_rejects_chunks_past_the_declared_riff_size(): void
+    {
+        // A chunk appended after the declared RIFF payload must not be walked and promoted into the
+        // recomputed output — that would carry metadata the strip claims to remove.
+        $input = $this->fixture('webp-vp8x-meta.webp').'JUNK'."\x04\x00\x00\x00".'riff-trailer-LEAK';
+
+        $this->expectException(ImageMetadataStripException::class);
+        $this->stripper->strip($input, 'image/webp');
+    }
+
+    public function test_jpeg_drops_an_overlong_app14(): void
+    {
+        // Only the canonical fixed-length Adobe APP14 survives; a padded "Adobe…" payload is a
+        // metadata channel and must be dropped, not kept on the prefix match alone.
+        $payload = 'Adobe'.'app14-pad-LEAK';
+        $app14 = "\xFF\xEE".pack('n', strlen($payload) + 2).$payload;
+        $soi = substr($this->fixture('jpeg-gps-orientation.jpg'), 0, 2);
+        $input = $soi.$app14.substr($this->fixture('jpeg-gps-orientation.jpg'), 2);
+
+        $out = $this->stripper->strip($input, 'image/jpeg');
+
+        $this->assertStringNotContainsString('app14-pad-LEAK', $out);
+        $this->assertNotFalse(getimagesizefromstring($out));
+    }
+
+    public function test_png_rejects_trailing_data_after_iend(): void
+    {
+        $input = $this->fixture('png-meta.png').'png-trailer-LEAK';
+
+        $this->expectException(ImageMetadataStripException::class);
+        $this->stripper->strip($input, 'image/png');
+    }
+
     public function test_garbage_input_throws(): void
     {
         $this->expectException(ImageMetadataStripException::class);

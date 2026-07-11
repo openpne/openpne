@@ -109,7 +109,9 @@ class ImageMetadataStripper
             return match ($marker) {
                 0xE0 => str_starts_with($payload, "JFIF\x00") || str_starts_with($payload, "JFXX\x00"),
                 0xE2 => str_starts_with($payload, "ICC_PROFILE\x00"),
-                0xEE => str_starts_with($payload, 'Adobe'),
+                // Adobe APP14 is a fixed 12-byte record ("Adobe" + version + 2 flag words + transform);
+                // match the exact shape, not just the prefix, so trailing bytes can't ride in a kept segment.
+                0xEE => strlen($payload) === 12 && str_starts_with($payload, 'Adobe'),
                 default => false,
             };
         }
@@ -273,6 +275,11 @@ class ImageMetadataStripper
             }
 
             if ($type === 'IEND') {
+                // IEND terminates the stream; trailing bytes are non-standard (fail-closed).
+                if ($chunkEnd !== $length) {
+                    throw new ImageMetadataStripException('PNG: trailing data after IEND.');
+                }
+
                 return $out;
             }
             $i = $chunkEnd;
@@ -292,6 +299,16 @@ class ImageMetadataStripper
         if ($length < 12 || substr($bytes, 0, 4) !== 'RIFF' || substr($bytes, 8, 4) !== 'WEBP') {
             throw new ImageMetadataStripException('WebP: not a RIFF/WEBP container.');
         }
+
+        // Bound the walk to the declared RIFF payload, and reject anything past it (beyond one
+        // odd-size pad byte). Otherwise trailing chunks outside the declared length would be walked
+        // and promoted into the recomputed output — a metadata channel the strip must not carry.
+        $declared = $this->uint32($bytes, 4, true);
+        $end = 8 + $declared;
+        if ($end > $length || $length > $end + ($declared & 1)) {
+            throw new ImageMetadataStripException('WebP: RIFF size does not match the file length.');
+        }
+        $length = $end;
 
         $body = '';
         $i = 12;
