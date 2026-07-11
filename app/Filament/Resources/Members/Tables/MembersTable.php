@@ -6,6 +6,7 @@ use App\Auth\SessionRevocation;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Filament\Resources\Members\MemberResource;
 use App\Models\Member;
+use App\Support\SecurityLog;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
@@ -95,6 +96,10 @@ class MembersTable
                     $record->save();
                     SessionRevocation::revokeMember($record);
                 });
+                SecurityLog::event('member.banned', [
+                    'member_id' => $record->getKey(),
+                    'admin_username' => auth('admin')->user()?->username,
+                ]);
                 Notification::make()
                     ->title(__('The member can no longer log in'))
                     ->success()
@@ -113,6 +118,10 @@ class MembersTable
             ->action(function (Member $record): void {
                 $record->is_login_rejected = false;
                 $record->save();
+                SecurityLog::event('member.unbanned', [
+                    'member_id' => $record->getKey(),
+                    'admin_username' => auth('admin')->user()?->username,
+                ]);
                 Notification::make()
                     ->title(__('The member can log in again'))
                     ->success()

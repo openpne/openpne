@@ -13,6 +13,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
 /**
@@ -23,7 +24,7 @@ use Tests\TestCase;
  */
 class AdminMfaSessionRevocationTest extends TestCase
 {
-    use RefreshDatabase;
+    use CapturesSecurityLog, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -54,38 +55,69 @@ class AdminMfaSessionRevocationTest extends TestCase
 
     public function test_enabling_mfa_revokes_other_admin_sessions(): void
     {
-        $this->assertFactorChangeRevokes('setUpAppAuthentication');
+        $admin = $this->adminWithSessions();
+
+        // The decorator's hooks compare persisted state around the action body, so the body's
+        // durable effect is simulated between callBefore and callAfter (the modal/effect itself
+        // is Filament's; the revocation and the log are ours).
+        $action = $this->action('setUpAppAuthentication');
+        $action->callBefore();
+        $admin->saveAppAuthenticationSecret(AdminAppAuthentication::make()->generateSecret());
+        $action->callAfter();
+
+        $this->assertDatabaseHas('admin_sessions', ['id' => session()->getId()]);
+        $this->assertDatabaseMissing('admin_sessions', ['id' => 'other-device']);
     }
 
     public function test_disabling_mfa_revokes_other_admin_sessions(): void
     {
-        $this->assertFactorChangeRevokes('disableAppAuthentication');
+        $admin = $this->adminWithSessions();
+        $admin->saveAppAuthenticationSecret(AdminAppAuthentication::make()->generateSecret());
+
+        $action = $this->action('disableAppAuthentication');
+        $action->callBefore();
+        $admin->saveAppAuthenticationSecret(null);
+        $action->callAfter();
+
+        $this->assertDatabaseHas('admin_sessions', ['id' => session()->getId()]);
+        $this->assertDatabaseMissing('admin_sessions', ['id' => 'other-device']);
     }
 
-    private function assertFactorChangeRevokes(string $actionName): void
+    public function test_a_no_op_set_up_neither_revokes_nor_logs(): void
+    {
+        // Filament runs after() even when the vendor action body declines to save (e.g. set-up
+        // args minted for a different admin) — the decorator must treat that as a no-op.
+        $this->adminWithSessions();
+        $this->captureSecurityLog();
+
+        $action = $this->action('setUpAppAuthentication');
+        $action->callBefore();
+        $action->callAfter();
+
+        $this->assertDatabaseHas('admin_sessions', ['id' => 'other-device']);
+        $this->assertSame([], $this->securityRecords('mfa.enabled'));
+    }
+
+    public function test_regenerating_recovery_codes_does_not_revoke(): void
+    {
+        $admin = $this->adminWithSessions();
+
+        $action = $this->action('regenerateAppAuthenticationRecoveryCodes');
+        $action->callBefore();
+        $admin->saveAppAuthenticationRecoveryCodes(['one', 'two']);
+        $action->callAfter();
+
+        $this->assertDatabaseHas('admin_sessions', ['id' => 'other-device']);
+    }
+
+    private function adminWithSessions(): AdminUser
     {
         $admin = AdminUser::factory()->create();
         $this->actingAs($admin, 'admin');
         $this->seedAdminSession($admin, session()->getId());
         $this->seedAdminSession($admin, 'other-device');
 
-        // Invoke only the after-hook our decorator added (the action's own modal/effect is
-        // Filament's; the revocation is ours).
-        $this->action($actionName)->callAfter();
-
-        $this->assertDatabaseHas('admin_sessions', ['id' => session()->getId()]);
-        $this->assertDatabaseMissing('admin_sessions', ['id' => 'other-device']);
-    }
-
-    public function test_regenerating_recovery_codes_does_not_revoke(): void
-    {
-        $admin = AdminUser::factory()->create();
-        $this->actingAs($admin, 'admin');
-        $this->seedAdminSession($admin, 'other-device');
-
-        $this->action('regenerateAppAuthenticationRecoveryCodes')->callAfter();
-
-        $this->assertDatabaseHas('admin_sessions', ['id' => 'other-device']);
+        return $admin;
     }
 
     public function test_the_security_page_renders(): void

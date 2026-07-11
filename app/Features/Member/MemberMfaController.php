@@ -11,6 +11,7 @@ use App\Http\Requests\Member\MfaManagementRequest;
 use App\Models\Member;
 use App\Notifications\Member\MfaDisabledNotification;
 use App\Notifications\Member\MfaEnabledNotification;
+use App\Support\SecurityLog;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -86,7 +87,9 @@ class MemberMfaController extends Controller
         MfaSetupReauth::clear($request->session());
         $request->session()->flash(MemberMfaSerializer::SHOW_RECOVERY_CODES, true);
 
-        // After the factor is live: a security alert to the member's own address (takeover detection).
+        // The factor is live: log first (enqueueing the alert is fallible and must not suppress the
+        // audit record), then the security alert to the member's own address (takeover detection).
+        SecurityLog::event('mfa.enabled', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
         $viewer->notify(new MfaEnabledNotification($viewer->locale ?? app()->getLocale()));
 
         return $this->mfaRedirect($request, __('Two-factor authentication is now enabled.'));
@@ -124,7 +127,9 @@ class MemberMfaController extends Controller
             return $this->mfaRedirect($request);
         }
 
-        // The removed factor was live: a security alert to the member's own address.
+        // The removed factor was live: log first (fallible enqueue must not suppress the audit
+        // record), then the security alert to the member's own address.
+        SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
         $viewer->notify(new MfaDisabledNotification($viewer->locale ?? app()->getLocale()));
 
         $status = __('Two-factor authentication has been disabled.');
@@ -144,6 +149,7 @@ class MemberMfaController extends Controller
 
         // No session revocation: the TOTP factor is unchanged (admin parity).
         $generate($viewer);
+        SecurityLog::event('mfa.recovery_codes_regenerated', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
 
         $request->session()->flash(MemberMfaSerializer::SHOW_RECOVERY_CODES, true);
 

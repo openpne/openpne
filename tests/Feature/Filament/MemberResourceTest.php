@@ -15,18 +15,24 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
 class MemberResourceTest extends TestCase
 {
+    use CapturesSecurityLog;
     use RefreshDatabase;
+
+    private AdminUser $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         Filament::setCurrentPanel('admin');
-        $this->actingAs(AdminUser::factory()->create(), 'admin');
+        $this->admin = AdminUser::factory()->create();
+        $this->actingAs($this->admin, 'admin');
+        $this->captureSecurityLog();
 
         // Reserve id 1 as the un-withdrawable primary member so factory subjects below get id >= 2.
         Member::factory()->create(['id' => 1]);
@@ -66,6 +72,10 @@ class MemberResourceTest extends TestCase
 
         $member->refresh();
         $this->assertTrue($member->is_login_rejected);
+
+        $context = $this->assertOneSecurityEvent('member.banned');
+        $this->assertSame((string) $member->getKey(), $context['member_id']);
+        $this->assertSame($this->admin->username, $context['admin_username']);
     }
 
     public function test_ban_revokes_live_sessions_and_remember_tokens(): void

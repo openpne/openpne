@@ -6,6 +6,7 @@ use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Notifications\Member\EmailChangeNoticeNotification;
+use App\Support\SecurityLog;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
@@ -40,6 +41,14 @@ class RequestEmailChange
             ['member_id'],
             ['new_email', 'token', 'cancel_token', 'created_at'],
         );
+
+        // The pending change is durable; log before the fallible notification sends. The new address
+        // is the subject of the change, so it is logged (contrast: passwords never are).
+        SecurityLog::event('email.change_requested', [
+            'guard' => 'member',
+            'member_id' => $member->getKey(),
+            'new_email' => $newEmail,
+        ]);
 
         Notification::route('mail', $newEmail)->notify(
             new EmailChangeConfirmationNotification($raw, (int) $member->getKey(), app()->getLocale()),

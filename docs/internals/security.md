@@ -176,10 +176,15 @@ Content-posting and mail-triggering member writes carry named per-minute limiter
 | `friend-request` | 15 / 40 | member id / client IP | friend link request, accept (2) |
 | `community-join` | 15 / 40 | member id / client IP | community join, member approve, member decline (3) |
 
-The defaults are deliberately loose: tuning waits until the security event log gives 429
-observability. Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist for shared-NAT /
+The defaults are deliberately loose: tuning draws on the 429 observability the security event log
+now provides — every throttled request logs a `throttle.hit` event (route + member, never the
+limiter key). Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist for shared-NAT /
 proxy deployments where the per-IP limb should be relaxed or turned off. A throttled request renders
 the framework default 429 page for now (no custom surface).
+
+Authentication and credential-mutation events (login, MFA, password/email change, ban, withdrawal)
+are recorded on a dedicated `security` log channel — the event vocabulary, PII/injection contract,
+and retention are in [logging](logging.md).
 
 ## Response headers
 
