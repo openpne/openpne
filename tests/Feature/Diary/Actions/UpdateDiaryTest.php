@@ -6,6 +6,7 @@ use App\Features\Diary\Actions\UpdateDiary;
 use App\Features\Diary\Data\DiaryFormData;
 use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Exceptions\DiaryActionFailure;
+use App\Files\ImageEdit;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Visibility;
@@ -22,7 +23,7 @@ class UpdateDiaryTest extends TestCase
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
         $data = new DiaryFormData('New title', 'New body', Visibility::Private);
 
-        app(UpdateDiary::class)($owner, $diary, $data);
+        app(UpdateDiary::class)($owner, $diary, $data, ImageEdit::none());
 
         $this->assertDatabaseHas('diaries', [
             'id' => $diary->getKey(),
@@ -41,7 +42,7 @@ class UpdateDiaryTest extends TestCase
         $data = new DiaryFormData('Hacked', 'body', Visibility::Members);
 
         try {
-            app(UpdateDiary::class)($other, $diary, $data);
+            app(UpdateDiary::class)($other, $diary, $data, ImageEdit::none());
             $this->fail('Expected DiaryActionException');
         } catch (DiaryActionException $e) {
             $this->assertSame(DiaryActionFailure::NotAuthor, $e->reason);

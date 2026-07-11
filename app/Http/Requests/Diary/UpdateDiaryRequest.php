@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Diary;
 
+use App\Files\ImageEdit;
 use App\Files\PostImages;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Diary;
@@ -38,11 +39,7 @@ class UpdateDiaryRequest extends StoreDiaryRequest
         ];
     }
 
-    /**
-     * Cross-field cap: the images kept (current minus the ones being removed) plus the new uploads
-     * may not exceed MAX_IMAGES. remove_images ids that aren't this diary's are ignored, so a bogus
-     * id can't inflate the kept count downwards.
-     */
+    /** Cross-field cap: the images kept after the edit plus the new uploads may not exceed MAX_IMAGES. */
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
@@ -51,13 +48,7 @@ class UpdateDiaryRequest extends StoreDiaryRequest
                 return;
             }
 
-            $currentIds = $diary->images()->pluck('id')->all();
-            // array_unique first: a crafted remove_images=[id, id] must not count one image twice
-            // and so undercount what is kept, slipping the cap.
-            $removing = array_unique(array_intersect(array_map('intval', (array) $this->input('remove_images', [])), $currentIds));
-            $kept = count($currentIds) - count($removing);
-
-            if ($kept + count($this->file('images', [])) > PostImages::MAX_IMAGES) {
+            if (ImageEdit::fromRequest($this)->exceedsCap($diary->images()->pluck('id')->all())) {
                 $validator->errors()->add('images', __('A %diary% can have at most :max images.', ['max' => PostImages::MAX_IMAGES]));
             }
         });

@@ -1,7 +1,7 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
+import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -63,22 +63,7 @@ export default function DiaryEdit() {
                         </Select>
                     </Field>
 
-                    {diary.images.length > 0 && (
-                        <fieldset className="space-y-2">
-                            <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
-                            <ul className="flex flex-wrap gap-3">
-                                {diary.images.map((image, i) => (
-                                    <li key={image.id} className="space-y-1 text-center">
-                                        <img src={image.thumbnailUrl} alt="" className="size-24 rounded-md object-cover" />
-                                        <label className="flex items-center justify-center gap-1 text-sm text-foreground">
-                                            <Checkbox aria-label={`${t('Delete')} ${t('Image')} ${i + 1}`} onChange={(e) => toggleRemove(image.id, e.target.checked)} />
-                                            {t('Delete')}
-                                        </label>
-                                    </li>
-                                ))}
-                            </ul>
-                        </fieldset>
-                    )}
+                    <CurrentImagesField images={diary.images} removedIds={data.remove_images} onToggle={toggleRemove} />
 
                     <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 
