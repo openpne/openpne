@@ -13,9 +13,9 @@ use Throwable;
 /**
  * Rejects a password that embeds a context word an attacker knowing the target would try first: the
  * site name, the member's own name or email local part, or the admin username (ASVS 5.0 6.2.4).
- * Context is resolved best-effort — any failure (an unresolved guard, no DB schema for sns_name()
- * mid-install) skips the check rather than blocking, since a false reject on unresolved context is
- * worse than a missed word. Accepted trade-off: a member whose name is a common short word cannot
+ * Context is resolved best-effort per source — a failing source (an unresolved guard, no DB schema
+ * for sns_name() mid-install) skips only itself, never blocks, and never discards the tokens the
+ * other sources yielded. Accepted trade-off: a member whose name is a common short word cannot
  * embed it in a password.
  */
 class NotContextWord implements DataAwareRule, ValidationRule
@@ -53,24 +53,25 @@ class NotContextWord implements DataAwareRule, ValidationRule
     }
 
     /**
-     * Raw context tokens from the three layers. The whole gathering is guarded: any throwable yields
-     * no tokens, so the check silently passes rather than blocking on context it could not resolve.
+     * Raw context tokens from the three layers. Each source that reaches beyond the data at hand
+     * (guards, the DB-backed sns_name()) is guarded on its own: one failing source must not discard
+     * the tokens already gathered from the validation data.
      *
      * @return list<string>
      */
     private function tokens(): array
     {
-        try {
-            $tokens = [];
+        $tokens = [];
 
-            foreach (Arr::dot($this->data) as $key => $val) {
-                $leaf = Str::afterLast((string) $key, '.');
-                if (! is_string($val) || $val === '' || ! in_array($leaf, self::CONTEXT_KEYS, true)) {
-                    continue;
-                }
-                $tokens[] = $leaf === 'email' ? Str::before($val, '@') : $val;
+        foreach (Arr::dot($this->data) as $key => $val) {
+            $leaf = Str::afterLast((string) $key, '.');
+            if (! is_string($val) || $val === '' || ! in_array($leaf, self::CONTEXT_KEYS, true)) {
+                continue;
             }
+            $tokens[] = $leaf === 'email' ? Str::before($val, '@') : $val;
+        }
 
+        try {
             if (($member = Auth::guard('member')->user()) !== null) {
                 $tokens[] = Str::before((string) $member->email, '@');
                 $tokens[] = (string) $member->name;
@@ -79,13 +80,15 @@ class NotContextWord implements DataAwareRule, ValidationRule
             if (($admin = Auth::guard('admin')->user()) !== null) {
                 $tokens[] = (string) $admin->username;
             }
-
-            $tokens[] = sns_name();
-
-            return array_values(array_filter($tokens, static fn (string $t): bool => $t !== ''));
         } catch (Throwable) {
-            return [];
         }
+
+        try {
+            $tokens[] = sns_name();
+        } catch (Throwable) {
+        }
+
+        return array_values(array_filter($tokens, static fn (string $t): bool => $t !== ''));
     }
 
     /**

@@ -145,15 +145,16 @@ class PasswordBlocklistTest extends TestCase
         $this->assertDatabaseMissing('admin_users', ['username' => 'takeshi']);
     }
 
-    public function test_context_resolution_failure_does_not_block(): void
+    public function test_a_failing_context_source_skips_only_itself(): void
     {
-        // sns_name() throwing (e.g. no schema mid-install) must skip context checking, not reject: the
-        // whole gathering is guarded, so even a data context word passes.
+        // sns_name() throwing (e.g. no schema mid-install) skips only the site-name source: it never
+        // blocks outright, and context already at hand in the validation data still applies.
         $this->mock(SnsSettingService::class)
             ->shouldReceive('get')
             ->andThrow(new RuntimeException('no schema'));
 
-        $this->assertTrue($this->passes('kobayashi-99', ['name' => 'Kobayashi']));
+        $this->assertContains($this->contextMessage(), $this->passwordErrors('kobayashi-99', ['name' => 'Kobayashi']));
+        $this->assertTrue($this->passes('plum-vivid-canyon-42', ['name' => 'Kobayashi']));
     }
 
     public function test_the_real_blocklist_rejects_a_known_password_end_to_end(): void
