@@ -11,6 +11,7 @@ use App\Http\Requests\Member\MfaManagementRequest;
 use App\Models\Member;
 use App\Notifications\Member\MfaDisabledNotification;
 use App\Notifications\Member\MfaEnabledNotification;
+use App\Support\SecurityLog;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -88,6 +89,7 @@ class MemberMfaController extends Controller
 
         // After the factor is live: a security alert to the member's own address (takeover detection).
         $viewer->notify(new MfaEnabledNotification($viewer->locale ?? app()->getLocale()));
+        SecurityLog::event('mfa.enabled', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
 
         return $this->mfaRedirect($request, __('Two-factor authentication is now enabled.'));
     }
@@ -126,6 +128,7 @@ class MemberMfaController extends Controller
 
         // The removed factor was live: a security alert to the member's own address.
         $viewer->notify(new MfaDisabledNotification($viewer->locale ?? app()->getLocale()));
+        SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
 
         $status = __('Two-factor authentication has been disabled.');
         if (SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC) {
@@ -144,6 +147,7 @@ class MemberMfaController extends Controller
 
         // No session revocation: the TOTP factor is unchanged (admin parity).
         $generate($viewer);
+        SecurityLog::event('mfa.recovery_codes_regenerated', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
 
         $request->session()->flash(MemberMfaSerializer::SHOW_RECOVERY_CODES, true);
 

@@ -25,6 +25,7 @@ use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Support\PreferenceKey;
+use App\Support\SecurityLog;
 use App\Support\Surface;
 use App\Support\SurfaceResolver;
 use Illuminate\Database\QueryException;
@@ -179,13 +180,23 @@ class MemberConfigController extends Controller
 
         // Security alert to the member's own address (takeover detection).
         $viewer->notify(new PasswordChangedNotification($viewer->locale ?? app()->getLocale()));
+        SecurityLog::event('password.changed', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
 
         return $this->savedRedirect($request, MemberConfigCategory::Password);
     }
 
     public function updateEmail(RequestEmailChangeRequest $request, RequestEmailChange $requestChange): RedirectResponse
     {
-        $requestChange($this->viewer(), $request->validated('new_email'));
+        $viewer = $this->viewer();
+        $newEmail = (string) $request->validated('new_email');
+        $requestChange($viewer, $newEmail);
+
+        // The new address is the subject of the change, so it is logged (contrast: passwords never are).
+        SecurityLog::event('email.change_requested', [
+            'guard' => 'member',
+            'member_id' => $viewer->getKey(),
+            'new_email' => $newEmail,
+        ]);
 
         // members.email is unchanged until confirmation; tell the member to open the link just mailed.
         $params = SurfaceResolver::resolve($request, 'member') === SurfaceResolver::CLASSIC
@@ -248,6 +259,9 @@ class MemberConfigController extends Controller
             return redirect()->route('login')->with('status', __('That email address is no longer available.'));
         }
 
+        // The login identifier before the swap; both addresses are the subject of the change.
+        $oldEmail = Member::whereKey($pending->member_id)->value('email');
+
         try {
             $member = $confirm($pending);
         } catch (QueryException) {
@@ -261,6 +275,13 @@ class MemberConfigController extends Controller
         if ($member === null) {
             return redirect()->route('login')->with('status', __('This email-change link is no longer valid.'));
         }
+
+        SecurityLog::event('email.changed', [
+            'guard' => 'member',
+            'member_id' => $member->getKey(),
+            'old_email' => $oldEmail,
+            'new_email' => $member->email,
+        ]);
 
         // OWASP: changing the login identifier should drop the member's other devices. remember_token
         // is rotated in the commit (kills remember-me cookies everywhere); the session purge is
@@ -312,6 +333,11 @@ class MemberConfigController extends Controller
         $pending = $this->pendingEmailChangeByCancelToken($token);
         if ($pending !== null) {
             $cancel($pending);
+            SecurityLog::event('email.change_cancelled', [
+                'guard' => 'member',
+                'member_id' => $pending->member_id,
+                'new_email' => $pending->new_email,
+            ]);
         }
 
         return redirect()->route('login')->with('status', __('The email-address change has been cancelled.'));

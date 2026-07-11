@@ -4,10 +4,13 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\UseAdminSessionStore;
+use App\Support\SecurityLog;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -56,7 +59,23 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => route('home'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Give the security log 429 observability (rate-limit tuning depends on it). A
+        // ThrottleRequestsException is an HttpException, and the handler ignores *every*
+        // HttpException by default (internalDontReport), so un-ignoring only the subclass does
+        // not lift the parent's ignore — the parent must be un-ignored, then re-narrowed here.
+        // ->stop() fires for every HttpException: 429s reach the security channel, and the rest
+        // stay out of the default channel exactly as before (they were already ignored). The
+        // limiter key is deliberately never logged — login keys embed the attempted email; ip and
+        // user_agent come from SecurityLog's request auto-attach. See docs/internals/logging.md.
+        $exceptions->stopIgnoring(HttpException::class);
+        $exceptions->report(function (HttpException $e): void {
+            if ($e instanceof ThrottleRequestsException) {
+                SecurityLog::event('throttle.hit', [
+                    'route' => request()->route()?->getName(),
+                    'member_id' => request()->user()?->getKey(),
+                ]);
+            }
+        })->stop();
     })->create();
 
 // Let the env file and storage directory be relocated to deployer-chosen paths

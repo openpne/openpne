@@ -11,6 +11,7 @@ use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -86,6 +87,15 @@ class WithdrawMember
         $member->delete();
 
         MemberWithdrawn::dispatch($memberId, $name, $email, $locale);
+
+        // Logged here once so it covers both callers (self-withdrawal and the Filament DeleteAction).
+        // The self path has already logged the member out, so only an admin remains on a guard here.
+        $adminUsername = auth('admin')->user()?->username;
+        SecurityLog::event('member.withdrawn', [
+            'member_id' => $memberId,
+            'actor' => $adminUsername === null ? 'self' : 'admin',
+            'admin_username' => $adminUsername,
+        ]);
     }
 
     /**

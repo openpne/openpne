@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
 class MemberConfigTest extends TestCase
 {
+    use CapturesSecurityLog;
     use RefreshDatabase;
 
     public function test_a_guest_is_redirected_to_login(): void
@@ -662,6 +664,7 @@ class MemberConfigTest extends TestCase
     public function test_requesting_an_email_change_stores_a_pending_row_and_mails_both_addresses(): void
     {
         Notification::fake();
+        $this->captureSecurityLog();
         $member = Member::factory()->create();
         $old = $member->email;
 
@@ -669,6 +672,9 @@ class MemberConfigTest extends TestCase
             'password' => 'password',
             'new_email' => 'new@example.com',
         ])->assertRedirect(route('member.config', ['category' => 'email']));
+
+        // The new address is the subject of an email change, so it is logged (unlike a password).
+        $this->assertSame('new@example.com', $this->assertOneSecurityEvent('email.change_requested')['new_email']);
 
         $this->assertDatabaseHas('email_change_requests', [
             'member_id' => $member->id, 'new_email' => 'new@example.com',

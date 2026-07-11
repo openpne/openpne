@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Auth\SessionRevocation;
 use App\Models\Member;
 use App\Notifications\Member\MfaDisabledNotification;
+use App\Support\SecurityLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
@@ -47,6 +48,7 @@ class DisableMemberMfaCommand extends Command
 
         if ($wasEnabled) {
             $member->notify(new MfaDisabledNotification($member->locale ?? config('app.locale')));
+            SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $member->getKey(), 'via' => 'cli']);
         }
 
         $this->info("Two-factor authentication for member [{$email}] has been disabled and their sessions revoked.");
