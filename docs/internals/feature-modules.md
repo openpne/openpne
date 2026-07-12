@@ -54,6 +54,9 @@ A **Filament Resource** is an admin presentation adapter, not a shared contract.
   must **not** fork a feature's rules, side effects, or compatibility behavior
   per surface.
 
+Three of these boundary rules are pinned in CI by
+[`FeatureModuleBoundaryTest`](../../tests/Feature/Architecture/FeatureModuleBoundaryTest.php).
+
 The intended call flow:
 
 ```text
