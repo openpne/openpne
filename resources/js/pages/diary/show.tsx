@@ -89,7 +89,7 @@ export default function DiaryShow() {
                         <Link href={`/diary/${previous.id}`} className="group flex min-h-11 min-w-0 flex-1 items-center gap-1.5">
                             <ChevronLeft className="size-4 shrink-0 text-link" aria-hidden />
                             <span className="min-w-0">
-                                <span className="block text-xs text-muted-foreground">{t('Previous %Diary%')}</span>
+                                <span className="block text-xs text-muted-foreground">{t('Older %Diary%')}</span>
                                 <span className="block truncate text-sm font-medium text-link group-hover:underline">{previous.title}</span>
                             </span>
                         </Link>
@@ -99,7 +99,7 @@ export default function DiaryShow() {
                     {next ? (
                         <Link href={`/diary/${next.id}`} className="group flex min-h-11 min-w-0 flex-1 items-center justify-end gap-1.5 text-right">
                             <span className="min-w-0">
-                                <span className="block text-xs text-muted-foreground">{t('Next %Diary%')}</span>
+                                <span className="block text-xs text-muted-foreground">{t('Newer %Diary%')}</span>
                                 <span className="block truncate text-sm font-medium text-link group-hover:underline">{next.title}</span>
                             </span>
                             <ChevronRight className="size-4 shrink-0 text-link" aria-hidden />
