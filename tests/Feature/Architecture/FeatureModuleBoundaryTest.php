@@ -93,7 +93,8 @@ class FeatureModuleBoundaryTest extends TestCase
         $belowBaseline = [];
         foreach ($controllers as $file) {
             $rel = $this->featureRelative($file);
-            $count = substr_count(file_get_contents($file), 'DB::transaction(');
+            // \s* so a formatting variant (`DB::transaction (`) cannot slip past the guard.
+            $count = preg_match_all('/DB::transaction\s*\(/', file_get_contents($file));
             $baseline = self::TRANSACTION_BASELINE[$rel] ?? 0;
 
             if ($count > $baseline) {
