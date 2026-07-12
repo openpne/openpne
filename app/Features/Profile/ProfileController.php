@@ -4,6 +4,7 @@ namespace App\Features\Profile;
 
 use App\Features\Block\BlockLookup;
 use App\Features\Profile\Actions\SaveMemberProfile;
+use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Features\Profile\Queries\EditProfileFields;
 use App\Features\Profile\Queries\ShowProfile;
 use App\Features\Profile\Queries\VisibleAge;
@@ -13,7 +14,6 @@ use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Models\Member;
-use App\Models\Profile;
 use App\Services\GadgetService;
 use App\Support\PreferenceKey;
 use App\Support\SurfaceResolver;
@@ -76,7 +76,7 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function edit(Request $request, EditProfileFields $query): View|InertiaResponse
+    public function edit(Request $request, EditProfileFields $query, BirthdayFieldExists $birthdayExists): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $lang = $this->translationLang();
@@ -89,12 +89,12 @@ class ProfileController extends Controller
                 'lang' => $lang,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/edit-profile', [
-                'form' => ProfileFormSerializer::form($viewer->name, $fields, $lang, $this->ageBlock($viewer)),
+                'form' => ProfileFormSerializer::form($viewer->name, $fields, $lang, $this->ageBlock($viewer, $birthdayExists)),
             ]),
         ]);
     }
 
-    public function update(UpdateProfileRequest $request, SaveMemberProfile $action): RedirectResponse
+    public function update(UpdateProfileRequest $request, SaveMemberProfile $action, BirthdayFieldExists $birthdayExists): RedirectResponse
     {
         $viewer = $this->viewer();
         $action($viewer, $request->toData());
@@ -106,7 +106,7 @@ class ProfileController extends Controller
         // AgeVisibility::defaultFor() clamps a stored Open to Members while web-public age is off,
         // so saving the profile in that window persists the clamped value (fail-closed direction).
         $age = $request->validated('age_visibility');
-        if ($age !== null && self::birthdayFieldExists()) {
+        if ($age !== null && $birthdayExists()) {
             $viewer->setPreference(PreferenceKey::AgeVisibility, Visibility::from((int) $age));
         }
 
@@ -121,9 +121,9 @@ class ProfileController extends Controller
      *
      * @return array{value: int, options: list<array{value: int, label: string}>}|null
      */
-    private function ageBlock(Member $viewer): ?array
+    private function ageBlock(Member $viewer, BirthdayFieldExists $birthdayExists): ?array
     {
-        if (! self::birthdayFieldExists()) {
+        if (! $birthdayExists()) {
             return null;
         }
 
@@ -134,12 +134,6 @@ class ProfileController extends Controller
                 AgeVisibility::options(),
             ),
         ];
-    }
-
-    /** Site-level gate: the preset birthday profile item exists (independent of its display flags). */
-    public static function birthdayFieldExists(): bool
-    {
-        return Profile::query()->where('name', 'op_preset_birthday')->exists();
     }
 
     /** Translation lang code (OpenPNE/Doctrine I18n) for the current locale. */

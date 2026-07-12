@@ -12,6 +12,7 @@ use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
 use App\Features\Home\HomeController;
+use App\Features\Member\EmailChangeLinkController;
 use App\Features\Member\InviteController;
 use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberConfigController;
@@ -157,9 +158,9 @@ Route::get('/member/configNotification', fn () => redirect()->route('member.conf
 // so it is neither guest- nor auth-restricted. GET renders a confirm page; the change happens on POST,
 // so a mail scanner / link prefetch cannot consume the token and flip the login identifier. Per-IP
 // throttled and length-pinned to the issued token shape.
-Route::get('/member/config/email/confirm/{token}', [MemberConfigController::class, 'confirmEmailForm'])
+Route::get('/member/config/email/confirm/{token}', [EmailChangeLinkController::class, 'confirmEmailForm'])
     ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.confirm');
-Route::post('/member/config/email/confirm/{token}', [MemberConfigController::class, 'confirmEmail'])
+Route::post('/member/config/email/confirm/{token}', [EmailChangeLinkController::class, 'confirmEmail'])
     ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.confirm.submit');
 
 // Email-change cancellation, carried by the old-address security notice. Same public, token-gated,
@@ -167,9 +168,9 @@ Route::post('/member/config/email/confirm/{token}', [MemberConfigController::cla
 // so the old-address holder can void a change they did not initiate without signing in. Cancelling
 // only deletes the pending row — it never itself alters the login identifier — so no member match is
 // required and a prefetch of the GET is harmless.
-Route::get('/member/config/email/cancel/{token}', [MemberConfigController::class, 'cancelEmailForm'])
+Route::get('/member/config/email/cancel/{token}', [EmailChangeLinkController::class, 'cancelEmailForm'])
     ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.cancel');
-Route::post('/member/config/email/cancel/{token}', [MemberConfigController::class, 'cancelEmail'])
+Route::post('/member/config/email/cancel/{token}', [EmailChangeLinkController::class, 'cancelEmail'])
     ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.cancel.submit');
 
 // OpenPNE 3 password recovery lived under the opAuthMailAddress plugin. Fortify owns the canonical
