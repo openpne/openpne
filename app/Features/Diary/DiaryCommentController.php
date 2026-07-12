@@ -10,7 +10,6 @@ use App\Features\Diary\Queries\ShowDiary;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Diary\StoreCommentRequest;
 use App\Models\DiaryComment;
-use App\Models\Member;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -62,13 +61,5 @@ class DiaryCommentController extends Controller
         return redirect()
             ->route('diary.show', $diary)
             ->with('status', __('The comment was deleted.'));
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

@@ -105,10 +105,10 @@ class FriendController extends Controller
         try {
             $action($this->viewer(), $request->target());
         } catch (FriendActionException $e) {
-            return $this->redirectAfterSubmit($request, 'friend.list', error: $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit('friend.list', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'friend.list', status: __('%Friend% request sent.'));
+        return $this->redirectAfterSubmit('friend.list', status: __('%Friend% request sent.'));
     }
 
     public function submitAccept(AcceptRequest $request, AcceptFriendRequest $action): RedirectResponse
@@ -116,10 +116,10 @@ class FriendController extends Controller
         try {
             $action($this->viewer(), $request->requester());
         } catch (FriendActionException $e) {
-            return $this->redirectAfterSubmit($request, 'friend.manage', error: $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit('friend.manage', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'friend.list', status: __('%Friend% request accepted.'));
+        return $this->redirectAfterSubmit('friend.list', status: __('%Friend% request accepted.'));
     }
 
     public function submitReject(RejectRequest $request, RejectFriendRequest $action): RedirectResponse
@@ -127,10 +127,10 @@ class FriendController extends Controller
         try {
             $action($this->viewer(), $request->requester());
         } catch (FriendActionException $e) {
-            return $this->redirectAfterSubmit($request, 'friend.manage', error: $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit('friend.manage', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'friend.manage', status: __('%Friend% request rejected.'));
+        return $this->redirectAfterSubmit('friend.manage', status: __('%Friend% request rejected.'));
     }
 
     public function showUnlink(Request $request, Member $member): View|RedirectResponse
@@ -155,25 +155,10 @@ class FriendController extends Controller
         try {
             $action($this->viewer(), $member);
         } catch (FriendActionException $e) {
-            return $this->redirectAfterSubmit($request, 'friend.list', error: $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit('friend.list', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'friend.list', status: __('%Friend% removed.'));
-    }
-
-    private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
-    {
-        $name = $canonicalName;
-
-        $redirect = redirect()->route($name);
-        if ($status !== null) {
-            $redirect = $redirect->with('status', $status);
-        }
-        if ($error !== null) {
-            $redirect = $redirect->with('error', $error);
-        }
-
-        return $redirect;
+        return $this->redirectAfterSubmit('friend.list', status: __('%Friend% removed.'));
     }
 
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
@@ -187,14 +172,6 @@ class FriendController extends Controller
         $route = request()->route();
 
         return $route !== null ? (string) $route->getName() : '';
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 
     private function messageFor(FriendActionFailure $reason): string

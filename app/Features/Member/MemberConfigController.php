@@ -20,7 +20,6 @@ use App\Http\Requests\Member\UpdatePasswordRequest;
 use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Http\Requests\Member\WithdrawalRequest;
 use App\Models\EmailChangeRequest;
-use App\Models\Member;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Support\PreferenceKey;
 use App\Support\SecurityLog;
@@ -271,13 +270,5 @@ class MemberConfigController extends Controller
         $redirect = redirect()->route('member.config', $isClassic ? ['category' => $category->value] : []);
 
         return $isClassic || $flashOnModern ? $redirect->with('status', __('Settings updated.')) : $redirect;
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

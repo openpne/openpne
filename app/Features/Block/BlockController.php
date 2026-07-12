@@ -61,10 +61,10 @@ class BlockController extends Controller
         try {
             $action($this->viewer(), $request->target());
         } catch (BlockActionException $e) {
-            return $this->redirectAfterSubmit($request, 'block.list', error: $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit('block.list', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'block.list', status: __('Member blocked.'));
+        return $this->redirectAfterSubmit('block.list', status: __('Member blocked.'));
     }
 
     public function showRemove(Request $request, Member $member): View|InertiaResponse
@@ -88,31 +88,10 @@ class BlockController extends Controller
         try {
             $action($this->viewer(), $member);
         } catch (BlockActionException $e) {
-            return $this->redirectAfterSubmit($request, 'block.list', error: $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit('block.list', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit($request, 'block.list', status: __('Member unblocked.'));
-    }
-
-    private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
-    {
-        $redirect = redirect()->route($canonicalName);
-        if ($status !== null) {
-            $redirect = $redirect->with('status', $status);
-        }
-        if ($error !== null) {
-            $redirect = $redirect->with('error', $error);
-        }
-
-        return $redirect;
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
+        return $this->redirectAfterSubmit('block.list', status: __('Member unblocked.'));
     }
 
     private function messageFor(BlockActionFailure $reason): string
