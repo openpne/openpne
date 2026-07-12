@@ -70,12 +70,4 @@ class MemberSearchController extends Controller
 
         return is_array($value) ? $value : [];
     }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
-    }
 }

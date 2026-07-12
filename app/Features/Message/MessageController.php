@@ -96,10 +96,10 @@ class MessageController extends Controller
         try {
             $message = $action($this->viewer(), $request->toData(), $request->asDraft(), $request->file('images', []));
         } catch (MessageActionException $e) {
-            return $this->failed($request, $e);
+            return $this->failed($e);
         }
 
-        return $this->afterWrite($request, $message->is_draft);
+        return $this->afterWrite($message->is_draft);
     }
 
     /** Reply to a received message: compose to its sender, carrying the thread links (OpenPNE 3 reply). */
@@ -154,10 +154,10 @@ class MessageController extends Controller
                 $request->asDraft(), ImageEdit::fromRequest($request),
             );
         } catch (MessageActionException $e) {
-            return $this->failed($request, $e);
+            return $this->failed($e);
         }
 
-        return $this->afterWrite($request, $draft->is_draft);
+        return $this->afterWrite($draft->is_draft);
     }
 
     /** Move a received message to the trash (OpenPNE 3 deleteReceiveMessage). */
@@ -293,18 +293,18 @@ class MessageController extends Controller
     }
 
     /** After a write: the sent box for a sent message, the draft box for a saved draft (same surface). */
-    private function afterWrite(Request $request, bool $isDraft): RedirectResponse
+    private function afterWrite(bool $isDraft): RedirectResponse
     {
         return $isDraft
-            ? redirect()->route('message.draft')->with('status', __('The message was saved successfully.'))
-            : redirect()->route('message.send')->with('status', __('The message was sent successfully.'));
+            ? $this->redirectAfterSubmit('message.draft', status: __('The message was saved successfully.'))
+            : $this->redirectAfterSubmit('message.send', status: __('The message was sent successfully.'));
     }
 
     /** OpenPNE 3 flashes an error and returns to the sent box when a send is blocked. */
-    private function failed(Request $request, MessageActionException $e): RedirectResponse
+    private function failed(MessageActionException $e): RedirectResponse
     {
         if ($e->reason === MessageActionFailure::CannotSend) {
-            return redirect()->route('message.send')->with('error', __('Cannot send the message.'));
+            return $this->redirectAfterSubmit('message.send', error: __('Cannot send the message.'));
         }
 
         abort(404); // too many images: a payload past the cross-field cap
@@ -361,13 +361,5 @@ class MessageController extends Controller
         $route = request()->route();
 
         return $route !== null ? (string) $route->getName() : '';
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

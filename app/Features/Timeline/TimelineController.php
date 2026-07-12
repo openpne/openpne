@@ -185,12 +185,4 @@ class TimelineController extends Controller
 
         return $route !== null ? (string) $route->getName() : '';
     }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
-    }
 }

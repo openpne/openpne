@@ -11,7 +11,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CommunityEvent\StoreEventCommentRequest;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\Member;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -111,13 +110,5 @@ class CommunityEventCommentController extends Controller
             false => __('You left the event.'),
             null => __('Comment posted.'),
         };
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

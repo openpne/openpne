@@ -9,7 +9,6 @@ use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\AvatarRequest;
 use App\Http\Requests\Member\UpdateAvatarColorRequest;
-use App\Models\Member;
 use App\Support\AvatarColor;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
@@ -103,13 +102,5 @@ class MemberAvatarController extends Controller
                 AvatarColor::cases(),
             ),
         ];
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }
