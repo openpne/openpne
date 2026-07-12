@@ -141,12 +141,4 @@ class ProfileController extends Controller
     {
         return app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
     }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
-    }
 }
