@@ -29,8 +29,12 @@ class EmailChangeLinkBoundaryTest extends TestCase
         $this->assertNotEmpty($routes, 'No routes resolve to MemberConfigController — the auth-boundary sweep would pass vacuously.');
 
         foreach ($routes as $route) {
-            $this->assertContains('auth', $route->gatherMiddleware(),
-                "MemberConfigController is an authenticated-only boundary, but [{$route->getName()}] carries no member auth middleware.");
+            // Pin the full auth-group contract, not just the guard: auth.session keeps a
+            // password-change logout effective on these routes.
+            foreach (['auth', 'auth.session'] as $required) {
+                $this->assertContains($required, $route->gatherMiddleware(),
+                    "MemberConfigController is an authenticated-only boundary, but [{$route->getName()}] carries no [{$required}] middleware.");
+            }
         }
     }
 
@@ -58,8 +62,10 @@ class EmailChangeLinkBoundaryTest extends TestCase
 
         $middleware = $route->gatherMiddleware();
 
-        // Deliberately reachable logged-in or out: no member auth guard, only the per-IP throttle.
-        $this->assertNotContains('auth', $middleware, "route [{$name}] must stay guest-reachable (no member auth middleware).");
+        // Deliberately reachable logged-in or out: nothing from the auth family (auth, auth:member,
+        // auth.session, ...) may appear — a plain not-contains('auth') would miss a guard variant.
+        $authLike = array_values(array_filter($middleware, fn (string $m): bool => str_starts_with($m, 'auth')));
+        $this->assertSame([], $authLike, "route [{$name}] must stay guest-reachable (no auth-family middleware).");
         $this->assertContains('throttle:30,1', $middleware, "route [{$name}] lost its per-IP throttle [throttle:30,1].");
 
         // Length-pinned to the issued token shape so a scanner cannot brute the token space.
