@@ -4,10 +4,34 @@ namespace App\Http\Controllers;
 
 use App\Models\Community;
 use App\Models\Member;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 
 abstract class Controller
 {
+    /** The authenticated member behind the request; the member auth guard on these routes guarantees it. */
+    protected function viewer(): Member
+    {
+        $viewer = auth()->user();
+        assert($viewer instanceof Member);
+
+        return $viewer;
+    }
+
+    /** The uniform redirect-and-flash for a form submit. */
+    protected function redirectAfterSubmit(string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
+    {
+        $redirect = redirect()->route($canonicalName);
+        if ($status !== null) {
+            $redirect = $redirect->with('status', $status);
+        }
+        if ($error !== null) {
+            $redirect = $redirect->with('error', $error);
+        }
+
+        return $redirect;
+    }
+
     /**
      * Resolve the member a member-scoped page is about (its OpenPNE 3 localNav `friend`
      * subject), and deny the whole page (404) when that member has blocked the viewer. Pass

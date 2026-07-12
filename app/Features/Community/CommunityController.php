@@ -482,14 +482,6 @@ class CommunityController extends Controller
         return $route !== null ? (string) $route->getName() : '';
     }
 
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
-    }
-
     private function messageFor(CommunityActionFailure $reason): string
     {
         return match ($reason) {

@@ -19,7 +19,6 @@ use App\Http\Requests\CommunityEvent\StoreEventRequest;
 use App\Http\Requests\CommunityEvent\UpdateEventRequest;
 use App\Models\Community;
 use App\Models\CommunityEvent;
-use App\Models\Member;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -252,13 +251,5 @@ class CommunityEventController extends Controller
         $route = request()->route();
 
         return $route !== null ? (string) $route->getName() : '';
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

@@ -8,7 +8,6 @@ use App\Features\Auth\Actions\IssueResult;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\InviteRequest;
-use App\Models\Member;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,13 +50,5 @@ class InviteController extends Controller
             : __('An invitation has been sent to :email.', ['email' => $email]);
 
         return redirect()->route('member.invite')->with('status', $status);
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

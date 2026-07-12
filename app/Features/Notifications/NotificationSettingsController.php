@@ -4,13 +4,12 @@ namespace App\Features\Notifications;
 
 use App\Features\Member\MemberConfigCategory;
 use App\Features\Notifications\Serializers\NotificationSettingsSerializer;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\UpdateNotificationSettingsRequest;
-use App\Models\Member;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,18 +18,18 @@ use Inertia\Response;
  * per-toggle saves); Classic edits as a member-config category (one bulk save), rendered by
  * MemberConfigController::show — this controller owns the Modern page and the save for both.
  */
-class NotificationSettingsController
+class NotificationSettingsController extends Controller
 {
-    public function edit(Request $request): Response
+    public function edit(): Response
     {
         return Inertia::render('member/config/notifications', [
-            'form' => NotificationSettingsSerializer::form($this->viewer($request)),
+            'form' => NotificationSettingsSerializer::form($this->viewer()),
         ]);
     }
 
     public function update(UpdateNotificationSettingsRequest $request): RedirectResponse
     {
-        $viewer = $this->viewer($request);
+        $viewer = $this->viewer();
 
         foreach ($request->validated('settings') as $kind => $channels) {
             foreach ($channels as $channel => $enabled) {
@@ -49,13 +48,5 @@ class NotificationSettingsController
             : redirect()
                 ->route('member.config', ['category' => MemberConfigCategory::Notification->value])
                 ->with('status', __('Settings updated.'));
-    }
-
-    private function viewer(Request $request): Member
-    {
-        /** @var Member $viewer */
-        $viewer = $request->user();
-
-        return $viewer;
     }
 }

@@ -272,21 +272,7 @@ class DiaryController extends Controller
             abort(404);
         }
 
-        return $this->redirectAfterSubmit($request, 'diary.list_member', status: __('%Diary% deleted.'));
-    }
-
-    private function redirectAfterSubmit(Request $request, string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
-    {
-        $name = $canonicalName;
-        $redirect = redirect()->route($name);
-        if ($status !== null) {
-            $redirect = $redirect->with('status', $status);
-        }
-        if ($error !== null) {
-            $redirect = $redirect->with('error', $error);
-        }
-
-        return $redirect;
+        return $this->redirectAfterSubmit('diary.list_member', status: __('%Diary% deleted.'));
     }
 
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
@@ -300,13 +286,5 @@ class DiaryController extends Controller
         $route = request()->route();
 
         return $route !== null ? (string) $route->getName() : '';
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

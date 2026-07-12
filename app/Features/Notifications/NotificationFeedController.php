@@ -3,9 +3,8 @@
 namespace App\Features\Notifications;
 
 use App\Features\Notifications\Serializers\NotificationFeedSerializer;
-use App\Models\Member;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,41 +15,33 @@ use Inertia\Response;
  * Opening the feed does not mark anything read — opening a row does (plus an explicit
  * mark-all-read), so the unread badge only drops on the member's own action.
  */
-class NotificationFeedController
+class NotificationFeedController extends Controller
 {
     private const PAGE = 30;
 
-    public function index(Request $request): Response
+    public function index(): Response
     {
         return Inertia::render('notifications/index', [
             'feed' => NotificationFeedSerializer::paginator(
-                $this->viewer($request)->notifications()->paginate(self::PAGE),
+                $this->viewer()->notifications()->paginate(self::PAGE),
             ),
         ]);
     }
 
     /** Mark one row read and land on what it is about (or back on the feed when that is gone). */
-    public function open(Request $request, string $notification): RedirectResponse
+    public function open(string $notification): RedirectResponse
     {
         /** @var DatabaseNotification $row */
-        $row = $this->viewer($request)->notifications()->whereKey($notification)->firstOrFail();
+        $row = $this->viewer()->notifications()->whereKey($notification)->firstOrFail();
         $row->markAsRead();
 
         return redirect(NotificationFeedSerializer::targetUrl($row) ?? route('notifications.index'));
     }
 
-    public function readAll(Request $request): RedirectResponse
+    public function readAll(): RedirectResponse
     {
-        $this->viewer($request)->unreadNotifications()->update(['read_at' => now()]);
+        $this->viewer()->unreadNotifications()->update(['read_at' => now()]);
 
         return back();
-    }
-
-    private function viewer(Request $request): Member
-    {
-        /** @var Member $viewer */
-        $viewer = $request->user();
-
-        return $viewer;
     }
 }

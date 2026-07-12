@@ -10,7 +10,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CommunityTopic\StoreTopicCommentRequest;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
-use App\Models\Member;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,13 +68,5 @@ class CommunityTopicCommentController extends Controller
     private function redirectToTopic(Request $request, CommunityTopic $topic): RedirectResponse
     {
         return redirect()->route('communityTopic.show', $topic);
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

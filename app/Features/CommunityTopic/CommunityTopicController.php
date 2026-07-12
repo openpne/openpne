@@ -18,7 +18,6 @@ use App\Http\Requests\CommunityTopic\StoreTopicRequest;
 use App\Http\Requests\CommunityTopic\UpdateTopicRequest;
 use App\Models\Community;
 use App\Models\CommunityTopic;
-use App\Models\Member;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -206,13 +205,5 @@ class CommunityTopicController extends Controller
         $route = request()->route();
 
         return $route !== null ? (string) $route->getName() : '';
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }

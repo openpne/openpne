@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\ConfirmMfaRequest;
 use App\Http\Requests\Member\DisableMfaRequest;
 use App\Http\Requests\Member\MfaManagementRequest;
-use App\Models\Member;
 use App\Notifications\Member\MfaDisabledNotification;
 use App\Notifications\Member\MfaEnabledNotification;
 use App\Support\SecurityLog;
@@ -164,13 +163,5 @@ class MemberMfaController extends Controller
             : redirect()->route('member.config.mfa.edit');
 
         return $status === null ? $redirect : $redirect->with('status', $status);
-    }
-
-    private function viewer(): Member
-    {
-        $viewer = auth()->user();
-        assert($viewer instanceof Member);
-
-        return $viewer;
     }
 }
