@@ -32,6 +32,13 @@ export interface DiaryDetail extends DiarySummary {
     images: DiaryImage[];
 }
 
+/** The prev/next pager target: identity + title + date (formatDate-compatible ISO string). */
+export interface DiaryNeighbor {
+    id: number;
+    title: string;
+    createdAt: string;
+}
+
 export interface DiaryComment {
     id: number;
     number: number;

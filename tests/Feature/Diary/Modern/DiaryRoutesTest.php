@@ -84,6 +84,53 @@ class DiaryRoutesTest extends TestCase
         $this->actingAs($alice)->get("/diary/{$diary->getKey()}")->assertNotFound();
     }
 
+    public function test_modern_show_carries_previous_and_next_neighbors(): void
+    {
+        $author = Member::factory()->create();
+        $older = Diary::factory()->create(['member_id' => $author->getKey(), 'title' => 'Older']);
+        $middle = Diary::factory()->create(['member_id' => $author->getKey(), 'title' => 'Middle']);
+        $newer = Diary::factory()->create(['member_id' => $author->getKey(), 'title' => 'Newer']);
+
+        $this->actingAs($author)
+            ->get("/diary/{$middle->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->where('previous.id', $older->getKey())
+                ->where('previous.title', 'Older')
+                ->has('previous.createdAt')
+                ->where('next.id', $newer->getKey())
+                ->where('next.title', 'Newer')
+            );
+    }
+
+    public function test_modern_show_neighbors_are_null_at_the_timeline_ends(): void
+    {
+        $author = Member::factory()->create();
+        $oldest = Diary::factory()->create(['member_id' => $author->getKey()]);
+        $newest = Diary::factory()->create(['member_id' => $author->getKey()]);
+
+        $this->actingAs($author)
+            ->get("/diary/{$oldest->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('previous', null)->where('next.id', $newest->getKey()));
+
+        $this->actingAs($author)
+            ->get("/diary/{$newest->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('previous.id', $oldest->getKey())->where('next', null));
+    }
+
+    public function test_modern_show_neighbors_skip_a_diary_the_viewer_cannot_see(): void
+    {
+        [$author, $viewer] = Member::factory()->count(2)->create()->all();
+        $first = Diary::factory()->create(['member_id' => $author->getKey()]);
+        Diary::factory()->private()->create(['member_id' => $author->getKey()]);
+        $third = Diary::factory()->create(['member_id' => $author->getKey()]);
+
+        // The viewer (not the author, not a friend) cannot see the private entry between the two
+        // members-visible ones, so next skips it — the props inherit AdjacentDiaries' viewer scope.
+        $this->actingAs($viewer)
+            ->get("/diary/{$first->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('next.id', $third->getKey()));
+    }
+
     public function test_modern_edit_renders_inertia_component_for_owner(): void
     {
         $member = Member::factory()->create();

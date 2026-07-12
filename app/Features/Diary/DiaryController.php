@@ -155,10 +155,11 @@ class DiaryController extends Controller
         // Classic friend localNav when viewing someone else's diary.
         $this->markLocalNavSubject($found->member);
 
-        return $this->respondWith($request, 'diary', [
-            SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer, $adjacent) {
-                ['previous' => $previous, 'next' => $next] = $adjacent($viewer, $found);
+        // Same viewer-scoped adjacency for both surfaces; hoisted so Modern gets it too.
+        ['previous' => $previous, 'next' => $next] = $adjacent($viewer, $found);
 
+        return $this->respondWith($request, 'diary', [
+            SurfaceResolver::CLASSIC => function () use ($request, $found, $previous, $next) {
                 $thread = DiaryCommentThread::paginate(
                     $found, $request->query('size'), $request->query('order'), $request->query('page'),
                 );
@@ -172,13 +173,15 @@ class DiaryController extends Controller
                     'nextDiary' => $next,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($found, $viewer) {
+            SurfaceResolver::MODERN => function () use ($found, $viewer, $previous, $next) {
                 $comments = $found->comments()->with(['member', 'images.file'])->orderBy('number')->get();
                 $comments->each->setRelation('diary', $found);
 
                 return Inertia::render('diary/show', [
                     'diary' => DiarySerializer::detail($found),
                     'comments' => DiarySerializer::comments($comments, $viewer),
+                    'previous' => DiarySerializer::neighbor($previous),
+                    'next' => DiarySerializer::neighbor($next),
                 ]);
             },
         ]);
