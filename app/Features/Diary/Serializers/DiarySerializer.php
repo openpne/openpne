@@ -70,7 +70,7 @@ class DiarySerializer
     }
 
     /**
-     * The prev/next pager needs only identity, title, and date; null-transparent so a caller can
+     * The older/newer pager needs only identity, title, and date; null-transparent so a caller can
      * forward a missing neighbour straight through. createdAt matches detail()/summary().
      *
      * @return array{id: int, title: string, createdAt: string}|null

@@ -20,14 +20,14 @@ import type { DiaryComment, DiaryDetail, DiaryNeighbor } from './types';
 interface ShowProps extends PageProps {
     diary: DiaryDetail;
     comments: DiaryComment[];
-    previous: DiaryNeighbor | null; // older entry by the same author
-    next: DiaryNeighbor | null; // newer entry by the same author
+    older: DiaryNeighbor | null; // older entry by the same author
+    newer: DiaryNeighbor | null; // newer entry by the same author
 }
 
 export default function DiaryShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { diary, comments, previous, next, auth } = usePage<ShowProps>().props;
+    const { diary, comments, older, newer, auth } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
 
     const form = useForm({ body: '', images: [] as File[] });
@@ -83,24 +83,24 @@ export default function DiaryShow() {
                 )}
             </Panel>
 
-            {(previous || next) && (
+            {(older || newer) && (
                 <nav className="flex items-center justify-between gap-3" aria-label={t('%Diary% navigation')}>
-                    {previous ? (
-                        <Link href={`/diary/${previous.id}`} className="group flex min-h-11 min-w-0 flex-1 items-center gap-1.5">
+                    {older ? (
+                        <Link href={`/diary/${older.id}`} className="group flex min-h-11 min-w-0 flex-1 items-center gap-1.5">
                             <ChevronLeft className="size-4 shrink-0 text-link" aria-hidden />
                             <span className="min-w-0">
                                 <span className="block text-xs text-muted-foreground">{t('Older %Diary%')}</span>
-                                <span className="block truncate text-sm font-medium text-link group-hover:underline">{previous.title}</span>
+                                <span className="block truncate text-sm font-medium text-link group-hover:underline">{older.title}</span>
                             </span>
                         </Link>
                     ) : (
                         <span className="flex-1" />
                     )}
-                    {next ? (
-                        <Link href={`/diary/${next.id}`} className="group flex min-h-11 min-w-0 flex-1 items-center justify-end gap-1.5 text-right">
+                    {newer ? (
+                        <Link href={`/diary/${newer.id}`} className="group flex min-h-11 min-w-0 flex-1 items-center justify-end gap-1.5 text-right">
                             <span className="min-w-0">
                                 <span className="block text-xs text-muted-foreground">{t('Newer %Diary%')}</span>
-                                <span className="block truncate text-sm font-medium text-link group-hover:underline">{next.title}</span>
+                                <span className="block truncate text-sm font-medium text-link group-hover:underline">{newer.title}</span>
                             </span>
                             <ChevronRight className="size-4 shrink-0 text-link" aria-hidden />
                         </Link>

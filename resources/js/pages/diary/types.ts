@@ -32,7 +32,7 @@ export interface DiaryDetail extends DiarySummary {
     images: DiaryImage[];
 }
 
-/** The prev/next pager target: identity + title + date (formatDate-compatible ISO string). */
+/** The older/newer pager target: identity + title + date (formatDate-compatible ISO string). */
 export interface DiaryNeighbor {
     id: number;
     title: string;
