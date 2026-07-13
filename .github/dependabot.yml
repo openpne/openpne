@@ -41,3 +41,16 @@ updates:
         update-types:
           - minor
           - patch
+  # docker-compose.yml image pins are a separate ecosystem: the docker one only
+  # covers Dockerfiles (plus Helm/Kubernetes-shaped YAML, which compose is not).
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      docker-compose-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
