@@ -7,6 +7,7 @@ use App\Models\DiaryComment;
 use App\Models\DiaryCommentImage;
 use App\Models\DiaryImage;
 use App\Models\Member;
+use App\Support\BodyText;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -17,13 +18,14 @@ use Illuminate\Support\Collection;
 class DiarySerializer
 {
     /**
-     * @return array{id: int, title: string, visibility: string, commentCount: int, hasImages: bool, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, visibility: string, commentCount: int, hasImages: bool, thumbnailUrl: string|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
      */
     public static function summary(Diary $diary): array
     {
         return [
             'id' => $diary->getKey(),
             'title' => $diary->title,
+            'excerpt' => BodyText::excerpt($diary->body),
             'visibility' => $diary->visibility->slug(),
             // List/feed callers eager-load the counts; a single route-bound diary lazy-loads them
             // here so the values are never silently zero.
@@ -31,6 +33,9 @@ class DiarySerializer
             // The feed shows only a has-photos marker, so the summary carries the boolean,
             // not the images themselves.
             'hasImages' => ($diary->images_count ?? $diary->loadCount('images')->images_count) > 0,
+            // Rich rows eager-load firstImage.file; a caller that didn't (dashboard digests) leaves
+            // it unloaded, and we return null rather than firing a query per row.
+            'thumbnailUrl' => $diary->relationLoaded('firstImage') ? $diary->firstImage?->file?->thumbnailUrl(120, 120, square: true) : null,
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
@@ -45,7 +50,7 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, body: string, visibility: string, commentCount: int, hasImages: bool, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, body: string, visibility: string, commentCount: int, hasImages: bool, thumbnailUrl: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
@@ -54,10 +59,14 @@ class DiarySerializer
         return [
             'id' => $diary->getKey(),
             'title' => $diary->title,
+            'excerpt' => BodyText::excerpt($diary->body),
             'body' => $diary->body,
             'visibility' => $diary->visibility->slug(),
             'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
             'hasImages' => $images !== [],
+            // detail eager-loads images (number-ordered); the first is the same thumbnail the list
+            // rows derive from firstImage, without a second one-of-many load.
+            'thumbnailUrl' => $diary->images->first()?->file?->thumbnailUrl(120, 120, square: true),
             'images' => $images,
             'author' => [
                 'id' => $diary->member->getKey(),

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Diary\Modern;
 
 use App\Models\Diary;
+use App\Models\DiaryImage;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -32,6 +33,19 @@ class DiaryRoutesTest extends TestCase
         $this->actingAs($member)
             ->get('/diary/listMember')
             ->assertInertia(fn ($page) => $page->component('diary/list'));
+    }
+
+    public function test_modern_list_member_rich_row_carries_a_thumbnail_url(): void
+    {
+        $member = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $member->getKey()]);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]);
+
+        $this->actingAs($member)
+            ->get('/diary/listMember')
+            ->assertInertia(fn ($page) => $page
+                ->where('diaries.data.0.thumbnailUrl', fn ($url) => is_string($url) && $url !== '')
+            );
     }
 
     public function test_modern_status_fallback_renders_classic_with_op3_body_id(): void

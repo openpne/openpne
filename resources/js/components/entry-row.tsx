@@ -33,6 +33,11 @@ type EntryRowProps = {
     /** Event roster size; renders a people icon + count after the comment count. */
     participantCount?: number;
     hasImages?: boolean;
+    /** Two-line body lead-in under the meta line (rich rows); empty string renders nothing. */
+    excerpt?: string;
+    /** Trailing decorative thumbnail (first attached image) before the chevron/actions. Its alt is
+     *  empty — the title carries the meaning — and it replaces the has-photos camera marker. */
+    thumbnail?: string;
     /** Trailing action links. Nested links are invalid inside a linked row, so with actions the
      *  title carries the link and the chevron is dropped. */
     actions?: ReactNode;
@@ -45,7 +50,7 @@ type EntryRowProps = {
  * leading visual + title line + one meta line of author · date · counts. Person/action rows
  * (friend, block, message boxes) keep their own layouts — this is not for them.
  */
-export function EntryRow({ href, leading, title, titleClassName, meta = [], commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, actions, className }: EntryRowProps) {
+export function EntryRow({ href, leading, title, titleClassName, meta = [], commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, excerpt, thumbnail, actions, className }: EntryRowProps) {
     const t = useT();
 
     const items: ReactNode[] = meta
@@ -70,7 +75,8 @@ export function EntryRow({ href, leading, title, titleClassName, meta = [], comm
             <CountBadge key="participants" icon={Users} count={participantCount} srLabel={t(':count participants', { count: participantCount })} />,
         );
     }
-    if (hasImages) {
+    // The thumbnail already shows there are photos, so the camera marker only appears without it.
+    if (hasImages && !thumbnail) {
         items.push(
             <span key="photos" className="flex shrink-0 items-center">
                 <Camera className="size-3.5" aria-hidden />
@@ -104,14 +110,20 @@ export function EntryRow({ href, leading, title, titleClassName, meta = [], comm
                     )}
                 </p>
             )}
+            {excerpt && <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{excerpt}</p>}
         </div>
     );
+
+    const thumb = thumbnail ? (
+        <img src={thumbnail} alt="" aria-hidden className="size-14 shrink-0 rounded object-cover" />
+    ) : null;
 
     if (actions) {
         return (
             <ListRow className={className}>
                 {leading}
                 {body}
+                {thumb}
                 <span className="flex shrink-0 items-center gap-3 text-sm">{actions}</span>
             </ListRow>
         );
@@ -121,6 +133,7 @@ export function EntryRow({ href, leading, title, titleClassName, meta = [], comm
         <ListRow href={href} chevron className={className}>
             {leading}
             {body}
+            {thumb}
         </ListRow>
     );
 }

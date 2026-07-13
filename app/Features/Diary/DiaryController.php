@@ -45,11 +45,17 @@ class DiaryController extends Controller
                 'owner' => $owner,
                 'diaries' => $diaries,
             ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('diary/list', [
-                'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
-                'isOwner' => $viewer->is($owner),
-                'diaries' => DiarySerializer::paginator($diaries),
-            ]),
+            SurfaceResolver::MODERN => function () use ($owner, $viewer, $diaries) {
+                // Modern-only: eager-load the thumbnail source here, not in the query, so Classic
+                // pays nothing. loadMissing forwards through the paginator to its collection.
+                $diaries->loadMissing('firstImage.file');
+
+                return Inertia::render('diary/list', [
+                    'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
+                    'isOwner' => $viewer->is($owner),
+                    'diaries' => DiarySerializer::paginator($diaries),
+                ]);
+            },
         ]);
     }
 
@@ -76,12 +82,16 @@ class DiaryController extends Controller
                 'period' => $period->label,
                 'archiveStart' => $period->start,
             ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('diary/list', [
-                'owner' => ['id' => $member->getKey(), 'name' => $member->name],
-                'isOwner' => $viewer->is($member),
-                'diaries' => DiarySerializer::paginator($diaries),
-                'period' => $period->label,
-            ]),
+            SurfaceResolver::MODERN => function () use ($member, $viewer, $diaries, $period) {
+                $diaries->loadMissing('firstImage.file');
+
+                return Inertia::render('diary/list', [
+                    'owner' => ['id' => $member->getKey(), 'name' => $member->name],
+                    'isOwner' => $viewer->is($member),
+                    'diaries' => DiarySerializer::paginator($diaries),
+                    'period' => $period->label,
+                ]);
+            },
         ]);
     }
 
@@ -137,12 +147,16 @@ class DiaryController extends Controller
                 'hasKeyword' => $hasKeyword,
                 'diaries' => $diaries,
             ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('diary/feed', [
-                'variant' => $variant,
-                'keyword' => $keyword,
-                'hasKeyword' => $hasKeyword,
-                'diaries' => DiarySerializer::paginator($diaries),
-            ]),
+            SurfaceResolver::MODERN => function () use ($variant, $keyword, $hasKeyword, $diaries) {
+                $diaries->loadMissing('firstImage.file');
+
+                return Inertia::render('diary/feed', [
+                    'variant' => $variant,
+                    'keyword' => $keyword,
+                    'hasKeyword' => $hasKeyword,
+                    'diaries' => DiarySerializer::paginator($diaries),
+                ]);
+            },
         ], bodyIdRoute: $bodyIdRoute);
     }
 
