@@ -111,6 +111,12 @@ const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary
 const POST_ACTIVITY: ChromeAction = { href: '/timeline/new', label: t('%Post_activity%'), icon: Pencil };
 const CREATE_COMMUNITY: ChromeAction = { href: '/community/edit', label: t('Create a %community%'), icon: Plus };
 
+const diaryTabs = (active: 'all' | 'friends' | 'mine'): ChromeTab[] => [
+    { href: '/diary/list', label: t('All'), active: active === 'all' },
+    { href: '/diary/listFriend', label: FRIENDS, active: active === 'friends' },
+    { href: '/diary/listMember', label: t('My %diaries%'), active: active === 'mine' },
+];
+
 const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
     { href: '/community/search', label: t('All'), active: active === 'browse' },
     { href: '/community/joinList', label: t('Joined'), active: active === 'joined' },
@@ -191,18 +197,22 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         mode: 'section',
         title: DIARIES,
         tabsLabel: DIARIES,
-        tabs: [
-            { href: '/diary/list', label: t('All'), active: (props as { variant: string }).variant !== 'friends' },
-            { href: '/diary/listFriend', label: FRIENDS, active: (props as { variant: string }).variant === 'friends' },
-        ],
+        tabs: diaryTabs((props as { variant: string }).variant === 'friends' ? 'friends' : 'all'),
         action: WRITE_DIARY,
     }),
-    // Another member's diary archive (listMember): a crumb back to their profile. Not promoted to
-    // 'contextual' mode — the page already carries its own period-suffixed PageHeading and the
-    // owner-only write action, so only the crumb is added here.
+    // The viewer's own archive (listMember) is a hub tab alongside the feeds; another member's
+    // archive is a contextual list crumbed back to their profile (community/list precedent).
     'diary/list': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
-        return isOwner ? {} : { context: memberContext(owner) };
+        return isOwner
+            ? {
+                  mode: 'section',
+                  title: DIARIES,
+                  tabsLabel: DIARIES,
+                  tabs: diaryTabs('mine'),
+                  action: WRITE_DIARY,
+              }
+            : { mode: 'contextual', title: DIARIES, context: memberContext(owner) };
     },
     'diary/show': (props) => {
         const { diary } = props as unknown as { diary: { author: MemberRef } };
