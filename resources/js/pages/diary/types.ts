@@ -20,9 +20,11 @@ export interface DiaryImage {
 export interface DiarySummary {
     id: number;
     title: string;
+    excerpt: string; // plain-text body lead-in (OpenPNE 3 width-108 single line), rendered on rich rows
     visibility: DiaryVisibility;
     commentCount: number;
     hasImages: boolean; // drives the feed's has-photos marker
+    thumbnails: string[]; // all attachments' square thumbnails, only eager-loaded for rich rows
     author: DiaryFeedAuthor;
     createdAt: string;
 }
