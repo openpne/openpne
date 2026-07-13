@@ -30,3 +30,14 @@ updates:
       github-actions:
         patterns:
           - "*"
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      docker-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch

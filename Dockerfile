@@ -1,4 +1,4 @@
-FROM php:8.5-fpm-bookworm
+FROM php:8.5.8-fpm-bookworm
 
 # git + unzip let `composer install` fall back to a git source checkout (and extract dist
 # archives) when GitHub's dist zipballs are temporarily unavailable (504). The slim php-fpm
@@ -17,7 +17,8 @@ RUN install-php-extensions intl bcmath zip exif gd pdo_mysql pdo_sqlite opcache
 # composer
 COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
 
-# Drop the default www pool; entrypoint runs FPM as root master + www-data worker on TCP 9000.
+# Drop the default www pool; the compose file runs the whole container as the bind-mount
+# uid, so the replacement pool sets no user/group (a non-root master cannot setuid anyway).
 # The official php:*-fpm image inlines a [www] pool inside docker.conf, so it must be removed too.
 RUN rm -f /usr/local/etc/php-fpm.d/www.conf \
           /usr/local/etc/php-fpm.d/www.conf.default \

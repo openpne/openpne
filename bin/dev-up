@@ -1,0 +1,6 @@
+#!/bin/sh
+# Canonical dev-stack start. `--build --remove-orphans` reconciles running
+# containers with the compose file (image pins, removed services) instead of
+# leaving stale ones behind after a compose change.
+cd "$(dirname "$0")/.." || exit 1
+exec docker compose up -d --build --remove-orphans "$@"
