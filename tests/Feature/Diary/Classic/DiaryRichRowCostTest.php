@@ -68,4 +68,19 @@ class DiaryRichRowCostTest extends TestCase
             $this->assertStringNotContainsString('from diary_images where diary_images.diary_id in', str_replace(['"', '`'], '', $query));
         }
     }
+
+    public function test_classic_list_member_never_runs_the_modern_monthly_counts_query(): void
+    {
+        $owner = Member::factory()->create();
+        foreach (range(1, 3) as $i) {
+            $this->attachImage(Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]));
+        }
+
+        foreach ($this->queriesFor($owner, "/diary/listMember/{$owner->getKey()}") as $query) {
+            // The Modern archive grid's per-month counts query groups by the year-month alias; it is
+            // resolved inside the Modern closure only, so Classic must never emit it. Strip identifier
+            // quotes so the marker matches on both sqlite and MySQL.
+            $this->assertStringNotContainsString('group by ym', str_replace(['"', '`'], '', $query));
+        }
+    }
 }
