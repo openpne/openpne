@@ -11,6 +11,7 @@ use App\Features\Diary\Queries\AdjacentDiaries;
 use App\Features\Diary\Queries\ListDiaries;
 use App\Features\Diary\Queries\ListFriendDiaries;
 use App\Features\Diary\Queries\ListRecentDiaries;
+use App\Features\Diary\Queries\MemberDiaryMonthlyCounts;
 use App\Features\Diary\Queries\SearchDiaries;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\DiarySerializer;
@@ -54,6 +55,8 @@ class DiaryController extends Controller
                     'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
                     'isOwner' => $viewer->is($owner),
                     'diaries' => DiarySerializer::paginator($diaries),
+                    'monthlyCounts' => (new MemberDiaryMonthlyCounts)($viewer, $owner),
+                    'archive' => null,
                 ]);
             },
         ]);
@@ -82,7 +85,7 @@ class DiaryController extends Controller
                 'period' => $period->label,
                 'archiveStart' => $period->start,
             ]),
-            SurfaceResolver::MODERN => function () use ($member, $viewer, $diaries, $period) {
+            SurfaceResolver::MODERN => function () use ($request, $member, $viewer, $diaries, $period) {
                 $diaries->loadMissing('images.file');
 
                 return Inertia::render('diary/list', [
@@ -90,6 +93,9 @@ class DiaryController extends Controller
                     'isOwner' => $viewer->is($member),
                     'diaries' => DiarySerializer::paginator($diaries),
                     'period' => $period->label,
+                    'monthlyCounts' => (new MemberDiaryMonthlyCounts)($viewer, $member),
+                    // A day archive still highlights its month cell, so only year+month are sent.
+                    'archive' => ['year' => (int) $request->route('year'), 'month' => (int) $request->route('month')],
                 ]);
             },
         ]);

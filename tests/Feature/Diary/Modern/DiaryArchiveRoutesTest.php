@@ -95,4 +95,53 @@ class DiaryArchiveRoutesTest extends TestCase
 
         $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}/2026/2/30")->assertNotFound();
     }
+
+    public function test_month_archive_carries_monthly_counts_and_highlights_the_month(): void
+    {
+        $owner = Member::factory()->create();
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members, 'created_at' => '2026-03-10 09:00:00']);
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members, 'created_at' => '2026-02-01 09:00:00']);
+
+        $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}/2026/3")
+            ->assertInertia(fn ($page) => $page
+                ->component('diary/list')
+                ->where('archive.year', 2026)
+                ->where('archive.month', 3)
+                ->has('monthlyCounts', 2)
+                ->where('monthlyCounts.0.year', 2026)
+                ->where('monthlyCounts.0.month', 3)
+                ->where('monthlyCounts.0.count', 1)
+                ->where('monthlyCounts.1.month', 2)
+            );
+    }
+
+    public function test_list_member_has_monthly_counts_and_null_archive(): void
+    {
+        $owner = Member::factory()->create();
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members, 'created_at' => '2026-03-10 09:00:00']);
+
+        $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->component('diary/list')
+                ->where('archive', null)
+                ->has('monthlyCounts', 1)
+                ->where('monthlyCounts.0.year', 2026)
+                ->where('monthlyCounts.0.month', 3)
+                ->where('monthlyCounts.0.count', 1)
+            );
+    }
+
+    public function test_monthly_counts_are_viewer_scoped(): void
+    {
+        [$owner, $viewer] = Member::factory()->count(2)->create()->all();
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members, 'created_at' => '2026-03-10 09:00:00']);
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Private, 'created_at' => '2026-03-20 09:00:00']);
+
+        // A non-friend viewer's grid counts only the Members-level entry, not the private one.
+        $this->actingAs($viewer)->get("/diary/listMember/{$owner->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->has('monthlyCounts', 1)
+                ->where('monthlyCounts.0.count', 1)
+            );
+    }
 }
