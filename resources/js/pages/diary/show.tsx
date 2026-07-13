@@ -1,4 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { type FormEvent } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
@@ -14,17 +15,19 @@ import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
-import type { DiaryComment, DiaryDetail } from './types';
+import type { DiaryComment, DiaryDetail, DiaryNeighbor } from './types';
 
 interface ShowProps extends PageProps {
     diary: DiaryDetail;
     comments: DiaryComment[];
+    older: DiaryNeighbor | null; // older entry by the same author
+    newer: DiaryNeighbor | null; // newer entry by the same author
 }
 
 export default function DiaryShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { diary, comments, auth } = usePage<ShowProps>().props;
+    const { diary, comments, older, newer, auth } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
 
     const form = useForm({ body: '', images: [] as File[] });
@@ -79,6 +82,33 @@ export default function DiaryShow() {
                     </div>
                 )}
             </Panel>
+
+            {(older || newer) && (
+                <nav className="flex items-center justify-between gap-3" aria-label={t('%Diary% navigation')}>
+                    {older ? (
+                        <Link href={`/diary/${older.id}`} className="group flex min-h-11 min-w-0 flex-1 items-center gap-1.5">
+                            <ChevronLeft className="size-4 shrink-0 text-link" aria-hidden />
+                            <span className="min-w-0">
+                                <span className="block text-xs text-muted-foreground">{t('Older %Diary%')}</span>
+                                <span className="block truncate text-sm font-medium text-link group-hover:underline">{older.title}</span>
+                            </span>
+                        </Link>
+                    ) : (
+                        <span className="flex-1" />
+                    )}
+                    {newer ? (
+                        <Link href={`/diary/${newer.id}`} className="group flex min-h-11 min-w-0 flex-1 items-center justify-end gap-1.5 text-right">
+                            <span className="min-w-0">
+                                <span className="block text-xs text-muted-foreground">{t('Newer %Diary%')}</span>
+                                <span className="block truncate text-sm font-medium text-link group-hover:underline">{newer.title}</span>
+                            </span>
+                            <ChevronRight className="size-4 shrink-0 text-link" aria-hidden />
+                        </Link>
+                    ) : (
+                        <span className="flex-1" />
+                    )}
+                </nav>
+            )}
 
             {comments.length > 0 && (
                 <Panel title={t('Comments')} flush>

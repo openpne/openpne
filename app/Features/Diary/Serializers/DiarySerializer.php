@@ -70,6 +70,25 @@ class DiarySerializer
     }
 
     /**
+     * The older/newer pager needs only identity, title, and date; null-transparent so a caller can
+     * forward a missing neighbour straight through. createdAt matches detail()/summary().
+     *
+     * @return array{id: int, title: string, createdAt: string}|null
+     */
+    public static function neighbor(?Diary $diary): ?array
+    {
+        if ($diary === null) {
+            return null;
+        }
+
+        return [
+            'id' => $diary->getKey(),
+            'title' => $diary->title,
+            'createdAt' => $diary->created_at->toIso8601String(),
+        ];
+    }
+
+    /**
      * A single attached image (diary or comment): the full-bytes url and a square thumbnail, both
      * FilePolicy-gated. Tolerates a row whose File is gone (defensive; the join cascades with it).
      *
