@@ -34,10 +34,15 @@ class DiarySerializer
             // not the images themselves.
             'hasImages' => ($diary->images_count ?? $diary->loadCount('images')->images_count) > 0,
             // Rich rows eager-load images.file; a caller that didn't (dashboard digests) leaves the
-            // relation unloaded, and we return [] rather than firing a query per row. A row whose
-            // File is gone drops out of the list (the join cascades with it).
+            // relation unloaded, and we return [] rather than firing a query per row — the nested
+            // file guard keeps that true even for an images-without-file load. A row whose File is
+            // gone drops out of the list (the join cascades with it).
             'thumbnails' => $diary->relationLoaded('images')
-                ? $diary->images->map(fn (DiaryImage $image): ?string => $image->file?->thumbnailUrl(120, 120, square: true))->filter()->values()->all()
+                ? $diary->images
+                    ->map(fn (DiaryImage $image): ?string => $image->relationLoaded('file')
+                        ? $image->file?->thumbnailUrl(120, 120, square: true)
+                        : null)
+                    ->filter()->values()->all()
                 : [],
             'author' => [
                 'id' => $diary->member->getKey(),
