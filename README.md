@@ -35,7 +35,7 @@ npm run type-check        # TypeScript type check
 ## Docker
 
 ```bash
-docker compose up -d      # http://localhost:8080
+bin/dev-up                # http://localhost:8080
 ```
 
 On first start the `app` container runs `composer install`, generates
@@ -45,15 +45,19 @@ reflected without a rebuild. SQLite is used by default.
 
 Notes:
 
-- `vendor/` and `node_modules/` live in named volumes (independent of any
-  host install). After updating `composer.lock` or `package-lock.json`, run
-  `docker compose down -v` so the volumes are reset and dependencies
-  reinstall on the next `up`.
+- Containers that write to the source tree run as `OPENPNE_UID:OPENPNE_GID`
+  (`bin/dev-up` defaults both to your uid/gid; plain `docker compose` falls
+  back to `1000:1000`), so everything they create — `vendor/`,
+  `node_modules/`, `storage/`, the SQLite file — stays owned by the host
+  user.
+- `node_modules/` contains platform-specific binaries, so on macOS avoid
+  mixing host `npm` and the Docker path in one checkout: the `vite`
+  container reinstalls automatically when the platform changed, but a
+  host-side install after that needs a manual `npm ci` too.
 - To rebuild frontend assets through Docker, run
-  `docker compose run --rm vite npm run build`. The `vite` entrypoint returns
-  `public/build` ownership to the host bind-mount owner after the build.
+  `docker compose run --rm vite npm run build`.
 - If port `8080` is taken, set `OPENPNE_HTTP_PORT=18080` before
-  `docker compose up -d`. Port `5173` is fixed (Vite always binds it
+  `bin/dev-up`. Port `5173` is fixed (Vite always binds it
   inside the container and `public/hot` references that port, so a
   host-side remap would not actually redirect the browser).
 
