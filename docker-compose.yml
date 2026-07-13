@@ -1,13 +1,14 @@
 # OpenPNE local development stack — NOT a production deployment.
-#   docker compose up -d   →   http://localhost:8080   (caught mail → http://localhost:8025)
+#   bin/dev-up   →   http://localhost:8080   (caught mail → http://localhost:8025)
 #
 # Tuned for the inner loop: source is bind-mounted, Vite serves HMR, outgoing mail
 # is caught by Mailpit, and queued work runs inline (QUEUE_CONNECTION=sync) so mail
 # appears immediately without a worker. A production stack (released image, real
 # DB/SMTP, queue worker + scheduler) is deliberately separate.
 #
-# - `vendor/` and `node_modules/` live in named volumes so container-side
-#   `composer install` / `npm ci` do not collide with host uid ownership.
+# - Every service that writes to the bind mount runs as OPENPNE_UID:OPENPNE_GID
+#   (default 1000:1000 — export both if your host user differs), so generated
+#   files keep host ownership. vendor/ and node_modules/ live on the bind mount.
 # - SQLite is used by default; opt in to MySQL via a separate compose file.
 # - `vite` runs the Vite dev server on :5173 for HMR; Laravel reads
 #   `public/hot` to redirect asset URLs to it. First startup runs `npm ci`.
@@ -15,6 +16,7 @@
 services:
   app:
     build: .
+    user: "${OPENPNE_UID:-1000}:${OPENPNE_GID:-1000}"
     # Override .env for the container only: deliver all mail to Mailpit and run queued
     # work inline, so registration/reset mail shows up at :8025 with no worker. php-fpm
     # passes these through (clear_env = no), so they win over .env. Production wires real
@@ -24,14 +26,16 @@ services:
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
       QUEUE_CONNECTION: sync
+      # The mapped uid has no passwd entry in the container; tools that insist on
+      # a writable HOME (composer) get a harmless one.
+      HOME: /tmp
     volumes:
       - .:/var/www/html
-      - vendor:/var/www/html/vendor
     depends_on:
       - mailpit
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.31.1-alpine
     ports:
       - "${OPENPNE_HTTP_PORT:-8080}:80"
     volumes:
@@ -42,23 +46,21 @@ services:
       - app
 
   vite:
-    image: node:26-bookworm-slim
+    image: node:26.5.0-bookworm-slim
+    user: "${OPENPNE_UID:-1000}:${OPENPNE_GID:-1000}"
     working_dir: /var/www/html
+    environment:
+      HOME: /tmp
     entrypoint: ["sh", "/var/www/html/docker/vite-dev.sh"]
     command: ["npm", "run", "dev"]
     ports:
       - "5173:5173"
     volumes:
       - .:/var/www/html
-      - node_modules:/var/www/html/node_modules
 
   # Dev mail sink: catches every outgoing mail instead of delivering it and shows
   # it at http://localhost:8025. The app reaches it over SMTP on the compose network.
   mailpit:
-    image: axllent/mailpit
+    image: axllent/mailpit:v1.30.1
     ports:
       - "${OPENPNE_MAILPIT_PORT:-8025}:8025"
-
-volumes:
-  vendor:
-  node_modules:
