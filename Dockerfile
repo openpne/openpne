@@ -15,7 +15,7 @@ ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/relea
 RUN install-php-extensions intl bcmath zip exif gd pdo_mysql pdo_sqlite opcache
 
 # composer
-COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+COPY --from=composer:2.9.5 /usr/bin/composer /usr/local/bin/composer
 
 # Drop the default www pool; the compose file runs the whole container as the bind-mount
 # uid, so the replacement pool sets no user/group (a non-root master cannot setuid anyway).

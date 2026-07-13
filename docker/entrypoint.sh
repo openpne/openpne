@@ -9,9 +9,9 @@ set -e
 
 cd /var/www/html
 
-if [ ! -f vendor/autoload.php ]; then
-    composer install --no-interaction --prefer-dist
-fi
+# Runs every start: near no-op when vendor/ matches composer.lock, and resolves
+# lockfile drift (pulls, branch switches) that a vendor-exists check would miss.
+composer install --no-interaction --prefer-dist
 
 # .env is bind-mounted; create from .env.example on first run, otherwise leave
 # it. Generate APP_KEY whenever it is unset (covers user-provided .env without

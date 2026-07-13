@@ -8,13 +8,15 @@ set -eu
 cd /var/www/html
 
 # node_modules lives on the bind mount and contains platform-specific native
-# binaries (rolldown, tailwind oxide). A tree installed by a macOS host would
-# break inside this Linux container, so reinstall whenever the recorded install
-# platform differs (host-side installs leave no marker and also trigger this).
-want="$(uname -s)-$(uname -m)"
-if [ ! -d node_modules/.bin ] || [ "$(cat node_modules/.openpne-platform 2>/dev/null)" != "$want" ]; then
+# binaries (rolldown, tailwind oxide). npm ci has no cheap no-op mode, so a
+# stamp records what the tree was installed for — platform (a macOS host
+# install would break in this Linux container) and lockfile hash (pulls and
+# branch switches would leave a stale tree) — and any mismatch reinstalls.
+# Host-side installs leave no stamp and also trigger this.
+want="$(uname -s)-$(uname -m) $(sha256sum package-lock.json | cut -d' ' -f1)"
+if [ ! -d node_modules/.bin ] || [ "$(cat node_modules/.openpne-stamp 2>/dev/null)" != "$want" ]; then
     npm ci
-    printf '%s' "$want" > node_modules/.openpne-platform
+    printf '%s' "$want" > node_modules/.openpne-stamp
 fi
 
 if [ "$#" -eq 0 ]; then
