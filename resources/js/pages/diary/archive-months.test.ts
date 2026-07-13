@@ -38,6 +38,26 @@ test('builds an archive href for counted months only', () => {
     assert.equal(row.months[3]?.href, null); // April: no entries
 });
 
+test('threads the keyword into counted-month hrefs', () => {
+    const rows = buildArchiveGrid([{ year: 2026, month: 3, count: 4 }], 2026, 7, 'cat');
+    const row = rows[0];
+    assert.ok(row);
+    assert.equal(row.months[2]?.href, '/diary/listMember/7/2026/3?keyword=cat');
+    // Empty months stay non-linked even under an active keyword.
+    assert.equal(row.months[0]?.href, null);
+});
+
+test('url-encodes multibyte and spaced keywords in hrefs', () => {
+    const rows = buildArchiveGrid([{ year: 2026, month: 3, count: 4 }], 2026, 7, '猫 dog');
+    // URLSearchParams: multibyte → percent-escapes, space → '+'.
+    assert.equal(rows[0]?.months[2]?.href, '/diary/listMember/7/2026/3?keyword=%E7%8C%AB+dog');
+});
+
+test('omits the keyword param when empty', () => {
+    const rows = buildArchiveGrid([{ year: 2026, month: 3, count: 4 }], 2026, 7, '');
+    assert.equal(rows[0]?.months[2]?.href, '/diary/listMember/7/2026/3');
+});
+
 test('count buckets use fixed thresholds 0 / 1-2 / 3-5 / 6-9 / 10+', () => {
     assert.equal(countBucket(0), 0);
     assert.equal(countBucket(1), 1);
@@ -52,6 +72,19 @@ test('count buckets use fixed thresholds 0 / 1-2 / 3-5 / 6-9 / 10+', () => {
 
 test('returns an empty grid when there are no counts', () => {
     assert.deepEqual(buildArchiveGrid([], 2026, 7), []);
+});
+
+test('keeps the selected year in range when the keyword leaves it without matches', () => {
+    // Viewing /2024/3 while the keyword only matches 2026: the 2024 row must still render so the
+    // selection ring stays on the map.
+    const rows = buildArchiveGrid([{ year: 2026, month: 7, count: 1 }], 2026, 7, 'x', { year: 2024 });
+    assert.deepEqual(
+        rows.map((row) => row.year),
+        [2026, 2025, 2024],
+    );
+    const row2024 = rows[2];
+    assert.ok(row2024);
+    assert.ok(row2024.months.every((cell) => cell.count === 0 && cell.href === null));
 });
 
 test('a selection in a folded older year forces the grid open', () => {

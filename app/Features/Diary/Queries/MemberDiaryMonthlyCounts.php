@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 class MemberDiaryMonthlyCounts
 {
     /** @return list<array{year: int, month: int, count: int}> */
-    public function __invoke(?Member $viewer, Member $owner): array
+    public function __invoke(?Member $viewer, Member $owner, string $keyword = ''): array
     {
         // strftime/DATE_FORMAT diverge across the sqlite and MySQL CI lanes (see SearchMembers::monthDayExpr).
         $ym = DB::connection()->getDriverName() === 'sqlite'
@@ -32,6 +32,7 @@ class MemberDiaryMonthlyCounts
             ->groupBy('ym')
             ->orderByDesc('ym');
         DiaryVisibilityScope::apply($query, $viewer, $owner);
+        SearchDiaries::applyTerms($query, $keyword);
 
         return $query->get()->map(function ($row): array {
             [$year, $month] = explode('-', (string) $row->ym);

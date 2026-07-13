@@ -39,23 +39,27 @@ class DiaryController extends Controller
     {
         $viewer = $this->viewer();
         $owner = $this->memberSubject($member);
-        $diaries = $query($viewer, $owner);
+        // Modern narrows the archive by keyword; Classic ignores it (OpenPNE 3 has no such filter),
+        // so each surface runs its own query inside its closure — Classic keyword-free, unchanged.
+        $keyword = $this->keywordParam($request);
 
         return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.list', [
                 'owner' => $owner,
-                'diaries' => $diaries,
+                'diaries' => $query($viewer, $owner),
             ]),
-            SurfaceResolver::MODERN => function () use ($owner, $viewer, $diaries) {
+            SurfaceResolver::MODERN => function () use ($query, $owner, $viewer, $keyword) {
                 // Modern-only: eager-load the thumbnail sources here, not in the query, so Classic
                 // pays nothing. loadMissing forwards through the paginator to its collection.
+                $diaries = $query($viewer, $owner, keyword: $keyword);
                 $diaries->loadMissing('images.file');
 
                 return Inertia::render('diary/list', [
                     'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
                     'isOwner' => $viewer->is($owner),
                     'diaries' => DiarySerializer::paginator($diaries),
-                    'monthlyCounts' => (new MemberDiaryMonthlyCounts)($viewer, $owner),
+                    'monthlyCounts' => (new MemberDiaryMonthlyCounts)($viewer, $owner, $keyword),
+                    'keyword' => $keyword,
                     'archive' => null,
                 ]);
             },
@@ -76,16 +80,19 @@ class DiaryController extends Controller
 
         $viewer = $this->viewer();
         $member = $this->memberSubject($member);
-        $diaries = $query($viewer, $member, period: $period);
+        $keyword = $this->keywordParam($request);
 
         return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.list', [
                 'owner' => $member,
-                'diaries' => $diaries,
+                'diaries' => $query($viewer, $member, period: $period),
                 'period' => $period->label,
                 'archiveStart' => $period->start,
             ]),
-            SurfaceResolver::MODERN => function () use ($request, $member, $viewer, $diaries, $period) {
+            SurfaceResolver::MODERN => function () use ($request, $query, $member, $viewer, $period, $keyword) {
+                // period × keyword are orthogonal: the month range and the term filter stack, so the
+                // grid becomes a map of when this member wrote about the term.
+                $diaries = $query($viewer, $member, period: $period, keyword: $keyword);
                 $diaries->loadMissing('images.file');
 
                 return Inertia::render('diary/list', [
@@ -93,7 +100,8 @@ class DiaryController extends Controller
                     'isOwner' => $viewer->is($member),
                     'diaries' => DiarySerializer::paginator($diaries),
                     'period' => $period->label,
-                    'monthlyCounts' => (new MemberDiaryMonthlyCounts)($viewer, $member),
+                    'monthlyCounts' => (new MemberDiaryMonthlyCounts)($viewer, $member, $keyword),
+                    'keyword' => $keyword,
                     // A day archive still highlights its month cell, so only year+month are sent.
                     'archive' => ['year' => (int) $request->route('year'), 'month' => (int) $request->route('month')],
                 ]);
@@ -113,8 +121,7 @@ class DiaryController extends Controller
 
     public function search(Request $request, SearchDiaries $query, ListRecentDiaries $recent): View|InertiaResponse
     {
-        $keywordParam = $request->query('keyword', '');
-        $keyword = is_string($keywordParam) ? $keywordParam : '';
+        $keyword = $this->keywordParam($request);
 
         // OpenPNE 3 forwards an empty search to the list action — identical results, body id, and
         // pager URL (@diary_list). Delegate so /diary/search renders exactly what /diary/list does,
@@ -297,6 +304,14 @@ class DiaryController extends Controller
         }
 
         return $this->redirectAfterSubmit('diary.list_member', status: __('%Diary% deleted.'));
+    }
+
+    /** Read the ?keyword= query param defensively — an array-shaped param arrives as a non-string. */
+    private function keywordParam(Request $request): string
+    {
+        $keyword = $request->query('keyword', '');
+
+        return is_string($keyword) ? $keyword : '';
     }
 
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
