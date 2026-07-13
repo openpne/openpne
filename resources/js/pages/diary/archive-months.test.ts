@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildArchiveGrid, countBucket } from './archive-months.ts';
+import { buildArchiveGrid, countBucket, selectedBeyondRecentYears } from './archive-months.ts';
 
 test('zero-fills each year to twelve month cells', () => {
     const rows = buildArchiveGrid([{ year: 2026, month: 3, count: 4 }], 2026, 7);
@@ -52,4 +52,13 @@ test('count buckets use fixed thresholds 0 / 1-2 / 3-5 / 6-9 / 10+', () => {
 
 test('returns an empty grid when there are no counts', () => {
     assert.deepEqual(buildArchiveGrid([], 2026, 7), []);
+});
+
+test('a selection in a folded older year forces the grid open', () => {
+    // 2024-2026: two recent rows visible, 2024 folded.
+    const rows = buildArchiveGrid([{ year: 2024, month: 3, count: 2 }], 2026, 7);
+    assert.equal(selectedBeyondRecentYears(rows, { year: 2024 }, 2), true);
+    assert.equal(selectedBeyondRecentYears(rows, { year: 2026 }, 2), false); // recent row
+    assert.equal(selectedBeyondRecentYears(rows, { year: 2025 }, 2), false); // recent row
+    assert.equal(selectedBeyondRecentYears(rows, null, 2), false); // unfiltered
 });

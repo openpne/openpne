@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { buildArchiveGrid, countBucket, type MonthlyCount } from './archive-months';
+import { buildArchiveGrid, countBucket, selectedBeyondRecentYears, type MonthlyCount } from './archive-months';
 
 interface Props {
     counts: MonthlyCount[];
@@ -34,8 +34,11 @@ export function DiaryArchiveGrid({ counts, ownerId, selected }: Props) {
         return null;
     }
 
+    // A selection in an older year forces the fold open — collapsing would hide its own ring.
+    const forceEarlier = selectedBeyondRecentYears(rows, selected, RECENT_YEARS);
+    const expanded = showEarlier || forceEarlier;
     const hasEarlier = rows.length > RECENT_YEARS;
-    const visibleRows = showEarlier ? rows : rows.slice(0, RECENT_YEARS);
+    const visibleRows = expanded ? rows : rows.slice(0, RECENT_YEARS);
 
     return (
         <Panel>
@@ -87,11 +90,11 @@ export function DiaryArchiveGrid({ counts, ownerId, selected }: Props) {
 
             {(hasEarlier || selected) && (
                 <div className="mt-4 flex items-center gap-3 text-sm">
-                    {hasEarlier && (
+                    {hasEarlier && !forceEarlier && (
                         <button
                             type="button"
                             onClick={() => setShowEarlier((v) => !v)}
-                            aria-expanded={showEarlier}
+                            aria-expanded={expanded}
                             className="text-selected hover:underline"
                         >
                             {t('Show earlier years')}

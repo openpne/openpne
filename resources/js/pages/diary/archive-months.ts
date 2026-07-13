@@ -32,6 +32,18 @@ export function countBucket(count: number): 0 | 1 | 2 | 3 | 4 {
  *
  * `currentYear` is passed in rather than read from Date here so the expansion stays pure/testable.
  */
+/**
+ * Whether the selected month sits in a year beyond the always-visible recent rows — the grid must
+ * then start expanded, or a navigation to an older month would hide its own selection ring.
+ */
+export function selectedBeyondRecentYears(rows: ArchiveYearRow[], selected: { year: number } | null, recentYears: number): boolean {
+    if (selected === null) {
+        return false;
+    }
+
+    return rows.slice(recentYears).some((row) => row.year === selected.year);
+}
+
 export function buildArchiveGrid(counts: MonthlyCount[], currentYear: number, ownerId: number): ArchiveYearRow[] {
     if (counts.length === 0) {
         return [];
