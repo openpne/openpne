@@ -12,6 +12,12 @@ on:
       - docker/**
       - bin/dev-up
       - .github/workflows/docker-smoke.yml
+      # The job's whole point is the first-run composer install / npm ci from a
+      # clean checkout, so dependency changes exercise it too.
+      - composer.json
+      - composer.lock
+      - package.json
+      - package-lock.json
   schedule:
     - cron: '30 20 * * 1'
   workflow_dispatch:
