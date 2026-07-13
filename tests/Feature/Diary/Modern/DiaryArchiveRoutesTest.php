@@ -75,11 +75,12 @@ class DiaryArchiveRoutesTest extends TestCase
 
         DB::enableQueryLog();
         $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}/2026/3")->assertOk();
-        // The one-of-many eager load aliases its subquery "firstImage"; loadMissing must batch all
-        // six rows into exactly one such query, not one per row.
+        // The one-of-many eager load aliases its subquery `firstImage`; loadMissing must batch all
+        // six rows into exactly one such query, not one per row. Strip identifier quotes first so
+        // the marker matches on both sqlite ("firstImage") and MySQL (`firstImage`).
         $firstImageQueries = array_filter(
             array_column(DB::getQueryLog(), 'query'),
-            fn (string $query): bool => str_contains($query, '"firstImage"'),
+            fn (string $query): bool => str_contains(str_replace(['"', '`'], '', $query), 'firstImage'),
         );
         DB::disableQueryLog();
 
