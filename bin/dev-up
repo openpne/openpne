@@ -3,4 +3,11 @@
 # containers with the compose file (image pins, removed services) instead of
 # leaving stale ones behind after a compose change.
 cd "$(dirname "$0")/.." || exit 1
+
+# Default the container uid/gid to the invoking user so uid != 1000 hosts work
+# without exporting anything (direct `docker compose` still falls back to 1000).
+: "${OPENPNE_UID:=$(id -u)}"
+: "${OPENPNE_GID:=$(id -g)}"
+export OPENPNE_UID OPENPNE_GID
+
 exec docker compose up -d --build --remove-orphans "$@"

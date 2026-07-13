@@ -46,9 +46,14 @@ reflected without a rebuild. SQLite is used by default.
 Notes:
 
 - Containers that write to the source tree run as `OPENPNE_UID:OPENPNE_GID`
-  (default `1000:1000`), so everything they create — `vendor/`,
+  (`bin/dev-up` defaults both to your uid/gid; plain `docker compose` falls
+  back to `1000:1000`), so everything they create — `vendor/`,
   `node_modules/`, `storage/`, the SQLite file — stays owned by the host
-  user. If your uid differs, export both variables before `bin/dev-up`.
+  user.
+- `node_modules/` contains platform-specific binaries, so on macOS avoid
+  mixing host `npm` and the Docker path in one checkout: the `vite`
+  container reinstalls automatically when the platform changed, but a
+  host-side install after that needs a manual `npm ci` too.
 - To rebuild frontend assets through Docker, run
   `docker compose run --rm vite npm run build`.
 - If port `8080` is taken, set `OPENPNE_HTTP_PORT=18080` before
