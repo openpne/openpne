@@ -7,6 +7,7 @@ use App\Models\DiaryComment;
 use App\Models\DiaryCommentImage;
 use App\Models\DiaryImage;
 use App\Models\Member;
+use App\Support\BodyText;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -17,13 +18,14 @@ use Illuminate\Support\Collection;
 class DiarySerializer
 {
     /**
-     * @return array{id: int, title: string, visibility: string, commentCount: int, hasImages: bool, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
      */
     public static function summary(Diary $diary): array
     {
         return [
             'id' => $diary->getKey(),
             'title' => $diary->title,
+            'excerpt' => BodyText::excerpt($diary->body),
             'visibility' => $diary->visibility->slug(),
             // List/feed callers eager-load the counts; a single route-bound diary lazy-loads them
             // here so the values are never silently zero.
@@ -31,6 +33,17 @@ class DiarySerializer
             // The feed shows only a has-photos marker, so the summary carries the boolean,
             // not the images themselves.
             'hasImages' => ($diary->images_count ?? $diary->loadCount('images')->images_count) > 0,
+            // Rich rows eager-load images.file; a caller that didn't (dashboard digests) leaves the
+            // relation unloaded, and we return [] rather than firing a query per row — the nested
+            // file guard keeps that true even for an images-without-file load. A row whose File is
+            // gone drops out of the list (the join cascades with it).
+            'thumbnails' => $diary->relationLoaded('images')
+                ? $diary->images
+                    ->map(fn (DiaryImage $image): ?string => $image->relationLoaded('file')
+                        ? $image->file?->thumbnailUrl(120, 120, square: true)
+                        : null)
+                    ->filter()->values()->all()
+                : [],
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
@@ -45,7 +58,7 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, body: string, visibility: string, commentCount: int, hasImages: bool, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, body: string, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
@@ -54,10 +67,14 @@ class DiarySerializer
         return [
             'id' => $diary->getKey(),
             'title' => $diary->title,
+            'excerpt' => BodyText::excerpt($diary->body),
             'body' => $diary->body,
             'visibility' => $diary->visibility->slug(),
             'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
             'hasImages' => $images !== [],
+            // The list-row thumbnails (number-ordered) reuse the already-loaded images, keeping the
+            // DiaryDetail-extends-DiarySummary TS shape; file-less rows carry an empty url and drop out.
+            'thumbnails' => array_values(array_filter(array_column($images, 'thumbnailUrl'))),
             'images' => $images,
             'author' => [
                 'id' => $diary->member->getKey(),

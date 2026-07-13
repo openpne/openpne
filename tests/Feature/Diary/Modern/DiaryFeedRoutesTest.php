@@ -3,6 +3,7 @@
 namespace Tests\Feature\Diary\Modern;
 
 use App\Models\Diary;
+use App\Models\DiaryImage;
 use App\Models\Member;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,6 +66,27 @@ class DiaryFeedRoutesTest extends TestCase
                 ->where('variant', 'friends')
                 ->has('diaries.data', 1)
                 ->where('diaries.data.0.title', 'Friend entry')
+            );
+    }
+
+    public function test_rich_feed_row_carries_the_excerpt_and_thumbnails(): void
+    {
+        $viewer = Member::factory()->create();
+        $author = Member::factory()->create();
+        $diary = Diary::factory()->create([
+            'member_id' => $author->getKey(),
+            'body' => "Lead line\nmore body",
+            'visibility' => Visibility::Members,
+        ]);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]);
+
+        // A non-empty thumbnails array proves the Modern closure ran loadMissing('images.file'):
+        // without it the relation is unloaded and the serializer returns [].
+        $this->actingAs($viewer)->get('/diary/list')
+            ->assertInertia(fn ($page) => $page
+                ->where('diaries.data.0.excerpt', 'Lead line more body')
+                ->has('diaries.data.0.thumbnails', 1)
+                ->where('diaries.data.0.thumbnails.0', fn ($url) => is_string($url) && $url !== '')
             );
     }
 

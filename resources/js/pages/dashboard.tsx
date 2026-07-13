@@ -148,7 +148,7 @@ export default function Dashboard() {
                             }
                         >
                             {diaries.map((diary) => (
-                                <DiaryRow key={diary.id} diary={diary} showAuthor />
+                                <DiaryRow key={diary.id} diary={diary} />
                             ))}
                         </DigestSection>
                     )}
@@ -172,7 +172,7 @@ export default function Dashboard() {
                     {myDiaries.length > 0 && (
                         <DigestSection title={t('My recent %diaries%')} viewAllHref={`/diary/listMember/${user.id}`}>
                             {myDiaries.map((diary) => (
-                                <DiaryRow key={diary.id} diary={diary} showAuthor={false} />
+                                <DiaryRow key={diary.id} diary={diary} />
                             ))}
                         </DigestSection>
                     )}

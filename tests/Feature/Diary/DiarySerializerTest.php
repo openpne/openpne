@@ -5,8 +5,11 @@ namespace Tests\Feature\Diary;
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Models\Diary;
 use App\Models\DiaryComment;
+use App\Models\DiaryImage;
+use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DiarySerializerTest extends TestCase
@@ -37,5 +40,87 @@ class DiarySerializerTest extends TestCase
         $fresh = Diary::findOrFail($diary->getKey());
 
         $this->assertSame(1, DiarySerializer::detail($fresh)['commentCount']);
+    }
+
+    public function test_summary_excerpt_collapses_newlines_to_a_single_line(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'body' => "First line\nSecond line"]);
+
+        $this->assertSame('First line Second line', DiarySerializer::summary($diary)['excerpt']);
+    }
+
+    public function test_summary_excerpt_is_cut_to_display_width_108(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'body' => str_repeat('a', 200)]);
+
+        // OpenPNE 3's op_truncate width-108 with no ellipsis.
+        $this->assertSame(str_repeat('a', 108), DiarySerializer::summary($diary)['excerpt']);
+    }
+
+    public function test_summary_thumbnails_are_the_number_ordered_urls_when_images_are_loaded(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+        $second = File::factory()->create();
+        $first = File::factory()->create();
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $second->getKey(), 'number' => 2]);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $first->getKey(), 'number' => 1]);
+
+        $loaded = Diary::with('images.file')->findOrFail($diary->getKey());
+
+        $this->assertSame(
+            [$first->thumbnailUrl(120, 120, square: true), $second->thumbnailUrl(120, 120, square: true)],
+            DiarySerializer::summary($loaded)['thumbnails'],
+        );
+    }
+
+    public function test_summary_thumbnails_are_empty_and_run_no_query_when_images_are_not_loaded(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]);
+
+        // Everything summary() reads except the thumbnail source, exactly as a list query provides it.
+        $loaded = Diary::with('member.avatar.file')->withCount(['comments', 'images'])->findOrFail($diary->getKey());
+
+        DB::enableQueryLog();
+        $summary = DiarySerializer::summary($loaded);
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $this->assertSame([], $summary['thumbnails']);
+        $this->assertSame([], $queries, 'summary() lazy-loaded images instead of returning []');
+    }
+
+    public function test_detail_carries_excerpt_and_thumbnails_from_loaded_images(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'body' => "Body\ntext"]);
+        $second = File::factory()->create();
+        $first = File::factory()->create();
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $second->getKey(), 'number' => 2]);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $first->getKey(), 'number' => 1]);
+
+        // ShowDiary eager-loads images.file; detail() derives the thumbnails from them, number-ordered.
+        $loaded = Diary::with('images.file')->findOrFail($diary->getKey());
+        $detail = DiarySerializer::detail($loaded);
+
+        $this->assertSame('Body text', $detail['excerpt']);
+        $this->assertSame(
+            [$first->thumbnailUrl(120, 120, square: true), $second->thumbnailUrl(120, 120, square: true)],
+            $detail['thumbnails'],
+        );
+    }
+
+    public function test_detail_thumbnails_are_empty_without_images(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
+
+        $loaded = Diary::with('images.file')->findOrFail($diary->getKey());
+
+        $this->assertSame([], DiarySerializer::detail($loaded)['thumbnails']);
     }
 }

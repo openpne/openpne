@@ -66,6 +66,7 @@ export default function DiaryList() {
                                 <DiaryRow
                                     key={entry.id}
                                     diary={entry}
+                                    rich
                                     actions={
                                         isOwner && (
                                             <>
