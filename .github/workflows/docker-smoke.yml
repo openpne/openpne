@@ -1,0 +1,67 @@
+# Boots the compose dev stack from a clean checkout — the first-run experience that
+# local daily use can never re-test (state accumulates there). Deliberately NOT a
+# required check, so a plain paths filter is safe (see the required-checks note in
+# ci.yml); the weekly run catches rot between docker-file changes.
+name: Docker smoke
+
+on:
+  pull_request:
+    paths:
+      - docker-compose.yml
+      - Dockerfile
+      - docker/**
+      - bin/dev-up
+      - .github/workflows/docker-smoke.yml
+      # The job's whole point is the first-run composer install / npm ci from a
+      # clean checkout, so dependency changes exercise it too.
+      - composer.json
+      - composer.lock
+      - package.json
+      - package-lock.json
+  schedule:
+    - cron: '30 20 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compose-boot:
+    name: Compose stack boots from clean checkout
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Start the stack
+        run: bin/dev-up
+
+      - name: Wait for the login page
+        run: |
+          for _ in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/login || true)
+            if [ "$code" = "200" ]; then
+              echo "login page returned 200"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::login page did not return 200 within 5 minutes (last code: $code)"
+          exit 1
+
+      # The uid-mapping invariant from the compose design: nothing in the worktree
+      # may end up owned by another user (root/www-data regressions).
+      - name: Assert worktree ownership
+        run: |
+          foreign=$(find . -path ./.git -prune -o -not -user "$(id -un)" -print)
+          if [ -n "$foreign" ]; then
+            echo "::error::files not owned by $(id -un):"
+            printf '%s\n' "$foreign"
+            exit 1
+          fi
+
+      - name: Dump stack state on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --tail 100 app nginx vite mailpit
