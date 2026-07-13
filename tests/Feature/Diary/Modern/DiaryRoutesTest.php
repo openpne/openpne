@@ -35,7 +35,7 @@ class DiaryRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page->component('diary/list'));
     }
 
-    public function test_modern_list_member_rich_row_carries_a_thumbnail_url(): void
+    public function test_modern_list_member_rich_row_carries_thumbnails(): void
     {
         $member = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $member->getKey()]);
@@ -44,7 +44,8 @@ class DiaryRoutesTest extends TestCase
         $this->actingAs($member)
             ->get('/diary/listMember')
             ->assertInertia(fn ($page) => $page
-                ->where('diaries.data.0.thumbnailUrl', fn ($url) => is_string($url) && $url !== '')
+                ->has('diaries.data.0.thumbnails', 1)
+                ->where('diaries.data.0.thumbnails.0', fn ($url) => is_string($url) && $url !== '')
             );
     }
 

@@ -18,7 +18,7 @@ use Illuminate\Support\Collection;
 class DiarySerializer
 {
     /**
-     * @return array{id: int, title: string, excerpt: string, visibility: string, commentCount: int, hasImages: bool, thumbnailUrl: string|null, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
      */
     public static function summary(Diary $diary): array
     {
@@ -33,9 +33,12 @@ class DiarySerializer
             // The feed shows only a has-photos marker, so the summary carries the boolean,
             // not the images themselves.
             'hasImages' => ($diary->images_count ?? $diary->loadCount('images')->images_count) > 0,
-            // Rich rows eager-load firstImage.file; a caller that didn't (dashboard digests) leaves
-            // it unloaded, and we return null rather than firing a query per row.
-            'thumbnailUrl' => $diary->relationLoaded('firstImage') ? $diary->firstImage?->file?->thumbnailUrl(120, 120, square: true) : null,
+            // Rich rows eager-load images.file; a caller that didn't (dashboard digests) leaves the
+            // relation unloaded, and we return [] rather than firing a query per row. A row whose
+            // File is gone drops out of the list (the join cascades with it).
+            'thumbnails' => $diary->relationLoaded('images')
+                ? $diary->images->map(fn (DiaryImage $image): ?string => $image->file?->thumbnailUrl(120, 120, square: true))->filter()->values()->all()
+                : [],
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
@@ -50,7 +53,7 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, excerpt: string, body: string, visibility: string, commentCount: int, hasImages: bool, thumbnailUrl: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, body: string, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
@@ -64,9 +67,9 @@ class DiarySerializer
             'visibility' => $diary->visibility->slug(),
             'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
             'hasImages' => $images !== [],
-            // detail eager-loads images (number-ordered); the first is the same thumbnail the list
-            // rows derive from firstImage, without a second one-of-many load.
-            'thumbnailUrl' => $diary->images->first()?->file?->thumbnailUrl(120, 120, square: true),
+            // The list-row thumbnails (number-ordered) reuse the already-loaded images, keeping the
+            // DiaryDetail-extends-DiarySummary TS shape; file-less rows carry an empty url and drop out.
+            'thumbnails' => array_values(array_filter(array_column($images, 'thumbnailUrl'))),
             'images' => $images,
             'author' => [
                 'id' => $diary->member->getKey(),

@@ -59,7 +59,7 @@ class DiarySerializerTest extends TestCase
         $this->assertSame(str_repeat('a', 108), DiarySerializer::summary($diary)['excerpt']);
     }
 
-    public function test_summary_thumbnail_is_the_lowest_numbered_image_when_first_image_is_loaded(): void
+    public function test_summary_thumbnails_are_the_number_ordered_urls_when_images_are_loaded(): void
     {
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
@@ -68,15 +68,15 @@ class DiarySerializerTest extends TestCase
         DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $second->getKey(), 'number' => 2]);
         DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $first->getKey(), 'number' => 1]);
 
-        $loaded = Diary::with('firstImage.file')->findOrFail($diary->getKey());
+        $loaded = Diary::with('images.file')->findOrFail($diary->getKey());
 
         $this->assertSame(
-            $first->thumbnailUrl(120, 120, square: true),
-            DiarySerializer::summary($loaded)['thumbnailUrl'],
+            [$first->thumbnailUrl(120, 120, square: true), $second->thumbnailUrl(120, 120, square: true)],
+            DiarySerializer::summary($loaded)['thumbnails'],
         );
     }
 
-    public function test_summary_thumbnail_is_null_and_runs_no_query_when_first_image_is_not_loaded(): void
+    public function test_summary_thumbnails_are_empty_and_run_no_query_when_images_are_not_loaded(): void
     {
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
@@ -90,11 +90,11 @@ class DiarySerializerTest extends TestCase
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
 
-        $this->assertNull($summary['thumbnailUrl']);
-        $this->assertSame([], $queries, 'summary() lazy-loaded firstImage instead of returning null');
+        $this->assertSame([], $summary['thumbnails']);
+        $this->assertSame([], $queries, 'summary() lazy-loaded images instead of returning []');
     }
 
-    public function test_detail_carries_excerpt_and_thumbnail_from_loaded_images(): void
+    public function test_detail_carries_excerpt_and_thumbnails_from_loaded_images(): void
     {
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'body' => "Body\ntext"]);
@@ -103,21 +103,24 @@ class DiarySerializerTest extends TestCase
         DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $second->getKey(), 'number' => 2]);
         DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'file_id' => $first->getKey(), 'number' => 1]);
 
-        // ShowDiary eager-loads images.file (not firstImage); detail() derives the thumbnail from them.
+        // ShowDiary eager-loads images.file; detail() derives the thumbnails from them, number-ordered.
         $loaded = Diary::with('images.file')->findOrFail($diary->getKey());
         $detail = DiarySerializer::detail($loaded);
 
         $this->assertSame('Body text', $detail['excerpt']);
-        $this->assertSame($first->thumbnailUrl(120, 120, square: true), $detail['thumbnailUrl']);
+        $this->assertSame(
+            [$first->thumbnailUrl(120, 120, square: true), $second->thumbnailUrl(120, 120, square: true)],
+            $detail['thumbnails'],
+        );
     }
 
-    public function test_detail_thumbnail_is_null_without_images(): void
+    public function test_detail_thumbnails_are_empty_without_images(): void
     {
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
 
         $loaded = Diary::with('images.file')->findOrFail($diary->getKey());
 
-        $this->assertNull(DiarySerializer::detail($loaded)['thumbnailUrl']);
+        $this->assertSame([], DiarySerializer::detail($loaded)['thumbnails']);
     }
 }

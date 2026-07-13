@@ -24,7 +24,7 @@ export interface DiarySummary {
     visibility: DiaryVisibility;
     commentCount: number;
     hasImages: boolean; // drives the feed's has-photos marker
-    thumbnailUrl: string | null; // first attached image, only eager-loaded for rich rows
+    thumbnails: string[]; // all attachments' square thumbnails, only eager-loaded for rich rows
     author: DiaryFeedAuthor;
     createdAt: string;
 }

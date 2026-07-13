@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['member_id', 'title', 'body', 'visibility'])]
 class Diary extends Model
@@ -40,11 +39,5 @@ class Diary extends Model
     public function images(): HasMany
     {
         return $this->hasMany(DiaryImage::class)->orderBy('number');
-    }
-
-    /** @return HasOne<DiaryImage, $this> The lowest-numbered attached image, for list thumbnails. */
-    public function firstImage(): HasOne
-    {
-        return $this->hasOne(DiaryImage::class)->ofMany('number', 'min');
     }
 }

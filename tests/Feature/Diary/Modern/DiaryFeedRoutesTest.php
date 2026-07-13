@@ -69,7 +69,7 @@ class DiaryFeedRoutesTest extends TestCase
             );
     }
 
-    public function test_rich_feed_row_carries_the_excerpt_and_a_thumbnail_url(): void
+    public function test_rich_feed_row_carries_the_excerpt_and_thumbnails(): void
     {
         $viewer = Member::factory()->create();
         $author = Member::factory()->create();
@@ -80,12 +80,13 @@ class DiaryFeedRoutesTest extends TestCase
         ]);
         DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]);
 
-        // A non-null thumbnail proves the Modern closure ran loadMissing('firstImage.file'):
-        // without it the relation is unloaded and the serializer returns null.
+        // A non-empty thumbnails array proves the Modern closure ran loadMissing('images.file'):
+        // without it the relation is unloaded and the serializer returns [].
         $this->actingAs($viewer)->get('/diary/list')
             ->assertInertia(fn ($page) => $page
                 ->where('diaries.data.0.excerpt', 'Lead line more body')
-                ->where('diaries.data.0.thumbnailUrl', fn ($url) => is_string($url) && $url !== '')
+                ->has('diaries.data.0.thumbnails', 1)
+                ->where('diaries.data.0.thumbnails.0', fn ($url) => is_string($url) && $url !== '')
             );
     }
 

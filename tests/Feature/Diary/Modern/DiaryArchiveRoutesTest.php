@@ -46,7 +46,7 @@ class DiaryArchiveRoutesTest extends TestCase
             );
     }
 
-    public function test_archive_rich_row_carries_a_thumbnail_url(): void
+    public function test_archive_rich_row_carries_thumbnails(): void
     {
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create([
@@ -57,11 +57,12 @@ class DiaryArchiveRoutesTest extends TestCase
 
         $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}/2026/3")
             ->assertInertia(fn ($page) => $page
-                ->where('diaries.data.0.thumbnailUrl', fn ($url) => is_string($url) && $url !== '')
+                ->has('diaries.data.0.thumbnails', 1)
+                ->where('diaries.data.0.thumbnails.0', fn ($url) => is_string($url) && $url !== '')
             );
     }
 
-    public function test_thumbnail_eager_load_runs_a_single_batched_first_image_query(): void
+    public function test_thumbnail_eager_load_runs_a_single_batched_images_query(): void
     {
         $owner = Member::factory()->create();
         foreach (range(1, 6) as $i) {
@@ -75,16 +76,17 @@ class DiaryArchiveRoutesTest extends TestCase
 
         DB::enableQueryLog();
         $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}/2026/3")->assertOk();
-        // The one-of-many eager load aliases its subquery `firstImage`; loadMissing must batch all
-        // six rows into exactly one such query, not one per row. Strip identifier quotes first so
-        // the marker matches on both sqlite ("firstImage") and MySQL (`firstImage`).
-        $firstImageQueries = array_filter(
+        // loadMissing('images.file') batches all six rows into one standalone diary_images load
+        // keyed by `diary_id in (...)`, not one per row. The correlated images_count subquery on the
+        // diaries page reads `diaries.id = diary_images.diary_id`, so this marker excludes it. Strip
+        // identifier quotes first so it matches on both sqlite ("…") and MySQL (`…`).
+        $imageQueries = array_filter(
             array_column(DB::getQueryLog(), 'query'),
-            fn (string $query): bool => str_contains(str_replace(['"', '`'], '', $query), 'firstImage'),
+            fn (string $query): bool => str_contains(str_replace(['"', '`'], '', $query), 'from diary_images where diary_images.diary_id in'),
         );
         DB::disableQueryLog();
 
-        $this->assertCount(1, $firstImageQueries);
+        $this->assertCount(1, $imageQueries);
     }
 
     public function test_impossible_date_returns_404(): void

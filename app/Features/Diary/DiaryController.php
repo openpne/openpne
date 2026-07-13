@@ -46,9 +46,9 @@ class DiaryController extends Controller
                 'diaries' => $diaries,
             ]),
             SurfaceResolver::MODERN => function () use ($owner, $viewer, $diaries) {
-                // Modern-only: eager-load the thumbnail source here, not in the query, so Classic
+                // Modern-only: eager-load the thumbnail sources here, not in the query, so Classic
                 // pays nothing. loadMissing forwards through the paginator to its collection.
-                $diaries->loadMissing('firstImage.file');
+                $diaries->loadMissing('images.file');
 
                 return Inertia::render('diary/list', [
                     'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
@@ -83,7 +83,7 @@ class DiaryController extends Controller
                 'archiveStart' => $period->start,
             ]),
             SurfaceResolver::MODERN => function () use ($member, $viewer, $diaries, $period) {
-                $diaries->loadMissing('firstImage.file');
+                $diaries->loadMissing('images.file');
 
                 return Inertia::render('diary/list', [
                     'owner' => ['id' => $member->getKey(), 'name' => $member->name],
@@ -148,7 +148,7 @@ class DiaryController extends Controller
                 'diaries' => $diaries,
             ]),
             SurfaceResolver::MODERN => function () use ($variant, $keyword, $hasKeyword, $diaries) {
-                $diaries->loadMissing('firstImage.file');
+                $diaries->loadMissing('images.file');
 
                 return Inertia::render('diary/feed', [
                     'variant' => $variant,

@@ -71,7 +71,7 @@ export default function DiaryFeed() {
                     <Panel flush>
                         <List>
                             {diaries.data.map((entry) => (
-                                <DiaryRow key={entry.id} diary={entry} showAuthor rich />
+                                <DiaryRow key={entry.id} diary={entry} rich />
                             ))}
                         </List>
                     </Panel>
