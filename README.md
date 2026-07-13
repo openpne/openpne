@@ -4,44 +4,26 @@ OpenPNE is an open-source social networking platform you can self-host. It power
 
 This repository is a Laravel 13 reimplementation succeeding the previous version (symfony 1.4 based, see [OpenPNE3](https://github.com/openpne/OpenPNE3)).
 
-## Requirements
-
-- PHP 8.3+
-- Composer 2.x
-- Node.js 26+ (for the frontend toolchain)
-
 ## Getting started
 
-```bash
-composer install
-npm install
-cp .env.example .env
-php artisan key:generate
-touch database/database.sqlite
-php artisan migrate
-npm run build
-```
-
-## Development
+The only requirement is [Docker](https://docs.docker.com/get-started/get-docker/) with Compose:
 
 ```bash
-php artisan serve         # http://localhost:8000
-npm run dev               # Vite dev server on :5173 (HMR)
-php artisan test
-vendor/bin/pint --test    # lint check (drop --test to auto-format)
-npm run type-check        # TypeScript type check
-```
-
-## Docker
-
-```bash
-bin/dev-up                # http://localhost:8080
+bin/dev-up                # http://localhost:8080  (caught mail: http://localhost:8025)
 ```
 
 On first start the `app` container runs `composer install`, generates
 `APP_KEY`, and runs migrations; the `vite` sidecar runs `npm ci` and starts
 the Vite dev server on `:5173`. Source is bind-mounted so code changes are
 reflected without a rebuild. SQLite is used by default.
+
+Day-to-day commands run inside the containers:
+
+```bash
+docker compose exec app php artisan test
+docker compose exec app vendor/bin/pint --test    # drop --test to auto-format
+docker compose exec vite npm run type-check
+```
 
 Notes:
 
@@ -60,6 +42,22 @@ Notes:
   `bin/dev-up`. Port `5173` is fixed (Vite always binds it
   inside the container and `public/hot` references that port, so a
   host-side remap would not actually redirect the browser).
+
+## Without Docker
+
+Requires PHP 8.3+, Composer 2.x, and Node.js 26+ on the host:
+
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate
+
+php artisan serve         # http://localhost:8000
+npm run dev               # Vite dev server on :5173 (HMR)
+```
 
 ## License
 
