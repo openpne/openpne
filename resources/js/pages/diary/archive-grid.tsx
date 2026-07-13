@@ -20,6 +20,8 @@ const RECENT_YEARS = 2;
 const monthLabel = (year: number, month: number): string =>
     new Date(year, month - 1).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
 
+const shortMonthLabel = (month: number): string => new Date(2000, month - 1).toLocaleDateString(undefined, { month: 'short' });
+
 /**
  * Viewer-scoped year×month heat grid over a member's diary archive: each month cell links to that
  * month's archive (shaded by entry count), so the reader can scan when they wrote and jump to a
@@ -60,11 +62,13 @@ export function DiaryArchiveGrid({ counts, ownerId, selected }: Props) {
                                 );
                                 const inner = (
                                     <>
-                                        <span>{cell.month}</span>
-                                        {cell.count > 0 && (
-                                            // Inherits the cell foreground: muted text fails contrast on the heavier fills.
-                                            <span className="text-[0.625rem] leading-none">{cell.count}</span>
-                                        )}
+                                        {/* A localized month name ("7月" / "Jul"), not a bare digit: the label is what
+                                            makes the grid read as a calendar at a glance. */}
+                                        <span className="text-xs">{shortMonthLabel(cell.month)}</span>
+                                        {/* The count line is always reserved (nbsp on empty months) so the month labels
+                                            sit at the same height in every cell. Inherits the cell foreground: muted
+                                            text fails contrast on the heavier fills. */}
+                                        <span className="text-[0.625rem] leading-none">{cell.count > 0 ? cell.count : ' '}</span>
                                     </>
                                 );
                                 return cell.href ? (
