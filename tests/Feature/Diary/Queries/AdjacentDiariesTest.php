@@ -21,11 +21,10 @@ class AdjacentDiariesTest extends TestCase
         $current = $this->diary($owner);
         $newer = $this->diary($owner);
 
-        ['previous' => $previous, 'next' => $next] = (new AdjacentDiaries)($owner, $current);
+        ['older' => $olderNeighbor, 'newer' => $newerNeighbor] = (new AdjacentDiaries)($owner, $current);
 
-        // previous is the older entry (smaller id), next the newer.
-        $this->assertSame($older->getKey(), $previous?->getKey());
-        $this->assertSame($newer->getKey(), $next?->getKey());
+        $this->assertSame($older->getKey(), $olderNeighbor?->getKey());
+        $this->assertSame($newer->getKey(), $newerNeighbor?->getKey());
     }
 
     public function test_endpoints_have_only_one_neighbor(): void
@@ -34,10 +33,10 @@ class AdjacentDiariesTest extends TestCase
         $first = $this->diary($owner);
         $last = $this->diary($owner);
 
-        $this->assertNull((new AdjacentDiaries)($owner, $first)['previous']);
-        $this->assertSame($last->getKey(), (new AdjacentDiaries)($owner, $first)['next']?->getKey());
-        $this->assertSame($first->getKey(), (new AdjacentDiaries)($owner, $last)['previous']?->getKey());
-        $this->assertNull((new AdjacentDiaries)($owner, $last)['next']);
+        $this->assertNull((new AdjacentDiaries)($owner, $first)['older']);
+        $this->assertSame($last->getKey(), (new AdjacentDiaries)($owner, $first)['newer']?->getKey());
+        $this->assertSame($first->getKey(), (new AdjacentDiaries)($owner, $last)['older']?->getKey());
+        $this->assertNull((new AdjacentDiaries)($owner, $last)['newer']);
     }
 
     public function test_skips_neighbors_the_viewer_may_not_see(): void
@@ -49,11 +48,11 @@ class AdjacentDiariesTest extends TestCase
         $this->diary($owner, Visibility::Private); // hidden from a non-friend
         $visibleNewer = $this->diary($owner, Visibility::Members);
 
-        ['previous' => $previous, 'next' => $next] = (new AdjacentDiaries)($other, $current);
+        ['older' => $older, 'newer' => $newer] = (new AdjacentDiaries)($other, $current);
 
         // The private entries on either side are skipped; adjacency lands on the visible ones.
-        $this->assertSame($visibleOlder->getKey(), $previous?->getKey());
-        $this->assertSame($visibleNewer->getKey(), $next?->getKey());
+        $this->assertSame($visibleOlder->getKey(), $older?->getKey());
+        $this->assertSame($visibleNewer->getKey(), $newer?->getKey());
     }
 
     public function test_does_not_cross_into_another_authors_diaries(): void
@@ -62,7 +61,7 @@ class AdjacentDiariesTest extends TestCase
         $own = $this->diary($author, Visibility::Members);
         $this->diary($stranger, Visibility::Members); // newer id, different author
 
-        $this->assertNull((new AdjacentDiaries)($author, $own)['next']);
+        $this->assertNull((new AdjacentDiaries)($author, $own)['newer']);
     }
 
     public function test_blocked_viewer_gets_no_neighbors(): void
@@ -78,8 +77,8 @@ class AdjacentDiariesTest extends TestCase
 
         $result = (new AdjacentDiaries)($viewer, $current);
 
-        $this->assertNull($result['previous']);
-        $this->assertNull($result['next']);
+        $this->assertNull($result['older']);
+        $this->assertNull($result['newer']);
     }
 
     private function diary(Member $owner, Visibility $visibility = Visibility::Members): Diary

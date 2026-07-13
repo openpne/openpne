@@ -155,30 +155,34 @@ class DiaryController extends Controller
         // Classic friend localNav when viewing someone else's diary.
         $this->markLocalNavSubject($found->member);
 
-        return $this->respondWith($request, 'diary', [
-            SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer, $adjacent) {
-                ['previous' => $previous, 'next' => $next] = $adjacent($viewer, $found);
+        // Same viewer-scoped adjacency for both surfaces; hoisted so Modern gets it too.
+        ['older' => $older, 'newer' => $newer] = $adjacent($viewer, $found);
 
+        return $this->respondWith($request, 'diary', [
+            SurfaceResolver::CLASSIC => function () use ($request, $found, $older, $newer) {
                 $thread = DiaryCommentThread::paginate(
                     $found, $request->query('size'), $request->query('order'), $request->query('page'),
                 );
                 // Share the already-loaded diary so isDeletableBy() needs no per-comment query.
                 $thread->comments->each->setRelation('diary', $found);
 
+                // Classic keeps OpenPNE 3's previous(older)/next(newer) template vars for parity.
                 return view('diary.show', [
                     'diary' => $found,
                     'thread' => $thread,
-                    'previousDiary' => $previous,
-                    'nextDiary' => $next,
+                    'previousDiary' => $older,
+                    'nextDiary' => $newer,
                 ]);
             },
-            SurfaceResolver::MODERN => function () use ($found, $viewer) {
+            SurfaceResolver::MODERN => function () use ($found, $viewer, $older, $newer) {
                 $comments = $found->comments()->with(['member', 'images.file'])->orderBy('number')->get();
                 $comments->each->setRelation('diary', $found);
 
                 return Inertia::render('diary/show', [
                     'diary' => DiarySerializer::detail($found),
                     'comments' => DiarySerializer::comments($comments, $viewer),
+                    'older' => DiarySerializer::neighbor($older),
+                    'newer' => DiarySerializer::neighbor($newer),
                 ]);
             },
         ]);
