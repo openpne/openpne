@@ -74,6 +74,19 @@ test('returns an empty grid when there are no counts', () => {
     assert.deepEqual(buildArchiveGrid([], 2026, 7), []);
 });
 
+test('keeps the selected year in range when the keyword leaves it without matches', () => {
+    // Viewing /2024/3 while the keyword only matches 2026: the 2024 row must still render so the
+    // selection ring stays on the map.
+    const rows = buildArchiveGrid([{ year: 2026, month: 7, count: 1 }], 2026, 7, 'x', { year: 2024 });
+    assert.deepEqual(
+        rows.map((row) => row.year),
+        [2026, 2025, 2024],
+    );
+    const row2024 = rows[2];
+    assert.ok(row2024);
+    assert.ok(row2024.months.every((cell) => cell.count === 0 && cell.href === null));
+});
+
 test('a selection in a folded older year forces the grid open', () => {
     // 2024-2026: two recent rows visible, 2024 folded.
     const rows = buildArchiveGrid([{ year: 2024, month: 3, count: 2 }], 2026, 7);
