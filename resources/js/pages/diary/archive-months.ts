@@ -15,6 +15,15 @@ export interface ArchiveYearRow {
     months: ArchiveMonthCell[]; // always 12, January..December
 }
 
+/** Append the active archive keyword to a listMember path so month links keep the filter. */
+export function withKeyword(path: string, keyword?: string): string {
+    if (!keyword) {
+        return path;
+    }
+
+    return `${path}?${new URLSearchParams({ keyword }).toString()}`;
+}
+
 /** Fixed heat buckets for the cell shading: 0 / 1-2 / 3-5 / 6-9 / 10+. */
 export function countBucket(count: number): 0 | 1 | 2 | 3 | 4 {
     if (count <= 0) return 0;
@@ -44,7 +53,7 @@ export function selectedBeyondRecentYears(rows: ArchiveYearRow[], selected: { ye
     return rows.slice(recentYears).some((row) => row.year === selected.year);
 }
 
-export function buildArchiveGrid(counts: MonthlyCount[], currentYear: number, ownerId: number): ArchiveYearRow[] {
+export function buildArchiveGrid(counts: MonthlyCount[], currentYear: number, ownerId: number, keyword?: string): ArchiveYearRow[] {
     if (counts.length === 0) {
         return [];
     }
@@ -63,7 +72,7 @@ export function buildArchiveGrid(counts: MonthlyCount[], currentYear: number, ow
         const months: ArchiveMonthCell[] = [];
         for (let month = 1; month <= 12; month++) {
             const count = byYearMonth.get(`${year}-${month}`) ?? 0;
-            months.push({ month, count, href: count > 0 ? `/diary/listMember/${ownerId}/${year}/${month}` : null });
+            months.push({ month, count, href: count > 0 ? withKeyword(`/diary/listMember/${ownerId}/${year}/${month}`, keyword) : null });
         }
         rows.push({ year, months });
     }

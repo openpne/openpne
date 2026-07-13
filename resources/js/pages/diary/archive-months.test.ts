@@ -38,6 +38,26 @@ test('builds an archive href for counted months only', () => {
     assert.equal(row.months[3]?.href, null); // April: no entries
 });
 
+test('threads the keyword into counted-month hrefs', () => {
+    const rows = buildArchiveGrid([{ year: 2026, month: 3, count: 4 }], 2026, 7, 'cat');
+    const row = rows[0];
+    assert.ok(row);
+    assert.equal(row.months[2]?.href, '/diary/listMember/7/2026/3?keyword=cat');
+    // Empty months stay non-linked even under an active keyword.
+    assert.equal(row.months[0]?.href, null);
+});
+
+test('url-encodes multibyte and spaced keywords in hrefs', () => {
+    const rows = buildArchiveGrid([{ year: 2026, month: 3, count: 4 }], 2026, 7, '猫 dog');
+    // URLSearchParams: multibyte → percent-escapes, space → '+'.
+    assert.equal(rows[0]?.months[2]?.href, '/diary/listMember/7/2026/3?keyword=%E7%8C%AB+dog');
+});
+
+test('omits the keyword param when empty', () => {
+    const rows = buildArchiveGrid([{ year: 2026, month: 3, count: 4 }], 2026, 7, '');
+    assert.equal(rows[0]?.months[2]?.href, '/diary/listMember/7/2026/3');
+});
+
 test('count buckets use fixed thresholds 0 / 1-2 / 3-5 / 6-9 / 10+', () => {
     assert.equal(countBucket(0), 0);
     assert.equal(countBucket(1), 1);

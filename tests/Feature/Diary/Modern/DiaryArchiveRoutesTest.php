@@ -131,6 +131,29 @@ class DiaryArchiveRoutesTest extends TestCase
             );
     }
 
+    public function test_keyword_narrows_the_archive_and_grid_count_matches_the_month_total(): void
+    {
+        $owner = Member::factory()->create();
+        // March: two entries, one carries the term.
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'title' => 'March laravel', 'body' => 'x', 'visibility' => Visibility::Members, 'created_at' => '2026-03-10 09:00:00']);
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'title' => 'March cooking', 'body' => 'y', 'visibility' => Visibility::Members, 'created_at' => '2026-03-20 09:00:00']);
+
+        $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}/2026/3?keyword=laravel")
+            ->assertInertia(fn ($page) => $page
+                ->component('diary/list')
+                ->where('keyword', 'laravel')
+                ->where('period', '2026-03')
+                ->has('diaries.data', 1)
+                ->where('diaries.data.0.title', 'March laravel')
+                // The month heading count (diaries.meta.total) and the grid's March cell agree on 1.
+                ->where('diaries.meta.total', 1)
+                ->has('monthlyCounts', 1)
+                ->where('monthlyCounts.0.year', 2026)
+                ->where('monthlyCounts.0.month', 3)
+                ->where('monthlyCounts.0.count', 1)
+            );
+    }
+
     public function test_monthly_counts_are_viewer_scoped(): void
     {
         [$owner, $viewer] = Member::factory()->count(2)->create()->all();

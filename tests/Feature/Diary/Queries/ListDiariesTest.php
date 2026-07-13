@@ -171,7 +171,68 @@ class ListDiariesTest extends TestCase
         $this->assertSame(1, $result->total());
     }
 
+    // Keyword filter ------------------------------------------------------------
+
+    public function test_keyword_matches_title_or_body(): void
+    {
+        $owner = Member::factory()->create();
+        $this->keyed($owner, 'Laravel tips', 'about the framework');
+        $this->keyed($owner, 'Cooking', 'I love laravel pasta');
+        $this->keyed($owner, 'Unrelated', 'nothing here');
+
+        $result = (new ListDiaries)($owner, $owner, keyword: 'laravel');
+
+        $this->assertSame(2, $result->total());
+    }
+
+    public function test_multiple_keyword_terms_are_and_connected(): void
+    {
+        $owner = Member::factory()->create();
+        $this->keyed($owner, 'Laravel and React', 'full stack');
+        $this->keyed($owner, 'Laravel only', 'backend');
+
+        $result = (new ListDiaries)($owner, $owner, keyword: 'laravel react');
+
+        $this->assertSame(1, $result->total());
+    }
+
+    public function test_full_width_space_splits_keyword_terms(): void
+    {
+        $owner = Member::factory()->create();
+        $this->keyed($owner, 'Laravel React', 'x');
+        $this->keyed($owner, 'Laravel', 'y');
+
+        $result = (new ListDiaries)($owner, $owner, keyword: 'laravel　react');
+
+        $this->assertSame(1, $result->total());
+    }
+
+    public function test_period_and_keyword_are_orthogonal(): void
+    {
+        $owner = Member::factory()->create();
+        // Two March entries; only one carries the term.
+        $this->keyed($owner, 'March laravel', 'x', '2026-03-10 09:00:00');
+        $this->keyed($owner, 'March cooking', 'y', '2026-03-20 09:00:00');
+        // A matching entry in another month must not leak into the March result.
+        $this->keyed($owner, 'April laravel', 'z', '2026-04-01 09:00:00');
+
+        $result = (new ListDiaries)($owner, $owner, period: ArchivePeriod::fromYearMonthDay(2026, 3), keyword: 'laravel');
+
+        $this->assertSame(1, $result->total());
+        $this->assertSame('March laravel', $result->items()[0]->title);
+    }
+
     // Helpers -------------------------------------------------------------------
+
+    private function keyed(Member $owner, string $title, string $body, ?string $createdAt = null): Diary
+    {
+        $attrs = ['member_id' => $owner->getKey(), 'title' => $title, 'body' => $body, 'visibility' => Visibility::Members];
+        if ($createdAt !== null) {
+            $attrs['created_at'] = $createdAt;
+        }
+
+        return Diary::factory()->create($attrs);
+    }
 
     private function createDiaryFor(Member $member, Visibility $visibility, ?string $createdAt = null): Diary
     {

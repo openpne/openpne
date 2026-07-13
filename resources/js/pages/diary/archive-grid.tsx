@@ -3,12 +3,14 @@ import { useState } from 'react';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { buildArchiveGrid, countBucket, selectedBeyondRecentYears, type MonthlyCount } from './archive-months';
+import { buildArchiveGrid, countBucket, selectedBeyondRecentYears, withKeyword, type MonthlyCount } from './archive-months';
 
 interface Props {
     counts: MonthlyCount[];
     ownerId: number;
     selected: { year: number; month: number } | null;
+    // Active archive keyword: threaded into month links and "show all" so filtering survives navigation.
+    keyword?: string;
 }
 
 // Opacity ramp per heat bucket over the chosen-state token (bucket 0 = no fill).
@@ -27,11 +29,11 @@ const shortMonthLabel = (month: number): string => new Date(2000, month - 1).toL
  * month's archive (shaded by entry count), so the reader can scan when they wrote and jump to a
  * period. Hidden entirely when the member has no diaries.
  */
-export function DiaryArchiveGrid({ counts, ownerId, selected }: Props) {
+export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) {
     const t = useT();
     const [showEarlier, setShowEarlier] = useState(false);
 
-    const rows = buildArchiveGrid(counts, new Date().getFullYear(), ownerId);
+    const rows = buildArchiveGrid(counts, new Date().getFullYear(), ownerId, keyword);
     if (rows.length === 0) {
         return null;
     }
@@ -105,7 +107,7 @@ export function DiaryArchiveGrid({ counts, ownerId, selected }: Props) {
                         </button>
                     )}
                     {selected && (
-                        <Link href={`/diary/listMember/${ownerId}`} className="ml-auto text-selected hover:underline">
+                        <Link href={withKeyword(`/diary/listMember/${ownerId}`, keyword)} className="ml-auto text-selected hover:underline">
                             {t('Show all %diary% entries')}
                         </Link>
                     )}
