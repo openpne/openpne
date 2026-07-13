@@ -5,6 +5,7 @@ namespace Tests\Feature\Diary\Modern;
 use App\Models\Diary;
 use App\Models\DiaryImage;
 use App\Models\Member;
+use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,6 +48,34 @@ class DiaryRoutesTest extends TestCase
                 ->has('diaries.data.0.thumbnails', 1)
                 ->where('diaries.data.0.thumbnails.0', fn ($url) => is_string($url) && $url !== '')
             );
+    }
+
+    public function test_keyword_filters_list_member_and_reflects_in_monthly_counts(): void
+    {
+        $owner = Member::factory()->create();
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'title' => 'Laravel tips', 'body' => 'x', 'visibility' => Visibility::Members, 'created_at' => '2026-03-10 09:00:00']);
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'title' => 'Cooking', 'body' => 'y', 'visibility' => Visibility::Members, 'created_at' => '2026-04-11 09:00:00']);
+
+        // keyword=laravel keeps only the March entry; the grid's monthly counts drop April too.
+        $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}?keyword=laravel")
+            ->assertInertia(fn ($page) => $page
+                ->component('diary/list')
+                ->where('keyword', 'laravel')
+                ->where('archive', null)
+                ->has('diaries.data', 1)
+                ->where('diaries.data.0.title', 'Laravel tips')
+                ->has('monthlyCounts', 1)
+                ->where('monthlyCounts.0.month', 3)
+                ->where('monthlyCounts.0.count', 1)
+            );
+    }
+
+    public function test_list_member_echoes_empty_keyword_when_unfiltered(): void
+    {
+        $owner = Member::factory()->create();
+
+        $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('keyword', ''));
     }
 
     public function test_modern_status_fallback_renders_classic_with_op3_body_id(): void

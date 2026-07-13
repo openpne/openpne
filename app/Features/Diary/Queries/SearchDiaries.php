@@ -6,6 +6,7 @@ use App\Features\Block\BlockLookup;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Visibility;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
@@ -28,13 +29,25 @@ class SearchDiaries
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'diaries.member_id');
 
+        self::applyTerms($query, $keyword);
+
+        return $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * AND-connect each whitespace-split term as a title/body LIKE onto an existing diary query.
+     * Shared with the member archive ({@see ListDiaries}, {@see MemberDiaryMonthlyCounts}) so a
+     * keyword scans title and body identically wherever it applies. Empty keyword → no-op.
+     *
+     * @param  Builder  $query  a diary query builder (Eloquent builder or a Diary relation)
+     */
+    public static function applyTerms(Builder $query, string $keyword): void
+    {
         foreach (self::terms($keyword) as $term) {
             $query->where(fn ($q) => $q
                 ->where('title', 'like', '%'.$term.'%')
                 ->orWhere('body', 'like', '%'.$term.'%'));
         }
-
-        return $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
     }
 
     /**

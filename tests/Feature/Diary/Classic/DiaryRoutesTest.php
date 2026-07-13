@@ -56,6 +56,20 @@ class DiaryRoutesTest extends TestCase
         $response->assertSee('Bobs Entry');
     }
 
+    public function test_keyword_query_param_is_ignored_by_classic(): void
+    {
+        $owner = Member::factory()->create();
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'title' => 'Laravel tips', 'visibility' => Visibility::Members]);
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'title' => 'Cooking pasta', 'visibility' => Visibility::Members]);
+
+        // Classic has no archive keyword filter (OpenPNE 3 parity): the param is inert, both entries show.
+        $response = $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}?keyword=laravel");
+
+        $response->assertOk();
+        $response->assertSee('Laravel tips');
+        $response->assertSee('Cooking pasta');
+    }
+
     public function test_list_member_hides_private_diary_from_non_owner(): void
     {
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
