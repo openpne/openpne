@@ -1,6 +1,6 @@
 # A named stage (not COPY --from=image) so dependabot's docker ecosystem, which
 # only reads FROM lines, keeps this pin updated too.
-FROM composer:2.9.5 AS composer
+FROM composer:2.10.2 AS composer
 
 FROM php:8.5.8-fpm-bookworm
 
