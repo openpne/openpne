@@ -1,21 +1,22 @@
 import { Link } from '@inertiajs/react';
 import { InitialBadge } from '@/components/initial-badge';
-import type { RightRailItem } from '@/types';
+import type { NineTableItem } from '@/types';
 
 /**
- * A 3×3 grid of friend or community thumbnails with names. `round`
+ * A grid of friend or community thumbnails with names. `round`
  * (friends, like the circular Avatar) vs `square` (communities, like CommunityImage) so a person and
  * a place read differently at a glance. Missing images fall back to a neutral initial badge. Items
- * are pre-shuffled server-side; this renders in order.
+ * are pre-shuffled server-side; this renders in order. `columns` picks the density: 3 fits the narrow
+ * right rail; 5 keeps roughly the same tile size in a full-width body column (3 on mobile either way).
  */
-export function NineTable({ items, shape }: { items: RightRailItem[]; shape: 'round' | 'square' }) {
+export function NineTable({ items, shape, columns = 3 }: { items: NineTableItem[]; shape: 'round' | 'square'; columns?: 3 | 5 }) {
     if (items.length === 0) {
         return null;
     }
     const rounded = shape === 'round' ? 'rounded-full' : 'rounded-lg';
 
     return (
-        <ul className="grid grid-cols-3 gap-2">
+        <ul className={columns === 5 ? 'grid grid-cols-3 gap-2 sm:grid-cols-5' : 'grid grid-cols-3 gap-2'}>
             {items.map((item) => (
                 <li key={item.id}>
                     <Link href={item.href} className="group block text-center" title={item.name}>
