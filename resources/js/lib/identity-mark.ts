@@ -23,7 +23,7 @@ export function computeInitial(name: string): string {
 
 function isCjk(ch: string): boolean {
     // CJK symbols/punctuation, hiragana, katakana, unified ideographs, and fullwidth/halfwidth forms.
-    return /[　-〿぀-ゟ゠-ヿ一-鿿＀-￯]/.test(ch);
+    return /[\u3000-〿぀-ゟ゠-ヿ一-鿿＀-￯]/.test(ch);
 }
 
 /**

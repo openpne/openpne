@@ -209,7 +209,7 @@ jobs:
       - run: vendor/bin/pint --test
 
   frontend:
-    name: Frontend (type-check + build)
+    name: Frontend (lint + type-check + test + build)
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
@@ -220,6 +220,7 @@ jobs:
           node-version: '26'
           cache: 'npm'
       - run: npm ci
+      - run: npm run lint
       - run: npm run type-check
       - run: npm test
       - run: npm run build
