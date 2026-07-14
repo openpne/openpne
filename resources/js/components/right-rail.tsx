@@ -4,7 +4,7 @@ import { NineTable } from '@/components/nine-table';
 import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Input } from '@/components/ui/input';
 import { useT } from '@/lib/i18n';
-import type { PageProps, RightRailItem } from '@/types';
+import type { PageProps } from '@/types';
 
 /**
  * Desktop-only (xl+) right rail: a member search box plus friends and joined-community thumbnail

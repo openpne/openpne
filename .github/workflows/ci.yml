@@ -209,6 +209,8 @@ jobs:
       - run: vendor/bin/pint --test
 
   frontend:
+    # This name is a required status check context in branch protection — keep it stable when
+    # adding steps, or the ruleset waits forever on the old context and blocks merges.
     name: Frontend (type-check + build)
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -220,6 +222,7 @@ jobs:
           node-version: '26'
           cache: 'npm'
       - run: npm ci
+      - run: npm run lint
       - run: npm run type-check
       - run: npm test
       - run: npm run build
