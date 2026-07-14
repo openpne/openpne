@@ -25,11 +25,26 @@ export default tseslint.config(
     {
         // The Inertia entry must stay a pure side-effect module: a component defined here makes it a
         // Vite Fast Refresh boundary, and plugin-react's boundary self-import re-runs the top-level
-        // createRoot in dev, mounting the app twice. Scope the refresh rule here to enforce that.
+        // createRoot in dev, mounting the app twice. Enforce the contract directly — no exports (a
+        // module that exports nothing can never become a refresh boundary) and no class definitions;
+        // only-export-components additionally flags a locally-defined function component.
         files: ['resources/js/app.tsx'],
         plugins: { 'react-refresh': reactRefresh },
         rules: {
-            'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
+            'react-refresh/only-export-components': 'error',
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector: 'ExportNamedDeclaration, ExportDefaultDeclaration, ExportAllDeclaration',
+                    message:
+                        'The Inertia entry is a side-effect-only module — no exports. Put components or helpers in their own module.',
+                },
+                {
+                    selector: 'ClassDeclaration',
+                    message:
+                        'The Inertia entry is a side-effect-only module — no class definitions. Put them in their own module.',
+                },
+            ],
         },
     },
     {
