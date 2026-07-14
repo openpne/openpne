@@ -115,13 +115,4 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'OpenPNE')),
     ],
 
-    // Resolve our resources/views/vendor/mail overrides (site-name header/footer, no Laravel
-    // logo) before the framework defaults; without an explicit path they are never picked up.
-    'markdown' => [
-        'theme' => 'default',
-        'paths' => [
-            resource_path('views/vendor/mail'),
-        ],
-    ],
-
 ];
