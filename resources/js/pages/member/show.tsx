@@ -10,6 +10,8 @@ import { useT } from '@/lib/i18n';
 import type { NineTableItem, PageProps } from '@/types';
 import { DiaryRow } from '../diary/diary-row';
 import type { DiarySummary } from '../diary/types';
+import { profileIsBlank } from './profile-blank';
+import type { ProfileStats } from './profile-blank';
 
 interface ProfileField {
     name: string;
@@ -26,13 +28,6 @@ interface ProfilePage {
     /** Self-introduction promoted into the header; null when absent or not visible. */
     bio: string | null;
     fields: ProfileField[];
-}
-
-interface ProfileStats {
-    diaries: number;
-    activity: number;
-    friends: number;
-    communities: number;
 }
 
 /** null for a guest — the digest links to auth-only routes, so it is served to signed-in viewers only. */
@@ -61,9 +56,10 @@ function StatsRow({ ownerId, stats }: { ownerId: number; stats: ProfileStats }) 
     return (
         <div className="grid grid-cols-4 gap-2">
             {items.map((item) => (
-                <Link key={item.key} href={item.href} className="rounded-lg px-2 py-1.5 text-center transition-colors hover:bg-muted/40">
+                <Link key={item.key} href={item.href} className="min-w-0 rounded-lg px-2 py-1.5 text-center transition-colors hover:bg-muted/40">
                     <span className="block text-lg font-semibold text-foreground">{item.count}</span>
-                    <span className="block text-xs text-muted-foreground">{item.label}</span>
+                    {/* Long sns-term labels (e.g. "Communities") must wrap, not overflow the narrow cell. */}
+                    <span className="block break-words text-xs text-muted-foreground">{item.label}</span>
                 </Link>
             ))}
         </div>
@@ -93,9 +89,7 @@ export default function MemberShow() {
     const { auth, profile, digest } = usePage<ShowProps>().props;
     const { owner, fields, isSelf, age, friendStatus, bio } = profile;
 
-    const digestEmpty =
-        !digest || (digest.recentDiaries.length === 0 && digest.friends.length === 0 && digest.communities.length === 0);
-    const nothingToShow = !bio && age === null && fields.length === 0 && digestEmpty;
+    const nothingToShow = profileIsBlank(bio, age, fields.length, digest?.stats ?? null);
 
     return (
         <>

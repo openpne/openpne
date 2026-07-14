@@ -24,6 +24,7 @@ export function NineTable({ items, shape, columns = 3 }: { items: NineTableItem[
                             <img
                                 src={item.imageUrl}
                                 alt=""
+                                loading="lazy"
                                 className={`aspect-square w-full object-cover ${rounded} transition group-hover:opacity-90`}
                             />
                         ) : (
