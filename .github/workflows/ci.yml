@@ -209,7 +209,9 @@ jobs:
       - run: vendor/bin/pint --test
 
   frontend:
-    name: Frontend (lint + type-check + test + build)
+    # This name is a required status check context in branch protection — keep it stable when
+    # adding steps, or the ruleset waits forever on the old context and blocks merges.
+    name: Frontend (type-check + build)
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
