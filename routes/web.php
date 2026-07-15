@@ -209,7 +209,7 @@ Route::get('/altcha/challenge', fn (Captcha $captcha) => response()->json($captc
 // Web app manifest, dynamic so `name` mirrors the admin-configured SNS name. Declaring standalone
 // display with a site-wide scope keeps home-screen launches free of browser chrome: without it iOS
 // overlays a title bar on every in-app navigation, covering the top of the page. Colors match the
-// theme-color meta in the layouts.
+// Modern shell's theme-color meta.
 Route::get('/manifest.webmanifest', fn () => response()->json([
     'name' => sns_name(),
     'short_name' => sns_name(),
