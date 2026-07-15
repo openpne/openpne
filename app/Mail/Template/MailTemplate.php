@@ -297,8 +297,8 @@ enum MailTemplate: string
     }
 
     /**
-     * Every caption and variable-help string surfaces in the admin mail-template editor (the template
-     * list and every edit modal), so the coverage subset is the full source set.
+     * Every caption and variable-help string surfaces in the admin mail-template editor, so the
+     * coverage subset is the full source set.
      *
      * @return list<string>
      */

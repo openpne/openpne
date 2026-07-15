@@ -9,11 +9,9 @@ use App\Services\TermService;
 use Tests\TestCase;
 
 /**
- * Pins the surfaced-only coverage corpus behind `i18n:check`. Captions/help that reach __() via a
- * variable never enter the code scanner; the coverage gate feeds them in, but only the subset that
- * actually renders — wired kinds, categories with a wired kind, and every mail-template string. So a
- * kind flipped to isWired:true gains its ja-translation requirement at that moment, and an unwired
- * kind stays out (no speculative translation, no baseline debt).
+ * Pins the surfaced-only coverage corpus: only registry captions/help that actually render (wired
+ * kinds, categories with a wired kind, all mail-template strings) are gated for a ja translation, so
+ * an unwired kind stays out until it becomes wired.
  */
 class I18nCoverageSourcesTest extends TestCase
 {
@@ -21,16 +19,13 @@ class I18nCoverageSourcesTest extends TestCase
     {
         $sources = Cmd::coverageSourceStrings();
 
-        // Wired kind caption — the reported half-English bug — is gated.
+        // Surfaced → gated: a wired kind caption, mail-template help, a wired category's heading.
         $this->assertArrayHasKey('New comments on %topics% in your %communities%', $sources);
-        // Mail-template variable help surfaces in the admin editor — gated.
         $this->assertArrayHasKey('The %community% name.', $sources);
-        // Diary has wired kinds, so its heading renders — gated.
         $this->assertArrayHasKey('%Diaries%', $sources);
 
-        // Unwired timeline kind never renders — must stay out so no speculative ja is demanded.
+        // Unsurfaced → out: an unwired kind caption and an all-unwired category's heading.
         $this->assertArrayNotHasKey('New %activity% posts (everyone)', $sources);
-        // Timeline has no wired kinds, so its heading never renders — must stay out too.
         $this->assertArrayNotHasKey('%Activity%', $sources);
     }
 

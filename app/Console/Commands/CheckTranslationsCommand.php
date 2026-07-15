@@ -830,12 +830,10 @@ class CheckTranslationsCommand extends Command
     }
 
     /**
-     * Surfaced source strings from every dynamic registry ({@see DYNAMIC_SOURCE_REGISTRIES}) —
-     * captions/help that actually render — mapped to their registry class for the missing-key report's
-     * synthetic location. Unlike dynamicSourceStrings() (ALL raw strings, for the term-literal gate),
-     * this is only the rendered subset ({@see NotificationKind::coverageStrings()} etc.), so the
-     * coverage gate demands a ja translation exactly when a string surfaces — a kind flipped to
-     * isWired:true enters this set immediately.
+     * Surfaced source strings from every dynamic registry ({@see DYNAMIC_SOURCE_REGISTRIES}), mapped
+     * to the registry class for the missing-key report's synthetic location. The coverage counterpart
+     * to dynamicSourceStrings(): each registry's coverageStrings() is the rendered subset the coverage
+     * gate requires a ja translation for.
      *
      * @return array<string, class-string> surfaced source string => registry class
      */

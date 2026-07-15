@@ -46,9 +46,8 @@ enum NotificationCategory: string
     }
 
     /**
-     * Raw headings (pre-__()) for categories that actually render: those with at least one wired kind.
-     * A category whose kinds are all unwired never surfaces, so requiring its ja translation would be
-     * speculative. Distinct from sourceStrings() (all categories, for the term-literal gate).
+     * Raw headings (pre-__()) of categories that render — those with at least one wired kind. An
+     * all-unwired category never surfaces, so gating its ja translation would be speculative.
      *
      * @return list<string>
      */

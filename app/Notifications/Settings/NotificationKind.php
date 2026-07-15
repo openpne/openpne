@@ -242,9 +242,8 @@ enum NotificationKind: string
     }
 
     /**
-     * Raw captions (pre-__()) that actually surface in the settings UI: wired kinds only. Feeds the
-     * i18n:check coverage gate, so flipping a kind to isWired:true adds its ja-translation requirement
-     * at that moment. Distinct from sourceStrings() (all kinds, for the term-literal gate).
+     * Raw captions (pre-__()) of kinds that surface in the settings UI (wired only), fed to the
+     * i18n:check coverage gate — so a kind's ja translation is required exactly when it becomes wired.
      *
      * @return list<string>
      */
