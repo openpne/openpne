@@ -89,8 +89,10 @@ class CheckTranslationsCommand extends Command
 
     /**
      * Registries whose captions/help strings reach __() through a variable, so the code scanner
-     * never sees them. Each exposes a static `sourceStrings(): list<string>` the term-literal gate
-     * scans directly. A new such registry must be added here or its literals go ungated.
+     * never sees them. Each exposes two static accessors the gates read directly: `sourceStrings():
+     * list<string>` (ALL raw strings, scanned by the term-literal gate) and `coverageStrings():
+     * list<string>` (the rendered subset, folded into the missing-key coverage gate via
+     * {@see coverageSourceStrings}). A new such registry must be added here or its literals go ungated.
      *
      * @var list<class-string>
      */
@@ -142,6 +144,9 @@ class CheckTranslationsCommand extends Command
         }
 
         $found = $this->extractUsedKeys($base);
+        foreach (self::coverageSourceStrings() as $string => $registry) {
+            $found[$string][] = 'registry: '.class_basename($registry);
+        }
         $defined = $this->loadDefinedKeys($base);
         $baseline = $this->loadBaseline($base);
 
@@ -817,6 +822,28 @@ class CheckTranslationsCommand extends Command
         $out = [];
         foreach (self::DYNAMIC_SOURCE_REGISTRIES as $registry) {
             foreach ($registry::sourceStrings() as $string) {
+                $out[(string) $string] ??= $registry;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Surfaced source strings from every dynamic registry ({@see DYNAMIC_SOURCE_REGISTRIES}) —
+     * captions/help that actually render — mapped to their registry class for the missing-key report's
+     * synthetic location. Unlike dynamicSourceStrings() (ALL raw strings, for the term-literal gate),
+     * this is only the rendered subset ({@see NotificationKind::coverageStrings()} etc.), so the
+     * coverage gate demands a ja translation exactly when a string surfaces — a kind flipped to
+     * isWired:true enters this set immediately.
+     *
+     * @return array<string, class-string> surfaced source string => registry class
+     */
+    public static function coverageSourceStrings(): array
+    {
+        $out = [];
+        foreach (self::DYNAMIC_SOURCE_REGISTRIES as $registry) {
+            foreach ($registry::coverageStrings() as $string) {
                 $out[(string) $string] ??= $registry;
             }
         }

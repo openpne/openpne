@@ -44,4 +44,26 @@ enum NotificationCategory: string
     {
         return array_map(static fn (self $category): string => $category->sourceCaption(), self::cases());
     }
+
+    /**
+     * Raw headings (pre-__()) for categories that actually render: those with at least one wired kind.
+     * A category whose kinds are all unwired never surfaces, so requiring its ja translation would be
+     * speculative. Distinct from sourceStrings() (all categories, for the term-literal gate).
+     *
+     * @return list<string>
+     */
+    public static function coverageStrings(): array
+    {
+        $seen = [];
+        $out = [];
+        foreach (NotificationKind::wiredCases() as $kind) {
+            $category = $kind->category();
+            if (! isset($seen[$category->value])) {
+                $seen[$category->value] = true;
+                $out[] = $category->sourceCaption();
+            }
+        }
+
+        return $out;
+    }
 }
