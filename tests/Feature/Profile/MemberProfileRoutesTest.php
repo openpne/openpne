@@ -2,9 +2,13 @@
 
 namespace Tests\Feature\Profile;
 
+use App\Models\Community;
+use App\Models\CommunityMember;
+use App\Models\Diary;
 use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
+use App\Models\TimelinePost;
 use App\Support\AvatarColor;
 use App\Support\PreferenceKey;
 use App\Support\SnsSettingKey;
@@ -312,12 +316,162 @@ class MemberProfileRoutesTest extends TestCase
         $this->actingAs($viewer)->get("/member/profile/id/{$other->getKey()}/extra")->assertRedirect("/member/{$other->getKey()}");
     }
 
+    // --- Modern digest (bio promotion + viewer-scoped stats/previews) ---
+
+    public function test_modern_promotes_the_self_introduction_to_bio(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $this->fieldFor($owner, Visibility::Members, 'a-regular-value');
+        $this->selfIntroFor($owner, 'Hello, I am Owner', Visibility::Members);
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('member/show')
+                ->where('profile.bio', 'Hello, I am Owner')
+                // The self-introduction is gone from the dl (only the regular field remains).
+                ->has('profile.fields', 1)
+                ->where('profile.fields.0.value', 'a-regular-value')
+            );
+    }
+
+    public function test_a_private_self_introduction_is_not_promoted_for_a_non_friend(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $this->selfIntroFor($owner, 'private-bio-secret', Visibility::Private);
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertDontSee('private-bio-secret');
+    }
+
+    public function test_digest_diary_count_is_scoped_to_the_viewer(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create(); // non-friend → Members clearance
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
+        Diary::factory()->friends()->create(['member_id' => $owner->getKey()]);
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('digest.stats.diaries', 1));
+    }
+
+    public function test_a_private_diary_title_is_absent_from_the_digest_payload(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        Diary::factory()->private()->create(['member_id' => $owner->getKey(), 'title' => 'my-private-diary-title']);
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertDontSee('my-private-diary-title');
+    }
+
+    public function test_a_friend_sees_the_friends_only_diary_in_the_digest(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create();
+        $friend = Member::factory()->create();
+        $this->makeFriends($owner, $friend);
+        Diary::factory()->friends()->create(['member_id' => $owner->getKey(), 'title' => 'friends-only-entry']);
+
+        $this->actingAs($friend)->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('digest.stats.diaries', 1)
+                ->where('digest.recentDiaries.0.title', 'friends-only-entry'));
+    }
+
+    public function test_the_digest_grids_match_the_stats_and_carry_deep_links(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $friend = Member::factory()->create();
+        $this->makeFriends($owner, $friend);
+        $community = Community::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $owner->getKey()]);
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('digest.stats.friends', 1)
+                ->has('digest.friends', 1)
+                ->where('digest.friends.0.id', $friend->getKey())
+                ->where('digest.friends.0.href', "/member/{$friend->getKey()}")
+                ->where('digest.stats.communities', 1)
+                ->has('digest.communities', 1)
+                ->where('digest.communities.0.id', $community->getKey())
+                ->where('digest.communities.0.href', "/community/{$community->getKey()}"));
+    }
+
+    public function test_activity_count_excludes_replies_and_invisible_posts(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create(); // non-friend → Members clearance
+        $top = TimelinePost::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
+        TimelinePost::factory()->replyTo($top)->create(['member_id' => $owner->getKey()]); // reply — excluded
+        TimelinePost::factory()->friends()->create(['member_id' => $owner->getKey()]); // above clearance — hidden
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('digest.stats.activity', 1));
+    }
+
+    public function test_a_guest_receives_no_digest(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);
+        $this->webField($owner, 'public-value');
+
+        $this->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('member/show')
+                ->where('digest', null));
+    }
+
+    public function test_self_digest_includes_private_content(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create();
+        Diary::factory()->private()->create(['member_id' => $owner->getKey()]);
+        TimelinePost::factory()->private()->create(['member_id' => $owner->getKey()]);
+
+        $this->actingAs($owner)->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('digest.stats.diaries', 1)
+                ->where('digest.stats.activity', 1));
+    }
+
     private function fieldFor(Member $owner, Visibility $visibility, string $value): void
     {
         $profile = Profile::factory()->create(['is_edit_public_flag' => true]);
         MemberProfile::factory()->create([
             'member_id' => $owner->getKey(), 'profile_id' => $profile->getKey(),
             'value' => $value, 'visibility' => $visibility,
+        ]);
+    }
+
+    private function selfIntroFor(Member $owner, string $value, Visibility $visibility = Visibility::Members): void
+    {
+        // op_preset_self_introduction is a per-install singleton (unique name); reuse it across members.
+        $profile = Profile::query()->where('name', 'op_preset_self_introduction')->first()
+            ?? Profile::factory()->preset('self_introduction')->create(['form_type' => 'textarea', 'is_edit_public_flag' => true]);
+        MemberProfile::factory()->create([
+            'member_id' => $owner->getKey(), 'profile_id' => $profile->getKey(),
+            'value' => $value, 'visibility' => $visibility,
+        ]);
+    }
+
+    private function makeFriends(Member $a, Member $b): void
+    {
+        DB::table('friendships')->insert([
+            ['member_id' => $a->getKey(), 'friend_id' => $b->getKey()],
+            ['member_id' => $b->getKey(), 'friend_id' => $a->getKey()],
         ]);
     }
 }

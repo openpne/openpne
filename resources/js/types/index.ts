@@ -17,7 +17,8 @@ export interface UnreadCounts {
     notifications: number;
 }
 
-export interface RightRailItem {
+/** One thumbnail tile in a NineTable grid (right rail, profile digest). */
+export interface NineTableItem {
     id: number;
     name: string;
     imageUrl: string | null;
@@ -28,8 +29,8 @@ export interface RightRailItem {
 }
 
 export interface RightRail {
-    friends: RightRailItem[];
-    joinedCommunities: RightRailItem[];
+    friends: NineTableItem[];
+    joinedCommunities: NineTableItem[];
 }
 
 export interface PageProps {
