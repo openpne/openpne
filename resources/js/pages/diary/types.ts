@@ -1,12 +1,14 @@
 export type DiaryVisibility = 'open' | 'members' | 'friends' | 'private';
 
+/** Minimal author reference: id + name only. Used where the payload carries no avatar (the diary
+ *  list `owner`, whose controller sends id/name only). */
 export interface DiaryAuthor {
     id: number;
     name: string;
 }
 
-/** A diary's own author (feed/detail) carries an avatar; comment authors (DiaryAuthor) do not. */
-export interface DiaryFeedAuthor extends DiaryAuthor {
+/** An author reference that carries an avatar — the diary byline (feed/detail) and comment authors. */
+export interface DiaryAvatarAuthor extends DiaryAuthor {
     imageUrl: string | null;
     avatarColor: string | null;
 }
@@ -25,7 +27,7 @@ export interface DiarySummary {
     commentCount: number;
     hasImages: boolean; // drives the feed's has-photos marker
     thumbnails: string[]; // all attachments' square thumbnails, only eager-loaded for rich rows
-    author: DiaryFeedAuthor;
+    author: DiaryAvatarAuthor;
     createdAt: string;
 }
 
@@ -46,7 +48,7 @@ export interface DiaryComment {
     number: number;
     body: string;
     images: DiaryImage[];
-    author: DiaryAuthor | null; // null once the author has withdrawn
+    author: DiaryAvatarAuthor | null; // null once the author has withdrawn
     createdAt: string;
     deletable: boolean; // viewer-specific, computed server-side
 }

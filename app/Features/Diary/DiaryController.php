@@ -202,7 +202,7 @@ class DiaryController extends Controller
                 ]);
             },
             SurfaceResolver::MODERN => function () use ($found, $viewer, $older, $newer) {
-                $comments = $found->comments()->with(['member', 'images.file'])->orderBy('number')->get();
+                $comments = $found->comments()->with(['member.avatar.file', 'images.file'])->orderBy('number')->get();
                 $comments->each->setRelation('diary', $found);
 
                 return Inertia::render('diary/show', [

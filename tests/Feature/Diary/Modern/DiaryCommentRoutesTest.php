@@ -5,6 +5,8 @@ namespace Tests\Feature\Diary\Modern;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\Member;
+use App\Models\MemberImage;
+use App\Support\AvatarColor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,11 +30,14 @@ class DiaryCommentRoutesTest extends TestCase
     {
         $diary = Diary::factory()->create();
         $commenter = Member::factory()->create(['name' => 'Commenter']);
+        MemberImage::factory()->create(['member_id' => $commenter->getKey()]);
+        $commenter->forceFill(['avatar_color' => AvatarColor::Green])->save();
         DiaryComment::factory()->create([
             'diary_id' => $diary->getKey(), 'member_id' => $commenter->getKey(),
             'number' => 1, 'body' => 'First post',
         ]);
         $viewer = Member::factory()->create();
+        $expectedImageUrl = $commenter->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
 
         $this->actingAs($viewer)->get("/diary/{$diary->getKey()}")
             ->assertInertia(fn ($page) => $page
@@ -41,6 +46,8 @@ class DiaryCommentRoutesTest extends TestCase
                 ->where('comments.0.body', 'First post')
                 ->where('comments.0.number', 1)
                 ->where('comments.0.author.name', 'Commenter')
+                ->where('comments.0.author.imageUrl', $expectedImageUrl)
+                ->where('comments.0.author.avatarColor', AvatarColor::Green->hex())
                 ->where('comments.0.deletable', false)
             );
     }

@@ -124,18 +124,19 @@ export default function CommunityTopicShow() {
                     <List>
                         {thread.comments.map((comment) => (
                             <li key={comment.id} className="px-5 py-4">
-                                <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
-                                    <span className="font-medium">#{comment.number}</span>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} size="sm" decorative />
                                     {comment.author ? (
-                                        <Link href={`/member/${comment.author.id}`} className="text-link hover:underline">
+                                        <Link href={`/member/${comment.author.id}`} className="truncate text-link hover:underline">
                                             {comment.author.name}
                                         </Link>
                                     ) : (
-                                        <span>{t('Withdrawn member')}</span>
+                                        <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
-                                    <span className="ml-auto">{formatDateTime(comment.createdAt)}</span>
+                                    <span className="ml-auto shrink-0 font-medium">#{comment.number}</span>
+                                    <span className="shrink-0">{formatDateTime(comment.createdAt)}</span>
                                     {comment.deletable && (
-                                        <button type="button" onClick={() => deleteComment(comment.id)} className={dangerActionClass}>
+                                        <button type="button" onClick={() => deleteComment(comment.id)} className={`${dangerActionClass} shrink-0`}>
                                             {t('Delete')}
                                         </button>
                                     )}
