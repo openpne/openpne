@@ -3,9 +3,13 @@
 namespace App\Features\Profile;
 
 use App\Features\Block\BlockLookup;
+use App\Features\Community\Queries\ListMemberCommunities;
+use App\Features\Diary\Queries\RecentMemberDiaries;
+use App\Features\Friend\Queries\ListFriends;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Features\Profile\Queries\EditProfileFields;
+use App\Features\Profile\Queries\ProfileStats;
 use App\Features\Profile\Queries\ShowProfile;
 use App\Features\Profile\Queries\VisibleAge;
 use App\Features\Profile\Serializers\ProfileFormSerializer;
@@ -70,9 +74,23 @@ class ProfileController extends Controller
                 'zones' => $gadgets->zones('profile', subject: $member, viewer: $viewer),
                 'layout' => $gadgets->layoutLetter('profile'),
             ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('member/show', [
-                'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang, $age, $friendStatus),
-            ]),
+            SurfaceResolver::MODERN => function () use ($member, $fields, $isSelf, $lang, $age, $friendStatus, $viewer) {
+                // Digest = auth-only: its previews and stats link to routes behind the auth group, and
+                // a guest never sees another member's friends/communities. Classic/guest pay +0 queries
+                // (this closure runs only for a Modern render). images.file feeds the rich diary rows.
+                $digest = $viewer === null ? null : ProfileSerializer::digest(
+                    (new ProfileStats)($viewer, $member),
+                    (new RecentMemberDiaries)($viewer, $member, 3)->load('images.file'),
+                    // 10 tiles fill the 5-column grid's two rows; NineTable trims to 9 (3×3) on mobile.
+                    (new ListFriends)->take($viewer, $member, 10),
+                    (new ListMemberCommunities)->take($member, 10),
+                );
+
+                return Inertia::render('member/show', [
+                    'profile' => ProfileSerializer::page($member, $fields, $isSelf, $lang, $age, $friendStatus),
+                    'digest' => $digest,
+                ]);
+            },
         ]);
     }
 
