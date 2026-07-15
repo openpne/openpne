@@ -81,8 +81,9 @@ class ProfileController extends Controller
                 $digest = $viewer === null ? null : ProfileSerializer::digest(
                     (new ProfileStats)($viewer, $member),
                     (new RecentMemberDiaries)($viewer, $member, 3)->load('images.file'),
-                    (new ListFriends)->take($viewer, $member, 9),
-                    (new ListMemberCommunities)->take($member, 9),
+                    // 10 tiles fill the 5-column grid's two rows; NineTable trims to 9 (3×3) on mobile.
+                    (new ListFriends)->take($viewer, $member, 10),
+                    (new ListMemberCommunities)->take($member, 10),
                 );
 
                 return Inertia::render('member/show', [
