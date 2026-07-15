@@ -126,7 +126,7 @@ class DiarySerializer
      * `author` is null for a withdrawn member; `deletable` is the viewer-specific delete
      * permission, computed server-side so the client never re-derives authorization.
      *
-     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string}|null, createdAt: string, deletable: bool}
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
      */
     public static function comment(DiaryComment $comment, Member $viewer): array
     {
@@ -138,6 +138,8 @@ class DiarySerializer
             'author' => $comment->member ? [
                 'id' => $comment->member->getKey(),
                 'name' => $comment->member->name,
+                'imageUrl' => $comment->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                'avatarColor' => $comment->member->avatar_color?->hex(),
             ] : null,
             'createdAt' => $comment->created_at->toIso8601String(),
             'deletable' => $comment->isDeletableBy($viewer),
