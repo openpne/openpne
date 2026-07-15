@@ -240,4 +240,15 @@ enum NotificationKind: string
     {
         return array_map(static fn (self $kind): string => $kind->definition()->caption, self::cases());
     }
+
+    /**
+     * Raw captions (pre-__()) of kinds that surface in the settings UI (wired only), fed to the
+     * i18n:check coverage gate — so a kind's ja translation is required exactly when it becomes wired.
+     *
+     * @return list<string>
+     */
+    public static function coverageStrings(): array
+    {
+        return array_map(static fn (self $kind): string => $kind->definition()->caption, self::wiredCases());
+    }
 }

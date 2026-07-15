@@ -297,6 +297,17 @@ enum MailTemplate: string
     }
 
     /**
+     * Every caption and variable-help string surfaces in the admin mail-template editor, so the
+     * coverage subset is the full source set.
+     *
+     * @return list<string>
+     */
+    public static function coverageStrings(): array
+    {
+        return self::sourceStrings();
+    }
+
+    /**
      * Dummy values for this template's variables, enough to render it once for a syntax check: a token so
      * `app_url_for` resolves (its absence would throw a missing-token error, not a template fault) and a
      * value for each declared variable. Derived from the same variable set as variableHelp() and undotted
