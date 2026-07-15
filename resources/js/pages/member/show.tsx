@@ -1,11 +1,17 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Mail, UserPlus } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { InitialBadge } from '@/components/initial-badge';
+import { NineTable } from '@/components/nine-table';
 import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
-import { List, ListRow, Panel } from '@/components/ui/surface';
+import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-import type { PageProps } from '@/types';
+import type { NineTableItem, PageProps } from '@/types';
+import { DiaryRow } from '../diary/diary-row';
+import type { DiarySummary } from '../diary/types';
+import { profileIsBlank } from './profile-blank';
+import type { ProfileStats } from './profile-blank';
 
 interface ProfileField {
     name: string;
@@ -19,17 +25,71 @@ interface ProfilePage {
     age: number | null;
     /** null = own profile or guest viewer. */
     friendStatus: 'friend' | 'sent' | 'received' | 'none' | null;
+    /** Self-introduction promoted into the header; null when absent or not visible. */
+    bio: string | null;
     fields: ProfileField[];
+}
+
+/** null for a guest — the digest links to auth-only routes, so it is served to signed-in viewers only. */
+interface ProfileDigest {
+    stats: ProfileStats;
+    recentDiaries: DiarySummary[];
+    friends: NineTableItem[];
+    communities: NineTableItem[];
 }
 
 interface ShowProps extends PageProps {
     profile: ProfilePage;
+    digest: ProfileDigest | null;
+}
+
+/** Tappable count + label per section: one link each so the accessible name reads "12 Friends". */
+function StatsRow({ ownerId, stats }: { ownerId: number; stats: ProfileStats }) {
+    const t = useT();
+    const items = [
+        { key: 'diaries', label: t('%Diaries%'), count: stats.diaries, href: `/diary/listMember/${ownerId}` },
+        { key: 'activity', label: t('%Activity%'), count: stats.activity, href: `/member/${ownerId}/timeline` },
+        { key: 'friends', label: t('%Friends%'), count: stats.friends, href: `/friend/list?id=${ownerId}` },
+        { key: 'communities', label: t('%Communities%'), count: stats.communities, href: `/community/joinList?id=${ownerId}` },
+    ];
+
+    return (
+        <div className="grid grid-cols-4 gap-2">
+            {items.map((item) => (
+                <Link key={item.key} href={item.href} className="min-w-0 rounded-lg px-2 py-1.5 text-center transition-colors hover:bg-muted/40">
+                    <span className="block text-lg font-semibold text-foreground">{item.count}</span>
+                    {/* Long sns-term labels (e.g. "Communities") must wrap, not overflow the narrow cell. */}
+                    <span className="block break-words text-xs text-muted-foreground">{item.label}</span>
+                </Link>
+            ))}
+        </div>
+    );
+}
+
+/** Titled digest section with a "View all" link. `flush` for a List body; padded otherwise (grids). */
+function SectionPanel({ title, viewAllHref, flush, children }: { title: string; viewAllHref: string; flush?: boolean; children: ReactNode }) {
+    const t = useT();
+    return (
+        <Panel
+            flush={flush}
+            title={title}
+            right={
+                <Link href={viewAllHref} className="shrink-0 text-xs text-link hover:underline">
+                    {t('View all')}
+                </Link>
+            }
+        >
+            {children}
+        </Panel>
+    );
 }
 
 export default function MemberShow() {
     const t = useT();
-    const { profile } = usePage<ShowProps>().props;
-    const { owner, fields, isSelf, age, friendStatus } = profile;
+    const { auth, profile, digest } = usePage<ShowProps>().props;
+    const { owner, fields, isSelf, age, friendStatus, bio } = profile;
+
+    const nothingToShow = profileIsBlank(bio, age, fields.length, digest?.stats ?? null);
 
     return (
         <>
@@ -51,7 +111,10 @@ export default function MemberShow() {
                             </Link>
                         )}
                     </div>
-                    <h1 className="min-w-0 flex-1 break-words text-xl font-semibold text-foreground">{owner.name}</h1>
+                    <div className="min-w-0 flex-1">
+                        <h1 className="break-words text-xl font-semibold text-foreground">{owner.name}</h1>
+                        {age !== null && <p className="mt-0.5 text-sm text-muted-foreground">{t(':age years old', { age })}</p>}
+                    </div>
                     {isSelf && (
                         <Link href="/member/edit/profile" className="shrink-0 text-sm text-link hover:underline">
                             {t('Edit Profile')}
@@ -59,9 +122,15 @@ export default function MemberShow() {
                     )}
                 </div>
 
-                {/* Primary relationship actions live in the profile panel (not the heading — the heading
-                    carries the person's name). Friend request is the primary action, message the secondary. */}
-                {!isSelf && (
+                {bio && (
+                    <div className="whitespace-pre-wrap break-words text-sm text-foreground">
+                        <UserText text={bio} />
+                    </div>
+                )}
+
+                {/* Primary relationship actions. Gated on an authenticated viewer: the targets need a
+                    login, so a guest must not see them. Friend request is primary, message secondary. */}
+                {auth.user && !isSelf && (
                     <div className="flex flex-wrap items-center gap-3">
                         {friendStatus === 'none' && (
                             <ActionLink href={`/friend/link?id=${owner.id}`}>
@@ -85,40 +154,16 @@ export default function MemberShow() {
                         </ActionLink>
                     </div>
                 )}
+
+                {digest && <StatsRow ownerId={owner.id} stats={digest.stats} />}
             </Panel>
 
-            {/* Jump to the owner's own content — same links whether the profile is the viewer's or not.
-                The list/joined routes accept ?id so they scope to this owner. */}
-            <Panel flush>
-                <List>
-                    <ListRow href={`/diary/listMember/${owner.id}`} chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Diary%')}</span>
-                    </ListRow>
-                    <ListRow href={`/member/${owner.id}/timeline`} chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Activity%')}</span>
-                    </ListRow>
-                    <ListRow href={`/friend/list?id=${owner.id}`} chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Friends%')}</span>
-                    </ListRow>
-                    <ListRow href={`/community/joinList?id=${owner.id}`} chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">{t('%Communities%')}</span>
-                    </ListRow>
-                </List>
-            </Panel>
-
-            {age === null && fields.length === 0 ? (
-                <Panel>
-                    <p className="text-sm text-muted-foreground">{t('No profile to show.')}</p>
-                </Panel>
-            ) : (
+            {/* Structured profile fields are self-declared identity, so they sit next to the header
+                (Facebook's Intro card, Mastodon's fields under the bio, mixi's profile table) with
+                the activity previews after. */}
+            {fields.length > 0 ? (
                 <Panel>
                     <dl className="divide-y divide-border">
-                        {age !== null && (
-                            <div className="flex gap-4 py-2 text-sm">
-                                <dt className="w-40 shrink-0 font-medium text-muted-foreground">{t('Age')}</dt>
-                                <dd className="text-foreground">{t(':age years old', { age })}</dd>
-                            </div>
-                        )}
                         {fields.map((field) => (
                             <div key={field.name} className="flex gap-4 py-2 text-sm">
                                 <dt className="w-40 shrink-0 font-medium text-muted-foreground">{field.caption}</dt>
@@ -129,7 +174,37 @@ export default function MemberShow() {
                         ))}
                     </dl>
                 </Panel>
+            ) : nothingToShow ? (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('No profile to show.')}</p>
+                </Panel>
+            ) : null}
+
+            {digest && digest.recentDiaries.length > 0 && (
+                <SectionPanel flush title={t('Recent %diaries%')} viewAllHref={`/diary/listMember/${owner.id}`}>
+                    <List>
+                        {digest.recentDiaries.map((diary) => (
+                            <DiaryRow key={diary.id} diary={diary} rich />
+                        ))}
+                    </List>
+                </SectionPanel>
             )}
+
+            {digest && digest.friends.length > 0 && (
+                <SectionPanel title={t('%Friends% (:count)', { count: digest.stats.friends })} viewAllHref={`/friend/list?id=${owner.id}`}>
+                    <NineTable items={digest.friends} shape="round" columns={5} />
+                </SectionPanel>
+            )}
+
+            {digest && digest.communities.length > 0 && (
+                <SectionPanel
+                    title={t('Joined %communities% (:count)', { count: digest.stats.communities })}
+                    viewAllHref={`/community/joinList?id=${owner.id}`}
+                >
+                    <NineTable items={digest.communities} shape="square" columns={5} />
+                </SectionPanel>
+            )}
+
         </>
     );
 }
