@@ -158,6 +158,28 @@ export default function MemberShow() {
                 {digest && <StatsRow ownerId={owner.id} stats={digest.stats} />}
             </Panel>
 
+            {/* Structured profile fields are self-declared identity, so they sit next to the header
+                (Facebook's Intro card, Mastodon's fields under the bio, mixi's profile table) with
+                the activity previews after. */}
+            {fields.length > 0 ? (
+                <Panel>
+                    <dl className="divide-y divide-border">
+                        {fields.map((field) => (
+                            <div key={field.name} className="flex gap-4 py-2 text-sm">
+                                <dt className="w-40 shrink-0 font-medium text-muted-foreground">{field.caption}</dt>
+                                <dd className="whitespace-pre-wrap break-words text-foreground">
+                                    <UserText text={field.value} />
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                </Panel>
+            ) : nothingToShow ? (
+                <Panel>
+                    <p className="text-sm text-muted-foreground">{t('No profile to show.')}</p>
+                </Panel>
+            ) : null}
+
             {digest && digest.recentDiaries.length > 0 && (
                 <SectionPanel flush title={t('Recent %diaries%')} viewAllHref={`/diary/listMember/${owner.id}`}>
                     <List>
@@ -183,24 +205,6 @@ export default function MemberShow() {
                 </SectionPanel>
             )}
 
-            {fields.length > 0 ? (
-                <Panel>
-                    <dl className="divide-y divide-border">
-                        {fields.map((field) => (
-                            <div key={field.name} className="flex gap-4 py-2 text-sm">
-                                <dt className="w-40 shrink-0 font-medium text-muted-foreground">{field.caption}</dt>
-                                <dd className="whitespace-pre-wrap break-words text-foreground">
-                                    <UserText text={field.value} />
-                                </dd>
-                            </div>
-                        ))}
-                    </dl>
-                </Panel>
-            ) : nothingToShow ? (
-                <Panel>
-                    <p className="text-sm text-muted-foreground">{t('No profile to show.')}</p>
-                </Panel>
-            ) : null}
         </>
     );
 }
