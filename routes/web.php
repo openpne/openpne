@@ -206,6 +206,24 @@ Route::middleware(['guest', NoReferrer::class])->controller(RegistrationControll
 Route::get('/altcha/challenge', fn (Captcha $captcha) => response()->json($captcha->challenge()))
     ->middleware(['throttle:60,1', AsBackgroundFetch::class])->name('altcha.challenge');
 
+// Web app manifest, dynamic so `name` mirrors the admin-configured SNS name. Declaring standalone
+// display with a site-wide scope keeps home-screen launches free of browser chrome: without it iOS
+// overlays a title bar on every in-app navigation, covering the top of the page. Colors match the
+// theme-color meta in the layouts.
+Route::get('/manifest.webmanifest', fn () => response()->json([
+    'name' => sns_name(),
+    'short_name' => sns_name(),
+    'start_url' => '/',
+    'scope' => '/',
+    'display' => 'standalone',
+    'background_color' => '#ffffff',
+    'theme_color' => '#2563eb',
+    'icons' => [
+        ['src' => asset('icon-192x192.png'), 'sizes' => '192x192', 'type' => 'image/png'],
+        ['src' => asset('icon-512x512.png'), 'sizes' => '512x512', 'type' => 'image/png'],
+    ],
+], options: JSON_UNESCAPED_SLASHES)->header('Content-Type', 'application/manifest+json'))->name('webmanifest');
+
 // Admin custom CSS, served as a text/css document the Classic shell <link>s (OpenPNE 3 parity:
 // /cache/css/customizing.css). Public — it styles guest pages too — and dynamic from the DB, not a
 // written cache file. See App\Http\Controllers\CustomizingCssController.
