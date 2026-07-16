@@ -72,7 +72,7 @@ class ClassicHomeActivityGadgetTest extends TestCase
             ->assertSee('timeline of my friend')      // h3 (%activity% of %my_friend%, en term rendering)
             ->assertSee('FriendActivityBody')
             ->assertSee('/timeline"', false)           // More → timeline.index (absolute url ends here)
-            ->assertDontSee('/timeline/new', false);   // no inline post link (unlike allMemberActivityBox)
+            ->assertSee('/timeline/new', false);       // post link (OP3's always-on home form, ported as a link)
     }
 
     public function test_activity_box_excludes_a_strangers_members_post(): void
@@ -89,14 +89,18 @@ class ClassicHomeActivityGadgetTest extends TestCase
             ->assertDontSee('StrangerMembersBody'); // FriendFeed drops a non-friend's all-members post
     }
 
-    public function test_activity_box_is_dropped_when_empty(): void
+    public function test_activity_box_keeps_its_frame_and_post_link_when_empty(): void
     {
+        // OpenPNE 3's home activityBox always carried the inline post form (is_allow_post_activity is
+        // a global default-on switch), so the frame never disappeared; the ported box keeps the frame
+        // and offers the post link even with no visible activities.
         $viewer = Member::factory()->create();
-        $this->makeGadget('activityBox');
+        $gadget = $this->makeGadget('activityBox');
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()
-            ->assertDontSee('activityBox', false);
+            ->assertSee('id="activityBox_'.$gadget->id.'"', false)
+            ->assertSee('/timeline/new', false);
     }
 
     public function test_activity_box_honors_the_row_config_and_ignores_the_page_query(): void

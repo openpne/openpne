@@ -1,11 +1,14 @@
 {{-- OpenPNE 3 activityBox (default/_activityBox via op_include_box): a server-rendered activity list.
-     Read-only in both contexts — the OpenPNE 3 inline post form is ported only on allMemberActivityBox
-     — so an empty box is dropped rather than render an empty frame (OpenPNE 3's profile activityBox and
-     an all-off home box drop the same way). --}}
-@if ($posts->isNotEmpty())
+     On the home, OpenPNE 3 always supplied the inline post form (is_allow_post_activity is a global
+     default-on switch OpenPNE 4 does not carry), so the frame always renders and the form becomes a
+     post-page link. A profile activityBox never had a form, so an empty one is dropped. --}}
+@if ($posts->isNotEmpty() || $context === 'home')
     <div class="dparts box activityBox homeRecentList" id="{{ $partId }}"><div class="parts">
         <div class="partsHeading"><h3>{{ $title }}</h3></div>
         <div class="body">
+            @if ($context === 'home')
+                <p><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
+            @endif
             <div class="box_list">
                 <ol id="{{ $partId }}_timeline" class="activities">
                     @foreach ($posts as $post)
