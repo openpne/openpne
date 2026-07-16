@@ -20,9 +20,9 @@ use Illuminate\Support\Facades\DB;
  * MAX over non-owner comments only (an owner's own follow-up comment does not bump the box, matching
  * OpenPNE 3's owner exclusion).
  *
- * Divergence from OpenPNE 3: the subscription table survived comment deletion, so a diary stayed in the
- * box even after the viewer removed their comment. This derived form drops a diary once the viewer has
- * no remaining comment on it (the whereHas no longer matches), even if other members' comments remain.
+ * Divergence from OpenPNE 3: the subscription table never rewound on comment deletion. This derived
+ * form recomputes from the surviving rows — a diary drops out once the viewer has no remaining comment
+ * on it, and deleting whichever non-owner comment was latest rewinds the box's time to the next one.
  */
 class DiaryCommentHistory
 {
@@ -37,7 +37,12 @@ class DiaryCommentHistory
             ->addSelect(['last_comment_time' => DiaryComment::query()
                 ->selectRaw('MAX(diary_comments.created_at)')
                 ->whereColumn('diary_comments.diary_id', 'diaries.id')
-                ->whereColumn('diary_comments.member_id', '!=', 'diaries.member_id')])
+                // A withdrawn commenter's member_id is NULL (nullOnDelete); on a surviving diary that
+                // is necessarily a non-owner comment (owners cascade-delete their diaries), and a bare
+                // != would drop it under SQL three-valued logic, rewinding the box's time.
+                ->where(fn (Builder $q) => $q
+                    ->whereNull('diary_comments.member_id')
+                    ->orWhereColumn('diary_comments.member_id', '!=', 'diaries.member_id'))])
             // Candidate: the viewer commented on a diary that is not their own — so their comment is
             // necessarily a non-owner comment, matching OpenPNE 3's member_id !== owner condition.
             ->where('diaries.member_id', '!=', $viewerId)

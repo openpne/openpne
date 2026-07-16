@@ -74,6 +74,29 @@ class DiaryCommentHistoryTest extends TestCase
         $this->assertSame('2026-01-02 10:00:00', $result->firstWhere('id', $b->getKey())->last_comment_time);
     }
 
+    public function test_a_withdrawn_authors_null_comment_still_counts_as_non_owner(): void
+    {
+        // Withdrawal null-fills diary_comments.member_id (nullOnDelete). On a surviving diary that is
+        // necessarily a non-owner comment; a bare != owner drops the NULL row under SQL three-valued
+        // logic and would rewind the box's time after the author withdraws.
+        $viewer = Member::factory()->create();
+        $owner = Member::factory()->create();
+        $withdrawn = Member::factory()->create();
+
+        $a = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
+        $b = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
+
+        $this->comment($a, $viewer, '2026-01-01 10:00:00');
+        $this->comment($b, $viewer, '2026-02-01 10:00:00');
+        $this->comment($a, $withdrawn, '2026-03-01 10:00:00'); // later than b's; must keep ranking a first
+        DiaryComment::where('member_id', $withdrawn->getKey())->update(['member_id' => null]);
+
+        $result = (new DiaryCommentHistory)($viewer);
+
+        $this->assertSame([$a->getKey(), $b->getKey()], $result->pluck('id')->all());
+        $this->assertSame('2026-03-01 10:00:00', $result->firstWhere('id', $a->getKey())->last_comment_time);
+    }
+
     public function test_visibility_gate(): void
     {
         $viewer = Member::factory()->create();
