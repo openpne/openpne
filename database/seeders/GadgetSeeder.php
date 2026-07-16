@@ -16,6 +16,7 @@ class GadgetSeeder extends Seeder
     /** @var list<array{context: string, zone: string, name: string, sort_order: int}> */
     private const ITEMS = [
         // home
+        ['context' => 'home', 'zone' => 'top', 'name' => 'birthdayBox', 'sort_order' => 0],
         ['context' => 'home', 'zone' => 'top', 'name' => 'informationBox', 'sort_order' => 20],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryFriendList', 'sort_order' => 101],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryList', 'sort_order' => 102],
@@ -29,6 +30,7 @@ class GadgetSeeder extends Seeder
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'communityJoinListBox', 'sort_order' => 30],
 
         // profile
+        ['context' => 'profile', 'zone' => 'top', 'name' => 'birthdayBox', 'sort_order' => 0],
         ['context' => 'profile', 'zone' => 'contents', 'name' => 'timelineProfile', 'sort_order' => 20],
         ['context' => 'profile', 'zone' => 'contents', 'name' => 'diaryMemberList', 'sort_order' => 101],
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'memberImageBox', 'sort_order' => 10],
