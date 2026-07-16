@@ -32,6 +32,9 @@ export default function MemberSearch() {
     const [monthday, setMonthday] = useState<Record<string, MonthDayRange>>(criteria.monthday ?? {});
     const [age, setAge] = useState<AgeRange>(criteria.age ?? {});
 
+    // No searchable profile fields and no age criterion → there is nothing behind the toggle.
+    const hasAdvancedFields = profiles.length > 0 || showAge;
+
     // Land with the detailed criteria expanded only when the applied search actually used one, so the
     // filters that produced the current results stay visible while the common name-only case stays lean.
     const hasAdvancedCriteria =
@@ -79,17 +82,19 @@ export default function MemberSearch() {
                     <SearchSubmitButton loading={searching} />
                 </div>
 
-                <button
-                    type="button"
-                    onClick={() => setAdvancedOpen((o) => !o)}
-                    aria-expanded={advancedOpen}
-                    className="flex items-center gap-1 text-sm text-link hover:underline"
-                >
-                    <ChevronRight className={cn('size-4 transition-transform', advancedOpen && 'rotate-90')} aria-hidden />
-                    {t('Advanced search')}
-                </button>
+                {hasAdvancedFields && (
+                    <button
+                        type="button"
+                        onClick={() => setAdvancedOpen((o) => !o)}
+                        aria-expanded={advancedOpen}
+                        className="flex items-center gap-1 text-sm text-link hover:underline"
+                    >
+                        <ChevronRight className={cn('size-4 transition-transform', advancedOpen && 'rotate-90')} aria-hidden />
+                        {t('Advanced search')}
+                    </button>
+                )}
 
-                {advancedOpen && (
+                {hasAdvancedFields && advancedOpen && (
                     <Panel bodyClassName="space-y-4">
                         {profiles.map((field) => (
                             <SearchField
