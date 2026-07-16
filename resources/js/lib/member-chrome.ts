@@ -354,7 +354,6 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         title: FRIENDS,
         tabsLabel: FRIENDS,
         tabs: friendTabs('manage'),
-        gap: '6',
     }),
     // One Messages hub: stable h1 (= nav label) with the four boxes as tabs; the active box lives
     // in the tabs and the browser Head title, not the h1.
