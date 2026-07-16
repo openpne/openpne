@@ -23,6 +23,9 @@ use App\Gadgets\Kinds\RecentCommunityEventCommentSnsGadget;
 use App\Gadgets\Kinds\RecentCommunityTopicCommentGadget;
 use App\Gadgets\Kinds\RecentCommunityTopicCommentSnsGadget;
 use App\Gadgets\Kinds\SearchBoxGadget;
+use App\Gadgets\Kinds\TimelineAllGadget;
+use App\Gadgets\Kinds\TimelineFriendGadget;
+use App\Gadgets\Kinds\TimelineProfileGadget;
 
 /**
  * The registered gadget kinds. A `gadgets.name` not found here (an OpenPNE 3 kind not yet ported —
@@ -53,6 +56,9 @@ final class GadgetKindRegistry
             RecentCommunityEventCommentGadget::class,
             RecentCommunityTopicCommentSnsGadget::class,
             RecentCommunityEventCommentSnsGadget::class,
+            TimelineAllGadget::class,
+            TimelineFriendGadget::class,
+            TimelineProfileGadget::class,
             SearchBoxGadget::class,
             LinkListBoxGadget::class,
             LanguageSelecterBoxGadget::class,

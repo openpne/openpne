@@ -44,4 +44,35 @@ final class TimelineFeedScope
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
     }
+
+    /**
+     * Friend-scoped variant of apply(): the viewer's own posts at every visibility, plus a friend's
+     * posts up to friends-only. Unlike apply() it drops the all-members tier, so a non-friend's
+     * members-only post never appears — the feed is limited to the viewer and the people they friended.
+     *
+     * @param  Builder<TimelinePost>  $query
+     */
+    public static function applyFriendsOnly(Builder $query, Member $viewer): void
+    {
+        $viewerId = $viewer->getKey();
+
+        $query->where(function (Builder $audience) use ($viewerId) {
+            $audience
+                // Your own posts, at every visibility (including Private).
+                ->where('timeline_posts.member_id', $viewerId)
+                // A friend's posts, up to friends-only (their Private stays hidden).
+                ->orWhere(function (Builder $friends) use ($viewerId) {
+                    $friends
+                        ->where('timeline_posts.visibility', '<=', Visibility::Friends->value)
+                        ->whereExists(function ($sub) use ($viewerId) {
+                            $sub->select(DB::raw(1))
+                                ->from('friendships')
+                                ->where('friendships.member_id', $viewerId)
+                                ->whereColumn('friendships.friend_id', 'timeline_posts.member_id');
+                        });
+                });
+        });
+
+        BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
+    }
 }

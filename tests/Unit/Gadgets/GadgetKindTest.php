@@ -37,6 +37,10 @@ class GadgetKindTest extends TestCase
             'recentCommunityEventComment' => ['recentCommunityEventComment', 'homeRecentList_7'],
             'recentCommunityTopicCommentSns' => ['recentCommunityTopicCommentSns', 'homeRecentList_7'],
             'recentCommunityEventCommentSns' => ['recentCommunityEventCommentSns', 'homeRecentList_7'],
+            // The timeline gadgets each keep their own OpenPNE 3 wrapper id.
+            'timelineAll' => ['timelineAll', 'homeAllTimeline_7'],
+            'timelineFriend' => ['timelineFriend', 'homeFriendTimeline_7'],
+            'timelineProfile' => ['timelineProfile', 'profileTimeline_7'],
             'searchBox' => ['searchBox', 'searchLine_7'],
             'linkListBox' => ['linkListBox', null],
             'languageSelecterBox' => ['languageSelecterBox', null],
