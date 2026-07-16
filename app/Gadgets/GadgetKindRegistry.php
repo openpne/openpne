@@ -18,6 +18,10 @@ use App\Gadgets\Kinds\LinkListBoxGadget;
 use App\Gadgets\Kinds\LoginFormGadget;
 use App\Gadgets\Kinds\MemberImageBoxGadget;
 use App\Gadgets\Kinds\ProfileListBoxGadget;
+use App\Gadgets\Kinds\RecentCommunityEventCommentGadget;
+use App\Gadgets\Kinds\RecentCommunityEventCommentSnsGadget;
+use App\Gadgets\Kinds\RecentCommunityTopicCommentGadget;
+use App\Gadgets\Kinds\RecentCommunityTopicCommentSnsGadget;
 use App\Gadgets\Kinds\SearchBoxGadget;
 
 /**
@@ -45,6 +49,10 @@ final class GadgetKindRegistry
             DiaryCommentHistoryGadget::class,
             DiaryMyListGadget::class,
             DiaryMemberListGadget::class,
+            RecentCommunityTopicCommentGadget::class,
+            RecentCommunityEventCommentGadget::class,
+            RecentCommunityTopicCommentSnsGadget::class,
+            RecentCommunityEventCommentSnsGadget::class,
             SearchBoxGadget::class,
             LinkListBoxGadget::class,
             LanguageSelecterBoxGadget::class,
