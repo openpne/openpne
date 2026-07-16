@@ -26,13 +26,16 @@ class MemberSearchController extends Controller
         $profileFilters = $this->arrayParam($request, 'profile');
         $dateRanges = $this->arrayParam($request, 'date');
         $monthDayRanges = $this->arrayParam($request, 'monthday');
-        $ageRange = $this->arrayParam($request, 'age');
+        $showAge = $query->ageSearchable();
+        // When the age criterion is not offered, discard the parameter like a filter on an
+        // unsearchable field — otherwise a stale URL keeps applying and re-echoing an invisible
+        // always-empty filter the form cannot clear.
+        $ageRange = $showAge ? $this->arrayParam($request, 'age') : [];
 
         $members = $query($viewer, $name, $profileFilters, $dateRanges, $monthDayRanges, $ageRange);
         $lang = app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
         $profiles = $query->searchableProfiles();
         $birthdayName = $query->birthdayProfileName();
-        $showAge = $query->ageSearchable();
 
         return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.search', [

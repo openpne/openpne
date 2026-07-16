@@ -73,10 +73,30 @@ class MemberSearchTest extends TestCase
         $this->actingAs($viewer)->get('/member/search')
             ->assertInertia(fn (AssertableInertia $page) => $page->where('showAge', false));
 
-        $this->birthdayProfile();
+        $birthday = $this->birthdayProfile();
 
         $this->actingAs($viewer)->get('/member/search')
             ->assertInertia(fn (AssertableInertia $page) => $page->where('showAge', true));
+
+        $birthday->update(['is_disp_search' => false]);
+
+        $this->actingAs($viewer)->get('/member/search')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('showAge', false));
+    }
+
+    public function test_a_stale_age_query_is_discarded_when_the_criterion_is_not_offered(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $viewer = Member::factory()->create();
+        Member::factory()->count(2)->create();
+
+        // No birthday field: the age parameter is dropped (neither applied nor echoed), so a stale
+        // URL does not pin the form to an inescapable zero-match state.
+        $this->actingAs($viewer)->get('/member/search?age[min]=20&age[max]=30')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('showAge', false)
+                ->where('criteria.age', [])
+                ->where('members.meta.total', 3));
     }
 
     public function test_name_keyword_filters(): void
