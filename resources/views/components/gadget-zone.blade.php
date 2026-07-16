@@ -7,5 +7,6 @@
         :config="$item['config']"
         :subject="$item['subject']"
         :part-id="$item['partId']"
+        :context="$item['context'] ?? null"
     />
 @endforeach
