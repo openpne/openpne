@@ -44,6 +44,20 @@ class ClassicProfileDiaryGadgetTest extends TestCase
             ->assertSee("/diary/listMember/{$owner->getKey()}", false); // More link (owner-scoped)
     }
 
+    public function test_japanese_heading_matches_openpne3(): void
+    {
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create(['locale' => 'ja']);
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
+        $this->makeGadget('diaryMemberList');
+
+        // OpenPNE 3 messages.ja.xml: 最新日記, not 最近投稿された日記.
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('最新日記')
+            ->assertDontSee('最近投稿された');
+    }
+
     public function test_is_dropped_when_the_owner_has_no_diaries(): void
     {
         $owner = Member::factory()->create();

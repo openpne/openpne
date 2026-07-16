@@ -132,6 +132,22 @@ class ClassicHomeDiaryGadgetTest extends TestCase
             ->assertDontSee('/diary/listMember', false); // no More link without entries
     }
 
+    public function test_japanese_headings_and_more_link_match_openpne3(): void
+    {
+        $viewer = Member::factory()->create(['locale' => 'ja']);
+        $friend = Member::factory()->create();
+        $this->makeFriends($viewer, $friend);
+        Diary::factory()->create(['member_id' => $friend->getKey(), 'visibility' => Visibility::Members]);
+        $this->makeGadget('diaryFriendList');
+
+        // OpenPNE 3 messages.ja.xml: the friend heading joins the term and 最新 with no particle,
+        // and More is もっと見る (not もっと読む).
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertSee('マイフレンド最新日記')
+            ->assertSee('もっと見る');
+    }
+
     public function test_diary_my_list_shows_the_more_link_with_entries_and_no_author(): void
     {
         $viewer = Member::factory()->create(['name' => 'SelfAuthor']);
