@@ -51,6 +51,34 @@ class MemberSearchTest extends TestCase
                 ->has('profiles'));
     }
 
+    public function test_classic_age_inputs_render_only_when_the_birthday_field_is_searchable(): void
+    {
+        $viewer = Member::factory()->create();
+
+        // No birthday field on the site → the age criterion is not offered.
+        $this->actingAs($viewer)->get('/member/search')->assertDontSee('age_min');
+
+        $birthday = $this->birthdayProfile();
+        $this->actingAs($viewer)->get('/member/search')->assertSee('age_min');
+
+        $birthday->update(['is_disp_search' => false]);
+        $this->actingAs($viewer)->get('/member/search')->assertDontSee('age_min');
+    }
+
+    public function test_modern_search_exposes_the_age_gate(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)->get('/member/search')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('showAge', false));
+
+        $this->birthdayProfile();
+
+        $this->actingAs($viewer)->get('/member/search')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('showAge', true));
+    }
+
     public function test_name_keyword_filters(): void
     {
         $viewer = Member::factory()->create(['name' => 'Viewer']);
@@ -520,6 +548,18 @@ class MemberSearchTest extends TestCase
         Member::factory()->count(3)->create();
 
         $this->assertSame([], $this->ids($this->search($viewer, age: ['min' => '20', 'max' => '30'])));
+    }
+
+    public function test_age_search_with_an_unsearchable_birthday_field_returns_nothing(): void
+    {
+        // The admin marked the birthday not searchable → the age criterion is not offered, so a
+        // hand-crafted age query matches nothing (like the missing-field case above).
+        $this->travelTo(Carbon::parse('2026-06-25'));
+        $viewer = Member::factory()->create();
+        $birthday = Profile::factory()->preset('birthday')->create(['form_type' => 'date', 'is_disp_search' => false]);
+        $this->memberWithBirthday($birthday, '1996-05-03', Visibility::Members);
+
+        $this->assertSame([], $this->ids($this->search($viewer, age: ['min' => '25', 'max' => '35'])));
     }
 
     private function birthdayProfile(): Profile

@@ -19,11 +19,12 @@ interface SearchProps extends PageProps {
     profiles: SearchFormField[];
     members: { data: MemberRow[]; meta: PaginationMeta };
     criteria: SearchCriteria;
+    showAge: boolean;
 }
 
 export default function MemberSearch() {
     const t = useT();
-    const { profiles, members, criteria } = usePage<SearchProps>().props;
+    const { profiles, members, criteria, showAge } = usePage<SearchProps>().props;
 
     const [name, setName] = useState(criteria.name ?? '');
     const [profile, setProfile] = useState<Record<string, string | string[]>>(criteria.profile ?? {});
@@ -104,28 +105,30 @@ export default function MemberSearch() {
                         ))}
 
                         {/* Derived age, gated by AgeVisibility (separate from the birthday field). */}
-                        <fieldset className="space-y-1.5">
-                            <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
-                            <div className="flex items-center gap-2">
-                                <Input
-                                    type="number"
-                                    min={0}
-                                    className="w-24"
-                                    aria-label={`${t('Age')} ${t('Start')}`}
-                                    value={age.min ?? ''}
-                                    onChange={(e) => setAge((a) => ({ ...a, min: e.target.value }))}
-                                />
-                                <span className="text-muted-foreground">–</span>
-                                <Input
-                                    type="number"
-                                    min={0}
-                                    className="w-24"
-                                    aria-label={`${t('Age')} ${t('End')}`}
-                                    value={age.max ?? ''}
-                                    onChange={(e) => setAge((a) => ({ ...a, max: e.target.value }))}
-                                />
-                            </div>
-                        </fieldset>
+                        {showAge && (
+                            <fieldset className="space-y-1.5">
+                                <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        className="w-24"
+                                        aria-label={`${t('Age')} ${t('Start')}`}
+                                        value={age.min ?? ''}
+                                        onChange={(e) => setAge((a) => ({ ...a, min: e.target.value }))}
+                                    />
+                                    <span className="text-muted-foreground">–</span>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        className="w-24"
+                                        aria-label={`${t('Age')} ${t('End')}`}
+                                        value={age.max ?? ''}
+                                        onChange={(e) => setAge((a) => ({ ...a, max: e.target.value }))}
+                                    />
+                                </div>
+                            </fieldset>
+                        )}
 
                         <Button type="submit" loading={searching}>{t('Search')}</Button>
                     </Panel>

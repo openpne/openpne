@@ -32,6 +32,7 @@ class MemberSearchController extends Controller
         $lang = app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
         $profiles = $query->searchableProfiles();
         $birthdayName = $query->birthdayProfileName();
+        $showAge = $query->ageSearchable();
 
         return $this->respondWith($request, 'member', [
             SurfaceResolver::CLASSIC => fn () => view('member.search', [
@@ -43,6 +44,7 @@ class MemberSearchController extends Controller
                 'monthDayRanges' => $monthDayRanges,
                 'ageRange' => $ageRange,
                 'birthdayName' => $birthdayName,
+                'showAge' => $showAge,
                 'lang' => $lang,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/search', [
@@ -51,6 +53,7 @@ class MemberSearchController extends Controller
                     $selfIntroductions($viewer, array_map(fn (Member $m): int => $m->getKey(), $members->items())),
                 ),
                 'profiles' => MemberSearchSerializer::formFields($profiles, $lang, $birthdayName),
+                'showAge' => $showAge,
                 // Cast to object so an empty filter set serialises as {} (a keyed map), not [].
                 'criteria' => [
                     'name' => $name,
