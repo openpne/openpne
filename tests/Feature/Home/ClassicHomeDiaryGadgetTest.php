@@ -3,6 +3,7 @@
 namespace Tests\Feature\Home;
 
 use App\Models\Diary;
+use App\Models\DiaryComment;
 use App\Models\DiaryImage;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
@@ -13,7 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-/** The OpenPNE 3 home diary list gadgets: diaryFriendList, diaryList, diaryMyList. */
+/** The OpenPNE 3 home diary list gadgets: diaryFriendList, diaryList, diaryCommentHistory, diaryMyList. */
 class ClassicHomeDiaryGadgetTest extends TestCase
 {
     use RefreshDatabase;
@@ -159,5 +160,50 @@ class ClassicHomeDiaryGadgetTest extends TestCase
             ->assertSee('MyPrivateDiary (0)')             // own private diary is visible to self
             ->assertSee('/diary/listMember', false)       // More link present
             ->assertDontSee('(SelfAuthor)');              // own list carries no author parenthetical
+    }
+
+    public function test_diary_comment_history_renders_with_author_no_camera_and_last_comment_date(): void
+    {
+        $viewer = Member::factory()->create();
+        $owner = Member::factory()->create(['name' => 'CommentedAuthor']);
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'title' => 'CommentedDiary', 'visibility' => Visibility::Members, 'created_at' => '2026-01-01 00:00:00']);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey()]);
+        // The viewer's non-owner comment: the row date is this comment's time, not the diary's created_at.
+        DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'member_id' => $viewer->getKey(), 'created_at' => '2026-03-04 12:00:00']);
+        $gadget = $this->makeGadget('diaryCommentHistory');
+
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertSee('id="homeRecentList_'.$gadget->id.'"', false)
+            ->assertSee('class="dparts homeRecentList"', false)
+            ->assertSee('Diary Comment History')  // h3 (en term rendering)
+            ->assertSee('CommentedDiary (1)')     // title + comment count
+            ->assertSee('(CommentedAuthor)')      // author (withName)
+            ->assertSee('March 4')                // last comment date, not the diary's January 1 created_at
+            ->assertDontSee('icon_camera.gif')    // no camera marker for this kind (withIcon=false)
+            ->assertDontSee('moreInfo', false);   // no More link — diary_comment_history page not ported
+    }
+
+    public function test_diary_comment_history_is_dropped_when_empty(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->makeGadget('diaryCommentHistory');
+
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertDontSee('homeRecentList', false);
+    }
+
+    public function test_diary_comment_history_japanese_heading(): void
+    {
+        $viewer = Member::factory()->create(['locale' => 'ja']);
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
+        DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->makeGadget('diaryCommentHistory');
+
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertSee('日記コメント記入履歴');
     }
 }
