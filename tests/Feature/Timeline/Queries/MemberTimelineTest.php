@@ -7,6 +7,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -124,6 +125,34 @@ class MemberTimelineTest extends TestCase
 
         $this->assertSame(20, $result->perPage());
         $this->assertSame(25, $result->total());
+    }
+
+    // take() (unpaginated slice for the profile gadget) -------------------------
+
+    public function test_take_returns_a_limited_collection_newest_first(): void
+    {
+        $owner = Member::factory()->create();
+        $older = $this->postFor($owner, Visibility::Members, createdAt: '2026-01-01');
+        $newer = $this->postFor($owner, Visibility::Members, createdAt: '2026-03-01');
+
+        $posts = (new MemberTimeline)->take($owner, $owner, 1);
+
+        $this->assertInstanceOf(Collection::class, $posts);
+        $this->assertSame([$newer->getKey()], $posts->modelKeys());
+        $this->assertNotContains($older->getKey(), $posts->modelKeys());
+    }
+
+    public function test_take_applies_the_same_clearance_as_the_paginated_query(): void
+    {
+        [$owner, $other] = Member::factory()->count(2)->create()->all();
+        $this->postFor($owner, Visibility::Private);
+        $this->postFor($owner, Visibility::Friends);
+        $members = $this->postFor($owner, Visibility::Members);
+
+        // A non-friend member sees only the members-level post, whether paginated or via take().
+        $posts = (new MemberTimeline)->take($other, $owner, 10);
+
+        $this->assertSame([$members->getKey()], $posts->modelKeys());
     }
 
     // Helpers -------------------------------------------------------------------
