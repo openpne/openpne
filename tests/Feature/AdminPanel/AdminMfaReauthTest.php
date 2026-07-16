@@ -154,9 +154,17 @@ class AdminMfaReauthTest extends TestCase
             ->assertHasNoActionErrors()
             ->assertWizardCurrentStep(2);
 
-        // Then the QR/code step, then submit.
+        // Then the QR/code step advances on a valid code, landing on the recovery-codes step, and
+        // the submit runs from there — the complete real UI path. goToWizardStep(3) rather than
+        // goToNextWizardStep: the browser tracks the current step client-side and passes it to
+        // nextStep, but the server-side index is not persisted between test calls, so the "next"
+        // helper would re-validate step 1 forever.
         $page->set('mountedActions.0.data.code', $this->currentCode($admin, $secret))
-            ->callMountedAction()
+            ->goToWizardStep(3)
+            ->assertHasNoActionErrors()
+            ->assertWizardCurrentStep(3);
+
+        $page->callMountedAction()
             ->assertHasNoActionErrors();
 
         $this->assertSame($secret, $admin->fresh()->getAppAuthenticationSecret());
@@ -299,7 +307,8 @@ class AdminMfaReauthTest extends TestCase
 
         $page->callAction(
             TestAction::make('regenerateAppAuthenticationRecoveryCodes')->schemaComponent(),
-            ['current_password' => 'secret-pass-1', 'password' => 'secret-pass-1', 'code' => $this->currentCode($admin, $secret)],
+            // The regenerate modal reuses the vendor's own `password` field — no second prompt.
+            ['password' => 'secret-pass-1', 'code' => $this->currentCode($admin, $secret)],
         )->assertHasNoActionErrors();
 
         $this->assertNotSame($before, $admin->fresh()->getRawOriginal('app_authentication_recovery_codes'));

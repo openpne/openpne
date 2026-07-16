@@ -14,6 +14,7 @@ use Filament\Forms\Components\Field;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Wizard\Step;
+use LogicException;
 use SensitiveParameter;
 
 /**
@@ -200,13 +201,18 @@ class AdminAppAuthentication extends AppAuthentication
     }
 
     /**
+     * Same loud-break stance as the schema read above: if a Filament upgrade turns this schema
+     * into a closure or renames the fields, throw rather than silently dropping the password gate.
+     *
      * @param  array<mixed>|Closure|null  $vendorRaw
      */
     private static function requirePasswordAndCode(array|Closure|null $vendorRaw): void
     {
         if (! is_array($vendorRaw)) {
-            return;
+            throw new LogicException('Expected the vendor regenerate schema to be a component array.');
         }
+
+        $required = [];
 
         foreach ($vendorRaw as $component) {
             if (! $component instanceof Field) {
@@ -214,10 +220,14 @@ class AdminAppAuthentication extends AppAuthentication
             }
 
             match ($component->getName()) {
-                'code' => $component->required(),
-                'password' => $component->required()->rule(new AdminMfaPasswordReauth),
+                'code' => $required[] = $component->required(),
+                'password' => $required[] = $component->required()->rule(new AdminMfaPasswordReauth),
                 default => null,
             };
+        }
+
+        if (count($required) !== 2) {
+            throw new LogicException('Expected the vendor regenerate schema to carry both a code and a password field.');
         }
     }
 
