@@ -19,6 +19,8 @@ class GadgetSeederTest extends TestCase
         $this->assertDatabaseHas('gadgets', ['context' => 'home', 'zone' => 'top', 'name' => 'informationBox']);
         $this->assertDatabaseHas('gadgets', ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryFriendList']);
         $this->assertDatabaseHas('gadgets', ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryCommentHistory']);
+        $this->assertDatabaseHas('gadgets', ['context' => 'home', 'zone' => 'contents', 'name' => 'recentCommunityTopicComment']);
+        $this->assertDatabaseHas('gadgets', ['context' => 'home', 'zone' => 'contents', 'name' => 'recentCommunityEventComment']);
         $this->assertDatabaseHas('gadgets', ['context' => 'profile', 'zone' => 'contents', 'name' => 'diaryMemberList']);
         $this->assertDatabaseHas('gadgets', ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'profileListBox']);
         $this->assertDatabaseHas('gadgets', ['context' => 'login', 'zone' => 'contents', 'name' => 'loginForm']);

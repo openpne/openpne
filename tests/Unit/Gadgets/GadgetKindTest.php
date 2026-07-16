@@ -32,6 +32,11 @@ class GadgetKindTest extends TestCase
             'diaryCommentHistory' => ['diaryCommentHistory', 'homeRecentList_7'],
             'diaryMyList' => ['diaryMyList', 'homeRecentList_7'],
             'diaryMemberList' => ['diaryMemberList', null],
+            // The community recent lists share OpenPNE 3's homeRecentList_ id (all home-only).
+            'recentCommunityTopicComment' => ['recentCommunityTopicComment', 'homeRecentList_7'],
+            'recentCommunityEventComment' => ['recentCommunityEventComment', 'homeRecentList_7'],
+            'recentCommunityTopicCommentSns' => ['recentCommunityTopicCommentSns', 'homeRecentList_7'],
+            'recentCommunityEventCommentSns' => ['recentCommunityEventCommentSns', 'homeRecentList_7'],
             'searchBox' => ['searchBox', 'searchLine_7'],
             'linkListBox' => ['linkListBox', null],
             'languageSelecterBox' => ['languageSelecterBox', null],
