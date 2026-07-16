@@ -6,6 +6,7 @@ namespace App\Gadgets;
 
 use App\Gadgets\Kinds\CommunityJoinListBoxGadget;
 use App\Gadgets\Kinds\DiaryAllListGadget;
+use App\Gadgets\Kinds\DiaryCommentHistoryGadget;
 use App\Gadgets\Kinds\DiaryFriendListGadget;
 use App\Gadgets\Kinds\DiaryMemberListGadget;
 use App\Gadgets\Kinds\DiaryMyListGadget;
@@ -41,6 +42,7 @@ final class GadgetKindRegistry
             ProfileListBoxGadget::class,
             DiaryFriendListGadget::class,
             DiaryAllListGadget::class,
+            DiaryCommentHistoryGadget::class,
             DiaryMyListGadget::class,
             DiaryMemberListGadget::class,
             SearchBoxGadget::class,

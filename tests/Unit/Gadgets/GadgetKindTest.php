@@ -29,6 +29,7 @@ class GadgetKindTest extends TestCase
             // The home diary lists share OpenPNE 3's homeRecentList_ id; diaryMemberList had none.
             'diaryFriendList' => ['diaryFriendList', 'homeRecentList_7'],
             'diaryList' => ['diaryList', 'homeRecentList_7'],
+            'diaryCommentHistory' => ['diaryCommentHistory', 'homeRecentList_7'],
             'diaryMyList' => ['diaryMyList', 'homeRecentList_7'],
             'diaryMemberList' => ['diaryMemberList', null],
             'searchBox' => ['searchBox', 'searchLine_7'],
