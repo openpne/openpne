@@ -21,6 +21,7 @@ class GadgetSeeder extends Seeder
         ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryList', 'sort_order' => 102],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryCommentHistory', 'sort_order' => 103],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryMyList', 'sort_order' => 104],
+        ['context' => 'home', 'zone' => 'contents', 'name' => 'timelineAll', 'sort_order' => 120],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'recentCommunityTopicComment', 'sort_order' => 131],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'recentCommunityEventComment', 'sort_order' => 132],
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'memberImageBox', 'sort_order' => 10],
@@ -28,6 +29,7 @@ class GadgetSeeder extends Seeder
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'communityJoinListBox', 'sort_order' => 30],
 
         // profile
+        ['context' => 'profile', 'zone' => 'contents', 'name' => 'timelineProfile', 'sort_order' => 20],
         ['context' => 'profile', 'zone' => 'contents', 'name' => 'diaryMemberList', 'sort_order' => 101],
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'memberImageBox', 'sort_order' => 10],
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'profileListBox', 'sort_order' => 15],
