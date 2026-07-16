@@ -17,11 +17,15 @@ class GadgetSeeder extends Seeder
     private const ITEMS = [
         // home
         ['context' => 'home', 'zone' => 'top', 'name' => 'informationBox', 'sort_order' => 20],
+        ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryFriendList', 'sort_order' => 101],
+        ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryList', 'sort_order' => 102],
+        ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryMyList', 'sort_order' => 104],
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'memberImageBox', 'sort_order' => 10],
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'friendListBox', 'sort_order' => 20],
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'communityJoinListBox', 'sort_order' => 30],
 
         // profile
+        ['context' => 'profile', 'zone' => 'contents', 'name' => 'diaryMemberList', 'sort_order' => 101],
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'memberImageBox', 'sort_order' => 10],
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'profileListBox', 'sort_order' => 15],
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'friendListBox', 'sort_order' => 20],

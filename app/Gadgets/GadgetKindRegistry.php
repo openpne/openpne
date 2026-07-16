@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Gadgets;
 
 use App\Gadgets\Kinds\CommunityJoinListBoxGadget;
+use App\Gadgets\Kinds\DiaryAllListGadget;
+use App\Gadgets\Kinds\DiaryFriendListGadget;
+use App\Gadgets\Kinds\DiaryMemberListGadget;
+use App\Gadgets\Kinds\DiaryMyListGadget;
 use App\Gadgets\Kinds\FreeAreaGadget;
 use App\Gadgets\Kinds\FriendListBoxGadget;
 use App\Gadgets\Kinds\InformationBoxGadget;
@@ -35,6 +39,10 @@ final class GadgetKindRegistry
             FriendListBoxGadget::class,
             CommunityJoinListBoxGadget::class,
             ProfileListBoxGadget::class,
+            DiaryFriendListGadget::class,
+            DiaryAllListGadget::class,
+            DiaryMyListGadget::class,
+            DiaryMemberListGadget::class,
             SearchBoxGadget::class,
             LinkListBoxGadget::class,
             LanguageSelecterBoxGadget::class,
