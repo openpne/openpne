@@ -28,6 +28,23 @@ the admin-user list shows which administrators have it enabled.
   actions, keeping the current session; the CLI revokes all), consistent with a
   password change. Regenerating recovery codes does not revoke — the TOTP factor
   is unchanged.
+- **Inline re-authentication (sudo mode).** All three management actions also
+  require the account password, on top of the code requirements above: set-up
+  keeps the new secret's TOTP proof, disable keeps code-or-recovery, and
+  regenerate — which used to accept a code **or** the password — now needs the
+  password **and** a current code (`App\Auth\AdminMfaPasswordReauth`). Password-
+  only regeneration would let an adversary holding the password and a hijacked
+  session mint fresh recovery codes that bypass the TOTP login challenge. A
+  walked-up unlocked session likewise can no longer enroll its own authenticator
+  — which would also have revoked the admin's other sessions, so a password-free
+  operation must stay side-effect-free. There is no re-auth window: each flow is
+  a single modal, so the password is asked exactly once per action. The check is
+  throttled by a dedicated per-admin limiter (5/min, shared across the three
+  modals) because the set-up wizard's per-step validation bypasses Filament's
+  action rate limit; and a wrong password never consumes a submitted recovery
+  code (it fails fast before the vendor rule spends the code). Recovering a lost
+  authenticator for regeneration means disabling with the password and a
+  recovery code, then re-enrolling.
 - **No "remember me."** The admin login drops the remember-me option
   (`App\Filament\Pages\Auth\Login`): a recaller cookie authenticates through the
   guard middleware, which never runs the TOTP challenge, so it would silently
@@ -58,6 +75,11 @@ refresh cannot burn the guess budget.
 
 Differences from the admin posture, all deliberate:
 
+- **Re-auth spans requests, so it uses a window.** Member set-up runs across
+  several requests (enable, scan, confirm), so it verifies the password once and
+  opens a short window (below) rather than re-asking per step; disabling and
+  regenerating always re-authenticate. The admin's flows are each a single modal,
+  so they instead demand the password **and** a code inline, once, with no window.
 - **"Remember me" stays available.** Fortify only mints the remember cookie
   *after* the challenge succeeds, so a recaller is always evidence of a full
   password + TOTP login — unlike Filament, whose recaller path would bypass the
