@@ -55,10 +55,11 @@ class HomeSerializer
 
     /**
      * One community activity row — a topic or an event — flattened for the digest: the community it
-     * belongs to, its comment count, and (events only) its participant count. `kind` drives the
-     * client's badge and its link target.
+     * belongs to (the byline subject, so its image is here too), its comment count, and (events
+     * only) its participant count. `kind` drives the client's byline note and its link target. Callers
+     * eager-load `community.image`.
      *
-     * @return array{kind: 'topic'|'event', id: int, name: string, commentCount: int, participantCount: int|null, community: array{id: int, name: string}, updatedAt: string}
+     * @return array{kind: 'topic'|'event', id: int, name: string, commentCount: int, participantCount: int|null, community: array{id: int, name: string, imageUrl: string|null}, updatedAt: string}
      */
     public static function activityEntry(CommunityTopic|CommunityEvent $row): array
     {
@@ -72,6 +73,9 @@ class HomeSerializer
             'community' => [
                 'id' => $row->community->getKey(),
                 'name' => $row->community->name,
+                // Byline-avatar size (76px square), matching DiarySerializer's author image — not the
+                // 180px community tile CommunitySerializer serves.
+                'imageUrl' => $row->community->image?->thumbnailUrl(76, 76, square: true),
             ],
             'updatedAt' => $row->updated_at->toIso8601String(),
         ];
