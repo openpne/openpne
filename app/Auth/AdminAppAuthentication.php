@@ -221,7 +221,11 @@ class AdminAppAuthentication extends AppAuthentication
 
             match ($component->getName()) {
                 'code' => $required[] = $component->required(),
-                'password' => $required[] = $component->required()->rule(new AdminMfaPasswordReauth),
+                // The vendor label reads "Or, enter your current password" — an or-phrasing that
+                // became misleading once both fields are required. Same label as the other modals.
+                'password' => $required[] = $component->required()
+                    ->label(__('Current password'))
+                    ->rule(new AdminMfaPasswordReauth),
                 default => null,
             };
         }
