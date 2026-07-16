@@ -1,5 +1,4 @@
 import { Head, usePage } from '@inertiajs/react';
-import { Avatar } from '@/components/avatar';
 import { EntryRow } from '@/components/entry-row';
 import { Pagination } from '@/components/pagination';
 import { List, Panel } from '@/components/ui/surface';
@@ -33,9 +32,9 @@ export default function CommunityEventIndex() {
                                 <EntryRow
                                     key={event.id}
                                     href={`/communityEvent/${event.id}`}
-                                    leading={<Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} color={event.author?.avatarColor ?? null} size="sm" decorative />}
+                                    author={event.author}
                                     title={event.name}
-                                    meta={[event.author?.name ?? t('Withdrawn member'), `${t('Open date')}: ${formatDate(event.openDate)}`]}
+                                    date={`${t('Open date')}: ${formatDate(event.openDate)}`}
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}
                                 />

@@ -1,6 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { Avatar } from '@/components/avatar';
 import { EntryRow } from '@/components/entry-row';
 import { List, ListRow, Panel } from '@/components/ui/surface';
 import { formatDate } from '@/lib/date';
@@ -89,12 +88,11 @@ function TimelineRow({ post }: { post: TimelinePostEntry }) {
     return (
         <EntryRow
             href={`/timeline/${post.id}`}
-            leading={<Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="sm" decorative />}
+            author={post.author}
             title={post.body}
             titleClassName="line-clamp-2 text-sm text-foreground"
-            meta={[post.author.name, formatDate(post.createdAt)]}
+            date={formatDate(post.createdAt)}
             replyCount={post.replyCount}
-            className="items-start"
         />
     );
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Community\Modern;
 
 use App\Models\Community;
 use App\Models\CommunityMember;
+use App\Models\CommunityTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -65,6 +66,24 @@ class CommunityRoutesTest extends TestCase
                 ->where('community.registerPolicy', 'open')
                 ->where('canJoin', true)
                 ->where('viewerRole', null)
+            );
+    }
+
+    public function test_modern_show_recent_topics_carry_the_author_byline(): void
+    {
+        $member = Member::factory()->create();
+        $community = Community::factory()->create();
+        CommunityMember::factory()->member()->create([
+            'community_id' => $community->getKey(),
+            'member_id' => $member->getKey(),
+        ]);
+        CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+
+        $this->actingAs($member)
+            ->get("/community/{$community->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->component('community/show')
+                ->where('recentTopics.0.author.name', $member->name)
             );
     }
 

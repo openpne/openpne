@@ -116,8 +116,9 @@ export default function CommunityShow() {
                                 <EntryRow
                                     key={topic.id}
                                     href={`/communityTopic/${topic.id}`}
+                                    author={topic.author}
                                     title={topic.name}
-                                    meta={[formatDate(topic.updatedAt)]}
+                                    date={formatDate(topic.updatedAt)}
                                     commentCount={topic.commentCount}
                                 />
                             ))}
@@ -152,8 +153,9 @@ export default function CommunityShow() {
                                 <EntryRow
                                     key={event.id}
                                     href={`/communityEvent/${event.id}`}
+                                    author={event.author}
                                     title={event.name}
-                                    meta={[`${t('Open date')}: ${formatDate(event.openDate)}`]}
+                                    date={`${t('Open date')}: ${formatDate(event.openDate)}`}
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}
                                 />
