@@ -75,4 +75,19 @@ final class TimelineFeedScope
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
     }
+
+    /**
+     * SNS-wide members-only variant: posts every member may see (visibility <= Members), with no
+     * viewer-specific tiers. Unlike apply() it adds neither the viewer's own Private posts nor a
+     * friend's friends-only posts — the feed is exactly what any member sees — matching OpenPNE 3's
+     * getAllMemberActivityList. Authors who block the viewer are then dropped.
+     *
+     * @param  Builder<TimelinePost>  $query
+     */
+    public static function applyMembersOnly(Builder $query, Member $viewer): void
+    {
+        $query->where('timeline_posts.visibility', '<=', Visibility::Members->value);
+
+        BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
+    }
 }

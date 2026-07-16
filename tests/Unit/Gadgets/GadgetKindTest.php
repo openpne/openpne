@@ -41,6 +41,9 @@ class GadgetKindTest extends TestCase
             'timelineAll' => ['timelineAll', 'homeAllTimeline_7'],
             'timelineFriend' => ['timelineFriend', 'homeFriendTimeline_7'],
             'timelineProfile' => ['timelineProfile', 'profileTimeline_7'],
+            // activityBox and allMemberActivityBox share OpenPNE 3's activityBox_ id (a common partial built it).
+            'activityBox' => ['activityBox', 'activityBox_7'],
+            'allMemberActivityBox' => ['allMemberActivityBox', 'activityBox_7'],
             'searchBox' => ['searchBox', 'searchLine_7'],
             'linkListBox' => ['linkListBox', null],
             'languageSelecterBox' => ['languageSelecterBox', null],

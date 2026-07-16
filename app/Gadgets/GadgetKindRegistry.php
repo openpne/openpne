@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Gadgets;
 
+use App\Gadgets\Kinds\ActivityBoxGadget;
+use App\Gadgets\Kinds\AllMemberActivityBoxGadget;
 use App\Gadgets\Kinds\CommunityJoinListBoxGadget;
 use App\Gadgets\Kinds\DiaryAllListGadget;
 use App\Gadgets\Kinds\DiaryCommentHistoryGadget;
@@ -59,6 +61,8 @@ final class GadgetKindRegistry
             TimelineAllGadget::class,
             TimelineFriendGadget::class,
             TimelineProfileGadget::class,
+            ActivityBoxGadget::class,
+            AllMemberActivityBoxGadget::class,
             SearchBoxGadget::class,
             LinkListBoxGadget::class,
             LanguageSelecterBoxGadget::class,
