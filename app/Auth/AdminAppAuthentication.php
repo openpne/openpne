@@ -4,11 +4,17 @@ namespace App\Auth;
 
 use App\Models\AdminUser;
 use App\Support\SecurityLog;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Field;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Text;
+use Filament\Schemas\Components\Wizard\Step;
+use LogicException;
 use SensitiveParameter;
 
 /**
@@ -17,6 +23,13 @@ use SensitiveParameter;
  * class of event as a password change (App\Auth\SessionRevocation, established by the
  * account-revocation work). Regenerating recovery codes does not revoke: the TOTP
  * factor is unchanged, only the backup codes rotate.
+ *
+ * All three management actions additionally require the administrator's account password inline
+ * ("sudo mode", App\Auth\AdminMfaPasswordReauth): set-up prepends an identity step, disable puts the
+ * password first, and regenerate is tightened from password-OR-code to password-AND-code. The pre-
+ * existing code requirements are kept. This blocks a walked-up unlocked session from enrolling or
+ * rotating a factor and closes the password-only regenerate path that could mint TOTP-bypassing
+ * recovery codes. See docs/internals/security.md.
  *
  * It also fixes the set-up QR code on servers without the imagick extension (common on
  * shared hosting): the provider's `getQRCodeInline` already returns a complete data: URI,
@@ -74,6 +87,8 @@ class AdminAppAuthentication extends AppAuthentication
             // disable controls read as clickable.
             $action->button();
 
+            $this->requirePassword($action);
+
             // No framework event fires for these admin-side changes; log (and, for a factor
             // change, revoke other sessions) in the action's after-hook. Regenerating recovery
             // codes leaves the factor unchanged, so it logs without revoking (member parity).
@@ -122,6 +137,102 @@ class AdminAppAuthentication extends AppAuthentication
 
             return $action;
         }, parent::getActions());
+    }
+
+    /**
+     * Fold the inline password re-auth into each management action.
+     *
+     * The raw value behind schema()/steps() lives in the protected Action::$schema property, which
+     * has no getter (schema()/steps() only replace it). Reading it through a bound closure and re-
+     * wrapping is a deliberate loud-break dependency: if a Filament upgrade renames the property this
+     * throws at runtime and AdminMfaReauthTest goes red rather than the guard silently disappearing.
+     */
+    private function requirePassword(Action $action): void
+    {
+        $readSchema = Closure::bind(fn (Action $a) => $a->schema, null, Action::class);
+        $vendorRaw = $readSchema($action);
+
+        match ($action->getName()) {
+            // Wizard: prepend a self-contained identity step. The vendor steps are never introspected
+            // (an unattached Step throws on child access) — the captured raw value is only re-evaluated
+            // inside a fresh wrapper, and a new array is built per render so nothing accumulates. As a
+            // side effect the password is now asked before the QR code is shown.
+            'setUpAppAuthentication' => $action->steps(fn (Action $action): array => [
+                self::identityStep(),
+                ...$action->evaluate($vendorRaw),
+            ]),
+            // Password field first: validation runs in component order and its fail-fast rule must throw
+            // before the vendor recovery-code rule (which consumes the code) is ever reached.
+            'disableAppAuthentication' => $action->schema(fn (Action $action): array => [
+                self::currentPasswordField(),
+                ...$action->evaluate($vendorRaw),
+            ]),
+            // The vendor schema already carries the password and code fields; make both mandatory (was
+            // password-OR-code) and route the password through the shared throttled rule. The captured
+            // field instances are mutated in place — once per render — so ->rule() cannot accumulate.
+            'regenerateAppAuthenticationRecoveryCodes' => self::requirePasswordAndCode($vendorRaw),
+            default => null,
+        };
+    }
+
+    /** The shared re-auth field. See currentPasswordField()/AdminMfaPasswordReauth for why markAsRequired. */
+    private static function identityStep(): Step
+    {
+        return Step::make('identity')->schema([
+            Text::make(__('To continue, first confirm it is you.')),
+            self::currentPasswordField(),
+        ]);
+    }
+
+    private static function currentPasswordField(): TextInput
+    {
+        // markAsRequired, not required(): a real `required` rule is implicit and Laravel short-circuits
+        // the attribute once it fails, so on a blank password the fail-fast AdminMfaPasswordReauth would
+        // never run and the disable modal's recovery-code field could still be validated and consume a
+        // code. markAsRequired shows the asterisk; the implicit rule enforces blank/wrong/throttled.
+        return TextInput::make('current_password')
+            ->label(__('Current password'))
+            ->password()
+            ->revealable(Filament::arePasswordsRevealable())
+            ->autocomplete('current-password')
+            ->markAsRequired()
+            ->rule(new AdminMfaPasswordReauth)
+            ->dehydrated(false); // keep the password out of getData(), the hooks and the logs
+    }
+
+    /**
+     * Same loud-break stance as the schema read above: if a Filament upgrade turns this schema
+     * into a closure or renames the fields, throw rather than silently dropping the password gate.
+     *
+     * @param  array<mixed>|Closure|null  $vendorRaw
+     */
+    private static function requirePasswordAndCode(array|Closure|null $vendorRaw): void
+    {
+        if (! is_array($vendorRaw)) {
+            throw new LogicException('Expected the vendor regenerate schema to be a component array.');
+        }
+
+        $required = [];
+
+        foreach ($vendorRaw as $component) {
+            if (! $component instanceof Field) {
+                continue;
+            }
+
+            match ($component->getName()) {
+                'code' => $required[] = $component->required(),
+                // The vendor label reads "Or, enter your current password" — an or-phrasing that
+                // became misleading once both fields are required. Same label as the other modals.
+                'password' => $required[] = $component->required()
+                    ->label(__('Current password'))
+                    ->rule(new AdminMfaPasswordReauth),
+                default => null,
+            };
+        }
+
+        if (count($required) !== 2) {
+            throw new LogicException('Expected the vendor regenerate schema to carry both a code and a password field.');
+        }
     }
 
     /**
