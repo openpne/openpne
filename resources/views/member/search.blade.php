@@ -48,14 +48,16 @@
                     @endforeach
 
                     {{-- Derived age, gated by AgeVisibility (separate from the birthday field above). --}}
-                    <tr>
-                        <th><label for="age_min">{{ __('Age') }}</label></th>
-                        <td>
-                            <input type="number" min="0" class="input_text" id="age_min" name="age[min]" value="{{ $ageRange['min'] ?? '' }}">
-                            <span>–</span>
-                            <input type="number" min="0" class="input_text" name="age[max]" value="{{ $ageRange['max'] ?? '' }}">
-                        </td>
-                    </tr>
+                    @if ($showAge)
+                        <tr>
+                            <th><label for="age_min">{{ __('Age') }}</label></th>
+                            <td>
+                                <input type="number" min="0" class="input_text" id="age_min" name="age[min]" value="{{ $ageRange['min'] ?? '' }}">
+                                <span>–</span>
+                                <input type="number" min="0" class="input_text" name="age[max]" value="{{ $ageRange['max'] ?? '' }}">
+                            </td>
+                        </tr>
+                    @endif
                 </table>
 
                 <div class="operation">

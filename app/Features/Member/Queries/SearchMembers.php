@@ -39,6 +39,9 @@ class SearchMembers
     /** @var Collection<int, Profile>|null */
     private ?Collection $profilesCache = null;
 
+    /** @var Profile|false|null false = looked up and absent */
+    private Profile|false|null $birthdayCache = null;
+
     public function __construct(private PresetProfileService $presets) {}
 
     /** @return Collection<int, Profile> */
@@ -58,6 +61,23 @@ class SearchMembers
     public function birthdayProfileName(): string
     {
         return $this->presets->nameForKey('birthday')['name'];
+    }
+
+    /**
+     * Whether the age criterion is offered: the birthday field (the age's source) must exist and be
+     * admin-marked searchable — in OP3 the birthday's search UI was the age search, so is_disp_search
+     * governs both. AgeVisibility remains the per-member privacy gate on matches.
+     */
+    public function ageSearchable(): bool
+    {
+        return (bool) $this->birthdayProfile()?->is_disp_search;
+    }
+
+    private function birthdayProfile(): ?Profile
+    {
+        $this->birthdayCache ??= Profile::query()->where('name', $this->birthdayProfileName())->first() ?? false;
+
+        return $this->birthdayCache ?: null;
     }
 
     /**
@@ -285,9 +305,9 @@ class SearchMembers
             return; // invalid range, ignore
         }
 
-        $birthday = Profile::query()->where('name', $this->birthdayProfileName())->first();
-        if ($birthday === null) {
-            $query->whereRaw('1 = 0'); // age requested but no birthday field exists → no matches
+        $birthday = $this->birthdayProfile();
+        if ($birthday === null || ! $this->ageSearchable()) {
+            $query->whereRaw('1 = 0'); // age requested but the criterion is not offered → no matches
 
             return;
         }

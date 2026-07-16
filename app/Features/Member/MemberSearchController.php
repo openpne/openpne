@@ -26,7 +26,11 @@ class MemberSearchController extends Controller
         $profileFilters = $this->arrayParam($request, 'profile');
         $dateRanges = $this->arrayParam($request, 'date');
         $monthDayRanges = $this->arrayParam($request, 'monthday');
-        $ageRange = $this->arrayParam($request, 'age');
+        $showAge = $query->ageSearchable();
+        // When the age criterion is not offered, discard the parameter like a filter on an
+        // unsearchable field — otherwise a stale URL keeps applying and re-echoing an invisible
+        // always-empty filter the form cannot clear.
+        $ageRange = $showAge ? $this->arrayParam($request, 'age') : [];
 
         $members = $query($viewer, $name, $profileFilters, $dateRanges, $monthDayRanges, $ageRange);
         $lang = app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
@@ -43,6 +47,7 @@ class MemberSearchController extends Controller
                 'monthDayRanges' => $monthDayRanges,
                 'ageRange' => $ageRange,
                 'birthdayName' => $birthdayName,
+                'showAge' => $showAge,
                 'lang' => $lang,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/search', [
@@ -51,6 +56,7 @@ class MemberSearchController extends Controller
                     $selfIntroductions($viewer, array_map(fn (Member $m): int => $m->getKey(), $members->items())),
                 ),
                 'profiles' => MemberSearchSerializer::formFields($profiles, $lang, $birthdayName),
+                'showAge' => $showAge,
                 // Cast to object so an empty filter set serialises as {} (a keyed map), not [].
                 'criteria' => [
                     'name' => $name,
