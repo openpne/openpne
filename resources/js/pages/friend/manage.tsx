@@ -39,47 +39,49 @@ export default function FriendManage() {
     return (
         <>
             <Head title={headTitle} />
-            <section className="space-y-2">
-                <Panel flush title={t('Requests received')}>
-                    {received.data.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No pending requests.')}</p>
-                    ) : (
-                        <List>
-                            {received.data.map((requester) => (
-                                <ListRow key={requester.id}>
-                                    <MemberCell member={requester} />
-                                    <div className="flex shrink-0 gap-2">
-                                        <Button type="button" size="sm" onClick={() => accept(requester.id)}>
-                                            {t('Accept')}
-                                        </Button>
-                                        <Button type="button" size="sm" variant="secondary" onClick={() => reject(requester.id)}>
-                                            {t('Reject')}
-                                        </Button>
-                                    </div>
-                                </ListRow>
-                            ))}
-                        </List>
-                    )}
-                </Panel>
-                {received.data.length > 0 && <Pagination meta={received.meta} pageName="received_page" />}
-            </section>
+            <div className="space-y-6">
+                <section className="space-y-2">
+                    <Panel flush title={t('Requests received')}>
+                        {received.data.length === 0 ? (
+                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No pending requests.')}</p>
+                        ) : (
+                            <List>
+                                {received.data.map((requester) => (
+                                    <ListRow key={requester.id}>
+                                        <MemberCell member={requester} />
+                                        <div className="flex shrink-0 gap-2">
+                                            <Button type="button" size="sm" onClick={() => accept(requester.id)}>
+                                                {t('Accept')}
+                                            </Button>
+                                            <Button type="button" size="sm" variant="secondary" onClick={() => reject(requester.id)}>
+                                                {t('Reject')}
+                                            </Button>
+                                        </div>
+                                    </ListRow>
+                                ))}
+                            </List>
+                        )}
+                    </Panel>
+                    {received.data.length > 0 && <Pagination meta={received.meta} pageName="received_page" />}
+                </section>
 
-            <section className="space-y-2">
-                <Panel flush title={t('Requests sent')}>
-                    {sent.data.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No outgoing requests.')}</p>
-                    ) : (
-                        <List>
-                            {sent.data.map((target) => (
-                                <ListRow key={target.id}>
-                                    <MemberCell member={target} />
-                                </ListRow>
-                            ))}
-                        </List>
-                    )}
-                </Panel>
-                {sent.data.length > 0 && <Pagination meta={sent.meta} pageName="sent_page" />}
-            </section>
+                <section className="space-y-2">
+                    <Panel flush title={t('Requests sent')}>
+                        {sent.data.length === 0 ? (
+                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No outgoing requests.')}</p>
+                        ) : (
+                            <List>
+                                {sent.data.map((target) => (
+                                    <ListRow key={target.id}>
+                                        <MemberCell member={target} />
+                                    </ListRow>
+                                ))}
+                            </List>
+                        )}
+                    </Panel>
+                    {sent.data.length > 0 && <Pagination meta={sent.meta} pageName="sent_page" />}
+                </section>
+            </div>
         </>
     );
 }
