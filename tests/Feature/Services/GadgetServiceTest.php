@@ -116,4 +116,29 @@ class GadgetServiceTest extends TestCase
         $this->assertSame('freeArea_'.$gadget->id, $item['partId']);
         $this->assertTrue($subject->is($item['subject'])); // the subject the caller passed reaches the item
     }
+
+    public function test_conveys_the_render_context_to_each_item(): void
+    {
+        $subject = Member::factory()->create();
+        $this->makeGadget('profile', 'contents', 'profileListBox');
+
+        $item = app(GadgetService::class)->zones('profile', $subject, Member::factory()->create())['contents'][0];
+
+        $this->assertSame('profile', $item['context']);
+    }
+
+    public function test_the_context_attribute_does_not_leak_into_rendered_gadgets(): void
+    {
+        // A class component (freeArea does not exist as one; timelineFriend is) and an anonymous one
+        // (memberImageBox) both receive the new context attribute; neither may echo it into the DOM.
+        $viewer = Member::factory()->create();
+        $this->makeGadget('home', 'contents', 'timelineFriend');
+        $this->makeGadget('home', 'sideMenu', 'memberImageBox');
+
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertSee('homeFriendTimeline', false) // the gadgets did render
+            ->assertSee('memberImageBox', false)
+            ->assertDontSee('context="', false);     // the passthrough attribute is not emitted
+    }
 }
