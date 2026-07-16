@@ -7,6 +7,7 @@ use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -73,6 +74,20 @@ class ListFriendDiariesTest extends TestCase
 
         $this->assertSame($second->getKey(), $result->items()[0]->getKey());
         $this->assertSame($first->getKey(), $result->items()[1]->getKey());
+    }
+
+    public function test_take_caps_the_result_and_returns_a_plain_collection(): void
+    {
+        $viewer = Member::factory()->create();
+        $friend = Member::factory()->create();
+        $this->makeFriends($viewer, $friend);
+        Diary::factory()->count(4)->create(['member_id' => $friend->getKey(), 'visibility' => Visibility::Members]);
+
+        // take() returns an unpaginated collection capped at the limit (no ?page= to read).
+        $result = (new ListFriendDiaries)->take($viewer, 2);
+
+        $this->assertInstanceOf(Collection::class, $result);
+        $this->assertCount(2, $result);
     }
 
     private function createDiaryFor(Member $member, Visibility $visibility, ?string $createdAt = null): Diary

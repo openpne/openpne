@@ -7,6 +7,8 @@ use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 /**
  * The friend diary feed: diaries by the viewer's friends, newest
@@ -21,6 +23,23 @@ class ListFriendDiaries
     /** @return LengthAwarePaginator<int, Diary> */
     public function __invoke(Member $viewer, int $perPage = 20): LengthAwarePaginator
     {
+        return $this->query($viewer)->paginate($perPage);
+    }
+
+    /**
+     * First $limit diaries, unpaginated — for the home gadget list, which shows no pager and must
+     * not read the host page's ?page=.
+     *
+     * @return Collection<int, Diary>
+     */
+    public function take(Member $viewer, int $limit): Collection
+    {
+        return $this->query($viewer)->limit($limit)->get();
+    }
+
+    /** @return Builder<Diary> */
+    private function query(Member $viewer): Builder
+    {
         $friendIds = $viewer->friendships()->pluck('members.id');
 
         $query = Diary::with('member.avatar.file')->withCount(['comments', 'images'])
@@ -29,6 +48,6 @@ class ListFriendDiaries
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'diaries.member_id');
 
-        return $query->orderByDesc('created_at')->paginate($perPage);
+        return $query->orderByDesc('created_at');
     }
 }
