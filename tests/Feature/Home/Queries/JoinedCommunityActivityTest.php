@@ -73,6 +73,26 @@ class JoinedCommunityActivityTest extends TestCase
         $this->assertInstanceOf(CommunityEvent::class, $result[1]);
     }
 
+    public function test_eager_loads_the_community_image_on_every_row(): void
+    {
+        // The digest serializes each row's community image; without the per-feeder community.image
+        // eager load every row would lazy-load its own. Assert both a topic row and an event row
+        // arrive with the relation loaded (catches a dropped eager load on either feeder directly).
+        $viewer = Member::factory()->create();
+        $community = $this->joinedCommunity($viewer);
+
+        CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'updated_at' => now()->subHour()]);
+        CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'updated_at' => now()]);
+
+        $result = app(JoinedCommunityActivity::class)($viewer);
+
+        $this->assertInstanceOf(CommunityEvent::class, $result[0]);
+        $this->assertInstanceOf(CommunityTopic::class, $result[1]);
+        foreach ($result as $row) {
+            $this->assertTrue($row->community->relationLoaded('image'), 'community.image must be eager-loaded per feeder query');
+        }
+    }
+
     public function test_caps_at_the_limit_across_both_sources(): void
     {
         $viewer = Member::factory()->create();

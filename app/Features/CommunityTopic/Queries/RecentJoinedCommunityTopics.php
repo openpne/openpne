@@ -26,7 +26,7 @@ class RecentJoinedCommunityTopics
                 ->where('member_id', $viewer->getKey())
                 ->select('community_id'))
             ->withCount('comments')
-            ->with('community')
+            ->with('community.image')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit($limit)

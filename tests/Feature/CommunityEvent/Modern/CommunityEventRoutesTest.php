@@ -274,7 +274,10 @@ class CommunityEventRoutesTest extends TestCase
 
         $this->actingAs($author)
             ->get(route('community.show', $community))
-            ->assertInertia(fn ($page) => $page->where('recentEvents.0.participantCount', 2));
+            ->assertInertia(fn ($page) => $page
+                ->where('recentEvents.0.participantCount', 2)
+                ->where('recentEvents.0.author.name', $author->name)
+            );
     }
 
     public function test_modern_only_serves_the_canonical_event_board_as_inertia(): void

@@ -8,6 +8,7 @@ use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DiaryImage;
+use App\Models\File;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
@@ -46,6 +47,7 @@ class DashboardTest extends TestCase
                 ->where('communityActivity.0.kind', 'topic')
                 ->where('communityActivity.0.id', $topic->getKey())
                 ->where('communityActivity.0.participantCount', null) // topics have no roster
+                ->where('communityActivity.0.community.imageUrl', null) // no community image in this fixture
                 ->has('myDiaries', 1)
                 ->missing('communities')
             );
@@ -84,6 +86,24 @@ class DashboardTest extends TestCase
                 ->where('communityActivity.0.id', $event->getKey())
                 ->where('communityActivity.0.participantCount', 2)
             );
+    }
+
+    public function test_community_activity_carries_the_community_image(): void
+    {
+        $viewer = Member::factory()->create();
+        $community = Community::factory()->create(['file_id' => File::factory()->create()->getKey()]);
+        CommunityMember::factory()->member()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+
+        $expected = $community->image->thumbnailUrl(76, 76, square: true);
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('communityActivity.0.community.imageUrl', $expected));
+
+        $this->actingAs($viewer)
+            ->get('/community/recent')
+            ->assertInertia(fn ($page) => $page->where('activity.0.community.imageUrl', $expected));
     }
 
     public function test_community_recent_carries_event_participant_counts(): void
@@ -129,13 +149,19 @@ class DashboardTest extends TestCase
             DiaryImage::factory()->create(['diary_id' => $diary->getKey()]);
         }
 
-        // Joined-community events with rosters: the activity digest reads a per-event participant
-        // count, so a missing withCount('participants') would lazy-load one query per event.
-        $community = Community::factory()->create();
-        CommunityMember::factory()->member()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
-        foreach (CommunityEvent::factory()->count(4)->create(['community_id' => $community->getKey()]) as $event) {
+        // Four distinct joined communities, each with an image and one rostered event, plus a fifth
+        // image-bearing community with a topic: the activity digest reads each row's participant
+        // count AND its community image, so dropping the events feeder's community.image eager load
+        // lazy-loads one query per distinct community (+4), rather than hiding as +1 behind slack.
+        foreach (range(1, 4) as $ignored) {
+            $community = Community::factory()->create(['file_id' => File::factory()->create()->getKey()]);
+            CommunityMember::factory()->member()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+            $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
             $event->participants()->attach(Member::factory()->create()->getKey());
         }
+        $topicCommunity = Community::factory()->create(['file_id' => File::factory()->create()->getKey()]);
+        CommunityMember::factory()->member()->create(['community_id' => $topicCommunity->getKey(), 'member_id' => $viewer->getKey()]);
+        CommunityTopic::factory()->create(['community_id' => $topicCommunity->getKey()]);
 
         DB::enableQueryLog();
         $this->actingAs($viewer)->get('/dashboard')->assertOk();
@@ -143,11 +169,11 @@ class DashboardTest extends TestCase
         DB::disableQueryLog();
 
         // Bounded by the number of feeds + their eager loads, not by the number of rows: every digest
-        // eager-loads its avatars and counts, so adding rows must not add queries. Kept tight (the
-        // steady state is ~22, four rows per digest) so dropping any single digest's eager load —
-        // e.g. the my-diaries image count, which would lazy-load one query per row (+4) — trips it
-        // instead of hiding under a loose ceiling.
-        $this->assertLessThan(26, $queries, "dashboard ran {$queries} queries — a per-row avatar/count is likely lazy-loading");
+        // eager-loads its avatars, counts, and community images, so adding rows must not add queries.
+        // Kept tight (steady state 27) so dropping any single digest's eager load trips it instead of
+        // hiding under a loose ceiling — e.g. the events feeder's community.image, whose four distinct
+        // communities turn one batched image fetch into four per-community lazy loads (+3 net → 30).
+        $this->assertLessThan(30, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 
     public function test_announcements_are_zeroed_when_nothing_needs_attention(): void

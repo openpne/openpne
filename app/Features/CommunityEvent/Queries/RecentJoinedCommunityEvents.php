@@ -24,7 +24,7 @@ class RecentJoinedCommunityEvents
                 ->where('member_id', $viewer->getKey())
                 ->select('community_id'))
             ->withCount(['comments', 'participants'])
-            ->with('community')
+            ->with('community.image')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->limit($limit)

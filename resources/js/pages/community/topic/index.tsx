@@ -1,5 +1,4 @@
 import { Head, usePage } from '@inertiajs/react';
-import { Avatar } from '@/components/avatar';
 import { EntryRow } from '@/components/entry-row';
 import { Pagination } from '@/components/pagination';
 import { List, Panel } from '@/components/ui/surface';
@@ -33,9 +32,9 @@ export default function CommunityTopicIndex() {
                                 <EntryRow
                                     key={topic.id}
                                     href={`/communityTopic/${topic.id}`}
-                                    leading={<Avatar id={topic.author?.id ?? 0} name={topic.author?.name ?? ''} src={topic.author?.imageUrl ?? null} color={topic.author?.avatarColor ?? null} size="sm" decorative />}
+                                    author={topic.author}
                                     title={topic.name}
-                                    meta={[topic.author?.name ?? t('Withdrawn member'), formatDate(topic.updatedAt)]}
+                                    date={formatDate(topic.updatedAt)}
                                     commentCount={topic.commentCount}
                                 />
                             ))}

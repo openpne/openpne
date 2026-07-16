@@ -8,23 +8,22 @@ export interface CommunityActivityEntry {
     name: string;
     commentCount: number;
     participantCount: number | null; // event roster size; null on topics (no roster)
-    community: { id: number; name: string };
+    community: { id: number; name: string; imageUrl: string | null };
     updatedAt: string;
 }
 
-/** One row of the cross-community activity digest (dashboard + /community/recent). */
+/** One row of the cross-community activity digest (dashboard + /community/recent). The community —
+ *  not a member — is the byline subject: updated_at bumps on any comment, so an author byline would
+ *  misattribute the row. */
 export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
     const t = useT();
     return (
         <EntryRow
             href={entry.kind === 'topic' ? `/communityTopic/${entry.id}` : `/communityEvent/${entry.id}`}
-            leading={
-                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    {entry.kind === 'topic' ? t('%Topic%') : t('Event')}
-                </span>
-            }
+            community={entry.community}
             title={entry.name}
-            meta={[entry.community.name, formatDate(entry.updatedAt)]}
+            bylineNote={entry.kind === 'topic' ? t('%Topic%') : t('Event')}
+            date={formatDate(entry.updatedAt)}
             commentCount={entry.commentCount}
             participantCount={entry.participantCount ?? 0}
         />
