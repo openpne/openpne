@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-// A design banner: a fixed placement (top_before / top_after) showing either operator
+// A design banner: a fixed placement (top/side, before/after login) showing either operator
 // HTML (is_use_html) or one of its associated images, chosen at random per request.
 #[Fillable(['name', 'is_use_html', 'html'])]
 class Banner extends Model
