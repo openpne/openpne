@@ -14,12 +14,14 @@ use App\Models\EmailChangeRequest;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
+use App\Models\MfaResetRequest;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -282,6 +284,31 @@ class ModernOnlyCoverageTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('auth/email-change-cancel')
                 ->where('newEmail', 'new@example.com'));
+    }
+
+    /**
+     * The admin-issued MFA reset link landing survives as a page under modern_only. Asserts the
+     * VALID-token render (a live factor, so it does not redirect out), not only the invalid-token
+     * redirect — otherwise a Classic render could hide behind the redirect. Guest-reachable, so no login.
+     */
+    public function test_valid_token_mfa_reset_renders_modern_under_modern_only(): void
+    {
+        $member = Member::factory()->create();
+        app(EnableTwoFactorAuthentication::class)($member, force: true);
+        $member->forceFill(['two_factor_confirmed_at' => now()])->save();
+
+        $token = str_repeat('c', 40);
+        MfaResetRequest::create([
+            'member_id' => $member->getKey(),
+            'token' => hash('sha256', $token),
+            'created_at' => now(),
+        ]);
+
+        $this->get("/member/mfa/reset/{$token}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('auth/mfa-reset')
+                ->where('token', $token));
     }
 
     /**

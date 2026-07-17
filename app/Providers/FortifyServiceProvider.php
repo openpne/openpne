@@ -136,6 +136,15 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by('mfa-manage|'.($request->user()?->getKey() ?? $request->ip()));
         });
 
+        // The admin-issued two-factor reset submit, keyed PER TOKEN, not per IP: a reset link is one
+        // account's password-guess surface, so a distributed attacker must not be able to pool
+        // 5/min-per-IP onto a single link. The raw token is hashed into the key so it never lands in the
+        // cache store or a log. The per-IP spray cap across links is the route's throttle:30,1; a re-send
+        // kills the old token, so its bucket simply goes stale.
+        RateLimiter::for('mfa-reset', function (Request $request) {
+            return Limit::perMinute(5)->by('mfa-reset|'.hash('sha256', (string) $request->route('token')));
+        });
+
         // Two limits, whichever trips first: per-(email,ip) caps re-sends to one address; per-ip caps
         // using the endpoint to mail many *different* addresses (a registration-mail relay) — the
         // per-email key alone gives each address its own bucket, so it cannot bound that.

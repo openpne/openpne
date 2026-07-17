@@ -35,6 +35,7 @@ enum MailTemplate: string
     case PasswordChanged = 'password-changed';
     case MfaEnabled = 'mfa-enabled';
     case MfaDisabled = 'mfa-disabled';
+    case MfaResetLink = 'mfa-reset-link';
 
     /** Not a sendable mail: rendered and appended to every sendable body by MailTemplateService. */
     case Signature = 'signature';
@@ -219,6 +220,15 @@ enum MailTemplate: string
                 isConfigurable: false,
                 caption: 'Two-factor authentication disabled',
                 variables: [],
+            ),
+            self::MfaResetLink => new MailTemplateDefinition(
+                // OpenPNE-4-only: the admin-issued two-factor reset link (TASK-122); OpenPNE 3 had no such flow.
+                op3SourceName: null,
+                isConfigurable: false,
+                caption: 'Two-factor authentication reset (link)',
+                variables: [
+                    'url' => ['help' => 'The two-factor reset URL.', 'sample' => 'https://example.test/member/mfa/reset/token'],
+                ],
             ),
             self::Signature => new MailTemplateDefinition(
                 op3SourceName: 'pc_signature',

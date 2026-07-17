@@ -122,6 +122,14 @@ return [
         'token_ttl_minutes' => (int) env('OPENPNE_EMAIL_CHANGE_TOKEN_TTL_MINUTES', 60),
     ],
 
+    'mfa_reset' => [
+        // How long an admin-issued two-factor reset link stays valid. Removing a second factor is a
+        // sensitive credential change, so this tracks the same password-reset window as email_change
+        // above (OWASP's "rarely more than an hour" for such links). Expiry is derived from
+        // mfa_reset_requests.created_at against this value.
+        'token_ttl_minutes' => (int) env('OPENPNE_MFA_RESET_TOKEN_TTL_MINUTES', 60),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Password policy

@@ -18,6 +18,7 @@ use App\Features\Member\MemberAvatarController;
 use App\Features\Member\MemberConfigController;
 use App\Features\Member\MemberMfaController;
 use App\Features\Member\MemberSearchController;
+use App\Features\Member\MfaResetLinkController;
 use App\Features\Message\MessageController;
 use App\Features\Notifications\NotificationFeedController;
 use App\Features\Notifications\NotificationSettingsController;
@@ -172,6 +173,18 @@ Route::get('/member/config/email/cancel/{token}', [EmailChangeLinkController::cl
     ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.cancel');
 Route::post('/member/config/email/cancel/{token}', [EmailChangeLinkController::class, 'cancelEmail'])
     ->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1')->name('member.config.email.cancel.submit');
+
+// Admin-issued two-factor reset landing. Token-gated and reachable whether or not the visitor is logged
+// in (the locked-out member opens it as a guest), so it is neither guest- nor auth-restricted and lives
+// on its own guest-reachable controller (auth boundary). GET renders the password form; the reset is the
+// POST, so a mail scanner / prefetch cannot consume the token or clear a factor. NoReferrer keeps the URL
+// secret out of the Referer header (URL secret + password, like the Fortify auth group). The POST also
+// carries a per-token limiter (FortifyServiceProvider's mfa-reset) so distributed password guessing
+// cannot pool onto one link; throttle:30,1 is the per-IP spray cap the GET and POST share.
+Route::get('/member/mfa/reset/{token}', [MfaResetLinkController::class, 'form'])
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1'])->name('member.mfa.reset');
+Route::post('/member/mfa/reset/{token}', [MfaResetLinkController::class, 'reset'])
+    ->where('token', '[A-Za-z0-9]{40}')->middleware([NoReferrer::class, 'throttle:30,1', 'throttle:mfa-reset'])->name('member.mfa.reset.submit');
 
 // OpenPNE 3 password recovery lived under the opAuthMailAddress plugin. Fortify owns the canonical
 // /forgot-password and /reset-password/{token}; the OpenPNE 3 token scheme (id + token) cannot be

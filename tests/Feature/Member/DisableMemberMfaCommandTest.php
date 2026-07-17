@@ -5,21 +5,27 @@ declare(strict_types=1);
 namespace Tests\Feature\Member;
 
 use App\Models\Member;
+use App\Models\MfaResetRequest;
 use App\Notifications\Member\MfaDisabledNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
+use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
 /**
  * Lockout recovery: openpne:member:disable-mfa clears a member's TOTP secret and recovery
  * codes and revokes every session — gated by server access, for the member who lost both the
- * authenticator and the recovery codes.
+ * authenticator and the recovery codes. Since TASK-122 the command runs on the shared
+ * ForceDisableMemberMfa core; the pins below keep its externally observed behavior fixed across
+ * that extraction (all-session revoke even for a pending set-up, the via=cli audit log, and the
+ * 失効契約 drop of any pending admin reset link).
  */
 class DisableMemberMfaCommandTest extends TestCase
 {
+    use CapturesSecurityLog;
     use RefreshDatabase;
 
     public function test_it_disables_mfa_and_revokes_sessions(): void
@@ -73,5 +79,55 @@ class DisableMemberMfaCommandTest extends TestCase
         $this->artisan('openpne:member:disable-mfa', ['email' => 'amy@example.com'])->assertSuccessful();
 
         Notification::assertNotSentTo($member, MfaDisabledNotification::class);
+    }
+
+    public function test_it_logs_the_disable_via_cli(): void
+    {
+        $this->captureSecurityLog();
+        $member = Member::factory()->create(['email' => 'amy@example.com']);
+        app(EnableTwoFactorAuthentication::class)($member, force: true);
+        $member->forceFill(['two_factor_confirmed_at' => now()])->save();
+
+        $this->artisan('openpne:member:disable-mfa', ['email' => 'amy@example.com'])->assertSuccessful();
+
+        $context = $this->assertOneSecurityEvent('mfa.disabled');
+        $this->assertSame('cli', $context['via']);
+        $this->assertSame((string) $member->getKey(), $context['member_id']);
+    }
+
+    public function test_it_revokes_all_sessions_even_for_a_pending_setup(): void
+    {
+        // No live factor, but the operator is at the CLI (no browser session to keep): every session and
+        // remember-me cookie still dies. Pinned because ForceDisableMemberMfa revokes unconditionally.
+        config(['session.driver' => 'database']);
+        $member = Member::factory()->create(['email' => 'amy@example.com']);
+        app(EnableTwoFactorAuthentication::class)($member, force: true); // pending, never confirmed
+        $member->forceFill(['remember_token' => Str::random(60)])->save();
+        $before = $member->fresh()->remember_token;
+
+        DB::table('sessions')->insert([
+            'id' => 'device', 'user_id' => $member->getKey(),
+            'payload' => base64_encode('{}'), 'last_activity' => time(),
+        ]);
+
+        $this->artisan('openpne:member:disable-mfa', ['email' => 'amy@example.com'])->assertSuccessful();
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'device']);
+        $this->assertNotSame($before, $member->fresh()->remember_token);
+    }
+
+    public function test_it_drops_a_pending_admin_reset_link(): void
+    {
+        // 失効契約 (a): clearing the factor also drops any pending admin-issued reset link.
+        $member = Member::factory()->create(['email' => 'amy@example.com']);
+        app(EnableTwoFactorAuthentication::class)($member, force: true);
+        $member->forceFill(['two_factor_confirmed_at' => now()])->save();
+        MfaResetRequest::create([
+            'member_id' => $member->getKey(), 'token' => hash('sha256', Str::random(40)), 'created_at' => now(),
+        ]);
+
+        $this->artisan('openpne:member:disable-mfa', ['email' => 'amy@example.com'])->assertSuccessful();
+
+        $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
     }
 }

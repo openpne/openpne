@@ -4,6 +4,7 @@ namespace App\Features\Member\Actions;
 
 use App\Auth\SessionRevocation;
 use App\Models\Member;
+use App\Models\MfaResetRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
@@ -43,6 +44,10 @@ class ConfirmMemberMfa
 
             ($this->confirm)($fresh, $code);
             SessionRevocation::revokeMember($fresh, $exceptSessionId);
+
+            // Defense-in-depth for 失効契約 (a): the newly live factor must never inherit a reset link
+            // issued against an earlier factor (TASK-122).
+            MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 
             return $fresh;
         });
