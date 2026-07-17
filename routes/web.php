@@ -371,13 +371,18 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/member/config/notifications', [NotificationSettingsController::class, 'update'])->name('member.config.notifications');
 
     // Member two-factor management (OpenPNE 4-native; Classic serves it as ?category=mfa).
-    // Re-auth is one current_password per flow (enable opens a window that covers confirm);
-    // which actions re-demand it and which revoke other sessions live in MemberMfaController.
+    // Re-auth per flow (enable opens a window that covers confirm; disable/regenerate also demand a
+    // second-factor proof); which actions re-demand it and which revoke other sessions live in
+    // MemberMfaController.
     Route::controller(MemberMfaController::class)->group(function () {
-        Route::post('/member/config/mfa/enable', 'enable')->name('member.config.mfa.enable');
-        Route::post('/member/config/mfa/confirm', 'confirm')->name('member.config.mfa.confirm');
-        Route::post('/member/config/mfa/disable', 'disable')->name('member.config.mfa.disable');
-        Route::post('/member/config/mfa/recovery-codes', 'regenerate')->name('member.config.mfa.recovery');
+        // The management POSTs share one per-member budget (FortifyServiceProvider's mfa-manage
+        // limiter); the GET render is left out so a refresh never spends it.
+        Route::middleware('throttle:mfa-manage')->group(function () {
+            Route::post('/member/config/mfa/enable', 'enable')->name('member.config.mfa.enable');
+            Route::post('/member/config/mfa/confirm', 'confirm')->name('member.config.mfa.confirm');
+            Route::post('/member/config/mfa/disable', 'disable')->name('member.config.mfa.disable');
+            Route::post('/member/config/mfa/recovery-codes', 'regenerate')->name('member.config.mfa.recovery');
+        });
         // Modern-only detail page, like the email/password/withdrawal ones above.
         Route::get('/member/config/mfa', 'edit')->name('member.config.mfa.edit');
     });

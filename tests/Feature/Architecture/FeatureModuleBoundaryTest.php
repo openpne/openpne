@@ -21,13 +21,12 @@ class FeatureModuleBoundaryTest extends TestCase
 {
     /**
      * Controllers carrying a `DB::transaction(` today. Side effects belong in Actions, so the target
-     * is zero everywhere; these predate this guard and their move into feature Actions is tracked for
-     * burn-down. The pinned count may only go DOWN — a new/extra occurrence fails as a regression, and
-     * a drop below the pinned number fails too so whoever lands the burn-down updates this baseline.
+     * is zero everywhere; any remaining entry predates this guard and its move into feature Actions is
+     * tracked for burn-down. The pinned count may only go DOWN — a new/extra occurrence fails as a
+     * regression, and a drop below the pinned number fails too so whoever lands the burn-down updates
+     * this baseline. Empty now: MemberMfaController's cores moved to App\Features\Member\Actions.
      */
-    private const TRANSACTION_BASELINE = [
-        'Member/MemberMfaController.php' => 2,
-    ];
+    private const TRANSACTION_BASELINE = [];
 
     /** @return list<string> absolute paths of every .php file under $dir, recursively, sorted */
     private function phpFilesUnder(string $dir): array

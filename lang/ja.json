@@ -1134,5 +1134,6 @@
     "Your join request is pending.": "参加リクエストは保留中です。",
     "Your password alone will sign you in again.": "無効にすると、パスワードのみでサインインするようになります。",
     "Your recently posted %diaries%.": "自分の新着%diaries%。",
+    "Your two-factor settings changed while this page was open. Please try again.": "このページを開いている間に2要素認証の設定が変更されました。もう一度お試しください。",
     "Zone": "ゾーン"
 }
