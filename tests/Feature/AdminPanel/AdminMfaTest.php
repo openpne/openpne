@@ -13,6 +13,7 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\OneTimeCodeInput;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -110,6 +111,22 @@ class AdminMfaTest extends TestCase
         $items = Filament::getCurrentOrDefaultPanel()->getUserMenuItems();
         $urls = array_map(fn ($item) => $item->getUrl(), $items);
         $this->assertContains(SecuritySettings::getUrl(), $urls);
+    }
+
+    public function test_the_challenge_code_field_is_autofocused(): void
+    {
+        // The challenge form appears mid-page after the credentials submit; the code field must
+        // carry the focus so the admin can type straight from their authenticator.
+        $admin = AdminUser::factory()->create();
+
+        $code = collect($this->provider()->getChallengeFormComponents($admin))
+            ->first(fn ($component) => $component instanceof OneTimeCodeInput);
+
+        $this->assertNotNull($code, 'expected the vendor challenge form to carry a one-time-code field');
+        $this->assertTrue($code->isAutofocused());
+        // The attribute alone is dead after page load; the Alpine hook does the actual focusing
+        // when the challenge is morphed in (see AdminAppAuthentication::getChallengeFormComponents).
+        $this->assertArrayHasKey('x-init', $code->getExtraInputAttributes());
     }
 
     public function test_an_admin_without_mfa_logs_in_with_password_alone(): void
