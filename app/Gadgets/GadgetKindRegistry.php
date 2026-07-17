@@ -26,6 +26,7 @@ use App\Gadgets\Kinds\RecentCommunityEventCommentSnsGadget;
 use App\Gadgets\Kinds\RecentCommunityTopicCommentGadget;
 use App\Gadgets\Kinds\RecentCommunityTopicCommentSnsGadget;
 use App\Gadgets\Kinds\SearchBoxGadget;
+use App\Gadgets\Kinds\SideBannerGadget;
 use App\Gadgets\Kinds\TimelineAllGadget;
 use App\Gadgets\Kinds\TimelineFriendGadget;
 use App\Gadgets\Kinds\TimelineProfileGadget;
@@ -68,6 +69,7 @@ final class GadgetKindRegistry
             SearchBoxGadget::class,
             LinkListBoxGadget::class,
             LanguageSelecterBoxGadget::class,
+            SideBannerGadget::class,
             LoginFormGadget::class,
         ];
     }

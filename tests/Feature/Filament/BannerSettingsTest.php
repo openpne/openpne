@@ -38,9 +38,30 @@ class BannerSettingsTest extends TestCase
             ->assertOk()
             ->assertSee('Top banner (before login)')
             ->assertSee('Top banner (after login)')
+            ->assertSee('Side banner (before login)')
+            ->assertSee('Side banner (after login)')
             // The image pool is offered for selection and the upload screen is linked.
             ->assertSee('Promo')
             ->assertSee('Add or manage banner images');
+    }
+
+    public function test_saving_a_side_placement_persists_it(): void
+    {
+        Livewire::test(BannerSettings::class)
+            ->fillForm([
+                'side_after_mode' => 'html',
+                'side_after_html' => '<div class="side">Ad</div>',
+                'side_before_mode' => 'images',
+            ])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $after = Banner::where('name', 'side_after')->first();
+        $this->assertTrue($after->is_use_html);
+        $this->assertSame('<div class="side">Ad</div>', $after->html);
+
+        $before = Banner::where('name', 'side_before')->first();
+        $this->assertFalse($before->is_use_html);
     }
 
     public function test_saving_sets_the_mode_and_html_per_placement(): void
