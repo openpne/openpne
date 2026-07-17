@@ -65,6 +65,33 @@ class ClassicProfileBirthdayGadgetTest extends TestCase
             ->assertDontSee('birthday_f.gif"', false);
     }
 
+    public function test_a_leap_day_birthday_shows_on_march_first_in_a_non_leap_year(): void
+    {
+        // OpenPNE 3's mktime-based countdown overflows Feb 29 to Mar 1 when the year has no leap day.
+        Carbon::setTestNow(Carbon::parse('2026-03-01 09:00:00'));
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $this->giveBirthday($owner, '1992-02-29');
+        $this->makeGadget();
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('birthday_f.gif"', false);
+    }
+
+    public function test_a_leap_day_birthday_shows_on_february_twenty_ninth_in_a_leap_year(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2028-02-29 09:00:00'));
+        $owner = Member::factory()->create();
+        $viewer = Member::factory()->create();
+        $this->giveBirthday($owner, '1992-02-29');
+        $this->makeGadget();
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('birthday_f.gif"', false);
+    }
+
     public function test_shows_nothing_four_days_before(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-06-20 09:00:00'));
