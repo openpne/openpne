@@ -3,6 +3,7 @@
 namespace App\Features\Member\Actions;
 
 use App\Models\Member;
+use App\Models\MfaResetRequest;
 use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 
@@ -33,6 +34,11 @@ class EnableMemberMfa
             // handed, so a stale instance would let it silently no-op while the caller reports
             // success — the exact split the lock exists to prevent.
             ($this->enable)($fresh);
+
+            // Defense-in-depth for 失効契約 (a): starting a fresh set-up drops any lingering reset link
+            // (the disable that preceded this already did, but a reset link must never carry across a
+            // factor's lifecycle — TASK-122).
+            MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 
             return $fresh;
         });

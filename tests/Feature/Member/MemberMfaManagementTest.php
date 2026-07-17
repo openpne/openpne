@@ -3,6 +3,7 @@
 namespace Tests\Feature\Member;
 
 use App\Models\Member;
+use App\Models\MfaResetRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -341,6 +342,22 @@ class MemberMfaManagementTest extends TestCase
         $this->assertNull($fresh->two_factor_confirmed_at);
         $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
         $this->assertNotSame('old-remember-token', $fresh->remember_token);
+    }
+
+    public function test_a_step_up_disable_drops_a_pending_admin_reset_link(): void
+    {
+        // 失効契約 (a): the member's own step-up disable drops any pending admin-issued reset link, so a
+        // "send → self-disable → re-enable within the TTL" sequence cannot leave the old link live.
+        $member = $this->memberWithTwoFactor();
+        MfaResetRequest::create([
+            'member_id' => $member->getKey(), 'token' => hash('sha256', str_repeat('a', 40)), 'created_at' => now(),
+        ]);
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', ['current_password' => 'password', 'code' => $this->currentOtp($member)])
+            ->assertRedirect('/member/config?category=mfa');
+
+        $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
     }
 
     public function test_disable_with_nothing_set_up_revokes_nothing(): void

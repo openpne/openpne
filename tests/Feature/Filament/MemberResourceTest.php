@@ -9,11 +9,15 @@ use App\Filament\Resources\Members\Pages\ListMembers;
 use App\Models\AdminUser;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Models\MfaResetRequest;
+use App\Notifications\Member\MfaResetLinkNotification;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Livewire\Livewire;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
@@ -140,5 +144,128 @@ class MemberResourceTest extends TestCase
         Livewire::test(ListMembers::class)
             ->assertActionHidden(TestAction::make('delete')->table($primary))
             ->assertActionHidden(TestAction::make('ban')->table($primary));
+    }
+
+    public function test_send_mfa_reset_is_hidden_without_a_live_factor(): void
+    {
+        // No factor at all, and a pending (unconfirmed) set-up: neither is a live factor, so there is
+        // nothing to reset — the action stays hidden.
+        $none = Member::factory()->create();
+
+        $pending = Member::factory()->create();
+        app(EnableTwoFactorAuthentication::class)($pending, force: true); // secret written, never confirmed
+
+        // A live factor but no registered address (members.email is nullable): nowhere to send.
+        $noEmail = $this->memberWithLiveFactor();
+        $noEmail->forceFill(['email' => null])->save();
+
+        Livewire::test(ListMembers::class)
+            ->assertActionHidden(TestAction::make('sendMfaReset')->table($none))
+            ->assertActionHidden(TestAction::make('sendMfaReset')->table($pending))
+            ->assertActionHidden(TestAction::make('sendMfaReset')->table($noEmail));
+    }
+
+    public function test_send_mfa_reset_is_visible_for_a_live_factor_regardless_of_primary_or_ban(): void
+    {
+        // Recovery is orthogonal to takeover risk and to moderation: the action offers no takeover ability
+        // (member mailbox + member password), so it is visible even for the primary member and a banned one.
+        $primary = Member::findOrFail(1);
+        $primary->forceFill(['email' => 'primary@example.test'])->save();
+        $this->giveLiveFactor($primary);
+
+        $banned = $this->memberWithLiveFactor();
+        $banned->forceFill(['is_login_rejected' => true])->save();
+
+        Livewire::test(ListMembers::class)
+            ->assertActionVisible(TestAction::make('sendMfaReset')->table($primary))
+            ->assertActionVisible(TestAction::make('sendMfaReset')->table($banned));
+    }
+
+    public function test_send_mfa_reset_mails_a_link_and_logs_the_admin(): void
+    {
+        Notification::fake();
+        $member = $this->memberWithLiveFactor();
+
+        Livewire::test(ListMembers::class)
+            ->callAction(TestAction::make('sendMfaReset')->table($member))
+            ->assertNotified();
+
+        // Exactly one pending row, the token stored as a 64-hex SHA-256 hash (never the raw token).
+        $rows = MfaResetRequest::where('member_id', $member->getKey())->get();
+        $this->assertCount(1, $rows);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $rows->first()->token);
+
+        // Logged before the fallible send, carrying the acting admin's username; the token is never logged.
+        $context = $this->assertOneSecurityEvent('mfa.reset_link_sent');
+        $this->assertSame((string) $member->getKey(), $context['member_id']);
+        $this->assertSame($this->admin->username, $context['admin_username']);
+        $this->assertArrayNotHasKey('token', $context);
+
+        // On-demand mail pinned to the member's registered address (never the Member notifiable).
+        Notification::assertSentOnDemand(
+            MfaResetLinkNotification::class,
+            fn ($n, $channels, $notifiable): bool => ($notifiable->routes['mail'] ?? null) === $member->email,
+        );
+        Notification::assertSentOnDemandTimes(MfaResetLinkNotification::class, 1);
+    }
+
+    public function test_resending_replaces_the_token_in_place(): void
+    {
+        Notification::fake();
+        $member = $this->memberWithLiveFactor();
+
+        Livewire::test(ListMembers::class)
+            ->callAction(TestAction::make('sendMfaReset')->table($member));
+        $first = MfaResetRequest::where('member_id', $member->getKey())->sole()->token;
+
+        Livewire::test(ListMembers::class)
+            ->callAction(TestAction::make('sendMfaReset')->table($member));
+        $rows = MfaResetRequest::where('member_id', $member->getKey())->get();
+
+        // Still one row (member_id is unique); the token was refreshed, so the earlier link is dead.
+        $this->assertCount(1, $rows);
+        $this->assertNotSame($first, $rows->first()->token);
+    }
+
+    public function test_send_mfa_reset_hides_and_does_nothing_once_the_factor_is_disabled(): void
+    {
+        Notification::fake();
+        $member = $this->memberWithLiveFactor();
+
+        // Disabled after the row rendered (another route / the CLI): the fresh record no longer has a live
+        // factor, so the action is hidden and nothing is minted, mailed, or logged.
+        $member->forceFill(['two_factor_secret' => null, 'two_factor_confirmed_at' => null, 'two_factor_recovery_codes' => null])->save();
+
+        Livewire::test(ListMembers::class)
+            ->assertActionHidden(TestAction::make('sendMfaReset')->table($member));
+
+        $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
+        Notification::assertNothingSent();
+        $this->assertCount(0, $this->securityRecords('mfa.reset_link_sent'));
+    }
+
+    public function test_two_factor_column_reflects_a_live_factor(): void
+    {
+        $live = $this->memberWithLiveFactor();
+        $off = Member::factory()->create();
+
+        Livewire::test(ListMembers::class)
+            ->assertTableColumnStateSet('two_factor', true, $live)
+            ->assertTableColumnStateSet('two_factor', false, $off);
+    }
+
+    /** A member with a confirmed (live) two-factor factor and a registered address. */
+    private function memberWithLiveFactor(): Member
+    {
+        $member = Member::factory()->create();
+        $this->giveLiveFactor($member);
+
+        return $member;
+    }
+
+    private function giveLiveFactor(Member $member): void
+    {
+        app(EnableTwoFactorAuthentication::class)($member, force: true);
+        $member->forceFill(['two_factor_confirmed_at' => now()])->save();
     }
 }

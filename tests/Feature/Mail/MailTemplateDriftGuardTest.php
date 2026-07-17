@@ -25,6 +25,7 @@ use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Notifications\Member\EmailChangeNoticeNotification;
 use App\Notifications\Member\MfaDisabledNotification;
 use App\Notifications\Member\MfaEnabledNotification;
+use App\Notifications\Member\MfaResetLinkNotification;
 use App\Notifications\Member\PasswordChangedNotification;
 use App\Notifications\Member\RegistrationCompletedNotification;
 use App\Notifications\Member\WithdrawalAdminNotification;
@@ -109,6 +110,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new PasswordChangedNotification('en'), $recipient],
             [new MfaEnabledNotification('en'), $recipient],
             [new MfaDisabledNotification('en'), $recipient],
+            [new MfaResetLinkNotification('the-token', 'en'), new AnonymousNotifiable],
         ];
 
         $this->assertCount(count(MailTemplate::sendable()), $notifications, 'one guarded notification per sendable template');
