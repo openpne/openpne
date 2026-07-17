@@ -11,9 +11,12 @@ use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Field;
+use Filament\Forms\Components\OneTimeCodeInput;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Wizard\Step;
+use Illuminate\Contracts\Auth\Authenticatable;
 use LogicException;
 use SensitiveParameter;
 
@@ -75,6 +78,26 @@ class AdminAppAuthentication extends AppAuthentication
         }
 
         return $verified;
+    }
+
+    /**
+     * The login challenge swaps into the page mid-flow with focus nowhere, and the admin's next
+     * action is always typing the code read off their phone — focus the code input for them.
+     * The autofocus attribute alone cannot do it: browsers only honour it while the document is
+     * loading, and the challenge is Livewire-morphed in long after that, so the first digit box
+     * also focuses itself on insertion (deferred a tick to outlast the morph's focus handling).
+     *
+     * @param  Authenticatable&HasAppAuthentication&HasAppAuthenticationRecovery  $user
+     * @return array<Component>
+     */
+    public function getChallengeFormComponents(Authenticatable $user): array
+    {
+        return array_map(
+            fn (Component $component): Component => $component instanceof OneTimeCodeInput
+                ? $component->autofocus()->extraInputAttributes(['x-init' => '$nextTick(() => $el.focus())'])
+                : $component,
+            parent::getChallengeFormComponents($user),
+        );
     }
 
     /**
