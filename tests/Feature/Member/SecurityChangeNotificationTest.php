@@ -96,9 +96,28 @@ class SecurityChangeNotificationTest extends TestCase
         Notification::fake();
         $member = $this->memberWithTwoFactor();
 
-        $this->actingAs($member)->post('/member/config/mfa/disable', ['current_password' => 'password']);
+        $this->actingAs($member)->post('/member/config/mfa/disable', [
+            'current_password' => 'password',
+            'code' => $this->currentOtp($member),
+        ]);
 
         Notification::assertSentTo($member, MfaDisabledNotification::class);
+        $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('mfa.disabled')['member_id']);
+    }
+
+    public function test_disabling_with_a_recovery_code_logs_its_use_and_the_disable(): void
+    {
+        Notification::fake();
+        $member = $this->memberWithTwoFactor();
+        $recovery = $member->recoveryCodes()[0];
+
+        $this->actingAs($member)->post('/member/config/mfa/disable', [
+            'current_password' => 'password',
+            'recovery_code' => $recovery,
+        ]);
+
+        Notification::assertSentTo($member, MfaDisabledNotification::class);
+        $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('mfa.recovery_code_used')['member_id']);
         $this->assertSame((string) $member->getKey(), $this->assertOneSecurityEvent('mfa.disabled')['member_id']);
     }
 

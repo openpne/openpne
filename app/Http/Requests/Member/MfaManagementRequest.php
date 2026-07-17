@@ -44,7 +44,12 @@ class MfaManagementRequest extends FormRequest
         ];
     }
 
-    protected function requiresPassword(): bool
+    /**
+     * Whether this request demanded (and thus verified) the account password. Public so the
+     * controller can fail-closed: it is the snapshot of the factor state the FormRequest validated
+     * against, which a concurrent change may have since invalidated (see MemberMfaController).
+     */
+    public function requiresPassword(): bool
     {
         return true;
     }

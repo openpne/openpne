@@ -324,6 +324,17 @@
                                         @endif
                                     </td>
                                 </tr>
+                                <tr>
+                                    <th><label for="mfa_regen_code">{{ __('Authentication code') }}</label></th>
+                                    <td>
+                                        <input type="text" id="mfa_regen_code" name="code" class="input_text"
+                                               inputmode="numeric" autocomplete="one-time-code">
+                                        {{-- `code` is shared with the disable form below, so gate it on the submitted form. --}}
+                                        @if ($submittedForm === 'regenerate')
+                                            @error('code')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        @endif
+                                    </td>
+                                </tr>
                             </table>
                             <div class="operation">
                                 <ul class="moreInfo button">
@@ -350,7 +361,36 @@
                                         @endif
                                     </td>
                                 </tr>
+                                <tr>
+                                    <th><label for="mfa_disable_code">{{ __('Authentication code') }}</label></th>
+                                    <td>
+                                        <input type="text" id="mfa_disable_code" name="code" class="input_text"
+                                               inputmode="numeric" autocomplete="one-time-code">
+                                        {{-- `code` is shared with the regenerate form above, so gate it on the submitted form. --}}
+                                        @if ($submittedForm === 'disable')
+                                            @error('code')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        @endif
+                                    </td>
+                                </tr>
                             </table>
+                            {{-- Progressive disclosure without JS; a recovery code is an alternative to the TOTP
+                                 code above (server prefers a filled recovery_code). Reopened when a recovery
+                                 attempt just failed so the error is not hidden behind the closed summary. Kept
+                                 outside the table so the disclosure wraps its own row, not a table cell. --}}
+                            <details @if ($errors->has('recovery_code')) open @endif>
+                                <summary>{{ __('Use a recovery code instead') }}</summary>
+                                <table>
+                                    <tr>
+                                        <th><label for="mfa_disable_recovery_code">{{ __('Recovery code') }}</label></th>
+                                        <td>
+                                            <input type="text" id="mfa_disable_recovery_code" name="recovery_code"
+                                                   class="input_text" autocomplete="off">
+                                            <p>{{ __('Each recovery code can be used once, if you no longer have your authenticator.') }}</p>
+                                            @error('recovery_code')<p class="error" role="alert">{{ $message }}</p>@enderror
+                                        </td>
+                                    </tr>
+                                </table>
+                            </details>
                             <div class="operation">
                                 <ul class="moreInfo button">
                                     <li><input type="submit" class="input_submit" value="{{ __('Disable two-factor authentication') }}"></li>

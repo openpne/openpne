@@ -19,7 +19,7 @@ class ConfirmMfaRequest extends MfaManagementRequest
         ];
     }
 
-    protected function requiresPassword(): bool
+    public function requiresPassword(): bool
     {
         return ! MfaSetupReauth::isFresh($this->session());
     }

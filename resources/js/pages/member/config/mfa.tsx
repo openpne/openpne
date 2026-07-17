@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import type { FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
 import { Field, FormActions, FormSection } from '@/components/ui/field';
@@ -146,8 +146,18 @@ function Pending({ qrCode, secret, requiresPassword }: { qrCode: string; secret:
 
 function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: number; recoveryCodes?: string[] }) {
     const t = useT();
-    const regenerate = useForm({ current_password: '' });
-    const disable = useForm({ current_password: '' });
+    const regenerate = useForm({ current_password: '', code: '' });
+    const disable = useForm({ current_password: '', code: '', recovery_code: '' });
+    // The disable proof is either a TOTP code or a recovery code; the server prefers a filled
+    // recovery_code, so only the active field is populated.
+    const [useRecovery, setUseRecovery] = useState(false);
+
+    function toggleRecovery() {
+        // Clear the now-inactive proof AND its stale error: reset() alone leaves a prior invalid
+        // attempt's error to reappear on toggling back. The password is kept.
+        disable.resetAndClearErrors('code', 'recovery_code');
+        setUseRecovery((v) => !v);
+    }
 
     return (
         <div className="space-y-6">
@@ -161,8 +171,8 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                 </p>
             )}
 
-            {/* Each management form leads with a heading + what it does; the password field is
-                the means, not the message. */}
+            {/* Each management form leads with a heading + what it does; the password and code
+                fields are the means, not the message. */}
             <div className="border-t border-border pt-5">
                 <FormSection
                     title={t('Regenerate recovery codes')}
@@ -183,6 +193,18 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                                 autoComplete="current-password"
                                 value={regenerate.data.current_password}
                                 onChange={(e) => regenerate.setData('current_password', e.target.value)}
+                            />
+                        </Field>
+                        <Field
+                            label={t('Authentication code')}
+                            htmlFor="regenerate_code"
+                            help={t('Enter the six-digit code shown in your authenticator app.')}
+                            error={regenerate.errors.code}
+                        >
+                            <OtpInput
+                                label={t('Authentication code')}
+                                value={regenerate.data.code}
+                                onChange={(code) => regenerate.setData('code', code)}
                             />
                         </Field>
                         <FormActions>
@@ -216,6 +238,40 @@ function Enabled({ recoveryCodesCount, recoveryCodes }: { recoveryCodesCount: nu
                                 onChange={(e) => disable.setData('current_password', e.target.value)}
                             />
                         </Field>
+                        {useRecovery ? (
+                            <Field
+                                label={t('Recovery code')}
+                                htmlFor="disable_recovery_code"
+                                help={t('Each recovery code can be used once, if you no longer have your authenticator.')}
+                                error={disable.errors.recovery_code}
+                            >
+                                <Input
+                                    id="disable_recovery_code"
+                                    type="text"
+                                    autoComplete="off"
+                                    value={disable.data.recovery_code}
+                                    onChange={(e) => disable.setData('recovery_code', e.target.value)}
+                                />
+                            </Field>
+                        ) : (
+                            <Field
+                                label={t('Authentication code')}
+                                htmlFor="disable_code"
+                                help={t('Enter the six-digit code shown in your authenticator app.')}
+                                error={disable.errors.code}
+                            >
+                                <OtpInput
+                                    label={t('Authentication code')}
+                                    value={disable.data.code}
+                                    onChange={(code) => disable.setData('code', code)}
+                                />
+                            </Field>
+                        )}
+                        <p className="text-sm">
+                            <button type="button" onClick={toggleRecovery} className="text-link hover:underline">
+                                {useRecovery ? t('Use an authentication code instead') : t('Use a recovery code instead')}
+                            </button>
+                        </p>
                         <FormActions>
                             <Button type="submit" variant="destructive" loading={disable.processing}>
                                 {t('Disable two-factor authentication')}
