@@ -86,6 +86,10 @@ final class MailTemplateDefaults
             'en' => 'Two-factor authentication was disabled',
             'ja' => '2要素認証が無効になりました',
         ],
+        'mfa-reset-link' => [
+            'en' => 'Reset your two-factor authentication',
+            'ja' => '2要素認証のリセット',
+        ],
         'signature' => [
             'en' => null,
             'ja' => null,

@@ -1,17 +1,23 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import 'altcha';
+import { FlashMessage } from '@/components/flash-message';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
+import type { PageProps } from '@/types';
 
 type Props = { registrationOpen?: boolean; captchaRequired?: boolean; challengeUrl?: string };
 
 export default function Login({ registrationOpen = false, captchaRequired = false, challengeUrl }: Props) {
     const t = useT();
+    // Flows that end at the sign-in screen (password reset, email change, 2FA reset) land here with
+    // a status flash; Classic renders it in the layout, so without this their success is silent on
+    // Modern only.
+    const status = usePage<PageProps>().props.flash.status;
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -51,6 +57,8 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
     return (
         <AuthLayout title={signIn}>
             <Head title={signIn} />
+
+            {status && <FlashMessage>{status}</FlashMessage>}
 
             <form onSubmit={submit} className="space-y-4">
                 <Field label={t('Email')} htmlFor="email" error={errors.email}>

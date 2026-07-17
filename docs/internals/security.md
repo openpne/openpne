@@ -137,9 +137,53 @@ the factor without the app's re-auth and revocation contract:
   5/min-per-member budget (the `mfa-manage` limiter, keyed by member for the same
   reason as the challenge), so a cancel still draws from it; the GET render does not.
 
-**Lockout recovery**: recovery codes, or `openpne:member:disable-mfa <email>` —
-server access as the trust boundary, same as the admin command; the member's
-self-service password reset cannot remove a lost second factor.
+**Lockout recovery** has three layers, in order of escalation:
+
+1. **Recovery codes** — shown once at set-up; a member who kept them signs in and
+   disables the factor themselves.
+2. **Admin-issued reset link** — a site admin mails the member's registered
+   address a time-limited link (the *Send 2FA reset link* member action). The
+   member opens it as a guest and clears the factor by entering their **account
+   password** (`App\Features\Member\MfaResetLinkController`, `ConsumeMfaReset`).
+   This is the delegable path: member support is the site admin's job, and the
+   admin CLI is not offered to admins.
+3. **Operator CLI** — `openpne:member:disable-mfa <email>`, server access as the
+   trust boundary (same as the admin command), for when the registered address is
+   also lost. The self-service password reset cannot remove a lost second factor.
+
+A pending reset link dies on factor removal, re-enrollment, recovery-code
+regeneration, or a completed email change, and survives **only** a password change
+(the proof it demands *is* the current password) — see the invalidation contract
+below.
+
+**Reset-link boundary invariant** (the reason the admin path is safe against a
+malicious or hijacked admin, T2/T3): issuing a link gives the admin panel **no
+direct account-takeover ability**. The link is delivered only to the member's
+registered mailbox, and consuming it requires the member's own account password —
+both evidence outside the admin's reach. So the action has no primary-member gate
+(there is nothing to seize) and no ban gate (a ban is enforced at login; recovery
+and moderation are orthogonal). Display-only delivery, admin editing of the
+address, and one-time access codes were all considered and rejected — each would
+hand the admin a takeover primitive. When the registered address itself is dead,
+the answer is the operator CLI, or a fresh account plus an admin withdrawal of the
+old one — never a seam that lets the admin redirect the proof.
+
+**Reset-link invalidation contract**: a link proves the factor and the registered
+address that existed when it was issued, so it must die once that ground truth
+moves. (a) **A factor's lifecycle drops the pending row** — its removal
+(`ForceDisableMemberMfa` for the CLI + link flow, the step-up `DisableMemberMfa`),
+its re-enrollment (`EnableMemberMfa` / `ConfirmMemberMfa`, defense-in-depth), and a
+recovery-code regeneration (`RegenerateMemberRecoveryCodes` — regenerating proves
+current authenticator possession, so an outstanding lost-factor link is moot) each
+delete it inside their transaction, closing "send → disable → re-enable within the
+TTL → old link now valid against the new factor". (b) **A completed email change
+voids it** (`ConfirmEmailChange`) — the address is the proof channel, the same
+compensating-control shape as a password change voiding a pending email change. A
+password change alone does **not** void it: the proof it still demands is the
+current password. GET renders only (a mail scanner / prefetch must not consume the
+token or clear a factor); the reset is the password-gated POST, per-token
+rate-limited (`mfa-reset`) so distributed guessing cannot pool onto one link. The
+whole global lock order is Member → `mfa_reset_requests`.
 
 Accepted residual: a pending (unconfirmed) set-up QR is visible to whoever
 holds the member's session, and inside the enable re-auth window it could even
