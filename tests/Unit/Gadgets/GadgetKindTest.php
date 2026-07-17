@@ -49,6 +49,7 @@ class GadgetKindTest extends TestCase
             'searchBox' => ['searchBox', 'searchLine_7'],
             'linkListBox' => ['linkListBox', null],
             'languageSelecterBox' => ['languageSelecterBox', null],
+            'sideBanner' => ['sideBanner', null],
             'loginForm' => ['loginForm', null],
         ];
     }

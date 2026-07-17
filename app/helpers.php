@@ -94,15 +94,15 @@ if (! function_exists('classic_layout')) {
     }
 }
 
-if (! function_exists('classic_top_banner')) {
+if (! function_exists('classic_banner')) {
     /**
-     * The Classic #topBanner content (OpenPNE 3 op_banner): the top_after placement when a member is
-     * logged in, top_before otherwise. A placement shows operator HTML (is_use_html, emitted raw) or
-     * one of its images at random, linked to the image's URL when set. Empty when nothing is configured.
+     * The content of a Classic banner placement (OpenPNE 3 op_banner): operator HTML (is_use_html,
+     * emitted raw) or one of the placement's images at random, linked to the image's URL when set.
+     * Empty when the placement is unconfigured. The caller picks the placement (top/side, by login).
      */
-    function classic_top_banner(): string
+    function classic_banner(string $placement): string
     {
-        $banner = Banner::where('name', auth()->check() ? 'top_after' : 'top_before')->first();
+        $banner = Banner::where('name', $placement)->first();
 
         if ($banner === null) {
             return '';
@@ -125,5 +125,13 @@ if (! function_exists('classic_top_banner')) {
         return $url === ''
             ? $img
             : sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', e($url), $img);
+    }
+}
+
+if (! function_exists('classic_top_banner')) {
+    /** The Classic #topBanner content: top_after when a member is signed in, else top_before. */
+    function classic_top_banner(): string
+    {
+        return classic_banner(auth()->check() ? 'top_after' : 'top_before');
     }
 }
