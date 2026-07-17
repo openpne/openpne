@@ -75,11 +75,12 @@ refresh cannot burn the guess budget.
 
 Differences from the admin posture, all deliberate:
 
-- **Re-auth spans requests, so it uses a window.** Member set-up runs across
-  several requests (enable, scan, confirm), so it verifies the password once and
-  opens a short window (below) rather than re-asking per step; disabling and
-  regenerating always re-authenticate. The admin's flows are each a single modal,
-  so they instead demand the password **and** a code inline, once, with no window.
+- **Set-up re-auth spans requests, so it uses a window.** Member set-up runs
+  across several requests (enable, scan, confirm), so it verifies the password
+  once and opens a short window (below) rather than re-asking per step. The
+  admin's set-up is a single modal, so it demands the password **and** a code
+  inline with no window. Disabling and regenerating match the admin posture
+  directly: the account password **and** a second-factor proof, inline, every time.
 - **"Remember me" stays available.** Fortify only mints the remember cookie
   *after* the challenge succeeds, so a recaller is always evidence of a full
   password + TOTP login — unlike Filament, whose recaller path would bypass the
@@ -104,17 +105,35 @@ methods and middleware pinned by `FortifyRoutesTest`). Fortify's
 `/user/two-factor-*` endpoints never ship: they would allow enabling/disabling
 the factor without the app's re-auth and revocation contract:
 
-- **Re-auth is per flow, not per step** (the sudo-mode convention). Enabling
-  verifies the account password and opens a short re-auth window
+- **Re-auth is per flow and demands a second factor.** Enabling verifies the
+  account password and opens a short re-auth window
   ([`MfaSetupReauth`](../../app/Features/Member/MfaSetupReauth.php)); confirming
   inside the window needs only the TOTP code, after it the password again.
-  Disabling a live factor and regenerating recovery codes always re-authenticate
-  inline; cancelling an inert pending set-up never does (it gates nothing).
+  Disabling a live factor and regenerating recovery codes demand the account
+  password **and** a second-factor proof inline every time — a current TOTP code,
+  or (disable only) an unused recovery code. Cancelling an inert pending set-up
+  demands neither (it gates nothing). The ordering is structural: the FormRequest
+  verifies only the password and the proof's *presence*, and the controller
+  verifies the proof's value only after that password rule has passed — so a wrong
+  password never marks a TOTP code used in Fortify's replay cache nor spends a
+  recovery code. A disable that spends a recovery code logs
+  `mfa.recovery_code_used`, deferred until the transaction commits so a rollback
+  records nothing.
+- **State is re-derived under a row lock.** Every state-dependent action re-reads
+  the member `FOR UPDATE` inside its transaction and re-checks the state the
+  FormRequest validated against (required-ness was decided on a pre-controller
+  snapshot). A concurrent change that invalidated that snapshot — a set-up
+  confirmed, a factor disabled — fails closed, rather than removing a now-live
+  factor with no proof or minting recovery codes for a factor a parallel disable
+  just removed.
 - **Live-factor changes revoke**: confirm and disabling a live factor revoke
   the member's other sessions and rotate `remember_token` in the same
   transaction. Regenerating recovery codes revokes nothing (the factor is
-  unchanged), and neither does cancelling a pending set-up — it is
-  password-free, so it must also stay side-effect-free.
+  unchanged), and neither does cancelling a pending set-up — being password- and
+  proof-free, it must also stay side-effect-free. "Free" means no credentials and
+  no mutation, not exempt from throttling: all four management POSTs share one
+  5/min-per-member budget (the `mfa-manage` limiter, keyed by member for the same
+  reason as the challenge), so a cancel still draws from it; the GET render does not.
 
 **Lockout recovery**: recovery codes, or `openpne:member:disable-mfa <email>` —
 server access as the trust boundary, same as the admin command; the member's

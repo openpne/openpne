@@ -77,6 +77,27 @@ class FortifyRoutesTest extends TestCase
         $this->get('/user/two-factor-recovery-codes')->assertNotFound();
     }
 
+    public function test_the_two_factor_management_posts_are_throttled_but_the_render_is_not(): void
+    {
+        // The four management POSTs share the mfa-manage budget (FortifyServiceProvider); the GET
+        // render is left out so a refresh cannot spend it. Kept separate from pinnedRoutes(), whose
+        // rows assume the pre-login challenge shape (NoReferrer, guest:member).
+        foreach ([
+            'member.config.mfa.enable',
+            'member.config.mfa.confirm',
+            'member.config.mfa.disable',
+            'member.config.mfa.recovery',
+        ] as $name) {
+            $route = Route::getRoutes()->getByName($name);
+            $this->assertInstanceOf(RoutingRoute::class, $route, "route [{$name}] is not registered");
+            $this->assertContains('throttle:mfa-manage', $route->gatherMiddleware(), "route [{$name}] lost throttle:mfa-manage");
+        }
+
+        $edit = Route::getRoutes()->getByName('member.config.mfa.edit');
+        $this->assertInstanceOf(RoutingRoute::class, $edit, 'route [member.config.mfa.edit] is not registered');
+        $this->assertNotContains('throttle:mfa-manage', $edit->gatherMiddleware(), 'the GET render must not be throttled');
+    }
+
     public function test_fortifys_unused_password_confirmation_routes_are_not_carried_over(): void
     {
         foreach (['password.confirm', 'password.confirm.store', 'password.confirmation'] as $name) {

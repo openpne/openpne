@@ -2,37 +2,44 @@
 
 namespace App\Features\Member;
 
-use App\Auth\SessionRevocation;
+use App\Features\Member\Actions\ConfirmMemberMfa;
+use App\Features\Member\Actions\DisableMemberMfa;
+use App\Features\Member\Actions\EnableMemberMfa;
+use App\Features\Member\Actions\RegenerateMemberRecoveryCodes;
 use App\Features\Member\Serializers\MemberMfaSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Member\ConfirmMfaRequest;
 use App\Http\Requests\Member\DisableMfaRequest;
 use App\Http\Requests\Member\MfaManagementRequest;
+use App\Http\Requests\Member\RegenerateMfaRequest;
 use App\Notifications\Member\MfaDisabledNotification;
 use App\Notifications\Member\MfaEnabledNotification;
 use App\Support\SecurityLog;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
-use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
-use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
-use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
-use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 
 /**
- * Member two-factor management: Fortify's actions behind this app's management contract —
- * one inline current_password re-auth per flow (enable opens MfaSetupReauth's window for
- * confirm; disabling a live factor and regenerating codes re-auth every time; cancelling an
- * inert pending set-up never does) and other-session revocation when the live factor changes
- * (docs/internals/security.md). Fortify's own /user/two-factor-* endpoints are not registered
- * precisely because they lack both.
+ * Member two-factor management: the surface for this app's management contract. Removing a live factor
+ * or regenerating recovery codes re-authenticates every time — the account password AND a second-factor
+ * proof (a current TOTP code; disable also accepts an unused recovery code) — matching the admin
+ * posture; enabling opens MfaSetupReauth's window so confirm needs only the TOTP code; cancelling an
+ * inert pending set-up needs nothing (docs/internals/security.md). A live-factor change revokes the
+ * member's other sessions. Fortify's own /user/two-factor-* endpoints are not registered precisely
+ * because they lack all of this.
  *
  * State machine: disabled → (enable: pending secret + codes) → pending → (confirm: TOTP proof)
  * → enabled. A pending secret never gates login, so cancelling or abandoning set-up is safe.
+ *
+ * Each transactional core — the row-locked fresh-state re-derivation, second-factor verification,
+ * Fortify mutation, and session revocation — lives in its own feature Action (App\Features\Member\
+ * Actions). This surface keeps only the HTTP edge: FormRequest input, the re-auth window, session
+ * flash, the audit log + alerts, and redirects. The FormRequest decided required-ness against a
+ * pre-controller snapshot, so the Action re-derives the state under the lock and fails closed on a
+ * mismatch; `requiresPassword()` is handed to the disable Action as the $stepUpValidated snapshot.
  */
 class MemberMfaController extends Controller
 {
@@ -41,18 +48,9 @@ class MemberMfaController extends Controller
         return Inertia::render('member/config/mfa', MemberMfaSerializer::state($this->viewer(), $request->session()));
     }
 
-    public function enable(MfaManagementRequest $request, EnableTwoFactorAuthentication $enable): RedirectResponse
+    public function enable(MfaManagementRequest $request, EnableMemberMfa $enable): RedirectResponse
     {
-        $viewer = $this->viewer();
-
-        // Strictly a disabled-state action: with any secret present (pending or confirmed) a
-        // parallel enable could rotate the stored secret under a concurrent confirm, which then
-        // stamps two_factor_confirmed_at against a secret the member never scanned — a lockout.
-        // Restarting a pending set-up is cancel (disable) first, then enable — never a rotation
-        // in place.
-        abort_if(! blank($viewer->two_factor_secret), 403);
-
-        $enable($viewer);
+        $enable($this->viewer());
 
         // The password was just verified (MfaManagementRequest); the stamp lets confirm finish
         // the same sitting without asking for it a second time.
@@ -61,23 +59,21 @@ class MemberMfaController extends Controller
         return $this->mfaRedirect($request);
     }
 
-    public function confirm(ConfirmMfaRequest $request, ConfirmTwoFactorAuthentication $confirm): RedirectResponse
+    public function confirm(ConfirmMfaRequest $request, ConfirmMemberMfa $confirm): RedirectResponse
     {
         $viewer = $this->viewer();
 
-        abort_if($viewer->hasEnabledTwoFactorAuthentication(), 403);
-        abort_if(blank($viewer->two_factor_secret), 403);
-
         try {
-            // One transaction: the factor turning on and the other-session purge + remember_token
-            // rotation must not half-apply (a factor change is a credential change).
-            DB::transaction(function () use ($confirm, $viewer, $request): void {
-                $confirm($viewer, (string) $request->validated('code'));
-                SessionRevocation::revokeMember($viewer, $request->session()->getId());
-            });
-        } catch (ValidationException) {
-            // Fortify raises this in the `confirmTwoFactorAuthentication` named bag; rethrow into
-            // the default bag so Classic @error('code') and Inertia errors.code both see it.
+            $confirm($viewer, (string) $request->validated('code'), $request->session()->getId());
+        } catch (ValidationException $e) {
+            // Fortify raises the code failure in the `confirmTwoFactorAuthentication` named bag;
+            // rethrow it into the default bag so Classic @error('code') and Inertia errors.code
+            // both see it. The Action's fail-closed mismatch is already default-bag — let it through
+            // unchanged rather than masking it as an invalid code.
+            if ($e->errorBag !== 'confirmTwoFactorAuthentication') {
+                throw $e;
+            }
+
             throw ValidationException::withMessages([
                 'code' => __('The provided two factor authentication code was invalid.'),
             ]);
@@ -94,27 +90,21 @@ class MemberMfaController extends Controller
         return $this->mfaRedirect($request, __('Two-factor authentication is now enabled.'));
     }
 
-    public function disable(DisableMfaRequest $request, DisableTwoFactorAuthentication $disable): RedirectResponse
+    public function disable(DisableMfaRequest $request, DisableMemberMfa $disable): RedirectResponse
     {
         $viewer = $this->viewer();
 
-        // Nothing to disable — don't revoke sessions over a no-op (stale tab double-submit).
-        if (blank($viewer->two_factor_secret)) {
-            return $this->mfaRedirect($request);
-        }
+        // requiresPassword() is the FormRequest's state snapshot; the Action re-checks it against the
+        // locked row and fails closed on a mismatch. $wasEnabled reflects the fresh state, so the
+        // log/alert/redirect below branch on what actually happened, not the snapshot.
+        $wasEnabled = $disable(
+            $viewer,
+            $request->requiresPassword(),
+            $request->validated('code'),
+            $request->validated('recovery_code'),
+            $request->session()->getId(),
+        );
 
-        // Read before disabling: only a live (confirmed) factor's removal is a credential change worth
-        // revoking sessions over and alerting on. Cancelling a pending set-up is password-free, so it
-        // must stay side-effect-free too — otherwise a walked-up session could log out the member's
-        // other devices for free.
-        $wasEnabled = $viewer->hasEnabledTwoFactorAuthentication();
-
-        DB::transaction(function () use ($disable, $viewer, $request, $wasEnabled): void {
-            $disable($viewer);
-            if ($wasEnabled) {
-                SessionRevocation::revokeMember($viewer, $request->session()->getId());
-            }
-        });
         MfaSetupReauth::clear($request->session());
 
         // Cancelling a pending set-up isn't a factor change worth announcing; it lands back on
@@ -140,14 +130,12 @@ class MemberMfaController extends Controller
         return redirect()->route('member.config')->with('status', $status);
     }
 
-    public function regenerate(MfaManagementRequest $request, GenerateNewRecoveryCodes $generate): RedirectResponse
+    public function regenerate(RegenerateMfaRequest $request, RegenerateMemberRecoveryCodes $regenerate): RedirectResponse
     {
         $viewer = $this->viewer();
 
-        abort_unless($viewer->hasEnabledTwoFactorAuthentication(), 403);
+        $regenerate($viewer, (string) $request->validated('code'));
 
-        // No session revocation: the TOTP factor is unchanged (admin parity).
-        $generate($viewer);
         SecurityLog::event('mfa.recovery_codes_regenerated', ['guard' => 'member', 'member_id' => $viewer->getKey()]);
 
         $request->session()->flash(MemberMfaSerializer::SHOW_RECOVERY_CODES, true);

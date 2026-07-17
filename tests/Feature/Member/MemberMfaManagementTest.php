@@ -6,8 +6,10 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use PragmaRX\Google2FA\Google2FA;
+use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
 /**
@@ -19,6 +21,7 @@ use Tests\TestCase;
  */
 class MemberMfaManagementTest extends TestCase
 {
+    use CapturesSecurityLog;
     use RefreshDatabase;
 
     private function memberWithPendingSetup(): Member
@@ -140,7 +143,7 @@ class MemberMfaManagementTest extends TestCase
         $member = $this->memberWithTwoFactor();
 
         $this->actingAs($member)
-            ->post('/member/config/mfa/disable', ['current_password' => 'password'])
+            ->post('/member/config/mfa/disable', ['current_password' => 'password', 'code' => $this->currentOtp($member)])
             ->assertRedirect('/member/config')
             ->assertSessionHas('status');
     }
@@ -192,9 +195,12 @@ class MemberMfaManagementTest extends TestCase
     {
         $member = $this->memberWithTwoFactor();
 
+        // With neither a password nor a second-factor proof, both required errors flash together
+        // (the FormRequest collects them; the controller's value checks never run), so the page
+        // shows what is missing rather than just the first field.
         $this->actingAs($member)
             ->post('/member/config/mfa/disable')
-            ->assertSessionHasErrors('current_password');
+            ->assertSessionHasErrors(['current_password', 'code']);
 
         $this->assertNotNull($member->fresh()->two_factor_secret);
     }
@@ -326,7 +332,7 @@ class MemberMfaManagementTest extends TestCase
         $this->insertOtherDeviceSession($member);
 
         $this->actingAs($member)
-            ->post('/member/config/mfa/disable', ['current_password' => 'password'])
+            ->post('/member/config/mfa/disable', ['current_password' => 'password', 'code' => $this->currentOtp($member)])
             ->assertRedirect('/member/config?category=mfa');
 
         $fresh = $member->fresh();
@@ -375,7 +381,7 @@ class MemberMfaManagementTest extends TestCase
         $oldCodes = $member->recoveryCodes();
 
         $this->actingAs($member)
-            ->post('/member/config/mfa/recovery-codes', ['current_password' => 'password'])
+            ->post('/member/config/mfa/recovery-codes', ['current_password' => 'password', 'code' => $this->currentOtp($member)])
             ->assertRedirect('/member/config?category=mfa');
 
         $fresh = $member->fresh();
@@ -388,10 +394,12 @@ class MemberMfaManagementTest extends TestCase
 
     public function test_regenerate_requires_a_confirmed_factor(): void
     {
+        // A valid password and a code that verifies against the pending secret still 403 — the
+        // controller re-checks the confirmed state under the lock before minting codes.
         $member = $this->memberWithPendingSetup();
 
         $this->actingAs($member)
-            ->post('/member/config/mfa/recovery-codes', ['current_password' => 'password'])
+            ->post('/member/config/mfa/recovery-codes', ['current_password' => 'password', 'code' => $this->currentOtp($member)])
             ->assertForbidden();
     }
 
@@ -417,5 +425,274 @@ class MemberMfaManagementTest extends TestCase
 
         $this->assertArrayNotHasKey('two_factor_secret', $member->toArray());
         $this->assertArrayNotHasKey('two_factor_recovery_codes', $member->toArray());
+    }
+
+    public function test_regenerate_without_a_code_reports_the_code_requirement(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $codes = $member->recoveryCodes();
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/recovery-codes', ['current_password' => 'password'])
+            ->assertSessionHasErrors('code');
+
+        $this->assertSame($codes, $member->fresh()->recoveryCodes());
+    }
+
+    public function test_regenerate_with_an_invalid_code_is_rejected(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $codes = $member->recoveryCodes();
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/recovery-codes', ['current_password' => 'password', 'code' => 'not-a-code'])
+            ->assertSessionHasErrors('code');
+
+        $this->assertSame($codes, $member->fresh()->recoveryCodes());
+    }
+
+    public function test_disabling_a_live_factor_without_a_second_factor_is_rejected(): void
+    {
+        $member = $this->memberWithTwoFactor();
+
+        // Password present, but no code and no recovery code — the second factor is required too.
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', ['current_password' => 'password'])
+            ->assertSessionHasErrors('code');
+
+        $this->assertNotNull($member->fresh()->two_factor_secret);
+    }
+
+    public function test_disabling_a_live_factor_with_an_invalid_code_changes_nothing(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $member->forceFill(['remember_token' => 'old-remember-token'])->save();
+        $this->insertOtherDeviceSession($member);
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', ['current_password' => 'password', 'code' => 'not-a-code'])
+            ->assertSessionHasErrors('code');
+
+        $fresh = $member->fresh();
+        $this->assertNotNull($fresh->two_factor_secret);
+        $this->assertDatabaseHas('sessions', ['id' => 'other-device-session']);
+        $this->assertSame('old-remember-token', $fresh->remember_token);
+    }
+
+    public function test_disabling_a_live_factor_with_an_invalid_recovery_code_is_rejected(): void
+    {
+        $member = $this->memberWithTwoFactor();
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', ['current_password' => 'password', 'recovery_code' => 'not-a-real-code'])
+            ->assertSessionHasErrors('recovery_code');
+
+        $fresh = $member->fresh();
+        $this->assertNotNull($fresh->two_factor_secret);
+        $this->assertCount(8, $fresh->recoveryCodes());
+    }
+
+    public function test_disabling_a_live_factor_with_a_valid_recovery_code_removes_it(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $member->forceFill(['remember_token' => 'old-remember-token'])->save();
+        $this->insertOtherDeviceSession($member);
+        $recovery = $member->recoveryCodes()[0];
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', ['current_password' => 'password', 'recovery_code' => $recovery])
+            ->assertRedirect('/member/config?category=mfa');
+
+        $fresh = $member->fresh();
+        $this->assertNull($fresh->two_factor_secret);
+        $this->assertNull($fresh->two_factor_recovery_codes);
+        $this->assertDatabaseMissing('sessions', ['id' => 'other-device-session']);
+        $this->assertNotSame('old-remember-token', $fresh->remember_token);
+    }
+
+    public function test_a_wrong_password_does_not_burn_the_regenerate_code(): void
+    {
+        // The replay-cache pin: a wrong password fails in the FormRequest, so the code never
+        // reaches (and never marks used) Fortify's TOTP replay cache — a right-password retry
+        // with the same code still succeeds within the same app instance.
+        $member = $this->memberWithTwoFactor();
+        $oldCodes = $member->recoveryCodes();
+        $code = $this->currentOtp($member);
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/recovery-codes', ['current_password' => 'wrong-password', 'code' => $code])
+            ->assertSessionHasErrors('current_password')
+            ->assertSessionDoesntHaveErrors('code');
+
+        $this->post('/member/config/mfa/recovery-codes', ['current_password' => 'password', 'code' => $code])
+            ->assertRedirect('/member/config?category=mfa');
+
+        $this->assertNotEquals($oldCodes, $member->fresh()->recoveryCodes());
+    }
+
+    public function test_a_wrong_password_does_not_burn_the_disable_code(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $code = $this->currentOtp($member);
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', ['current_password' => 'wrong-password', 'code' => $code])
+            ->assertSessionHasErrors('current_password')
+            ->assertSessionDoesntHaveErrors('code');
+
+        $this->post('/member/config/mfa/disable', ['current_password' => 'password', 'code' => $code])
+            ->assertRedirect('/member/config?category=mfa');
+
+        $this->assertNull($member->fresh()->two_factor_secret);
+    }
+
+    public function test_a_wrong_or_missing_password_never_consumes_a_recovery_code(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $recovery = $member->recoveryCodes()[0];
+
+        // No password: the recovery code's presence passes, but the password rule fails before the
+        // controller scans (and would consume) it.
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', ['recovery_code' => $recovery])
+            ->assertSessionHasErrors('current_password');
+
+        $this->assertCount(8, $member->fresh()->recoveryCodes());
+
+        // The same recovery code still disables once the password is supplied.
+        $this->post('/member/config/mfa/disable', ['current_password' => 'password', 'recovery_code' => $recovery])
+            ->assertRedirect('/member/config?category=mfa');
+
+        $this->assertNull($member->fresh()->two_factor_secret);
+    }
+
+    public function test_disable_prefers_a_filled_recovery_code_over_a_garbage_code(): void
+    {
+        $member = $this->memberWithTwoFactor();
+        $recovery = $member->recoveryCodes()[0];
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', [
+                'current_password' => 'password',
+                'code' => 'not-a-code',
+                'recovery_code' => $recovery,
+            ])
+            ->assertRedirect('/member/config?category=mfa');
+
+        $this->assertNull($member->fresh()->two_factor_secret);
+    }
+
+    public function test_the_management_posts_are_throttled_per_member(): void
+    {
+        $member = $this->memberWithTwoFactor();
+
+        foreach (range(1, 5) as $i) {
+            $this->actingAs($member)
+                ->post('/member/config/mfa/disable', ['current_password' => 'wrong-password'])
+                ->assertSessionHasErrors('current_password');
+        }
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', ['current_password' => 'wrong-password'])
+            ->assertStatus(429);
+
+        // The GET render is not throttled — a refresh must not spend the budget.
+        $this->actingAs($member)->get('/member/config/mfa')->assertOk();
+    }
+
+    public function test_classic_routes_the_code_error_to_the_form_that_was_submitted(): void
+    {
+        // `code` is a key shared by the regenerate and disable forms; the flashed _mfa_form marker
+        // routes the invalid-code error into the disable box (after the regenerate box's field).
+        $member = $this->memberWithTwoFactor();
+
+        $this->actingAs($member)
+            ->from('/member/config?category=mfa')
+            ->post('/member/config/mfa/disable', ['current_password' => 'password', 'code' => 'not-a-code', '_mfa_form' => 'disable'])
+            ->assertRedirect('/member/config?category=mfa');
+
+        $this->get('/member/config?category=mfa')
+            ->assertSeeInOrder(['id="mfa_regen_code"', 'id="mfa_disable_code"', 'The provided two factor authentication code was invalid.'], false);
+    }
+
+    public function test_a_disable_racing_a_confirm_fails_closed(): void
+    {
+        // The FormRequest sees a stale pending instance (no password/proof demanded); a concurrent
+        // confirm makes the factor live before the controller locks the row. Removing a now-live
+        // factor without proof is refused.
+        $member = $this->memberWithPendingSetup();
+        $member->fresh()->forceFill(['two_factor_confirmed_at' => now()])->save();
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable')
+            ->assertSessionHasErrors('current_password');
+
+        $fresh = $member->fresh();
+        $this->assertNotNull($fresh->two_factor_secret);
+        $this->assertNotNull($fresh->two_factor_confirmed_at);
+    }
+
+    public function test_a_confirm_racing_a_secret_rotation_fails_closed_with_its_own_message(): void
+    {
+        // The loaded viewer holds pending secret A; a concurrent cancel + re-enable rotates the
+        // row to secret B before the controller locks it. Confirming A's code against B would
+        // either fail confusingly or (worse) stamp the factor live against a secret the member
+        // never scanned — the controller refuses with the state-change message, not "invalid code".
+        $member = $this->memberWithPendingSetup();
+        $staleOtp = $this->currentOtp($member);
+        app(EnableTwoFactorAuthentication::class)($member->fresh(), force: true);
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/confirm', ['current_password' => 'password', 'code' => $staleOtp])
+            ->assertSessionHasErrors([
+                'code' => __('Your two-factor settings changed while this page was open. Please try again.'),
+            ]);
+
+        $this->assertNull($member->fresh()->two_factor_confirmed_at);
+    }
+
+    public function test_a_regenerate_racing_a_disable_mints_no_orphan_codes(): void
+    {
+        // The FormRequest sees a stale enabled instance; a concurrent disable removes the factor
+        // before the controller locks the row. Minting codes for the removed factor is refused.
+        $member = $this->memberWithTwoFactor();
+        $member->fresh()->forceFill([
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+        ])->save();
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/recovery-codes', ['current_password' => 'password', 'code' => $this->currentOtp($member)])
+            ->assertForbidden();
+
+        $this->assertNull($member->fresh()->two_factor_recovery_codes);
+    }
+
+    public function test_a_rollback_after_consuming_a_recovery_code_records_nothing(): void
+    {
+        $this->captureSecurityLog();
+
+        // A failure after the recovery code is spent must roll the consumption back and — because
+        // the audit log defers to after-commit — record nothing.
+        $this->app->bind(DisableTwoFactorAuthentication::class, fn () => new class extends DisableTwoFactorAuthentication
+        {
+            public function __invoke($user): void
+            {
+                throw new \RuntimeException('disable failed');
+            }
+        });
+
+        $member = $this->memberWithTwoFactor();
+        $recovery = $member->recoveryCodes()[0];
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable', ['current_password' => 'password', 'recovery_code' => $recovery])
+            ->assertStatus(500);
+
+        $fresh = $member->fresh();
+        $this->assertNotNull($fresh->two_factor_secret);
+        $this->assertCount(8, $fresh->recoveryCodes());
+        $this->assertSame([], $this->securityRecords('mfa.recovery_code_used'));
     }
 }

@@ -127,6 +127,15 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by('two-factor|'.$request->session()->get('login.id'));
         });
 
+        // The four member two-factor management POSTs (enable/confirm/disable/regenerate) share one
+        // budget; the GET render is left unthrottled (routes/web.php). Keyed by the authenticated
+        // member, not the IP: the adversary at these endpoints already holds the session, so the
+        // guess budget for the inline code/recovery proof must not scale with attacker IPs (same
+        // reasoning as the challenge limiter).
+        RateLimiter::for('mfa-manage', function (Request $request) {
+            return Limit::perMinute(5)->by('mfa-manage|'.($request->user()?->getKey() ?? $request->ip()));
+        });
+
         // Two limits, whichever trips first: per-(email,ip) caps re-sends to one address; per-ip caps
         // using the endpoint to mail many *different* addresses (a registration-mail relay) — the
         // per-email key alone gives each address its own bucket, so it cannot bound that.
