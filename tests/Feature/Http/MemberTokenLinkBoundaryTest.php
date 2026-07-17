@@ -44,31 +44,35 @@ class MemberTokenLinkBoundaryTest extends TestCase
     /**
      * Guest-reachable, token-gated mail-link landings.
      *
-     * @return array<string, array{string, class-string, string, string, list<string>}>
-     *                                                                                  name, controller, action, http method, must-have middleware
+     * @return array<string, array{string, class-string, string, string, list<string>, list<string>}>
+     *                                                                                                name, controller, action, http method, must-have middleware, forbidden middleware
      */
     public static function tokenLinkRoutes(): array
     {
         return [
             // Email-change: per-IP throttle + token regex. These carry no NoReferrer today — a known
             // oversight (the URL holds a token); tracked for a separate fix, so it is not asserted here.
-            'email.confirm' => ['member.config.email.confirm', EmailChangeLinkController::class, 'confirmEmailForm', 'GET', ['throttle:30,1']],
-            'email.confirm.submit' => ['member.config.email.confirm.submit', EmailChangeLinkController::class, 'confirmEmail', 'POST', ['throttle:30,1']],
-            'email.cancel' => ['member.config.email.cancel', EmailChangeLinkController::class, 'cancelEmailForm', 'GET', ['throttle:30,1']],
-            'email.cancel.submit' => ['member.config.email.cancel.submit', EmailChangeLinkController::class, 'cancelEmail', 'POST', ['throttle:30,1']],
+            // The per-token mfa-reset limiter must never leak onto them.
+            'email.confirm' => ['member.config.email.confirm', EmailChangeLinkController::class, 'confirmEmailForm', 'GET', ['throttle:30,1'], ['throttle:mfa-reset']],
+            'email.confirm.submit' => ['member.config.email.confirm.submit', EmailChangeLinkController::class, 'confirmEmail', 'POST', ['throttle:30,1'], ['throttle:mfa-reset']],
+            'email.cancel' => ['member.config.email.cancel', EmailChangeLinkController::class, 'cancelEmailForm', 'GET', ['throttle:30,1'], ['throttle:mfa-reset']],
+            'email.cancel.submit' => ['member.config.email.cancel.submit', EmailChangeLinkController::class, 'cancelEmail', 'POST', ['throttle:30,1'], ['throttle:mfa-reset']],
 
-            // MFA reset: NoReferrer on both (URL secret + password); the POST also carries the per-token limiter.
-            'mfa.reset' => ['member.mfa.reset', MfaResetLinkController::class, 'form', 'GET', [NoReferrer::class, 'throttle:30,1']],
-            'mfa.reset.submit' => ['member.mfa.reset.submit', MfaResetLinkController::class, 'reset', 'POST', [NoReferrer::class, 'throttle:30,1', 'throttle:mfa-reset']],
+            // MFA reset: NoReferrer on both (URL secret + password); the POST also carries the per-token
+            // limiter. The GET must NOT — the limiter guards password guesses, and a render must not spend
+            // the guess budget (POST-only pin).
+            'mfa.reset' => ['member.mfa.reset', MfaResetLinkController::class, 'form', 'GET', [NoReferrer::class, 'throttle:30,1'], ['throttle:mfa-reset']],
+            'mfa.reset.submit' => ['member.mfa.reset.submit', MfaResetLinkController::class, 'reset', 'POST', [NoReferrer::class, 'throttle:30,1', 'throttle:mfa-reset'], []],
         ];
     }
 
     /**
      * @param  class-string  $controller
      * @param  list<string>  $mustHave
+     * @param  list<string>  $mustNotHave
      */
     #[DataProvider('tokenLinkRoutes')]
-    public function test_token_link_route_keeps_its_guest_reachable_contract(string $name, string $controller, string $action, string $method, array $mustHave): void
+    public function test_token_link_route_keeps_its_guest_reachable_contract(string $name, string $controller, string $action, string $method, array $mustHave, array $mustNotHave): void
     {
         $route = Route::getRoutes()->getByName($name);
         $this->assertInstanceOf(RoutingRoute::class, $route, "route [{$name}] is not registered");
@@ -87,6 +91,10 @@ class MemberTokenLinkBoundaryTest extends TestCase
 
         foreach ($mustHave as $required) {
             $this->assertContains($required, $middleware, "route [{$name}] lost expected middleware [{$required}].");
+        }
+
+        foreach ($mustNotHave as $forbidden) {
+            $this->assertNotContains($forbidden, $middleware, "route [{$name}] must not carry middleware [{$forbidden}].");
         }
 
         // Length-pinned to the issued token shape so a scanner cannot brute the token space.

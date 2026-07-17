@@ -68,10 +68,9 @@ class MfaResetLinkController extends Controller
 
     public function reset(Request $request, string $token, ConsumeMfaReset $consume): RedirectResponse
     {
-        // Format only — the guest context cannot use the current_password:member rule; ConsumeMfaReset does
-        // the Hash::check under the lock, before any mutation, so a wrong guess spends nothing.
-        $request->validate(['password' => ['required', 'string']]);
-
+        // Token lookup and the different-member reject run BEFORE password validation: an empty password
+        // from a DIFFERENT logged-in member must land on the home reject, not a validation redirect that
+        // leaks that the link is live.
         $pending = $this->livePendingReset($token);
         if ($pending === null) {
             return redirect()->route('login')->with('status', __('This two-factor reset link is no longer valid.'));
@@ -81,33 +80,37 @@ class MfaResetLinkController extends Controller
             return $wrongMember;
         }
 
-        // The factor was cleared elsewhere after the form loaded: burn the spent link and point them at a
-        // plain password sign-in (no proof is needed anymore) rather than failing the password check.
-        $member = Member::find($pending->member_id);
-        if ($member === null || ! $member->hasEnabledTwoFactorAuthentication()) {
-            MfaResetRequest::whereKey($pending->getKey())->delete();
+        // Format only — the guest context cannot use the current_password:member rule; ConsumeMfaReset does
+        // the Hash::check under the lock, before any mutation, so a wrong guess spends nothing.
+        $request->validate(['password' => ['required', 'string']]);
 
+        // ConsumeMfaReset owns every state transition (re-lock, TTL/factor re-check, password proof,
+        // disable + burn) and returns an explicit outcome. A wrong password throws ValidationException,
+        // landing back on the form with the token intact.
+        $result = $consume((int) $pending->member_id, $token, (string) $request->input('password'));
+
+        if ($result->isInvalid()) {
+            return redirect()->route('login')->with('status', __('This two-factor reset link is no longer valid.'));
+        }
+
+        if ($result->isAlreadyOff()) {
+            // The factor was cleared elsewhere after the form loaded; the spent link was burned. Point them
+            // at a plain password sign-in (no proof is needed anymore).
             return redirect()->route('login')
                 ->with('status', __('Two-factor authentication is already off for this account. Sign in with your password.'));
         }
 
-        // Authoritative: re-lock, verify the password, clear the factor, burn the token — all in one
-        // transaction. A wrong password throws ValidationException['password'] (back to the form, token
-        // intact); a null return means a concurrent change voided the link between the checks and the lock.
-        $disabled = $consume($member, $token, (string) $request->input('password'));
-        if ($disabled === null) {
-            return redirect()->route('login')->with('status', __('This two-factor reset link is no longer valid.'));
-        }
+        $member = $result->member;
 
         // The factor is gone: log first (a fallible enqueue must not suppress the audit record), then the
         // security alert to the member's own address. No admin_username — the member, not the admin, acted.
-        SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $disabled->getKey(), 'via' => 'reset_link']);
-        $disabled->notify(new MfaDisabledNotification($disabled->locale ?? app()->getLocale()));
+        SecurityLog::event('mfa.disabled', ['guard' => 'member', 'member_id' => $member->getKey(), 'via' => 'reset_link']);
+        $member->notify(new MfaDisabledNotification($member->locale ?? app()->getLocale()));
 
         // Removing the factor is a credential change, so all sessions were revoked in ConsumeMfaReset. If
         // the consumer is signed in as this member (they opened the link in their own session), end that
         // session here too, then everyone signs in afresh (email-change idiom).
-        if (Auth::guard('member')->id() === $disabled->getKey()) {
+        if (Auth::guard('member')->id() === $member->getKey()) {
             Auth::guard('member')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

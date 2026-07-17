@@ -16,6 +16,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use RuntimeException;
 
 class MembersTable
 {
@@ -151,7 +152,20 @@ class MembersTable
                 }
             })
             ->action(function (Member $record): void {
-                app(RequestMfaReset::class)($record);
+                try {
+                    app(RequestMfaReset::class)($record);
+                } catch (RuntimeException) {
+                    // The true modal-mounted race: the factor (or address) was invalidated between
+                    // before() and here. RequestMfaReset's locked recheck is the correctness backstop;
+                    // degrade to the same graceful warning instead of a 500.
+                    Notification::make()
+                        ->title(__('Two-factor authentication is no longer active for this member'))
+                        ->warning()
+                        ->send();
+
+                    return;
+                }
+
                 Notification::make()
                     ->title(__("A 2FA reset link has been sent to the member's registered address"))
                     ->success()

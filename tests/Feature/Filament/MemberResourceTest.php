@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Features\Member\Actions\RequestMfaReset;
 use App\Filament\Resources\Members\MemberResource;
 use App\Filament\Resources\Members\Pages\ListMembers;
 use App\Models\AdminUser;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
 use Livewire\Livewire;
+use RuntimeException;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
@@ -238,6 +240,33 @@ class MemberResourceTest extends TestCase
 
         Livewire::test(ListMembers::class)
             ->assertActionHidden(TestAction::make('sendMfaReset')->table($member));
+
+        $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
+        Notification::assertNothingSent();
+        $this->assertCount(0, $this->securityRecords('mfa.reset_link_sent'));
+    }
+
+    public function test_send_mfa_reset_degrades_gracefully_when_the_action_races(): void
+    {
+        Notification::fake();
+        $member = $this->memberWithLiveFactor();
+
+        // The true modal-mounted race: the factor is invalidated between before() (which passed on the
+        // still-live record) and RequestMfaReset's locked recheck, which then throws. Filament re-checks
+        // visibility on a mounted action, so a disable-then-confirm sequence would just silently hide it;
+        // to reach the action body deterministically, stand in a RequestMfaReset that throws as the lock
+        // recheck would. The action must catch it and warn — not 500 — and mint/mail/log nothing.
+        $this->app->bind(RequestMfaReset::class, fn () => new class extends RequestMfaReset
+        {
+            public function __invoke(Member $member): void
+            {
+                throw new RuntimeException('factor invalidated between before() and the lock recheck');
+            }
+        });
+
+        Livewire::test(ListMembers::class)
+            ->callAction(TestAction::make('sendMfaReset')->table($member))
+            ->assertNotified(__('Two-factor authentication is no longer active for this member'));
 
         $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
         Notification::assertNothingSent();

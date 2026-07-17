@@ -3,6 +3,7 @@
 namespace App\Features\Member\Actions;
 
 use App\Models\Member;
+use App\Models\MfaResetRequest;
 use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Actions\GenerateNewRecoveryCodes;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
@@ -32,6 +33,11 @@ class RegenerateMemberRecoveryCodes
             $this->verifyTotpCode($this->provider, $fresh, $code);
 
             ($this->generate)($fresh);
+
+            // 失効契約: regenerating just proved current authenticator possession, so any outstanding
+            // admin-issued lost-factor reset link is moot — drop it (TASK-122). Member is locked above;
+            // the global Member → mfa_reset_requests order holds.
+            MfaResetRequest::where('member_id', $fresh->getKey())->delete();
 
             return $fresh;
         });

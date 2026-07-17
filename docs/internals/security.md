@@ -151,9 +151,10 @@ the factor without the app's re-auth and revocation contract:
    trust boundary (same as the admin command), for when the registered address is
    also lost. The self-service password reset cannot remove a lost second factor.
 
-The self-service password reset does **not** void a pending reset link (the proof
-it demands *is* the current password), but changing the registered address or any
-factor change does — see the invalidation contract below.
+A pending reset link dies on factor removal, re-enrollment, recovery-code
+regeneration, or a completed email change, and survives **only** a password change
+(the proof it demands *is* the current password) — see the invalidation contract
+below.
 
 **Reset-link boundary invariant** (the reason the admin path is safe against a
 malicious or hijacked admin, T2/T3): issuing a link gives the admin panel **no
@@ -168,17 +169,21 @@ the answer is the operator CLI, or a fresh account plus an admin withdrawal of t
 old one — never a seam that lets the admin redirect the proof.
 
 **Reset-link invalidation contract**: a link proves the factor and the registered
-address that existed when it was issued, so it must die when either changes.
-(a) **Any factor removal drops the pending row** — `ForceDisableMemberMfa` (CLI +
-link flow) and the step-up `DisableMemberMfa` delete it inside their transaction,
-and `EnableMemberMfa` / `ConfirmMemberMfa` delete it defense-in-depth — closing
-"send → disable → re-enable within the TTL → old link now valid against the new
-factor". (b) **An email change voids it** (`ConfirmEmailChange`) — the address is
-the proof channel, the same compensating-control shape as a password change
-voiding a pending email change. GET renders only (a mail scanner / prefetch must
-not consume the token or clear a factor); the reset is the password-gated POST,
-per-token rate-limited (`mfa-reset`) so distributed guessing cannot pool onto one
-link. The whole global lock order is Member → `mfa_reset_requests`.
+address that existed when it was issued, so it must die once that ground truth
+moves. (a) **A factor's lifecycle drops the pending row** — its removal
+(`ForceDisableMemberMfa` for the CLI + link flow, the step-up `DisableMemberMfa`),
+its re-enrollment (`EnableMemberMfa` / `ConfirmMemberMfa`, defense-in-depth), and a
+recovery-code regeneration (`RegenerateMemberRecoveryCodes` — regenerating proves
+current authenticator possession, so an outstanding lost-factor link is moot) each
+delete it inside their transaction, closing "send → disable → re-enable within the
+TTL → old link now valid against the new factor". (b) **A completed email change
+voids it** (`ConfirmEmailChange`) — the address is the proof channel, the same
+compensating-control shape as a password change voiding a pending email change. A
+password change alone does **not** void it: the proof it still demands is the
+current password. GET renders only (a mail scanner / prefetch must not consume the
+token or clear a factor); the reset is the password-gated POST, per-token
+rate-limited (`mfa-reset`) so distributed guessing cannot pool onto one link. The
+whole global lock order is Member → `mfa_reset_requests`.
 
 Accepted residual: a pending (unconfirmed) set-up QR is visible to whoever
 holds the member's session, and inside the enable re-auth window it could even

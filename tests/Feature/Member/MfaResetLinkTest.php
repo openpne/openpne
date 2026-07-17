@@ -176,16 +176,24 @@ class MfaResetLinkTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_post_wrong_password_is_throttled_per_token(): void
+    public function test_wrong_password_throttling_is_per_token_not_per_ip(): void
     {
-        $member = $this->memberWithLiveFactor();
-        $raw = $this->seedLink($member);
+        $memberA = $this->memberWithLiveFactor();
+        $rawA = $this->seedLink($memberA);
+        $memberB = $this->memberWithLiveFactor();
+        $rawB = $this->seedLink($memberB);
 
-        // The per-token mfa-reset limiter is 5/min; the 6th guess against the same link is 429'd.
+        // The per-token mfa-reset limiter is 5/min; the 6th guess against token A is 429'd.
         for ($i = 0; $i < 5; $i++) {
-            $this->post("/member/mfa/reset/{$raw}", ['password' => 'wrong-password'])->assertRedirect();
+            $this->post("/member/mfa/reset/{$rawA}", ['password' => 'wrong-password'])->assertRedirect();
         }
-        $this->post("/member/mfa/reset/{$raw}", ['password' => 'wrong-password'])->assertStatus(429);
+        $this->post("/member/mfa/reset/{$rawA}", ['password' => 'wrong-password'])->assertStatus(429);
+
+        // From the SAME IP, token B's first guess still passes: the limiter keys on the hashed token, so a
+        // per-IP implementation (which would 429 this too) is ruled out.
+        $this->post("/member/mfa/reset/{$rawB}", ['password' => 'wrong-password'])
+            ->assertStatus(302)
+            ->assertSessionHasErrors('password');
     }
 
     public function test_a_consumed_token_is_dead_on_reuse(): void
@@ -230,6 +238,22 @@ class MfaResetLinkTest extends TestCase
         $this->get('/member/config')->assertOk();
     }
 
+    public function test_a_different_member_with_an_empty_password_still_hits_the_home_reject(): void
+    {
+        // Pins the reorder: the different-member reject runs BEFORE password validation, so an empty
+        // password lands on the home reject — not a validation redirect that would leak the link is live.
+        $subject = $this->memberWithLiveFactor();
+        $other = Member::factory()->create();
+        $raw = $this->seedLink($subject);
+
+        $this->actingAs($other)
+            ->post("/member/mfa/reset/{$raw}", ['password' => ''])
+            ->assertRedirect(route('home'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('mfa_reset_requests', ['member_id' => $subject->getKey()]);
+    }
+
     public function test_the_subject_consuming_their_own_session_gets_signed_out(): void
     {
         $member = $this->memberWithLiveFactor();
@@ -244,21 +268,29 @@ class MfaResetLinkTest extends TestCase
         $this->get('/member/config')->assertRedirect('/login'); // logged out
     }
 
-    public function test_a_password_change_keeps_the_link_but_rebinds_the_proof(): void
+    public function test_a_real_password_change_keeps_the_link_and_rebinds_the_proof(): void
     {
         // The link binds to member_id, and the proof it demands is the CURRENT password: a password change
-        // does not void it (unlike an email change), but the old password no longer opens it.
+        // does not void it (unlike an email change), but the old password no longer opens it. Driven as the
+        // real in-session member-config password change, not a forceFill.
         $member = $this->memberWithLiveFactor();
         $raw = $this->seedLink($member);
 
-        $member->forceFill(['password' => bcrypt('brand-new-pass')])->save();
+        $this->actingAs($member)->post('/member/config/password', [
+            'current_password' => 'password',
+            'password' => 'new-secret-pass',
+            'password_confirmation' => 'new-secret-pass',
+        ])->assertSessionHasNoErrors();
 
-        // Old password fails and spends nothing.
+        // The pending link survives the password change.
+        $this->assertDatabaseHas('mfa_reset_requests', ['member_id' => $member->getKey()]);
+
+        // The old password no longer opens it, and spends nothing.
         $this->post("/member/mfa/reset/{$raw}", ['password' => 'password'])->assertSessionHasErrors('password');
         $this->assertTrue($member->fresh()->hasEnabledTwoFactorAuthentication());
 
-        // New password consumes it.
-        $this->post("/member/mfa/reset/{$raw}", ['password' => 'brand-new-pass'])->assertRedirect(route('login'));
+        // The new password consumes it.
+        $this->post("/member/mfa/reset/{$raw}", ['password' => 'new-secret-pass'])->assertRedirect(route('login'));
         $this->assertFalse($member->fresh()->hasEnabledTwoFactorAuthentication());
     }
 
@@ -339,7 +371,7 @@ class MfaResetLinkTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_consume_ignores_a_replaced_row(): void
+    public function test_consume_reports_invalid_for_a_replaced_row(): void
     {
         // The controller looked up token A, but a re-send replaced the row (token B) before the lock: the
         // in-transaction re-fetch by (member_id + hash) misses, so nothing is disabled.
@@ -347,11 +379,27 @@ class MfaResetLinkTest extends TestCase
         $this->seedLink($member); // token B is what is stored now
         $tokenA = str_repeat('9', 40);
 
-        $result = app(ConsumeMfaReset::class)($member, $tokenA, 'password');
+        $result = app(ConsumeMfaReset::class)($member->getKey(), $tokenA, 'password');
 
-        $this->assertNull($result);
+        $this->assertTrue($result->isInvalid());
+        $this->assertNull($result->member);
         $this->assertTrue($member->fresh()->hasEnabledTwoFactorAuthentication());
         $this->assertDatabaseHas('mfa_reset_requests', ['member_id' => $member->getKey()]); // the live row survives
+    }
+
+    public function test_consume_reports_invalid_for_a_withdrawn_member(): void
+    {
+        // The member withdrew between the controller's unlocked lookup and the action's lock: the in-tx
+        // Member lookup returns null, so it is a dead link — invalid(), not a firstOrFail 404.
+        $member = $this->memberWithLiveFactor();
+        $raw = $this->seedLink($member);
+        $memberId = $member->getKey();
+        $member->delete(); // cascade drops the row, but the controller still holds the stale id
+
+        $result = app(ConsumeMfaReset::class)($memberId, $raw, 'password');
+
+        $this->assertTrue($result->isInvalid());
+        $this->assertNull($result->member);
     }
 
     public function test_consume_rechecks_expiry_inside_the_transaction(): void
@@ -361,11 +409,24 @@ class MfaResetLinkTest extends TestCase
         $member = $this->memberWithLiveFactor();
         $raw = $this->seedLink($member, minutesAgo: (int) config('openpne.mfa_reset.token_ttl_minutes') + 1);
 
-        $result = app(ConsumeMfaReset::class)($member, $raw, 'password');
+        $result = app(ConsumeMfaReset::class)($member->getKey(), $raw, 'password');
 
-        $this->assertNull($result);
+        $this->assertTrue($result->isInvalid());
         $this->assertTrue($member->fresh()->hasEnabledTwoFactorAuthentication());
         $this->assertDatabaseHas('mfa_reset_requests', ['member_id' => $member->getKey()]);
+    }
+
+    public function test_consume_reports_already_off_and_burns_the_row(): void
+    {
+        // The factor was cleared elsewhere; consuming reports alreadyOff and burns the spent link.
+        $member = Member::factory()->create();
+        $raw = $this->seedLink($member);
+
+        $result = app(ConsumeMfaReset::class)($member->getKey(), $raw, 'password');
+
+        $this->assertTrue($result->isAlreadyOff());
+        $this->assertNull($result->member);
+        $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
     }
 
     public function test_consume_throws_on_a_wrong_password_without_spending_the_token(): void
@@ -374,7 +435,7 @@ class MfaResetLinkTest extends TestCase
         $raw = $this->seedLink($member);
 
         try {
-            app(ConsumeMfaReset::class)($member, $raw, 'wrong-password');
+            app(ConsumeMfaReset::class)($member->getKey(), $raw, 'wrong-password');
             $this->fail('expected a ValidationException');
         } catch (ValidationException $e) {
             $this->assertArrayHasKey('password', $e->errors());

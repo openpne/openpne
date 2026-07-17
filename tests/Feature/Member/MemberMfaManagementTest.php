@@ -409,6 +409,22 @@ class MemberMfaManagementTest extends TestCase
         $this->assertSame('old-remember-token', $fresh->remember_token);
     }
 
+    public function test_regenerating_codes_drops_a_pending_admin_reset_link(): void
+    {
+        // 失効契約: regenerating proves current authenticator possession, so an outstanding admin-issued
+        // lost-factor reset link is moot — the regenerate transaction drops it (TASK-122).
+        $member = $this->memberWithTwoFactor();
+        MfaResetRequest::create([
+            'member_id' => $member->getKey(), 'token' => hash('sha256', str_repeat('a', 40)), 'created_at' => now(),
+        ]);
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/recovery-codes', ['current_password' => 'password', 'code' => $this->currentOtp($member)])
+            ->assertRedirect('/member/config?category=mfa');
+
+        $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
+    }
+
     public function test_regenerate_requires_a_confirmed_factor(): void
     {
         // A valid password and a code that verifies against the pending secret still 403 — the
