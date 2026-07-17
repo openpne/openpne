@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Members\Tables;
 
 use App\Features\Member\Actions\AllowMemberLogin;
+use App\Features\Member\Actions\MfaResetUnavailable;
 use App\Features\Member\Actions\RejectMemberLogin;
 use App\Features\Member\Actions\RequestMfaReset;
 use App\Features\Member\Actions\WithdrawMember;
@@ -16,7 +17,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
-use RuntimeException;
 
 class MembersTable
 {
@@ -154,7 +154,7 @@ class MembersTable
             ->action(function (Member $record): void {
                 try {
                     app(RequestMfaReset::class)($record);
-                } catch (RuntimeException) {
+                } catch (MfaResetUnavailable) {
                     // The true modal-mounted race: the factor (or address) was invalidated between
                     // before() and here. RequestMfaReset's locked recheck is the correctness backstop;
                     // degrade to the same graceful warning instead of a 500.

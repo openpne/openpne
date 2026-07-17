@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Features\Member\Actions\MfaResetUnavailable;
 use App\Features\Member\Actions\RequestMfaReset;
 use App\Filament\Resources\Members\MemberResource;
 use App\Filament\Resources\Members\Pages\ListMembers;
@@ -260,7 +261,7 @@ class MemberResourceTest extends TestCase
         {
             public function __invoke(Member $member): void
             {
-                throw new RuntimeException('factor invalidated between before() and the lock recheck');
+                throw new MfaResetUnavailable('factor invalidated between before() and the lock recheck');
             }
         });
 
@@ -271,6 +272,29 @@ class MemberResourceTest extends TestCase
         $this->assertDatabaseMissing('mfa_reset_requests', ['member_id' => $member->getKey()]);
         Notification::assertNothingSent();
         $this->assertCount(0, $this->securityRecords('mfa.reset_link_sent'));
+    }
+
+    public function test_an_unexpected_send_failure_is_not_masked_as_the_race(): void
+    {
+        Notification::fake();
+        $member = $this->memberWithLiveFactor();
+
+        // Only the precondition failure (MfaResetUnavailable) is the benign race; anything else the
+        // Action throws — a dead queue, a logging fault — must bubble, not hide behind the stale-factor
+        // warning where monitoring would never see it.
+        $this->app->bind(RequestMfaReset::class, fn () => new class extends RequestMfaReset
+        {
+            public function __invoke(Member $member): void
+            {
+                throw new RuntimeException('queue exploded');
+            }
+        });
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('queue exploded');
+
+        Livewire::test(ListMembers::class)
+            ->callAction(TestAction::make('sendMfaReset')->table($member));
     }
 
     public function test_two_factor_column_reflects_a_live_factor(): void

@@ -9,7 +9,6 @@ use App\Support\SecurityLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
-use RuntimeException;
 
 /**
  * Admin-initiated: issue a two-factor reset link and mail it to the member's registered address. The link
@@ -37,7 +36,7 @@ class RequestMfaReset
             $fresh = Member::whereKey($member->getKey())->lockForUpdate()->firstOrFail();
 
             if (! $fresh->hasEnabledTwoFactorAuthentication() || blank($fresh->email)) {
-                throw new RuntimeException('A two-factor reset link requires a member with a live factor and a registered address.');
+                throw new MfaResetUnavailable('A two-factor reset link requires a member with a live factor and a registered address.');
             }
 
             MfaResetRequest::upsert(
