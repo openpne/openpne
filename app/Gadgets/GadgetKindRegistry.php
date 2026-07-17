@@ -6,6 +6,7 @@ namespace App\Gadgets;
 
 use App\Gadgets\Kinds\ActivityBoxGadget;
 use App\Gadgets\Kinds\AllMemberActivityBoxGadget;
+use App\Gadgets\Kinds\BirthdayBoxGadget;
 use App\Gadgets\Kinds\CommunityJoinListBoxGadget;
 use App\Gadgets\Kinds\DiaryAllListGadget;
 use App\Gadgets\Kinds\DiaryCommentHistoryGadget;
@@ -63,6 +64,7 @@ final class GadgetKindRegistry
             TimelineProfileGadget::class,
             ActivityBoxGadget::class,
             AllMemberActivityBoxGadget::class,
+            BirthdayBoxGadget::class,
             SearchBoxGadget::class,
             LinkListBoxGadget::class,
             LanguageSelecterBoxGadget::class,

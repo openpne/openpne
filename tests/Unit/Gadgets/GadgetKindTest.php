@@ -44,6 +44,8 @@ class GadgetKindTest extends TestCase
             // activityBox and allMemberActivityBox share OpenPNE 3's activityBox_ id (a common partial built it).
             'activityBox' => ['activityBox', 'activityBox_7'],
             'allMemberActivityBox' => ['allMemberActivityBox', 'activityBox_7'],
+            // birthdayBox is a bare greeting image; OpenPNE 3 emitted no wrapper id.
+            'birthdayBox' => ['birthdayBox', null],
             'searchBox' => ['searchBox', 'searchLine_7'],
             'linkListBox' => ['linkListBox', null],
             'languageSelecterBox' => ['languageSelecterBox', null],
