@@ -27,10 +27,10 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
 
 /**
- * The Classic #topBanner config, one screen per placement. Each placement
- * either shows images picked from the shared pool (default, one at random per request) or operator
- * HTML (is_use_html, emitted raw — admin-trusted). The images themselves are uploaded and edited in
- * the Banner images resource; here you choose which of them each placement shows.
+ * The Classic banner config, one section per placement (#topBanner and the #sideBanner gadget). Each
+ * placement either shows images picked from the shared pool (default, one at random per request) or
+ * operator HTML (is_use_html, emitted raw — admin-trusted). The images themselves are uploaded and
+ * edited in the Banner images resource; here you choose which of them each placement shows.
  *
  * @property-read Schema $form
  */
@@ -40,8 +40,8 @@ class BannerSettings extends Page
 
     protected static ?int $navigationSort = 4;
 
-    /** OpenPNE 3 PC banner placements (top only; see BannerSeeder). */
-    private const PLACEMENTS = ['top_before', 'top_after'];
+    /** OpenPNE 3 PC banner placements: top (#topBanner) and side (the sideBanner gadget), by login state. */
+    private const PLACEMENTS = ['top_before', 'top_after', 'side_before', 'side_after'];
 
     /**
      * @var array<string, mixed>|null

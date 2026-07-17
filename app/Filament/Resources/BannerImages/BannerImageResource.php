@@ -45,6 +45,8 @@ class BannerImageResource extends Resource
         return match ($name) {
             'top_before' => __('Top banner (before login)'),
             'top_after' => __('Top banner (after login)'),
+            'side_before' => __('Side banner (before login)'),
+            'side_after' => __('Side banner (after login)'),
             default => $name,
         };
     }

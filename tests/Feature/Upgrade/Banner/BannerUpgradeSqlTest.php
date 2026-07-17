@@ -56,6 +56,7 @@ class BannerUpgradeSqlTest extends TestCase
         $this->seedFile(11);
         $this->seedBanner(1, 'top_before', isUseHtml: 0, html: null);
         $this->seedBanner(2, 'top_after', isUseHtml: 1, html: '<b>hi</b>');
+        $this->seedBanner(3, 'side_before', isUseHtml: 0, html: null);
         $this->seedBannerImage(100, fileId: 10, url: 'https://example.test', name: 'promo');
         $this->seedBannerImage(101, fileId: 11, url: null, name: null);
         $this->seedBannerUseImage(1000, bannerId: 1, bannerImageId: 100);
@@ -68,6 +69,8 @@ class BannerUpgradeSqlTest extends TestCase
         // banner: copied; the absent OpenPNE 3 timestamps fall to the nullable default.
         $this->assertDatabaseHas('banners', ['id' => 1, 'name' => 'top_before', 'is_use_html' => 0, 'html' => null, 'created_at' => null]);
         $this->assertDatabaseHas('banners', ['id' => 2, 'name' => 'top_after', 'is_use_html' => 1, 'html' => '<b>hi</b>']);
+        $this->assertDatabaseHas('banners', ['id' => 3, 'name' => 'side_before']); // side placements ride the same verbatim copy
+
         // banner_image: verbatim, including the nullable url / name.
         $this->assertDatabaseHas('banner_images', ['id' => 100, 'file_id' => 10, 'url' => 'https://example.test', 'name' => 'promo']);
         $this->assertDatabaseHas('banner_images', ['id' => 101, 'file_id' => 11, 'url' => null, 'name' => null]);
