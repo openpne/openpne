@@ -669,6 +669,43 @@ class MemberMfaManagementTest extends TestCase
         $this->assertNull($member->fresh()->two_factor_recovery_codes);
     }
 
+    public function test_an_enable_racing_a_disable_still_writes_a_pending_secret(): void
+    {
+        // Stale enabled viewer; a parallel request disabled the factor. Fortify's enable re-checks
+        // the state of the model it is handed — handed the stale instance it would silently no-op
+        // while the controller reports success (the split-snapshot bug); handed the locked fresh
+        // row it writes the pending secret.
+        $member = $this->memberWithTwoFactor();
+        $member->fresh()->forceFill([
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+        ])->save();
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/enable', ['current_password' => 'password'])
+            ->assertRedirect();
+
+        $fresh = $member->fresh();
+        $this->assertNotNull($fresh->two_factor_secret);
+        $this->assertNull($fresh->two_factor_confirmed_at);
+    }
+
+    public function test_a_pending_cancel_racing_an_enable_still_clears_the_secret(): void
+    {
+        // Stale disabled viewer; a parallel request started a set-up. The cancel must wipe the
+        // pending secret it finds under the lock — a stale-instance disable would no-op and strand
+        // the member unable to re-enroll (enable refuses while any secret is present).
+        $member = Member::factory()->create();
+        app(EnableTwoFactorAuthentication::class)($member->fresh(), force: true);
+
+        $this->actingAs($member)
+            ->post('/member/config/mfa/disable')
+            ->assertRedirect();
+
+        $this->assertNull($member->fresh()->two_factor_secret);
+    }
+
     public function test_a_rollback_after_consuming_a_recovery_code_records_nothing(): void
     {
         $this->captureSecurityLog();

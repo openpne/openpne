@@ -18,16 +18,25 @@ use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
  */
 class EnableMemberMfa
 {
+    use SyncsCallerInstance;
+
     public function __construct(private readonly EnableTwoFactorAuthentication $enable) {}
 
     public function __invoke(Member $viewer): void
     {
-        DB::transaction(function () use ($viewer): void {
+        $fresh = DB::transaction(function () use ($viewer): Member {
             $fresh = Member::whereKey($viewer->getKey())->lockForUpdate()->firstOrFail();
 
             abort_if(! blank($fresh->two_factor_secret), 403);
 
-            ($this->enable)($viewer);
+            // Mutate the LOCKED row: Fortify's action re-checks the state of the model it is
+            // handed, so a stale instance would let it silently no-op while the caller reports
+            // success — the exact split the lock exists to prevent.
+            ($this->enable)($fresh);
+
+            return $fresh;
         });
+
+        $this->syncCaller($viewer, $fresh);
     }
 }

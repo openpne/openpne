@@ -19,13 +19,11 @@ use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
  * ($stepUpValidated is that snapshot — whether the request demanded and verified the password): if
  * the factor went live under a pending-cancel request, removing it unproven is refused (fail closed).
  * A spent recovery code is consumed BEFORE the factor is wiped, so its RecoveryCodeReplaced audit log
- * (deferred to after-commit) records nothing when a later failure rolls the transaction back. The
- * proof is verified against the fresh row, but the consume/disable/revoke run on the authenticated
- * instance so the session's auth/flash state stays consistent.
+ * (deferred to after-commit) records nothing when a later failure rolls the transaction back.
  */
 class DisableMemberMfa
 {
-    use VerifiesTotpProof;
+    use SyncsCallerInstance, VerifiesTotpProof;
 
     public function __construct(
         private readonly DisableTwoFactorAuthentication $disable,
@@ -34,12 +32,12 @@ class DisableMemberMfa
 
     public function __invoke(Member $viewer, bool $stepUpValidated, ?string $code, ?string $recoveryCode, ?string $exceptSessionId): bool
     {
-        return DB::transaction(function () use ($viewer, $stepUpValidated, $code, $recoveryCode, $exceptSessionId): bool {
+        [$fresh, $wasEnabled] = DB::transaction(function () use ($viewer, $stepUpValidated, $code, $recoveryCode, $exceptSessionId): array {
             $fresh = Member::whereKey($viewer->getKey())->lockForUpdate()->firstOrFail();
 
             // Nothing to disable — don't revoke sessions over a no-op (stale tab double-submit).
             if (blank($fresh->two_factor_secret)) {
-                return false;
+                return [$fresh, false];
             }
 
             $wasEnabled = $fresh->hasEnabledTwoFactorAuthentication();
@@ -56,17 +54,21 @@ class DisableMemberMfa
 
                 $matched = $this->verifySecondFactor($fresh, $code, $recoveryCode);
                 if ($matched !== null) {
-                    $viewer->replaceRecoveryCode($matched);
+                    $fresh->replaceRecoveryCode($matched);
                 }
             }
 
-            ($this->disable)($viewer);
+            ($this->disable)($fresh);
             if ($wasEnabled) {
-                SessionRevocation::revokeMember($viewer, $exceptSessionId);
+                SessionRevocation::revokeMember($fresh, $exceptSessionId);
             }
 
-            return $wasEnabled;
+            return [$fresh, $wasEnabled];
         });
+
+        $this->syncCaller($viewer, $fresh);
+
+        return $wasEnabled;
     }
 
     /**

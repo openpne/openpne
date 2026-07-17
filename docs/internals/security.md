@@ -113,16 +113,18 @@ the factor without the app's re-auth and revocation contract:
   password **and** a second-factor proof inline every time — a current TOTP code,
   or (disable only) an unused recovery code. Cancelling an inert pending set-up
   demands neither (it gates nothing). The ordering is structural: the FormRequest
-  verifies only the password and the proof's *presence*, and the controller
+  verifies only the password and the proof's *presence*, and the feature Action
   verifies the proof's value only after that password rule has passed — so a wrong
   password never marks a TOTP code used in Fortify's replay cache nor spends a
   recovery code. A disable that spends a recovery code logs
   `mfa.recovery_code_used`, deferred until the transaction commits so a rollback
   records nothing.
-- **State is re-derived under a row lock.** Every state-dependent action re-reads
-  the member `FOR UPDATE` inside its transaction and re-checks the state the
-  FormRequest validated against (required-ness was decided on a pre-controller
-  snapshot). A concurrent change that invalidated that snapshot — a set-up
+- **State is re-derived — and mutated — under a row lock.** Every state-dependent
+  action re-reads the member `FOR UPDATE` inside its transaction, re-checks the
+  state the FormRequest validated against (required-ness was decided on a
+  pre-controller snapshot), and hands that locked row to the Fortify mutation —
+  whose own internal state guard would otherwise silently no-op against a stale
+  instance. A concurrent change that invalidated the snapshot — a set-up
   confirmed, a factor disabled — fails closed, rather than removing a now-live
   factor with no proof or minting recovery codes for a factor a parallel disable
   just removed.

@@ -11,9 +11,9 @@ use Illuminate\Validation\Rule;
  * Cancelling a pending set-up does not: the pending secret gates nothing, so demanding either
  * would only punish the member for abandoning a wizard.
  *
- * Only the proof's PRESENCE is validated here; its value is verified in the controller, after the
+ * Only the proof's PRESENCE is validated here; its value is verified by the Action, after the
  * password rule has passed — so a wrong password never spends a recovery code or marks a TOTP
- * code used (see MemberMfaController::verifySecondFactor).
+ * code used (see Actions\DisableMemberMfa).
  */
 class DisableMfaRequest extends MfaManagementRequest
 {

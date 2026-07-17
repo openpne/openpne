@@ -22,11 +22,13 @@ use Laravel\Fortify\Actions\ConfirmTwoFactorAuthentication;
  */
 class ConfirmMemberMfa
 {
+    use SyncsCallerInstance;
+
     public function __construct(private readonly ConfirmTwoFactorAuthentication $confirm) {}
 
     public function __invoke(Member $viewer, string $code, string $exceptSessionId): void
     {
-        DB::transaction(function () use ($viewer, $code, $exceptSessionId): void {
+        $fresh = DB::transaction(function () use ($viewer, $code, $exceptSessionId): Member {
             $fresh = Member::whereKey($viewer->getKey())->lockForUpdate()->firstOrFail();
             abort_if($fresh->hasEnabledTwoFactorAuthentication(), 403);
             abort_if(blank($fresh->two_factor_secret), 403);
@@ -39,8 +41,12 @@ class ConfirmMemberMfa
                 ]);
             }
 
-            ($this->confirm)($viewer, $code);
-            SessionRevocation::revokeMember($viewer, $exceptSessionId);
+            ($this->confirm)($fresh, $code);
+            SessionRevocation::revokeMember($fresh, $exceptSessionId);
+
+            return $fresh;
         });
+
+        $this->syncCaller($viewer, $fresh);
     }
 }
