@@ -11,9 +11,9 @@ class CommunityCategoryForm
 {
     public static function configure(Schema $schema): Schema
     {
-        // Categories are a flat master in this phase. The parent_id column exists for a possible
-        // future shallow hierarchy but is intentionally not exposed yet — an unrestricted parent
-        // select would let an admin create self-parent / cyclic master data nothing reads.
+        // Categories are a flat master. The parent_id column is deliberately not exposed —
+        // nothing reads it, and an unrestricted parent select would let an admin create
+        // self-parent / cyclic master data.
         return $schema
             ->columns(1)
             ->components([

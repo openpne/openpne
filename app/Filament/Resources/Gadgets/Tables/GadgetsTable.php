@@ -30,8 +30,8 @@ class GadgetsTable
                     ->getStateUsing(fn (Gadget $record): string => GadgetKindRegistry::find($record->name)?->label() ?? $record->name)
                     ->description(fn (Gadget $record): ?string => GadgetKindRegistry::find($record->name)?->description() ?: null),
 
-                // Surfaces a row the renderer hides: a `name` with no registered kind (an OpenPNE 3
-                // gadget not yet ported) cannot render.
+                // Surfaces a row the renderer hides: a `name` with no registered kind (an
+                // unregistered OpenPNE 3 gadget) cannot render.
                 TextColumn::make('status')
                     ->label(__('Status'))
                     ->badge()

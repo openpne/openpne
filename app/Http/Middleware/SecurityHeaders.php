@@ -12,9 +12,9 @@ use Symfony\Component\HttpFoundation\Response;
  * registered there too — otherwise the admin pages, the highest-value clickjacking target, would ship
  * none of these.
  *
- * The CSP is only the clickjacking floor (`frame-ancestors`); a content CSP (script-src) is deferred
- * until the Vite/Inertia bundle gets its own nonce/hash work, and its absence is what lets the panel's
- * inline Livewire/Alpine scripts run unrestricted. `Referrer-Policy` is set non-destructively so token
+ * The CSP is only the clickjacking floor (`frame-ancestors`); it carries no content CSP
+ * (script-src) — the Vite/Inertia bundle has no nonce/hash wiring — and that absence is what lets
+ * the panel's inline Livewire/Alpine scripts run unrestricted. `Referrer-Policy` is set non-destructively so token
  * screens can tighten it to `no-referrer` (NoReferrer). HSTS is emitted only under force_https, so a
  * plain-HTTP dev host is not pinned to a scheme it cannot serve. Cross-Origin-Resource-Policy is
  * deliberately omitted: web-public avatars and banners are served for cross-origin embedding.

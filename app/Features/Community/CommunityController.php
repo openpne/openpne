@@ -61,8 +61,7 @@ class CommunityController extends Controller
         $sidebarMembers = $found->members()->with('member.avatar.file')
             ->orderByDesc('role')->orderBy('id')->limit(9)->get();
         // The recent-topics / recent-events boxes only show when the viewer
-        // may read that board; events share the topic read gate, so one check covers both. Modern
-        // omits these until the board/event surfaces land (a follow-up), so no unlinkable content.
+        // may read that board; events share the topic read gate, so one check covers both.
         $canViewBoard = CommunityTopicAccess::canViewBoard($found, $viewer);
 
         return $this->respondWith($request, 'community', [

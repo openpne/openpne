@@ -88,7 +88,7 @@ class MembersTable
             ->requiresConfirmation()
             ->visible(fn (Member $record): bool => ! $record->is_login_rejected && MemberResource::canDelete($record))
             // Defense-in-depth: visible() only hides the action; a forged mount must not be able to
-            // freeze the primary member's login. Mirrors AdminUser delete's before()/halt() guard.
+            // freeze the primary member's login.
             ->before(function (Action $action, Member $record): void {
                 if (! MemberResource::canDelete($record)) {
                     $action->halt();

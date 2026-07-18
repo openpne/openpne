@@ -12,8 +12,8 @@ use Illuminate\Support\Carbon;
  * A pending admin-issued two-factor reset. `token` holds the SHA-256 hash of the raw token the reset URL
  * carries (mailed to the member's registered address); the raw token only ever lives in that emailed
  * link. Only created_at is tracked (expiry is derived from it), so timestamps are off. One row per member
- * (the column is unique); it cascades away with the member. Mirrors EmailChangeRequest — minus the cancel
- * token, since consuming a reset link needs the account password (see the migration docblock).
+ * (the column is unique); it cascades away with the member. There is no cancel token: consuming a reset
+ * link needs the account password (see the migration docblock).
  *
  * @property int $id
  * @property int $member_id

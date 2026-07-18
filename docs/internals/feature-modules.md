@@ -159,8 +159,8 @@ keeps the frontend's author/actor check, and an author-less `purge(…)` core ho
 the actual deletion + cleanup. Member adapters call `__invoke`; the Filament
 Resource calls `purge` directly (its guard is the authorization). The cleanup
 lives once, in `purge`. Member withdrawal is the same shape: `WithdrawMember` has
-no per-actor check (the panel guard authorizes) and the member-facing `/leave` is
-a separate, deferred adapter.
+no per-actor check, and each caller — the panel (its guard authorizes) and the
+member-facing withdrawal flow — is its own adapter.
 
 ## When to use this contract
 

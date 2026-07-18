@@ -9,15 +9,12 @@ use App\Upgrade\UpgradeStep;
  * OpenPNE 3 `community_event` (opCommunityTopicPlugin) → OpenPNE 4 `community_events`.
  *
  * id is preserved because community_event_comment, community_event_member and community_event_image
- * reference community_event.id; keeping it lets the comment / RSVP / (deferred) image upgrades rewire
+ * reference community_event.id; keeping it lets the comment / RSVP / image upgrades rewire
  * by id. member_id stays nullable: a withdrawn author is NULL in OpenPNE 3 (onDelete set null) and the
  * event is kept. name/body/open_date_comment/area are TEXT → TEXT, so long content round-trips
  * untruncated. open_date / application_deadline / capacity carry the scheduling data verbatim, and
  * updated_at is the board sort key (the event board orders by it, not by open_date). event_updated_at
- * is the original activity timestamp, kept for fidelity though no OpenPNE 4 widget reads it yet.
- *
- * community_event_image is not migrated here — it is recorded in StepRegistry::deferredSourceTables()
- * (binary migration pending the `file` step, like the other image tables).
+ * is the OpenPNE 3 latest-events activity timestamp, carried for fidelity.
  */
 class CommunityEventUpgrade extends UpgradeStep
 {

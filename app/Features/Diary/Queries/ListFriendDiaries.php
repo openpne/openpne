@@ -15,8 +15,7 @@ use Illuminate\Support\Collection;
  * first. The threshold is Friends — a friend's Friends/Members/Open diaries all qualify, their
  * Private ones do not. No friends means an empty feed (whereIn on an empty set yields no rows).
  *
- * Block exclusion mirrors ListRecentDiaries / ShowDiary for the edge case of a friend who has
- * since blocked the viewer.
+ * Blocking owners are excluded for the edge case of a friend who has since blocked the viewer.
  */
 class ListFriendDiaries
 {

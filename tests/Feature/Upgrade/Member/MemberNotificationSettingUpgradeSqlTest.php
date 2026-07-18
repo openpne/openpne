@@ -81,7 +81,7 @@ class MemberNotificationSettingUpgradeSqlTest extends TestCase
 
     public function test_unwired_kinds_import_too(): void
     {
-        // One-shot upgrade: a timeline opt-out must survive now for the sender that lands later.
+        // One-shot upgrade: an unwired kind's opt-out must survive regardless of whether a sender exists.
         $this->seedConfig(1, $this->memberId, 'is_send_pc_timelineNewPost_mail', '0');
 
         $this->runUpgrade();

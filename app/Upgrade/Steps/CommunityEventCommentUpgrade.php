@@ -9,13 +9,10 @@ use App\Upgrade\UpgradeStep;
  * OpenPNE 3 `community_event_comment` (opCommunityTopicPlugin) → OpenPNE 4 `community_event_comments`.
  *
  * id is preserved because community_event_comment_image references community_event_comment.id; keeping
- * it lets the (deferred) comment-image upgrade rewire by id. member_id stays nullable: a withdrawn
+ * it lets the comment-image upgrade rewire by id. member_id stays nullable: a withdrawn
  * author is NULL in OpenPNE 3 (onDelete set null) and the comment is kept. number is a racy max+1 on a
  * non-unique index, so legacy duplicate (event, number) rows import losslessly. body is TEXT → TEXT;
  * timestamps are the original post dates, not the upgrade run's clock.
- *
- * community_event_comment_image is not migrated here — it is recorded in
- * StepRegistry::deferredSourceTables() (binary migration pending the `file` step).
  */
 class CommunityEventCommentUpgrade extends UpgradeStep
 {

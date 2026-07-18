@@ -29,7 +29,7 @@ use App\Upgrade\UpgradeStep;
  *
  * parent_id/thread_id (OpenPNE 3 return_message_id/thread_message_id) are null-normalized: a 0
  * (OpenPNE 3 default) or a reference outside the migrated personal-message set becomes NULL rather
- * than a dangling self reference. message_file is deferred to the file step (deferredSourceTables).
+ * than a dangling self reference.
  */
 class MessageUpgrade extends UpgradeStep
 {

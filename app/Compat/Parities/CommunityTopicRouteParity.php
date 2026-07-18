@@ -34,14 +34,14 @@ class CommunityTopicRouteParity extends RouteParity
     {
         return [
             // Cross-community "recently updated topics" feed (ordered by updated_at, not the
-            // topic_updated_at widget). A sidebar feature for a later slice.
+            // topic_updated_at widget).
             'communityTopic_recently_topic_list' => 'Cross-community recently-updated topics feed; a sidebar feature, not ported.',
             // Topic keyword search. OpenPNE 3 routes it through one search surface shared with the
             // event plugin, a separate surface neither board adapter provides.
             'communityTopic_search' => 'Per-community topic search; routes to the shared topic/event search form, a separate surface the board adapter does not provide.',
             'communityTopic_search_all' => 'Global topic search; routes to the shared topic/event search form, a separate surface the board adapter does not provide.',
             'communityTopic_search_form' => 'The shared topic/event search form page; a separate search surface the board adapter does not provide.',
-            'config_community_topic_notification_mail' => 'Per-community topic notification-mail opt-in; lands with the notification feature.',
+            'config_community_topic_notification_mail' => 'Per-community topic notification-mail opt-in; OpenPNE 4 notification opt-outs are member-level, with no per-community toggle.',
         ];
     }
 

@@ -29,7 +29,7 @@ final readonly class NotificationKindDefinition
         /**
          * Whether OpenPNE 4 has a sender for this kind. Unwired kinds exist for import fidelity
          * (the one-shot upgrade preserves a choice the extension stored) but are hidden from the
-         * settings UI until their sender lands.
+         * settings UI.
          */
         public bool $isWired = false,
     ) {}

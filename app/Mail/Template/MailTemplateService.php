@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Resolves a mail template to its rendered subject/body for a recipient, reading the admin override from
- * `mail_templates` (+ translations) and falling back to the MailTemplate registry default. Mirrors
- * SnsSettingService: a single cached map guarded by Schema::hasTable so a pre-migrate / console boot
- * resolves to defaults instead of throwing; the admin editor calls clearCache() after saving.
+ * `mail_templates` (+ translations) and falling back to the MailTemplate registry default. A single
+ * cached map guarded by Schema::hasTable lets a pre-migrate / console boot resolve to defaults instead
+ * of throwing; the admin editor calls clearCache() after saving.
  */
 class MailTemplateService
 {
