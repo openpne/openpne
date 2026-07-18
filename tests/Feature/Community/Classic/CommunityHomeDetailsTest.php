@@ -12,7 +12,7 @@ use Tests\TestCase;
 /**
  * OpenPNE 3 community home fidelity: the sidemenu member grid crowns the admin, and the center
  * column renders the full details listBox. Labels resolve in the request locale (en here), so the
- * assertions are the rendered English output (%community% term substituted to "community").
+ * assertions are the rendered English output (the fronted %Community% term renders "Community").
  */
 class CommunityHomeDetailsTest extends TestCase
 {
@@ -53,6 +53,7 @@ class CommunityHomeDetailsTest extends TestCase
             'name' => 'Tokyo Runners',
             'description' => 'Hello world',
             'community_category_id' => $category->getKey(),
+            'created_at' => '2026-05-01 12:00:00',
         ]);
         $admin = Member::factory()->create(['name' => 'AdminAlice']);
         $sub = Member::factory()->create(['name' => 'SubBob']);
@@ -61,22 +62,26 @@ class CommunityHomeDetailsTest extends TestCase
 
         $response = $this->actingAs($admin)->get(route('community.show', $community))->assertOk();
 
-        $response->assertSee('id="communityHome"', false);
+        // The box heading is the fronted %Community% term, and the th labels follow in OP3 order.
+        $response->assertSeeInOrder(['id="communityHome"', '<h3>Community</h3>'], false);
         $response->assertSeeInOrder([
-            '<th>community Name</th>',
-            '<th>community Category</th>',
+            '<th>Community Name</th>',
+            '<th>Community Category</th>',
             '<th>Date Created</th>',
             '<th>Administrator</th>',
             '<th>Sub Administrator</th>',
             '<th>Count of Members</th>',
             '<th>Register policy</th>',
-            '<th>community Description</th>',
-            '<th>Authority to Read topic</th>',
-            '<th>Authority to Create topic</th>',
+            '<th>Community Description</th>',
+            '<th>Authority to Read Topic</th>',
+            '<th>Authority to Create Topic</th>',
         ], false);
 
-        // The Administrator row links to the admin's profile.
+        // The Date Created row renders the localized date (en LL format).
+        $response->assertSee('<td>May 1, 2026</td>', false);
+        // The Administrator and Sub Administrator rows link to the members' profiles.
         $response->assertSee('<td><a href="'.route('member.profile.show', $admin).'">AdminAlice</a></td>', false);
+        $response->assertSee('<li><a href="'.route('member.profile.show', $sub).'">SubBob</a></li>', false);
         // The category name and the enum value labels render.
         $response->assertSee('Sports');
         $response->assertSee('Approval required'); // register_policy = Approval

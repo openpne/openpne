@@ -20,15 +20,15 @@
 @section('content')
     {{-- The OpenPNE 3 community details listBox (homeSuccess center column): a th/td table of the
          community's profile fields, followed by the member operations. --}}
-    <x-gadget-part part-id="communityHome" part-name="listBox" :title="__('%community%')">
+    <x-gadget-part part-id="communityHome" part-name="listBox" :title="__('%Community%')">
         <table>
             <tr>
-                <th>{{ __('%community% Name') }}</th>
+                <th>{{ __('%Community% Name') }}</th>
                 <td>{{ $community->name }}</td>
             </tr>
             @if ($community->category)
                 <tr>
-                    <th>{{ __('%community% Category') }}</th>
+                    <th>{{ __('%Community% Category') }}</th>
                     <td>{{ $community->category->name }}</td>
                 </tr>
             @endif
@@ -64,15 +64,15 @@
             </tr>
             {{-- OpenPNE 3 renders the description row even when empty. --}}
             <tr>
-                <th>{{ __('%community% Description') }}</th>
+                <th>{{ __('%Community% Description') }}</th>
                 <td>@if ($community->description)<x-user-text :value="$community->description" />@endif</td>
             </tr>
             <tr>
-                <th>{{ __('Authority to Read %topic%') }}</th>
+                <th>{{ __('Authority to Read %Topic%') }}</th>
                 <td>{{ __($community->topic_read_access->label()) }}</td>
             </tr>
             <tr>
-                <th>{{ __('Authority to Create %topic%') }}</th>
+                <th>{{ __('Authority to Create %Topic%') }}</th>
                 <td>{{ __($community->topic_post_authority->label()) }}</td>
             </tr>
         </table>
