@@ -22,8 +22,8 @@ class QuitCommunity
             throw new CommunityActionException(CommunityActionFailure::NotMember);
         }
 
-        // One admin per community in Phase A (transfer is deferred), so the admin must hand off
-        // before leaving — OpenPNE 3's "the admin cannot quit".
+        // One admin per community, so the admin must hand off before leaving —
+        // OpenPNE 3's "the admin cannot quit".
         if ($membership->role === CommunityRole::Admin) {
             throw new CommunityActionException(CommunityActionFailure::AdminCannotQuit);
         }

@@ -73,8 +73,7 @@ The `daily` driver rotates in-process (each write checks the date), so there is 
 
 Tail or ship `storage/logs/security-*.log`. Because `SecurityLog` targets the channel directly,
 `LOG_STACK` does not influence it — pointing the app stack at `syslog`/`stderr` leaves the security
-trail on disk. A stacked `security` channel (fan out to syslog as well as file) is a possible future
-design; not built.
+trail on disk.
 
 ## 429 observability
 

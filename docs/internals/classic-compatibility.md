@@ -128,9 +128,8 @@ custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar 
 (OpenPNE 3 `isSecurePage`); `$classicFooterHtml` overrides it per request.
 
 Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
-broken in OpenPNE 3) and its fixed 950px width are kept as-is. Theme switching is not yet ported;
-admin custom CSS, the PC HTML insertion slots, the footer, gadget layout, and the top banner are. The
-footer omits the privacy-policy / terms links until those routes exist.
+broken in OpenPNE 3) and its fixed 950px width are kept as-is; there is a single static skin (no
+theme switching); the footer has no privacy-policy / terms links (no such routes exist).
 
 ## JavaScript compatibility
 
@@ -162,8 +161,7 @@ are uploaded and edited in the [`BannerImages`](../../app/Filament/Resources/Ban
 resource and served publicly through [`BannerImageController`](../../app/Http/Controllers/BannerImageController.php)
 (banners show to guests, so unlike other files they are not auth-gated); each placement's mode, the
 images it shows (picked from that shared pool), and any HTML are set on the
-[`Banner`](../../app/Filament/Pages/BannerSettings.php) page. Upgrading existing OpenPNE 3 banner rows
-is gated on the deferred `file` / `file_bin` upgrade.
+[`Banner`](../../app/Filament/Pages/BannerSettings.php) page.
 
 Modern does not apply the same CSS/HTML. It offers its own migration targets
 (logo, primary color, header image, footer/free area, a scoped safe-HTML slot).
@@ -203,8 +201,7 @@ Classic compatibility is judged per item, not as uniform "exact reproduction".
   plugins checked during this port do not key JS/CSS off field *names*; a theme, a
   plugin from another version, or an admin-panel customization still could, and
   such a case is treated as a Level 2 gap if it surfaces. The `#diary_body` *id* is
-  preserved on the field today; the SMT emoji JS that keys off it is handled
-  separately in the JS migration.
+  preserved on the field.
 
 Record a Level 2/3 gap with a short reason in the feature's parity or gap notes. A
 gap promotes to Level 2 if a real theme or customization is found to depend on it.

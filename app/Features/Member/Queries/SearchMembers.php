@@ -109,7 +109,7 @@ class SearchMembers
 
         $this->applyAgeFilter($query, $viewer, $ageRange);
 
-        // Hide owners who block the viewer (owner→viewer block), like Diary and Profile.
+        // Hide owners who block the viewer (owner→viewer block).
         $query->whereNotExists(fn ($q) => $q->select(DB::raw(1))
             ->from('member_blocks')
             ->whereColumn('member_blocks.blocker_id', 'members.id')
@@ -332,8 +332,8 @@ class SearchMembers
 
     /**
      * Constrain to members whose age is visible to the viewer: the stored AgeVisibility (absent or
-     * malformed → Private, fail-closed like PreferenceKey::decode) within the viewer's clearance, and
-     * a web-public (Open) age only when the SNS allows it — the same gate as VisibleAge.
+     * malformed → Private, fail-closed) within the viewer's clearance, and a web-public (Open) age
+     * only when the SNS allows it — the same gate as VisibleAge, which must stay in agreement.
      */
     private function applyAgeVisibility(Builder $query, Member $viewer): void
     {

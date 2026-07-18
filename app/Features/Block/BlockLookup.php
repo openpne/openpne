@@ -7,9 +7,9 @@ use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Visibility primitive owned by Block, consumed cross-feature (Friend now,
- * Diary later). Direction matters: a block is one-directional (blocker→blocked),
- * so callers pick the method that matches their gate.
+ * Visibility primitive owned by Block, consumed cross-feature. Direction
+ * matters: a block is one-directional (blocker→blocked), so callers pick the
+ * method that matches their gate.
  */
 class BlockLookup
 {

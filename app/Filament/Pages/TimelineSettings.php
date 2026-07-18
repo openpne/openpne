@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Edit the timeline policy settings (currently: whether members may make a post web-public).
  * `sns_settings` is authoritative; every field is stored verbatim on save and resolves to its
- * fail-closed default (web-public off) while no row exists. Mirrors MemberPrivacySettings.
+ * fail-closed default (web-public off) while no row exists.
  *
  * @property-read Schema $form
  */

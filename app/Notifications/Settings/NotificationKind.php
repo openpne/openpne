@@ -12,7 +12,7 @@ namespace App\Notifications\Settings;
  *
  * Every importable catalog item is registered, wired or not, so the one-shot upgrade can
  * preserve every member's stored choice; only wired kinds (those with an OpenPNE 4 sender)
- * surface in the settings UI. Timeline kinds stay unwired until community-scoped timeline lands.
+ * surface in the settings UI.
  */
 enum NotificationKind: string
 {

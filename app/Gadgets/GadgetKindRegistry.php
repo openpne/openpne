@@ -32,9 +32,9 @@ use App\Gadgets\Kinds\TimelineFriendGadget;
 use App\Gadgets\Kinds\TimelineProfileGadget;
 
 /**
- * The registered gadget kinds. A `gadgets.name` not found here (an OpenPNE 3 kind not yet ported —
- * rssBox, activityBox, plugin gadgets) is hidden at render and flagged Unsupported in admin;
- * adding a kind is registering its class here.
+ * The registered gadget kinds. A `gadgets.name` not found here (an unregistered OpenPNE 3 kind,
+ * e.g. a plugin gadget) is hidden at render and flagged Unsupported in admin; adding a kind is
+ * registering its class here.
  */
 final class GadgetKindRegistry
 {

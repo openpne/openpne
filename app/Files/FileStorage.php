@@ -17,8 +17,7 @@ use App\Models\File;
  * Scope: this contract is intentionally the four byte-level operations only.
  * URL generation / delivery is NOT here — the DB-BLOB backend cannot return a
  * URL (its bytes are streamed by a controller) while disk backends have native
- * URLs; the File::url() single entry point will be added above this seam later
- * without changing it.
+ * URLs; File::url() is the single entry point above this seam.
  */
 interface FileStorage
 {
