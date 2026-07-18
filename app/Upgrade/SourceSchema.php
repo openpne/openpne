@@ -55,7 +55,8 @@ final class SourceSchema
      * Every `table.column` that is a foreign key onto `file`(id), in fixture order. A file owner can
      * be a join table (member_image, *_image) or a plain column on another table (community.file_id),
      * so coverage of the upload binaries is a column-level question, not a table-level one — this is
-     * what the matrix audit checks each reference is either owned or explicitly deferred.
+     * what the matrix audit checks each reference against (owned, on an unstepped table, or
+     * declared unowned).
      *
      * @return list<string>
      */

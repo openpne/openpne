@@ -192,10 +192,10 @@ class FileUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('files', ['id' => 41, 'related_entity_type' => null, 'related_entity_id' => null]);
     }
 
-    public function test_a_file_only_an_unowned_surface_points_at_is_migrated_ownerless(): void
+    public function test_a_file_only_an_unowned_source_points_at_is_migrated_ownerless(): void
     {
         $this->seedFile(50);
-        // activity_image has no OpenPNE 4 successor surface (the timeline is not built), so a file only
+        // activity_image rows are not migrated and carry no owner mapping, so a file only
         // it points at keeps a null owner — the FileUpgrade fail-closed default.
         DB::table('activity_image')->insert(['id' => 1, 'activity_data_id' => 7, 'mime_type' => 'image/png', 'uri' => null, 'file_id' => 50, 'created_at' => '2016-01-01 00:00:00', 'updated_at' => '2016-01-01 00:00:00']);
 
