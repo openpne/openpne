@@ -9,14 +9,11 @@ use App\Upgrade\UpgradeStep;
  * OpenPNE 3 `community_topic` (opCommunityTopicPlugin) → OpenPNE 4 `community_topics`.
  *
  * id is preserved because community_topic_comment and community_topic_image reference
- * community_topic.id; keeping it lets the (deferred) comment / image upgrades rewire by id.
+ * community_topic.id; keeping it lets the comment / image upgrades rewire by id.
  * member_id stays nullable: a withdrawn author is NULL in OpenPNE 3 (onDelete set null) and the
  * topic is kept. name/body are TEXT → TEXT, so long content round-trips untruncated. timestamps and
  * topic_updated_at are the original dates, not the upgrade run's clock — updated_at is the board sort
- * key and topic_updated_at feeds the (unported) latest-topics widget, both carried for fidelity.
- *
- * community_topic_image is not migrated here — it is recorded in StepRegistry::deferredSourceTables()
- * (binary migration pending the `file` step, like the other image tables).
+ * key; topic_updated_at is the OpenPNE 3 latest-topics activity timestamp, carried for fidelity.
  */
 class CommunityTopicUpgrade extends UpgradeStep
 {

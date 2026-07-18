@@ -65,10 +65,10 @@ class MessageRouteParity extends RouteParity
         return [
             // Smartphone-only thread view; OpenPNE 4 has no mobile surface.
             'messageChain' => 'Smartphone-only message thread; OpenPNE 4 has no mobile surface.',
-            // JSON message API (compose / search / recent) — not ported (Phase 2+).
-            'message_post' => 'JSON compose API; not ported (Phase 2+).',
-            'message_search' => 'JSON conversation search API; not ported (Phase 2+).',
-            'recent_message_list' => 'JSON recent-messages API; not ported (Phase 2+).',
+            // JSON message API (compose / search / recent) — not ported.
+            'message_post' => 'JSON compose API; not ported.',
+            'message_search' => 'JSON conversation search API; not ported.',
+            'recent_message_list' => 'JSON recent-messages API; not ported.',
         ];
     }
 

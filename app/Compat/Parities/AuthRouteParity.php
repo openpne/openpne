@@ -9,7 +9,7 @@ use App\Compat\ScreenElement;
 use App\Compat\ScreenStatus as S;
 
 /**
- * The pre-login auth screens Fortify owns (password reset; registration added later). This is an
+ * The pre-login auth screens Fortify owns (password reset and registration). This is an
  * OpenPNE 4-native grouping, not an OpenPNE 3 module — openpne3Module() is null, so the audit does
  * not expect it in the route inventory. The OpenPNE 3 origins (the opAuthMailAddress plugin's
  * passwordRecovery/passwordRecoveryComplete actions) are not in the inventory either, so these are

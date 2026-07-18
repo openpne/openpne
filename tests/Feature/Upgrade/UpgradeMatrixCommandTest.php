@@ -21,8 +21,8 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain("'pc_address'") // email row's member_config subquery
             ->expectsOutputToContain('`password`')   // password is a mapped column, not pending
             ->expectsOutputToContain('Accepted gaps:')
-            // Source tables not driven by a standalone step (deferred or flattened) must stay visible too.
-            ->expectsOutputToContain('Deferred / flattened source tables')
+            // Source tables not driven by a standalone step must stay visible too.
+            ->expectsOutputToContain('Source tables without a standalone step')
             ->expectsOutputToContain('`file_bin`');
     }
 
@@ -55,28 +55,26 @@ class UpgradeMatrixCommandTest extends TestCase
             ->expectsOutputToContain('`mobile_*`');
     }
 
-    public function test_renders_community_topic_steps_and_deferred_images(): void
+    public function test_renders_community_topic_board_and_image_steps(): void
     {
-        // The topic board steps must appear (no silent drop) and the image tables they do not
-        // migrate must stay visible in the deferred section, not vanish.
+        // The topic board steps and their image-join steps must all appear (no silent drop).
         $this->artisan('openpne:upgrade-matrix')
             ->assertSuccessful()
             ->expectsOutputToContain('`community_topic` → `community_topics`')
             ->expectsOutputToContain('`community_topic_comment` → `community_topic_comments`')
-            ->expectsOutputToContain('`community_topic_image`')
-            ->expectsOutputToContain('`community_topic_comment_image`');
+            ->expectsOutputToContain('`community_topic_image` → `community_topic_images`')
+            ->expectsOutputToContain('`community_topic_comment_image` → `community_topic_comment_images`');
     }
 
-    public function test_renders_community_event_steps_and_deferred_images(): void
+    public function test_renders_community_event_board_and_image_steps(): void
     {
-        // The event board, comment and RSVP-pivot steps must appear (no silent drop) and the event
-        // image tables they do not migrate must stay visible in the deferred section.
+        // The event board, comment, RSVP-pivot and image-join steps must all appear (no silent drop).
         $this->artisan('openpne:upgrade-matrix')
             ->assertSuccessful()
             ->expectsOutputToContain('`community_event` → `community_events`')
             ->expectsOutputToContain('`community_event_comment` → `community_event_comments`')
             ->expectsOutputToContain('`community_event_member` → `community_event_members`')
-            ->expectsOutputToContain('`community_event_image`')
-            ->expectsOutputToContain('`community_event_comment_image`');
+            ->expectsOutputToContain('`community_event_image` → `community_event_images`')
+            ->expectsOutputToContain('`community_event_comment_image` → `community_event_comment_images`');
     }
 }

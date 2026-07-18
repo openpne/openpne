@@ -146,8 +146,8 @@ enum MailTemplate: string
                 op3SourceName: 'pc_notifyCommunityPosting',
                 isConfigurable: true,
                 // One template for every community-board notification (topic and event comments
-                // now; the new-post broadcasts later share it too), matching the source template —
-                // a second case could not import the same source row.
+                // and the new-post broadcasts), matching the source template — a second case
+                // could not import the same source row.
                 caption: 'Notification of %Community% Posting',
                 variables: [
                     'community_name' => ['help' => 'The %community% name.', 'sample' => 'Example community'],

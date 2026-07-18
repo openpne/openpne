@@ -71,6 +71,19 @@ class RouteParityAuditTest extends TestCase
         }
     }
 
+    public function test_no_openpne3_route_is_both_mapped_and_gapped(): void
+    {
+        // The coverage audit above accepts a route from either list, so a route present in both
+        // would pass while its gap reason contradicts the live mapping. Once a gapped route is
+        // ported, its gaps() entry must go.
+        foreach (RouteParityRegistry::all() as $parity) {
+            $overlap = array_intersect($parity->mappedRoutes(), array_keys($parity->gaps()));
+
+            $this->assertSame([], array_values($overlap),
+                "{$parity->module()}: routes declared both in maps() and gaps(): ".implode(', ', $overlap));
+        }
+    }
+
     public function test_url_compatible_routes_stay_get_reachable(): void
     {
         // A GET-reachable OpenPNE 3 URL (bookmarked / mailed / linked) keeps its

@@ -132,7 +132,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
     {
         $this->seedMail(1, 'pc_requestRegisterURL');
         $this->seedMail(5, 'pc_reissuedPassword');       // OpenPNE 4 sends a reset link instead
-        $this->seedMail(6, 'pc_birthday');                // Phase 3 digest
+        $this->seedMail(6, 'pc_birthday');                // birthday digest not carried
         $this->seedMail(7, 'mobile_changeMailAddress');   // mobile frontend out of scope
 
         $this->runUpgrade();
