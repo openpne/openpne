@@ -40,8 +40,8 @@ class BannerImage extends Model
 
     /**
      * Pixel dimensions of the stored image ([width, height]), or null when the bytes are missing or
-     * not a readable image (e.g. a non-raster file imported by a future upgrade). Reads the bytes on
-     * demand (memoized per instance) — fine for the small, admin-only banner pool.
+     * not a readable image (e.g. a non-raster file imported by the OpenPNE 3 upgrade). Reads the
+     * bytes on demand (memoized per instance) — fine for the small, admin-only banner pool.
      *
      * @return array{0: int, 1: int}|null
      */

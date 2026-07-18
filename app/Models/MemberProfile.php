@@ -55,8 +55,8 @@ class MemberProfile extends Model
 
     /**
      * Human-readable value for the current locale. Option fields resolve to the choice
-     * label (preset choices from the catalog, custom from profile_options); dates format
-     * the stored datetime. country/region rendering is added with their services later.
+     * label (preset choices from the catalog, custom from profile_options); country/region
+     * resolve through their list services; dates format the stored datetime.
      */
     public function displayValue(string $lang = 'ja_JP'): string
     {

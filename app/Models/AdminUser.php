@@ -35,9 +35,9 @@ class AdminUser extends Authenticatable implements FilamentUser, HasAppAuthentic
     // is the upgrade source, kept distinct so both coexist in a same-database upgrade.
 
     /**
-     * Every administrator has full access to the operator panel: the MVP has
-     * no administrator role split, so panel access is governed only by whether
-     * an `admin_users` row exists. Role-based restriction lands later.
+     * Every administrator has full access to the operator panel: there is no
+     * administrator role split, so panel access is governed only by whether
+     * an `admin_users` row exists.
      */
     public function canAccessPanel(Panel $panel): bool
     {

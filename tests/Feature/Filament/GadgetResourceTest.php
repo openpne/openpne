@@ -117,7 +117,7 @@ class GadgetResourceTest extends TestCase
 
     public function test_table_flags_an_unsupported_kind(): void
     {
-        // A gadget whose kind is not registered (an OpenPNE 3 kind not yet ported) is flagged.
+        // A gadget whose kind is not registered (an unregistered OpenPNE 3 kind) is flagged.
         $gadget = Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'rssBox', 'sort_order' => 0]);
 
         Livewire::test(ListGadgets::class)

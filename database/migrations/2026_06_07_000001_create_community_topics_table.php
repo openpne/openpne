@@ -24,8 +24,8 @@ return new class extends Migration
             $table->text('name');
             $table->text('body');
             // "Last activity" timestamp OpenPNE 3 bumps on a content edit or a new comment. The
-            // board itself orders by updated_at (see index); this drives the sidebar / API "latest
-            // topics" widgets (not ported). Carried for upgrade fidelity. Nullable: OpenPNE 3
+            // board itself orders by updated_at (see index); OpenPNE 3's sidebar / API "latest
+            // topics" widgets order by this. Carried for upgrade fidelity. Nullable: OpenPNE 3
             // leaves it null until the first bump.
             $table->dateTime('topic_updated_at')->nullable();
             $table->timestamps();

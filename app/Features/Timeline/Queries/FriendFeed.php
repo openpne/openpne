@@ -12,8 +12,7 @@ use Illuminate\Support\Collection;
 /**
  * The viewer's own posts plus their friends' — top-level, newest first — matching OpenPNE 3's
  * friend-scoped timeline. The narrower cut of HomeFeed: it drops the all-members tier, so a
- * non-friend's members-only post never surfaces. Also the substrate for the home feed's future
- * "friends" tab.
+ * non-friend's members-only post never surfaces.
  */
 class FriendFeed
 {

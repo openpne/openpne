@@ -73,8 +73,8 @@ class CommunitiesTable
                         Notification::make()->success()->title(__('Saved'))->send();
                     }),
 
-                // One-time bulk join of all existing members (auto-join of future registrations is a
-                // separate, deferred frontend change). Idempotent via AddAllMembers.
+                // One-time bulk join of all existing members; registration does not auto-join
+                // default communities. Idempotent via AddAllMembers.
                 Action::make('addAllMembers')
                     ->label(__('Add all members'))
                     ->icon(Heroicon::OutlinedUserPlus)
