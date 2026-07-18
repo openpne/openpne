@@ -46,6 +46,22 @@ class MessageControllerTest extends TestCase
         $response->assertSee(route('message.receive.show', ['message' => Message::first()->getKey()]), false);
     }
 
+    public function test_draft_list_links_the_subject_to_the_edit_form(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $this->actingAs($sender)->post(route('message.compose.store'), [
+            'to' => $recipient->getKey(),
+            'subject' => 'A draft',
+            'body' => 'Body',
+            'action' => 'draft',
+        ]);
+
+        $editUrl = route('message.draft.edit', ['message' => Message::firstOrFail()->getKey()]);
+        $this->actingAs($sender)->get('/message/draftList')
+            ->assertOk()
+            ->assertSee('<a href="'.$editUrl.'">A draft</a>', false);
+    }
+
     public function test_empty_box_shows_the_empty_state(): void
     {
         $member = Member::factory()->create();

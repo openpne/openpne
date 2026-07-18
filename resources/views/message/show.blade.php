@@ -9,7 +9,7 @@
 @endsection
 
 @section('content')
-    @php($showRoute = $view->box->showRoute())
+    @php($openRoute = $view->box->openRoute())
     <div class="dparts messageDetailBox" id="message_show">
         <div class="parts">
             <div class="partsHeading"><h3>{{ __('Message') }}</h3></div>
@@ -17,10 +17,10 @@
             @if ($view->previousId || $view->nextId)
                 <div class="block prevNextLinkLine">
                     @if ($view->previousId)
-                        <p class="prev"><a href="{{ route($showRoute, ['message' => $view->previousId]) }}">{{ __('Previous') }}</a></p>
+                        <p class="prev"><a href="{{ route($openRoute, ['message' => $view->previousId]) }}">{{ __('Previous') }}</a></p>
                     @endif
                     @if ($view->nextId)
-                        <p class="next"><a href="{{ route($showRoute, ['message' => $view->nextId]) }}">{{ __('Next') }}</a></p>
+                        <p class="next"><a href="{{ route($openRoute, ['message' => $view->nextId]) }}">{{ __('Next') }}</a></p>
                     @endif
                 </div>
             @endif
