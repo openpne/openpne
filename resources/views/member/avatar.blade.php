@@ -6,11 +6,7 @@
     <div class="dparts" id="member_avatar">
         <div class="partsHeading"><h3>{{ __('Profile image') }}</h3></div>
         <div class="parts">
-            @if ($avatar)
-                <p><img src="{{ $avatar->thumbnailUrl(120, 120, square: true) }}" alt="{{ __('Profile image') }}"></p>
-            @else
-                <p>{{ __('No profile image set.') }}</p>
-            @endif
+            <p><x-classic.image :file="$avatar" :size="120" :alt="__('Profile image')" /></p>
             <form method="POST" action="{{ route('member.avatar.update') }}" enctype="multipart/form-data">
                 @csrf
                 <input type="file" class="input_file" name="image" accept="image/jpeg,image/png,image/gif,image/webp" required>
