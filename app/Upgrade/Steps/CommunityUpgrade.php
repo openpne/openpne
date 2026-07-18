@@ -24,14 +24,13 @@ use App\Upgrade\UpgradeStep;
  *    KV→typed-column flatten, defaulting to the OpenPNE 3 config default ("public").
  *  - description: community_config[description], or NULL when absent.
  *  - pending_admin_member_id: the single community_member_position[name=admin_confirm] member (the
- *    pending target of an admin transfer); NULL when none. The transfer handshake itself is deferred.
+ *    pending target of an admin transfer); NULL when none.
  *  - community_category_id: nulled when it points at a category that was not migrated — the
  *    OpenPNE 3 root (lft=1) is dropped by CommunityCategoryUpgrade — so the target FK holds.
  *
  * The top-image file_id is copied verbatim onto communities.file_id, preserving which file each
- * community used (FileUpgrade keeps file.id, so the FK resolves). FileUpgrade does not yet assign that
- * file an owner — the community-image delivery surface is not built — so the owner is backfilled from
- * communities.file_id when it lands; the link is what makes that recoverable.
+ * community used (FileUpgrade keeps file.id, so the FK resolves, and assigns the file its
+ * `community` owner).
  *
  * The subqueries use the latest row per name where the KV table has no uniqueness, so duplicates
  * resolve deterministically.

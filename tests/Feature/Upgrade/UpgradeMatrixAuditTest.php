@@ -86,43 +86,56 @@ class UpgradeMatrixAuditTest extends TestCase
         }
     }
 
-    public function test_deferred_source_tables_exist_in_the_fixture(): void
+    public function test_unstepped_source_tables_exist_in_the_fixture(): void
     {
-        // Well-formedness of the deferred-table declaration: each named table must be a
+        // Well-formedness of the unstepped-table declaration: each named table must be a
         // real OpenPNE 3 source table (catches typos). Whether every source table is
-        // either stepped or deferred is a separate, fixture-wide coverage audit.
+        // either stepped or declared unstepped is a separate, fixture-wide coverage audit.
         $schema = SourceSchema::default();
 
-        foreach (StepRegistry::deferredSourceTables() as $table => $reason) {
+        foreach (StepRegistry::unsteppedSourceTables() as $table => $reason) {
             $this->assertNotEmpty($schema->columns($table),
-                "deferred source table `{$table}` is declared but absent from the source schema fixture");
-            $this->assertNotEmpty($reason, "deferred source table `{$table}` must carry a reason");
+                "unstepped source table `{$table}` is declared but absent from the source schema fixture");
+            $this->assertNotEmpty($reason, "unstepped source table `{$table}` must carry a reason");
         }
     }
 
-    public function test_every_file_referencing_column_is_owned_or_deferred(): void
+    public function test_no_stepped_source_table_is_declared_unstepped(): void
+    {
+        // unsteppedSourceTables() is the ledger of tables no standalone step drives; once a step
+        // lands for a table, its entry must go — otherwise the matrix reports the table twice and
+        // the ledger reason silently lies.
+        $unstepped = array_keys(StepRegistry::unsteppedSourceTables());
+
+        foreach (StepRegistry::all() as $step) {
+            $this->assertNotContains($step->sourceTable(), $unstepped,
+                "`{$step->sourceTable()}` is driven by a standalone step but still declared in unsteppedSourceTables()");
+        }
+    }
+
+    public function test_every_file_referencing_column_is_owned_or_accounted_for(): void
     {
         // A file's binary is preserved (FileUpgrade keeps every `file` row), but its owner must be
         // explicitly accounted for so no upload silently loses its owning entity. An owner can sit on
         // a join table (member_image) or a plain column (community.file_id), so this is checked per
-        // file_id column, not per table: each is owned by FileUpgrade, on a deferred source table, or
+        // file_id column, not per table: each is owned by FileUpgrade, on an unstepped source table, or
         // declared in unownedFileColumns() — anything else (e.g. a file column on a migrated table
         // that nothing owns) is a silent drop.
         $references = SourceSchema::default()->fileReferencingColumns();
 
         $owned = array_keys((new FileUpgrade)->ownedFileReferences());
-        $deferredTables = array_keys(StepRegistry::deferredSourceTables());
+        $unsteppedTables = array_keys(StepRegistry::unsteppedSourceTables());
         $unowned = array_keys(StepRegistry::unownedFileColumns());
 
         foreach ($references as $reference) {
             [$table] = explode('.', $reference);
 
             $accounted = in_array($reference, $owned, true)
-                || in_array($table, $deferredTables, true)
+                || in_array($table, $unsteppedTables, true)
                 || in_array($reference, $unowned, true);
 
             $this->assertTrue($accounted,
-                "{$reference} references `file` but is neither owned by FileUpgrade, on a deferred source table, nor declared in unownedFileColumns() — its file's owner would be silently dropped");
+                "{$reference} references `file` but is neither owned by FileUpgrade, on an unstepped source table, nor declared in unownedFileColumns() — its file's owner would be silently dropped");
         }
 
         // No stale declaration: a declared owner/unowned reference must be a real fixture file FK.

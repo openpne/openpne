@@ -131,26 +131,25 @@ final class StepRegistry
 
     /**
      * OpenPNE 3 source tables not driven by a standalone source→target step, each with the
-     * reason — either deferred (a successor table exists but no step yet) or flattened into
-     * another table via correlated subquery (no successor table of its own). Recorded so the
-     * data shows up in the matrix instead of being an invisible omission (the per-step audit
-     * only sees source tables a step reads as its FROM table).
+     * reason — flattened into another table via correlated subquery, handled by the runner
+     * outside the step pipeline, or not carried. Recorded so the data shows up in the matrix
+     * instead of being an invisible omission (the per-step audit only sees source tables a
+     * step reads as its FROM table).
      *
      * @return array<string, string> source table => reason
      */
-    public static function deferredSourceTables(): array
+    public static function unsteppedSourceTables(): array
     {
         return [
             'file_bin' => 'OpenPNE 3 file bytes. Not a copy step: the runner migrates it by an in-place ALTER that re-points the file_id FK from `file` onto `files` (the file_bin schema is frozen, and FileUpgrade keeps file.id, for exactly that), so the gigabytes of BLOBs are never rewritten.',
             'banner_translation' => 'OpenPNE 3 banner caption (I18n). Not migrated: the caption was an admin-only label, never rendered, and OpenPNE 4 labels the fixed placements in the UI.',
-            'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped (Phase A is approval-only).',
+            'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped: OpenPNE 4 has no nomination handshake.',
             'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: MessageUpgrade / MessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the messages.sender_* / message_recipients.recipient_* soft-delete columns via correlated subquery.',
             'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
             'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
-            // File-owning tables with no OpenPNE 4 successor surface. FileUpgrade still migrates their
-            // binaries (every `file` row is kept) with a null owner; an owner is assigned if and when
-            // the corresponding feature lands.
-            'activity_image' => 'OpenPNE 3 activity (timeline) images. The timeline is not built; the binaries are kept with a null owner for when it lands.',
+            // File-owning tables whose rows are not migrated. FileUpgrade still migrates their
+            // binaries (every `file` row is kept) with a null owner.
+            'activity_image' => 'OpenPNE 3 activity (timeline) images. The activity rows themselves are not migrated, so there is no owner to point at; the binaries are kept with a null owner.',
             'oauth_consumer' => 'OpenPNE 3 OAuth consumer registry (incl. a consumer logo file_id). OpenPNE 4 has no OAuth provider, so the table is not migrated; the logo binary is kept with a null owner.',
         ];
     }
@@ -189,12 +188,12 @@ final class StepRegistry
 
     /**
      * file_id columns that sit on an otherwise-migrated table but are intentionally left without a
-     * file owner, with the reason. Distinct from deferredSourceTables() (whole tables with no step):
-     * the table migrates, but FileUpgrade assigns its file no related_entity yet. The matrix coverage
+     * file owner, with the reason. Distinct from unsteppedSourceTables() (whole tables with no step):
+     * the table migrates, but FileUpgrade assigns its file no related_entity. The matrix coverage
      * audit treats these as accounted-for so the column is not read as a silent drop.
      *
-     * Currently empty: every migrated table's file column is owned by FileUpgrade (the community top
-     * image now is too). Kept as the registered home for the next such case.
+     * Currently empty: every migrated table's file column is owned by FileUpgrade. Kept as the
+     * registered home for the next such case.
      *
      * @return array<string, string> "table.column" => reason
      */
@@ -208,8 +207,7 @@ final class StepRegistry
      * by several steps via subquery (not one source→target step), so the per-step column audit
      * cannot show which names migrate and which are dropped; this is that per-name coverage.
      * A name absent from this map is an unrecognised custom config (third-party plugin or source
-     * customisation) the upgrade does not migrate — a data-driven count of such names at run time
-     * is a follow-up once the upgrade has a source-connected runner.
+     * customisation) the upgrade does not migrate.
      *
      * @return array<string, string> member_config name => where it goes / why it is dropped
      */
@@ -226,8 +224,8 @@ final class StepRegistry
             'age_public_flag' => 'member_preferences[age_visibility], MemberPreferenceUpgrade.',
             // Owned by another OpenPNE 4 surface, migrated with that feature (not here).
             'is_send_*_mail / is_send_*_web' => 'member_notification_settings (kind × channel rows), MemberNotificationSettingUpgrade. Only the registered NotificationKind keys migrate; an is_send_ name outside the registry is an unrecognised custom key the upgrade does not carry.',
-            'op_screen_name' => 'members.screen_name (unique handle) — lands with the timeline feature.',
             // Intentionally dropped: no OpenPNE 4 consumer.
+            'op_screen_name' => 'Dropped: OpenPNE 4 has no screen-name handle; members are shown by their nickname.',
             'time_zone' => 'Dropped: no per-member timezone rendering in OpenPNE 4.',
             'daily_news' => 'Dropped: daily-news digest is not in scope.',
             'secret_question' => 'Dropped: secret-question recovery is not in scope.',
@@ -298,7 +296,7 @@ final class StepRegistry
             'pc_signature' => 'mail_templates[signature]. Appended to every sendable body; not itself toggleable.',
             // Dropped: deliberately not carried.
             'pc_reissuedPassword' => 'Dropped: OpenPNE 3 mailed a new plaintext password; OpenPNE 4 sends a reset link (password-reset) instead — a different mail with no OpenPNE 3 wording to carry.',
-            'pc_birthday' => 'Dropped: the birthday digest is a Phase 3 feature (needs the loop/filter renderer extensions).',
+            'pc_birthday' => 'Dropped: OpenPNE 4 has no birthday digest (its template needs loop/filter constructs the sandboxed renderer does not support).',
             'pc_dailyNews' => 'Dropped: the daily-news digest is not in scope.',
             // Dropped: the feature-phone frontend is out of scope; every mobile_ row is excluded by the name filter.
             'mobile_*' => 'Dropped: the mobile (feature-phone) frontend is not in scope.',
