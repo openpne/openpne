@@ -69,11 +69,19 @@ class CommunityController extends Controller
             SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $sidebarMembers, $canViewBoard, $recentTopics, $recentEvents) {
                 $this->markLocalNavCommunity($found);
 
+                // The details listBox names the admin and sub-admins; only Classic needs them, so the
+                // query lives here and never runs for Modern.
+                $staff = $found->members()
+                    ->whereIn('role', [CommunityRole::Admin, CommunityRole::SubAdmin])
+                    ->with('member')->orderByDesc('role')->orderBy('id')->get();
+
                 return view('community.show', [
                     'community' => $found,
                     'sidebarMembers' => $sidebarMembers,
                     'role' => $role,
                     'isPending' => $isPending,
+                    'adminMember' => $staff->firstWhere('role', CommunityRole::Admin)?->member,
+                    'subAdminMembers' => $staff->where('role', CommunityRole::SubAdmin)->pluck('member'),
                     'recentTopics' => $canViewBoard ? $recentTopics($found) : null,
                     'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
                     'recentEvents' => $canViewBoard ? $recentEvents($found) : null,

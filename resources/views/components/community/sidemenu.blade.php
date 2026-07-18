@@ -18,6 +18,7 @@
     'url' => route('member.profile.show', $membership->member),
     'imageUrl' => $membership->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
     'name' => $membership->member->name,
+    'crown' => $membership->role === \App\Features\Community\CommunityRole::Admin,
 ])->all())
 @if (count($items))
     <div class="dparts nineTable" id="communityMembers">

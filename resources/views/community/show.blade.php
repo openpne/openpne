@@ -18,40 +18,87 @@
 @endif
 
 @section('content')
-    <div class="dparts" id="community_profile">
-        <div class="partsHeading"><h3>{{ $community->name }}</h3></div>
-        <div class="parts">
+    {{-- The OpenPNE 3 community details listBox (homeSuccess center column): a th/td table of the
+         community's profile fields, followed by the member operations. --}}
+    <x-gadget-part part-id="communityHome" part-name="listBox" :title="__('%Community%')">
+        <table>
+            <tr>
+                <th>{{ __('%Community% Name') }}</th>
+                <td>{{ $community->name }}</td>
+            </tr>
             @if ($community->category)
-                <p class="category">{{ $community->category->name }}</p>
+                <tr>
+                    <th>{{ __('%Community% Category') }}</th>
+                    <td>{{ $community->category->name }}</td>
+                </tr>
             @endif
-            @if ($community->description)
-                <p class="description"><x-user-text :value="$community->description" /></p>
+            <tr>
+                <th>{{ __('Date Created') }}</th>
+                <td>{{ \App\Support\LocalizedDate::date($community->created_at) }}</td>
+            </tr>
+            @if ($adminMember)
+                <tr>
+                    <th>{{ __('Administrator') }}</th>
+                    <td><a href="{{ route('member.profile.show', $adminMember) }}">{{ $adminMember->name }}</a></td>
+                </tr>
             @endif
-            <p class="memberCount">{{ __(':count members', ['count' => $community->members_count]) }}</p>
+            @if ($subAdminMembers->isNotEmpty())
+                <tr>
+                    <th>{{ __('Sub Administrator') }}</th>
+                    <td>
+                        <ul>
+                            @foreach ($subAdminMembers as $subAdmin)
+                                <li><a href="{{ route('member.profile.show', $subAdmin) }}">{{ $subAdmin->name }}</a></li>
+                            @endforeach
+                        </ul>
+                    </td>
+                </tr>
+            @endif
+            <tr>
+                <th>{{ __('Count of Members') }}</th>
+                <td>{{ $community->members_count }}</td>
+            </tr>
+            <tr>
+                <th>{{ __('Register policy') }}</th>
+                <td>{{ __($community->register_policy->label()) }}</td>
+            </tr>
+            {{-- OpenPNE 3 renders the description row even when empty. --}}
+            <tr>
+                <th>{{ __('%Community% Description') }}</th>
+                <td>@if ($community->description)<x-user-text :value="$community->description" />@endif</td>
+            </tr>
+            <tr>
+                <th>{{ __('Authority to Read %Topic%') }}</th>
+                <td>{{ __($community->topic_read_access->label()) }}</td>
+            </tr>
+            <tr>
+                <th>{{ __('Authority to Create %Topic%') }}</th>
+                <td>{{ __($community->topic_post_authority->label()) }}</td>
+            </tr>
+        </table>
 
-            <div class="operation">
-                <ul class="moreInfo button">
-                    <li><a href="{{ route('community.members', ['id' => $community->getKey()]) }}">{{ __('Member list') }}</a></li>
+        <div class="operation">
+            <ul class="moreInfo button">
+                <li><a href="{{ route('community.members', ['id' => $community->getKey()]) }}">{{ __('Member list') }}</a></li>
 
-                    @if ($role === null && ! $isPending)
-                        <li><a href="{{ route('community.join.show', ['id' => $community->getKey()]) }}">{{ __('Join this %community%') }}</a></li>
-                    @elseif ($isPending)
-                        <li><span class="pending">{{ __('Your join request is pending.') }}</span></li>
-                    @endif
+                @if ($role === null && ! $isPending)
+                    <li><a href="{{ route('community.join.show', ['id' => $community->getKey()]) }}">{{ __('Join this %community%') }}</a></li>
+                @elseif ($isPending)
+                    <li><span class="pending">{{ __('Your join request is pending.') }}</span></li>
+                @endif
 
-                    @if ($role?->canManage())
-                        <li><a href="{{ route('community.edit', ['id' => $community->getKey()]) }}">{{ __('Edit settings') }}</a></li>
-                    @endif
-                    @if ($role === \App\Features\Community\CommunityRole::Admin)
-                        <li><a href="{{ route('community.members.pending', ['id' => $community->getKey()]) }}">{{ __('Pending members') }}</a></li>
-                        <li><a href="{{ route('community.delete.show', $community) }}">{{ __('Delete %community%') }}</a></li>
-                    @elseif ($role !== null)
-                        <li><a href="{{ route('community.quit.show', ['id' => $community->getKey()]) }}">{{ __('Leave this %community%') }}</a></li>
-                    @endif
-                </ul>
-            </div>
+                @if ($role?->canManage())
+                    <li><a href="{{ route('community.edit', ['id' => $community->getKey()]) }}">{{ __('Edit settings') }}</a></li>
+                @endif
+                @if ($role === \App\Features\Community\CommunityRole::Admin)
+                    <li><a href="{{ route('community.members.pending', ['id' => $community->getKey()]) }}">{{ __('Pending members') }}</a></li>
+                    <li><a href="{{ route('community.delete.show', $community) }}">{{ __('Delete %community%') }}</a></li>
+                @elseif ($role !== null)
+                    <li><a href="{{ route('community.quit.show', ['id' => $community->getKey()]) }}">{{ __('Leave this %community%') }}</a></li>
+                @endif
+            </ul>
         </div>
-    </div>
+    </x-gadget-part>
 
     {{-- The recent-topics box links into the board. Shown only when the viewer may read the
          board (a members-only board is hidden from non-members). --}}
