@@ -56,10 +56,10 @@ class MessageControllerTest extends TestCase
             'action' => 'draft',
         ]);
 
+        $editUrl = route('message.draft.edit', ['message' => Message::firstOrFail()->getKey()]);
         $this->actingAs($sender)->get('/message/draftList')
             ->assertOk()
-            ->assertSee('A draft')
-            ->assertSee(route('message.draft.edit', ['message' => Message::firstOrFail()->getKey()]), false);
+            ->assertSee('<a href="'.$editUrl.'">A draft</a>', false);
     }
 
     public function test_empty_box_shows_the_empty_state(): void
