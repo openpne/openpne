@@ -16,6 +16,8 @@
                                 <a href="{{ $item['url'] }}">
                                     @if ($item['imageUrl'])
                                         <img src="{{ $item['imageUrl'] }}" alt="{{ $item['name'] }}">
+                                    @else
+                                        <img src="{{ asset('images/no_image.gif') }}" width="76" height="76" alt="{{ $item['name'] }}">
                                     @endif
                                 </a>
                             @endif

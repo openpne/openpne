@@ -3,9 +3,14 @@
 
 <div class="parts memberImageBox">
     @php($image = $community->image)
-    @if ($image)
-        <p class="photo"><a href="{{ $image->url() }}" target="_blank" rel="noopener"><img src="{{ $image->thumbnailUrl(120, 120, square: true) }}" alt="{{ $community->name }}"></a></p>
-    @endif
+    <p class="photo">
+        @if ($image)
+            {{-- The link opens the full-size image; the no_image fallback has none, so it renders bare. --}}
+            <a href="{{ $image->url() }}" target="_blank" rel="noopener"><x-classic.image :file="$image" :size="120" :alt="$community->name" /></a>
+        @else
+            <x-classic.image :file="null" :size="120" :alt="$community->name" />
+        @endif
+    </p>
     <p class="text">{{ $community->name }}</p>
 </div>
 

@@ -80,9 +80,7 @@
                         @php($avatar = $member->avatar?->file)
                         <li>
                             <a href="{{ route('member.profile.show', $member) }}">
-                                @if ($avatar)
-                                    <img src="{{ $avatar->thumbnailUrl(76, 76, square: true) }}" alt="{{ $member->name }}">
-                                @endif
+                                <x-classic.image :file="$avatar" :size="76" :alt="$member->name" />
                                 {{ $member->name }}
                             </a>
                         </li>

@@ -7,7 +7,7 @@
 @php($images = $post->images->filter(fn ($image) => $image->file !== null)->take(3))
 <li class="activity">
     <div class="box_memberImage">
-        <p><a href="{{ route('member.profile.show', $author) }}">@if ($avatar)<img src="{{ $avatar->thumbnailUrl(48, 48, square: true) }}" alt="{{ $author->name }}">@endif</a></p>
+        <p><a href="{{ route('member.profile.show', $author) }}"><x-classic.image :file="$avatar" :size="48" :alt="$author->name" /></a></p>
     </div>
     <div class="box_body">
         <p>

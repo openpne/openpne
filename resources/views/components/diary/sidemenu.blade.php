@@ -1,10 +1,8 @@
-{{-- The author's avatar linked to their profile, then their name. The name keeps the link so
-     the profile stays reachable when the author has no avatar. --}}
+{{-- The author's avatar box (always rendered, no_image fallback when unset) linked to their
+     profile, then their name. --}}
 <div class="parts memberImageBox">
     @php($avatar = $member->avatar?->file)
-    @if ($avatar)
-        <p class="photo"><a href="{{ route('member.profile.show', $member) }}"><img src="{{ $avatar->thumbnailUrl(120, 120, square: true) }}" alt="{{ $member->name }}"></a></p>
-    @endif
+    <p class="photo"><a href="{{ route('member.profile.show', $member) }}"><x-classic.image :file="$avatar" :size="120" :alt="$member->name" /></a></p>
     <p class="text"><a href="{{ route('member.profile.show', $member) }}">{{ $member->name }}</a></p>
 </div>
 

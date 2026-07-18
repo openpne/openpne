@@ -98,6 +98,11 @@ custom CSS is linked after it as its own `text/css` document
 parity) rather than inlined, so `@charset` / `@import` / relative `url(...)` keep stylesheet
 semantics. `@vite` is not used for Classic.
 
+An unset member/community image falls back to the OpenPNE 3 `no_image.gif`, vendored at
+[`public/images/no_image.gif`](../../public/images/no_image.gif) and rendered through the shared
+[`x-classic.image`](../../resources/views/components/classic/image.blade.php) component (Modern has
+its own placeholder).
+
 Classic forms use the OpenPNE 3 `.form` two-column `<table>` (`<th>` label / `<td>` field), the
 `input_text` / `input_file` / `input_submit` classes, the `operation` button area, and the
 `.input` / `.publicFlag` float for a profile field's per-value visibility. Single-action

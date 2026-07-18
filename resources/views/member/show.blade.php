@@ -15,9 +15,7 @@
             <div class="partsHeading"><h3>{{ $owner->name }}</h3></div>
             <div class="parts">
                 @php($avatar = $owner->avatar?->file)
-                @if ($avatar)
-                    <p><img src="{{ $avatar->thumbnailUrl(120, 120, square: true) }}" alt="{{ $owner->name }}"></p>
-                @endif
+                <p><x-classic.image :file="$avatar" :size="120" :alt="$owner->name" /></p>
 
                 @if ($fields->isEmpty() && $age === null)
                     <p>{{ __('No profile to show.') }}</p>
