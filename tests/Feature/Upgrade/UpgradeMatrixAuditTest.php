@@ -89,8 +89,7 @@ class UpgradeMatrixAuditTest extends TestCase
     public function test_unstepped_source_tables_exist_in_the_fixture(): void
     {
         // Well-formedness of the unstepped-table declaration: each named table must be a
-        // real OpenPNE 3 source table (catches typos). Whether every source table is
-        // either stepped or declared unstepped is a separate, fixture-wide coverage audit.
+        // real OpenPNE 3 source table (catches typos).
         $schema = SourceSchema::default();
 
         foreach (StepRegistry::unsteppedSourceTables() as $table => $reason) {

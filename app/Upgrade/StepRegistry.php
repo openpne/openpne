@@ -130,11 +130,11 @@ final class StepRegistry
     }
 
     /**
-     * OpenPNE 3 source tables not driven by a standalone source→target step, each with the
-     * reason — flattened into another table via correlated subquery, handled by the runner
-     * outside the step pipeline, or not carried. Recorded so the data shows up in the matrix
-     * instead of being an invisible omission (the per-step audit only sees source tables a
-     * step reads as its FROM table).
+     * Dispositions for OpenPNE 3 source tables the upgrade accounts for without a standalone
+     * source→target step — flattened into another table via correlated subquery, handled by
+     * the runner outside the step pipeline, or deliberately not carried. Not an inventory of
+     * every unmigrated source table: an entry is recorded where its absence from the step list
+     * would read as a silent omission in the matrix or the coverage audits.
      *
      * @return array<string, string> source table => reason
      */
@@ -192,8 +192,7 @@ final class StepRegistry
      * the table migrates, but FileUpgrade assigns its file no related_entity. The matrix coverage
      * audit treats these as accounted-for so the column is not read as a silent drop.
      *
-     * Currently empty: every migrated table's file column is owned by FileUpgrade. Kept as the
-     * registered home for the next such case.
+     * Currently empty: every migrated table's file column is owned by FileUpgrade.
      *
      * @return array<string, string> "table.column" => reason
      */

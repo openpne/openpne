@@ -59,7 +59,7 @@ class UpgradeMatrixCommand extends Command
         if (StepRegistry::unsteppedSourceTables() !== []) {
             $this->line('## Source tables without a standalone step');
             $this->line('');
-            $this->line('OpenPNE 3 source tables not driven by a standalone step — flattened into another table via subquery, handled by the runner outside the step pipeline, or not carried:');
+            $this->line('Dispositions for OpenPNE 3 source tables the upgrade accounts for without a standalone step — flattened into another table via subquery, handled by the runner outside the step pipeline, or deliberately not carried:');
             foreach (StepRegistry::unsteppedSourceTables() as $table => $reason) {
                 $this->line("- `{$table}` — {$reason}");
             }
@@ -69,7 +69,7 @@ class UpgradeMatrixCommand extends Command
         if (StepRegistry::unownedFileColumns() !== []) {
             $this->line('## Migrated columns whose file is left ownerless');
             $this->line('');
-            $this->line('file_id columns on migrated tables whose file FileUpgrade does not assign an owner yet (the binary and the link are kept; the owner is backfilled when the feature lands):');
+            $this->line('file_id columns on migrated tables whose file FileUpgrade leaves ownerless (the binary and the link are kept):');
             foreach (StepRegistry::unownedFileColumns() as $column => $reason) {
                 $this->line("- `{$column}` — {$reason}");
             }
