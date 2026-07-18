@@ -49,8 +49,7 @@ class AdminPanelProvider extends PanelProvider
             ->login(Login::class)
             // Opt-in TOTP two-factor auth (Filament's built-in App provider). isRequired is
             // false by design — a nudge, not a gate (see the dashboard reminder widget and
-            // docs/internals/security.md); the third argument is the built-in enforcement
-            // hook a later PR can wire to a setting. codeWindow(1) tightens Filament's lax
+            // docs/internals/security.md). codeWindow(1) tightens Filament's lax
             // default (8 ≈ ±4 min) to ±1 step (~±30s). AdminAppAuthentication revokes other
             // sessions on enable/disable.
             ->multiFactorAuthentication(

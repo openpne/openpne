@@ -30,7 +30,7 @@ Per request it pins, both ways:
   over HTTPS, so a plain-HTTP host must stay unprefixed or login breaks. The
   prefix is not applied to the `XSRF-TOKEN` cookie (read by name from JS) or the
   remember-me cookies (guard-named); those keep their Secure flag from
-  `session.secure` but no prefix (tightening them is the `__Host-` follow-up).
+  `session.secure` but no prefix.
   A site already on HTTPS renames its session cookie on deploy, so everyone
   re-logs in once. A `SESSION_COOKIE` / `SESSION_ADMIN_COOKIE` an operator has
   already prefixed (`__Secure-`/`__Host-`) is passed through unchanged — the

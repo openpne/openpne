@@ -48,8 +48,8 @@ class BannerImageActionsTest extends TestCase
 
     public function test_a_non_raster_banner_file_is_served_as_an_attachment(): void
     {
-        // The Filament upload rejects non-raster types, but a future OpenPNE 3 banner-image upgrade may
-        // import one; it must be an attachment, never an inline same-origin document.
+        // The Filament upload rejects non-raster types, but the OpenPNE 3 banner-image upgrade copies
+        // rows verbatim and may import one; it must be an attachment, never an inline same-origin document.
         $image = app(StoreBannerImage::class)(UploadedFile::fake()->create('x.html', 1, 'text/html'), null, null, []);
 
         $response = $this->get(route('banner.image', $image->file->name));

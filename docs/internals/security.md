@@ -13,8 +13,8 @@ the admin-user list shows which administrators have it enabled.
   a gate, to keep the panel easy to try. This is a deliberate deviation from
   NIST SP 800-63B-4's AAL2-for-administrators SHOULD — a blanket requirement is
   impractical for the operator population. The enforcement lever exists as
-  Filament's `multiFactorAuthentication(..., isRequired:)` argument; a later PR
-  can wire it to a per-site setting (default off).
+  Filament's `multiFactorAuthentication(..., isRequired:)` argument; it is not
+  wired to any setting.
 - **TOTP only.** Email one-time codes are not offered — NIST does not count them
   as an AAL2 authenticator, and admins have no email column anyway.
 - **`codeWindow(1)`** (≈±30s / ±1 step) tightens Filament's default of 8 (≈±4
@@ -192,9 +192,8 @@ confirmed the pending secret gates nothing. Outside the window every
 security-relevant action requires the account password, and restarting set-up
 mints a fresh secret.
 
-There is no enforcement lever yet ("this site requires MFA"); the natural
-insertion point is a post-login check on `hasEnabledTwoFactorAuthentication()`,
-kept open by design.
+There is no site-wide enforcement setting ("this site requires MFA"): enabling
+two-factor is always the member's own choice.
 
 ## Password policy
 
@@ -258,16 +257,16 @@ Content-posting and mail-triggering member writes carry named per-minute limiter
 
 | Limiter | Default (member / IP per min) | Key shape | Routes |
 |---|---|---|---|
-| `posting` | 30 / 60 | member id / client IP | diary, community topic and event create + update, their comment posts, timeline post + reply (11) |
-| `message-send` | 10 / 30 | member id / client IP | message compose send, draft-edit send (2) |
-| `friend-request` | 15 / 40 | member id / client IP | friend link request, accept (2) |
-| `community-join` | 15 / 40 | member id / client IP | community join, member approve, member decline (3) |
+| `posting` | 30 / 60 | member id / client IP | diary, community topic and event create + update, their comment posts, timeline post + reply |
+| `message-send` | 10 / 30 | member id / client IP | message compose send, draft-edit send |
+| `friend-request` | 15 / 40 | member id / client IP | friend link request, accept |
+| `community-join` | 15 / 40 | member id / client IP | community join, member approve, member decline |
 
 The defaults are deliberately loose: tuning draws on the 429 observability the security event log
 now provides — every throttled request logs a `throttle.hit` event (route + member, never the
 limiter key). Env overrides (`OPENPNE_THROTTLE_*`, `0` disables that limb) exist for shared-NAT /
 proxy deployments where the per-IP limb should be relaxed or turned off. A throttled request renders
-the framework default 429 page for now (no custom surface).
+the framework default 429 page.
 
 Authentication and credential-mutation events (login, MFA, password/email change, ban, withdrawal)
 are recorded on a dedicated `security` log channel — the event vocabulary, PII/injection contract,
@@ -286,9 +285,9 @@ highest-value clickjacking target — would otherwise ship none of these.
 
 Deliberately not set:
 
-- **A content CSP (`script-src`)** — deferred until the Vite/Inertia bundle
-  gets nonce/hash wiring. Its absence is also what lets the panel's inline
-  Livewire/Alpine scripts run.
+- **A content CSP (`script-src`)** — the Vite/Inertia bundle has no nonce/hash
+  wiring, and the absence is also what lets the panel's inline Livewire/Alpine
+  scripts run.
 - **`Cross-Origin-Resource-Policy`** — web-public avatars and banners are
   served for cross-origin embedding, which `same-origin` would break.
 
@@ -343,9 +342,7 @@ When `session.secure` is on (explicit `SESSION_SECURE_COOKIE`, or `force_https`)
 the two realm session cookies are renamed with the `__Secure-` prefix
 ([`UseAdminSessionStore`](../../app/Http/Middleware/UseAdminSessionStore.php)),
 which the browser accepts only over HTTPS with the Secure attribute. A
-plain-HTTP host stays unprefixed so login still works. Not yet covered: the
-`XSRF-TOKEN` cookie is read from JS by name and the remember-me cookies are
-guard-named, so neither takes the prefix — they carry the Secure flag from
-`session.secure` but not the prefix, which the `__Host-` follow-up would
-tighten. So this satisfies the prefix requirement for the session cookies, not
-yet for every authentication cookie.
+plain-HTTP host stays unprefixed so login still works. The `XSRF-TOKEN` cookie
+is read from JS by name and the remember-me cookies are guard-named, so neither
+takes a prefix — they carry the Secure flag from `session.secure` but not the
+prefix. The prefix requirement is met for the session cookies only.

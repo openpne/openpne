@@ -14,8 +14,8 @@ use App\Upgrade\UpgradeStep;
  * The migrated source names are derived from NotificationKind × NotificationChannel
  * (NotificationKind::op3ConfigName()), so registering a kind is all it takes to migrate its two
  * keys — there is no second list here to drift. Every registered kind imports, wired or not:
- * the upgrade is one-shot, so an unwired kind's stored choice must be preserved now for the
- * sender that lands later.
+ * the upgrade is one-shot, so an unwired kind's stored choice must be preserved regardless
+ * of whether a sender exists.
  *
  * Values are copied verbatim in the source's own semantics: '0' is the only opt-out, anything
  * else means enabled (the fail-open default the source form wrote). member_config is a KV table

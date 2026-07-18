@@ -19,8 +19,8 @@ class BannerImageController extends Controller
     /**
      * MIME types served inline. Anything else is sent as an opaque attachment so a stored file is
      * never interpreted as a same-origin document — the same second-line defense as FileController,
-     * kept here because this route is public and cacheable (the upload path already rejects non-raster
-     * types; a future OpenPNE 3 banner-image upgrade may not).
+     * kept here because this route is public and cacheable (the upload path rejects non-raster
+     * types; the OpenPNE 3 banner-image upgrade copies rows verbatim and does not).
      */
     private const INLINE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 

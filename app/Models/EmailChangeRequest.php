@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
  * URL carries (sent to the new address); `cancel_token` is the same for the cancel link (sent to the
  * old address). Both raw tokens only ever live in their emailed links. Only created_at is tracked
  * (expiry is derived from it), so timestamps are off. One row per member (the column is unique); it
- * cascades away with the member. Mirrors RegistrationToken.
+ * cascades away with the member.
  *
  * @property int $id
  * @property int $member_id

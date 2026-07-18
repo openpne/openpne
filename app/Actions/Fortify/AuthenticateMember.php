@@ -92,9 +92,9 @@ class AuthenticateMember
     /**
      * Persist a freshly hashed password. Hash explicitly rather than leaning on the model's
      * `hashed` cast: the cast leaves an already-hash-shaped string untouched, so passing the
-     * raw plaintext could skip hashing for a password that happens to look like a hash. This
-     * mirrors Laravel's EloquentUserProvider::rehashPasswordIfRequired. The save also clears
-     * password_scheme (ClearsPasswordScheme), retiring a wrapped row's md5 pre-step.
+     * raw plaintext could skip hashing for a password that happens to look like a hash. The
+     * save also clears password_scheme (ClearsPasswordScheme), retiring a wrapped row's md5
+     * pre-step.
      */
     private function store(Member $member, string $password): Member
     {

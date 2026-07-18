@@ -9,7 +9,7 @@
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ route('webmanifest') }}">
     <title>@yield('title') | {{ sns_title() ?: sns_name() }}</title>
-    {{-- Default skin, served statically. $classicSkinCss is the seam a future theme resolver injects. --}}
+    {{-- Default skin, served statically; $classicSkinCss overrides which skin stylesheet is linked. --}}
     <link rel="stylesheet" href="{{ $classicSkinCss ?? asset('opSkinBasicPlugin/css/main.css') }}">
     {{-- Admin custom CSS, linked after the skin so it overrides it. --}}
     @if ($customCssUrl = classic_custom_css_url())

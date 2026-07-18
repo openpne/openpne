@@ -40,8 +40,8 @@ class VisibleAge
         if ($viewer === null) {
             $clearance = Visibility::Open; // a guest only ever reaches an Open age (gated above)
         } else {
-            // A blocked viewer must not see the owner's age, mirroring ShowProfile's query-layer
-            // block check (defense in depth; the profile page also 404s at the controller).
+            // A blocked viewer must not see the owner's age (defense in depth; the profile
+            // page also 404s at the controller).
             if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
                 return null;
             }

@@ -12,7 +12,7 @@ namespace App\Notifications\Settings;
  *
  * Every importable catalog item is registered, wired or not, so the one-shot upgrade can
  * preserve every member's stored choice; only wired kinds (those with an OpenPNE 4 sender)
- * surface in the settings UI. Timeline kinds stay unwired until community-scoped timeline lands.
+ * surface in the settings UI.
  */
 enum NotificationKind: string
 {
@@ -202,7 +202,7 @@ enum NotificationKind: string
     /**
      * Whether an absent settings row means enabled. Must stay true for imported kinds (an
      * absent source key meant enabled, and the import writes no row for it); kept per-kind so
-     * a default can be flipped in one arm later.
+     * each kind's default is declared in one place.
      */
     public function defaultEnabled(): bool
     {

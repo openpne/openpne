@@ -149,7 +149,7 @@ enum SnsSettingKey: string
     /**
      * Fallback used only while no row exists (fresh install / before first save), never as a runtime
      * tier above a stored value. A display key may borrow an application config value; a security key
-     * must return a fixed fail-closed constant. Returns `mixed` because later keys decode to bool/enum.
+     * must return a fixed fail-closed constant. Returns `mixed` because keys decode to string/bool/enum.
      */
     public function default(): mixed
     {

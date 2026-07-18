@@ -33,7 +33,7 @@ class CreateCommunity
                 'is_join_notification_enabled' => $data->isJoinNotificationEnabled,
             ]);
 
-            // The creator is the sole admin (one admin per community in Phase A).
+            // The creator is the sole admin (one admin per community).
             $community->members()->create([
                 'member_id' => $creator->getKey(),
                 'role' => CommunityRole::Admin,

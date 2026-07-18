@@ -80,7 +80,7 @@ return [
     | OpenPNE 3's op_diary_plugin_use_open_diary (admin-configurable, default on).
     | When false the option is removed from the diary form and rejected on submit,
     | so a site that disabled anonymous-visible diaries in OpenPNE 3 keeps that
-    | ability. This env seam stands in until that admin surface lands.
+    | ability.
     |
     */
 
@@ -88,8 +88,8 @@ return [
         'allow_web_public' => (bool) env('OPENPNE_DIARY_ALLOW_WEB_PUBLIC', true),
     ],
 
-    // Timeline web-public is now an admin setting (SnsSettingKey::TimelineAllowWebPublic), no longer
-    // an env flag. The diary equivalent stays here until its admin surface lands.
+    // Timeline web-public is an admin setting (SnsSettingKey::TimelineAllowWebPublic), not an env
+    // flag; the diary flag above has no admin surface, so this env seam is its only control.
 
     /*
     |--------------------------------------------------------------------------
@@ -115,18 +115,18 @@ return [
 
     'email_change' => [
         // How long an emailed email-change confirmation link stays valid. Changing the login identifier
-        // is a sensitive operation, so this tracks the password-reset window (config/auth.php expire=60)
-        // and stays within OWASP's "rarely more than an hour" guidance for such links — deliberately not
-        // the 24h registration TTL (an onboarding/OpenPNE 3-parity case). Expiry is derived from
-        // email_change_requests.created_at against this value.
+        // is a sensitive credential operation, so the default stays within OWASP's "rarely more than an
+        // hour" guidance for such links — deliberately not the 24h registration TTL (an
+        // onboarding/OpenPNE 3-parity case). Expiry is derived from email_change_requests.created_at
+        // against this value.
         'token_ttl_minutes' => (int) env('OPENPNE_EMAIL_CHANGE_TOKEN_TTL_MINUTES', 60),
     ],
 
     'mfa_reset' => [
         // How long an admin-issued two-factor reset link stays valid. Removing a second factor is a
-        // sensitive credential change, so this tracks the same password-reset window as email_change
-        // above (OWASP's "rarely more than an hour" for such links). Expiry is derived from
-        // mfa_reset_requests.created_at against this value.
+        // sensitive credential change, so the default stays within OWASP's "rarely more than an hour"
+        // guidance for such links. Expiry is derived from mfa_reset_requests.created_at against
+        // this value.
         'token_ttl_minutes' => (int) env('OPENPNE_MFA_RESET_TOKEN_TTL_MINUTES', 60),
     ],
 

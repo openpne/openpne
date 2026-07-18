@@ -181,7 +181,7 @@ class ClassicHomeDiaryGadgetTest extends TestCase
             ->assertSee('(CommentedAuthor)')      // author (withName)
             ->assertSee('March 4')                // last comment date, not the diary's January 1 created_at
             ->assertDontSee('icon_camera.gif')    // no camera marker for this kind (withIcon=false)
-            ->assertDontSee('moreInfo', false);   // no More link — diary_comment_history page not ported
+            ->assertDontSee('moreInfo', false);   // no More link rendered for this kind
     }
 
     public function test_diary_comment_history_is_dropped_when_empty(): void

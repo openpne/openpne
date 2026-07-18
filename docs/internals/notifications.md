@@ -41,8 +41,7 @@ an **absent row means the kind's default (enabled)**, matching the extension's a
 `Member::wantsNotification()` / `setNotificationSetting()`.
 
 Every catalog item is registered so the one-shot upgrade can preserve stored choices, but only
-**wired** kinds (those with an OpenPNE 4 sender) appear in the settings UI. Timeline kinds stay
-unwired until community-scoped timeline lands.
+**wired** kinds (those with an OpenPNE 4 sender) appear in the settings UI.
 
 `dependOnNot` encodes the extension's "(x only)" variants: `MessageNewOnlyFriends` only takes
 effect while `MessageNew` is off — an enabled broad kind already covers the narrower audience.

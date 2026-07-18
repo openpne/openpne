@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Schema;
  *
  * OpenPNE 3 stored a NestedSet tree (lft/rgt/level/tree_key), but the pc_frontend only ever
  * used the categories as a flat select on the create form and a search filter. OpenPNE 4 keeps
- * a flat admin-managed master and drops the tree, retaining only an optional `parent_id` for a
- * possible shallow hierarchy later.
+ * a flat admin-managed master and drops the tree, retaining only an optional `parent_id` left
+ * to its null default.
  */
 return new class extends Migration
 {

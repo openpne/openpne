@@ -116,7 +116,7 @@ class MemberRouteParity extends RouteParity
                 new ScreenElement('mail address + password inputs', L::One, S::Ported, 'opAuthLoginFormMailAddress (mail_address, password)', 'field names not preserved (email/password, Level 3)'),
                 new ScreenElement('login button', L::Two, S::Ported, '_partsLogin input_submit'),
                 new ScreenElement('password reminder link', L::One, S::Ported, 'link_to help_login_error_action', 'links to /forgot-password (password.request)'),
-                new ScreenElement('self-registration link', L::Two, S::Ported, 'link_to self_invite_action', 'shown unconditionally; OpenPNE 3 gated it on invite_mode==2 + enable_registration (config gate deferred)'),
+                new ScreenElement('self-registration link', L::Two, S::Ported, 'link_to self_invite_action', 'shown when open registration is on, mirroring OpenPNE 3\'s invite_mode==2 + enable_registration gate'),
                 new ScreenElement('login gadget zones (top/side/contents/bottom)', L::Three, S::Missing, 'op_login_gadget_list', 'gadget layout not ported; single-column LayoutC form only'),
             ],
         ];

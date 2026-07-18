@@ -1,6 +1,5 @@
 {{-- OpenPNE 3 recentCommunityTopicComment: recent topics across the viewer's joined communities,
-     dropped entirely when empty. No "More" link — OpenPNE 3's recent-list link target is
-     intentionally not ported (route parity gap). --}}
+     dropped entirely when empty. --}}
 @if (count($entries))
     <div class="dparts homeRecentList"@if ($partId !== null) id="{{ $partId }}"@endif><div class="parts">
         <div class="partsHeading"><h3>{{ __('Recently Posted %Community% %Topics%') }}</h3></div>

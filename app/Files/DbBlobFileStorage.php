@@ -20,8 +20,8 @@ use RuntimeException;
  * Memory shape: the whole BLOB is buffered in PHP memory on read and write (a DB
  * limitation — there is no constant-memory streaming from a row), so readStream
  * materialises the row into php://temp. A single file's size is bounded by the
- * upload validation layer (a later slice) and ultimately by memory_limit /
- * max_allowed_packet; oversized writes surface as a DB/PDO error, not silently.
+ * upload validation layer and ultimately by memory_limit / max_allowed_packet;
+ * oversized writes surface as a DB/PDO error, not silently.
  */
 class DbBlobFileStorage implements FileStorage
 {

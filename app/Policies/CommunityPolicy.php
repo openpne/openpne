@@ -8,7 +8,7 @@ use App\Models\Member;
 
 class CommunityPolicy
 {
-    /** Phase A: any authenticated member may view any community. */
+    /** Any authenticated member may view any community. */
     public function view(Member $viewer, Community $community): bool
     {
         return true;
@@ -25,7 +25,7 @@ class CommunityPolicy
         return CommunityMembership::isAdmin($community, $actor);
     }
 
-    /** Approve/decline pending members (and later member moderation): admin only. */
+    /** Approve/decline pending members: admin only. */
     public function manageMembers(Member $actor, Community $community): bool
     {
         return CommunityMembership::isAdmin($community, $actor);

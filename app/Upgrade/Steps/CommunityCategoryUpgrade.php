@@ -11,8 +11,8 @@ use App\Upgrade\UpgradeStep;
  * OpenPNE 3 stored categories as a NestedSet tree (lft/rgt/level/tree_key) with a synthetic
  * root at lft=1 that is never a selectable category — the pc_frontend only offers the lft>1
  * children. OpenPNE 4 keeps a flat master, so the root is not migrated (filter lft>1) and the
- * tree columns are dropped; `parent_id` is a new column left to its null default (a possible
- * shallow hierarchy later), not derived from the tree.
+ * tree columns are dropped; `parent_id` is a new column left to its null default, not derived
+ * from the tree.
  */
 class CommunityCategoryUpgrade extends UpgradeStep
 {
