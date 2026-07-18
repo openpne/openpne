@@ -92,7 +92,7 @@ reproduces the base OpenPNE 3 `pc_frontend` layout DOM (`#Body > #Container > #H
 #Contents / #Footer`, `div#globalNav > ul > li`, `#localNav`, `#Layout{A..E} > #Center`, and the
 `alertBox` flash). The OpenPNE 3 default skin (`opSkinBasicPlugin`) is vendored verbatim and
 served statically from [`public/opSkinBasicPlugin/`](../../public/opSkinBasicPlugin) through a
-plain `<link>`; the `$classicSkinCss` view variable is the seam a later theme resolver swaps. Admin
+plain `<link>`; the `$classicSkinCss` view variable overrides which skin stylesheet is linked. Admin
 custom CSS is linked after it as its own `text/css` document
 ([`/cache/css/customizing.css`](../../app/Http/Controllers/CustomizingCssController.php), OpenPNE 3
 parity) rather than inlined, so `@charset` / `@import` / relative `url(...)` keep stylesheet

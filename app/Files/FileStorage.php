@@ -15,9 +15,9 @@ use App\Models\File;
  * native key directly: DbBlobFileStorage by file_id, DiskFileStorage by name.
  *
  * Scope: this contract is intentionally the four byte-level operations only.
- * URL generation / delivery is NOT here — the DB-BLOB backend cannot return a
- * URL (its bytes are streamed by a controller) while disk backends have native
- * URLs; File::url() is the single entry point above this seam.
+ * URL generation / delivery is NOT here — delivery is backend-independent and
+ * policy-gated (the file controllers stream the bytes whatever the backend),
+ * with File::url() as the single entry point above this seam.
  */
 interface FileStorage
 {

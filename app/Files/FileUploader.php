@@ -18,7 +18,8 @@ use Throwable;
  * after the bytes were written is compensated by removing them best-effort here
  * (not in FileObserver — a transaction rollback never fires the deleting event).
  * The residual race (commit fails after a successful disk write yet the file is
- * not removed) is left to a future periodic orphan-file GC.
+ * not removed) is accepted: with no metadata row the bytes are unreachable and
+ * only waste space.
  */
 class FileUploader
 {
