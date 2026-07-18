@@ -93,7 +93,7 @@ class MessageRouteParity extends RouteParity
                 new ScreenElement('per-box heading + counterparty column (From/To)', L::Two, S::Ported, '$title / $sender_title switch'),
                 new ScreenElement('status icon (unread / read / sent / draft)', L::Two, S::Partial, 'icon_mail_* by box + is_read', 'unread row + status class hooks; OpenPNE 3 gif icons not shipped with the basic skin'),
                 new ScreenElement('replied icon', L::Three, S::Missing, 'getIsHensin() icon_mail_4', 'replied state pairs with reply (write surface)'),
-                new ScreenElement('subject link to show', L::One, S::Ported, 'link_to($detail_title, $detail_url)', 'draft links to the edit form (write surface), so its subject is plain text here'),
+                new ScreenElement('subject link to show', L::One, S::Ported, 'link_to($detail_title, $detail_url)', 'the draft box links the subject to the edit form'),
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "format_datetime(created_at, 'f')", 'LocalizedDate'),
                 new ScreenElement('pager navigation', L::Two, S::Ported, 'op_include_pager_navigation'),
                 new ScreenElement('empty-state message', L::Three, S::Ported, "__('There are no messages')"),

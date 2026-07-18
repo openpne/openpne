@@ -7,7 +7,7 @@
 @endsection
 
 @section('content')
-    @php($showRoute = $box->showRoute())
+    @php($openRoute = $box->openRoute())
     @php($isTrash = $box === \App\Features\Message\MessageBox::Trash)
     <div class="dparts searchResultList" id="message_list">
         <div class="parts">
@@ -41,13 +41,7 @@
                                     @endif
                                 </td>
                                 <td>
-                                    {{-- A draft has no show page (opened via the edit form, write surface), so its
-                                         subject is plain text until then. --}}
-                                    @if ($showRoute)
-                                        <a href="{{ route($showRoute, ['message' => $item->messageId]) }}">{{ $item->subject }}</a>
-                                    @else
-                                        {{ $item->subject }}
-                                    @endif
+                                    <a href="{{ route($openRoute, ['message' => $item->messageId]) }}">{{ $item->subject }}</a>
                                 </td>
                                 <td>{{ \App\Support\LocalizedDate::dateTime($item->date) }}</td>
                             </tr>
