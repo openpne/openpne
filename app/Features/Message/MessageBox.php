@@ -25,16 +25,16 @@ enum MessageBox: string
     }
 
     /**
-     * The per-message show route, or null for Draft (OpenPNE 3 opens a draft in the compose/edit
-     * form, which lands with the write surface — until then a draft row has no show page).
+     * The route that opens a message from this box: the show page, or the edit form for a
+     * draft (OpenPNE 3 also opens a draft in the compose form — a draft has no show page).
      */
-    public function showRoute(): ?string
+    public function openRoute(): string
     {
         return match ($this) {
             self::Receive => 'message.receive.show',
             self::Sent => 'message.send.show',
             self::Trash => 'message.trash.show',
-            self::Draft => null,
+            self::Draft => 'message.draft.edit',
         };
     }
 

@@ -9,7 +9,7 @@
 @endsection
 
 @section('content')
-    @php($showRoute = $view->box->showRoute())
+    @php($showRoute = $view->box->openRoute())
     <div class="dparts messageDetailBox" id="message_show">
         <div class="parts">
             <div class="partsHeading"><h3>{{ __('Message') }}</h3></div>
