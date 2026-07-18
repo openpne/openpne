@@ -33,13 +33,11 @@
                     @foreach ($diaries as $entry)
                         <li>
                             {{-- OpenPNE 3 listSuccess shows the author's avatar (76×76) linking to the
-                                 entry; listFriendSuccess (friends) omits it. Rendered only when set —
-                                 OpenPNE 4 has no default-avatar placeholder. --}}
+                                 entry, with the no_image fallback when unset; listFriendSuccess (friends)
+                                 omits it entirely. --}}
                             @if ($variant !== 'friends')
                                 @php($authorAvatar = $entry->member->avatar?->file)
-                                @if ($authorAvatar)
-                                    <a class="photo" href="{{ route('diary.show', $entry) }}"><img src="{{ $authorAvatar->thumbnailUrl(76, 76, square: true) }}" alt="{{ $entry->member->name }}"></a>
-                                @endif
+                                <a class="photo" href="{{ route('diary.show', $entry) }}"><x-classic.image :file="$authorAvatar" :size="76" :alt="$entry->member->name" /></a>
                             @endif
                             <a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a>
                             {{-- A camera marker when the entry has photos. OpenPNE 4 ships no gif;

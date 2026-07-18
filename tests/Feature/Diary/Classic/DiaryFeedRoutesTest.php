@@ -99,7 +99,7 @@ class DiaryFeedRoutesTest extends TestCase
             ->assertSee($file->thumbnailUrl(76, 76, square: true), false);
     }
 
-    public function test_recent_feed_renders_no_thumbnail_when_the_author_has_no_avatar(): void
+    public function test_recent_feed_renders_the_no_image_fallback_when_the_author_has_no_avatar(): void
     {
         $viewer = Member::factory()->create();
         $author = Member::factory()->create();
@@ -108,10 +108,11 @@ class DiaryFeedRoutesTest extends TestCase
             'visibility' => Visibility::Members,
         ]);
 
-        // No default-avatar placeholder: the photo link is absent when the author has no avatar.
+        // OpenPNE 3 parity: the photo link still renders, showing the no_image.gif fallback.
         $this->actingAs($viewer)->get('/diary/list')
             ->assertOk()
-            ->assertDontSee('class="photo"', false);
+            ->assertSee('class="photo"', false)
+            ->assertSee('images/no_image.gif', false);
     }
 
     public function test_friend_feed_omits_the_author_thumbnail(): void
