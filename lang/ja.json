@@ -57,6 +57,8 @@
     ":count unread notifications": ":count件の未読通知",
     ":inviter has invited you to join :app.": ":inviter さんがあなたを :app に招待しました。",
     ":name accepted your %friend% request.": ":name さんがあなたの%friend%申請を承認しました。",
+    ":name appointed you as a %community% sub-administrator.": ":name さんがあなたを%community%の副管理者に任命しました。",
+    ":name asked you to take over a %community% administration.": ":name さんから%community%の管理者交代依頼が届きました。",
     ":name commented on a %diary% you commented on.": ":name さんがあなたのコメントした%diary%にコメントしました。",
     ":name commented on a %topic% in your %community%.": ":name さんが%community%の%topic%にコメントしました。",
     ":name commented on a %topic% you commented on.": ":name さんがあなたのコメントした%topic%にコメントしました。",

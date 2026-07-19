@@ -180,6 +180,32 @@ class WithdrawMemberTest extends TestCase
         $this->assertSame(CommunityRole::Admin, $other->role); // unchanged
     }
 
+    public function test_withdrawing_a_pending_nominee_clears_pending_and_removes_every_membership(): void
+    {
+        // The withdrawing member is a plain member of two communities and the admin-transfer nominee of
+        // one. All memberships go through the locked leave path (not the FK cascade), and the dangling
+        // pending seat is cleared under the same lock.
+        $leaving = Member::factory()->create();
+
+        $nominated = Community::factory()->create();
+        $admin = Member::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $nominated->getKey(), 'member_id' => $admin->getKey(), 'role' => CommunityRole::Admin]);
+        $seatA = CommunityMember::factory()->create(['community_id' => $nominated->getKey(), 'member_id' => $leaving->getKey(), 'role' => CommunityRole::Member]);
+        $nominated->forceFill(['pending_admin_member_id' => $leaving->getKey()])->save();
+
+        $other = Community::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $other->getKey(), 'role' => CommunityRole::Admin]);
+        $seatB = CommunityMember::factory()->create(['community_id' => $other->getKey(), 'member_id' => $leaving->getKey(), 'role' => CommunityRole::Member]);
+
+        $this->withdraw($leaving);
+
+        $this->assertModelMissing($seatA);
+        $this->assertModelMissing($seatB);
+        $this->assertNull($nominated->fresh()->pending_admin_member_id);
+        $this->assertModelExists($nominated);
+        $this->assertModelExists($other);
+    }
+
     public function test_primary_member_cannot_be_withdrawn(): void
     {
         $primary = Member::findOrFail(1);

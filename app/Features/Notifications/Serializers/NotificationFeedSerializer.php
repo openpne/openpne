@@ -52,6 +52,8 @@ class NotificationFeedSerializer
             'message_received' => $data['sender_id'] ?? null,
             'diary_commented', 'community_topic_commented', 'community_event_commented' => $data['commenter_id'] ?? null,
             'community_joined' => $data['new_member_id'] ?? null,
+            'community_admin_transfer_requested' => $data['requester_id'] ?? null,
+            'community_sub_admin_appointed' => $data['appointer_id'] ?? null,
             'diary_posted', 'community_topic_posted', 'community_event_posted' => $data['author_id'] ?? null,
             default => null,
         };
@@ -73,6 +75,7 @@ class NotificationFeedSerializer
             'community_topic_commented' => self::topicUrl($row, $data['topic_id'] ?? null),
             'community_event_commented' => self::eventUrl($row, $data['event_id'] ?? null),
             'community_joined' => self::communityUrl($data['community_id'] ?? null),
+            'community_admin_transfer_requested', 'community_sub_admin_appointed' => self::communityUrl($data['community_id'] ?? null),
             'diary_posted' => self::diaryUrl($row, $data['diary_id'] ?? null),
             'community_topic_posted' => self::topicUrl($row, $data['topic_id'] ?? null),
             'community_event_posted' => self::eventUrl($row, $data['event_id'] ?? null),

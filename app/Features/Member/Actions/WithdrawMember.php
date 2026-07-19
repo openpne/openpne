@@ -61,8 +61,8 @@ class WithdrawMember
         $email = (string) $member->email;
         $locale = $member->locale ?? (string) config('app.locale');
 
-        // Resolve sole-admin communities first (each under its own row lock); dissolve the leftover
-        // empty ones after their lock commits so their byte purge stays post-commit.
+        // Leave every community first (each under its own row lock), handing over sole-admin seats;
+        // dissolve the leftover empty ones after their lock commits so their byte purge stays post-commit.
         foreach ($this->handOverAdminCommunities($member) as $community) {
             $this->deleteCommunity->purge($community);
         }
@@ -101,38 +101,57 @@ class WithdrawMember
     }
 
     /**
-     * For every community the member administers, keep it governable after withdrawal: under a lock
-     * on the community row, relinquish the member's admin seat, then — if no admin remains — promote
-     * the longest-tenured remaining member (OpenPNE 3's oldest-becomes-admin). The lock plus the
-     * in-lock relinquishment serialize concurrent admin withdrawals: without it, two sole-admins
-     * leaving at once could each see the other still present and skip handover, stranding the
-     * community admin-less. Communities with no members left are returned for post-commit dissolve
-     * (their byte purge must run outside the lock transaction).
+     * Keep every community the member belongs to governable after withdrawal. Each membership is
+     * removed under a lock on its community row, and whether a successor is needed is decided from the
+     * role re-read *under that lock*, never from a snapshot taken before it (see the lock protocol in
+     * AcceptAdminTransfer): a transfer accepted between enumeration and the lock can flip a non-admin
+     * membership to admin, and branching on the stale role would strand the community admin-less — the
+     * withdrawing nominee would become admin and then be cascade-deleted. When the departing role is
+     * admin and no admin remains, the longest-tenured member is promoted (OpenPNE 3's oldest-becomes-
+     * admin); communities with no members left are returned for post-commit dissolve (their byte purge
+     * must run outside the lock transaction).
+     *
+     * All memberships are enumerated (not just admin ones) so each delete is serialized here rather
+     * than left to the members FK cascade — the cascade only backstops rows created after enumeration.
      *
      * @return array<int, Community>
      */
     private function handOverAdminCommunities(Member $member): array
     {
-        $adminMemberships = CommunityMember::query()
+        $memberships = CommunityMember::query()
             ->where('member_id', $member->getKey())
-            ->where('role', CommunityRole::Admin->value)
             ->get();
 
         $toDissolve = [];
 
-        foreach ($adminMemberships as $membership) {
+        foreach ($memberships as $membership) {
             $community = DB::transaction(function () use ($membership, $member): ?Community {
                 $community = Community::whereKey($membership->community_id)->lockForUpdate()->first();
                 if ($community === null) {
                     return null; // already dissolved by a concurrent withdrawal
                 }
 
-                // Give up the leaving member's seat under the lock so the successor check below sees
-                // the post-departure state (the members cascade would otherwise drop it only later).
-                CommunityMember::query()
+                // Re-read the seat under the lock; a concurrent path may already have removed it.
+                $locked = CommunityMember::query()
                     ->where('community_id', $community->getKey())
                     ->where('member_id', $member->getKey())
-                    ->delete();
+                    ->first();
+                if ($locked === null) {
+                    return null;
+                }
+
+                $locked->delete();
+
+                // A transfer nominating the leaving member dies with the seat.
+                if ((int) $community->pending_admin_member_id === (int) $member->getKey()) {
+                    $community->pending_admin_member_id = null;
+                    $community->save();
+                }
+
+                // Only an admin departure needs a successor; a plain/sub-admin seat just leaves.
+                if ($locked->role !== CommunityRole::Admin) {
+                    return null;
+                }
 
                 $hasOtherAdmin = CommunityMember::query()
                     ->where('community_id', $community->getKey())

@@ -39,6 +39,20 @@ class CommunityPolicyTest extends TestCase
         $this->assertFalse(Gate::forUser($sub)->allows('manageMembers', $community));
     }
 
+    public function test_moderate_members_is_allowed_for_admin_and_sub_admin_only(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->memberWithRole($community, 'admin');
+        $sub = $this->memberWithRole($community, 'subAdmin');
+        $member = $this->memberWithRole($community, 'member');
+        $stranger = Member::factory()->create();
+
+        $this->assertTrue(Gate::forUser($admin)->allows('moderateMembers', $community));
+        $this->assertTrue(Gate::forUser($sub)->allows('moderateMembers', $community));
+        $this->assertFalse(Gate::forUser($member)->allows('moderateMembers', $community));
+        $this->assertFalse(Gate::forUser($stranger)->allows('moderateMembers', $community));
+    }
+
     public function test_view_is_allowed_for_any_member(): void
     {
         $community = Community::factory()->create();

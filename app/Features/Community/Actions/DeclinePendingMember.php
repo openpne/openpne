@@ -13,17 +13,23 @@ class DeclinePendingMember
 {
     public function __invoke(Member $actor, Community $community, Member $applicant): void
     {
-        if (! CommunityMembership::isAdmin($community, $actor)) {
-            throw new CommunityActionException(CommunityActionFailure::NotAdmin);
-        }
+        // The admin check re-runs under the community-row lock (see AcceptAdminTransfer) so a transfer
+        // accepted after page load can't let an ex-admin decline.
+        DB::transaction(function () use ($actor, $community, $applicant): void {
+            $locked = Community::whereKey($community->getKey())->lockForUpdate()->firstOrFail();
 
-        $deleted = DB::table('community_join_requests')
-            ->where('community_id', $community->getKey())
-            ->where('member_id', $applicant->getKey())
-            ->delete();
+            if (! CommunityMembership::isAdmin($locked, $actor)) {
+                throw new CommunityActionException(CommunityActionFailure::NotAdmin);
+            }
 
-        if ($deleted === 0) {
-            throw new CommunityActionException(CommunityActionFailure::NotPending);
-        }
+            $deleted = DB::table('community_join_requests')
+                ->where('community_id', $locked->getKey())
+                ->where('member_id', $applicant->getKey())
+                ->delete();
+
+            if ($deleted === 0) {
+                throw new CommunityActionException(CommunityActionFailure::NotPending);
+            }
+        });
     }
 }

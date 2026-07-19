@@ -30,4 +30,10 @@ class CommunityPolicy
     {
         return CommunityMembership::isAdmin($community, $actor);
     }
+
+    /** View the member-management screen and drop plain members: admin or sub-admin. */
+    public function moderateMembers(Member $actor, Community $community): bool
+    {
+        return CommunityMembership::canManage($community, $actor);
+    }
 }

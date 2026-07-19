@@ -36,13 +36,20 @@ class UpdateCommunity
             throw new CommunityActionException(CommunityActionFailure::CategoryNotAllowed);
         }
 
-        $replaced = $this->images->compensating(function (callable $store) use ($community, $data, $image, $removeImage): ?File {
+        $replaced = $this->images->compensating(function (callable $store) use ($actor, $community, $data, $image, $removeImage): ?File {
             // Re-read under the lock and work off $locked: file_id is a mutable column on this row, so
             // the passed-in instance may carry a value already overwritten by a concurrent edit that
             // won the lock first. Reading the prior File off the stale value would miss that edit's
             // image and orphan its bytes. (UpdateTopic is safe without this because it reads images by
             // the immutable post_id, not a self-column.)
             $locked = Community::whereKey($community->getKey())->lockForUpdate()->firstOrFail();
+
+            // Re-check management under the lock (see AcceptAdminTransfer): a transfer accepted after
+            // page load could have demoted this ex-manager. No image is stored yet, so the throw just
+            // rolls the transaction back with nothing to purge.
+            if (! CommunityMembership::canManage($locked, $actor)) {
+                throw new CommunityActionException(CommunityActionFailure::NotManager);
+            }
 
             $locked->update([
                 'name' => $data->name,
