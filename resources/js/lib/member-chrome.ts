@@ -320,6 +320,10 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { community } = props as unknown as { community: CommunityRef };
         return { mode: 'contextual', title: t('Members'), context: communityContext(community) };
     },
+    'community/manage': (props) => {
+        const { community } = props as unknown as { community: CommunityRef };
+        return { mode: 'contextual', title: t('Management member'), context: communityContext(community) };
+    },
     'community/event/members': (props) => {
         const { community, event } = props as unknown as { community: CommunityRef; event: { id: number; name: string } };
         return {

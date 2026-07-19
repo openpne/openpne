@@ -4,6 +4,7 @@ use App\Captcha\Captcha;
 use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
 use App\Features\Community\CommunityController;
+use App\Features\Community\CommunityMemberManageController;
 use App\Features\CommunityEvent\CommunityEventCommentController;
 use App\Features\CommunityEvent\CommunityEventController;
 use App\Features\CommunityTopic\CommunityTopicCommentController;
@@ -467,6 +468,20 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // delete: GET confirm, POST submit (community id in the path, as in OpenPNE 3).
         Route::get('/delete/{community}', 'showDelete')->whereNumber('community')->name('community.delete.show');
         Route::post('/delete/{community}', 'delete')->whereNumber('community')->name('community.delete');
+
+        // Member management + immediate operations (appoint/demote sub-admin, drop member). manage
+        // keeps OpenPNE 3's /community/member/manage/:id (path param); the operation endpoints are
+        // OpenPNE 4-native (?id= + member_id, GET confirm + POST submit like join/quit).
+        Route::controller(CommunityMemberManageController::class)->group(function () {
+            Route::get('/member/manage/{community}', 'manage')->whereNumber('community')->name('community.members.manage');
+            Route::get('/member/appointSubAdmin', 'showAppoint')->name('community.members.appoint.show');
+            Route::post('/member/appointSubAdmin', 'appoint')->name('community.members.appoint');
+            Route::get('/member/demoteSubAdmin', 'showDemote')->name('community.members.demote.show');
+            Route::post('/member/demoteSubAdmin', 'demote')->name('community.members.demote');
+            Route::get('/member/drop', 'showDrop')->name('community.members.drop.show');
+            Route::post('/member/drop', 'drop')->name('community.members.drop');
+        });
+
         Route::get('/{community}', 'show')->whereNumber('community')->name('community.show');
     });
 
