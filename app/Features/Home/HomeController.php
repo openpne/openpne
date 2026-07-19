@@ -10,6 +10,7 @@ use App\Features\Home\Queries\JoinedCommunityActivity;
 use App\Features\Home\Serializers\HomeSerializer;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Http\Controllers\Controller;
+use App\Models\Community;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Support\SurfaceResolver;
@@ -44,6 +45,10 @@ class HomeController extends Controller
             'zones' => $gadgets->zones('home', $viewer, $viewer),
             'layout' => $gadgets->layoutLetter('home'),
             'pageId' => RouteParityRegistry::bodyId('home'),
+            // Communities awaiting this member's admin-transfer decision: the OpenPNE 3
+            // _cautionAboutChangeAdminRequest, restored as a direct link to each community's banner
+            // (Modern surfaces this through the feed + bell instead). Cheap: pending_admin_member_id is indexed.
+            'adminTransferCommunities' => Community::where('pending_admin_member_id', $viewer->getKey())->get(),
         ]);
     }
 

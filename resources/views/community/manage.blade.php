@@ -30,6 +30,18 @@
                                     <a href="{{ route('community.members.demote.show', ['id' => $community->getKey(), 'member_id' => $rowMember->getKey()]) }}">{{ __("Demote this member from this %community%'s sub-administrator") }}</a>
                                 @endif
                             </td>
+
+                            {{-- Admin-transfer cell (admin viewer only): the pending nominee shows a status,
+                                 the admin row is blank, every other row offers the take-over request. A pending
+                                 transfer does not freeze other rows' links — a new request replaces the old
+                                 nominee (OpenPNE 3 parity). --}}
+                            <td>
+                                @if ((int) $rowMember->getKey() === (int) $pendingAdminId)
+                                    {{ __("You are taking over this %community%'s administrator to this member now.") }}
+                                @elseif ($membership->role !== \App\Features\Community\CommunityRole::Admin)
+                                    <a href="{{ route('community.members.transfer.show', ['id' => $community->getKey(), 'member_id' => $rowMember->getKey()]) }}">{{ __("Take over this %community%'s administrator to this member") }}</a>
+                                @endif
+                            </td>
                         @endif
                     </tr>
                 @endforeach

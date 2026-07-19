@@ -3,11 +3,13 @@
 namespace Tests\Feature\Community\Classic;
 
 use App\Features\Community\CommunityRole;
+use App\Features\Community\Events\AdminTransferRequested;
 use App\Features\Community\Events\SubAdminAppointed;
 use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
@@ -184,6 +186,188 @@ class CommunityManageRoutesTest extends TestCase
         $this->actingAs($admin)->get(route('community.show', $community))->assertOk()->assertSee($link, false);
         $this->actingAs($sub)->get(route('community.show', $community))->assertOk()->assertSee($link, false);
         $this->actingAs($member)->get(route('community.show', $community))->assertOk()->assertDontSee($link, false);
+    }
+
+    public function test_admin_viewer_sees_take_over_links_and_the_nominee_status(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->join($community, CommunityRole::Admin);
+        $sub = $this->join($community, CommunityRole::SubAdmin);
+        $member = $this->join($community, CommunityRole::Member);
+        $nominee = $this->join($community, CommunityRole::Member);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        $response = $this->actingAs($admin)->get(route('community.members.manage', $community));
+        $response->assertOk();
+        // Nominee row: the take-over status text, no take-over link.
+        $response->assertSee('You are taking over this', false);
+        $response->assertDontSee($this->href('community.members.transfer.show', $community, $nominee), false);
+        // Admin row: no take-over link (cannot transfer to self).
+        $response->assertDontSee($this->href('community.members.transfer.show', $community, $admin), false);
+        // Other member + sub-admin rows keep their take-over link while a transfer is pending
+        // (a new request replaces the nominee — replace-on-new-request, OpenPNE 3 parity).
+        $response->assertSee($this->href('community.members.transfer.show', $community, $member), false);
+        $response->assertSee($this->href('community.members.transfer.show', $community, $sub), false);
+    }
+
+    public function test_sub_admin_viewer_sees_no_take_over_column(): void
+    {
+        $community = Community::factory()->create();
+        $this->join($community, CommunityRole::Admin);
+        $sub = $this->join($community, CommunityRole::SubAdmin);
+        $this->join($community, CommunityRole::Member);
+
+        $this->actingAs($sub)->get(route('community.members.manage', $community))
+            ->assertOk()
+            ->assertDontSee('community/member/transferAdmin', false);
+    }
+
+    public function test_transfer_confirm_renders_for_member_and_sub_admin_targets(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->join($community, CommunityRole::Admin);
+        $sub = $this->join($community, CommunityRole::SubAdmin, 'Sammy');
+        $member = $this->join($community, CommunityRole::Member, 'Casey');
+
+        $this->actingAs($admin)->get($this->confirmUrl('transferAdmin', $community, $member))
+            ->assertOk()
+            ->assertSee('id="page_community_changeAdminRequest"', false)
+            ->assertSee('Casey');
+        // A sub-admin nominee is allowed (OpenPNE 3 parity).
+        $this->actingAs($admin)->get($this->confirmUrl('transferAdmin', $community, $sub))
+            ->assertOk()
+            ->assertSee('id="page_community_changeAdminRequest"', false)
+            ->assertSee('Sammy');
+    }
+
+    public function test_transfer_confirm_404_for_admin_target_current_nominee_and_non_admin_viewer(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->join($community, CommunityRole::Admin);
+        $sub = $this->join($community, CommunityRole::SubAdmin);
+        $member = $this->join($community, CommunityRole::Member);
+        $nominee = $this->join($community, CommunityRole::Member);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        // The admin (self) target and the current nominee are refused.
+        $this->actingAs($admin)->get($this->confirmUrl('transferAdmin', $community, $admin))->assertNotFound();
+        $this->actingAs($admin)->get($this->confirmUrl('transferAdmin', $community, $nominee))->assertNotFound();
+        // A sub-admin viewer cannot request a transfer (admin-only).
+        $this->actingAs($sub)->get($this->confirmUrl('transferAdmin', $community, $member))->assertNotFound();
+    }
+
+    public function test_transfer_post_sets_pending_then_a_new_request_replaces_it(): void
+    {
+        Event::fake([AdminTransferRequested::class]);
+        $community = Community::factory()->create();
+        $admin = $this->join($community, CommunityRole::Admin);
+        $first = $this->join($community, CommunityRole::Member);
+        $second = $this->join($community, CommunityRole::Member);
+        $manage = route('community.members.manage', $community);
+
+        $this->actingAs($admin)->post('/community/member/transferAdmin', ['id' => $community->getKey(), 'member_id' => $first->getKey()])
+            ->assertRedirect($manage)
+            ->assertSessionHas('status');
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'pending_admin_member_id' => $first->getKey()]);
+
+        // A new request to a different nominee replaces the pending one over HTTP.
+        $this->actingAs($admin)->post('/community/member/transferAdmin', ['id' => $community->getKey(), 'member_id' => $second->getKey()])
+            ->assertRedirect($manage);
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'pending_admin_member_id' => $second->getKey()]);
+    }
+
+    public function test_nominee_sees_the_accept_reject_banner_on_the_community_home(): void
+    {
+        $community = Community::factory()->create();
+        $this->join($community, CommunityRole::Admin);
+        $nominee = $this->join($community, CommunityRole::Member);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        $response = $this->actingAs($nominee)->get(route('community.show', $community));
+        $response->assertOk();
+        $response->assertSee('id="Top"', false);
+        $response->assertSee('id="community_changeAdminRequest"', false);
+        $response->assertSee(e(route('community.members.transfer.accept')), false);
+        $response->assertSee(e(route('community.members.transfer.reject')), false);
+    }
+
+    public function test_non_nominee_does_not_see_the_transfer_banner(): void
+    {
+        $community = Community::factory()->create();
+        $this->join($community, CommunityRole::Admin);
+        $member = $this->join($community, CommunityRole::Member);
+        $nominee = $this->join($community, CommunityRole::Member);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        $this->actingAs($member)->get(route('community.show', $community))
+            ->assertOk()
+            ->assertDontSee('id="community_changeAdminRequest"', false);
+    }
+
+    public function test_pending_applicant_still_sees_the_approval_notice(): void
+    {
+        // Regression: the two Top notices share one @section, so the pending-approval branch must
+        // keep rendering after the transfer banner was folded in.
+        $community = Community::factory()->create();
+        $applicant = Member::factory()->create();
+        DB::table('community_join_requests')->insert([
+            'community_id' => $community->getKey(),
+            'member_id' => $applicant->getKey(),
+        ]);
+
+        $this->actingAs($applicant)->get(route('community.show', $community))
+            ->assertOk()
+            ->assertSee('id="community_pending"', false)
+            ->assertDontSee('id="community_changeAdminRequest"', false);
+    }
+
+    public function test_nominee_accept_becomes_admin_and_demotes_the_old_admin(): void
+    {
+        $community = Community::factory()->create();
+        $oldAdmin = $this->join($community, CommunityRole::Admin);
+        $nominee = $this->join($community, CommunityRole::Member);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        $this->actingAs($nominee)->post('/community/member/acceptTransfer', ['id' => $community->getKey()])
+            ->assertRedirect(route('community.show', $community))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseHas('community_members', ['community_id' => $community->getKey(), 'member_id' => $nominee->getKey(), 'role' => CommunityRole::Admin->value]);
+        $this->assertDatabaseHas('community_members', ['community_id' => $community->getKey(), 'member_id' => $oldAdmin->getKey(), 'role' => CommunityRole::Member->value]);
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'pending_admin_member_id' => null]);
+    }
+
+    public function test_nominee_reject_clears_pending(): void
+    {
+        $community = Community::factory()->create();
+        $this->join($community, CommunityRole::Admin);
+        $nominee = $this->join($community, CommunityRole::Member);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        $this->actingAs($nominee)->post('/community/member/rejectTransfer', ['id' => $community->getKey()])
+            ->assertRedirect(route('community.show', $community))
+            ->assertSessionHas('status');
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'pending_admin_member_id' => null]);
+    }
+
+    public function test_non_nominee_accept_or_reject_redirects_with_an_error_and_changes_nothing(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->join($community, CommunityRole::Admin);
+        $nominee = $this->join($community, CommunityRole::Member);
+        $other = $this->join($community, CommunityRole::Member);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+        $show = route('community.show', $community);
+
+        // A non-nominee is not 404'd — the action's NoTransferPending surfaces as an error flash.
+        $this->actingAs($other)->post('/community/member/acceptTransfer', ['id' => $community->getKey()])
+            ->assertRedirect($show)->assertSessionHas('error');
+        $this->actingAs($other)->post('/community/member/rejectTransfer', ['id' => $community->getKey()])
+            ->assertRedirect($show)->assertSessionHas('error');
+
+        // The roles and the pending seat are untouched.
+        $this->assertDatabaseHas('community_members', ['community_id' => $community->getKey(), 'member_id' => $admin->getKey(), 'role' => CommunityRole::Admin->value]);
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'pending_admin_member_id' => $nominee->getKey()]);
     }
 
     private function join(Community $community, CommunityRole $role, ?string $name = null): Member
