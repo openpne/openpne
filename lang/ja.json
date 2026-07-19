@@ -964,7 +964,7 @@
     "The :id placeholder is only allowed in member and %community% navigation.": ":id プレースホルダはメンバー・%community%のナビでのみ使用できます。",
     "The :label value is too large.": "「:label」の値が大きすぎます。",
     "The address type.": "アドレス種別。",
-    "The admin must transfer the role before leaving.": "管理者は退会する前に管理者権限を譲渡する必要があります。",
+    "The admin must transfer the role before leaving.": "管理者は退会する前に管理者交代を済ませる必要があります。",
     "The administrator of :name asks you to take over the administration.": "「:name」の管理者交代の依頼が届いています。",
     "The administrator of this %community% asks you to take over the administration.": "この%community%の管理者交代の依頼が届いています。",
     "The application deadline has passed.": "申し込み締め切りを過ぎています。",
