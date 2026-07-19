@@ -32,7 +32,8 @@ class AppointSubAdmin
                 throw new CommunityActionException(CommunityActionFailure::TargetNotPlainMember);
             }
 
-            // A pending nominee outranks sub-admin: appointing them would let the accept demote itself.
+            // A pending transfer nominee's role is frozen until the transfer resolves — OpenPNE 3
+            // refused sub-admin nomination for an admin_confirm holder.
             if ((int) $locked->pending_admin_member_id === (int) $target->getKey()) {
                 throw new CommunityActionException(CommunityActionFailure::TargetIsPendingAdmin);
             }

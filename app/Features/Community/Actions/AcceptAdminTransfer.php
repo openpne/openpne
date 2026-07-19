@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\DB;
  *    the longest-tenured member, and a later accept then demotes that successor. The nominee wins.
  *  - DeleteCommunity has a TOCTOU: an ex-admin's in-flight delete can complete after a transfer, since
  *    its irreversible byte purge runs outside this lock. The harm equals a delete done just before the
- *    transfer, so it is accepted rather than folding the purge into the lock. See worklog decision note.
+ *    transfer, so it is accepted rather than folding the purge into the lock.
  */
 class AcceptAdminTransfer
 {

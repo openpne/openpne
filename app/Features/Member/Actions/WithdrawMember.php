@@ -35,8 +35,12 @@ use RuntimeException;
  * There is deliberately NO single wrapping transaction. The cores purge image bytes via the
  * FileObserver, which removes them irreversibly; that must stay outside any transaction that could
  * roll back (a rollback would restore the rows but not the bytes). Each core therefore runs
- * un-nested, exactly as the frontend calls it, and the member-row delete — with MemberObserver's
- * avatar purge — runs un-nested too. The only transactions are the per-community handover locks.
+ * un-nested, exactly as the frontend calls it. The final member-row delete instead runs in a small
+ * verify+delete transaction (lock the member row → assert zero memberships → delete), so a membership
+ * racing in during the long purge phase can't survive the delete and strand a community admin-less.
+ * The only cost is that MemberObserver's avatar-byte purge now runs inside that tx, so a commit
+ * failure right after it could orphan the avatar bytes — negligible, as the tx does nothing after the
+ * delete but commit. The per-community handover locks are the other transactions.
  */
 class WithdrawMember
 {
@@ -63,9 +67,7 @@ class WithdrawMember
 
         // Leave every community first (each under its own row lock), handing over sole-admin seats;
         // dissolve the leftover empty ones after their lock commits so their byte purge stays post-commit.
-        foreach ($this->handOverAdminCommunities($member) as $community) {
-            $this->deleteCommunity->purge($community);
-        }
+        $this->drainCommunities($member);
 
         // Own diaries: purge each (drops the diary + its comments and all their image bytes).
         foreach ($member->diaries()->get() as $diary) {
@@ -84,7 +86,7 @@ class WithdrawMember
             ($this->deleteTimelinePost)($post);
         }
 
-        $member->delete();
+        $this->deleteMemberRow($member);
 
         // Logged here once so it covers both callers (self-withdrawal and the Filament DeleteAction),
         // and before the event dispatch — enqueueing its listeners is fallible and must not suppress
@@ -101,6 +103,62 @@ class WithdrawMember
     }
 
     /**
+     * Leave every community (each under its own row lock, handing over sole-admin seats) and dissolve
+     * the ones left empty. Re-runnable: deleteMemberRow() calls it again if a membership raced in.
+     */
+    private function drainCommunities(Member $member): void
+    {
+        foreach ($this->handOverAdminCommunities($member) as $community) {
+            $this->deleteCommunity->purge($community);
+        }
+    }
+
+    /**
+     * Delete the member row only once it holds no memberships, closing the window where a membership
+     * (possibly a sole-admin one from a transfer accepted mid-withdrawal) races in after the drain and
+     * would then be silently FK-cascaded away, stranding a community admin-less.
+     *
+     * While the member row is X-locked, a concurrent community_members INSERT for this member blocks on
+     * InnoDB's FK parent-row share lock until we commit — after which that insert fails the FK. A
+     * membership committed before we took the lock is caught by the locked count and drained again
+     * (which hands over any admin seat under the community lock), then we retry. The loop converges
+     * once the member's sessions are gone; the cap only guards against a pathological spin.
+     */
+    private function deleteMemberRow(Member $member): void
+    {
+        $id = $member->getKey();
+
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $done = DB::transaction(function () use ($id): bool {
+                $locked = Member::whereKey($id)->lockForUpdate()->first();
+                if ($locked === null) {
+                    return true; // already gone
+                }
+
+                $hasMembership = CommunityMember::query()
+                    ->where('member_id', $id)
+                    ->lockForUpdate()
+                    ->exists();
+                if ($hasMembership) {
+                    return false; // raced in before the lock — drain again below
+                }
+
+                $locked->delete(); // MemberObserver purges the avatar bytes here
+
+                return true;
+            });
+
+            if ($done) {
+                return;
+            }
+
+            $this->drainCommunities($member);
+        }
+
+        throw new RuntimeException("Member {$id} still held memberships after the withdrawal drain cap.");
+    }
+
+    /**
      * Keep every community the member belongs to governable after withdrawal. Each membership is
      * removed under a lock on its community row, and whether a successor is needed is decided from the
      * role re-read *under that lock*, never from a snapshot taken before it (see the lock protocol in
@@ -111,8 +169,9 @@ class WithdrawMember
      * admin); communities with no members left are returned for post-commit dissolve (their byte purge
      * must run outside the lock transaction).
      *
-     * All memberships are enumerated (not just admin ones) so each delete is serialized here rather
-     * than left to the members FK cascade — the cascade only backstops rows created after enumeration.
+     * All memberships are enumerated (not just admin ones) so each delete is serialized under the
+     * community lock; deleteMemberRow() re-drains any that race in afterward, so the members FK cascade
+     * never has to remove a membership (least of all a sole-admin one).
      *
      * @return array<int, Community>
      */
