@@ -4,7 +4,9 @@ namespace Tests\Feature\Home;
 
 use App\Models\Community;
 use App\Models\CommunityMember;
+use App\Models\Gadget;
 use App\Models\Member;
+use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -55,6 +57,25 @@ class ClassicHomeTest extends TestCase
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertSee('id="home_index"', false)
+            ->assertSee('Runners Club')
+            ->assertSee(e(route('community.show', $community)), false);
+    }
+
+    public function test_admin_transfer_caution_also_renders_on_a_gadget_configured_home(): void
+    {
+        $member = Member::factory()->create();
+        $community = Community::factory()->create(['name' => 'Runners Club']);
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+        $community->forceFill(['pending_admin_member_id' => $member->getKey()])->save();
+
+        // With a gadget configured, home takes the gadget-sections branch (contentTop seam), not the
+        // no-gadgets fallback — the caution must render there too.
+        Gadget::create(['context' => 'home', 'zone' => 'contents', 'name' => 'informationBox', 'sort_order' => 10]);
+        app(GadgetService::class)->clearCache();
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertDontSee('id="home_index"', false)
             ->assertSee('Runners Club')
             ->assertSee(e(route('community.show', $community)), false);
     }
