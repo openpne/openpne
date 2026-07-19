@@ -38,9 +38,9 @@ use RuntimeException;
  * un-nested, exactly as the frontend calls it. The final member-row delete instead runs in a small
  * verify+delete transaction (lock the member row → assert zero memberships → delete), so a membership
  * racing in during the long purge phase can't survive the delete and strand a community admin-less.
- * The only cost is that MemberObserver's avatar-byte purge now runs inside that tx, so a commit
- * failure right after it could orphan the avatar bytes — negligible, as the tx does nothing after the
- * delete but commit. The per-community handover locks are the other transactions.
+ * MemberObserver defers the avatar-byte purge to DB::afterCommit, so a rollback of this transaction
+ * leaves the File row and its bytes intact — the bytes are destroyed only once the delete is durable.
+ * The per-community handover locks are the other transactions.
  */
 class WithdrawMember
 {
@@ -121,8 +121,14 @@ class WithdrawMember
      * While the member row is X-locked, a concurrent community_members INSERT for this member blocks on
      * InnoDB's FK parent-row share lock until we commit — after which that insert fails the FK. A
      * membership committed before we took the lock is caught by the locked count and drained again
-     * (which hands over any admin seat under the community lock), then we retry. The loop converges
-     * once the member's sessions are gone; the cap only guards against a pathological spin.
+     * (which hands over any admin seat under the community lock), then we retry.
+     *
+     * Convergence is the overwhelmingly normal case but not guaranteed: nothing pre-purges the member's
+     * other sessions before this runs (self-withdrawal logs out only the current guard, and its session
+     * purge happens after this action returns; admin-initiated withdrawal does no pre-purge), so another
+     * device could in principle keep re-joining between drains. The cap bounds that pathological spin;
+     * exhausting it throws — aborting loudly with the member's content already purged but the row
+     * retained, so nothing is silently lost.
      */
     private function deleteMemberRow(Member $member): void
     {
@@ -143,7 +149,7 @@ class WithdrawMember
                     return false; // raced in before the lock — drain again below
                 }
 
-                $locked->delete(); // MemberObserver purges the avatar bytes here
+                $locked->delete(); // MemberObserver defers the avatar-byte purge to after this commit
 
                 return true;
             });
