@@ -56,6 +56,9 @@ class CommunityController extends Controller
         $viewer = $this->viewer();
         $role = CommunityMembership::roleOf($found, $viewer);
         $isPending = CommunityMembership::isPending($found, $viewer);
+        // The viewer is the pending admin-transfer nominee — the accept/reject banner is theirs.
+        $isTransferNominee = $found->pending_admin_member_id !== null
+            && (int) $found->pending_admin_member_id === (int) $viewer->getKey();
         // The sidemenu member grid (3×3), admins first like ListCommunityMembers.
         // Shared by the Classic grid and the Modern member preview.
         $sidebarMembers = $found->members()->with('member.avatar.file')
@@ -65,7 +68,7 @@ class CommunityController extends Controller
         $canViewBoard = CommunityTopicAccess::canViewBoard($found, $viewer);
 
         return $this->respondWith($request, 'community', [
-            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $sidebarMembers, $canViewBoard, $recentTopics, $recentEvents) {
+            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $canViewBoard, $recentTopics, $recentEvents) {
                 $this->markLocalNavCommunity($found);
 
                 // The details listBox names the admin and sub-admins; only Classic needs them, so the
@@ -79,6 +82,7 @@ class CommunityController extends Controller
                     'sidebarMembers' => $sidebarMembers,
                     'role' => $role,
                     'isPending' => $isPending,
+                    'isTransferNominee' => $isTransferNominee,
                     'adminMember' => $staff->firstWhere('role', CommunityRole::Admin)?->member,
                     'subAdminMembers' => $staff->where('role', CommunityRole::SubAdmin)->pluck('member'),
                     'recentTopics' => $canViewBoard ? $recentTopics($found) : null,
@@ -91,6 +95,7 @@ class CommunityController extends Controller
                 'community' => CommunitySerializer::detail($found),
                 'viewerRole' => $role?->slug(),
                 'isPending' => $isPending,
+                'isTransferNominee' => $isTransferNominee,
                 'canManage' => $role?->canManage() ?? false,
                 'canJoin' => $role === null && ! $isPending,
                 // Only a non-admin member may leave (the sole admin must hand off first), matching showQuit.

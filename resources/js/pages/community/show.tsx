@@ -17,6 +17,7 @@ interface ShowProps extends PageProps {
     community: CommunityDetail;
     viewerRole: CommunityRoleSlug | null;
     isPending: boolean;
+    isTransferNominee: boolean; // the viewer is the pending admin-transfer nominee → the accept/reject banner
     canManage: boolean;
     canJoin: boolean;
     canLeave: boolean;
@@ -31,7 +32,7 @@ export default function CommunityShow() {
     const t = useT();
     const confirm = useConfirm();
     const {
-        community, viewerRole, canManage, isPending, canJoin, canLeave, members,
+        community, viewerRole, canManage, isPending, isTransferNominee, canJoin, canLeave, members,
         recentTopics, canPostTopic, recentEvents, canPostEvent,
     } = usePage<ShowProps>().props;
 
@@ -45,6 +46,20 @@ export default function CommunityShow() {
     return (
         <>
             <Head title={community.name} />
+
+            {isTransferNominee && (
+                <Panel bodyClassName="space-y-3">
+                    <p className="text-sm">{t('The administrator of this %community% asks you to take over the administration.')}</p>
+                    <div className="flex gap-3">
+                        <Button type="button" onClick={() => router.post('/community/member/acceptTransfer', { id: community.id })}>
+                            {t('Accept')}
+                        </Button>
+                        <Button type="button" variant="secondary" onClick={() => router.post('/community/member/rejectTransfer', { id: community.id })}>
+                            {t('Decline')}
+                        </Button>
+                    </div>
+                </Panel>
+            )}
 
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-start gap-4">

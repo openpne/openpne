@@ -55,6 +55,7 @@ class ModernOnlyCoverageTest extends TestCase
         'community.members.appoint.show',
         'community.members.demote.show',
         'community.members.drop.show',
+        'community.members.transfer.show',
     ];
 
     /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */

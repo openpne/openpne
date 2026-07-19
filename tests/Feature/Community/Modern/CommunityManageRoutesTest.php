@@ -3,6 +3,7 @@
 namespace Tests\Feature\Community\Modern;
 
 use App\Features\Community\CommunityRole;
+use App\Features\Community\Events\AdminTransferRequested;
 use App\Features\Community\Events\SubAdminAppointed;
 use App\Models\Community;
 use App\Models\CommunityMember;
@@ -119,6 +120,61 @@ class CommunityManageRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('canManage', true)->where('viewerRole', 'sub_admin'));
         $this->actingAs($member)->get(route('community.show', $community))
             ->assertInertia(fn ($page) => $page->where('canManage', false));
+    }
+
+    public function test_transfer_confirm_redirects_to_manage_for_a_valid_target_and_404s_for_invalid(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->join($community, CommunityRole::Admin);
+        $member = $this->join($community, CommunityRole::Member);
+        $manage = route('community.members.manage', $community);
+
+        $this->actingAs($admin)->get($this->confirmUrl('transferAdmin', $community, $member))->assertRedirect($manage);
+        // The admin (self) target is invalid → 404 before the Modern redirect can fire.
+        $this->actingAs($admin)->get($this->confirmUrl('transferAdmin', $community, $admin))->assertNotFound();
+    }
+
+    public function test_transfer_request_and_accept_mutate_and_redirect(): void
+    {
+        Event::fake([AdminTransferRequested::class]);
+        $community = Community::factory()->create();
+        $admin = $this->join($community, CommunityRole::Admin);
+        $nominee = $this->join($community, CommunityRole::Member);
+
+        $this->actingAs($admin)->post('/community/member/transferAdmin', ['id' => $community->getKey(), 'member_id' => $nominee->getKey()])
+            ->assertRedirect(route('community.members.manage', $community));
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'pending_admin_member_id' => $nominee->getKey()]);
+
+        $this->actingAs($nominee)->post('/community/member/acceptTransfer', ['id' => $community->getKey()])
+            ->assertRedirect(route('community.show', $community));
+        $this->assertDatabaseHas('community_members', ['community_id' => $community->getKey(), 'member_id' => $nominee->getKey(), 'role' => CommunityRole::Admin->value]);
+        $this->assertDatabaseHas('community_members', ['community_id' => $community->getKey(), 'member_id' => $admin->getKey(), 'role' => CommunityRole::Member->value]);
+    }
+
+    public function test_transfer_reject_clears_pending(): void
+    {
+        $community = Community::factory()->create();
+        $this->join($community, CommunityRole::Admin);
+        $nominee = $this->join($community, CommunityRole::Member);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        $this->actingAs($nominee)->post('/community/member/rejectTransfer', ['id' => $community->getKey()])
+            ->assertRedirect(route('community.show', $community));
+        $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'pending_admin_member_id' => null]);
+    }
+
+    public function test_show_exposes_is_transfer_nominee(): void
+    {
+        $community = Community::factory()->create();
+        $this->join($community, CommunityRole::Admin);
+        $nominee = $this->join($community, CommunityRole::Member);
+        $other = $this->join($community, CommunityRole::Member);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        $this->actingAs($nominee)->get(route('community.show', $community))
+            ->assertInertia(fn ($page) => $page->component('community/show')->where('isTransferNominee', true));
+        $this->actingAs($other)->get(route('community.show', $community))
+            ->assertInertia(fn ($page) => $page->where('isTransferNominee', false));
     }
 
     private function join(Community $community, CommunityRole $role): Member

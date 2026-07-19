@@ -3,9 +3,12 @@
 namespace App\Features\Community;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Community\Actions\AcceptAdminTransfer;
 use App\Features\Community\Actions\AppointSubAdmin;
 use App\Features\Community\Actions\DemoteSubAdmin;
 use App\Features\Community\Actions\DropMember;
+use App\Features\Community\Actions\RejectAdminTransfer;
+use App\Features\Community\Actions\RequestAdminTransfer;
 use App\Features\Community\Exceptions\CommunityActionException;
 use App\Features\Community\Exceptions\CommunityActionFailure;
 use App\Features\Community\Queries\ListCommunityMembers;
@@ -122,6 +125,62 @@ class CommunityMemberManageController extends Controller
             __('Member dropped.'));
     }
 
+    public function showTransfer(Request $request): View|RedirectResponse
+    {
+        return $this->confirm(
+            $request,
+            'manageMembers',
+            // A sub-admin nominee is allowed (OpenPNE 3 parity); only the current admin and the
+            // member already nominated are refused.
+            fn (Community $c, Member $t) => ($role = $this->targetRole($c, $t)) !== null
+                && $role !== CommunityRole::Admin
+                && (int) $c->pending_admin_member_id !== (int) $t->getKey(),
+            title: __("Take over this %community%'s administrator to this member"),
+            messageKey: "Ask :name to take over this %community%'s administration?",
+            submitLabel: __("Take over this %community%'s administrator to this member"),
+            actionRoute: 'community.members.transfer',
+        );
+    }
+
+    public function transfer(Request $request, RequestAdminTransfer $action): RedirectResponse
+    {
+        return $this->operate($request, 'manageMembers',
+            fn (Community $c, Member $t) => $action($this->viewer(), $c, $t),
+            __('Admin transfer requested.'));
+    }
+
+    public function acceptTransfer(Request $request, AcceptAdminTransfer $action): RedirectResponse
+    {
+        return $this->respondToTransfer($request,
+            fn (Community $c) => $action($this->viewer(), $c),
+            __("You are now this %community%'s administrator."));
+    }
+
+    public function rejectTransfer(Request $request, RejectAdminTransfer $action): RedirectResponse
+    {
+        return $this->respondToTransfer($request,
+            fn (Community $c) => $action($this->viewer(), $c),
+            __('Admin transfer declined.'));
+    }
+
+    /**
+     * The nominee's accept/reject: no policy ability — being the nominee is state, not role, so the
+     * action's NoTransferPending check is authoritative. Resolve the community, run, redirect to the
+     * community home (where the banner lives), surfacing a failure as an error flash.
+     */
+    private function respondToTransfer(Request $request, Closure $run, string $status): RedirectResponse
+    {
+        $community = $this->communityFrom($request);
+
+        try {
+            $run($community);
+        } catch (CommunityActionException $e) {
+            return redirect()->route('community.show', $community)->with('error', $this->messageFor($e->reason));
+        }
+
+        return redirect()->route('community.show', $community)->with('status', $status);
+    }
+
     /**
      * Shared GET confirm: resolve community + target, gate the viewer, then state-guard the target
      * so an invalid confirm is never rendered. Modern confirms inline, so it redirects to the
@@ -203,6 +262,8 @@ class CommunityMemberManageController extends Controller
             CommunityActionFailure::TargetNotPlainMember => __("That member's role has changed."),
             CommunityActionFailure::NotSubAdmin => __('That member is not a sub-administrator.'),
             CommunityActionFailure::TargetIsPendingAdmin => __('That member is awaiting an administrator handover.'),
+            CommunityActionFailure::TransferAlreadyRequested => __('An admin transfer to this member is already pending.'),
+            CommunityActionFailure::NoTransferPending => __('No admin transfer is pending for you.'),
             default => __('You are not allowed to manage this %community%.'),
         };
     }

@@ -480,6 +480,12 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             Route::post('/member/demoteSubAdmin', 'demote')->name('community.members.demote');
             Route::get('/member/drop', 'showDrop')->name('community.members.drop.show');
             Route::post('/member/drop', 'drop')->name('community.members.drop');
+            // Admin transfer: request (GET confirm + POST) from the roster, then the nominee
+            // accepts/rejects from a banner on the community home (POST only — no confirm page).
+            Route::get('/member/transferAdmin', 'showTransfer')->name('community.members.transfer.show');
+            Route::post('/member/transferAdmin', 'transfer')->name('community.members.transfer');
+            Route::post('/member/acceptTransfer', 'acceptTransfer')->name('community.members.transfer.accept');
+            Route::post('/member/rejectTransfer', 'rejectTransfer')->name('community.members.transfer.reject');
         });
 
         Route::get('/{community}', 'show')->whereNumber('community')->name('community.show');
