@@ -15,14 +15,18 @@ class ApproveMember
 {
     public function __invoke(Member $actor, Community $community, Member $applicant): void
     {
-        if (! CommunityMembership::isAdmin($community, $actor)) {
-            throw new CommunityActionException(CommunityActionFailure::NotAdmin);
-        }
-
         // Move the pending request into a confirmed membership atomically (cf. AcceptFriendRequest).
-        DB::transaction(function () use ($community, $applicant) {
+        // The admin check re-runs under the community-row lock (see AcceptAdminTransfer): a transfer
+        // accepted after page load could have demoted this ex-admin.
+        DB::transaction(function () use ($actor, $community, $applicant) {
+            $locked = Community::whereKey($community->getKey())->lockForUpdate()->firstOrFail();
+
+            if (! CommunityMembership::isAdmin($locked, $actor)) {
+                throw new CommunityActionException(CommunityActionFailure::NotAdmin);
+            }
+
             $deleted = DB::table('community_join_requests')
-                ->where('community_id', $community->getKey())
+                ->where('community_id', $locked->getKey())
                 ->where('member_id', $applicant->getKey())
                 ->delete();
 
@@ -30,12 +34,12 @@ class ApproveMember
                 throw new CommunityActionException(CommunityActionFailure::NotPending);
             }
 
-            $community->members()->create([
+            $locked->members()->create([
                 'member_id' => $applicant->getKey(),
                 'role' => CommunityRole::Member,
             ]);
 
-            CommunityJoined::dispatch($community, $applicant);
+            CommunityJoined::dispatch($locked, $applicant);
         });
     }
 }

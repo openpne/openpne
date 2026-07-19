@@ -18,6 +18,8 @@ class AddAllMembers
 {
     public function __invoke(Community $community): int
     {
+        // Outside the community-row lock protocol (see AcceptAdminTransfer): this only inserts plain
+        // Member rows and never touches any admin/sub-admin role or pending_admin_member_id.
         $communityId = $community->getKey();
         $now = now();
         $added = 0;

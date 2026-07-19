@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Member\Actions;
 
+use App\Features\Community\Actions\AcceptAdminTransfer;
+use App\Features\Community\Actions\JoinCommunity;
+use App\Features\Community\Actions\RequestAdminTransfer;
 use App\Features\Community\CommunityRole;
 use App\Features\Member\Actions\WithdrawMember;
 use App\Models\Community;
@@ -178,6 +181,71 @@ class WithdrawMemberTest extends TestCase
         $this->assertModelExists($community);
         $other->refresh();
         $this->assertSame(CommunityRole::Admin, $other->role); // unchanged
+    }
+
+    public function test_withdrawing_a_pending_nominee_clears_pending_and_removes_every_membership(): void
+    {
+        // The withdrawing member is a plain member of two communities and the admin-transfer nominee of
+        // one. All memberships go through the locked leave path (not the FK cascade), and the dangling
+        // pending seat is cleared under the same lock.
+        $leaving = Member::factory()->create();
+
+        $nominated = Community::factory()->create();
+        $admin = Member::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $nominated->getKey(), 'member_id' => $admin->getKey(), 'role' => CommunityRole::Admin]);
+        $seatA = CommunityMember::factory()->create(['community_id' => $nominated->getKey(), 'member_id' => $leaving->getKey(), 'role' => CommunityRole::Member]);
+        $nominated->forceFill(['pending_admin_member_id' => $leaving->getKey()])->save();
+
+        $other = Community::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $other->getKey(), 'role' => CommunityRole::Admin]);
+        $seatB = CommunityMember::factory()->create(['community_id' => $other->getKey(), 'member_id' => $leaving->getKey(), 'role' => CommunityRole::Member]);
+
+        $this->withdraw($leaving);
+
+        $this->assertModelMissing($seatA);
+        $this->assertModelMissing($seatB);
+        $this->assertNull($nominated->fresh()->pending_admin_member_id);
+        $this->assertModelExists($nominated);
+        $this->assertModelExists($other);
+    }
+
+    public function test_a_membership_racing_in_mid_withdrawal_cannot_strand_a_community_admin_less(): void
+    {
+        // Simulate the mid-withdrawal window without real concurrency: a one-shot listener on the diary
+        // purge phase makes the withdrawing member B join community C, get nominated by admin A, and
+        // accept — becoming C's sole admin after the initial community drain has already run. The
+        // verify+delete loop must re-drain that membership so C keeps exactly one admin (A), not zero.
+        $b = Member::factory()->create();
+        Diary::factory()->create(['member_id' => $b->getKey()]);
+
+        $community = Community::factory()->create(); // Open by default
+        $a = Member::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $a->getKey(), 'role' => CommunityRole::Admin]);
+
+        $injected = false;
+        Diary::deleted(function () use (&$injected, $a, $b, $community): void {
+            if ($injected) {
+                return;
+            }
+            $injected = true;
+
+            (new JoinCommunity)($b, $community);
+            (new RequestAdminTransfer)($a, $community, $b);
+            (new AcceptAdminTransfer)($b, $community);
+        });
+
+        $this->withdraw($b);
+
+        $this->assertTrue($injected, 'the mid-withdrawal join/transfer was never exercised');
+        $this->assertDatabaseMissing('members', ['id' => $b->getKey()]);
+        $this->assertDatabaseMissing('community_members', ['member_id' => $b->getKey()]);
+        $this->assertNull($community->fresh()->pending_admin_member_id);
+
+        $admins = CommunityMember::query()
+            ->where('community_id', $community->getKey())
+            ->where('role', CommunityRole::Admin->value)
+            ->pluck('member_id');
+        $this->assertSame([$a->getKey()], $admins->all());
     }
 
     public function test_primary_member_cannot_be_withdrawn(): void

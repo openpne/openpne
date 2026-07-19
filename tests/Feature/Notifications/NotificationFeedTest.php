@@ -204,6 +204,37 @@ class NotificationFeedTest extends TestCase
             ->assertRedirect(route('notifications.index'));
     }
 
+    public function test_admin_transfer_and_sub_admin_kinds_hydrate_their_actor_and_link_to_the_community(): void
+    {
+        [$viewer, $requester, $appointer] = Member::factory()->count(3)->create()->all();
+        $community = Community::factory()->create();
+        $appointed = $this->seedRow($viewer, 'community_sub_admin_appointed', ['appointer_id' => $appointer->getKey(), 'community_id' => $community->getKey()], createdAt: now()->subMinute());
+        $transfer = $this->seedRow($viewer, 'community_admin_transfer_requested', ['requester_id' => $requester->getKey(), 'community_id' => $community->getKey()], createdAt: now());
+
+        $this->actingAs($viewer)->get('/notifications')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('feed.data.0.kind', 'community_admin_transfer_requested')
+                ->where('feed.data.0.actor.name', $requester->name)
+                ->where('feed.data.1.kind', 'community_sub_admin_appointed')
+                ->where('feed.data.1.actor.name', $appointer->name),
+            );
+
+        $this->actingAs($viewer)->post("/notifications/{$transfer->getKey()}/open")
+            ->assertRedirect('/community/'.$community->getKey());
+        $this->actingAs($viewer)->post("/notifications/{$appointed->getKey()}/open")
+            ->assertRedirect('/community/'.$community->getKey());
+    }
+
+    public function test_admin_transfer_falls_back_to_the_feed_when_the_community_is_gone(): void
+    {
+        [$viewer, $requester] = Member::factory()->count(2)->create()->all();
+        $row = $this->seedRow($viewer, 'community_admin_transfer_requested', ['requester_id' => $requester->getKey(), 'community_id' => 424242]);
+
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
+    }
+
     public function test_open_rejects_another_members_notification(): void
     {
         [$viewer, $other, $actor] = Member::factory()->count(3)->create()->all();

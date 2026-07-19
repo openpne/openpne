@@ -58,4 +58,30 @@ class QuitCommunityTest extends TestCase
 
         $this->assertFailsWith(CommunityActionFailure::NotMember, fn () => (new QuitCommunity)($stranger, $community));
     }
+
+    public function test_the_pending_nominee_quitting_clears_the_transfer(): void
+    {
+        $community = Community::factory()->create();
+        $nominee = Member::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $nominee->getKey()]);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        (new QuitCommunity)($nominee, $community);
+
+        $this->assertNull($community->fresh()->pending_admin_member_id);
+    }
+
+    public function test_someone_elses_quit_leaves_the_pending_transfer_intact(): void
+    {
+        $community = Community::factory()->create();
+        $nominee = Member::factory()->create();
+        $other = Member::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $nominee->getKey()]);
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $other->getKey()]);
+        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+
+        (new QuitCommunity)($other, $community);
+
+        $this->assertSame($nominee->getKey(), $community->fresh()->pending_admin_member_id);
+    }
 }
