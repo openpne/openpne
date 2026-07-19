@@ -57,6 +57,10 @@ export default function NotificationsIndex() {
                 return t(':name commented on your event.', { name });
             case 'community_joined':
                 return t(':name joined your %community%.', { name });
+            case 'community_admin_transfer_requested':
+                return t(':name asked you to take over a %community% administration.', { name });
+            case 'community_sub_admin_appointed':
+                return t(':name appointed you as a %community% sub-administrator.', { name });
             case 'diary_posted':
                 return t(':name posted a new %diary%.', { name });
             case 'community_topic_posted':

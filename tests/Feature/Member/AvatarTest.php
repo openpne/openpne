@@ -114,6 +114,30 @@ class AvatarTest extends TestCase
         $this->assertSame(0, DB::table('member_images')->where('member_id', $member->getKey())->count());
     }
 
+    public function test_a_rolled_back_member_delete_keeps_the_avatar_file_and_bytes(): void
+    {
+        $member = Member::factory()->create();
+        app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 10, 10));
+        $file = $member->fresh()->avatar->file;
+
+        // Runs after MemberObserver::deleting (which registers the deferred purge); throwing rolls the
+        // transaction back, so DB::afterCommit must discard the purge — the File row and bytes survive.
+        Member::deleting(function (): void {
+            throw new RuntimeException('boom');
+        });
+
+        try {
+            DB::transaction(fn () => $member->delete());
+            $this->fail('expected the delete to throw');
+        } catch (RuntimeException) {
+            // expected
+        }
+
+        $this->assertNotNull(Member::find($member->getKey()));
+        $this->assertNotNull(File::find($file->getKey()));
+        $this->assertSame(1, DB::table('file_bin')->where('file_id', $file->getKey())->count());
+    }
+
     public function test_removing_an_avatar_clears_it_and_purges_its_bytes(): void
     {
         $member = Member::factory()->create();
