@@ -6,9 +6,10 @@
 @php($hasGadgets = collect($zones)->flatten(1)->isNotEmpty())
 
 @if ($hasGadgets)
-    @include('partials.gadget-sections', ['zones' => $zones])
+    @include('partials.gadget-sections', ['zones' => $zones, 'contentTop' => 'home.partials.admin-transfer-caution'])
 @else
     @section('content')
+        @include('home.partials.admin-transfer-caution')
         {{-- No gadgets configured yet: a minimal landing until the admin adds gadgets. --}}
         <div class="dparts" id="home_index">
             <div class="partsHeading"><h3>{{ __('Home') }}</h3></div>

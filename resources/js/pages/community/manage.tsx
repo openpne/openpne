@@ -29,7 +29,7 @@ export default function CommunityManage() {
     const confirm = useConfirm();
     const { members, community, viewerRole, pendingAdminId } = usePage<ManageProps>().props;
 
-    const post = (path: 'appointSubAdmin' | 'demoteSubAdmin' | 'drop', memberId: number) =>
+    const post = (path: 'appointSubAdmin' | 'demoteSubAdmin' | 'drop' | 'transferAdmin', memberId: number) =>
         router.post(`/community/member/${path}`, { id: community.id, member_id: memberId }, { preserveScroll: true });
 
     const appoint = async (member: CommunityMemberRow) => {
@@ -45,6 +45,11 @@ export default function CommunityManage() {
     const drop = async (member: CommunityMemberRow) => {
         if (await confirm({ title: t('Drop :name from this %community%?', { name: member.name }), confirmLabel: t('Drop'), danger: true })) {
             post('drop', member.id);
+        }
+    };
+    const transfer = async (member: CommunityMemberRow) => {
+        if (await confirm({ title: t("Ask :name to take over this %community%'s administration?", { name: member.name }), confirmLabel: t('Transfer') })) {
+            post('transferAdmin', member.id);
         }
     };
 
@@ -75,6 +80,14 @@ export default function CommunityManage() {
                                 {viewerRole === 'admin' && member.role === 'sub_admin' && (
                                     <Button type="button" size="sm" variant="secondary" onClick={() => demote(member)}>
                                         {t('Demote')}
+                                    </Button>
+                                )}
+                                {viewerRole === 'admin' && member.id === pendingAdminId && (
+                                    <span className="shrink-0 text-xs text-muted-foreground">{t('Transfer pending')}</span>
+                                )}
+                                {viewerRole === 'admin' && member.role !== 'admin' && member.id !== pendingAdminId && (
+                                    <Button type="button" size="sm" variant="secondary" onClick={() => transfer(member)}>
+                                        {t('Transfer')}
                                     </Button>
                                 )}
                             </ListRow>

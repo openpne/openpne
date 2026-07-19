@@ -6,14 +6,43 @@
     <x-community.sidemenu :community="$community" :members="$sidebarMembers" :can-manage-members="$role?->canManage() ?? false" />
 @endsection
 
-@if ($isPending)
-    {{-- The pending-approval notice, shown only while waiting. --}}
+@if ($isPending || $isTransferNominee)
+    {{-- One Top section: the two notices are mutually exclusive (a nominee is a member, a pending
+         applicant is not), and two @section('top') blocks would collide. --}}
     @section('top')
-        <div class="dparts" id="community_pending">
-            <div class="parts">
-                <p>{{ __('You are waiting for the participation approval by %community% administrator.') }}</p>
+        @if ($isPending)
+            {{-- The pending-approval notice, shown only while waiting. --}}
+            <div class="dparts" id="community_pending">
+                <div class="parts">
+                    <p>{{ __('You are waiting for the participation approval by %community% administrator.') }}</p>
+                </div>
             </div>
-        </div>
+        @else
+            {{-- The admin-transfer nominee's accept/reject banner (this is the confirmation step). --}}
+            <div class="dparts" id="community_changeAdminRequest">
+                <div class="parts">
+                    <p>{{ __('The administrator of this %community% asks you to take over the administration.') }}</p>
+                    <div class="operation">
+                        <ul class="moreInfo button">
+                            <li>
+                                <form method="POST" action="{{ route('community.members.transfer.accept') }}">
+                                    @csrf
+                                    <input type="hidden" name="id" value="{{ $community->getKey() }}">
+                                    <input type="submit" class="input_submit" value="{{ __('Accept') }}">
+                                </form>
+                            </li>
+                            <li>
+                                <form method="POST" action="{{ route('community.members.transfer.reject') }}">
+                                    @csrf
+                                    <input type="hidden" name="id" value="{{ $community->getKey() }}">
+                                    <input type="submit" class="input_submit" value="{{ __('Decline') }}">
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        @endif
     @endsection
 @endif
 
