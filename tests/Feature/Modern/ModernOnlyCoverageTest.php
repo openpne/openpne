@@ -52,6 +52,9 @@ class ModernOnlyCoverageTest extends TestCase
     private const REDIRECTS_UNDER_MODERN = [
         'community.join.show',
         'community.quit.show',
+        'community.members.appoint.show',
+        'community.members.demote.show',
+        'community.members.drop.show',
     ];
 
     /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */
@@ -154,7 +157,11 @@ class ModernOnlyCoverageTest extends TestCase
         $community = Community::factory()->create();
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
-        foreach (["/community/member/list?id={$community->getKey()}", "/community/member/pending?id={$community->getKey()}"] as $uri) {
+        foreach ([
+            "/community/member/list?id={$community->getKey()}",
+            "/community/member/pending?id={$community->getKey()}",
+            "/community/member/manage/{$community->getKey()}",
+        ] as $uri) {
             $this->actingAs($admin)->get($uri)
                 ->assertOk()
                 ->assertInertia(fn (AssertableInertia $page) => $page);

@@ -1,5 +1,5 @@
 {{-- The community image box and the member grid (nineTable, admins first). --}}
-@props(['community', 'members' => []])
+@props(['community', 'members' => [], 'canManageMembers' => false])
 
 <div class="parts memberImageBox">
     @php($image = $community->image)
@@ -28,6 +28,9 @@
             <div class="moreInfo">
                 <ul>
                     <li><a href="{{ route('community.members', ['id' => $community->getKey()]) }}">{{ __('Show all') }} ({{ $community->members_count }})</a></li>
+                    @if ($canManageMembers)
+                        <li><a href="{{ route('community.members.manage', $community) }}">{{ __('Management member') }}</a></li>
+                    @endif
                 </ul>
             </div>
         </div>

@@ -80,6 +80,9 @@ export default function CommunityShow() {
                         <Link href={`/community/edit?id=${community.id}`} className="text-link hover:underline">
                             {t('Edit %community%')}
                         </Link>
+                        <Link href={`/community/member/manage/${community.id}`} className="text-link hover:underline">
+                            {t('Management member')}
+                        </Link>
                         {viewerRole === 'admin' && (
                             <Link href={`/community/member/pending?id=${community.id}`} className="text-link hover:underline">
                                 {t('Pending members')}

@@ -46,13 +46,24 @@ class CommunityRouteParity extends RouteParity
             new RouteMap(null, null, 'community.members.pending', 'GET', op3Action: 'memberManage'),
             new RouteMap(null, null, 'community.members.approve', 'POST'),
             new RouteMap(null, null, 'community.members.decline', 'POST'),
+
+            // The member-management page: the /community/member/manage/:id URL is preserved (path
+            // param) and it borrows page_community_memberManage. The per-member operations are
+            // OpenPNE 4-native (OpenPNE 3 reached them through the global fallback), so they carry no
+            // named OpenPNE 3 route; the GET confirms borrow the OpenPNE 3 input-page body ids.
+            new RouteMap('community_memberManage', '/community/member/manage/:id', 'community.members.manage', 'GET', op3Action: 'memberManage', note: 'The member-management page is ported (sub-admin appoint/demote, member removal). The admin-transfer column lands in a follow-up PR.'),
+            new RouteMap(null, null, 'community.members.appoint.show', 'GET', op3Action: 'subAdminRequest', note: 'OpenPNE 3 nominated a sub-admin through a confirmation handshake; OpenPNE 4 appoints immediately (the upgrade drops pending nominations; the appointee gets a feed notification).'),
+            new RouteMap(null, null, 'community.members.appoint', 'POST'),
+            new RouteMap(null, null, 'community.members.demote.show', 'GET', op3Action: 'removeSubAdmin'),
+            new RouteMap(null, null, 'community.members.demote', 'POST'),
+            new RouteMap(null, null, 'community.members.drop.show', 'GET', op3Action: 'dropMember'),
+            new RouteMap(null, null, 'community.members.drop', 'POST'),
         ];
     }
 
     public function gaps(): array
     {
         return [
-            'community_memberManage' => 'The full member-management page (sub-admin nomination, admin transfer, member removal). Only the pending-approval slice is ported, as a native screen (community.members.pending, reusing page_community_memberManage); the /community/member/manage/:id URL itself is not preserved.',
             'community_deleteImage' => 'Top-image upload and removal are ported into the edit form (a file field plus a remove checkbox), so the standalone /community/deleteImage/:id URL is not preserved.',
         ];
     }

@@ -3,7 +3,7 @@
 @section('title', $community->name)
 
 @section('sidemenu')
-    <x-community.sidemenu :community="$community" :members="$sidebarMembers" />
+    <x-community.sidemenu :community="$community" :members="$sidebarMembers" :can-manage-members="$role?->canManage() ?? false" />
 @endsection
 
 @if ($isPending)
