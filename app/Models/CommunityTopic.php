@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BodyFormat;
 use Database\Factories\CommunityTopicFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,7 @@ class CommunityTopic extends Model
     {
         return [
             'topic_updated_at' => 'datetime',
+            'format' => BodyFormat::class,
         ];
     }
 

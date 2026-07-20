@@ -40,4 +40,10 @@ class CommunityEventUpgrade extends UpgradeStep
             'updated_at' => Column::source('updated_at'),
         ];
     }
+
+    /** OpenPNE 3 community events carry no rich-text decoration; the body stays plain (schema default). */
+    public function targetDefaults(): array
+    {
+        return ['format'];
+    }
 }

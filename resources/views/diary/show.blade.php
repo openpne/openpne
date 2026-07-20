@@ -27,7 +27,7 @@
             <p class="diaryMeta">
                 {{ $diary->member->name }} &mdash; {{ \App\Support\LocalizedDate::dateTime($diary->created_at) }}
             </p>
-            <div class="diaryBody"><x-user-text :value="$diary->body" /></div>
+            <div class="diaryBody"><x-user-text :value="$diary->body" :format="$diary->format" /></div>
 
             @include('community-topic._images', ['images' => $diary->images])
 
