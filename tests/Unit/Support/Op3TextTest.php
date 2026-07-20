@@ -29,9 +29,12 @@ class Op3TextTest extends TestCase
             ['<op:large>x</op:large>', '<span class="op_large">x</span>', 'large raw'],
             ['<op:small>x</op:small>', '<span class="op_small">x</span>', 'small raw'],
 
-            // Every tag, entity form (a stored body that was already escaped).
+            // Every tag, entity form (a stored body that was already escaped). The attributed tags
+            // pin TAG_SPLIT + attribute parsing on the &quot;-delimited values a stored body carries.
             ['&lt;op:b&gt;x&lt;/op:b&gt;', '<span class="op_b">x</span>', 'bold entity'],
             ['&lt;op:s&gt;x&lt;/op:s&gt;', '<span class="op_s">x</span>', 'strike entity (literal entity op tag)'],
+            ['&lt;op:color code=&quot;#ff0000&quot;&gt;x&lt;/op:color&gt;', '<span class="op_color" style="color:#ff0000">x</span>', 'colour entity'],
+            ['&lt;op:font color=&quot;#333333&quot; size=&quot;5&quot;&gt;x&lt;/op:font&gt;', '<span class="op_font" style="color:#333333;font-size:large">x</span>', 'font colour + size entity'],
 
             // OP3 case 1/2/3: strike, broken inner <op> (not op:\w+, stays escaped text), unclosed.
             ['<op:s>どーん</op:s>', '<span class="op_s">どーん</span>', 'OP3 case 1'],
