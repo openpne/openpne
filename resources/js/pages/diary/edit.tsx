@@ -1,6 +1,8 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
+import { MarkdownPreview } from '@/components/markdown-preview';
+import { MarkdownToggle } from '@/components/markdown-toggle';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -18,6 +20,9 @@ interface EditProps extends PageProps {
 export default function DiaryEdit() {
     const t = useT();
     const { diary } = usePage<EditProps>().props;
+    // op3 is a migration-only format with no author-facing editor: omit `format` entirely so the
+    // update preserves it (an absent field preserves the current format server-side).
+    const isOp3 = diary.format === 'op3';
     const { data, setData, post, errors, processing } = useForm({
         title: diary.title,
         body: diary.body,
@@ -26,6 +31,7 @@ export default function DiaryEdit() {
         ),
         images: [] as File[],
         remove_images: [] as number[],
+        ...(isOp3 ? {} : { format: (diary.format === 'markdown' ? 'markdown' : 'plain') as 'plain' | 'markdown' }),
     });
 
     const toggleRemove = (id: number, remove: boolean) =>
@@ -54,6 +60,15 @@ export default function DiaryEdit() {
                     <Field label={t('Body')} htmlFor="diary_body" error={errors.body}>
                         <Textarea id="diary_body" required rows={10} value={data.body} onChange={(e) => setData('body', e.target.value)} />
                     </Field>
+
+                    {isOp3 ? (
+                        <p className="text-sm text-muted-foreground">{t('This entry keeps its OpenPNE 3 formatting.')}</p>
+                    ) : (
+                        <>
+                            <MarkdownToggle checked={data.format === 'markdown'} onChange={(on) => setData('format', on ? 'markdown' : 'plain')} />
+                            <MarkdownPreview body={data.body} enabled={data.format === 'markdown'} />
+                        </>
+                    )}
 
                     <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
                         <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>

@@ -12,3 +12,4 @@
         @error('body')<p class="error">{{ $message }}</p>@enderror
     </td>
 </tr>
+@include('compose._format-toggle', ['format' => $format ?? null])

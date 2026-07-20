@@ -40,4 +40,57 @@ class BodyRendererTest extends TestCase
         $this->assertSame('Bold and plain', BodyRenderer::excerpt('<op:b>Bold</op:b> and plain', BodyFormat::Op3));
         $this->assertSame('Bold and plain', BodyRenderer::excerpt('**Bold** and plain', BodyFormat::Markdown));
     }
+
+    public function test_plaintext_plain_passes_through_unchanged(): void
+    {
+        // text/plain mail: a plain body is emitted verbatim, newlines and all — no width cut.
+        $this->assertSame("hi\nthere", BodyRenderer::plainText("hi\nthere", BodyFormat::Plain));
+    }
+
+    public function test_plaintext_op3_strips_decoration_but_keeps_newlines(): void
+    {
+        // Raw and entity-encoded <op:*> tags both go; the text between them and its newlines stay.
+        $this->assertSame("bold\nsecond", BodyRenderer::plainText("<op:b>bold</op:b>\nsecond", BodyFormat::Op3));
+        $this->assertSame('x', BodyRenderer::plainText('&lt;op:b&gt;x&lt;/op:b&gt;', BodyFormat::Op3));
+    }
+
+    public function test_plaintext_markdown_flattens_to_text_with_newlines(): void
+    {
+        // No literal markup reaches the mail: `**bold**` renders to `bold`.
+        $this->assertSame('bold', BodyRenderer::plainText('**bold**', BodyFormat::Markdown));
+        // A blank line separates paragraphs; a single soft break stays a single newline.
+        $this->assertSame("a\n\nb", BodyRenderer::plainText("a\n\nb", BodyFormat::Markdown));
+        $this->assertSame("line1\nline2", BodyRenderer::plainText("line1\nline2", BodyFormat::Markdown));
+        // List items land on their own lines (markers dropped in a text/plain context).
+        $this->assertSame("one\ntwo", BodyRenderer::plainText("- one\n- two", BodyFormat::Markdown));
+    }
+
+    public function test_plaintext_markdown_keeps_link_targets(): void
+    {
+        // A labeled link keeps its target — stripping to the bare label would drop the reference
+        // from a text/plain mail entirely.
+        $this->assertSame(
+            'OpenPNE (https://www.openpne.jp/)',
+            BodyRenderer::plainText('[OpenPNE](https://www.openpne.jp/)', BodyFormat::Markdown),
+        );
+        // An href with query entities decodes back to the typed URL.
+        $this->assertSame(
+            'docs (https://example.com/?a=1&b=2)',
+            BodyRenderer::plainText('[docs](https://example.com/?a=1&b=2)', BodyFormat::Markdown),
+        );
+        // An autolinked URL is not duplicated as "URL (URL)".
+        $this->assertSame(
+            'https://example.com/path',
+            BodyRenderer::plainText('https://example.com/path', BodyFormat::Markdown),
+        );
+        $this->assertSame(
+            'www.example.com',
+            BodyRenderer::plainText('www.example.com', BodyFormat::Markdown),
+        );
+        // An unsafe scheme loses its href at the sanitizer; only the label remains.
+        $this->assertSame(
+            'click',
+            BodyRenderer::plainText('[click](javascript:alert(1))', BodyFormat::Markdown),
+        );
+    }
 }

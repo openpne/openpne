@@ -154,6 +154,7 @@ class CommunityEventController extends Controller
                     'id' => $event->getKey(),
                     'name' => $event->name,
                     'body' => $event->body,
+                    'format' => $event->format->value,
                     'openDate' => $event->open_date->format('Y-m-d'),
                     'openDateComment' => $event->open_date_comment ?? '',
                     'area' => $event->area ?? '',
