@@ -72,7 +72,14 @@ export function MarkdownPreview({ body, enabled }: { body: string; enabled: bool
                     {t('Preview unavailable.')}
                 </p>
             ) : html !== null ? (
-                <div className={state === 'pending' ? 'opacity-60 transition-opacity' : undefined}>
+                // Bounded height with internal scroll: a long draft must not push the form's
+                // remaining fields (visibility, submit) further down the page as it grows.
+                <div
+                    className={
+                        'max-h-[60vh] overflow-y-auto rounded-md border border-border p-3' +
+                        (state === 'pending' ? ' opacity-60 transition-opacity' : '')
+                    }
+                >
                     <RichBody body={body} bodyHtml={html} />
                 </div>
             ) : (
