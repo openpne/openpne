@@ -55,6 +55,47 @@ final class MarkdownText
         return mb_strimwidth($plain, 0, BodyText::EXCERPT_WIDTH, '');
     }
 
+    /**
+     * The full body flattened to plain text for a text/plain context (notification mail), with no
+     * width cut. Renders to HTML, turns <br> and block-element boundaries into newlines so the
+     * paragraph/list shape survives, then strips tags and decodes entities (strip_tags before decode,
+     * as in excerpt(), so a raw-HTML fragment the user typed reads back as they typed it). Runs of
+     * three-plus newlines collapse to a blank line.
+     */
+    public static function plainText(?string $text): string
+    {
+        $html = self::render($text)->toHtml();
+        // Keep link targets: strip_tags would reduce [label](url) to just the label, silently
+        // dropping the reference from a text/plain mail. A label that is the URL itself (autolink)
+        // stays a single URL; an unsafe-scheme link has no href after the sanitizer and keeps its
+        // label only (the regex does not match).
+        $html = (string) preg_replace_callback(
+            '~<a\b[^>]*\bhref="([^"]*)"[^>]*>(.*?)</a>~is',
+            function (array $m): string {
+                $href = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $label = html_entity_decode(strip_tags($m[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if ($label === $href || "http://{$label}" === $href || "https://{$label}" === $href) {
+                    return $m[2];
+                }
+
+                // Re-escape: this value flows through the shared strip_tags + entity-decode below.
+                return $m[2].' ('.htmlspecialchars($href, ENT_QUOTES, 'UTF-8').')';
+            },
+            $html,
+        );
+        // Strip only the newlines adjacent to <br> / a block-end tag (CommonMark's cosmetic ones);
+        // newlines inside a <pre> block are content and must survive.
+        $html = (string) preg_replace('~<br\s*/?>\s*~i', "\n", $html);
+        $html = (string) preg_replace('~</p>\s*~i', "\n\n", $html);
+        $html = (string) preg_replace('~</(?:li|h[1-6]|blockquote|tr|pre|ul|ol|table)>\s*~i', "\n", $html);
+
+        $plain = strip_tags($html);
+        $plain = html_entity_decode($plain, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $plain = (string) preg_replace("/\n{3,}/", "\n\n", $plain);
+
+        return trim($plain);
+    }
+
     private static function converter(): MarkdownConverter
     {
         if (self::$converter !== null) {

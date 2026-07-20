@@ -55,10 +55,19 @@ final class BodyText
      */
     public static function excerpt(?string $text): string
     {
-        $stripped = preg_replace(self::DECORATION_TAG, '', (string) $text) ?? (string) $text;
-        $singleLine = strtr($stripped, ["\r\n" => ' ', "\r" => ' ', "\n" => ' ']);
+        $singleLine = strtr(self::stripDecoration($text), ["\r\n" => ' ', "\r" => ' ', "\n" => ' ']);
 
         return mb_strimwidth($singleLine, 0, self::EXCERPT_WIDTH, '');
+    }
+
+    /**
+     * Removes the OpenPNE 3 <op:*> rich-text decoration tags, leaving the text between them (and its
+     * newlines) intact. The flatten path (BodyRenderer::plainText, for text/plain mail) reuses this
+     * so the op-tag regex lives in one place.
+     */
+    public static function stripDecoration(?string $text): string
+    {
+        return preg_replace(self::DECORATION_TAG, '', (string) $text) ?? (string) $text;
     }
 
     private static function link(string $url): string

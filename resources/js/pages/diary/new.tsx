@@ -1,5 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import { ImagesField } from '@/components/images-field';
+import { MarkdownPreview } from '@/components/markdown-preview';
+import { MarkdownToggle } from '@/components/markdown-toggle';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -23,6 +25,7 @@ export default function DiaryNew({
         body: '',
         visibility: defaultVisibility,
         images: [] as File[],
+        format: 'plain' as 'plain' | 'markdown',
     });
 
     return (
@@ -47,6 +50,9 @@ export default function DiaryNew({
                     <Field label={t('Body')} htmlFor="diary_body" error={errors.body}>
                         <Textarea id="diary_body" required rows={10} value={data.body} onChange={(e) => setData('body', e.target.value)} />
                     </Field>
+
+                    <MarkdownToggle checked={data.format === 'markdown'} onChange={(on) => setData('format', on ? 'markdown' : 'plain')} />
+                    <MarkdownPreview body={data.body} enabled={data.format === 'markdown'} />
 
                     <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
                         <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
