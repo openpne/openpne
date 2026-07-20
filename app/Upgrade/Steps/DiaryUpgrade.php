@@ -26,6 +26,8 @@ class DiaryUpgrade extends UpgradeStep
             'member_id' => Column::source('member_id'),
             'title' => Column::source('title'),
             'body' => Column::source('body'),
+            // OpenPNE 3 diary bodies carry <op:*> rich-text decoration; render them via the op3 path.
+            'format' => Column::expr("'op3'"),
             'visibility' => Column::expr($this->visibilityCase(), uses: ['public_flag', 'is_open']),
             'created_at' => Column::source('created_at'),
             'updated_at' => Column::source('updated_at'),

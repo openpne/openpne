@@ -9,6 +9,8 @@ use App\Models\CommunityTopicComment;
 use App\Models\CommunityTopicCommentImage;
 use App\Models\CommunityTopicImage;
 use App\Models\Member;
+use App\Support\BodyFormat;
+use App\Support\BodyRenderer;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -39,7 +41,7 @@ class CommunityTopicSerializer
     /**
      * The topic show shape: the full body and images plus the author and post time.
      *
-     * @return array{id: int, name: string, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string}
      */
     public static function detail(CommunityTopic $topic): array
     {
@@ -47,6 +49,9 @@ class CommunityTopicSerializer
             'id' => $topic->getKey(),
             'name' => $topic->name,
             'body' => $topic->body,
+            // See DiarySerializer::detail: bodyHtml is the server-rendered decoration HTML, null for plain.
+            'format' => $topic->format->value,
+            'bodyHtml' => $topic->format === BodyFormat::Plain ? null : BodyRenderer::render($topic->body, $topic->format)->toHtml(),
             'images' => $topic->images->map([self::class, 'image'])->all(),
             'author' => self::author($topic->member),
             'createdAt' => $topic->created_at->toIso8601String(),

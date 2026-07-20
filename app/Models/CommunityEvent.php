@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BodyFormat;
 use Database\Factories\CommunityEventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +24,7 @@ class CommunityEvent extends Model
             'open_date' => 'datetime',
             'application_deadline' => 'datetime',
             'capacity' => 'integer',
+            'format' => BodyFormat::class,
         ];
     }
 

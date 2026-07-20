@@ -31,7 +31,7 @@ class UpgradeFromThreeCommand extends Command
         {--source-prefix= : OpenPNE 3 table prefix (default empty)}
         {--source-database= : Database the OpenPNE 3 source was restored into (same MySQL instance)}
         {--dry-run : Print the planned SQL without writing anything}
-        {--force-restart : Clear the upgrade state and target tables, then run from scratch}';
+        {--force-restart : Clear the upgrade state and target tables, then run from scratch — required to resume after a step definition changed, since checkpoints do not record it}';
 
     protected $description = 'Migrate OpenPNE 3 data into the OpenPNE 4 schema (single site)';
 

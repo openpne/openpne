@@ -5,6 +5,7 @@ import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
+import { RichBody } from '@/components/rich-body';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -65,9 +66,7 @@ export default function DiaryShow() {
                     <span>&mdash; {formatDateTime(diary.createdAt)}</span>
                 </div>
 
-                <div className="whitespace-pre-wrap break-words">
-                    <UserText text={diary.body} />
-                </div>
+                <RichBody body={diary.body} bodyHtml={diary.bodyHtml} />
 
                 <ImageGrid images={diary.images} size="size-28" className="mt-1" />
 

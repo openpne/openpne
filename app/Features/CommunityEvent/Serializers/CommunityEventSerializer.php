@@ -9,6 +9,8 @@ use App\Models\CommunityEventComment;
 use App\Models\CommunityEventCommentImage;
 use App\Models\CommunityEventImage;
 use App\Models\Member;
+use App\Support\BodyFormat;
+use App\Support\BodyRenderer;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -49,7 +51,7 @@ class CommunityEventSerializer
      * the current roster size (the RSVP button state is computed by the controller). openDate and
      * applicationDeadline are date-only Y-m-d strings (see summary()); createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
     public static function detail(CommunityEvent $event): array
     {
@@ -57,6 +59,9 @@ class CommunityEventSerializer
             'id' => $event->getKey(),
             'name' => $event->name,
             'body' => $event->body,
+            // See DiarySerializer::detail: bodyHtml is the server-rendered decoration HTML, null for plain.
+            'format' => $event->format->value,
+            'bodyHtml' => $event->format === BodyFormat::Plain ? null : BodyRenderer::render($event->body, $event->format)->toHtml(),
             'images' => $event->images->map([self::class, 'image'])->all(),
             'author' => self::author($event->member),
             'createdAt' => $event->created_at->toIso8601String(),

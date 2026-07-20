@@ -52,7 +52,7 @@
 
             <div class="eventBody">
                 @include('community-event._images', ['images' => $event->images])
-                <x-user-text :value="$event->body" />
+                <x-user-text :value="$event->body" :format="$event->format" />
             </div>
 
             @if ($canEdit)

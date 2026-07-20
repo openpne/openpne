@@ -68,6 +68,8 @@ export interface TopicDetail {
     id: number;
     name: string;
     body: string;
+    format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
+    bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     images: TopicImage[];
     author: TopicAuthor | null;
     createdAt: string;
@@ -120,6 +122,8 @@ export interface EventDetail {
     id: number;
     name: string;
     body: string;
+    format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
+    bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     images: TopicImage[];
     author: TopicAuthor | null;
     createdAt: string; // ISO 8601 datetime

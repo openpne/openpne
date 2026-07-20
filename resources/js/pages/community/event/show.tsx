@@ -3,6 +3,7 @@ import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { RichBody } from '@/components/rich-body';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -114,9 +115,7 @@ export default function CommunityEventShow() {
                     </dd>
                 </dl>
 
-                <div className="whitespace-pre-wrap break-words">
-                    <UserText text={event.body} />
-                </div>
+                <RichBody body={event.body} bodyHtml={event.bodyHtml} />
                 <ImageGrid images={event.images} size="size-24" className="mt-2" />
 
                 {canEdit && (
