@@ -7,6 +7,8 @@ use App\Models\DiaryComment;
 use App\Models\DiaryCommentImage;
 use App\Models\DiaryImage;
 use App\Models\Member;
+use App\Support\BodyFormat;
+use App\Support\BodyRenderer;
 use App\Support\BodyText;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -58,7 +60,7 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, excerpt: string, body: string, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, body: string, format: string, bodyHtml: string|null, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
@@ -69,6 +71,10 @@ class DiarySerializer
             'title' => $diary->title,
             'excerpt' => BodyText::excerpt($diary->body),
             'body' => $diary->body,
+            // bodyHtml is the server-rendered decoration HTML for a non-plain body, null for plain (the
+            // client then renders body itself via the plain path); it is the only trusted-HTML prop.
+            'format' => $diary->format->value,
+            'bodyHtml' => $diary->format === BodyFormat::Plain ? null : BodyRenderer::render($diary->body, $diary->format)->toHtml(),
             'visibility' => $diary->visibility->slug(),
             'commentCount' => $diary->comments_count ?? $diary->loadCount('comments')->comments_count,
             'hasImages' => $images !== [],

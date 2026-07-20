@@ -4,6 +4,7 @@ namespace Tests\Feature\Upgrade\Diary;
 
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use App\Support\Visibility;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
@@ -94,6 +95,17 @@ class DiaryUpgradeSqlTest extends TestCase
         $this->assertSame(Visibility::Private, Diary::findOrFail(4)->visibility);
         $this->assertSame(Visibility::Open, Diary::findOrFail(5)->visibility);
         $this->assertSame(Visibility::Friends, Diary::findOrFail(6)->visibility);
+    }
+
+    public function test_tags_migrated_bodies_as_op3(): void
+    {
+        // OpenPNE 3 diary bodies carry <op:*> decoration, so every migrated row is tagged op3.
+        $owner = Member::factory()->create();
+        $this->seedSourceDiary(1, $owner->getKey());
+
+        $this->runUpgrade();
+
+        $this->assertSame(BodyFormat::Op3, Diary::findOrFail(1)->format);
     }
 
     public function test_unknown_public_flag_aborts_the_copy(): void

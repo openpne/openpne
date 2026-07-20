@@ -8,6 +8,7 @@ use App\Models\DiaryComment;
 use App\Models\DiaryImage;
 use App\Models\File;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -122,5 +123,27 @@ class DiarySerializerTest extends TestCase
         $loaded = Diary::with('images.file')->findOrFail($diary->getKey());
 
         $this->assertSame([], DiarySerializer::detail($loaded)['thumbnails']);
+    }
+
+    public function test_detail_body_html_is_null_for_a_plain_body(): void
+    {
+        $owner = Member::factory()->create();
+        Diary::factory()->create(['id' => 1, 'member_id' => $owner->getKey(), 'body' => '<op:b>x</op:b>']);
+
+        $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail(1));
+
+        $this->assertSame('plain', $detail['format']);
+        $this->assertNull($detail['bodyHtml']);
+    }
+
+    public function test_detail_body_html_is_populated_for_an_op3_body(): void
+    {
+        $owner = Member::factory()->create();
+        Diary::factory()->create(['id' => 1, 'member_id' => $owner->getKey(), 'format' => BodyFormat::Op3, 'body' => '<op:b>x</op:b>']);
+
+        $detail = DiarySerializer::detail(Diary::with('images.file')->findOrFail(1));
+
+        $this->assertSame('op3', $detail['format']);
+        $this->assertSame('<span class="op_b">x</span>', $detail['bodyHtml']);
     }
 }

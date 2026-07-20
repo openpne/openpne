@@ -16,7 +16,7 @@
             </p>
             <div class="topicBody">
                 @include('community-topic._images', ['images' => $topic->images])
-                <x-user-text :value="$topic->body" />
+                <x-user-text :value="$topic->body" :format="$topic->format" />
             </div>
 
             @if ($canEdit)

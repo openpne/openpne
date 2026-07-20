@@ -22,6 +22,10 @@ use Throwable;
  * Each step runs in its own transaction wrapping the INSERT...SELECT and the checkpoint write — the
  * whole run cannot be one transaction at OpenPNE 3 data volumes — so completed ⟺ committed and a
  * re-run resumes from the first incomplete step without re-inserting verbatim ids.
+ *
+ * A checkpoint records only that a step ran, not the step definition it ran. Changing a step's column
+ * mapping invalidates prior UpgradeState checkpoints: resuming a database that was upgraded or
+ * interrupted under an older step set is unsupported — reset (--force-restart) and re-run from scratch.
  */
 final class UpgradeRunner
 {

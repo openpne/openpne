@@ -156,3 +156,34 @@ html {
 html body[data-scroll-locked] {
     margin-right: 0 !important;
 }
+
+/* OpenPNE 3 rich-text decoration on the Modern surface (RichBody). Mirrors the Classic skin's
+   span.op_* rules (opSkinBasicPlugin/css/main.css); op_color/op_font carry an inline style, so
+   they need none. */
+.rich-body span.op_b {
+    font-weight: bold;
+}
+.rich-body span.op_u {
+    text-decoration: underline;
+}
+.rich-body span.op_s {
+    text-decoration: line-through;
+}
+.rich-body span.op_i {
+    font-style: italic;
+}
+.rich-body span.op_large {
+    font-size: large;
+}
+.rich-body span.op_small {
+    font-size: xx-small;
+}
+/* Bare URLs autolinked inside a RichBody carry no class (BodyText emits a plain <a>), and Tailwind
+   Preflight resets anchors to inherit — so restore the plain surface's link treatment. Mirrors
+   UserText's "break-all text-link underline"; the always-on underline keeps WCAG 1.4.1 for links in
+   body prose. */
+.rich-body a {
+    color: var(--color-link);
+    text-decoration: underline;
+    word-break: break-all;
+}

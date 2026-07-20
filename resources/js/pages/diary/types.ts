@@ -33,6 +33,8 @@ export interface DiarySummary {
 
 export interface DiaryDetail extends DiarySummary {
     body: string;
+    format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
+    bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     images: DiaryImage[];
 }
 

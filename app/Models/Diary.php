@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BodyFormat;
 use App\Support\Visibility;
 use Database\Factories\DiaryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,6 +21,7 @@ class Diary extends Model
     {
         return [
             'visibility' => Visibility::class,
+            'format' => BodyFormat::class,
         ];
     }
 

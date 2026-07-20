@@ -4,6 +4,7 @@ import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { RichBody } from '@/components/rich-body';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -78,9 +79,7 @@ export default function CommunityTopicShow() {
                     <span>&mdash; {formatDateTime(topic.createdAt)}</span>
                 </div>
 
-                <div className="whitespace-pre-wrap break-words">
-                    <UserText text={topic.body} />
-                </div>
+                <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
                 <ImageGrid images={topic.images} size="size-24" className="mt-2" />
 
                 {canEdit && (
