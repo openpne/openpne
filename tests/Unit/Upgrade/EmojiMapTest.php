@@ -14,12 +14,13 @@ class EmojiMapTest extends TestCase
      */
     public function test_known_ids_map_to_expected_unicode(): void
     {
-        $this->assertSame("\u{2600}", EmojiMap::convert('[i:1]'));
+        // Single codepoints that RGI requires to carry U+FE0F (☀️, ❤️, ⚠️).
+        $this->assertSame("\u{2600}\u{FE0F}", EmojiMap::convert('[i:1]'));
         $this->assertSame("\u{1F319}", EmojiMap::convert('[i:98]'));
         $this->assertSame("\u{1F697}", EmojiMap::convert('[i:33]'));
-        $this->assertSame("\u{2764}", EmojiMap::convert('[i:136]'));
-        $this->assertSame("\u{26A0}", EmojiMap::convert('[e:1]'));
-        $this->assertSame("\u{2764}", EmojiMap::convert('[e:51]'));
+        $this->assertSame("\u{2764}\u{FE0F}", EmojiMap::convert('[i:136]'));
+        $this->assertSame("\u{26A0}\u{FE0F}", EmojiMap::convert('[e:1]'));
+        $this->assertSame("\u{2764}\u{FE0F}", EmojiMap::convert('[e:51]'));
         $this->assertSame("\u{1F4F7}", EmojiMap::convert('[e:94]'));
         $this->assertSame("\u{1F468}", EmojiMap::convert('[s:4]'));
         $this->assertSame("\u{1F35E}", EmojiMap::convert('[s:327]'));
@@ -27,8 +28,9 @@ class EmojiMapTest extends TestCase
 
     public function test_multi_codepoint_mappings(): void
     {
-        // i:123 シャープダイヤル = keycap #, e:90 ＵＳＡ = regional indicator pair.
-        $this->assertSame("\u{0023}\u{20E3}", EmojiMap::convert('[i:123]'));
+        // i:123 シャープダイヤル = keycap # (U+FE0F inserted before U+20E3),
+        // e:90 ＵＳＡ = regional indicator pair (no U+FE0F).
+        $this->assertSame("\u{0023}\u{FE0F}\u{20E3}", EmojiMap::convert('[i:123]'));
         $this->assertSame("\u{1F1FA}\u{1F1F8}", EmojiMap::convert('[e:90]'));
     }
 
@@ -42,7 +44,7 @@ class EmojiMapTest extends TestCase
     public function test_mixed_text_converts_only_mapped_codes(): void
     {
         $this->assertSame(
-            "こんにちは\u{2600}です[i:999]",
+            "こんにちは\u{2600}\u{FE0F}です[i:999]",
             EmojiMap::convert('こんにちは[i:1]です[i:999]'),
         );
     }
@@ -67,6 +69,23 @@ class EmojiMapTest extends TestCase
                 $this->assertTrue(
                     mb_check_encoding($value, 'UTF-8'),
                     "carrier {$carrier} id {$id} is not valid UTF-8",
+                );
+            }
+        }
+    }
+
+    public function test_every_value_is_rgi_fully_qualified_or_allowlisted(): void
+    {
+        $fullyQualified = require __DIR__.'/../../Fixtures/emoji_fully_qualified.php';
+        $allowed = array_flip([...$fullyQualified, ...EmojiMap::NON_EMOJI]);
+
+        foreach (EmojiMap::TABLE as $carrier => $entries) {
+            foreach ($entries as $id => $value) {
+                $this->assertArrayHasKey(
+                    $value,
+                    $allowed,
+                    "carrier {$carrier} id {$id} is neither an RGI fully-qualified "
+                    .'sequence (emoji-test.txt) nor in EmojiMap::NON_EMOJI',
                 );
             }
         }

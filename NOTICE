@@ -1,0 +1,36 @@
+=========================================================================
+==  NOTICE file for use with the Apache License, Version 2.0,          ==
+==  in this case for the OpenPNE distribution.                         ==
+=========================================================================
+
+OpenPNE
+Copyright 2005-2026 OpenPNE Project
+
+This product includes software developed at
+OpenPNE Project (https://www.openpne.jp/).
+
+-------------------------------------------------------------------------
+Google emoji4unicode
+-------------------------------------------------------------------------
+
+app/Upgrade/Runner/EmojiMap.php derives its carrier-emoji-to-Unicode
+mappings from the emoji4unicode dataset by Google Inc.
+(https://github.com/google/emoji4unicode), licensed under the Apache
+License, Version 2.0. Its upstream NOTICE reads:
+
+    Attribution notices:
+
+    * Unicode is a trademark of Unicode, Inc.
+    For data/unicode/* files see the COPYING_UNICODE license file.
+
+    For data/icu/* files see the COPYING_ICU license file.
+
+-------------------------------------------------------------------------
+Unicode emoji-test.txt
+-------------------------------------------------------------------------
+
+Those mappings are validated against the Unicode Emoji data file
+emoji-test.txt (v17.0), Copyright (C) Unicode, Inc., used under the
+Unicode Terms of Use (https://www.unicode.org/terms_of_use.html).
+Unicode is a registered trademark of Unicode, Inc. in the U.S. and
+other countries.
