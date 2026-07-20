@@ -7,7 +7,9 @@ use App\Features\CommunityTopic\Data\CommunityTopicFormData;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Community;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Create a topic. Posting authority is gated in authorize() — before validation runs — so an
@@ -58,6 +60,8 @@ class StoreTopicRequest extends FormRequest
         return [
             'name' => ['required', 'string'],
             'body' => ['required', 'string'],
+            // op3 is never author-able: it exists only on bodies migrated from OpenPNE 3.
+            'format' => ['sometimes', Rule::in([BodyFormat::Plain->value, BodyFormat::Markdown->value])],
         ];
     }
 
@@ -68,6 +72,7 @@ class StoreTopicRequest extends FormRequest
         return new CommunityTopicFormData(
             name: $validated['name'],
             body: $validated['body'],
+            format: isset($validated['format']) ? BodyFormat::from($validated['format']) : null,
         );
     }
 

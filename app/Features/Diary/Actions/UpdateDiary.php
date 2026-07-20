@@ -9,6 +9,7 @@ use App\Files\ImageEdit;
 use App\Files\PostImages;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\BodyFormat;
 
 class UpdateDiary
 {
@@ -32,11 +33,17 @@ class UpdateDiary
             // past the image cap.
             Diary::whereKey($diary->getKey())->lockForUpdate()->first();
 
-            $diary->update([
+            $attributes = [
                 'title' => $data->title,
                 'body' => $data->body,
                 'visibility' => $data->visibility,
-            ]);
+            ];
+            // An op3 body keeps its format regardless of input: op3 is a migration-only format with no
+            // author-facing editor, so an edit must never convert it (invariant, not just validation).
+            if ($data->format !== null && $diary->format !== BodyFormat::Op3) {
+                $attributes['format'] = $data->format;
+            }
+            $diary->update($attributes);
 
             // Drop the selected images (this diary's only — an id from another diary is ignored).
             // Keep their Files to purge after commit; here only the link row is removed.

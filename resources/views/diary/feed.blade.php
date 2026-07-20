@@ -47,7 +47,7 @@
                             <span class="diaryDate">{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</span>
                             {{-- OpenPNE 3 listSuccess shows a body excerpt; listFriendSuccess (friends) does not. --}}
                             @if ($variant !== 'friends')
-                                <p class="summary">{{ \App\Support\BodyText::excerpt($entry->body) }}</p>
+                                <p class="summary">{{ \App\Support\BodyRenderer::excerpt($entry->body, $entry->format) }}</p>
                             @endif
                         </li>
                     @endforeach

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['community_id', 'member_id', 'name', 'body', 'topic_updated_at'])]
+#[Fillable(['community_id', 'member_id', 'name', 'body', 'topic_updated_at', 'format'])]
 class CommunityTopic extends Model
 {
     /** @use HasFactory<CommunityTopicFactory> */

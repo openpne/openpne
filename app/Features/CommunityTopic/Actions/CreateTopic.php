@@ -11,6 +11,7 @@ use App\Files\PostImages;
 use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Http\UploadedFile;
 
 class CreateTopic
@@ -36,6 +37,7 @@ class CreateTopic
                 'name' => $data->name,
                 'body' => $data->body,
                 'topic_updated_at' => now(),
+                'format' => $data->format ?? BodyFormat::Plain,
             ]),
             relation: fn (CommunityTopic $topic) => $topic->images(),
         );

@@ -23,8 +23,11 @@ final class BodyText
     /** OpenPNE 3 truncates the visible link text (op_auto_link_text truncate_len). */
     private const VISIBLE_URL_LIMIT = 57;
 
-    /** op_truncate(body, 36, '', 3): up to three rows of display width 36 in the OpenPNE 3 table cell. */
-    private const EXCERPT_WIDTH = 108;
+    /**
+     * op_truncate(body, 36, '', 3): up to three rows of display width 36 in the OpenPNE 3 table cell.
+     * Public so MarkdownText::excerpt cuts to the same width without duplicating the literal.
+     */
+    public const EXCERPT_WIDTH = 108;
 
     /** OpenPNE 3 op_decoration is_strip: removes <op:*> rich-text tags in both raw and entity-encoded form. */
     private const DECORATION_TAG = '/(?:&lt;|<)(\/?)(op:\w+)(?:\s+((?:(?!&lt;|<).)*))?(?:&gt;|>)/i';

@@ -10,6 +10,7 @@ use App\Files\ImageEdit;
 use App\Files\PostImages;
 use App\Models\CommunityTopic;
 use App\Models\Member;
+use App\Support\BodyFormat;
 
 class UpdateTopic
 {
@@ -38,6 +39,11 @@ class UpdateTopic
             $contentChanged = $topic->name !== $data->name || $topic->body !== $data->body;
             $topic->name = $data->name;
             $topic->body = $data->body;
+            // An op3 body keeps its format regardless of input: op3 is a migration-only format with no
+            // author-facing editor, so an edit must never convert it (invariant, not just validation).
+            if ($data->format !== null && $topic->format !== BodyFormat::Op3) {
+                $topic->format = $data->format;
+            }
             if ($contentChanged) {
                 $topic->topic_updated_at = now();
             }

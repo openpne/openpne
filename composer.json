@@ -13,6 +13,8 @@
         "intervention/image": "^4",
         "laravel/fortify": "^1.37",
         "laravel/framework": "^13.8",
+        "league/commonmark": "^2.8",
+        "symfony/html-sanitizer": "^7.4",
         "symfony/intl": "^7.4",
         "twig/twig": "^3.27"
     },

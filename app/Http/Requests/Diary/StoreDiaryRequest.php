@@ -5,8 +5,10 @@ namespace App\Http\Requests\Diary;
 use App\Features\Diary\Data\DiaryFormData;
 use App\Features\Diary\DiaryVisibility;
 use App\Http\Requests\Concerns\PostImageRules;
+use App\Support\BodyFormat;
 use App\Support\Visibility;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreDiaryRequest extends FormRequest
 {
@@ -30,6 +32,8 @@ class StoreDiaryRequest extends FormRequest
             'title' => ['required', 'string'],
             'body' => ['required', 'string'],
             'visibility' => ['required', DiaryVisibility::rule()],
+            // op3 is never author-able: it exists only on bodies migrated from OpenPNE 3.
+            'format' => ['sometimes', Rule::in([BodyFormat::Plain->value, BodyFormat::Markdown->value])],
         ];
     }
 
@@ -41,6 +45,7 @@ class StoreDiaryRequest extends FormRequest
             title: $validated['title'],
             body: $validated['body'],
             visibility: Visibility::from($validated['visibility']),
+            format: isset($validated['format']) ? BodyFormat::from($validated['format']) : null,
         );
     }
 

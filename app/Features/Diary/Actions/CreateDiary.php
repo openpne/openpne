@@ -7,6 +7,7 @@ use App\Features\Diary\Events\DiaryPosted;
 use App\Files\PostImages;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Http\UploadedFile;
 
 class CreateDiary
@@ -25,6 +26,7 @@ class CreateDiary
                 'title' => $data->title,
                 'body' => $data->body,
                 'visibility' => $data->visibility,
+                'format' => $data->format ?? BodyFormat::Plain,
             ]),
             relation: fn (Diary $diary) => $diary->images(),
         );

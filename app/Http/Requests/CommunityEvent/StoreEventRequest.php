@@ -7,8 +7,10 @@ use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Community;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Create an event. Posting authority is gated in authorize() — before validation runs — so an
@@ -64,6 +66,8 @@ class StoreEventRequest extends FormRequest
             // whole day, so a time component would shift the join window.
             'application_deadline' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today'],
             'capacity' => ['nullable', 'integer', 'min:0'],
+            // op3 is never author-able: it exists only on bodies migrated from OpenPNE 3.
+            'format' => ['sometimes', Rule::in([BodyFormat::Plain->value, BodyFormat::Markdown->value])],
             ...PostImageRules::rules(),
         ];
     }
@@ -98,6 +102,7 @@ class StoreEventRequest extends FormRequest
             area: $v['area'],
             application_deadline: $v['application_deadline'] ?? null,
             capacity: isset($v['capacity']) ? (int) $v['capacity'] : null,
+            format: isset($v['format']) ? BodyFormat::from($v['format']) : null,
         );
     }
 

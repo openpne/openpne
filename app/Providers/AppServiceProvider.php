@@ -152,6 +152,7 @@ class AppServiceProvider extends ServiceProvider
     private function configureRateLimiting(): void
     {
         RateLimiter::for('posting', $this->writeLimiter('posting', 'posting', 'posting_ip'));
+        RateLimiter::for('preview', $this->writeLimiter('preview', 'preview', 'preview_ip'));
         RateLimiter::for('message-send', $this->writeLimiter('message', 'message', 'message_ip'));
         RateLimiter::for('friend-request', $this->writeLimiter('friend', 'friend', 'friend_ip'));
         RateLimiter::for('community-join', $this->writeLimiter('community', 'community', 'community_ip'));
