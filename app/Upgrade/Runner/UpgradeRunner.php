@@ -74,6 +74,7 @@ final class UpgradeRunner
                 $fileBin->plan($options->sourcePrefix, $options->sourceDatabase, $out);
             }
             (new PasswordWrap)->plan($out);
+            (new EmojiTransform)->plan($out);
             $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
 
             return $this->walk($options, $out);
@@ -99,6 +100,12 @@ final class UpgradeRunner
             // complete — verify-upgrade holds the cutover to zero bare-MD5 rows.
             if ($walked) {
                 $walked = (new PasswordWrap)->run($this->targetTables(), $out);
+            }
+
+            // Rewrite carrier-emoji codes to Unicode after the walk: the mapping is per-row PHP, not
+            // expressible in an INSERT...SELECT, and only now is every text table populated.
+            if ($walked) {
+                $walked = (new EmojiTransform)->run($this->targetTables(), $out);
             }
 
             // Migrate the BLOBs only after the walk: FileUpgrade (first step) has populated `files`, so
