@@ -25,18 +25,19 @@ class BodyRendererTest extends TestCase
         $this->assertSame('<span class="op_b">x</span>', $html);
     }
 
-    public function test_markdown_falls_back_to_the_plain_path_for_now(): void
+    public function test_markdown_format_renders_markdown_not_the_plain_path(): void
     {
-        $plain = (string) BodyRenderer::render('<op:b>x</op:b>', BodyFormat::Plain);
-        $markdown = (string) BodyRenderer::render('<op:b>x</op:b>', BodyFormat::Markdown);
+        $html = (string) BodyRenderer::render('**bold**', BodyFormat::Markdown);
 
-        $this->assertSame($plain, $markdown);
+        // Markdown emphasis becomes a tag; the plain path would escape the asterisks verbatim.
+        $this->assertStringContainsString('<strong>bold</strong>', $html);
     }
 
-    public function test_excerpt_strips_op_tags_for_every_format(): void
+    public function test_excerpt_is_format_aware(): void
     {
-        foreach (BodyFormat::cases() as $format) {
-            $this->assertSame('Bold and plain', BodyRenderer::excerpt('<op:b>Bold</op:b> and plain', $format), $format->value);
-        }
+        // Plain and op3 strip <op:*> tags (BodyText::excerpt); markdown flattens its rendered HTML.
+        $this->assertSame('Bold and plain', BodyRenderer::excerpt('<op:b>Bold</op:b> and plain', BodyFormat::Plain));
+        $this->assertSame('Bold and plain', BodyRenderer::excerpt('<op:b>Bold</op:b> and plain', BodyFormat::Op3));
+        $this->assertSame('Bold and plain', BodyRenderer::excerpt('**Bold** and plain', BodyFormat::Markdown));
     }
 }

@@ -69,6 +69,27 @@ class CommunityEventRequestTest extends TestCase
             ->assertOk();
     }
 
+    public function test_create_accepts_a_markdown_format(): void
+    {
+        $community = Community::factory()->create();
+        $member = $this->joined($community);
+
+        $this->actingAs($member)
+            ->post("/_t/events/{$community->getKey()}", $this->validPayload(['format' => 'markdown']))
+            ->assertOk()
+            ->assertJsonPath('format', 'markdown');
+    }
+
+    public function test_create_rejects_the_op3_format(): void
+    {
+        $community = Community::factory()->create();
+        $member = $this->joined($community);
+
+        $this->actingAs($member)
+            ->post("/_t/events/{$community->getKey()}", $this->validPayload(['format' => 'op3']))
+            ->assertSessionHasErrors('format');
+    }
+
     public function test_open_date_must_be_date_only(): void
     {
         $community = Community::factory()->create();

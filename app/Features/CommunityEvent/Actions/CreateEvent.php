@@ -11,6 +11,7 @@ use App\Files\PostImages;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Http\UploadedFile;
 
 class CreateEvent
@@ -41,6 +42,7 @@ class CreateEvent
                 'application_deadline' => $data->application_deadline,
                 'capacity' => $data->capacity,
                 'event_updated_at' => now(),
+                'format' => $data->format ?? BodyFormat::Plain,
             ]),
             relation: fn (CommunityEvent $event) => $event->images(),
         );

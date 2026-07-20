@@ -10,6 +10,7 @@ use App\Files\ImageEdit;
 use App\Files\PostImages;
 use App\Models\CommunityEvent;
 use App\Models\Member;
+use App\Support\BodyFormat;
 
 class UpdateEvent
 {
@@ -46,6 +47,11 @@ class UpdateEvent
                 'application_deadline' => $data->application_deadline,
                 'capacity' => $data->capacity,
             ]);
+            // An op3 body keeps its format regardless of input: op3 is a migration-only format with no
+            // author-facing editor, so an edit must never convert it (invariant, not just validation).
+            if ($data->format !== null && $event->format !== BodyFormat::Op3) {
+                $event->format = $data->format;
+            }
             if ($contentChanged) {
                 $event->event_updated_at = now();
             }

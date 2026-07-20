@@ -15,17 +15,20 @@ final class BodyRenderer
     {
         return match ($format) {
             BodyFormat::Op3 => Op3Text::render($text),
-            // Markdown renderer lands in a follow-up PR; fall back to the plain path until then.
-            BodyFormat::Plain, BodyFormat::Markdown => BodyText::render($text),
+            BodyFormat::Markdown => MarkdownText::render($text),
+            BodyFormat::Plain => BodyText::render($text),
         };
     }
 
     /**
-     * A feed excerpt. Format-independent for now — BodyText::excerpt already strips <op:*> tags and
-     * would strip markdown syntax verbatim; a format-aware excerpt lands with the markdown renderer.
+     * A feed excerpt. Markdown flattens its rendered HTML to plain text (MarkdownText::excerpt);
+     * Plain and Op3 share BodyText::excerpt, which strips <op:*> tags and collapses newlines.
      */
     public static function excerpt(?string $text, BodyFormat $format): string
     {
-        return BodyText::excerpt($text);
+        return match ($format) {
+            BodyFormat::Markdown => MarkdownText::excerpt($text),
+            BodyFormat::Plain, BodyFormat::Op3 => BodyText::excerpt($text),
+        };
     }
 }
