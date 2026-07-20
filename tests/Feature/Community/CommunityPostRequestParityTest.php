@@ -40,7 +40,9 @@ class CommunityPostRequestParityTest extends TestCase
         $topic = Arr::only((new StoreTopicRequest)->rules(), ['name', 'body']);
         $event = Arr::only((new StoreEventRequest)->rules(), ['name', 'body']);
 
-        $this->assertSame($topic, $event, 'Topic and event create requests must keep identical name/body rules; a one-sided change is accidental drift.');
+        // assertEquals, not assertSame: rule objects (e.g. MaxBytes) are distinct instances per
+        // request, and equality still pins the shared shape — a one-sided rule or a differing cap fails.
+        $this->assertEquals($topic, $event, 'Topic and event create requests must keep identical name/body rules; a one-sided change is accidental drift.');
     }
 
     public function test_update_requests_share_the_remove_images_rules(): void

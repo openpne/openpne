@@ -7,6 +7,7 @@ use App\Features\CommunityTopic\Data\CommunityTopicFormData;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Community;
 use App\Models\Member;
+use App\Rules\MaxBytes;
 use App\Support\BodyFormat;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -49,9 +50,13 @@ class StoreTopicRequest extends FormRequest
         return [...$this->textRules(), ...PostImageRules::rules()];
     }
 
+    // Bounded by bytes, not characters: the body lives in a TEXT column (65535 bytes), and MySQL
+    // rejects anything longer at insert time. The cap equals the column size, so no migrated value
+    // can be locked out of re-editing.
+    private const BODY_MAX_BYTES = 65535;
+
     /**
-     * The text fields, shared with editing (UpdateTopicRequest). No max length: OpenPNE 3
-     * community_topic name/body are TEXT with no validator limit.
+     * The text fields, shared with editing (UpdateTopicRequest).
      *
      * @return array<string, mixed>
      */
@@ -59,7 +64,7 @@ class StoreTopicRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string'],
-            'body' => ['required', 'string'],
+            'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             // op3 is never author-able: it exists only on bodies migrated from OpenPNE 3.
             'format' => ['sometimes', Rule::in([BodyFormat::Plain->value, BodyFormat::Markdown->value])],
         ];

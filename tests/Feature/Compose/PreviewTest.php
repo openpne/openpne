@@ -44,6 +44,14 @@ class PreviewTest extends TestCase
         $this->actingAs($member)->postJson('/compose/preview', [])->assertStatus(422)->assertJsonValidationErrors('body');
     }
 
+    public function test_a_body_over_the_text_column_byte_cap_is_rejected(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->postJson('/compose/preview', ['body' => str_repeat('a', 65536)])
+            ->assertStatus(422)->assertJsonValidationErrors('body');
+    }
+
     public function test_it_throttles_after_the_per_member_cap(): void
     {
         // Lower the per-member limit; keep the per-IP limb loose so the member cap is what trips.

@@ -57,6 +57,43 @@ class DiaryFormatAuthoringTest extends TestCase
         $this->assertDatabaseMissing('diaries', ['title' => 'Nope']);
     }
 
+    public function test_body_at_the_text_column_byte_cap_is_accepted(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->post('/diary/create', [
+            'title' => 'Max',
+            'body' => str_repeat('a', 65535),
+            'visibility' => '1',
+        ]);
+
+        $this->assertDatabaseHas('diaries', ['title' => 'Max']);
+    }
+
+    public function test_body_over_the_text_column_byte_cap_is_rejected(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->postJson('/diary/create', [
+            'title' => 'Over',
+            'body' => str_repeat('a', 65536),
+            'visibility' => '1',
+        ])->assertStatus(422)->assertJsonValidationErrors('body');
+    }
+
+    public function test_the_body_cap_counts_bytes_not_characters(): void
+    {
+        $member = Member::factory()->create();
+
+        // 21,846 three-byte characters = 65,538 bytes but only ~22k characters: a character-count
+        // rule would accept what the TEXT column rejects.
+        $this->actingAs($member)->postJson('/diary/create', [
+            'title' => 'Multibyte',
+            'body' => str_repeat('あ', 21846),
+            'visibility' => '1',
+        ])->assertStatus(422)->assertJsonValidationErrors('body');
+    }
+
     public function test_classic_show_renders_a_markdown_body(): void
     {
         config(['openpne.surface_mode' => 'classic_default']);

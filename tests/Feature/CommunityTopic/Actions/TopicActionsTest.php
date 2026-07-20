@@ -18,6 +18,7 @@ use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -91,6 +92,21 @@ class TopicActionsTest extends TestCase
         $this->assertSame('Edited', $fresh->name);
         $this->assertTrue($fresh->updated_at->greaterThan(now()->subMinute()));
         $this->assertTrue($fresh->topic_updated_at->greaterThan(now()->subMinute()));
+    }
+
+    public function test_update_topic_cannot_change_an_op3_rows_format(): void
+    {
+        $community = Community::factory()->create();
+        $author = $this->joined($community, CommunityRole::Member);
+        $topic = CommunityTopic::factory()->create([
+            'community_id' => $community->getKey(),
+            'member_id' => $author->getKey(),
+            'format' => BodyFormat::Op3,
+        ]);
+
+        app(UpdateTopic::class)($author, $topic, new CommunityTopicFormData('Edited', 'b', BodyFormat::Markdown), ImageEdit::none());
+
+        $this->assertSame(BodyFormat::Op3, $topic->fresh()->format);
     }
 
     public function test_update_topic_is_blocked_for_a_non_author_non_admin(): void

@@ -7,6 +7,7 @@ use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Community;
 use App\Models\Member;
+use App\Rules\MaxBytes;
 use App\Support\BodyFormat;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -19,6 +20,8 @@ use Illuminate\Validation\Rule;
  */
 class StoreEventRequest extends FormRequest
 {
+    private const BODY_MAX_BYTES = 65535;
+
     public function authorize(): bool
     {
         $community = $this->route('community');
@@ -56,9 +59,11 @@ class StoreEventRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // No max length: OpenPNE 3 name/body/area are TEXT with no validator limit.
             'name' => ['required', 'string'],
-            'body' => ['required', 'string'],
+            // Bounded by bytes, not characters: the body lives in a TEXT column (65535 bytes), and
+            // MySQL rejects anything longer at insert time. The cap equals the column size, so no
+            // migrated value can be locked out of re-editing.
+            'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
             'area' => ['required', 'string'],
             'open_date' => $this->openDateRules(),
             'open_date_comment' => ['string'],
