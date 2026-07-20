@@ -5,6 +5,7 @@ namespace Tests\Feature\Diary;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\BodyFormat;
+use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,6 +29,60 @@ class DiaryFormatAuthoringTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('diaries', ['title' => 'MD', 'format' => BodyFormat::Markdown->value]);
+    }
+
+    public function test_classic_new_form_shows_the_markdown_toggle(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/diary/new')
+            ->assertOk()
+            // The hidden field posts plain, so unchecking really switches a record back to plain.
+            ->assertSee('<input type="hidden" name="format" value="plain">', false)
+            ->assertSee('name="format" value="markdown"', false)
+            ->assertDontSee('value="markdown" checked', false); // unchecked on a fresh form
+    }
+
+    public function test_classic_edit_of_a_markdown_diary_checks_the_box_with_the_hidden_plain_field(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'format' => BodyFormat::Markdown]);
+
+        $this->actingAs($owner)->get("/diary/edit/{$diary->getKey()}")
+            ->assertOk()
+            ->assertSee('<input type="hidden" name="format" value="plain">', false)
+            ->assertSee('name="format" value="markdown" checked', false);
+    }
+
+    public function test_classic_edit_of_an_op3_diary_shows_the_note_and_no_format_input(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'format' => BodyFormat::Op3]);
+
+        $this->actingAs($owner)->get("/diary/edit/{$diary->getKey()}")
+            ->assertOk()
+            ->assertSee('OpenPNE 3') // the muted note (locale-independent fragment)
+            ->assertDontSee('name="format"', false); // no hidden field, no checkbox — absent preserves op3
+    }
+
+    public function test_unchecking_markdown_on_edit_switches_the_diary_back_to_plain(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create([
+            'member_id' => $owner->getKey(),
+            'format' => BodyFormat::Markdown,
+            'visibility' => Visibility::Members,
+        ]);
+
+        // Unchecked checkbox posts nothing; only the hidden field's plain reaches the server.
+        $this->actingAs($owner)->post("/diary/update/{$diary->getKey()}", [
+            'title' => $diary->title,
+            'body' => $diary->body,
+            'visibility' => '1',
+            'format' => 'plain',
+        ]);
+
+        $this->assertSame(BodyFormat::Plain, $diary->fresh()->format);
     }
 
     public function test_create_without_a_format_defaults_to_plain(): void

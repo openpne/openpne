@@ -9,7 +9,7 @@
             <form method="POST" action="{{ route('communityTopic.update', $topic) }}" enctype="multipart/form-data">
                 @csrf
                 <table>
-                    @include('community-topic._fields', ['name' => $topic->name, 'body' => $topic->body])
+                    @include('community-topic._fields', ['name' => $topic->name, 'body' => $topic->body, 'format' => $topic->format])
                     @if ($topic->images->isNotEmpty())
                         <tr>
                             <th>{{ __('Current images') }}</th>

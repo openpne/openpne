@@ -2,6 +2,8 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
+import { MarkdownPreview } from '@/components/markdown-preview';
+import { MarkdownToggle } from '@/components/markdown-toggle';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,7 @@ interface EditEvent {
     id: number;
     name: string;
     body: string;
+    format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
     openDate: string; // Y-m-d
     openDateComment: string;
     area: string;
@@ -32,6 +35,9 @@ export default function CommunityEventEdit() {
     const t = useT();
     const { community, event } = usePage<EditProps>().props;
     const isEdit = event !== null;
+    // op3 is a migration-only format with no author-facing editor: omit `format` so the update
+    // preserves it (an absent field preserves the current format server-side).
+    const isOp3 = event?.format === 'op3';
 
     const form = useForm({
         name: event?.name ?? '',
@@ -43,6 +49,7 @@ export default function CommunityEventEdit() {
         capacity: event?.capacity != null ? String(event.capacity) : '',
         images: [] as File[],
         remove_images: [] as number[],
+        ...(isOp3 ? {} : { format: (event?.format === 'markdown' ? 'markdown' : 'plain') as 'plain' | 'markdown' }),
     });
 
     const submit = (e: FormEvent) => {
@@ -92,6 +99,15 @@ export default function CommunityEventEdit() {
                     <Field label={t('Body')} htmlFor="body" error={form.errors.body}>
                         <Textarea id="body" required rows={8} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
                     </Field>
+
+                    {isOp3 ? (
+                        <p className="text-sm text-muted-foreground">{t('This entry keeps its OpenPNE 3 formatting.')}</p>
+                    ) : (
+                        <>
+                            <MarkdownToggle checked={form.data.format === 'markdown'} onChange={(on) => form.setData('format', on ? 'markdown' : 'plain')} />
+                            <MarkdownPreview body={form.data.body} enabled={form.data.format === 'markdown'} />
+                        </>
+                    )}
 
                     <CurrentImagesField images={event?.images ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />
 

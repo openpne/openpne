@@ -187,3 +187,94 @@ html body[data-scroll-locked] {
     text-decoration: underline;
     word-break: break-all;
 }
+
+/* Prose baseline for a Markdown body (MarkdownText output) on the Modern surface. Hand-rolled from
+   the existing tokens (light + dark switch through them), not @tailwindcss/typography. Tailwind
+   Preflight strips list markers and paragraph/heading spacing, so restore a modest amount — content
+   headings stay small enough not to shout over the page chrome. */
+.rich-body p {
+    margin: 0 0 0.75em;
+}
+.rich-body p:last-child {
+    margin-bottom: 0;
+}
+.rich-body ul,
+.rich-body ol {
+    margin: 0 0 0.75em;
+    padding-left: 1.5em;
+}
+.rich-body ul {
+    list-style: disc outside;
+}
+.rich-body ol {
+    list-style: decimal outside;
+}
+.rich-body li {
+    margin: 0.15em 0;
+}
+.rich-body blockquote {
+    margin: 0 0 0.75em;
+    padding: 0.1em 0 0.1em 0.9em;
+    border-left: 3px solid var(--color-border);
+    color: var(--color-muted-foreground);
+}
+.rich-body code {
+    padding: 0.1em 0.35em;
+    border-radius: var(--radius-field);
+    background: var(--color-muted);
+    font-size: 0.9em;
+}
+.rich-body pre {
+    margin: 0 0 0.75em;
+    padding: 0.7em 0.9em;
+    border-radius: var(--radius-field);
+    background: var(--color-muted);
+    overflow-x: auto;
+}
+.rich-body pre code {
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    font-size: 0.9em;
+}
+.rich-body h1 {
+    font-size: 1.5em;
+}
+.rich-body h2 {
+    font-size: 1.3em;
+}
+.rich-body h3 {
+    font-size: 1.15em;
+}
+.rich-body h4,
+.rich-body h5,
+.rich-body h6 {
+    font-size: 1em;
+}
+.rich-body h1,
+.rich-body h2,
+.rich-body h3,
+.rich-body h4,
+.rich-body h5,
+.rich-body h6 {
+    margin: 0.6em 0 0.4em;
+    font-weight: 600;
+    line-height: 1.3;
+}
+.rich-body table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 0 0 0.75em;
+    border-collapse: collapse;
+}
+.rich-body th,
+.rich-body td {
+    padding: 0.3em 0.6em;
+    border: 1px solid var(--color-border);
+}
+.rich-body th {
+    font-weight: 600;
+    background: var(--color-muted);
+}

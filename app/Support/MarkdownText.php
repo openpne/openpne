@@ -55,6 +55,29 @@ final class MarkdownText
         return mb_strimwidth($plain, 0, BodyText::EXCERPT_WIDTH, '');
     }
 
+    /**
+     * The full body flattened to plain text for a text/plain context (notification mail), with no
+     * width cut. Renders to HTML, turns <br> and block-element boundaries into newlines so the
+     * paragraph/list shape survives, then strips tags and decodes entities (strip_tags before decode,
+     * as in excerpt(), so a raw-HTML fragment the user typed reads back as they typed it). Runs of
+     * three-plus newlines collapse to a blank line.
+     */
+    public static function plainText(?string $text): string
+    {
+        $html = self::render($text)->toHtml();
+        // Strip only the newlines adjacent to <br> / a block-end tag (CommonMark's cosmetic ones);
+        // newlines inside a <pre> block are content and must survive.
+        $html = (string) preg_replace('~<br\s*/?>\s*~i', "\n", $html);
+        $html = (string) preg_replace('~</p>\s*~i', "\n\n", $html);
+        $html = (string) preg_replace('~</(?:li|h[1-6]|blockquote|tr|pre|ul|ol|table)>\s*~i', "\n", $html);
+
+        $plain = strip_tags($html);
+        $plain = html_entity_decode($plain, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $plain = (string) preg_replace("/\n{3,}/", "\n\n", $plain);
+
+        return trim($plain);
+    }
+
     private static function converter(): MarkdownConverter
     {
         if (self::$converter !== null) {

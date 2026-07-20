@@ -31,4 +31,18 @@ final class BodyRenderer
             BodyFormat::Plain, BodyFormat::Op3 => BodyText::excerpt($text),
         };
     }
+
+    /**
+     * The full body as plain text for a text/plain context (notification mail), so a Markdown body is
+     * not emailed as literal `**bold**` and an op3 body carries no `<op:*>` tags. Unlike excerpt() this
+     * keeps the whole body and its line structure — no width cut. Plain passes through unchanged.
+     */
+    public static function plainText(?string $text, BodyFormat $format): string
+    {
+        return match ($format) {
+            BodyFormat::Markdown => MarkdownText::plainText($text),
+            BodyFormat::Op3 => BodyText::stripDecoration($text),
+            BodyFormat::Plain => (string) $text,
+        };
+    }
 }

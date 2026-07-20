@@ -9,6 +9,7 @@ use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityMember;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -154,6 +155,7 @@ class CommunityEventRoutesTest extends TestCase
             'community_id' => $community->getKey(),
             'member_id' => $author->getKey(),
             'open_date' => now()->addWeek()->startOfDay(),
+            'format' => BodyFormat::Markdown,
         ]);
 
         $this->actingAs($author)
@@ -162,6 +164,8 @@ class CommunityEventRoutesTest extends TestCase
                 ->component('community/event/edit')
                 ->where('event.id', $event->getKey())
                 ->where('event.openDate', now()->addWeek()->format('Y-m-d'))
+                // The edit page drives its Markdown toggle from this prop (the slim edit shape must carry it).
+                ->where('event.format', 'markdown')
             );
     }
 

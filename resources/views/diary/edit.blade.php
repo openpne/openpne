@@ -27,6 +27,7 @@
                             @error('body')<p class="error">{{ $message }}</p>@enderror
                         </td>
                     </tr>
+                    @include('compose._format-toggle', ['format' => $diary->format])
                     <tr>
                         <th><label for="diary_visibility">{{ __('Visibility') }}</label></th>
                         <td>

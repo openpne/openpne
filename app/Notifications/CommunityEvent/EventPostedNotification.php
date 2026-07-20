@@ -7,6 +7,7 @@ use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\Member;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Support\BodyRenderer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -42,7 +43,9 @@ class EventPostedNotification extends Notification implements ShouldQueue
             'community_name' => $this->community->name,
             'topic_name' => $this->event->name,
             'nickname' => $this->author->name,
-            'body' => $this->event->body,
+            // Flatten to plain text: the mail is text/plain, so a Markdown body must not arrive as
+            // literal `**bold**` and an op3 body must carry no <op:*> tags.
+            'body' => BodyRenderer::plainText($this->event->body, $this->event->format),
             'url' => route('communityEvent.show', ['event' => $this->event->getKey()]),
         ]);
     }
