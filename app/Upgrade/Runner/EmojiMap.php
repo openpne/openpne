@@ -7,7 +7,7 @@ namespace App\Upgrade\Runner;
  * [s:N] (SoftBank). This table chains the OpenPNE 3 KtaiEmoji PUA tables
  * (lib/vendor/OpenPNE2/KtaiEmoji/{Docomo,Au,Softbank}.php) with Google's
  * emoji4unicode dataset (github.com/google/emoji4unicode,
- * data/emoji4unicode.xml @ 5019c2da); fallback (">"-prefixed) carrier entries
+ * data/emoji4unicode.xml @ 5019c2da8c4fa80286ae9cca7d89e062fb8704be); fallback (">"-prefixed) carrier entries
  * are excluded. Coverage: i 245/252, e 633/641, s 470/471 ids mapped — the
  * remainder are carrier brand glyphs with no Unicode equivalent and stay
  * literal at runtime.
