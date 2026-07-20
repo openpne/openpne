@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,6 +20,8 @@ class DiaryFactory extends Factory
             'title' => fake()->sentence(4),
             'body' => fake()->paragraphs(2, true),
             'visibility' => Visibility::Members,
+            // A make()d model carries no DB default, so pin the format the serializers read.
+            'format' => BodyFormat::Plain,
         ];
     }
 

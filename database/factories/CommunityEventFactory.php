@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -26,6 +27,8 @@ class CommunityEventFactory extends Factory
             'area' => fake()->city(),
             'application_deadline' => null,
             'capacity' => null,
+            // A make()d model carries no DB default, so pin the format the serializers read.
+            'format' => BodyFormat::Plain,
         ];
     }
 }

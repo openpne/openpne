@@ -58,6 +58,27 @@ class CommunityTopicRequestTest extends TestCase
             ->assertOk();
     }
 
+    public function test_create_accepts_a_markdown_format(): void
+    {
+        $community = Community::factory()->create();
+        $member = $this->joined($community);
+
+        $this->actingAs($member)
+            ->post("/_t/topics/{$community->getKey()}", ['name' => 'MD', 'body' => '**b**', 'format' => 'markdown'])
+            ->assertOk()
+            ->assertJsonPath('format', 'markdown');
+    }
+
+    public function test_create_rejects_the_op3_format(): void
+    {
+        $community = Community::factory()->create();
+        $member = $this->joined($community);
+
+        $this->actingAs($member)
+            ->post("/_t/topics/{$community->getKey()}", ['name' => 'MD', 'body' => 'x', 'format' => 'op3'])
+            ->assertSessionHasErrors('format');
+    }
+
     public function test_create_requires_a_name(): void
     {
         $community = Community::factory()->create();

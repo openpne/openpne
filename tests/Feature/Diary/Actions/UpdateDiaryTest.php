@@ -9,6 +9,7 @@ use App\Features\Diary\Exceptions\DiaryActionFailure;
 use App\Files\ImageEdit;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -30,6 +31,39 @@ class UpdateDiaryTest extends TestCase
             'title' => 'New title',
             'visibility' => Visibility::Private->value,
         ]);
+    }
+
+    public function test_applies_the_given_format_to_a_plain_row(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey()]); // plain by default
+        $data = new DiaryFormData('t', 'b', Visibility::Members, BodyFormat::Markdown);
+
+        app(UpdateDiary::class)($owner, $diary, $data, ImageEdit::none());
+
+        $this->assertSame(BodyFormat::Markdown, $diary->fresh()->format);
+    }
+
+    public function test_preserves_the_format_when_the_field_is_absent(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'format' => BodyFormat::Markdown]);
+        $data = new DiaryFormData('t', 'b', Visibility::Members); // format null
+
+        app(UpdateDiary::class)($owner, $diary, $data, ImageEdit::none());
+
+        $this->assertSame(BodyFormat::Markdown, $diary->fresh()->format);
+    }
+
+    public function test_cannot_change_an_op3_rows_format(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'format' => BodyFormat::Op3]);
+        $data = new DiaryFormData('t', 'b', Visibility::Members, BodyFormat::Markdown); // attempts a switch
+
+        app(UpdateDiary::class)($owner, $diary, $data, ImageEdit::none());
+
+        $this->assertSame(BodyFormat::Op3, $diary->fresh()->format);
     }
 
     public function test_non_owner_throws_not_author_and_leaves_db_unchanged(): void

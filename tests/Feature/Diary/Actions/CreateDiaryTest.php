@@ -5,6 +5,7 @@ namespace Tests\Feature\Diary\Actions;
 use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Data\DiaryFormData;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -37,6 +38,26 @@ class CreateDiaryTest extends TestCase
         $diary = app(CreateDiary::class)($author, $data);
 
         $this->assertSame(Visibility::Friends, $diary->visibility);
+    }
+
+    public function test_defaults_to_plain_format_when_none_is_given(): void
+    {
+        $author = Member::factory()->create();
+        $data = new DiaryFormData('Title', 'Body', Visibility::Members);
+
+        $diary = app(CreateDiary::class)($author, $data);
+
+        $this->assertSame(BodyFormat::Plain, $diary->fresh()->format);
+    }
+
+    public function test_stores_the_given_markdown_format(): void
+    {
+        $author = Member::factory()->create();
+        $data = new DiaryFormData('Title', 'Body', Visibility::Members, BodyFormat::Markdown);
+
+        $diary = app(CreateDiary::class)($author, $data);
+
+        $this->assertSame(BodyFormat::Markdown, $diary->fresh()->format);
     }
 
     public function test_accepts_long_title_beyond_varchar_limit(): void

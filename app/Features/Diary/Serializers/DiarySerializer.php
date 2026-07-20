@@ -9,7 +9,6 @@ use App\Models\DiaryImage;
 use App\Models\Member;
 use App\Support\BodyFormat;
 use App\Support\BodyRenderer;
-use App\Support\BodyText;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -27,7 +26,7 @@ class DiarySerializer
         return [
             'id' => $diary->getKey(),
             'title' => $diary->title,
-            'excerpt' => BodyText::excerpt($diary->body),
+            'excerpt' => BodyRenderer::excerpt($diary->body, $diary->format),
             'visibility' => $diary->visibility->slug(),
             // List/feed callers eager-load the counts; a single route-bound diary lazy-loads them
             // here so the values are never silently zero.
@@ -69,7 +68,7 @@ class DiarySerializer
         return [
             'id' => $diary->getKey(),
             'title' => $diary->title,
-            'excerpt' => BodyText::excerpt($diary->body),
+            'excerpt' => BodyRenderer::excerpt($diary->body, $diary->format),
             'body' => $diary->body,
             // bodyHtml is the server-rendered decoration HTML for a non-plain body, null for plain (the
             // client then renders body itself via the plain path); it is the only trusted-HTML prop.

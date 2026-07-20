@@ -19,6 +19,7 @@ use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityMember;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -49,6 +50,7 @@ class EventActionsTest extends TestCase
             area: $overrides['area'] ?? $event->area,
             application_deadline: $overrides['application_deadline'] ?? $event->application_deadline?->format('Y-m-d'),
             capacity: array_key_exists('capacity', $overrides) ? $overrides['capacity'] : $event->capacity,
+            format: $overrides['format'] ?? null,
         );
     }
 
@@ -116,6 +118,21 @@ class EventActionsTest extends TestCase
         $this->assertSame('Edited', $fresh->name);
         $this->assertTrue($fresh->updated_at->greaterThan(now()->subMinute()));
         $this->assertTrue($fresh->event_updated_at->greaterThan(now()->subMinute()));
+    }
+
+    public function test_update_event_cannot_change_an_op3_rows_format(): void
+    {
+        $community = Community::factory()->create();
+        $author = $this->joined($community, CommunityRole::Member);
+        $event = CommunityEvent::factory()->create([
+            'community_id' => $community->getKey(),
+            'member_id' => $author->getKey(),
+            'format' => BodyFormat::Op3,
+        ]);
+
+        app(UpdateEvent::class)($author, $event, $this->formData($event, ['format' => BodyFormat::Markdown]), ImageEdit::none());
+
+        $this->assertSame(BodyFormat::Op3, $event->fresh()->format);
     }
 
     public function test_update_event_scheduling_only_change_bumps_updated_at_not_event_updated_at(): void

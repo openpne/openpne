@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['community_id', 'member_id', 'name', 'body', 'event_updated_at', 'open_date', 'open_date_comment', 'area', 'application_deadline', 'capacity'])]
+#[Fillable(['community_id', 'member_id', 'name', 'body', 'event_updated_at', 'open_date', 'open_date_comment', 'area', 'application_deadline', 'capacity', 'format'])]
 class CommunityEvent extends Model
 {
     /** @use HasFactory<CommunityEventFactory> */
