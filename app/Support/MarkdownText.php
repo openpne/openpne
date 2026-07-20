@@ -65,6 +65,24 @@ final class MarkdownText
     public static function plainText(?string $text): string
     {
         $html = self::render($text)->toHtml();
+        // Keep link targets: strip_tags would reduce [label](url) to just the label, silently
+        // dropping the reference from a text/plain mail. A label that is the URL itself (autolink)
+        // stays a single URL; an unsafe-scheme link has no href after the sanitizer and keeps its
+        // label only (the regex does not match).
+        $html = (string) preg_replace_callback(
+            '~<a\b[^>]*\bhref="([^"]*)"[^>]*>(.*?)</a>~is',
+            function (array $m): string {
+                $href = html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $label = html_entity_decode(strip_tags($m[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if ($label === $href || "http://{$label}" === $href || "https://{$label}" === $href) {
+                    return $m[2];
+                }
+
+                // Re-escape: this value flows through the shared strip_tags + entity-decode below.
+                return $m[2].' ('.htmlspecialchars($href, ENT_QUOTES, 'UTF-8').')';
+            },
+            $html,
+        );
         // Strip only the newlines adjacent to <br> / a block-end tag (CommonMark's cosmetic ones);
         // newlines inside a <pre> block are content and must survive.
         $html = (string) preg_replace('~<br\s*/?>\s*~i', "\n", $html);

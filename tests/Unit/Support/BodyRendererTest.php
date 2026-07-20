@@ -64,4 +64,33 @@ class BodyRendererTest extends TestCase
         // List items land on their own lines (markers dropped in a text/plain context).
         $this->assertSame("one\ntwo", BodyRenderer::plainText("- one\n- two", BodyFormat::Markdown));
     }
+
+    public function test_plaintext_markdown_keeps_link_targets(): void
+    {
+        // A labeled link keeps its target — stripping to the bare label would drop the reference
+        // from a text/plain mail entirely.
+        $this->assertSame(
+            'OpenPNE (https://www.openpne.jp/)',
+            BodyRenderer::plainText('[OpenPNE](https://www.openpne.jp/)', BodyFormat::Markdown),
+        );
+        // An href with query entities decodes back to the typed URL.
+        $this->assertSame(
+            'docs (https://example.com/?a=1&b=2)',
+            BodyRenderer::plainText('[docs](https://example.com/?a=1&b=2)', BodyFormat::Markdown),
+        );
+        // An autolinked URL is not duplicated as "URL (URL)".
+        $this->assertSame(
+            'https://example.com/path',
+            BodyRenderer::plainText('https://example.com/path', BodyFormat::Markdown),
+        );
+        $this->assertSame(
+            'www.example.com',
+            BodyRenderer::plainText('www.example.com', BodyFormat::Markdown),
+        );
+        // An unsafe scheme loses its href at the sanitizer; only the label remains.
+        $this->assertSame(
+            'click',
+            BodyRenderer::plainText('[click](javascript:alert(1))', BodyFormat::Markdown),
+        );
+    }
 }

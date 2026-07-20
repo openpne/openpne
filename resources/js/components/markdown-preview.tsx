@@ -62,16 +62,23 @@ export function MarkdownPreview({ body, enabled }: { body: string; enabled: bool
     }
 
     return (
-        <div className="space-y-1">
+        // aria-busy marks the async refresh; the error line is a status region so a screen reader
+        // hears the failure (the rendered body itself is not announced — re-reading the whole
+        // preview on every debounce would be noise).
+        <div className="space-y-1" aria-busy={state === 'pending'}>
             <p className="text-xs font-medium text-muted-foreground">{t('Preview')}</p>
             {state === 'error' ? (
-                <p className="text-xs text-muted-foreground">{t('Preview unavailable.')}</p>
+                <p className="text-xs text-muted-foreground" role="status">
+                    {t('Preview unavailable.')}
+                </p>
+            ) : html !== null ? (
+                <div className={state === 'pending' ? 'opacity-60 transition-opacity' : undefined}>
+                    <RichBody body={body} bodyHtml={html} />
+                </div>
             ) : (
-                html !== null && (
-                    <div className={state === 'pending' ? 'opacity-60 transition-opacity' : undefined}>
-                        <RichBody body={body} bodyHtml={html} />
-                    </div>
-                )
+                <p className="text-xs text-muted-foreground" aria-hidden="true">
+                    …
+                </p>
             )}
         </div>
     );
