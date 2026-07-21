@@ -2,7 +2,8 @@
 
 Per-member preferences (OpenPNE 3's `member_config` grab-bag, retyped): a closed registry of
 keys, each stored at most once per member, surfaced for editing on the member config page
-(OpenPNE 3 `member/config`). The page is a dual-surface [feature module](feature-modules.md)
+(OpenPNE 3 `member/config`) — except `ComposeEditor`, which the Modern compose forms save in
+place via `compose.editor`. The page is a dual-surface [feature module](feature-modules.md)
 under [`app/Features/Member/`](../../app/Features/Member); the store is
 [`member_preferences`](../../database/migrations/2026_06_04_000000_create_member_preferences_table.php).
 
@@ -42,9 +43,10 @@ default applies to every member who has not made an explicit choice. The default
   `Rich`, never `null`. Read via [`Member::composeEditor(): ComposeEditor`](../../app/Models/Member.php),
   separate from `Member::preference()` to keep the value type at the call site.
 
-Writes go through `Member::setPreference()` / `setPreferredSurface()` (store an explicit value,
-even one equal to the default) and `resetPreference()` / `resetPreferredSurface()` (delete the
-row, back to default-following). `setPreference($default)` is **not** the same as a reset.
+Writes go through `Member::setPreference()` / `setPreferredSurface()` / `setComposeEditor()`
+(store an explicit value, even one equal to the default) and `resetPreference()` /
+`resetPreferredSurface()` (delete the row, back to default-following). `setPreference($default)`
+is **not** the same as a reset.
 
 ## The config page
 
@@ -113,9 +115,9 @@ such unique. All disposition of `member_config` names (migrated vs dropped) is r
 
 1. `PreferenceKey` is the only list of preferences; the case value is the stored `key`, and the
    codec branches on the case so keys may carry different value types.
-2. An absent row means "follow the default". A Visibility key's default is concrete;
-   `PreferredSurface`'s default is `null` (defer to the surface fallback). Reset deletes the row;
-   it is not `setPreference($default)`.
+2. An absent row means "follow the default". Visibility keys and `ComposeEditor` have concrete
+   defaults; `PreferredSurface`'s default is `null` (defer to the surface fallback). Reset deletes
+   the row; it is not `setPreference($default)`.
 3. The config page saves each section independently, so the diary section's read-time clamp is
    never written back. The surface section is binary; `updateSurface()` pins only an actual change
    (chosen ≠ current), keeping an unset member unset, and redirects to the canonical URL when the
