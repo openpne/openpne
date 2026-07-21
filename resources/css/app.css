@@ -278,3 +278,22 @@ html body[data-scroll-locked] {
     font-weight: 600;
     background: var(--color-muted);
 }
+
+/* WYSIWYG compose editor (rich-text-editor.tsx). The editable is a .rich-body, so it inherits the
+   prose baseline above; these rules add only the editing chrome the display path lacks. */
+.ProseMirror {
+    outline: none;
+    caret-color: var(--color-foreground);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+/* An image reference is kept as an inert chip: the server allowlist has no <img>, so the editor
+   never displays it, only preserves the ![alt](src) source. */
+.ProseMirror .md-image-chip {
+    display: inline-block;
+    padding: 0.05em 0.4em;
+    border-radius: var(--radius-field);
+    background: var(--color-muted);
+    color: var(--color-muted-foreground);
+    font-size: 0.9em;
+}
