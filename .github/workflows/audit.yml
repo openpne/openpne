@@ -1,26 +1,35 @@
-# Dependency vulnerability audit. composer audit and npm audit query advisory
-# databases, so the result is time-dependent: a newly published advisory can
-# turn this red on a PR that never touched dependencies. For that reason this
-# workflow is intentionally NOT in the branch-protection required-checks set —
-# it gives per-PR feedback and repeats weekly so an advisory published between
-# PRs still surfaces. Defense in depth: roave/security-advisories (require-dev)
-# already fails `composer install` on a vulnerable locked dependency in the CI
-# lanes; this adds a readable report on top. composer audit runs --locked, so
-# it audits the committed lock without installing.
+# Dependency vulnerability audit, two tiers. composer audit and npm audit query
+# advisory databases, so the result is time-dependent: a newly published advisory
+# can turn a check red on a PR that never touched dependencies. Policy:
+#
+#   - PR gate (job "Dependency audit"): fails only on high/critical (and
+#     unknown-severity, fail-closed) advisories — the ones worth stopping the
+#     line for. Low/medium advisories never block a PR, and abandoned packages
+#     are reported without failing the gate.
+#   - Scheduled full audit (daily): all severities plus abandoned packages. A
+#     failure files or updates a `dependency-audit` issue instead of painting
+#     commits red — and a clean run closes it — so the fix flows through a
+#     normal deps PR (Dependabot security updates are enabled).
+#
+# Defense in depth: roave/security-advisories (require-dev) already fails
+# `composer install` on a vulnerable locked dependency in the CI lanes; this
+# adds a readable report on top. composer audit runs --locked, so it audits the
+# committed lock without installing.
 name: Dependency audit
 
 on:
   pull_request:
   schedule:
-    - cron: '20 3 * * 1' # weekly, Monday 03:20 UTC
+    - cron: '20 3 * * *' # daily 03:20 UTC (12:20 JST)
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  audit:
+  gate:
     name: Dependency audit
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -32,12 +41,96 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Audit Composer dependencies (committed lock)
-        run: composer audit --locked
+      - name: Audit Composer dependencies (high/critical gate, committed lock)
+        # --abandoned=report: Composer 2.9 defaults to fail, which would let a
+        # mere abandonment (not a vulnerability) block unrelated PRs.
+        run: composer audit --locked --abandoned=report --ignore-severity=low --ignore-severity=medium
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '26'
 
-      - name: Audit npm dependencies
+      - name: Audit npm dependencies (high/critical gate)
         run: npm audit --audit-level=high
+
+  full-report:
+    name: Full audit (all severities)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Serialize schedule/dispatch runs: the create-or-comment step is a
+    # list-then-write race that could otherwise file duplicate issues.
+    concurrency:
+      group: dependency-audit-full-report
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.5'
+          coverage: none
+          tools: composer:v2
+
+      - name: Full Composer audit (committed lock)
+        id: composer
+        continue-on-error: true
+        run: composer audit --locked 2>&1 | tee composer-audit.txt
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26'
+
+      - name: Full npm audit
+        id: npm
+        continue-on-error: true
+        run: npm audit 2>&1 | tee npm-audit.txt
+
+      - name: File or update the dependency-audit issue
+        if: steps.composer.outcome == 'failure' || steps.npm.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Daily full-severity audit found advisories ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}))."
+            echo
+            echo "Low/medium findings do not block PRs — fix via a normal deps PR (Dependabot security updates are enabled)."
+            echo
+            if [ "${{ steps.composer.outcome }}" = "failure" ]; then
+              echo '## composer audit'
+              echo '```'
+              tail -n 200 composer-audit.txt
+              echo '```'
+            fi
+            if [ "${{ steps.npm.outcome }}" = "failure" ]; then
+              echo '## npm audit'
+              echo '```'
+              tail -n 200 npm-audit.txt
+              echo '```'
+            fi
+          } > issue-body.md
+          gh label create dependency-audit --description "Open advisories from the scheduled dependency audit" --color D93F0B --force
+          existing="$(gh issue list --label dependency-audit --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file issue-body.md
+          else
+            gh issue create --title "Dependency audit: open advisories on main" --label dependency-audit --body-file issue-body.md
+          fi
+
+      - name: Close the dependency-audit issue when clean
+        if: steps.composer.outcome == 'success' && steps.npm.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for issue in $(gh issue list --label dependency-audit --state open --json number --jq '.[].number'); do
+            gh issue close "$issue" --comment "Daily audit is clean again ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}))."
+          done
+
+      - name: Reflect the audit result
+        if: steps.composer.outcome == 'failure' || steps.npm.outcome == 'failure'
+        run: |
+          echo "Advisories found — see the dependency-audit issue."
+          exit 1
