@@ -6,6 +6,7 @@ import {
     useState,
     type ComponentType,
     type FocusEvent as ReactFocusEvent,
+    type KeyboardEvent as ReactKeyboardEvent,
     type ReactNode,
     type RefObject,
 } from 'react';
@@ -61,6 +62,26 @@ type RichTextEditorProps = {
 
 // Below Tailwind's md (768px): the compact layout trades the full sticky row for the mobile bottom bar.
 const COMPACT_QUERY = '(max-width: 767.98px)';
+
+const FOCUSABLE_SELECTOR =
+    'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable="true"]';
+
+/**
+ * The next tabbable element after `el` in document order. Because the bar is portalled to <body> (end
+ * of document), the tabbable right after the wrapper sentinel is the in-flow control that follows the
+ * editor (the "Edit as Markdown" button), not the portalled bar — so this is both the toolbar's forward
+ * escape target and the control whose focus should keep the bar mounted (for symmetric reverse entry).
+ */
+function nextTabbableAfter(el: HTMLElement | null): HTMLElement | null {
+    if (!el) {
+        return null;
+    }
+    const focusables = Array.from(document.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (node) => node === el || node.getClientRects().length > 0,
+    );
+    const index = focusables.indexOf(el);
+    return index >= 0 ? (focusables[index + 1] ?? null) : null;
+}
 
 // size-9 (36px) resting; pointer-coarse bumps every target to 44px (Apple HIG / Material touch floor).
 const TOOLBAR_BUTTON_CLASS =
@@ -559,16 +580,40 @@ function MobileToolbar({
     editor,
     metrics,
     rootRef,
+    sentinelRef,
     onOverlayOpenChange,
 }: {
     editor: Editor;
     metrics: ViewportMetrics;
     rootRef: RefObject<HTMLDivElement | null>;
+    sentinelRef: RefObject<HTMLSpanElement | null>;
     onOverlayOpenChange: (open: boolean) => void;
 }) {
     const t = useT();
     const actions = useToolbarActions(editor);
     const [barHeight, setBarHeight] = useState(56);
+
+    // Tab escape routes that compensate for the portal (the bar is not a DOM neighbour of the editor):
+    // Shift+Tab off the first control returns to the editable; Tab off the last control jumps to the
+    // in-flow control after the wrapper sentinel ("Edit as Markdown"). Forward/backward ENTRY is handled
+    // by the sentinel's onFocus in the parent. `:not([disabled])` so a disabled table op is never an edge.
+    const onKeyDown = (event: ReactKeyboardEvent) => {
+        if (event.key !== 'Tab') {
+            return;
+        }
+        const buttons = rootRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])');
+        if (!buttons || buttons.length === 0) {
+            return;
+        }
+        const activeEl = document.activeElement;
+        if (event.shiftKey && activeEl === buttons[0]) {
+            event.preventDefault();
+            editor.commands.focus();
+        } else if (!event.shiftKey && activeEl === buttons[buttons.length - 1]) {
+            event.preventDefault();
+            nextTabbableAfter(sentinelRef.current)?.focus();
+        }
+    };
 
     // Measure the bar (its height varies with the safe-area padding) so the top offset lands its bottom
     // edge exactly on the visual-viewport bottom. ResizeObserver keeps it correct as the safe-area
@@ -601,6 +646,7 @@ function MobileToolbar({
             aria-label={t('Editor toolbar')}
             data-testid="compose-mobile-toolbar"
             style={{ top: metrics.viewportBottom - barHeight }}
+            onKeyDown={onKeyDown}
             className={cn(
                 'fixed inset-x-0 z-40 border-t border-border bg-card px-2 py-1.5 shadow-elevated',
                 !metrics.keyboardOpen && 'pb-[calc(0.375rem+env(safe-area-inset-bottom))]',
@@ -677,6 +723,7 @@ export default function RichTextEditor({
     const isCompact = useIsCompact();
     const wrapperRef = useRef<HTMLDivElement>(null);
     const barPortalRef = useRef<HTMLDivElement>(null);
+    const sentinelRef = useRef<HTMLSpanElement>(null);
     const blurTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
     const [focusWithin, setFocusWithin] = useState(false);
     const [overlayOpen, setOverlayOpen] = useState(false);
@@ -690,11 +737,27 @@ export default function RichTextEditor({
     };
     const handleFocusOut = (event: ReactFocusEvent) => {
         const next = event.relatedTarget as Node | null;
-        if (next && (wrapperRef.current?.contains(next) || barPortalRef.current?.contains(next))) {
+        // Stayed within the editor surface (wrapper or portalled bar), or landed on the editor's
+        // immediate follow-control (the "Edit as Markdown" button after the sentinel) — keep the bar
+        // mounted so Shift+Tab can re-enter the toolbar regardless of the deactivation timer.
+        if (next && (wrapperRef.current?.contains(next) || barPortalRef.current?.contains(next) || next === nextTabbableAfter(sentinelRef.current))) {
             return;
         }
         clearTimeout(blurTimer.current);
         blurTimer.current = setTimeout(() => setFocusWithin(false), 100);
+    };
+
+    // Focus-order bridge for the portalled bar: Tab out of the editor lands on this in-flow sentinel,
+    // which forwards into the portalled toolbar (first button on forward entry from the editor; last
+    // control on backward entry via Shift+Tab from the following control). The bar's own keydown handles
+    // the reverse escapes. Rendered only while the bar is mounted, so it is never a stray tab stop.
+    const handleSentinelFocus = (event: ReactFocusEvent) => {
+        const buttons = barPortalRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])');
+        if (!buttons || buttons.length === 0) {
+            return;
+        }
+        const fromInsideWrapper = event.relatedTarget instanceof Node && wrapperRef.current?.contains(event.relatedTarget);
+        (fromInsideWrapper ? buttons[0] : buttons[buttons.length - 1])?.focus();
     };
 
     const mobileActive = isCompact && active;
@@ -705,7 +768,22 @@ export default function RichTextEditor({
             {editor && !isCompact && <DesktopToolbar editor={editor} />}
             {editor && <EditorContent editor={editor} />}
             {editor && mobileActive && (
-                <MobileToolbar editor={editor} metrics={viewport} rootRef={barPortalRef} onOverlayOpenChange={setOverlayOpen} />
+                <>
+                    <span
+                        ref={sentinelRef}
+                        data-testid="compose-focus-sentinel"
+                        tabIndex={0}
+                        onFocus={handleSentinelFocus}
+                        className="sr-only"
+                    />
+                    <MobileToolbar
+                        editor={editor}
+                        metrics={viewport}
+                        rootRef={barPortalRef}
+                        sentinelRef={sentinelRef}
+                        onOverlayOpenChange={setOverlayOpen}
+                    />
+                </>
             )}
         </div>
     );
