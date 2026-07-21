@@ -232,15 +232,18 @@ function MoreMenu({ editor, viewportHeight }: { editor: Editor; viewportHeight: 
     const inTable = editor.isActive('table');
 
     // Clamp the upward-opening panel to the visible band above the bar so it never spills past the top
-    // of the visual viewport when the keyboard is open. Available height = vv.height − bar height −
-    // margin (the panel scrolls internally past that). viewportHeight 0 = unknown → keep the CSS cap.
+    // of the visual viewport when the keyboard is open: min(60vh of the layout viewport, vv.height −
+    // bar height − margin), with no lower floor — a tiny visual viewport shrinks the panel to what
+    // fits and the panel scrolls internally. viewportHeight 0 = unknown → keep the CSS 60vh cap.
     useLayoutEffect(() => {
         if (!open) {
             return;
         }
         const bar = containerRef.current?.closest('[data-testid="compose-mobile-toolbar"]') as HTMLElement | null;
         const barHeight = bar?.offsetHeight ?? 0;
-        setMaxHeight(viewportHeight > 0 ? Math.max(140, viewportHeight - barHeight - 16) : undefined);
+        setMaxHeight(
+            viewportHeight > 0 ? Math.min(0.6 * window.innerHeight, viewportHeight - barHeight - 16) : undefined,
+        );
     }, [open, viewportHeight]);
 
     useEffect(() => {
