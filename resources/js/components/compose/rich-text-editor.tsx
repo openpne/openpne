@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import {
@@ -34,7 +34,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { composeEditorAttributes, createComposeEditorOptions } from '@/components/compose/editor-extensions';
-import { useVisualViewportBottom } from '@/components/compose/use-visual-viewport-bottom';
+import { useVisualViewport } from '@/components/compose/use-visual-viewport-bottom';
 
 type RichTextEditorProps = {
     initialMarkdown: string;
@@ -222,13 +222,26 @@ function MoreItem({
  * mousedown, so focus never leaves the contenteditable — the keyboard stays up and commands apply to
  * the live selection. Opens upward (bottom-full) since the bar sits at the viewport bottom.
  */
-function MoreMenu({ editor }: { editor: Editor }) {
+function MoreMenu({ editor, viewportHeight }: { editor: Editor; viewportHeight: number }) {
     const t = useT();
     const actions = useToolbarActions(editor);
     const [open, setOpen] = useState(false);
+    const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined);
     const containerRef = useRef<HTMLDivElement>(null);
     const panelId = useId();
     const inTable = editor.isActive('table');
+
+    // Clamp the upward-opening panel to the visible band above the bar so it never spills past the top
+    // of the visual viewport when the keyboard is open. Available height = vv.height − bar height −
+    // margin (the panel scrolls internally past that). viewportHeight 0 = unknown → keep the CSS cap.
+    useLayoutEffect(() => {
+        if (!open) {
+            return;
+        }
+        const bar = containerRef.current?.closest('[data-testid="compose-mobile-toolbar"]') as HTMLElement | null;
+        const barHeight = bar?.offsetHeight ?? 0;
+        setMaxHeight(viewportHeight > 0 ? Math.max(140, viewportHeight - barHeight - 16) : undefined);
+    }, [open, viewportHeight]);
 
     useEffect(() => {
         if (!open) {
@@ -275,6 +288,8 @@ function MoreMenu({ editor }: { editor: Editor }) {
             {open && (
                 <div
                     id={panelId}
+                    data-testid="compose-more-panel"
+                    style={{ maxHeight }}
                     className="absolute bottom-full right-0 z-50 mb-2 max-h-[60vh] w-60 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-lg"
                 >
                     <MoreItem label={t('Italic')} icon={Italic} pressed={actions.italic.active} onSelect={() => select(actions.italic.run)} />
@@ -380,7 +395,18 @@ function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (
             <ToolbarButton label={t('Link')} pressed={active} onClick={openDialog}>
                 <Link2 className="size-4" />
             </ToolbarButton>
-            <SheetContent closeLabel={t('Close')}>
+            <SheetContent
+                closeLabel={t('Close')}
+                // Hand focus back to the editable on every close path (Apply / × / ESC / overlay-tap).
+                // The default returns focus to the trigger, but on mobile the trigger lives in the
+                // bottom bar, which unmounts as the overlay closes — so focus would fall to <body> and
+                // the bar would not re-activate. Focusing the editor lands focus inside the wrapper and
+                // re-arms the focusin activation, keeping the bar mounted through the handoff.
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    editor.commands.focus();
+                }}
+            >
                 <DialogTitle className="text-base font-semibold">{t('Link')}</DialogTitle>
                 <form
                     className="mt-4 space-y-3"
@@ -511,7 +537,17 @@ function DesktopToolbar({ editor }: { editor: Editor }) {
  * keyboard) showing only the core four commands + a "More" overflow. `bottom` is the keyboard-covered
  * height; at rest (0) it pads for the home-indicator safe area.
  */
-function MobileToolbar({ editor, bottom, onOverlayOpenChange }: { editor: Editor; bottom: number; onOverlayOpenChange: (open: boolean) => void }) {
+function MobileToolbar({
+    editor,
+    bottom,
+    viewportHeight,
+    onOverlayOpenChange,
+}: {
+    editor: Editor;
+    bottom: number;
+    viewportHeight: number;
+    onOverlayOpenChange: (open: boolean) => void;
+}) {
     const t = useT();
     const actions = useToolbarActions(editor);
 
@@ -530,7 +566,7 @@ function MobileToolbar({ editor, bottom, onOverlayOpenChange }: { editor: Editor
             <ActionButton action={actions.h2} />
             <ActionButton action={actions.bulletList} />
             <LinkDialog editor={editor} onOpenChange={onOverlayOpenChange} />
-            <MoreMenu editor={editor} />
+            <MoreMenu editor={editor} viewportHeight={viewportHeight} />
         </div>
     );
 }
@@ -623,13 +659,20 @@ export default function RichTextEditor({
     }, []);
 
     const mobileActive = isCompact && active;
-    const bottom = useVisualViewportBottom(mobileActive);
+    const viewport = useVisualViewport(mobileActive);
 
     return (
         <div ref={wrapperRef} className="space-y-2">
             {editor && !isCompact && <DesktopToolbar editor={editor} />}
             {editor && <EditorContent editor={editor} />}
-            {editor && mobileActive && <MobileToolbar editor={editor} bottom={bottom} onOverlayOpenChange={setOverlayOpen} />}
+            {editor && mobileActive && (
+                <MobileToolbar
+                    editor={editor}
+                    bottom={viewport.bottom}
+                    viewportHeight={viewport.height}
+                    onOverlayOpenChange={setOverlayOpen}
+                />
+            )}
         </div>
     );
 }

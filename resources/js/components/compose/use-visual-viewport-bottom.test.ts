@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { computeViewportBottom, observeViewportBottom, type ViewportLike } from './use-visual-viewport-bottom.ts';
+import { computeViewportMetrics, observeViewportMetrics, type ViewportLike } from './use-visual-viewport-bottom.ts';
 
 /**
  * A driveable stand-in for window.visualViewport: mutable dimensions plus captured listeners the test
@@ -32,45 +32,57 @@ function mockViewport(init: { innerHeight: number; height: number; offsetTop?: n
 
 const flushFrame = () => new Promise((resolve) => setTimeout(resolve, 40));
 
-test('computeViewportBottom: keyboard closed → 0', () => {
-    assert.equal(computeViewportBottom({ innerHeight: 844, height: 844, offsetTop: 0 } as ViewportLike), 0);
+test('computeViewportMetrics: keyboard closed → bottom 0, band = full viewport', () => {
+    assert.deepEqual(computeViewportMetrics({ innerHeight: 844, height: 844, offsetTop: 0 } as ViewportLike), {
+        bottom: 0,
+        height: 844,
+        offsetTop: 0,
+    });
 });
 
-test('computeViewportBottom: keyboard open → covered height', () => {
-    assert.equal(computeViewportBottom({ innerHeight: 844, height: 544, offsetTop: 0 } as ViewportLike), 300);
+test('computeViewportMetrics: keyboard open → covered height + shrunken band', () => {
+    assert.deepEqual(computeViewportMetrics({ innerHeight: 844, height: 544, offsetTop: 0 } as ViewportLike), {
+        bottom: 300,
+        height: 544,
+        offsetTop: 0,
+    });
 });
 
-test('computeViewportBottom: offsetTop is subtracted', () => {
-    assert.equal(computeViewportBottom({ innerHeight: 844, height: 500, offsetTop: 44 } as ViewportLike), 300);
+test('computeViewportMetrics: offsetTop is subtracted from bottom and exposed', () => {
+    assert.deepEqual(computeViewportMetrics({ innerHeight: 844, height: 500, offsetTop: 44 } as ViewportLike), {
+        bottom: 300,
+        height: 500,
+        offsetTop: 44,
+    });
 });
 
-test('computeViewportBottom: clamps negative to 0', () => {
-    assert.equal(computeViewportBottom({ innerHeight: 844, height: 900, offsetTop: 0 } as ViewportLike), 0);
+test('computeViewportMetrics: clamps negative bottom to 0', () => {
+    assert.equal(computeViewportMetrics({ innerHeight: 844, height: 900, offsetTop: 0 } as ViewportLike).bottom, 0);
 });
 
-test('computeViewportBottom: missing viewport → 0', () => {
-    assert.equal(computeViewportBottom(null), 0);
-    assert.equal(computeViewportBottom(undefined), 0);
+test('computeViewportMetrics: missing viewport → zero', () => {
+    assert.deepEqual(computeViewportMetrics(null), { bottom: 0, height: 0, offsetTop: 0 });
+    assert.deepEqual(computeViewportMetrics(undefined), { bottom: 0, height: 0, offsetTop: 0 });
 });
 
-test('observeViewportBottom: reports the initial value synchronously', () => {
+test('observeViewportMetrics: reports the initial value synchronously', () => {
     const values: number[] = [];
-    const cleanup = observeViewportBottom(mockViewport({ innerHeight: 844, height: 544 }) as ViewportLike, (b) => values.push(b));
+    const cleanup = observeViewportMetrics(mockViewport({ innerHeight: 844, height: 544 }) as ViewportLike, (m) => values.push(m.bottom));
     assert.deepEqual(values, [300]);
     cleanup();
 });
 
-test('observeViewportBottom: missing viewport reports 0 once, cleanup is a no-op', () => {
+test('observeViewportMetrics: missing viewport reports zero once, cleanup is a no-op', () => {
     const values: number[] = [];
-    const cleanup = observeViewportBottom(null, (b) => values.push(b));
+    const cleanup = observeViewportMetrics(null, (m) => values.push(m.bottom));
     assert.deepEqual(values, [0]);
     assert.doesNotThrow(cleanup);
 });
 
-test('observeViewportBottom: resize updates the offset', async () => {
+test('observeViewportMetrics: resize updates the offset', async () => {
     const viewport = mockViewport({ innerHeight: 844, height: 844 });
     const values: number[] = [];
-    const cleanup = observeViewportBottom(viewport as ViewportLike, (b) => values.push(b));
+    const cleanup = observeViewportMetrics(viewport as ViewportLike, (m) => values.push(m.bottom));
     assert.deepEqual(values, [0]);
 
     viewport.height = 500; // keyboard opens
@@ -80,23 +92,23 @@ test('observeViewportBottom: resize updates the offset', async () => {
     cleanup();
 });
 
-test('observeViewportBottom: scroll updates the offset (offsetTop shift)', async () => {
+test('observeViewportMetrics: scroll updates the band (offsetTop shift)', async () => {
     const viewport = mockViewport({ innerHeight: 844, height: 500, offsetTop: 0 });
-    const values: number[] = [];
-    const cleanup = observeViewportBottom(viewport as ViewportLike, (b) => values.push(b));
-    assert.equal(values.at(-1), 344);
+    const bands: { bottom: number; offsetTop: number }[] = [];
+    const cleanup = observeViewportMetrics(viewport as ViewportLike, (m) => bands.push({ bottom: m.bottom, offsetTop: m.offsetTop }));
+    assert.deepEqual(bands.at(-1), { bottom: 344, offsetTop: 0 });
 
     viewport.offsetTop = 44;
     viewport.emit('scroll');
     await flushFrame();
-    assert.equal(values.at(-1), 300);
+    assert.deepEqual(bands.at(-1), { bottom: 300, offsetTop: 44 });
     cleanup();
 });
 
-test('observeViewportBottom: coalesces multiple events into one frame', async () => {
+test('observeViewportMetrics: coalesces multiple events into one frame', async () => {
     const viewport = mockViewport({ innerHeight: 844, height: 844 });
     let calls = 0;
-    const cleanup = observeViewportBottom(viewport as ViewportLike, () => {
+    const cleanup = observeViewportMetrics(viewport as ViewportLike, () => {
         calls += 1;
     });
     assert.equal(calls, 1); // initial
@@ -110,10 +122,10 @@ test('observeViewportBottom: coalesces multiple events into one frame', async ()
     cleanup();
 });
 
-test('observeViewportBottom: cleanup removes listeners and stops updates', async () => {
+test('observeViewportMetrics: cleanup removes listeners and stops updates', async () => {
     const viewport = mockViewport({ innerHeight: 844, height: 844 });
     let calls = 0;
-    const cleanup = observeViewportBottom(viewport as ViewportLike, () => {
+    const cleanup = observeViewportMetrics(viewport as ViewportLike, () => {
         calls += 1;
     });
     cleanup();

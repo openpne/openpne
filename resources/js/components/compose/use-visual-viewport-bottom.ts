@@ -14,6 +14,19 @@ export interface ViewportLike {
     removeEventListener(type: string, listener: () => void): void;
 }
 
+/**
+ * Derived viewport geometry for the bar. `bottom` is the keyboard-covered height the bar sits above;
+ * `height`/`offsetTop` describe the visible band so a popover can clamp itself inside it. `height` is
+ * 0 when no viewport is available (the consumer then falls back to its own cap).
+ */
+export interface ViewportMetrics {
+    readonly bottom: number;
+    readonly height: number;
+    readonly offsetTop: number;
+}
+
+const ZERO: ViewportMetrics = { bottom: 0, height: 0, offsetTop: 0 };
+
 // rAF-coalesce viewport events into one update per frame. Falls back to a timer where rAF is absent
 // (node --test), so the observe logic is testable without a DOM.
 const scheduleFrame: (cb: () => void) => number =
@@ -22,23 +35,30 @@ const cancelFrame: (id: number) => void =
     typeof cancelAnimationFrame === 'function' ? (id) => cancelAnimationFrame(id) : (id) => clearTimeout(id);
 
 /**
- * Pixels between the visual viewport's bottom edge and the layout viewport's bottom — i.e. the height
- * the keyboard (and any browser bottom chrome) covers. Clamped at 0; 0 when no viewport is available.
+ * Bottom offset (keyboard-covered height), clamped at 0, plus the visible band dimensions. 0/0/0 when
+ * no viewport is available.
  */
-export function computeViewportBottom(viewport: ViewportLike | null | undefined): number {
+export function computeViewportMetrics(viewport: ViewportLike | null | undefined): ViewportMetrics {
     if (!viewport) {
-        return 0;
+        return ZERO;
     }
-    return Math.max(0, viewport.innerHeight - viewport.height - viewport.offsetTop);
+    return {
+        bottom: Math.max(0, viewport.innerHeight - viewport.height - viewport.offsetTop),
+        height: viewport.height,
+        offsetTop: viewport.offsetTop,
+    };
 }
 
 /**
- * Report the bottom offset now and on every viewport resize/scroll (rAF-coalesced). Returns a cleanup
- * that removes the listeners and cancels any pending frame. A missing viewport reports 0 once and
+ * Report the metrics now and on every viewport resize/scroll (rAF-coalesced). Returns a cleanup that
+ * removes the listeners and cancels any pending frame. A missing viewport reports zero once and
  * subscribes to nothing.
  */
-export function observeViewportBottom(viewport: ViewportLike | null | undefined, onChange: (bottom: number) => void): () => void {
-    onChange(computeViewportBottom(viewport));
+export function observeViewportMetrics(
+    viewport: ViewportLike | null | undefined,
+    onChange: (metrics: ViewportMetrics) => void,
+): () => void {
+    onChange(computeViewportMetrics(viewport));
     if (!viewport) {
         return () => {};
     }
@@ -49,7 +69,7 @@ export function observeViewportBottom(viewport: ViewportLike | null | undefined,
         }
         frame = scheduleFrame(() => {
             frame = null;
-            onChange(computeViewportBottom(viewport));
+            onChange(computeViewportMetrics(viewport));
         });
     };
     viewport.addEventListener('resize', update);
@@ -85,22 +105,22 @@ function windowViewport(): ViewportLike | null {
 }
 
 /**
- * Track the keyboard-driven bottom offset for a viewport-anchored fixed bar. Only subscribes while
- * `active`; returns 0 (and tears down) otherwise. Pass `viewportOverride` in tests to drive it without
- * a browser — leave it undefined in production to read the real window (null when visualViewport is
- * missing → constant 0). The override must be referentially stable.
+ * Track the keyboard-driven viewport metrics for a viewport-anchored fixed bar. Only subscribes while
+ * `active`; returns zero (and tears down) otherwise. Pass `viewportOverride` in tests to drive it
+ * without a browser — leave it undefined in production to read the real window (null when
+ * visualViewport is missing → constant zero). The override must be referentially stable.
  */
-export function useVisualViewportBottom(active: boolean, viewportOverride?: ViewportLike | null): number {
-    const [bottom, setBottom] = useState(0);
+export function useVisualViewport(active: boolean, viewportOverride?: ViewportLike | null): ViewportMetrics {
+    const [metrics, setMetrics] = useState<ViewportMetrics>(ZERO);
 
     useEffect(() => {
         if (!active) {
-            setBottom(0);
+            setMetrics(ZERO);
             return;
         }
         const viewport = viewportOverride === undefined ? windowViewport() : viewportOverride;
-        return observeViewportBottom(viewport, setBottom);
+        return observeViewportMetrics(viewport, setMetrics);
     }, [active, viewportOverride]);
 
-    return active ? bottom : 0;
+    return active ? metrics : ZERO;
 }
