@@ -78,8 +78,8 @@ export function BodyField({
         // In rich mode `format` is always 'markdown' (the entering transition set it; nothing here
         // flips it back). `initialMarkdown` is the form value AT MOUNT and the switch never rewrites
         // the form value, so an unedited body submits unchanged — mount/parse fires no onChange
-        // (dirty-contract.test.ts); the form body only changes once the member edits. (Transport
-        // caveat shared with raw mode: multipart encoding normalizes LF to CRLF — body-text.md.)
+        // (dirty-contract.test.ts); the form body only changes once the member edits. A fileless
+        // save posts JSON, keeping the bytes stable end to end (body-text.md).
         // Accepted edge: raw→rich→raw with zero edits leaves format=markdown (the toggle shows it
         // checked, and the member can uncheck to revert).
         //

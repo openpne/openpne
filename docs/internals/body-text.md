@@ -89,10 +89,10 @@ block is [`BodyField`](../../resources/js/components/compose/body-field.tsx).
 
 An untouched body submits its form value unchanged — mounting the rich editor parses the stored
 body but fires no change signal — and after an edit the serializer's canonical Markdown
-normalization is accepted. One transport caveat predates the editor and applies to both modes:
-the compose forms post `multipart/form-data`, whose browser encoding normalizes bare LF to CRLF,
-so a legacy LF body grows by one byte per line break on its first save (stable afterwards; the
-renderer treats both identically). The rich editor's schema equals the
+normalization is accepted. A fileless save posts JSON, so it is byte-stable end to end; only a
+save with an image attached uses `multipart/form-data`, whose browser encoding normalizes bare
+LF to CRLF (one byte per line break, once; the renderer treats both identically). The rich
+editor's schema equals the
 server sanitizer allowlist (authoring a construct the sanitizer would strip would lose it on save):
 [`editor-extensions.ts`](../../resources/js/components/compose/editor-extensions.ts) is the SSoT.
 

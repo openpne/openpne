@@ -50,7 +50,9 @@ export default function DiaryEdit() {
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        post(`/diary/update/${diary.id}`, { forceFormData: true });
+                        // No forceFormData — a fileless save posts JSON, keeping LF byte-stable
+                        // (multipart normalizes LF to CRLF); Inertia auto-switches when a File is attached.
+                        post(`/diary/update/${diary.id}`);
                     }}
                     className="space-y-4"
                 >

@@ -55,9 +55,9 @@ export default function CommunityEventEdit() {
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        form.post(isEdit ? `/communityEvent/update/${event.id}` : `/communityEvent/create/${community.id}`, {
-            forceFormData: true,
-        });
+        // No forceFormData — a fileless save posts JSON, keeping LF byte-stable
+        // (multipart normalizes LF to CRLF); Inertia auto-switches when a File is attached.
+        form.post(isEdit ? `/communityEvent/update/${event.id}` : `/communityEvent/create/${community.id}`);
     };
 
     const toggleRemove = (imageId: number, remove: boolean) => {

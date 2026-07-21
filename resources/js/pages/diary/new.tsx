@@ -39,9 +39,10 @@ export default function DiaryNew({
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        // forceFormData: the upload needs a multipart body, which Inertia uses
-                        // automatically once a File is present but not for an initially-empty array.
-                        post('/diary/create', { forceFormData: true });
+                        // No forceFormData: Inertia switches to multipart only when a File is
+                        // attached. A fileless save posts JSON, keeping the body's LF line endings
+                        // byte-stable (multipart encoding normalizes LF to CRLF — body-text.md).
+                        post('/diary/create');
                     }}
                     className="space-y-4"
                 >
