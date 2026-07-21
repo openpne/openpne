@@ -232,6 +232,7 @@ class DiaryController extends Controller
                     fn (Visibility $option): array => ['value' => (string) $option->value, 'label' => $option->label()],
                     DiaryVisibility::options(),
                 ),
+                'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);
     }
@@ -260,6 +261,7 @@ class DiaryController extends Controller
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/edit', [
                 'diary' => DiarySerializer::detail($diary),
+                'composeEditor' => $viewer->composeEditor()->value,
             ]),
         ]);
     }

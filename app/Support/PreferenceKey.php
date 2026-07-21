@@ -14,7 +14,8 @@ use InvalidArgumentException;
  *
  * Most preferences are on the App\Support\Visibility scale (feature-scoped visibility defaults),
  * but the codec is value-type aware per case: PreferredSurface stores an App\Support\Surface and is
- * tri-state (an absent row means "no member choice", deferring to the SurfaceResolver fallback).
+ * tri-state (an absent row means "no member choice", deferring to the SurfaceResolver fallback),
+ * and ComposeEditor stores an App\Support\ComposeEditor with a concrete default (Rich).
  * Identity-bearing / hot-path member attributes (locale, screen name) live as typed `members`
  * columns instead, not here.
  */
@@ -29,6 +30,9 @@ enum PreferenceKey: string
     /** The member's durable Classic/Modern surface choice; absent = follow the tenant/session default. */
     case PreferredSurface = 'preferred_surface';
 
+    /** Which editor the Modern compose forms open with (App\Support\ComposeEditor); default Rich. */
+    case ComposeEditor = 'compose_editor';
+
     /** The OpenPNE 3 `member_config.name` this preference upgrades from, or null if it is OpenPNE 4-native. */
     public function op3SourceName(): ?string
     {
@@ -36,6 +40,7 @@ enum PreferenceKey: string
             self::DiaryDefaultVisibility => 'diary_public_flag',
             self::AgeVisibility => 'age_public_flag',
             self::PreferredSurface => null,
+            self::ComposeEditor => null,
         };
     }
 
@@ -56,27 +61,30 @@ enum PreferenceKey: string
      * Visibility keys carry a concrete fallback; PreferredSurface is tri-state, so its default is
      * null — "no member choice, defer to SurfaceResolver's session override / mode default".
      */
-    public function default(): Visibility|Surface|null
+    public function default(): Visibility|Surface|ComposeEditor|null
     {
         return match ($this) {
             self::DiaryDefaultVisibility => Visibility::Members,
             // Fail-closed, matching OpenPNE 3 Member::getAge() (PUBLIC_FLAG_PRIVATE fallback).
             self::AgeVisibility => Visibility::Private,
             self::PreferredSurface => null,
+            self::ComposeEditor => ComposeEditor::Rich,
         };
     }
 
     /** Decode the stored string `value` to the typed value; an absent/invalid value is the default. */
-    public function decode(?string $value): Visibility|Surface|null
+    public function decode(?string $value): Visibility|Surface|ComposeEditor|null
     {
         return match ($this) {
             self::DiaryDefaultVisibility, self::AgeVisibility => $this->decodeVisibility($value),
             self::PreferredSurface => $value === null ? null : Surface::tryFrom($value),
+            // Fail-closed to the default: a corrupt row reads as Rich, never null (this key is not tri-state).
+            self::ComposeEditor => $value === null ? ComposeEditor::Rich : (ComposeEditor::tryFrom($value) ?? ComposeEditor::Rich),
         };
     }
 
     /** Encode a typed value to the stored string `value`. */
-    public function encode(Visibility|Surface $value): string
+    public function encode(Visibility|Surface|ComposeEditor $value): string
     {
         return (string) $value->value;
     }

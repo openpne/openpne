@@ -9,6 +9,7 @@ use App\Features\CommunityEvent\CommunityEventCommentController;
 use App\Features\CommunityEvent\CommunityEventController;
 use App\Features\CommunityTopic\CommunityTopicCommentController;
 use App\Features\CommunityTopic\CommunityTopicController;
+use App\Features\Compose\EditorPreferenceController;
 use App\Features\Compose\PreviewController;
 use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
@@ -277,6 +278,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // same sanitized pipeline as a stored body. Throttled on its own limiter — a keystroke-driven
     // endpoint fires far more often than a post.
     Route::post('/compose/preview', [PreviewController::class, 'preview'])->middleware('throttle:preview')->name('compose.preview');
+    // The member's Rich/Markdown editor choice for the Modern compose forms, persisted by a
+    // fire-and-forget fetch (204, no body). Unthrottled, matching the /member/config/* preference POSTs.
+    Route::post('/compose/editor', [EditorPreferenceController::class, 'update'])->name('compose.editor');
     // The dashboard's community activity section, expanded. Modern-only (no OpenPNE 3 equivalent),
     // so it renders Inertia directly like /dashboard — not a surface twin.
     Route::get('/community/recent', [HomeController::class, 'communityActivity'])->name('community.recent');

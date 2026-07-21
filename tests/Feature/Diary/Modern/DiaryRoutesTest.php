@@ -5,6 +5,7 @@ namespace Tests\Feature\Diary\Modern;
 use App\Models\Diary;
 use App\Models\DiaryImage;
 use App\Models\Member;
+use App\Support\ComposeEditor;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -97,7 +98,17 @@ class DiaryRoutesTest extends TestCase
 
         $this->actingAs($member)
             ->get('/diary/new')
-            ->assertInertia(fn ($page) => $page->component('diary/new'));
+            ->assertInertia(fn ($page) => $page->component('diary/new')->where('composeEditor', 'rich'));
+    }
+
+    public function test_modern_new_reflects_a_stored_markdown_editor_preference(): void
+    {
+        $member = Member::factory()->create();
+        $member->setComposeEditor(ComposeEditor::Markdown);
+
+        $this->actingAs($member)
+            ->get('/diary/new')
+            ->assertInertia(fn ($page) => $page->component('diary/new')->where('composeEditor', 'markdown'));
     }
 
     public function test_modern_show_renders_inertia_component_with_diary_props(): void
@@ -182,7 +193,7 @@ class DiaryRoutesTest extends TestCase
 
         $this->actingAs($member)
             ->get("/diary/edit/{$diary->getKey()}")
-            ->assertInertia(fn ($page) => $page->component('diary/edit'));
+            ->assertInertia(fn ($page) => $page->component('diary/edit')->where('composeEditor', 'rich'));
     }
 
     public function test_modern_store_creates_diary_and_redirects_to_show(): void

@@ -154,6 +154,7 @@ class CommunityTopicRoutesTest extends TestCase
                 ->component('community/topic/edit')
                 ->where('community.id', $community->getKey())
                 ->where('topic', null)
+                ->where('composeEditor', 'rich')
             );
     }
 
@@ -196,6 +197,7 @@ class CommunityTopicRoutesTest extends TestCase
                 ->component('community/topic/edit')
                 ->where('topic.id', $topic->getKey())
                 ->where('community.id', $community->getKey())
+                ->where('composeEditor', 'rich')
             );
     }
 

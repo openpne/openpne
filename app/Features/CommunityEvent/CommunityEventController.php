@@ -121,6 +121,7 @@ class CommunityEventController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('community/event/edit', [
                 'community' => CommunitySerializer::summary($community),
                 'event' => null,
+                'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);
     }
@@ -162,6 +163,7 @@ class CommunityEventController extends Controller
                     'capacity' => $event->capacity,
                     'images' => $event->images->map([CommunityEventSerializer::class, 'image'])->all(),
                 ],
+                'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);
     }

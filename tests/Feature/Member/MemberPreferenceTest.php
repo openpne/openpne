@@ -3,6 +3,7 @@
 namespace Tests\Feature\Member;
 
 use App\Models\Member;
+use App\Support\ComposeEditor;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
 use App\Support\Visibility;
@@ -96,5 +97,32 @@ class MemberPreferenceTest extends TestCase
         $this->assertDatabaseMissing('member_preferences', [
             'member_id' => $member->id, 'key' => 'preferred_surface',
         ]);
+    }
+
+    public function test_compose_editor_reads_the_default_until_set_then_persists(): void
+    {
+        $member = Member::factory()->create();
+
+        // Concrete default (Rich), unlike the tri-state surface key.
+        $this->assertSame(ComposeEditor::Rich, $member->composeEditor());
+
+        $member->setComposeEditor(ComposeEditor::Markdown);
+
+        // No fresh(): setComposeEditor invalidates the cached relation, so the next read reloads.
+        $this->assertSame(ComposeEditor::Markdown, $member->composeEditor());
+        $this->assertDatabaseHas('member_preferences', [
+            'member_id' => $member->id, 'key' => 'compose_editor', 'value' => 'markdown',
+        ]);
+    }
+
+    public function test_setting_the_compose_editor_again_overwrites_the_single_row(): void
+    {
+        $member = Member::factory()->create();
+
+        $member->setComposeEditor(ComposeEditor::Markdown);
+        $member->setComposeEditor(ComposeEditor::Rich);
+
+        $this->assertSame(1, $member->preferences()->where('key', 'compose_editor')->count());
+        $this->assertSame(ComposeEditor::Rich, $member->composeEditor());
     }
 }
