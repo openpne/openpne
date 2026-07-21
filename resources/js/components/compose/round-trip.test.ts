@@ -4,6 +4,7 @@ import './test-dom.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Editor } from '@tiptap/core';
+import type { JSONContent } from '@tiptap/core';
 import { createComposeEditorOptions, parseMarkdown, serializeMarkdown } from './editor-extensions.ts';
 
 function makeEditor(): Editor {
@@ -29,6 +30,23 @@ function hasRawHtmlTag(md: string): boolean {
     return /<[A-Za-z]/.test(md);
 }
 
+/** The parsed document's plain text — used to assert what a construct becomes in the editor. */
+function docText(md: string): string {
+    parseMarkdown(editor, md);
+    return editor.getText().trim();
+}
+
+/** The joined text of each cell in the first table row of the parsed document. */
+function firstTableRowCells(md: string): string[] {
+    parseMarkdown(editor, md);
+    const doc: JSONContent = editor.getJSON();
+    const table = doc.content?.find((node) => node.type === 'table');
+    const row = table?.content?.[0];
+    return (row?.content ?? []).map((cell: JSONContent) =>
+        ((cell.content?.[0]?.content ?? []) as JSONContent[]).map((t) => t.text ?? '').join(''),
+    );
+}
+
 // ─── tier 1: exact preservation ────────────────────────────────────────────────────────────────
 
 for (const md of [
@@ -51,6 +69,8 @@ for (const md of [
     '3. three\n4. four',
     '> quote',
     '---',
+    // A task-like line inside a code block is not a list item: neutralization leaves it untouched.
+    '```\n- [ ] in code\n```',
 ]) {
     test(`tier-1 exact: ${JSON.stringify(md)}`, () => {
         assert.equal(roundTrip(md), md);
@@ -65,8 +85,17 @@ for (const md of [
     'Sub\n-----', // setext h2 → ATX
     '***', // asterisk hr → ---
     '| a | b |\n|:--|--:|\n| 1 | 2 |', // table with alignment colons
+    '| a \\| b | c |\n| --- | --- |\n| 1 | 2 |', // escaped pipe in a cell
     '> - one\n> - two', // blockquote containing a list
     'a\r\nb\r\nc', // CRLF input
+    '- [ ] task', // GFM task marker (unchecked)
+    '- [x] done', // GFM task marker (checked)
+    '- [ ] a\n- [x] b', // mixed task markers
+    '- [ ] outer\n  - [x] inner', // nested task markers
+    '![a\\]b](https://example.com/a.png "cap")', // image: escaped ] in alt + title
+    '![<b>x](https://e.com/y.png)', // image: <tag> in alt
+    '![k](https://e.com/x.png "t<i>")', // image: <tag> in title
+    '![a *b* c](https://e.com/z.png)', // image: emphasis chars in alt
 ]) {
     test(`tier-2 idempotent: ${JSON.stringify(md)}`, () => {
         const once = roundTrip(md);
@@ -90,12 +119,27 @@ test('tier-3: simple GFM table normalizes cell padding (demoted from tier-1)', (
     assert.equal(roundTrip('| A | B |\n| --- | --- |\n| 1 | 2 |'), '| A   | B   |\n| --- | --- |\n| 1   | 2   |');
 });
 
-test('tier-3: task-list marker is dropped (no TaskList extension)', () => {
-    assert.equal(roundTrip('- [ ] task'), '- task');
+test('tier-3: GFM task marker is kept as literal text (no TaskList node)', () => {
+    // The doc keeps the marker verbatim (parsing must not drop it), and the server — which also has no
+    // task-list extension — renders `- [ ] x` as the literal `[ ] x`.
+    assert.equal(docText('- [ ] task'), '[ ] task');
+    assert.equal(docText('- [x] done'), '[x] done');
+    // Serialized form escapes the brackets (`- \[ \] task`); the server renders that and `- [ ] task`
+    // to the identical visible `[ ] task` (verified against app/Support/MarkdownText.php), so escaping
+    // is not content loss.
+    assert.equal(roundTrip('- [ ] task'), '- \\[ \\] task');
+    assert.equal(roundTrip('- [x] done'), '- \\[x\\] done');
 });
 
-test('tier-3 (gate b): image source is preserved, not collapsed to alt text', () => {
+test('tier-3 (gate b): image source preserved, alt/title round-trip, syntax kept safe', () => {
+    // Plain image and a title round-trip exactly.
     assert.equal(roundTrip('![alt](https://example.com/x.png)'), '![alt](https://example.com/x.png)');
+    assert.equal(roundTrip('![alt](https://example.com/x.png "cap")'), '![alt](https://example.com/x.png "cap")');
+    // An escaped `]` in the alt stays escaped, so it can't close the alt early and expose image syntax.
+    assert.equal(roundTrip('![a\\]b](https://example.com/a.png "cap")'), '![a\\]b](https://example.com/a.png "cap")');
+    // `<tag>` in the alt is entity-encoded (no raw `<tag`, gate c) — not exact, but the server renders
+    // `![&lt;b&gt;x]` and `![<b>x]` to the identical visible alt (verified against MarkdownText.php).
+    assert.equal(roundTrip('![<b>x](https://e.com/y.png)'), '![&lt;b&gt;x](https://e.com/y.png)');
 });
 
 test('tier-3: Japanese text adjacent to a URL', () => {
@@ -115,12 +159,15 @@ test('tier-3 (gate a): raw inline HTML stays literal, serialized as escaped enti
     assert.equal(roundTrip('<strong>x</strong>'), '&lt;strong&gt;x&lt;/strong&gt;');
 });
 
-test('tier-3: escaped pipe in a table cell is not preserved (@tiptap/markdown 3.28.0 limitation)', () => {
-    // The vendor serializer unescapes `\|` inside a cell, so the construct does not round-trip and is
-    // not idempotent. Pinned to document the limitation; the server table renderer is authoritative
-    // for display. A rare construct — not worth forking the vendor for.
-    const out = roundTrip('| a \\| b | c |\n| --- | --- |\n| 1 | 2 |');
-    assert.ok(!out.includes('\\|'), 'the backslash-escape is lost');
+test('tier-3: escaped pipe in a table cell survives (structure + cell text preserved)', () => {
+    const md = '| a \\| b | c |\n| --- | --- |\n| 1 | 2 |';
+    // The input parses to a 2-column table whose first cell text is `a | b`.
+    assert.deepEqual(firstTableRowCells(md), ['a | b', 'c']);
+    const once = roundTrip(md);
+    // The serialized output re-parses to the SAME structure — so the server parses the same table
+    // instead of degrading it to a paragraph — and is idempotent on a second pass.
+    assert.deepEqual(firstTableRowCells(once), ['a | b', 'c']);
+    assert.equal(roundTrip(once), once);
 });
 
 // ─── tier 4: no raw HTML in serialized output (gate c) ───────────────────────────────────────────
@@ -155,6 +202,8 @@ for (const md of [
     '<strong>x</strong>',
     'a <em>b</em> c',
     '![alt](https://example.com/x.png)',
+    '![<b>x](https://e.com/y.png)', // <tag> in image alt
+    '![k](https://e.com/x.png "t<i>")', // <tag> in image title
     '- [ ] task',
     '[j](javascript:alert(1))',
     'https://example.com',

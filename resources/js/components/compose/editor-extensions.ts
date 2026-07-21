@@ -24,14 +24,26 @@
  *   (b) `![alt](src)` survives. With no Image extension the image token collapses to its alt text.
  *       MarkdownImage keeps the source: an inert inline chip in the editor (the server allowlist has
  *       no <img>, so it never displays), `![alt](src)` on serialize.
+ *   (c) Content the schema can't represent stays literal and re-renders identically on the server.
+ *       Two more marked constructs would otherwise be silently corrupted on the first edit+save (the
+ *       dirty rule only shields an unedited body): a GFM task item (`- [ ] x`) has its marker
+ *       stripped, and an escaped pipe in a table cell (`| a \| b |`) collapses the column structure.
+ *       markdownParser() keeps the task marker literal; the table serializer re-escapes cell pipes.
+ *       And every serializer here (image alt/src/title, cell text) escapes Markdown-significant
+ *       characters so nothing breaks structure or emits a raw `<tag` (verified against the server
+ *       renderer in round-trip.test.ts).
  */
 import { Node } from '@tiptap/core';
-import type { Editor, EditorOptions, Extensions, MarkdownToken } from '@tiptap/core';
+import type { Editor, EditorOptions, Extensions, MarkdownRendererHelpers, MarkdownToken } from '@tiptap/core';
 import { Markdown } from '@tiptap/markdown';
 import type { MarkdownExtensionOptions } from '@tiptap/markdown';
-import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
+import { renderTableToMarkdown, Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
-import { Marked } from 'marked';
+import { Marked, Tokenizer } from 'marked';
+import type { Tokens } from 'marked';
+
+/** marked's built-in list tokenizer, wrapped below to neutralise GFM task-item detection. */
+const originalListTokenizer = Tokenizer.prototype.list;
 
 /** Textarea chrome (mirrors components/ui/textarea.tsx) applied to the ProseMirror editable. */
 const EDITOR_CONTENT_CLASS =
@@ -57,12 +69,69 @@ function markdownParser(): NonNullable<MarkdownExtensionOptions['marked']> {
             tag() {
                 return undefined;
             },
+            // Undo GFM task-item detection so the marker survives — invariant (c). The server (no
+            // task-list extension) renders `- [ ] x` as the literal `[ ] x`, and the schema has no
+            // task node; letting marked strip the marker would lose it on the first save. Done at the
+            // tokenizer so a `[ ]` inside a code block (which is not a list item) is left untouched.
+            list(src) {
+                const token = originalListTokenizer.call(this, src);
+                if (token) {
+                    for (const item of token.items) {
+                        if (!item.task) {
+                            continue;
+                        }
+                        const marker: Tokens.Text = {
+                            type: 'text',
+                            raw: item.checked ? '[x] ' : '[ ] ',
+                            text: item.checked ? '[x] ' : '[ ] ',
+                        };
+                        item.task = false;
+                        item.checked = false;
+                        item.tokens = item.tokens.map((child) => (child.type === 'checkbox' ? marker : child));
+                    }
+                }
+                return token;
+            },
         },
     });
     // A private Marked instance is duck-compatible with how the manager uses `marked`
     // (lexer / setOptions / defaults); the option type additionally demands the module's static
     // surface the manager never touches.
     return parser as unknown as NonNullable<MarkdownExtensionOptions['marked']>;
+}
+
+// --- Markdown escaping for content the schema keeps as literal text (invariant c) ---
+
+/**
+ * Escape an image alt so it can't break out of `![...]` (brackets / backslash), start a code span
+ * (backtick), or emit a raw `<tag`. `<`/`>` become entities rather than backslash escapes because
+ * the gate-c contract forbids a `<` followed by a letter even when backslash-escaped.
+ */
+function escapeImageAlt(alt: string): string {
+    return alt.replace(/[\\`[\]]/g, '\\$&').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Serialize an image destination: backslash-escape the `()` / `\` delimiters and percent-encode the
+ * chars that would otherwise force an angle-bracket destination (`<url>` reads as a raw tag under
+ * gate c). A clean http(s) URL is returned unchanged.
+ */
+function serializeImageDestination(src: string): string {
+    return src
+        .replace(/[\\()]/g, '\\$&')
+        .replace(/</g, '%3C')
+        .replace(/>/g, '%3E')
+        .replace(/ /g, '%20');
+}
+
+/** Serialize an image title in double quotes, escaping the quote/backslash and `<`/`>` (gate c). */
+function serializeImageTitle(title: string): string {
+    return ` "${title.replace(/[\\"]/g, '\\$&').replace(/</g, '&lt;').replace(/>/g, '&gt;')}"`;
+}
+
+/** Escape every unescaped `|` in table-cell text so it can't be read as a column separator. */
+function escapeTableCellText(text: string): string {
+    return text.replace(/(?<!\\)\|/g, '\\|');
 }
 
 /**
@@ -98,10 +167,25 @@ const MarkdownImage = Node.create({
     },
 
     renderMarkdown(node) {
-        const alt = (node.attrs?.alt as string) ?? '';
-        const src = (node.attrs?.src as string) ?? '';
-        const title = node.attrs?.title ? ` "${node.attrs.title as string}"` : '';
+        const alt = escapeImageAlt((node.attrs?.alt as string) ?? '');
+        const src = serializeImageDestination((node.attrs?.src as string) ?? '');
+        const title = node.attrs?.title ? serializeImageTitle(node.attrs.title as string) : '';
         return `![${alt}](${src}${title})`;
+    },
+});
+
+/**
+ * Table with a serializer that re-escapes pipes in cell text — invariant (c). The vendor serializer
+ * emits cell text verbatim, so a `|` inside a cell (valid input, written `\|`) would be read as a
+ * column separator and collapse the table into a paragraph. Wrapping renderChildren re-escapes it.
+ */
+const ComposeTable = Table.extend({
+    renderMarkdown(node, helpers) {
+        const escapingHelpers: MarkdownRendererHelpers = {
+            ...helpers,
+            renderChildren: (nodes, ctx) => escapeTableCellText(helpers.renderChildren(nodes, ctx)),
+        };
+        return renderTableToMarkdown(node, escapingHelpers);
     },
 });
 
@@ -128,7 +212,7 @@ export function composeExtensions(): Extensions {
             // the compose field has no use for the click-below affordance.
             trailingNode: false,
         }),
-        Table.configure({ resizable: false }),
+        ComposeTable.configure({ resizable: false }),
         TableRow,
         // One block per cell keeps every cell Markdown-serialisable (a table row is a single line).
         TableHeader.extend({ content: 'paragraph' }),
