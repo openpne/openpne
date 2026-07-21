@@ -45,9 +45,13 @@ import type { Tokens } from 'marked';
 /** marked's built-in list tokenizer, wrapped below to neutralise GFM task-item detection. */
 const originalListTokenizer = Tokenizer.prototype.list;
 
-/** Textarea chrome (mirrors components/ui/textarea.tsx) applied to the ProseMirror editable. */
+/**
+ * Textarea chrome (mirrors components/ui/textarea.tsx) applied to the ProseMirror editable —
+ * except `block` where the textarea uses `flex`: on a contenteditable div, flex would lay the
+ * child block nodes (paragraphs, lists) out in a row, so Enter never visibly breaks the line.
+ */
 const EDITOR_CONTENT_CLASS =
-    'rich-body flex min-h-24 w-full rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/30 md:text-sm';
+    'rich-body block min-h-24 w-full rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/30 md:text-sm';
 
 /** True only for an http/https URL — the sanitizer's link-scheme allowlist, enforced at authoring. */
 function isHttpUrl(url: string): boolean {
