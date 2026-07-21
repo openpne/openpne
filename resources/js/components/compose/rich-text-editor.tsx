@@ -740,33 +740,44 @@ export default function RichTextEditor({
         setFocusWithin(true);
     };
 
-    // DEACTIVATION AUTHORITY (only while active): a document-level focusin listener. The portalled bar
-    // and the one grace control (the "Edit as Markdown" button after the sentinel, kept allowed so
-    // Shift+Tab reverse-entry stays deterministic) live outside the wrapper's React subtree, so their
-    // later blur is never observed by a wrapper onBlur — only a document listener sees focus land on the
-    // NEXT target. Focus outside the allowed set deactivates (short delay to survive Radix's link-sheet
-    // focus juggling); re-entry cancels the pending timer. This is why moving PAST the grace control
-    // (e.g. to #diary_visibility) correctly deactivates.
+    // DEACTIVATION AUTHORITY (only while active), document-level so it also sees departures from the
+    // portalled bar and the grace control, which the wrapper's React subtree cannot. Dual mechanism:
+    //   - focusout SCHEDULES the deactivation timer on EVERY focus departure — including blur-to-nowhere
+    //     (el.blur(), tapping non-focusable chrome, iOS keyboard "Done"), where activeElement becomes
+    //     <body> and NO focusin ever fires.
+    //   - focusin CANCELS it when focus lands back inside the allowed set: the wrapper, the portalled
+    //     bar, or the one grace control (the "Edit as Markdown" button after the sentinel, kept allowed
+    //     so Shift+Tab reverse-entry stays deterministic).
+    // Net: bar→grace = focusin cancels; grace→visibility = outside focusin never cancels, timer fires;
+    // blur-to-null = nothing cancels, timer fires. The 100ms delay lets Radix's link-sheet close refocus
+    // the editable in time (and overlayOpen pins the bar through the sheet's lifetime regardless).
     useEffect(() => {
         if (!mobileActive) {
             return;
         }
-        const onDocFocusIn = (event: FocusEvent) => {
-            const target = event.target;
+        const inAllowedSet = (target: EventTarget | null): boolean => {
             const grace = nextTabbableAfter(sentinelRef.current);
-            const inSet =
+            return (
                 target instanceof Node &&
                 (Boolean(wrapperRef.current?.contains(target)) ||
                     Boolean(barPortalRef.current?.contains(target)) ||
-                    (grace !== null && target === grace));
+                    (grace !== null && target === grace))
+            );
+        };
+        const onDocFocusOut = () => {
             clearTimeout(blurTimer.current);
-            if (!inSet) {
-                blurTimer.current = setTimeout(() => setFocusWithin(false), 100);
+            blurTimer.current = setTimeout(() => setFocusWithin(false), 100);
+        };
+        const onDocFocusIn = (event: FocusEvent) => {
+            if (inAllowedSet(event.target)) {
+                clearTimeout(blurTimer.current);
             }
         };
+        document.addEventListener('focusout', onDocFocusOut);
         document.addEventListener('focusin', onDocFocusIn);
         return () => {
             clearTimeout(blurTimer.current);
+            document.removeEventListener('focusout', onDocFocusOut);
             document.removeEventListener('focusin', onDocFocusIn);
         };
     }, [mobileActive]);
