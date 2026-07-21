@@ -119,6 +119,7 @@ class CommunityEventRoutesTest extends TestCase
                 ->component('community/event/edit')
                 ->where('community.id', $community->getKey())
                 ->where('event', null)
+                ->where('composeEditor', 'rich')
             );
     }
 
@@ -166,6 +167,7 @@ class CommunityEventRoutesTest extends TestCase
                 ->where('event.openDate', now()->addWeek()->format('Y-m-d'))
                 // The edit page drives its Markdown toggle from this prop (the slim edit shape must carry it).
                 ->where('event.format', 'markdown')
+                ->where('composeEditor', 'rich')
             );
     }
 

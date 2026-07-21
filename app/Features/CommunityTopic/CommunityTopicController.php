@@ -112,6 +112,7 @@ class CommunityTopicController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('community/topic/edit', [
                 'community' => CommunitySerializer::summary($community),
                 'topic' => null,
+                'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);
     }
@@ -141,6 +142,7 @@ class CommunityTopicController extends Controller
             SurfaceResolver::MODERN => fn () => Inertia::render('community/topic/edit', [
                 'community' => CommunitySerializer::summary($topic->community),
                 'topic' => CommunityTopicSerializer::detail($topic),
+                'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);
     }

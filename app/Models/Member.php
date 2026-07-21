@@ -7,6 +7,7 @@ use App\Notifications\Auth\ResetPasswordNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use App\Support\AvatarColor;
+use App\Support\ComposeEditor;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
 use App\Support\Visibility;
@@ -211,12 +212,29 @@ class Member extends Authenticatable
         $this->resetPreference(PreferenceKey::PreferredSurface);
     }
 
+    /**
+     * The member's compose-editor choice, or the registry default (Rich) when unset. Separate from
+     * preference() so the ComposeEditor value type stays type-safe at the call site.
+     */
+    public function composeEditor(): ComposeEditor
+    {
+        $value = PreferenceKey::ComposeEditor->decode($this->storedPreference(PreferenceKey::ComposeEditor));
+        assert($value instanceof ComposeEditor);
+
+        return $value;
+    }
+
+    public function setComposeEditor(ComposeEditor $editor): void
+    {
+        $this->writePreference(PreferenceKey::ComposeEditor, $editor);
+    }
+
     private function storedPreference(PreferenceKey $key): ?string
     {
         return $this->preferences->firstWhere('key', $key->value)?->value;
     }
 
-    private function writePreference(PreferenceKey $key, Visibility|Surface $value): void
+    private function writePreference(PreferenceKey $key, Visibility|Surface|ComposeEditor $value): void
     {
         $this->preferences()->updateOrCreate(
             ['key' => $key->value],
