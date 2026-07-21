@@ -87,7 +87,25 @@ function markdownParser(): NonNullable<MarkdownExtensionOptions['marked']> {
                         };
                         item.task = false;
                         item.checked = false;
-                        item.tokens = item.tokens.map((child) => (child.type === 'checkbox' ? marker : child));
+                        const checkboxIndex = item.tokens.findIndex((child) => child.type === 'checkbox');
+                        if (checkboxIndex === -1) {
+                            continue;
+                        }
+                        // Fold the marker into the first text/paragraph block after the checkbox by
+                        // mutating its inline `tokens` array IN PLACE — marked's deferred inline pass
+                        // holds a reference to that array, so reassigning it would drop the marker. This
+                        // keeps a loose item's marker inside its first paragraph instead of emitting it
+                        // as a standalone paragraph.
+                        const content = item.tokens.find(
+                            (child, index) => index > checkboxIndex && (child.type === 'paragraph' || child.type === 'text'),
+                        ) as Tokens.Paragraph | Tokens.Text | undefined;
+                        if (content && Array.isArray(content.tokens)) {
+                            content.tokens.unshift(marker);
+                            item.tokens = item.tokens.filter((child) => child.type !== 'checkbox');
+                        } else {
+                            // No following text (e.g. `- [ ]` alone): keep the marker as a literal sibling.
+                            item.tokens = item.tokens.map((child) => (child.type === 'checkbox' ? marker : child));
+                        }
                     }
                 }
                 return token;
@@ -129,9 +147,15 @@ function serializeImageTitle(title: string): string {
     return ` "${title.replace(/[\\"]/g, '\\$&').replace(/</g, '&lt;').replace(/>/g, '&gt;')}"`;
 }
 
-/** Escape every unescaped `|` in table-cell text so it can't be read as a column separator. */
+/**
+ * Escape every unescaped `|` in table-cell text so it can't be read as a column separator. A pipe is
+ * unescaped only when preceded by an EVEN-length run of backslashes (each pair is one literal `\`); an
+ * odd run means the pipe is already escaped. A lookbehind (`(?<!\\)`) can't tell the two apart.
+ */
 function escapeTableCellText(text: string): string {
-    return text.replace(/(?<!\\)\|/g, '\\|');
+    return text.replace(/(\\*)\|/g, (match, backslashes: string) =>
+        backslashes.length % 2 === 0 ? `${backslashes}\\|` : match,
+    );
 }
 
 /**

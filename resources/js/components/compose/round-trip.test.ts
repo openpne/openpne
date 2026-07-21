@@ -47,6 +47,17 @@ function firstTableRowCells(md: string): string[] {
     );
 }
 
+/** The text of each paragraph in the first list item of the parsed document. */
+function firstListItemParagraphs(md: string): string[] {
+    parseMarkdown(editor, md);
+    const doc: JSONContent = editor.getJSON();
+    const list = doc.content?.find((node) => node.type === 'bulletList' || node.type === 'orderedList');
+    const item = list?.content?.[0];
+    return (item?.content ?? [])
+        .filter((node) => node.type === 'paragraph')
+        .map((para) => (para.content ?? []).map((t) => t.text ?? '').join(''));
+}
+
 // ─── tier 1: exact preservation ────────────────────────────────────────────────────────────────
 
 for (const md of [
@@ -86,12 +97,19 @@ for (const md of [
     '***', // asterisk hr → ---
     '| a | b |\n|:--|--:|\n| 1 | 2 |', // table with alignment colons
     '| a \\| b | c |\n| --- | --- |\n| 1 | 2 |', // escaped pipe in a cell
+    '| a \\\\\\| b | c |\n| --- | --- |\n| 1 | 2 |', // literal backslash + pipe in a cell
+    '| a\\|b\\|c | d |\n| --- | --- |\n| 1 | 2 |', // adjacent escaped pipes in a cell
+    '| `x|y` | z |\n| --- | --- |\n| 1 | 2 |', // pipe inside a code span in a cell
+    '| [a\\|b](https://e.com) | z |\n| --- | --- |\n| 1 | 2 |', // escaped pipe inside a link
+    '| *a\\|b* | z |\n| --- | --- |\n| 1 | 2 |', // escaped pipe inside emphasis
     '> - one\n> - two', // blockquote containing a list
     'a\r\nb\r\nc', // CRLF input
     '- [ ] task', // GFM task marker (unchecked)
     '- [x] done', // GFM task marker (checked)
     '- [ ] a\n- [x] b', // mixed task markers
     '- [ ] outer\n  - [x] inner', // nested task markers
+    '- [ ] loose\n\n  second paragraph', // loose task item + continuation
+    '- [ ] a\n\n  cont\n- [x] b', // mixed loose/tight task items
     '![a\\]b](https://example.com/a.png "cap")', // image: escaped ] in alt + title
     '![<b>x](https://e.com/y.png)', // image: <tag> in alt
     '![k](https://e.com/x.png "t<i>")', // image: <tag> in title
@@ -167,6 +185,26 @@ test('tier-3: escaped pipe in a table cell survives (structure + cell text prese
     // The serialized output re-parses to the SAME structure — so the server parses the same table
     // instead of degrading it to a paragraph — and is idempotent on a second pass.
     assert.deepEqual(firstTableRowCells(once), ['a | b', 'c']);
+    assert.equal(roundTrip(once), once);
+});
+
+test('tier-3: literal backslash + pipe in a table cell survives (backslash-run parity)', () => {
+    // Cell source `a \\\| b` = a literal backslash (`\\`) + a literal pipe (`\|`); server cell `a \| b`.
+    // A lookbehind would miss the pipe (it sees one preceding backslash) and split the column.
+    const md = '| a \\\\\\| b | c |\n| --- | --- |\n| 1 | 2 |';
+    assert.deepEqual(firstTableRowCells(md), ['a \\| b', 'c']);
+    const once = roundTrip(md);
+    assert.deepEqual(firstTableRowCells(once), ['a \\| b', 'c']);
+    assert.equal(roundTrip(once), once);
+});
+
+test('tier-3: loose task item keeps the marker inside its first paragraph', () => {
+    const md = '- [ ] loose\n\n  second paragraph';
+    // The parsed item is 2 paragraphs with the marker in the first (previously it split into 3, the
+    // marker becoming its own paragraph). Server renders the same 2-paragraph item.
+    assert.deepEqual(firstListItemParagraphs(md), ['[ ] loose', 'second paragraph']);
+    const once = roundTrip(md);
+    assert.deepEqual(firstListItemParagraphs(once), ['[ ] loose', 'second paragraph']);
     assert.equal(roundTrip(once), once);
 });
 
