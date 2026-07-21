@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import {
@@ -31,7 +31,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { createComposeEditorOptions } from '@/components/compose/editor-extensions';
+import { composeEditorAttributes, createComposeEditorOptions } from '@/components/compose/editor-extensions';
 
 type RichTextEditorProps = {
     initialMarkdown: string;
@@ -303,28 +303,36 @@ export default function RichTextEditor({
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
 
-    const [baseOptions] = useState(() => {
-        const attributes: Record<string, string> = { 'aria-label': label };
-        if (id) {
-            attributes.id = id;
-        }
-        if (ariaRequired) {
-            attributes['aria-required'] = 'true';
-        }
-        if (ariaInvalid) {
-            attributes['aria-invalid'] = 'true';
-        }
-        if (ariaDescribedby) {
-            attributes['aria-describedby'] = ariaDescribedby;
-        }
-        return createComposeEditorOptions({
+    const attributes: Record<string, string> = { 'aria-label': label };
+    if (id) {
+        attributes.id = id;
+    }
+    if (ariaRequired) {
+        attributes['aria-required'] = 'true';
+    }
+    if (ariaInvalid) {
+        attributes['aria-invalid'] = 'true';
+    }
+    if (ariaDescribedby) {
+        attributes['aria-describedby'] = ariaDescribedby;
+    }
+
+    const [baseOptions] = useState(() =>
+        createComposeEditorOptions({
             initialMarkdown,
             onChange: (md) => onChangeRef.current(md),
             attributes,
-        });
-    });
+        }),
+    );
 
     const editor = useEditor({ ...baseOptions, immediatelyRender: false, shouldRerenderOnTransaction: true });
+
+    // The construction-time attributes are read once; push changes (a validation error arriving
+    // after mount must toggle aria-invalid/aria-describedby on the live editable).
+    const attributesKey = JSON.stringify(attributes);
+    useEffect(() => {
+        editor?.setOptions({ editorProps: { attributes: composeEditorAttributes(JSON.parse(attributesKey) as Record<string, string>) } });
+    }, [editor, attributesKey]);
 
     return (
         <div className="space-y-2">

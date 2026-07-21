@@ -251,6 +251,17 @@ export function composeExtensions(): Extensions {
     ];
 }
 
+/**
+ * The full editable-element attribute map (chrome class + caller attributes). Exported so the
+ * component can push updated aria-* attributes into a live editor via editor.setOptions — the
+ * attributes handed to createComposeEditorOptions are only read at construction. The explicit
+ * textbox role is what permits aria-label/aria-required on the contenteditable (axe
+ * aria-allowed-attr; contenteditable has no implicit role).
+ */
+export function composeEditorAttributes(attributes?: Record<string, string>): Record<string, string> {
+    return { class: EDITOR_CONTENT_CLASS, role: 'textbox', 'aria-multiline': 'true', ...attributes };
+}
+
 /** Parse Markdown into the editor without emitting an update (isolates the early-release API). */
 export function parseMarkdown(editor: Editor, md: string): void {
     editor.commands.setContent(md, { contentType: 'markdown', emitUpdate: false });
@@ -279,10 +290,7 @@ export function createComposeEditorOptions(opts: {
         content: initialMarkdown,
         contentType: 'markdown',
         editorProps: {
-            attributes: {
-                class: EDITOR_CONTENT_CLASS,
-                ...attributes,
-            },
+            attributes: composeEditorAttributes(attributes),
         },
         onUpdate: ({ editor, transaction }) => {
             // docChanged is the dirty signal for the host form; a bare selection move is not an edit.

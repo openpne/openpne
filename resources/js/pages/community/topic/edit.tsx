@@ -1,6 +1,7 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { BodyField } from '@/components/compose/body-field';
+import { initialComposeFormat, type RecordFormat } from '@/components/compose/editor-mode';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
@@ -14,22 +15,24 @@ import type { CommunitySummary, TopicDetail } from '../types';
 interface EditProps extends PageProps {
     community: CommunitySummary;
     topic: TopicDetail | null; // null = create mode
+    composeEditor: 'rich' | 'markdown';
 }
 
 export default function CommunityTopicEdit() {
     const t = useT();
-    const { community, topic } = usePage<EditProps>().props;
+    const { community, topic, composeEditor } = usePage<EditProps>().props;
     const isEdit = topic !== null;
-    // op3 is a migration-only format with no author-facing editor: omit `format` so the update
-    // preserves it (an absent field preserves the current format server-side).
-    const isOp3 = topic?.format === 'op3';
+    // op3 is a migration-only format with no author-facing editor: initialComposeFormat returns
+    // undefined so `format` is omitted from the form, and the update preserves the stored format.
+    const recordFormat = topic?.format as RecordFormat | undefined;
+    const format = initialComposeFormat(composeEditor, recordFormat);
 
     const form = useForm({
         name: topic?.name ?? '',
         body: topic?.body ?? '',
         images: [] as File[],
         remove_images: [] as number[],
-        ...(isOp3 ? {} : { format: (topic?.format === 'markdown' ? 'markdown' : 'plain') as 'plain' | 'markdown' }),
+        ...(format === undefined ? {} : { format }),
     });
 
     const submit = (e: FormEvent) => {
@@ -64,8 +67,10 @@ export default function CommunityTopicEdit() {
                         error={form.errors.body}
                         rows={10}
                         required
-                        format={isOp3 ? undefined : form.data.format}
+                        format={form.data.format}
                         onFormatChange={(format) => form.setData('format', format)}
+                        editorPreference={composeEditor}
+                        recordFormat={recordFormat}
                     />
 
                     <CurrentImagesField images={topic?.images ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />

@@ -1,5 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { BodyField } from '@/components/compose/body-field';
+import { initialComposeFormat, type RecordFormat } from '@/components/compose/editor-mode';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
@@ -13,14 +14,16 @@ import type { DiaryDetail } from './types';
 
 interface EditProps extends PageProps {
     diary: DiaryDetail;
+    composeEditor: 'rich' | 'markdown';
 }
 
 export default function DiaryEdit() {
     const t = useT();
-    const { diary } = usePage<EditProps>().props;
-    // op3 is a migration-only format with no author-facing editor: omit `format` entirely so the
-    // update preserves it (an absent field preserves the current format server-side).
-    const isOp3 = diary.format === 'op3';
+    const { diary, composeEditor } = usePage<EditProps>().props;
+    // op3 is a migration-only format with no author-facing editor: initialComposeFormat returns
+    // undefined so `format` is omitted from the form, and the update preserves the stored format.
+    const recordFormat = diary.format as RecordFormat;
+    const format = initialComposeFormat(composeEditor, recordFormat);
     const { data, setData, post, errors, processing } = useForm({
         title: diary.title,
         body: diary.body,
@@ -29,7 +32,7 @@ export default function DiaryEdit() {
         ),
         images: [] as File[],
         remove_images: [] as number[],
-        ...(isOp3 ? {} : { format: (diary.format === 'markdown' ? 'markdown' : 'plain') as 'plain' | 'markdown' }),
+        ...(format === undefined ? {} : { format }),
     });
 
     const toggleRemove = (id: number, remove: boolean) =>
@@ -63,8 +66,10 @@ export default function DiaryEdit() {
                         error={errors.body}
                         rows={10}
                         required
-                        format={isOp3 ? undefined : data.format}
+                        format={data.format}
                         onFormatChange={(format) => setData('format', format)}
+                        editorPreference={composeEditor}
+                        recordFormat={recordFormat}
                     />
 
                     <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
@@ -79,7 +84,7 @@ export default function DiaryEdit() {
 
                     <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 
-                    <Button type="submit" loading={processing}>
+                    <Button type="submit" loading={processing} disabled={data.body.trim() === ''}>
                         {t('Save')}
                     </Button>
                 </form>
