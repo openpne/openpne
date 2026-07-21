@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use App\Support\ComposeEditor;
 use App\Support\PreferenceKey;
 use App\Support\Surface;
 use App\Support\Visibility;
@@ -23,9 +24,13 @@ class PreferenceKeyTest extends TestCase
 
     public function test_native_keys_have_no_op3_source_and_are_not_upgradable(): void
     {
-        // PreferredSurface is OpenPNE 4-native: no member_config source, so it never enters the upgrade.
+        // PreferredSurface and ComposeEditor are OpenPNE 4-native: no member_config source, so they
+        // never enter the upgrade.
         $this->assertNull(PreferenceKey::PreferredSurface->op3SourceName());
         $this->assertNotContains(PreferenceKey::PreferredSurface, PreferenceKey::upgradableCases());
+
+        $this->assertNull(PreferenceKey::ComposeEditor->op3SourceName());
+        $this->assertNotContains(PreferenceKey::ComposeEditor, PreferenceKey::upgradableCases());
     }
 
     public function test_preferred_surface_is_tri_state(): void
@@ -39,6 +44,26 @@ class PreferenceKeyTest extends TestCase
         $this->assertSame(Surface::Classic, PreferenceKey::PreferredSurface->decode('classic'));
         $this->assertSame(Surface::Modern, PreferenceKey::PreferredSurface->decode('modern'));
         $this->assertSame('modern', PreferenceKey::PreferredSurface->encode(Surface::Modern));
+    }
+
+    public function test_compose_editor_defaults_to_rich_and_fails_closed(): void
+    {
+        // Concrete (not tri-state) default: an absent row and any corrupted value read as Rich,
+        // never null, so the compose forms always have an editor to open with.
+        $this->assertSame(ComposeEditor::Rich, PreferenceKey::ComposeEditor->default());
+        $this->assertSame(ComposeEditor::Rich, PreferenceKey::ComposeEditor->decode(null));
+        $this->assertSame(ComposeEditor::Rich, PreferenceKey::ComposeEditor->decode('nonsense'));
+
+        $this->assertSame(ComposeEditor::Markdown, PreferenceKey::ComposeEditor->decode('markdown'));
+        $this->assertSame('markdown', PreferenceKey::ComposeEditor->encode(ComposeEditor::Markdown));
+    }
+
+    public function test_encode_decode_round_trips_every_compose_editor(): void
+    {
+        foreach (ComposeEditor::cases() as $editor) {
+            $encoded = PreferenceKey::ComposeEditor->encode($editor);
+            $this->assertSame($editor, PreferenceKey::ComposeEditor->decode($encoded));
+        }
     }
 
     public function test_decode_uses_the_key_default_when_absent_or_invalid(): void

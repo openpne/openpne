@@ -28,7 +28,7 @@ The codec is **value-type aware per case**: most keys are on the shared
 the case, so the registry can hold more than one value type without a second list.
 
 An **absent row means "follow the default"** — the default is never written, so changing a key's
-default applies to every member who has not made an explicit choice. Two default shapes:
+default applies to every member who has not made an explicit choice. The default shapes:
 
 - A **Visibility** key has a concrete default (e.g. `DiaryDefaultVisibility` → Members), so a
   read always yields a value. A corrupted / non-digit stored value falls back to that default,
@@ -37,6 +37,10 @@ default applies to every member who has not made an explicit choice. Two default
   to the [surface fallback](feature-modules.md#surface-selection)". So it has a distinct read,
   [`Member::preferredSurface(): ?Surface`](../../app/Models/Member.php), rather than going
   through `Member::preference()` (which is typed to return a non-null `Visibility`).
+- `ComposeEditor` stores an [`App\Support\ComposeEditor`](../../app/Support/ComposeEditor.php)
+  (`rich` | `markdown`) with a **concrete** default (`Rich`): a corrupt row fails closed to
+  `Rich`, never `null`. Read via [`Member::composeEditor(): ComposeEditor`](../../app/Models/Member.php),
+  separate from `Member::preference()` to keep the value type at the call site.
 
 Writes go through `Member::setPreference()` / `setPreferredSurface()` (store an explicit value,
 even one equal to the default) and `resetPreference()` / `resetPreferredSurface()` (delete the
