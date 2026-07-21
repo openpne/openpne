@@ -45,9 +45,13 @@ import type { Tokens } from 'marked';
 /** marked's built-in list tokenizer, wrapped below to neutralise GFM task-item detection. */
 const originalListTokenizer = Tokenizer.prototype.list;
 
-/** Textarea chrome (mirrors components/ui/textarea.tsx) applied to the ProseMirror editable. */
+/**
+ * Textarea chrome (mirrors components/ui/textarea.tsx) applied to the ProseMirror editable —
+ * except `block` where the textarea uses `flex`: on a contenteditable div, flex would lay the
+ * child block nodes (paragraphs, lists) out in a row, so Enter never visibly breaks the line.
+ */
 const EDITOR_CONTENT_CLASS =
-    'rich-body flex min-h-24 w-full rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/30 md:text-sm';
+    'rich-body block min-h-24 w-full rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/30 md:text-sm';
 
 /** True only for an http/https URL — the sanitizer's link-scheme allowlist, enforced at authoring. */
 function isHttpUrl(url: string): boolean {
@@ -251,6 +255,17 @@ export function composeExtensions(): Extensions {
     ];
 }
 
+/**
+ * The full editable-element attribute map (chrome class + caller attributes). Exported so the
+ * component can push updated aria-* attributes into a live editor via editor.setOptions — the
+ * attributes handed to createComposeEditorOptions are only read at construction. The explicit
+ * textbox role is what permits aria-label/aria-required on the contenteditable (axe
+ * aria-allowed-attr; contenteditable has no implicit role).
+ */
+export function composeEditorAttributes(attributes?: Record<string, string>): Record<string, string> {
+    return { class: EDITOR_CONTENT_CLASS, role: 'textbox', 'aria-multiline': 'true', ...attributes };
+}
+
 /** Parse Markdown into the editor without emitting an update (isolates the early-release API). */
 export function parseMarkdown(editor: Editor, md: string): void {
     editor.commands.setContent(md, { contentType: 'markdown', emitUpdate: false });
@@ -279,10 +294,7 @@ export function createComposeEditorOptions(opts: {
         content: initialMarkdown,
         contentType: 'markdown',
         editorProps: {
-            attributes: {
-                class: EDITOR_CONTENT_CLASS,
-                ...attributes,
-            },
+            attributes: composeEditorAttributes(attributes),
         },
         onUpdate: ({ editor, transaction }) => {
             // docChanged is the dirty signal for the host form; a bare selection move is not an edit.

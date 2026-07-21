@@ -1,6 +1,7 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { BodyField } from '@/components/compose/body-field';
+import { initialComposeFormat, type RecordFormat } from '@/components/compose/editor-mode';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
@@ -27,15 +28,17 @@ interface EditEvent {
 interface EditProps extends PageProps {
     community: CommunitySummary;
     event: EditEvent | null; // null = create mode
+    composeEditor: 'rich' | 'markdown';
 }
 
 export default function CommunityEventEdit() {
     const t = useT();
-    const { community, event } = usePage<EditProps>().props;
+    const { community, event, composeEditor } = usePage<EditProps>().props;
     const isEdit = event !== null;
-    // op3 is a migration-only format with no author-facing editor: omit `format` so the update
-    // preserves it (an absent field preserves the current format server-side).
-    const isOp3 = event?.format === 'op3';
+    // op3 is a migration-only format with no author-facing editor: initialComposeFormat returns
+    // undefined so `format` is omitted from the form, and the update preserves the stored format.
+    const recordFormat = event?.format as RecordFormat | undefined;
+    const format = initialComposeFormat(composeEditor, recordFormat);
 
     const form = useForm({
         name: event?.name ?? '',
@@ -47,14 +50,14 @@ export default function CommunityEventEdit() {
         capacity: event?.capacity != null ? String(event.capacity) : '',
         images: [] as File[],
         remove_images: [] as number[],
-        ...(isOp3 ? {} : { format: (event?.format === 'markdown' ? 'markdown' : 'plain') as 'plain' | 'markdown' }),
+        ...(format === undefined ? {} : { format }),
     });
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        form.post(isEdit ? `/communityEvent/update/${event.id}` : `/communityEvent/create/${community.id}`, {
-            forceFormData: true,
-        });
+        // No forceFormData — a fileless save posts JSON, keeping LF byte-stable
+        // (multipart normalizes LF to CRLF); Inertia auto-switches when a File is attached.
+        form.post(isEdit ? `/communityEvent/update/${event.id}` : `/communityEvent/create/${community.id}`);
     };
 
     const toggleRemove = (imageId: number, remove: boolean) => {
@@ -102,8 +105,10 @@ export default function CommunityEventEdit() {
                         error={form.errors.body}
                         rows={8}
                         required
-                        format={isOp3 ? undefined : form.data.format}
+                        format={form.data.format}
                         onFormatChange={(format) => form.setData('format', format)}
+                        editorPreference={composeEditor}
+                        recordFormat={recordFormat}
                     />
 
                     <CurrentImagesField images={event?.images ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />

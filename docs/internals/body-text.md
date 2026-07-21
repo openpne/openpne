@@ -77,6 +77,25 @@ means "keep the stored format" on update. The Modern forms show a live preview t
 authenticated + throttled), which runs the **identical** pipeline as a stored render — the
 preview can never show markup the saved body would strip.
 
+### Authoring: rich vs raw editor
+
+The Modern compose forms offer two editors over the same `markdown` body, remembered per member
+([`PreferenceKey::ComposeEditor`](../../app/Support/PreferenceKey.php), default Rich): a WYSIWYG
+**rich** editor storing Markdown, and the **raw** textarea + `format` toggle + live preview.
+Switching editors persists the choice (`POST /compose/editor`). A `plain` record always opens raw
+(never silently reparsed as Markdown); an `op3` record gets no editor at all. Mode/format
+resolution is [`editor-mode.ts`](../../resources/js/components/compose/editor-mode.ts); the shared
+block is [`BodyField`](../../resources/js/components/compose/body-field.tsx).
+
+An untouched body submits its form value unchanged — mounting the rich editor parses the stored
+body but fires no change signal — and after an edit the serializer's canonical Markdown
+normalization is accepted. A fileless save posts JSON, so it is byte-stable end to end; only a
+save with an image attached uses `multipart/form-data`, whose browser encoding normalizes bare
+LF to CRLF (one byte per line break, once; the renderer treats both identically). The rich
+editor's schema equals the
+server sanitizer allowlist (authoring a construct the sanitizer would strip would lose it on save):
+[`editor-extensions.ts`](../../resources/js/components/compose/editor-extensions.ts) is the SSoT.
+
 ## Excerpts and mail text
 
 `BodyRenderer::excerpt` produces the single-line feed excerpt (display width 108, no
