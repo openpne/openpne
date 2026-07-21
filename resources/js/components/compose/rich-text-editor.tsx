@@ -1,4 +1,15 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import {
+    useEffect,
+    useId,
+    useLayoutEffect,
+    useRef,
+    useState,
+    type ComponentType,
+    type FocusEvent as ReactFocusEvent,
+    type ReactNode,
+    type RefObject,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import {
@@ -34,7 +45,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { composeEditorAttributes, createComposeEditorOptions } from '@/components/compose/editor-extensions';
-import { useVisualViewport } from '@/components/compose/use-visual-viewport-bottom';
+import { useVisualViewport, type ViewportMetrics } from '@/components/compose/use-visual-viewport-bottom';
 
 type RichTextEditorProps = {
     initialMarkdown: string;
@@ -536,41 +547,74 @@ function DesktopToolbar({ editor }: { editor: Editor }) {
 }
 
 /**
- * Below md: a note.com-style bar fixed to the visual-viewport bottom (so it rides just above the
- * keyboard) showing only the core four commands + a "More" overflow. `bottom` is the keyboard-covered
- * height; at rest (0) it pads for the home-indicator safe area.
+ * Below md: a note.com-style bar pinned to the visual-viewport bottom so it rides just above the
+ * keyboard. Positioned by TOP in layout-viewport coordinates (`top = viewportBottom − barHeight`),
+ * robust whether iOS resizes the layout viewport, pans the visual viewport, or both. Rendered through
+ * a portal to <body> so no ancestor transform/filter/backdrop-filter can capture the fixed position
+ * (an iOS WebKit containing-block trap that made the bar float mid-screen at the content-column width).
+ * At rest (keyboard closed) it pads for the home-indicator safe area; the More panel is a DOM child and
+ * rides along.
  */
 function MobileToolbar({
     editor,
-    bottom,
-    viewportHeight,
+    metrics,
+    rootRef,
     onOverlayOpenChange,
 }: {
     editor: Editor;
-    bottom: number;
-    viewportHeight: number;
+    metrics: ViewportMetrics;
+    rootRef: RefObject<HTMLDivElement | null>;
     onOverlayOpenChange: (open: boolean) => void;
 }) {
     const t = useT();
     const actions = useToolbarActions(editor);
+    const [barHeight, setBarHeight] = useState(56);
 
-    return (
+    // Measure the bar (its height varies with the safe-area padding) so the top offset lands its bottom
+    // edge exactly on the visual-viewport bottom. ResizeObserver keeps it correct as the safe-area
+    // padding toggles with the keyboard.
+    useLayoutEffect(() => {
+        const el = rootRef.current;
+        if (!el) {
+            return;
+        }
+        const measure = () => setBarHeight(el.offsetHeight);
+        measure();
+        if (typeof ResizeObserver === 'undefined') {
+            return;
+        }
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [rootRef]);
+
+    if (typeof document === 'undefined') {
+        return null;
+    }
+
+    // Portalled to <body>, the bar sits outside the page's <main>, so it carries its own region
+    // landmark (axe "region") — the inner element keeps the toolbar role.
+    return createPortal(
         <div
-            role="toolbar"
-            aria-label={t('Formatting')}
+            ref={rootRef}
+            role="region"
+            aria-label={t('Editor toolbar')}
             data-testid="compose-mobile-toolbar"
-            style={{ bottom }}
+            style={{ top: metrics.viewportBottom - barHeight }}
             className={cn(
-                'fixed inset-x-0 z-40 flex items-center gap-0.5 border-t border-border bg-card px-2 py-1.5 shadow-elevated pointer-coarse:gap-1',
-                bottom === 0 && 'pb-[calc(0.375rem+env(safe-area-inset-bottom))]',
+                'fixed inset-x-0 z-40 border-t border-border bg-card px-2 py-1.5 shadow-elevated',
+                !metrics.keyboardOpen && 'pb-[calc(0.375rem+env(safe-area-inset-bottom))]',
             )}
         >
-            <ActionButton action={actions.bold} />
-            <ActionButton action={actions.h2} />
-            <ActionButton action={actions.bulletList} />
-            <LinkDialog editor={editor} onOpenChange={onOverlayOpenChange} />
-            <MoreMenu editor={editor} viewportHeight={viewportHeight} />
-        </div>
+            <div role="toolbar" aria-label={t('Formatting')} className="flex items-center gap-0.5 pointer-coarse:gap-1">
+                <ActionButton action={actions.bold} />
+                <ActionButton action={actions.h2} />
+                <ActionButton action={actions.bulletList} />
+                <LinkDialog editor={editor} onOpenChange={onOverlayOpenChange} />
+                <MoreMenu editor={editor} viewportHeight={metrics.height} />
+            </div>
+        </div>,
+        document.body,
     );
 }
 
@@ -623,58 +667,45 @@ export default function RichTextEditor({
         editor?.setOptions({ editorProps: { attributes: composeEditorAttributes(JSON.parse(attributesKey) as Record<string, string>) } });
     }, [editor, attributesKey]);
 
-    // Mobile bottom bar shows only while the editor surface holds focus: focusin activates; focusout
-    // deactivates after a short delay if focus left the whole wrapper (relatedTarget check + delay to
-    // survive Radix's focus juggling when the link sheet opens/closes). The toolbar buttons
-    // preventDefault on mousedown, so tapping them never triggers a focusout. The link sheet is
-    // portalled out of the wrapper, so its open state pins the bar active explicitly.
+    // Mobile bottom bar shows only while the editor surface holds focus. React synthetic focus events
+    // bubble through the portal (the bar is a React child even though its DOM lives on <body>), so
+    // onFocus/onBlur here observe the portalled bar too. Deactivation waits a short delay and only if
+    // focus left BOTH the wrapper and the portalled bar — DOM containment is checked against each
+    // explicitly, since the bar is not a DOM descendant of the wrapper. Toolbar buttons preventDefault
+    // on mousedown so tapping them never moves focus; the link sheet is portalled by Radix, so its open
+    // state pins the bar active explicitly (overlayOpen).
     const isCompact = useIsCompact();
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const barPortalRef = useRef<HTMLDivElement>(null);
     const blurTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
     const [focusWithin, setFocusWithin] = useState(false);
     const [overlayOpen, setOverlayOpen] = useState(false);
     const active = focusWithin || overlayOpen;
 
-    useEffect(() => {
-        const el = wrapperRef.current;
-        if (!el) {
+    useEffect(() => () => clearTimeout(blurTimer.current), []);
+
+    const handleFocusIn = () => {
+        clearTimeout(blurTimer.current);
+        setFocusWithin(true);
+    };
+    const handleFocusOut = (event: ReactFocusEvent) => {
+        const next = event.relatedTarget as Node | null;
+        if (next && (wrapperRef.current?.contains(next) || barPortalRef.current?.contains(next))) {
             return;
         }
-        const onFocusIn = () => {
-            clearTimeout(blurTimer.current);
-            setFocusWithin(true);
-        };
-        const onFocusOut = (event: FocusEvent) => {
-            const next = event.relatedTarget as Node | null;
-            if (next && el.contains(next)) {
-                return;
-            }
-            clearTimeout(blurTimer.current);
-            blurTimer.current = setTimeout(() => setFocusWithin(false), 100);
-        };
-        el.addEventListener('focusin', onFocusIn);
-        el.addEventListener('focusout', onFocusOut);
-        return () => {
-            clearTimeout(blurTimer.current);
-            el.removeEventListener('focusin', onFocusIn);
-            el.removeEventListener('focusout', onFocusOut);
-        };
-    }, []);
+        clearTimeout(blurTimer.current);
+        blurTimer.current = setTimeout(() => setFocusWithin(false), 100);
+    };
 
     const mobileActive = isCompact && active;
     const viewport = useVisualViewport(mobileActive);
 
     return (
-        <div ref={wrapperRef} className="space-y-2">
+        <div ref={wrapperRef} className="space-y-2" onFocus={handleFocusIn} onBlur={handleFocusOut}>
             {editor && !isCompact && <DesktopToolbar editor={editor} />}
             {editor && <EditorContent editor={editor} />}
             {editor && mobileActive && (
-                <MobileToolbar
-                    editor={editor}
-                    bottom={viewport.bottom}
-                    viewportHeight={viewport.height}
-                    onOverlayOpenChange={setOverlayOpen}
-                />
+                <MobileToolbar editor={editor} metrics={viewport} rootRef={barPortalRef} onOverlayOpenChange={setOverlayOpen} />
             )}
         </div>
     );

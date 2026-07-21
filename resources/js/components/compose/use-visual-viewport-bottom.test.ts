@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { computeViewportMetrics, observeViewportMetrics, type ViewportLike } from './use-visual-viewport-bottom.ts';
+import { computeViewportMetrics, observeViewportMetrics, type ViewportLike, type ViewportMetrics } from './use-visual-viewport-bottom.ts';
 
 /**
  * A driveable stand-in for window.visualViewport: mutable dimensions plus captured listeners the test
  * fires by hand. No browser, no rAF of its own — the module's rAF falls back to a timer under
- * `node --test`, so a short wait flushes a coalesced frame.
+ * `node --test`, so a short wait flushes a coalesced frame. The real window adapter fans 'resize' and
+ * 'scroll' out to both visualViewport and window; at this abstraction they are the same two signals.
  */
 function mockViewport(init: { innerHeight: number; height: number; offsetTop?: number }) {
     const listeners = new Map<string, Set<() => void>>();
@@ -32,76 +33,95 @@ function mockViewport(init: { innerHeight: number; height: number; offsetTop?: n
 
 const flushFrame = () => new Promise((resolve) => setTimeout(resolve, 40));
 
-test('computeViewportMetrics: keyboard closed → bottom 0, band = full viewport', () => {
+test('computeViewportMetrics: keyboard closed → bar bottom at the layout bottom, keyboard closed', () => {
     assert.deepEqual(computeViewportMetrics({ innerHeight: 844, height: 844, offsetTop: 0 } as ViewportLike), {
-        bottom: 0,
+        viewportBottom: 844,
         height: 844,
         offsetTop: 0,
-    });
+        keyboardOpen: false,
+    } satisfies ViewportMetrics);
 });
 
-test('computeViewportMetrics: keyboard open → covered height + shrunken band', () => {
+test('computeViewportMetrics: keyboard open → bar bottom rises to the visible-area bottom', () => {
     assert.deepEqual(computeViewportMetrics({ innerHeight: 844, height: 544, offsetTop: 0 } as ViewportLike), {
-        bottom: 300,
+        viewportBottom: 544,
         height: 544,
         offsetTop: 0,
-    });
+        keyboardOpen: true,
+    } satisfies ViewportMetrics);
 });
 
-test('computeViewportMetrics: offsetTop is subtracted from bottom and exposed', () => {
+test('computeViewportMetrics: panned visual viewport (offsetTop) is folded into viewportBottom', () => {
     assert.deepEqual(computeViewportMetrics({ innerHeight: 844, height: 500, offsetTop: 44 } as ViewportLike), {
-        bottom: 300,
+        viewportBottom: 544,
         height: 500,
         offsetTop: 44,
-    });
+        keyboardOpen: true,
+    } satisfies ViewportMetrics);
 });
 
-test('computeViewportMetrics: clamps negative bottom to 0', () => {
-    assert.equal(computeViewportMetrics({ innerHeight: 844, height: 900, offsetTop: 0 } as ViewportLike).bottom, 0);
+test('computeViewportMetrics: clamps viewportBottom to the layout viewport', () => {
+    assert.equal(computeViewportMetrics({ innerHeight: 844, height: 900, offsetTop: 0 } as ViewportLike).viewportBottom, 844);
 });
 
-test('computeViewportMetrics: missing viewport → zero', () => {
-    assert.deepEqual(computeViewportMetrics(null), { bottom: 0, height: 0, offsetTop: 0 });
-    assert.deepEqual(computeViewportMetrics(undefined), { bottom: 0, height: 0, offsetTop: 0 });
+test('computeViewportMetrics: missing viewport → zero (fallback handled by the window adapter)', () => {
+    const zero = { viewportBottom: 0, height: 0, offsetTop: 0, keyboardOpen: false } satisfies ViewportMetrics;
+    assert.deepEqual(computeViewportMetrics(null), zero);
+    assert.deepEqual(computeViewportMetrics(undefined), zero);
 });
 
 test('observeViewportMetrics: reports the initial value synchronously', () => {
     const values: number[] = [];
-    const cleanup = observeViewportMetrics(mockViewport({ innerHeight: 844, height: 544 }) as ViewportLike, (m) => values.push(m.bottom));
-    assert.deepEqual(values, [300]);
+    const cleanup = observeViewportMetrics(mockViewport({ innerHeight: 844, height: 544 }) as ViewportLike, (m) => values.push(m.viewportBottom));
+    assert.deepEqual(values, [544]);
     cleanup();
 });
 
 test('observeViewportMetrics: missing viewport reports zero once, cleanup is a no-op', () => {
     const values: number[] = [];
-    const cleanup = observeViewportMetrics(null, (m) => values.push(m.bottom));
+    const cleanup = observeViewportMetrics(null, (m) => values.push(m.viewportBottom));
     assert.deepEqual(values, [0]);
     assert.doesNotThrow(cleanup);
 });
 
-test('observeViewportMetrics: resize updates the offset', async () => {
+test('observeViewportMetrics: resize updates viewportBottom', async () => {
     const viewport = mockViewport({ innerHeight: 844, height: 844 });
     const values: number[] = [];
-    const cleanup = observeViewportMetrics(viewport as ViewportLike, (m) => values.push(m.bottom));
-    assert.deepEqual(values, [0]);
+    const cleanup = observeViewportMetrics(viewport as ViewportLike, (m) => values.push(m.viewportBottom));
+    assert.deepEqual(values, [844]);
 
     viewport.height = 500; // keyboard opens
     viewport.emit('resize');
     await flushFrame();
-    assert.equal(values.at(-1), 344);
+    assert.equal(values.at(-1), 500);
     cleanup();
 });
 
-test('observeViewportMetrics: scroll updates the band (offsetTop shift)', async () => {
+test('observeViewportMetrics: vv scroll (visual viewport pans) shifts the band', async () => {
     const viewport = mockViewport({ innerHeight: 844, height: 500, offsetTop: 0 });
-    const bands: { bottom: number; offsetTop: number }[] = [];
-    const cleanup = observeViewportMetrics(viewport as ViewportLike, (m) => bands.push({ bottom: m.bottom, offsetTop: m.offsetTop }));
-    assert.deepEqual(bands.at(-1), { bottom: 344, offsetTop: 0 });
+    const bands: { viewportBottom: number; offsetTop: number }[] = [];
+    const cleanup = observeViewportMetrics(viewport as ViewportLike, (m) => bands.push({ viewportBottom: m.viewportBottom, offsetTop: m.offsetTop }));
+    assert.deepEqual(bands.at(-1), { viewportBottom: 500, offsetTop: 0 });
 
     viewport.offsetTop = 44;
     viewport.emit('scroll');
     await flushFrame();
-    assert.deepEqual(bands.at(-1), { bottom: 300, offsetTop: 44 });
+    assert.deepEqual(bands.at(-1), { viewportBottom: 544, offsetTop: 44 });
+    cleanup();
+});
+
+test('observeViewportMetrics: window scroll (same subscription) re-syncs after a geometry change', async () => {
+    const viewport = mockViewport({ innerHeight: 844, height: 844, offsetTop: 0 });
+    const values: number[] = [];
+    const cleanup = observeViewportMetrics(viewport as ViewportLike, (m) => values.push(m.viewportBottom));
+    assert.deepEqual(values, [844]);
+
+    // A window scroll that panned the visual viewport surfaces through the 'scroll' subscription.
+    viewport.height = 600;
+    viewport.offsetTop = 20;
+    viewport.emit('scroll');
+    await flushFrame();
+    assert.equal(values.at(-1), 620);
     cleanup();
 });
 
