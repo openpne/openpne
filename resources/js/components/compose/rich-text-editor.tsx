@@ -287,15 +287,24 @@ function MoreMenu({ editor, viewportHeight }: { editor: Editor; viewportHeight: 
                 setOpen(false);
             }
         };
+        // Close when keyboard focus leaves the panel (e.g. Tab from the last item onto the switch
+        // button) so the popover never lingers over an external control.
+        const onFocusIn = (event: FocusEvent) => {
+            if (!containerRef.current?.contains(event.target as Node)) {
+                setOpen(false);
+            }
+        };
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 setOpen(false);
             }
         };
         document.addEventListener('pointerdown', onPointerDown, true);
+        document.addEventListener('focusin', onFocusIn);
         document.addEventListener('keydown', onKeyDown);
         return () => {
             document.removeEventListener('pointerdown', onPointerDown, true);
+            document.removeEventListener('focusin', onFocusIn);
             document.removeEventListener('keydown', onKeyDown);
         };
     }, [open]);
@@ -713,13 +722,7 @@ export default function RichTextEditor({
         editor?.setOptions({ editorProps: { attributes: composeEditorAttributes(JSON.parse(attributesKey) as Record<string, string>) } });
     }, [editor, attributesKey]);
 
-    // Mobile bottom bar shows only while the editor surface holds focus. React synthetic focus events
-    // bubble through the portal (the bar is a React child even though its DOM lives on <body>), so
-    // onFocus/onBlur here observe the portalled bar too. Deactivation waits a short delay and only if
-    // focus left BOTH the wrapper and the portalled bar — DOM containment is checked against each
-    // explicitly, since the bar is not a DOM descendant of the wrapper. Toolbar buttons preventDefault
-    // on mousedown so tapping them never moves focus; the link sheet is portalled by Radix, so its open
-    // state pins the bar active explicitly (overlayOpen).
+    // Mobile bottom bar shows only while the editor surface holds focus.
     const isCompact = useIsCompact();
     const wrapperRef = useRef<HTMLDivElement>(null);
     const barPortalRef = useRef<HTMLDivElement>(null);
@@ -728,24 +731,45 @@ export default function RichTextEditor({
     const [focusWithin, setFocusWithin] = useState(false);
     const [overlayOpen, setOverlayOpen] = useState(false);
     const active = focusWithin || overlayOpen;
+    const mobileActive = isCompact && active;
 
-    useEffect(() => () => clearTimeout(blurTimer.current), []);
-
+    // ACTIVATION: React synthetic onFocus bubbles through the portal, so focus entering the editor, the
+    // sentinel, or the portalled bar activates the bar.
     const handleFocusIn = () => {
         clearTimeout(blurTimer.current);
         setFocusWithin(true);
     };
-    const handleFocusOut = (event: ReactFocusEvent) => {
-        const next = event.relatedTarget as Node | null;
-        // Stayed within the editor surface (wrapper or portalled bar), or landed on the editor's
-        // immediate follow-control (the "Edit as Markdown" button after the sentinel) — keep the bar
-        // mounted so Shift+Tab can re-enter the toolbar regardless of the deactivation timer.
-        if (next && (wrapperRef.current?.contains(next) || barPortalRef.current?.contains(next) || next === nextTabbableAfter(sentinelRef.current))) {
+
+    // DEACTIVATION AUTHORITY (only while active): a document-level focusin listener. The portalled bar
+    // and the one grace control (the "Edit as Markdown" button after the sentinel, kept allowed so
+    // Shift+Tab reverse-entry stays deterministic) live outside the wrapper's React subtree, so their
+    // later blur is never observed by a wrapper onBlur — only a document listener sees focus land on the
+    // NEXT target. Focus outside the allowed set deactivates (short delay to survive Radix's link-sheet
+    // focus juggling); re-entry cancels the pending timer. This is why moving PAST the grace control
+    // (e.g. to #diary_visibility) correctly deactivates.
+    useEffect(() => {
+        if (!mobileActive) {
             return;
         }
-        clearTimeout(blurTimer.current);
-        blurTimer.current = setTimeout(() => setFocusWithin(false), 100);
-    };
+        const onDocFocusIn = (event: FocusEvent) => {
+            const target = event.target;
+            const grace = nextTabbableAfter(sentinelRef.current);
+            const inSet =
+                target instanceof Node &&
+                (Boolean(wrapperRef.current?.contains(target)) ||
+                    Boolean(barPortalRef.current?.contains(target)) ||
+                    (grace !== null && target === grace));
+            clearTimeout(blurTimer.current);
+            if (!inSet) {
+                blurTimer.current = setTimeout(() => setFocusWithin(false), 100);
+            }
+        };
+        document.addEventListener('focusin', onDocFocusIn);
+        return () => {
+            clearTimeout(blurTimer.current);
+            document.removeEventListener('focusin', onDocFocusIn);
+        };
+    }, [mobileActive]);
 
     // Focus-order bridge for the portalled bar: Tab out of the editor lands on this in-flow sentinel,
     // which forwards into the portalled toolbar (first button on forward entry from the editor; last
@@ -760,11 +784,10 @@ export default function RichTextEditor({
         (fromInsideWrapper ? buttons[0] : buttons[buttons.length - 1])?.focus();
     };
 
-    const mobileActive = isCompact && active;
     const viewport = useVisualViewport(mobileActive);
 
     return (
-        <div ref={wrapperRef} className="space-y-2" onFocus={handleFocusIn} onBlur={handleFocusOut}>
+        <div ref={wrapperRef} className="space-y-2" onFocus={handleFocusIn}>
             {editor && !isCompact && <DesktopToolbar editor={editor} />}
             {editor && <EditorContent editor={editor} />}
             {editor && mobileActive && (
