@@ -1,13 +1,11 @@
 import { Head, useForm } from '@inertiajs/react';
+import { BodyField } from '@/components/compose/body-field';
 import { ImagesField } from '@/components/images-field';
-import { MarkdownPreview } from '@/components/markdown-preview';
-import { MarkdownToggle } from '@/components/markdown-toggle';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
-import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 
 type VisibilityOption = { value: string; label: string };
@@ -47,12 +45,17 @@ export default function DiaryNew({
                         <Input id="diary_title" type="text" required value={data.title} onChange={(e) => setData('title', e.target.value)} />
                     </Field>
 
-                    <Field label={t('Body')} htmlFor="diary_body" error={errors.body}>
-                        <Textarea id="diary_body" required rows={10} value={data.body} onChange={(e) => setData('body', e.target.value)} />
-                    </Field>
-
-                    <MarkdownToggle checked={data.format === 'markdown'} onChange={(on) => setData('format', on ? 'markdown' : 'plain')} />
-                    <MarkdownPreview body={data.body} enabled={data.format === 'markdown'} />
+                    <BodyField
+                        id="diary_body"
+                        label={t('Body')}
+                        value={data.body}
+                        onChange={(body) => setData('body', body)}
+                        error={errors.body}
+                        rows={10}
+                        required
+                        format={data.format}
+                        onFormatChange={(format) => setData('format', format)}
+                    />
 
                     <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
                         <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
