@@ -1,14 +1,12 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { BodyField } from '@/components/compose/body-field';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
-import { MarkdownPreview } from '@/components/markdown-preview';
-import { MarkdownToggle } from '@/components/markdown-toggle';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Panel } from '@/components/ui/surface';
-import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, TopicImage } from '../types';
@@ -96,18 +94,17 @@ export default function CommunityEventEdit() {
                         <Input id="capacity" type="number" min={0} className="w-32" value={form.data.capacity} onChange={(e) => form.setData('capacity', e.target.value)} />
                     </Field>
 
-                    <Field label={t('Body')} htmlFor="body" error={form.errors.body}>
-                        <Textarea id="body" required rows={8} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
-                    </Field>
-
-                    {isOp3 ? (
-                        <p className="text-sm text-muted-foreground">{t('This entry keeps its OpenPNE 3 formatting.')}</p>
-                    ) : (
-                        <>
-                            <MarkdownToggle checked={form.data.format === 'markdown'} onChange={(on) => form.setData('format', on ? 'markdown' : 'plain')} />
-                            <MarkdownPreview body={form.data.body} enabled={form.data.format === 'markdown'} />
-                        </>
-                    )}
+                    <BodyField
+                        id="body"
+                        label={t('Body')}
+                        value={form.data.body}
+                        onChange={(body) => form.setData('body', body)}
+                        error={form.errors.body}
+                        rows={8}
+                        required
+                        format={isOp3 ? undefined : form.data.format}
+                        onFormatChange={(format) => form.setData('format', format)}
+                    />
 
                     <CurrentImagesField images={event?.images ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />
 
