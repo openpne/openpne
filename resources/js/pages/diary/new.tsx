@@ -1,5 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { BodyField } from '@/components/compose/body-field';
+import { initialComposeFormat } from '@/components/compose/editor-mode';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -13,17 +14,20 @@ type VisibilityOption = { value: string; label: string };
 export default function DiaryNew({
     defaultVisibility,
     visibilityOptions,
+    composeEditor,
 }: {
     defaultVisibility: string;
     visibilityOptions: VisibilityOption[];
+    composeEditor: 'rich' | 'markdown';
 }) {
     const t = useT();
+    const format = initialComposeFormat(composeEditor, undefined);
     const { data, setData, post, errors, processing } = useForm({
         title: '',
         body: '',
         visibility: defaultVisibility,
         images: [] as File[],
-        format: 'plain' as 'plain' | 'markdown',
+        ...(format === undefined ? {} : { format }),
     });
 
     return (
@@ -35,9 +39,10 @@ export default function DiaryNew({
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        // forceFormData: the upload needs a multipart body, which Inertia uses
-                        // automatically once a File is present but not for an initially-empty array.
-                        post('/diary/create', { forceFormData: true });
+                        // No forceFormData: Inertia switches to multipart only when a File is
+                        // attached. A fileless save posts JSON, keeping the body's LF line endings
+                        // byte-stable (multipart encoding normalizes LF to CRLF — body-text.md).
+                        post('/diary/create');
                     }}
                     className="space-y-4"
                 >
@@ -55,6 +60,7 @@ export default function DiaryNew({
                         required
                         format={data.format}
                         onFormatChange={(format) => setData('format', format)}
+                        editorPreference={composeEditor}
                     />
 
                     <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
@@ -69,7 +75,7 @@ export default function DiaryNew({
 
                     <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 
-                    <Button type="submit" loading={processing}>
+                    <Button type="submit" loading={processing} disabled={data.body.trim() === ''}>
                         {t('Post')}
                     </Button>
                 </form>
