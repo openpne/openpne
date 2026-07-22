@@ -401,6 +401,19 @@ function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (
     const urlId = useId();
     const errorId = `${urlId}-error`;
 
+    // CSS breakpoints can't see the soft keyboard: a landscape phone is sm+ (centered panel) yet its
+    // visual viewport may be ~180px tall. While the keyboard is open, clamp the panel into the
+    // visible band by inline style (overrides the class positioning) at every width.
+    const viewport = useVisualViewport(open);
+    const clampStyle = viewport.keyboardOpen
+        ? {
+              top: viewport.offsetTop + 8,
+              transform: 'translateX(-50%)',
+              maxHeight: viewport.height - 16,
+              overflowY: 'auto' as const,
+          }
+        : undefined;
+
     const active = editor.isActive('link');
 
     const setOpen = (next: boolean) => {
@@ -441,6 +454,7 @@ function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (
             </ToolbarButton>
             <DialogContent
                 closeLabel={t('Close')}
+                style={clampStyle}
                 // Hand focus back to the editable on every close path (Apply / × / ESC / overlay-tap).
                 // The default returns focus to the trigger, but on mobile the trigger lives in the
                 // bottom bar, which unmounts as the overlay closes — so focus would fall to <body> and
