@@ -10,7 +10,7 @@ Three formats exist, carried per record in a `format` column on `diaries`,
 | format | who writes it | renderer |
 |---|---|---|
 | `plain` (default) | everyone | [`BodyText`](../../app/Support/BodyText.php) — escape + bare-URL autolink + `nl2br` |
-| `markdown` | opt-in via the compose toggle | [`MarkdownText`](../../app/Support/MarkdownText.php) |
+| `markdown` | opt-in via the compose input method | [`MarkdownText`](../../app/Support/MarkdownText.php) |
 | `op3` | the OpenPNE 3 upgrade only | [`Op3Text`](../../app/Support/Op3Text.php) |
 
 [`BodyFormat`](../../app/Support/BodyFormat.php) is the enum;

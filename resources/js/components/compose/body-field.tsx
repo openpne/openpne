@@ -93,7 +93,7 @@ export function BodyField({
         }
         const applied = applyInputMethod(next);
         if (
-            needsFormatConfirm(recordFormat, next) &&
+            needsFormatConfirm(recordFormat, format, next) &&
             !(await confirm({
                 title: t('Change the input method?'),
                 description:

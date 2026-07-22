@@ -79,13 +79,18 @@ export function applyInputMethod(method: InputMethod): { mode: EditorMode; forma
 
 /**
  * Whether picking `method` needs a confirmation first: only on a stored record, and only when it
- * moves the body away from the format it is saved as — that changes how the same bytes render
- * (`#`/`*` become structure, or stop being it). Returning to the record's own format is a no-op for
- * rendering, and an unsaved draft is freely reversible until submit, so neither prompts.
+ * crosses the format the form is on RIGHT NOW — that is what changes how the body renders (`#`/`*`
+ * become structure, or stop being it). Both directions count: once the body has been edited, going
+ * back to the record's original format is no longer a no-op either.
+ *
+ * `current`, not the stored format, is the axis. Comparing against the stored one would re-ask on a
+ * mode-only move that already crossed once (plain record → Markdown → rich), and stay silent on a
+ * real crossing that happens to land back on it (plain record → rich, edit, → no formatting).
+ * A draft has nothing stored to reinterpret and op3 has no menu, so neither prompts.
  */
-export function needsFormatConfirm(recordFormat: RecordFormat | undefined, method: InputMethod): boolean {
+export function needsFormatConfirm(recordFormat: RecordFormat | undefined, current: ComposeFormat, method: InputMethod): boolean {
     if (recordFormat !== 'plain' && recordFormat !== 'markdown') {
         return false;
     }
-    return applyInputMethod(method).format !== recordFormat;
+    return applyInputMethod(method).format !== current;
 }

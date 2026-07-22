@@ -422,7 +422,7 @@
     "Form Type": "入力形式",
     "Format a date.": "日付を書式化します。",
     "Formatting": "書式",
-    "Formatting symbols in this entry will be shown as characters, exactly as typed.": "この投稿の書式の記号が、入力したとおりの文字として表示されるようになります。",
+    "Formatting symbols in this entry will be shown as characters, exactly as typed.": "この投稿の # や * などの記号が、入力したとおりに表示されるようになります。",
     "Found": "発見",
     "Fri": "金",
     "From preset": "プリセットから",

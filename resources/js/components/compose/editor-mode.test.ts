@@ -85,19 +85,37 @@ test('rich is only ever offered over a markdown body', () => {
     assert.equal(inputMethodFor('rich', 'markdown'), 'rich');
 });
 
-test('needsFormatConfirm: only a stored record moving away from its own format', () => {
-    // Stored plain: switching to either markdown-backed method reinterprets the text.
-    assert.equal(needsFormatConfirm('plain', 'rich'), true);
-    assert.equal(needsFormatConfirm('plain', 'markdown'), true);
-    assert.equal(needsFormatConfirm('plain', 'plain'), false);
-    // Stored markdown: dropping to plain stops rendering its symbols.
-    assert.equal(needsFormatConfirm('markdown', 'plain'), true);
+test('needsFormatConfirm: only a stored record crossing the format it is on now', () => {
+    // Stored plain, still on plain: either markdown-backed method reinterprets the text.
+    assert.equal(needsFormatConfirm('plain', 'plain', 'rich'), true);
+    assert.equal(needsFormatConfirm('plain', 'plain', 'markdown'), true);
+    assert.equal(needsFormatConfirm('plain', 'plain', 'plain'), false);
+    // Stored markdown, still on markdown: dropping to plain stops rendering its symbols...
+    assert.equal(needsFormatConfirm('markdown', 'markdown', 'plain'), true);
     // ...but moving between the two markdown-backed methods changes no rendering.
-    assert.equal(needsFormatConfirm('markdown', 'rich'), false);
-    assert.equal(needsFormatConfirm('markdown', 'markdown'), false);
+    assert.equal(needsFormatConfirm('markdown', 'markdown', 'rich'), false);
+    assert.equal(needsFormatConfirm('markdown', 'markdown', 'markdown'), false);
     // A draft is freely reversible until submit, and op3 has no menu to begin with.
     for (const method of METHODS) {
-        assert.equal(needsFormatConfirm(undefined, method), false);
-        assert.equal(needsFormatConfirm('op3', method), false);
+        assert.equal(needsFormatConfirm(undefined, 'plain', method), false);
+        assert.equal(needsFormatConfirm(undefined, 'markdown', method), false);
+        assert.equal(needsFormatConfirm('op3', 'markdown', method), false);
     }
+});
+
+test('needsFormatConfirm: asks once per crossing, not once per departure from the stored format', () => {
+    // A stored plain record taken to Markdown and then into the rich editor: the second move is
+    // mode-only, so re-asking there would be noise (it is still the same markdown body).
+    let current: ComposeFormat = 'plain';
+    const ask = (method: InputMethod) => {
+        const needed = needsFormatConfirm('plain', current, method);
+        current = applyInputMethod(method).format;
+        return needed;
+    };
+    assert.equal(ask('markdown'), true, 'plain → Markdown crosses');
+    assert.equal(ask('rich'), false, 'Markdown → rich is mode-only');
+    // ...and coming back down to unformatted crosses again, even though it lands on the format the
+    // record was stored as — by now the body may have been edited as Markdown.
+    assert.equal(ask('plain'), true, 'rich → no formatting crosses back');
+    assert.equal(ask('plain'), false, 'and re-picking the current method asks nothing');
 });

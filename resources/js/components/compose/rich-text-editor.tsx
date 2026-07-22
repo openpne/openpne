@@ -626,8 +626,8 @@ function MobileToolbar({
     // Tab escape routes that compensate for the portal (the bar is not a DOM neighbour of the editor):
     // Shift+Tab off the first control returns to the editable; Tab off the last control jumps to the
     // in-flow control after the wrapper sentinel — the next form field, which also dismisses the bar.
-    // Forward/backward ENTRY is handled by the sentinel's onFocus in the parent. `:not([disabled])` so
-    // a disabled table op is never an edge.
+    // Forward ENTRY is handled by the sentinel's onFocus in the parent. `:not([disabled])` so a
+    // disabled table op is never an edge.
     const onKeyDown = (event: ReactKeyboardEvent) => {
         if (event.key !== 'Tab') {
             return;
@@ -801,9 +801,14 @@ export default function RichTextEditor({
     }, [mobileActive]);
 
     // Focus-order bridge for the portalled bar: Tab out of the editor lands on this in-flow sentinel,
-    // which forwards into the portalled toolbar (first button on forward entry from the editor; last
-    // control on backward entry via Shift+Tab from the following control). The bar's own keydown handles
-    // the reverse escapes. Rendered only while the bar is mounted, so it is never a stray tab stop.
+    // which forwards into the portalled toolbar (first button on forward entry from the editor). The
+    // bar's own keydown handles the reverse escapes. Rendered only while the bar is mounted, so it is
+    // never a stray tab stop.
+    //
+    // Backward entry from the following control only reaches here inside the 100ms before the bar
+    // deactivates; past that the sentinel is gone and Shift+Tab simply lands on the editable in
+    // document order, remounting the bar. Both routes end up in the editor surface, which is the
+    // contract — the last-control branch just keeps the immediate one from skipping the bar entirely.
     const handleSentinelFocus = (event: ReactFocusEvent) => {
         const buttons = barPortalRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])');
         if (!buttons || buttons.length === 0) {
