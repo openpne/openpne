@@ -111,6 +111,16 @@ class DiaryRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page->component('diary/new')->where('composeEditor', 'markdown'));
     }
 
+    public function test_modern_new_reflects_a_stored_plain_editor_preference(): void
+    {
+        $member = Member::factory()->create();
+        $member->setComposeEditor(ComposeEditor::Plain);
+
+        $this->actingAs($member)
+            ->get('/diary/new')
+            ->assertInertia(fn ($page) => $page->component('diary/new')->where('composeEditor', 'plain'));
+    }
+
     public function test_modern_show_renders_inertia_component_with_diary_props(): void
     {
         $member = Member::factory()->create();

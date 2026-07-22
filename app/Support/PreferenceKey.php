@@ -30,7 +30,7 @@ enum PreferenceKey: string
     /** The member's durable Classic/Modern surface choice; absent = follow the tenant/session default. */
     case PreferredSurface = 'preferred_surface';
 
-    /** Which editor the Modern compose forms open with (App\Support\ComposeEditor); default Rich. */
+    /** Which input method the Modern compose forms open with (App\Support\ComposeEditor); default Rich. */
     case ComposeEditor = 'compose_editor';
 
     /** The OpenPNE 3 `member_config.name` this preference upgrades from, or null if it is OpenPNE 4-native. */
