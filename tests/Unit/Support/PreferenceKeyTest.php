@@ -56,6 +56,8 @@ class PreferenceKeyTest extends TestCase
 
         $this->assertSame(ComposeEditor::Markdown, PreferenceKey::ComposeEditor->decode('markdown'));
         $this->assertSame('markdown', PreferenceKey::ComposeEditor->encode(ComposeEditor::Markdown));
+        $this->assertSame(ComposeEditor::Plain, PreferenceKey::ComposeEditor->decode('plain'));
+        $this->assertSame('plain', PreferenceKey::ComposeEditor->encode(ComposeEditor::Plain));
     }
 
     public function test_encode_decode_round_trips_every_compose_editor(): void

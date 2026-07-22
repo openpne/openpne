@@ -1,7 +1,7 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { BodyField } from '@/components/compose/body-field';
-import { initialComposeFormat, type RecordFormat } from '@/components/compose/editor-mode';
+import { initialComposeFormat, type ComposeEditorPreference, type RecordFormat } from '@/components/compose/editor-mode';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ interface EditEvent {
 interface EditProps extends PageProps {
     community: CommunitySummary;
     event: EditEvent | null; // null = create mode
-    composeEditor: 'rich' | 'markdown';
+    composeEditor: ComposeEditorPreference;
 }
 
 export default function CommunityEventEdit() {

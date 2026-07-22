@@ -69,8 +69,8 @@ const FOCUSABLE_SELECTOR =
 /**
  * The next tabbable element after `el` in document order. Because the bar is portalled to <body> (end
  * of document), the tabbable right after the wrapper sentinel is the in-flow control that follows the
- * editor (the "Edit as Markdown" button), not the portalled bar — so this is both the toolbar's forward
- * escape target and the control whose focus should keep the bar mounted (for symmetric reverse entry).
+ * editor — the next form field — not the portalled bar, which makes it the toolbar's forward escape
+ * target. Focusing it ends the bar's session (it is outside the allowed set).
  */
 function nextTabbableAfter(el: HTMLElement | null): HTMLElement | null {
     if (!el) {
@@ -625,8 +625,9 @@ function MobileToolbar({
 
     // Tab escape routes that compensate for the portal (the bar is not a DOM neighbour of the editor):
     // Shift+Tab off the first control returns to the editable; Tab off the last control jumps to the
-    // in-flow control after the wrapper sentinel ("Edit as Markdown"). Forward/backward ENTRY is handled
-    // by the sentinel's onFocus in the parent. `:not([disabled])` so a disabled table op is never an edge.
+    // in-flow control after the wrapper sentinel — the next form field, which also dismisses the bar.
+    // Forward/backward ENTRY is handled by the sentinel's onFocus in the parent. `:not([disabled])` so
+    // a disabled table op is never an edge.
     const onKeyDown = (event: ReactKeyboardEvent) => {
         if (event.key !== 'Tab') {
             return;
@@ -762,29 +763,25 @@ export default function RichTextEditor({
     };
 
     // DEACTIVATION AUTHORITY (only while active), document-level so it also sees departures from the
-    // portalled bar and the grace control, which the wrapper's React subtree cannot. Dual mechanism:
+    // portalled bar, which the wrapper's React subtree cannot. Dual mechanism:
     //   - focusout SCHEDULES the deactivation timer on EVERY focus departure — including blur-to-nowhere
     //     (el.blur(), tapping non-focusable chrome, iOS keyboard "Done"), where activeElement becomes
     //     <body> and NO focusin ever fires.
-    //   - focusin CANCELS it when focus lands back inside the allowed set: the wrapper, the portalled
-    //     bar, or the one grace control (the "Edit as Markdown" button after the sentinel, kept allowed
-    //     so Shift+Tab reverse-entry stays deterministic).
-    // Net: bar→grace = focusin cancels; grace→visibility = outside focusin never cancels, timer fires;
-    // blur-to-null = nothing cancels, timer fires. The 100ms delay lets Radix's link-sheet close refocus
-    // the editable in time (and overlayOpen pins the bar through the sheet's lifetime regardless).
+    //   - focusin CANCELS it only when focus lands back inside the editor surface: the wrapper or the
+    //     portalled bar. Anything past the editor — the next form control included — lets it fire, which
+    //     is what keeps the bar from covering the fields below it (the whole point of showing it only
+    //     while the editor has focus). Reverse entry does not need an exemption here: once the bar is
+    //     gone Shift+Tab reaches the editable directly in document order and remounts it.
+    // Net: bar→next field = no cancel, timer fires; blur-to-null = nothing cancels, timer fires. The
+    // 100ms delay lets Radix's link-sheet close refocus the editable in time (and overlayOpen pins the
+    // bar through the sheet's lifetime regardless).
     useEffect(() => {
         if (!mobileActive) {
             return;
         }
-        const inAllowedSet = (target: EventTarget | null): boolean => {
-            const grace = nextTabbableAfter(sentinelRef.current);
-            return (
-                target instanceof Node &&
-                (Boolean(wrapperRef.current?.contains(target)) ||
-                    Boolean(barPortalRef.current?.contains(target)) ||
-                    (grace !== null && target === grace))
-            );
-        };
+        const inAllowedSet = (target: EventTarget | null): boolean =>
+            target instanceof Node &&
+            (Boolean(wrapperRef.current?.contains(target)) || Boolean(barPortalRef.current?.contains(target)));
         const onDocFocusOut = () => {
             clearTimeout(blurTimer.current);
             blurTimer.current = setTimeout(() => setFocusWithin(false), 100);

@@ -3,9 +3,11 @@
 namespace App\Support;
 
 /**
- * Which body-authoring editor the Modern compose forms (diary / topic / event) open with: Rich is
- * the WYSIWYG editor, Markdown the plain textarea. A member pins the choice via
- * PreferenceKey::ComposeEditor; absent a choice the registry default (Rich) applies.
+ * How the Modern compose forms (diary / topic / event) open the body: Rich is the WYSIWYG editor,
+ * Markdown the raw textarea over Markdown source, Plain the raw textarea over unformatted text. A
+ * member pins the choice via PreferenceKey::ComposeEditor; absent a choice the registry default
+ * (Rich) applies. The values double as the Modern input-method menu's selection — see
+ * resources/js/components/compose/editor-mode.ts.
  */
 enum ComposeEditor: string
 {
@@ -13,12 +15,5 @@ enum ComposeEditor: string
 
     case Markdown = 'markdown';
 
-    /** Human-readable label key, translated via __()/t() on either surface. */
-    public function label(): string
-    {
-        return match ($this) {
-            self::Rich => 'Rich text',
-            self::Markdown => 'Markdown',
-        };
-    }
+    case Plain = 'plain';
 }
