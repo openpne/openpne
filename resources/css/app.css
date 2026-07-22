@@ -38,6 +38,9 @@
     --color-info: var(--info);
     --color-info-foreground: var(--info-foreground);
     --color-link: var(--link);
+    /* Foreground for chrome sitting on a translucent dark scrim over image content (lightbox
+       nav buttons). The scrim is dark in both themes, so this stays white in both. */
+    --color-scrim-foreground: var(--scrim-foreground);
     /* Chosen-state accent for selection controls (checked pill/card, radio dot). Chromatic on
        purpose: with a neutral primary a gray tint reads as disabled, and a primary fill makes a
        selected control shout like a primary action. Follows the link blue (declared once in :root;
@@ -91,6 +94,8 @@
     --info-foreground: oklch(0.985 0 0);
     --link: oklch(0.52 0.19 256);
     --selected: var(--link);
+    /* Theme-invariant on purpose (not redefined in .dark): it sits on a dark image scrim. */
+    --scrim-foreground: oklch(1 0 0);
     /* Field fill: near-white so it lifts on the page (0.977) and reads as a faint well in a white card. */
     --field: oklch(0.995 0.002 83);
     --field-border: oklch(0.845 0.01 83);

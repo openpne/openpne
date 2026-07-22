@@ -17,7 +17,7 @@ export interface GridImage {
  */
 export function ImageGrid({ images, size, className }: { images: GridImage[]; size?: string; className?: string }) {
     const t = useT();
-    const [open, setOpen] = useState<GridImage | null>(null);
+    const [openIndex, setOpenIndex] = useState<number | null>(null);
     const opener = useRef<HTMLButtonElement | null>(null);
 
     if (images.length === 0) {
@@ -33,7 +33,7 @@ export function ImageGrid({ images, size, className }: { images: GridImage[]; si
                             type="button"
                             onClick={(e) => {
                                 opener.current = e.currentTarget;
-                                setOpen(image);
+                                setOpenIndex(i);
                             }}
                             aria-label={`${t('Image')} ${i + 1}`}
                             aria-haspopup="dialog"
@@ -44,7 +44,13 @@ export function ImageGrid({ images, size, className }: { images: GridImage[]; si
                     </li>
                 ))}
             </ul>
-            <Lightbox image={open} onClose={() => setOpen(null)} restoreFocus={() => opener.current?.focus()} />
+            <Lightbox
+                images={images}
+                index={openIndex}
+                onClose={() => setOpenIndex(null)}
+                onNavigate={setOpenIndex}
+                restoreFocus={() => opener.current?.focus()}
+            />
         </>
     );
 }
