@@ -1,6 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { BodyField } from '@/components/compose/body-field';
-import { initialComposeFormat, type RecordFormat } from '@/components/compose/editor-mode';
+import { initialComposeFormat, type ComposeEditorPreference, type RecordFormat } from '@/components/compose/editor-mode';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import type { DiaryDetail } from './types';
 
 interface EditProps extends PageProps {
     diary: DiaryDetail;
-    composeEditor: 'rich' | 'markdown';
+    composeEditor: ComposeEditorPreference;
 }
 
 export default function DiaryEdit() {

@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { BodyField } from '@/components/compose/body-field';
-import { initialComposeFormat } from '@/components/compose/editor-mode';
+import { initialComposeFormat, type ComposeEditorPreference } from '@/components/compose/editor-mode';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -18,7 +18,7 @@ export default function DiaryNew({
 }: {
     defaultVisibility: string;
     visibilityOptions: VisibilityOption[];
-    composeEditor: 'rich' | 'markdown';
+    composeEditor: ComposeEditorPreference;
 }) {
     const t = useT();
     const format = initialComposeFormat(composeEditor, undefined);

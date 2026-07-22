@@ -39,7 +39,7 @@ default applies to every member who has not made an explicit choice. The default
   [`Member::preferredSurface(): ?Surface`](../../app/Models/Member.php), rather than going
   through `Member::preference()` (which is typed to return a non-null `Visibility`).
 - `ComposeEditor` stores an [`App\Support\ComposeEditor`](../../app/Support/ComposeEditor.php)
-  (`rich` | `markdown`) with a **concrete** default (`Rich`): a corrupt row fails closed to
+  (`rich` | `markdown` | `plain`) with a **concrete** default (`Rich`): a corrupt row fails closed to
   `Rich`, never `null`. Read via [`Member::composeEditor(): ComposeEditor`](../../app/Models/Member.php),
   separate from `Member::preference()` to keep the value type at the call site.
 

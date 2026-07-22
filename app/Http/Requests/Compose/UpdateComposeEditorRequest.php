@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * The compose-editor preference POST: a member's Rich/Markdown choice for the Modern compose forms.
+ * The compose input-method POST: a member's Rich/Markdown/Plain choice for the Modern compose forms.
  */
 class UpdateComposeEditorRequest extends FormRequest
 {

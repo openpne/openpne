@@ -278,7 +278,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // same sanitized pipeline as a stored body. Throttled on its own limiter — a keystroke-driven
     // endpoint fires far more often than a post.
     Route::post('/compose/preview', [PreviewController::class, 'preview'])->middleware('throttle:preview')->name('compose.preview');
-    // The member's Rich/Markdown editor choice for the Modern compose forms, persisted by a
+    // The member's Rich/Markdown/Plain input-method choice for the Modern compose forms, persisted by a
     // fire-and-forget fetch (204, no body). Unthrottled, matching the /member/config/* preference POSTs.
     Route::post('/compose/editor', [EditorPreferenceController::class, 'update'])->name('compose.editor');
     // The dashboard's community activity section, expanded. Modern-only (no OpenPNE 3 equivalent),
