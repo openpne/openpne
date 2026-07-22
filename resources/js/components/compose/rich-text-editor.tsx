@@ -403,12 +403,15 @@ function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (
 
     // CSS breakpoints can't see the soft keyboard: a landscape phone is sm+ (centered panel) yet its
     // visual viewport may be ~180px tall. While the keyboard is open, clamp the panel into the
-    // visible band by inline style (overrides the class positioning) at every width.
+    // visible band by inline style at every width. The class centers with `translate:` (Tailwind v4's
+    // -translate-x-1/2 + sm:-translate-y-1/2 both write the `translate` property), so the override
+    // must set `translate` too — an inline `transform` is a different property and would stack, double-
+    // shifting the panel off-screen.
     const viewport = useVisualViewport(open);
     const clampStyle = viewport.keyboardOpen
         ? {
               top: viewport.offsetTop + 8,
-              transform: 'translateX(-50%)',
+              translate: '-50% 0',
               maxHeight: viewport.height - 16,
               overflowY: 'auto' as const,
           }
