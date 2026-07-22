@@ -456,6 +456,10 @@ function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (
                     className="mt-4 space-y-3"
                     onSubmit={(event) => {
                         event.preventDefault();
+                        // React propagates events through the React tree even across the dialog
+                        // portal — without this, the submit bubbles into the host compose <form>
+                        // and posts the whole entry.
+                        event.stopPropagation();
                         submit();
                     }}
                 >
