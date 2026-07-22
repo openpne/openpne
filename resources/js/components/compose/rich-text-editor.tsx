@@ -567,7 +567,9 @@ function TableMenu({ editor }: { editor: Editor }) {
  * md+ toolbar: the full formatting row, sticky at the top of the form column (below the persistent
  * TopNav via --modern-top-offset, which is 0 at lg) with an opaque background so the body scrolls
  * under it. The host Panel opts out of overflow clipping (Panel overflow="visible") so the sticky
- * resolves against the page scroll, and -mx-5 bleeds the band to the card edges.
+ * resolves against the page scroll, and -mx-5 bleeds the band to the card edges — matching the
+ * Panel body's px-5. That pairing survives `Panel bleed` only because bleed's px-4 stops at sm and
+ * this row starts at md; keep them from overlapping if either breakpoint moves.
  */
 function DesktopToolbar({ editor }: { editor: Editor }) {
     const t = useT();

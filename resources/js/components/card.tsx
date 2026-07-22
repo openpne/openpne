@@ -10,13 +10,25 @@ type Props = {
  * Rounded card wrapping a block of page content. Clips to the rounded corners by default; pass
  * `overflow="visible"` when a descendant needs to escape the card as its scroll context (e.g. a
  * `position: sticky` toolbar resolving against the page instead of the clipped card).
+ *
+ * `bleed` gives the card the full phone width: the `-mx-4` exactly cancels MemberFrame's `px-4`, and
+ * the side border and corners go with it, since a rounded card inset from both edges wastes scarce
+ * width on a screen this narrow. It is a base-class swap rather than an appended override because
+ * tailwind-merge does not know our custom `rounded-card` token and so would not dedupe it against
+ * `rounded-none`, leaving the outcome to stylesheet order.
  */
-export function Card({ children, className, overflow = 'hidden' }: Props & { overflow?: 'hidden' | 'visible' }) {
+export function Card({
+    children,
+    className,
+    overflow = 'hidden',
+    bleed = false,
+}: Props & { overflow?: 'hidden' | 'visible'; bleed?: boolean }) {
     return (
         <div
             className={cn(
                 overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible',
-                'rounded-card border border-border bg-card text-card-foreground shadow-card',
+                bleed ? '-mx-4 rounded-none border-y border-x-0 sm:mx-0 sm:rounded-card sm:border-x' : 'rounded-card border',
+                'border-border bg-card text-card-foreground shadow-card',
                 className,
             )}
         >
