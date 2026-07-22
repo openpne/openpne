@@ -46,7 +46,7 @@ export default function DiaryEdit() {
             <Head title={t('Edit %diary%')} />
             <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit %diary%')}</h1>
 
-            <Panel>
+            <Panel overflow="visible">
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();

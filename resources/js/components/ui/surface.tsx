@@ -26,6 +26,8 @@ type PanelProps = {
     bodyClassName?: string;
     /** Drop the body padding so an edge-to-edge <List> sits flush under the header. */
     flush?: boolean;
+    /** Forwarded to {@link Card}: `visible` lets a sticky descendant resolve against the page scroll. */
+    overflow?: 'hidden' | 'visible';
 };
 
 /**
@@ -33,9 +35,9 @@ type PanelProps = {
  * page background: a Card + optional {@link SectionHeader} band + padded body. Use `flush` when the
  * body is a {@link List} (rows carry their own padding).
  */
-export function Panel({ title, right, children, className, bodyClassName, flush }: PanelProps) {
+export function Panel({ title, right, children, className, bodyClassName, flush, overflow }: PanelProps) {
     return (
-        <Card className={className}>
+        <Card className={className} overflow={overflow}>
             {title && <SectionHeader title={title} right={right} />}
             <div className={cn(flush ? undefined : 'px-5 py-4', bodyClassName)}>{children}</div>
         </Card>
