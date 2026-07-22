@@ -50,7 +50,7 @@ export function Lightbox({
         }
     };
 
-    // Warm the neighbours so a swipe/arrow reveals a decoded image instead of a blank frame.
+    // Start fetching the neighbours so a swipe/arrow rarely waits on the network.
     useEffect(() => {
         if (index === null) {
             return;
@@ -133,7 +133,7 @@ export function Lightbox({
                                             onClick={goPrev}
                                             aria-disabled={!hasPrev}
                                             aria-label={t('Previous image')}
-                                            className="absolute left-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40"
+                                            className="absolute left-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40"
                                         >
                                             <ChevronLeft className="size-6" aria-hidden />
                                         </button>
@@ -142,7 +142,7 @@ export function Lightbox({
                                             onClick={goNext}
                                             aria-disabled={!hasNext}
                                             aria-label={t('Next image')}
-                                            className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40"
+                                            className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40"
                                         >
                                             <ChevronRight className="size-6" aria-hidden />
                                         </button>
