@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogTitle, SheetContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -439,7 +439,7 @@ function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (
             <ToolbarButton label={t('Link')} pressed={active} onClick={openDialog}>
                 <Link2 className="size-4" />
             </ToolbarButton>
-            <SheetContent
+            <DialogContent
                 closeLabel={t('Close')}
                 // Hand focus back to the editable on every close path (Apply / × / ESC / overlay-tap).
                 // The default returns focus to the trigger, but on mobile the trigger lives in the
@@ -495,7 +495,7 @@ function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (
                         )}
                     </div>
                 </form>
-            </SheetContent>
+            </DialogContent>
         </Dialog>
     );
 }
