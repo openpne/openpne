@@ -1,4 +1,6 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
+import { useEffect, useRef } from 'react';
 import { useT } from '@/lib/i18n';
 
 interface LightboxImage {
@@ -11,22 +13,58 @@ interface LightboxImage {
  * open-the-original escape hatch). Built on the same Radix Dialog primitive as the nav
  * drawer and confirm dialog, sharing their overlay style: it supplies the focus trap,
  * dismissal, scroll lock and focus restore.
+ *
+ * Controlled multi-image viewer: the parent owns which of `images` is shown via `index`
+ * (null = closed) and moves it with `onNavigate`. Navigation is bounded — no wrap — so the
+ * prev/next affordances and the counter only exist for a set of more than one.
  */
 export function Lightbox({
-    image,
+    images,
+    index,
     onClose,
+    onNavigate,
     restoreFocus,
 }: {
-    image: LightboxImage | null;
+    images: LightboxImage[];
+    index: number | null;
     onClose: () => void;
+    onNavigate: (index: number) => void;
     /** Focus target for dismissal — the thumbnails are plain buttons, not Radix triggers. */
     restoreFocus?: () => void;
 }) {
     const t = useT();
+    const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+    const image = index === null ? null : (images[index] ?? null);
+    const hasPrev = index !== null && index > 0;
+    const hasNext = index !== null && index < images.length - 1;
+
+    const goPrev = () => {
+        if (index !== null && index > 0) {
+            onNavigate(index - 1);
+        }
+    };
+    const goNext = () => {
+        if (index !== null && index < images.length - 1) {
+            onNavigate(index + 1);
+        }
+    };
+
+    // Start fetching the neighbours so a swipe/arrow rarely waits on the network.
+    useEffect(() => {
+        if (index === null) {
+            return;
+        }
+        for (const adjacent of [images[index - 1], images[index + 1]]) {
+            if (adjacent) {
+                new Image().src = adjacent.url;
+            }
+        }
+    }, [index, images]);
 
     return (
         <DialogPrimitive.Root
-            open={image !== null}
+            open={index !== null}
             onOpenChange={(open) => {
                 if (!open) {
                     onClose();
@@ -43,19 +81,83 @@ export function Lightbox({
                             restoreFocus();
                         }
                     }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'ArrowLeft') {
+                            goPrev();
+                        } else if (e.key === 'ArrowRight') {
+                            goNext();
+                        }
+                    }}
+                    onTouchStart={(e) => {
+                        // Drop the anchor on a second finger so a pinch-zoom never resolves as a swipe.
+                        const point = e.touches[0];
+                        touchStart.current = e.touches.length === 1 && point ? { x: point.clientX, y: point.clientY } : null;
+                    }}
+                    onTouchEnd={(e) => {
+                        const start = touchStart.current;
+                        touchStart.current = null;
+                        const touch = e.changedTouches[0];
+                        if (!start || !touch) {
+                            return;
+                        }
+                        const dx = touch.clientX - start.x;
+                        const dy = touch.clientY - start.y;
+                        // Horizontal dominance gate: a mostly-vertical drag stays a scroll, not a page turn.
+                        if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy)) {
+                            return;
+                        }
+                        if (dx < 0) {
+                            goNext();
+                        } else {
+                            goPrev();
+                        }
+                    }}
+                    // touch-action pan-y keeps horizontal pans ours (the swipe) while leaving vertical
+                    // scroll and pinch-zoom of the image to the browser.
                     // Definite width, not max-width: a fixed box centered with left-1/2 + translate and
                     // width:auto shrink-to-fits to the ~50vw available right of its left edge, so the
                     // image would render at half screen width. A definite width lets it fill the frame.
-                    className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(94vw,60rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-background p-3 text-foreground shadow-xl outline-none"
+                    className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(94vw,60rem)] -translate-x-1/2 -translate-y-1/2 touch-pan-y touch-pinch-zoom rounded-xl bg-background p-3 text-foreground shadow-xl outline-none"
                 >
                     <DialogPrimitive.Title className="sr-only">{t('Image')}</DialogPrimitive.Title>
                     {image && (
                         <div className="space-y-2.5">
-                            <img src={image.url} alt="" className="mx-auto max-h-[80vh] max-w-full rounded-md" />
+                            <div className="relative">
+                                <img src={image.url} alt="" className="mx-auto max-h-[80vh] max-w-full rounded-md" />
+                                {images.length > 1 && (
+                                    <>
+                                        {/* aria-disabled, not disabled: a focused button that turns disabled drops
+                                            focus to body, which would kill arrow-key navigation at either end. */}
+                                        <button
+                                            type="button"
+                                            onClick={goPrev}
+                                            aria-disabled={!hasPrev}
+                                            aria-label={t('Previous image')}
+                                            className="absolute left-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40"
+                                        >
+                                            <ChevronLeft className="size-6" aria-hidden />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={goNext}
+                                            aria-disabled={!hasNext}
+                                            aria-label={t('Next image')}
+                                            className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40"
+                                        >
+                                            <ChevronRight className="size-6" aria-hidden />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
                                 <a href={image.url} target="_blank" rel="noopener noreferrer" className="text-link hover:underline">
                                     {t('Open original in new tab')}
                                 </a>
+                                {index !== null && images.length > 1 && (
+                                    <span aria-live="polite" className="text-muted-foreground">
+                                        {index + 1} / {images.length}
+                                    </span>
+                                )}
                                 <DialogPrimitive.Close className="text-muted-foreground transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                     {t('Close')}
                                 </DialogPrimitive.Close>
