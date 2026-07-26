@@ -30,6 +30,9 @@ const RichTextEditor = lazy(() => import('./rich-text-editor'));
 /** Per-part horizontal inset for the row layout's parts that are NOT the editing surface itself. */
 const ROW_INSET = 'px-(--frame-inset) sm:px-0';
 
+/** The row layout's editing surface: full width below sm, re-spending the inset on its own text. */
+const ROW_SURFACE = 'min-h-40 px-(--frame-inset) py-3 sm:min-h-24 sm:px-3 sm:py-2';
+
 interface BodyFieldProps {
     id: string;
     label: string; // pre-translated by the page
@@ -86,15 +89,61 @@ export function BodyField({
 
     const errorId = error ? `${id}-error` : undefined;
 
-    // op3: unchanged. `format === undefined` is the op3 signal (the page omitted the field so the
-    // server preserves the stored format); show the static note, no menu, no editor choice.
+    // In the row layout this block is a row of a `Panel bleed="full"` body, but unlike a FormRow it
+    // spends `--frame-inset` per part rather than on the whole: the editing surface runs to both
+    // screen edges and re-spends the inset on its own text, while the label and error stay inset like
+    // every other row. All of that collapses from sm up, where the panel pads again.
+    const inset = layout === 'row' ? ROW_INSET : undefined;
+    const block = layout === 'row' ? 'space-y-2 py-4 sm:py-0' : 'space-y-2';
+
+    const errorNode = error ? (
+        <p id={errorId} role="alert" className={cn(inset, 'text-xs text-destructive')}>
+            {error}
+        </p>
+    ) : null;
+
+    // op3: `format === undefined` is the op3 signal (the page omitted the field so the server
+    // preserves the stored format); show the static note, no menu, no editor choice. The row layout
+    // needs its own return: the stack markup is a Fragment, which in a `divide-y` form would split
+    // one field across two hairline rows, and its boxed Textarea would sit at x=0 in a panel that
+    // pays no side padding.
     if (format === undefined) {
+        const note = t('This entry keeps its OpenPNE 3 formatting.');
+        const textarea = (
+            <Textarea
+                id={id}
+                variant={layout === 'row' ? 'bare' : 'field'}
+                required={required}
+                rows={rows}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                // Only in the row layout: there is no Field to clone-inject these. In the stack layout
+                // Field owns them, and passing them here as well would duplicate the describedby token.
+                aria-invalid={layout === 'row' && error ? true : undefined}
+                aria-describedby={layout === 'row' ? errorId : undefined}
+                className={layout === 'row' ? ROW_SURFACE : undefined}
+            />
+        );
+
+        if (layout === 'row') {
+            return (
+                <div className={block}>
+                    <div className={inset}>
+                        <Label htmlFor={id}>{label}</Label>
+                    </div>
+                    {textarea}
+                    {errorNode}
+                    <p className={cn(inset, 'text-sm text-muted-foreground')}>{note}</p>
+                </div>
+            );
+        }
+
         return (
             <>
                 <Field label={label} htmlFor={id} error={error}>
-                    <Textarea id={id} required={required} rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
+                    {textarea}
                 </Field>
-                <p className="text-sm text-muted-foreground">{t('This entry keeps its OpenPNE 3 formatting.')}</p>
+                <p className="text-sm text-muted-foreground">{note}</p>
             </>
         );
     }
@@ -134,14 +183,6 @@ export function BodyField({
     // the same place whichever is showing, so switching never moves it. Field's clone-injection is not
     // usable here — it cannot reach the contenteditable through <Suspense> — so the label, the aria-*
     // wiring, and the error are rendered by hand for both branches alike.
-    //
-    // In the row layout this block is a row of a `Panel bleed="full"` body, but unlike a FormRow it
-    // spends `--frame-inset` per part rather than on the whole: the editing surface runs to both
-    // screen edges and re-spends the inset on its own text, while the label and error stay inset like
-    // every other row. All of that collapses from sm up, where the panel pads again.
-    const inset = layout === 'row' ? ROW_INSET : undefined;
-    const block = layout === 'row' ? 'space-y-2 py-4 sm:py-0' : 'space-y-2';
-
     const header = (
         <div className={cn(inset, 'flex items-center justify-between gap-2')}>
             <Label htmlFor={id}>{label}</Label>
@@ -151,12 +192,6 @@ export function BodyField({
             </div>
         </div>
     );
-
-    const errorNode = error ? (
-        <p id={errorId} role="alert" className={cn(inset, 'text-xs text-destructive')}>
-            {error}
-        </p>
-    ) : null;
 
     if (mode === 'rich') {
         return (
@@ -168,7 +203,7 @@ export function BodyField({
                             className={cn(
                                 'flex w-full items-center text-sm text-muted-foreground',
                                 layout === 'row'
-                                    ? 'min-h-40 px-(--frame-inset) py-3 sm:min-h-24 sm:rounded-field sm:border sm:border-field-border sm:bg-field sm:px-3 sm:py-2'
+                                    ? `${ROW_SURFACE} sm:rounded-field sm:border sm:border-field-border sm:bg-field`
                                     : 'min-h-24 rounded-field border border-field-border bg-field px-3 py-2',
                             )}
                         >
@@ -205,7 +240,7 @@ export function BodyField({
                 onChange={(e) => onChange(e.target.value)}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={errorId}
-                className={layout === 'row' ? 'min-h-40 px-(--frame-inset) py-3 sm:min-h-24 sm:px-3 sm:py-2' : undefined}
+                className={layout === 'row' ? ROW_SURFACE : undefined}
             />
             {errorNode}
             <div className={inset}>

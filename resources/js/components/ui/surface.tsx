@@ -4,7 +4,10 @@ import type { ReactNode } from 'react';
 import { Card, type CardBleed } from '@/components/card';
 import { cn } from '@/lib/utils';
 
-/** Body padding per bleed tier; `full` keeps none below sm so its children own `--frame-inset`. */
+/**
+ * Body padding per bleed tier. `full` pays no HORIZONTAL padding below sm — its children own
+ * `--frame-inset` — while keeping the vertical rhythm, and restores the normal padding from sm up.
+ */
 const BODY_PADDING: Record<'inset' | 'bleed' | 'full', string> = {
     inset: 'px-5 py-4',
     bleed: 'px-(--frame-inset) py-4 sm:px-5',
@@ -39,10 +42,11 @@ type PanelProps = {
      * Forwarded to {@link Card}: run edge to edge below `sm`, and tighten the body padding to match.
      * For title-less panels — a {@link SectionHeader} keeps its own `px-5` and would not line up.
      *
-     * `'full'` additionally hands the horizontal inset to the body's own children: the panel keeps no
-     * side padding below sm, so each child (a {@link FormRow}, the compose editor) spends
-     * `--frame-inset` itself and can align its text with the page heading. A child that forgets to
-     * would sit at x=0, so `'full'` is only for bodies built out of inset-owning parts.
+     * `'full'` additionally hands the horizontal inset to the body's own children, and drops the
+     * border with it: the panel keeps no side padding below sm, so each child (a {@link FormRow}, the
+     * compose editor) spends `--frame-inset` itself and can align its text with the page heading. A
+     * child that forgets to would sit at x=0, so `'full'` is only for bodies built out of
+     * inset-owning parts.
      */
     bleed?: CardBleed;
 };
