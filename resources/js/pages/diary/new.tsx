@@ -3,7 +3,7 @@ import { BodyField } from '@/components/compose/body-field';
 import { initialComposeFormat, type ComposeEditorPreference } from '@/components/compose/editor-mode';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
-import { FormActions, FormRow } from '@/components/ui/field';
+import { Field, FormActions } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
@@ -36,8 +36,8 @@ export default function DiaryNew({
             <h1 className="break-words text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
 
             <Panel overflow="visible" bleed="full">
-                {/* Below sm the form is a stack of hairline-separated full-width rows (each row owns
-                    --frame-inset); from sm up the dividers go and the usual 4-gap stack returns. */}
+                {/* The panel pays no horizontal padding below sm so the body's editing surface can
+                    reach both screen edges; every other child pays the frame inset itself (`inset`). */}
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
@@ -46,18 +46,11 @@ export default function DiaryNew({
                         // byte-stable (multipart encoding normalizes LF to CRLF — body-text.md).
                         post('/diary/create');
                     }}
-                    className="divide-y divide-border sm:space-y-4 sm:divide-y-0"
+                    className="space-y-4"
                 >
-                    <FormRow label={t('Title')} htmlFor="diary_title" error={errors.title}>
-                        <Input
-                            id="diary_title"
-                            type="text"
-                            variant="bare"
-                            required
-                            value={data.title}
-                            onChange={(e) => setData('title', e.target.value)}
-                        />
-                    </FormRow>
+                    <Field label={t('Title')} htmlFor="diary_title" error={errors.title} inset>
+                        <Input id="diary_title" type="text" required value={data.title} onChange={(e) => setData('title', e.target.value)} />
+                    </Field>
 
                     <BodyField
                         id="diary_body"
@@ -73,31 +66,26 @@ export default function DiaryNew({
                         editorPreference={composeEditor}
                     />
 
-                    <FormRow label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
-                        <Select
-                            id="diary_visibility"
-                            variant="bare"
-                            value={data.visibility}
-                            onChange={(e) => setData('visibility', e.target.value)}
-                        >
+                    <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility} inset>
+                        <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
                             {visibilityOptions.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {t(option.label)}
                                 </option>
                             ))}
                         </Select>
-                    </FormRow>
+                    </Field>
 
                     <ImagesField
                         id="diary_images"
                         label={t('Images')}
-                        layout="row"
+                        inset
                         files={data.images}
                         onChange={(files) => setData('images', files)}
                         errors={errors}
                     />
 
-                    <FormActions row>
+                    <FormActions inset>
                         <Button type="submit" loading={processing} disabled={data.body.trim() === ''}>
                             {t('Post')}
                         </Button>

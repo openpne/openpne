@@ -119,12 +119,10 @@ class FrameInsetContractTest extends TestCase
      */
     public function test_inset_owning_content_respends_it(): void
     {
-        $field = $this->js('components/ui/field.tsx');
-        $this->assertStringContainsString(self::INSET, $this->fn($field, 'FormRow'), 'FormRow owns the inset and must re-spend it.');
         $this->assertStringContainsString(
             self::INSET,
-            $this->fn($field, 'FormActions'),
-            'FormActions in row mode owns the inset and must re-spend it.',
+            $this->declaration($this->js('components/ui/field.tsx'), 'FRAME_INSET'),
+            'FRAME_INSET is what every `inset` consumer spends; it must reference the token.',
         );
 
         $this->assertStringContainsString(
@@ -133,23 +131,43 @@ class FrameInsetContractTest extends TestCase
             'The row editable is the writing surface and must re-spend the inset on its own text.',
         );
 
-        $body = $this->js('components/compose/body-field.tsx');
-        foreach (['ROW_INSET', 'ROW_SURFACE'] as $name) {
+        $this->assertStringContainsString(
+            self::INSET,
+            $this->declaration($this->js('components/compose/body-field.tsx'), 'ROW_SURFACE'),
+            "BodyField's ROW_SURFACE is the full-width surface and must re-spend the inset.",
+        );
+    }
+
+    /**
+     * The `inset` opt-in must reach the same shared constant from every consumer, so a `Panel
+     * bleed="full"` child cannot be inset by a hand-rolled padding that drifts from the frame's.
+     */
+    public function test_every_inset_consumer_spends_the_shared_constant(): void
+    {
+        $field = $this->js('components/ui/field.tsx');
+        foreach (['Field', 'FormActions'] as $component) {
             $this->assertStringContainsString(
-                self::INSET,
-                $this->declaration($body, $name),
-                "BodyField's {$name} owns the inset and must re-spend it.",
+                'FRAME_INSET',
+                $this->fn($field, $component),
+                "{$component} must spend FRAME_INSET for its `inset` prop, not its own padding.",
             );
         }
+
+        // The function body, not the file: the `import { FRAME_INSET }` line survives the prop being
+        // dropped, so a whole-file check would stay green with nothing spending it.
+        $this->assertStringContainsString(
+            'FRAME_INSET',
+            $this->fn($this->js('components/images-field.tsx'), 'ImagesField'),
+            'ImagesField must spend FRAME_INSET for its `inset` prop.',
+        );
     }
 
     /**
      * BodyField's op3 branch returns before the layout-aware markup below it, so it needs its own row
-     * handling. Two things would break a `Panel bleed="full"` form if it fell through to the stack
-     * markup: the boxed Textarea would sit at x=0 (the panel pays no side padding), and the Fragment's
-     * two children would land as separate children of the `divide-y` form, splitting one field across
-     * two hairline rows. Not reachable from diary/new — a new entry is never op3 — but the edit forms
-     * allow it, so the contract is pinned here rather than at the first page that would expose it.
+     * handling: falling through to the stack markup would put its boxed Textarea at x=0, since a
+     * `Panel bleed="full"` pays no side padding. Not reachable from diary/new — a new entry is never
+     * op3 — but the edit forms allow it, so the contract is pinned here rather than at the first page
+     * that would expose it.
      */
     public function test_the_op3_body_branch_honours_the_row_layout(): void
     {
@@ -161,11 +179,11 @@ class FrameInsetContractTest extends TestCase
         $branch = $this->stripComments(substr($source, $start, $end - $start));
 
         $this->assertStringContainsString("layout === 'row'", $branch, 'The op3 branch must not ignore the row layout.');
-        $this->assertMatchesRegularExpression(
-            '/if \(layout === \'row\'\) \{\s*return \(\s*<div/',
-            $branch,
-            'The op3 row layout must return one element — a Fragment would split the field across two rows.',
+        $this->assertStringContainsString('ROW_SURFACE', $branch, 'The op3 row textarea must be the full-width surface.');
+        $this->assertStringContainsString(
+            'FRAME_INSET',
+            $this->fn($this->js('components/compose/body-field.tsx'), 'BodyField'),
+            "BodyField's inset parts must spend FRAME_INSET.",
         );
-        $this->assertStringContainsString('ROW_SURFACE', $branch, 'The op3 row textarea must be the inset-owning surface.');
     }
 }

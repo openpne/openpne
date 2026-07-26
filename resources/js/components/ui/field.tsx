@@ -3,6 +3,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
+/**
+ * Spend MemberFrame's `--frame-inset` below sm, then hand the padding back to the panel from sm up.
+ * Shared by everything that sits in a `Panel bleed="full"` body — see the `inset` props here and on
+ * {@link FormActions} / ImagesField, which must stay in step with that panel's padding.
+ */
+export const FRAME_INSET = 'px-(--frame-inset) sm:px-0';
+
 type FieldProps = {
     label?: ReactNode;
     /** Ties the label to the control; defaults to a generated id when omitted. */
@@ -14,17 +21,23 @@ type FieldProps = {
     className?: string;
     /** Trailing content on the label row (e.g. a compact per-field visibility control). */
     labelRight?: ReactNode;
+    /**
+     * Pay the horizontal inset ourselves below sm. For a `Panel bleed="full"` body, which pays none so
+     * that the compose editing surface inside it can reach both screen edges — every other child of
+     * that body has to make up the difference or it sits at x=0.
+     */
+    inset?: boolean;
     /** The single control element. Field injects id / aria-invalid / aria-describedby onto it. */
     children: ReactNode;
 };
 
 /**
- * The a11y wiring shared by {@link Field} and {@link FormRow}: a canonical id stamped on both the
- * label and the control, deterministic help/error ids, and the aria-* injection onto the control.
- * The two differ only in layout, so this stays the single owner of the plumbing — a second copy
- * would drift, and a layout wrapper without it would silently drop the associations.
+ * Label + help + error scaffolding around one control. Owns the a11y wiring: it gives help/error
+ * deterministic ids and injects `id`, `aria-invalid`, and `aria-describedby` onto the control, so
+ * every use site is programmatically associated without repeating the plumbing. Form state stays in
+ * the caller's Inertia useForm; just pass `error`.
  */
-function useFieldWiring({ htmlFor, help, error, required, children }: Pick<FieldProps, 'htmlFor' | 'help' | 'error' | 'required' | 'children'>) {
+export function Field({ label, htmlFor, help, error, required, className, labelRight, inset, children }: FieldProps) {
     const generatedId = useId();
     // Canonical id: prefer the caller's htmlFor, else the child's own id, else a generated one — then
     // stamp that same id on both the label and the control so they can never desynchronize.
@@ -46,26 +59,6 @@ function useFieldWiring({ htmlFor, help, error, required, children }: Pick<Field
           })
         : children;
 
-    return { id, helpId, errorId, control };
-}
-
-/** The label row, help line, and error line — identical in both layouts. */
-function FieldParts({
-    id,
-    helpId,
-    errorId,
-    label,
-    labelRight,
-    help,
-    error,
-    required,
-    control,
-}: {
-    id: string;
-    helpId?: string;
-    errorId?: string;
-    control: ReactNode;
-} & Pick<FieldProps, 'label' | 'labelRight' | 'help' | 'error' | 'required'>) {
     const labelNode = label && (
         <Label htmlFor={id}>
             {label}
@@ -74,7 +67,7 @@ function FieldParts({
     );
 
     return (
-        <>
+        <div className={cn('space-y-2', inset && FRAME_INSET, className)}>
             {labelRight ? (
                 <div className="flex items-center justify-between gap-2">
                     {labelNode ?? <span />}
@@ -94,38 +87,6 @@ function FieldParts({
                     {error}
                 </p>
             )}
-        </>
-    );
-}
-
-/**
- * Label + help + error scaffolding around one control. Owns the a11y wiring: it gives help/error
- * deterministic ids and injects `id`, `aria-invalid`, and `aria-describedby` onto the control, so
- * every use site is programmatically associated without repeating the plumbing. Form state stays in
- * the caller's Inertia useForm; just pass `error`.
- */
-export function Field({ label, htmlFor, help, error, required, className, labelRight, children }: FieldProps) {
-    const wiring = useFieldWiring({ htmlFor, help, error, required, children });
-
-    return (
-        <div className={cn('space-y-2', className)}>
-            <FieldParts {...wiring} label={label} labelRight={labelRight} help={help} error={error} required={required} />
-        </div>
-    );
-}
-
-/**
- * {@link Field} laid out as a full-width row for a `Panel bleed="full"` body: below sm it spends
- * `--frame-inset` itself (the panel keeps none) so its text lines up with the page heading, and the
- * form's `divide-y` draws the hairline between rows. From sm up it is a plain Field again — the
- * padding collapses and the form's `space-y-4` takes back over, leaving the inset card untouched.
- */
-export function FormRow({ label, htmlFor, help, error, required, className, labelRight, children }: FieldProps) {
-    const wiring = useFieldWiring({ htmlFor, help, error, required, children });
-
-    return (
-        <div className={cn('space-y-2 px-(--frame-inset) py-4 sm:px-0 sm:py-0', className)}>
-            <FieldParts {...wiring} label={label} labelRight={labelRight} help={help} error={error} required={required} />
         </div>
     );
 }
@@ -154,17 +115,9 @@ export function FormSection({
     );
 }
 
-/**
- * Trailing action row (submit/cancel). Pass `row` inside a `Panel bleed="full"` body so the actions
- * spend `--frame-inset` like the {@link FormRow}s above them — without it the buttons would sit at
- * x=0, since that panel keeps no side padding of its own below sm.
- */
-export function FormActions({ row, className, children }: { row?: boolean; className?: string; children: ReactNode }) {
-    return (
-        <div className={cn('flex flex-wrap items-center gap-3 pt-1', row && 'px-(--frame-inset) py-4 sm:px-0 sm:py-0 sm:pt-1', className)}>
-            {children}
-        </div>
-    );
+/** Trailing action row (submit/cancel). `inset` as on {@link Field}. */
+export function FormActions({ inset, className, children }: { inset?: boolean; className?: string; children: ReactNode }) {
+    return <div className={cn('flex flex-wrap items-center gap-3 pt-1', inset && FRAME_INSET, className)}>{children}</div>;
 }
 
 /**

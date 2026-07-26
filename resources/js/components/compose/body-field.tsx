@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import { MarkdownPreview } from '@/components/markdown-preview';
-import { Field } from '@/components/ui/field';
+import { Field, FRAME_INSET } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
@@ -27,10 +27,13 @@ import { saveComposeEditor } from './save-compose-editor';
 // compose form opens the rich editor and shared across all of them.
 const RichTextEditor = lazy(() => import('./rich-text-editor'));
 
-/** Per-part horizontal inset for the row layout's parts that are NOT the editing surface itself. */
-const ROW_INSET = 'px-(--frame-inset) sm:px-0';
-
-/** The row layout's editing surface: full width below sm, re-spending the inset on its own text. */
+/**
+ * The row layout's editing surface: below sm it is the only part that does NOT take the frame inset as
+ * padding on its box — the box runs the full width and re-spends the inset on its own text instead, so
+ * the tappable surface reaches both screen edges while the text lines up with the label above it. A
+ * taller min-h as well: a full-width surface three lines tall reads as a scrap of a form rather than a
+ * page to write on. From sm up it is the ordinary boxed field again.
+ */
 const ROW_SURFACE = 'min-h-40 px-(--frame-inset) py-3 sm:min-h-24 sm:px-3 sm:py-2';
 
 interface BodyFieldProps {
@@ -89,12 +92,11 @@ export function BodyField({
 
     const errorId = error ? `${id}-error` : undefined;
 
-    // In the row layout this block is a row of a `Panel bleed="full"` body, but unlike a FormRow it
-    // spends `--frame-inset` per part rather than on the whole: the editing surface runs to both
-    // screen edges and re-spends the inset on its own text, while the label and error stay inset like
-    // every other row. All of that collapses from sm up, where the panel pads again.
-    const inset = layout === 'row' ? ROW_INSET : undefined;
-    const block = layout === 'row' ? 'space-y-2 py-4 sm:py-0' : 'space-y-2';
+    // In the row layout this block sits in a `Panel bleed="full"` body, which pays no horizontal
+    // padding — so each part pays the frame inset itself, EXCEPT the editing surface, which runs to
+    // both screen edges and re-spends the inset internally (see ROW_SURFACE). All of it collapses from
+    // sm up, where the panel pads again.
+    const inset = layout === 'row' ? FRAME_INSET : undefined;
 
     const errorNode = error ? (
         <p id={errorId} role="alert" className={cn(inset, 'text-xs text-destructive')}>
@@ -104,9 +106,8 @@ export function BodyField({
 
     // op3: `format === undefined` is the op3 signal (the page omitted the field so the server
     // preserves the stored format); show the static note, no menu, no editor choice. The row layout
-    // needs its own return: the stack markup is a Fragment, which in a `divide-y` form would split
-    // one field across two hairline rows, and its boxed Textarea would sit at x=0 in a panel that
-    // pays no side padding.
+    // needs its own return: the stack markup is a Fragment whose boxed Textarea would sit at x=0 in a
+    // panel that pays no side padding.
     if (format === undefined) {
         const note = t('This entry keeps its OpenPNE 3 formatting.');
         const textarea = (
@@ -127,7 +128,7 @@ export function BodyField({
 
         if (layout === 'row') {
             return (
-                <div className={block}>
+                <div className="space-y-2">
                     <div className={inset}>
                         <Label htmlFor={id}>{label}</Label>
                     </div>
@@ -195,7 +196,7 @@ export function BodyField({
 
     if (mode === 'rich') {
         return (
-            <div className={block}>
+            <div className="space-y-2">
                 {header}
                 <Suspense
                     fallback={
@@ -229,7 +230,7 @@ export function BodyField({
     }
 
     return (
-        <div className={block}>
+        <div className="space-y-2">
             {header}
             <Textarea
                 id={id}
@@ -244,7 +245,7 @@ export function BodyField({
             />
             {errorNode}
             <div className={inset}>
-                <MarkdownPreview body={value} enabled={format === 'markdown'} bare={layout === 'row'} />
+                <MarkdownPreview body={value} enabled={format === 'markdown'} />
             </div>
         </div>
     );

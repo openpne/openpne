@@ -1,4 +1,5 @@
 import { type ChangeEvent, useRef, useState } from 'react';
+import { FRAME_INSET } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -68,11 +69,11 @@ interface ImagesFieldProps {
     /** Server-side cap (PostImages::MAX_IMAGES). */
     max?: number;
     /**
-     * `'row'` when this sits in a `Panel bleed="full"` body (the compose forms): the block spends
-     * `--frame-inset` itself, like a {@link FormRow}. Opt-in, because the same picker also serves the
-     * message forms and the comment boxes on the show pages, which keep their padded panel.
+     * Pay the horizontal inset ourselves, as on {@link Field} — for a `Panel bleed="full"` body. Opt-in,
+     * because the same picker also serves the message forms and the comment boxes on the show pages,
+     * which keep their padded panel.
      */
-    layout?: 'stack' | 'row';
+    inset?: boolean;
 }
 
 /**
@@ -81,7 +82,7 @@ interface ImagesFieldProps {
  * on every pick (nothing stale survives a reset after posting), oversized photos are shrunk
  * client-side before submit, and server errors keyed `images` and `images.N` are both surfaced.
  */
-export function ImagesField({ id, label, files, onChange, errors, name = 'images', max = 3, layout = 'stack' }: ImagesFieldProps) {
+export function ImagesField({ id, label, files, onChange, errors, name = 'images', max = 3, inset }: ImagesFieldProps) {
     const t = useT();
     const [busy, setBusy] = useState(false);
     const [clientError, setClientError] = useState<string | null>(null);
@@ -135,7 +136,7 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
     }
 
     return (
-        <div className={cn('space-y-2', layout === 'row' && 'px-(--frame-inset) py-4 sm:px-0 sm:py-0')}>
+        <div className={cn('space-y-2', inset && FRAME_INSET)}>
             <Label htmlFor={id}>{label}</Label>
             {files.length > 0 && (
                 <ul className="space-y-1">
