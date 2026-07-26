@@ -3,7 +3,7 @@ import { BodyField } from '@/components/compose/body-field';
 import { initialComposeFormat, type ComposeEditorPreference } from '@/components/compose/editor-mode';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
-import { Field } from '@/components/ui/field';
+import { FormActions, FormRow } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
@@ -35,7 +35,9 @@ export default function DiaryNew({
             <Head title={t('Write a %diary%')} />
             <h1 className="break-words text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
 
-            <Panel overflow="visible" bleed>
+            <Panel overflow="visible" bleed="full">
+                {/* Below sm the form is a stack of hairline-separated full-width rows (each row owns
+                    --frame-inset); from sm up the dividers go and the usual 4-gap stack returns. */}
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
@@ -44,15 +46,23 @@ export default function DiaryNew({
                         // byte-stable (multipart encoding normalizes LF to CRLF — body-text.md).
                         post('/diary/create');
                     }}
-                    className="space-y-4"
+                    className="divide-y divide-border sm:space-y-4 sm:divide-y-0"
                 >
-                    <Field label={t('Title')} htmlFor="diary_title" error={errors.title}>
-                        <Input id="diary_title" type="text" required value={data.title} onChange={(e) => setData('title', e.target.value)} />
-                    </Field>
+                    <FormRow label={t('Title')} htmlFor="diary_title" error={errors.title}>
+                        <Input
+                            id="diary_title"
+                            type="text"
+                            variant="bare"
+                            required
+                            value={data.title}
+                            onChange={(e) => setData('title', e.target.value)}
+                        />
+                    </FormRow>
 
                     <BodyField
                         id="diary_body"
                         label={t('Body')}
+                        layout="row"
                         value={data.body}
                         onChange={(body) => setData('body', body)}
                         error={errors.body}
@@ -63,21 +73,35 @@ export default function DiaryNew({
                         editorPreference={composeEditor}
                     />
 
-                    <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
-                        <Select id="diary_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
+                    <FormRow label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>
+                        <Select
+                            id="diary_visibility"
+                            variant="bare"
+                            value={data.visibility}
+                            onChange={(e) => setData('visibility', e.target.value)}
+                        >
                             {visibilityOptions.map((option) => (
                                 <option key={option.value} value={option.value}>
                                     {t(option.label)}
                                 </option>
                             ))}
                         </Select>
-                    </Field>
+                    </FormRow>
 
-                    <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
+                    <ImagesField
+                        id="diary_images"
+                        label={t('Images')}
+                        layout="row"
+                        files={data.images}
+                        onChange={(files) => setData('images', files)}
+                        errors={errors}
+                    />
 
-                    <Button type="submit" loading={processing} disabled={data.body.trim() === ''}>
-                        {t('Post')}
-                    </Button>
+                    <FormActions row>
+                        <Button type="submit" loading={processing} disabled={data.body.trim() === ''}>
+                            {t('Post')}
+                        </Button>
+                    </FormActions>
                 </form>
             </Panel>
         </>

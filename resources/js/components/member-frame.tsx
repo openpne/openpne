@@ -21,6 +21,12 @@ const GAP: Record<Chrome['gap'], string> = {
  * (h1 + primary action + tabs) resolved from the chrome registry, and central flash. Pages render
  * only their content — a page must not carry its own <main> or FlashMessage (MemberFrameGuardTest
  * enforces both), and headings outside the registry's hub modes stay in the page body ('embedded').
+ *
+ * `--frame-inset` is the one horizontal inset every descendant measures against: this <main> spends
+ * it as padding, a bleeding Card cancels it with a negative margin, and content that took over the
+ * inset from its card (the compose editor, form rows) re-spends it. Below sm the card chrome is gone
+ * and content owns the inset, so text stays 16px from the edge instead of the 33px a nested
+ * frame + card + field box used to add up to. FrameInsetContractTest guards the three roles.
  */
 export function MemberFrame({ chrome: override, children }: { chrome?: Partial<Chrome>; children: ReactNode }) {
     const t = useT();
@@ -34,7 +40,7 @@ export function MemberFrame({ chrome: override, children }: { chrome?: Partial<C
     return (
         <main
             className={cn(
-                'mx-auto px-4 py-8',
+                'mx-auto px-(--frame-inset) py-8 [--frame-inset:1rem]',
                 chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
                 GAP[chrome.gap],
                 chrome.foreground && 'text-foreground',

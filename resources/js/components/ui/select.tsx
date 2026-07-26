@@ -1,20 +1,12 @@
 import type { ComponentProps } from 'react';
+import { BARE_BOX_CARETLESS, FIELD_BOX } from '@/components/ui/control-chrome';
 import { cn } from '@/lib/utils';
 
 /**
  * Token-based native select (keeps the platform picker + Inertia useForm compatibility; a Radix
- * combobox is heavier and unnecessary for these short option lists).
+ * combobox is heavier and unnecessary for these short option lists). `variant="bare"` drops the box
+ * below sm but keeps the focus ring — a select has no caret to signal focus with.
  */
-export function Select({ className, ...props }: ComponentProps<'select'>) {
-    return (
-        <select
-            className={cn(
-                // text-base on mobile: a <16px control makes iOS Safari auto-zoom on focus, and the
-                // zoom persists across Inertia's SPA navigations (page looks cut off on the right).
-                'flex min-h-11 w-full rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/30 md:text-sm',
-                className,
-            )}
-            {...props}
-        />
-    );
+export function Select({ className, variant = 'field', ...props }: ComponentProps<'select'> & { variant?: 'field' | 'bare' }) {
+    return <select className={cn('flex min-h-11 w-full', variant === 'bare' ? BARE_BOX_CARETLESS : FIELD_BOX, className)} {...props} />;
 }

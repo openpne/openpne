@@ -9,7 +9,7 @@ import { useT } from '@/lib/i18n';
  * preview can never show markup the saved body would strip. Renders nothing until enabled with a
  * non-empty body. An in-flight request is aborted when the body changes or the component unmounts.
  */
-export function MarkdownPreview({ body, enabled }: { body: string; enabled: boolean }) {
+export function MarkdownPreview({ body, enabled, bare = false }: { body: string; enabled: boolean; bare?: boolean }) {
     const t = useT();
     const [html, setHtml] = useState<string | null>(null);
     const [state, setState] = useState<'idle' | 'pending' | 'error'>('idle');
@@ -73,10 +73,14 @@ export function MarkdownPreview({ body, enabled }: { body: string; enabled: bool
                 </p>
             ) : html !== null ? (
                 // Bounded height with internal scroll: a long draft must not push the form's
-                // remaining fields (visibility, submit) further down the page as it grows.
+                // remaining fields (visibility, submit) further down the page as it grows. With
+                // `bare`, that box is a sm+ affordance only: below sm the compose surface carries no
+                // inset frames at all (mobile width policy #3), so the "Preview" label marks it.
                 <div
                     className={
-                        'max-h-[60vh] overflow-y-auto rounded-md border border-border p-3' +
+                        (bare
+                            ? 'max-h-[60vh] overflow-y-auto sm:rounded-md sm:border sm:border-border sm:p-3'
+                            : 'max-h-[60vh] overflow-y-auto rounded-md border border-border p-3') +
                         (state === 'pending' ? ' opacity-60 transition-opacity' : '')
                     }
                 >

@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { composeEditorAttributes, createComposeEditorOptions } from '@/components/compose/editor-extensions';
+import { type ComposeLayout, composeEditorAttributes, createComposeEditorOptions } from '@/components/compose/editor-extensions';
 import { useVisualViewport, type ViewportMetrics } from '@/components/compose/use-visual-viewport-bottom';
 
 type RichTextEditorProps = {
@@ -54,6 +54,8 @@ type RichTextEditorProps = {
     /** Accessible name; forwarded as aria-label onto the editable and reused for the toolbar. */
     label: string;
     id?: string;
+    /** 'row' drops the editable's box below sm so it becomes the full-width writing surface. */
+    layout?: ComposeLayout;
     // Hyphen-named DOM attributes exactly as components/ui/field.tsx clone-injects them.
     'aria-required'?: 'true';
     'aria-invalid'?: 'true';
@@ -568,8 +570,9 @@ function TableMenu({ editor }: { editor: Editor }) {
  * TopNav via --modern-top-offset, which is 0 at lg) with an opaque background so the body scrolls
  * under it. The host Panel opts out of overflow clipping (Panel overflow="visible") so the sticky
  * resolves against the page scroll, and -mx-5 bleeds the band to the card edges — matching the
- * Panel body's px-5. That pairing survives `Panel bleed` only because bleed's px-4 stops at sm and
- * this row starts at md; keep them from overlapping if either breakpoint moves.
+ * `sm:px-5` the panel body restores. Only the sm+ padding is ever in play here, because this row
+ * starts at md while the panel's below-sm layout (no side padding, children own --frame-inset) stops
+ * at sm; keep them from overlapping if either breakpoint moves.
  */
 function DesktopToolbar({ editor }: { editor: Editor }) {
     const t = useT();
@@ -707,6 +710,7 @@ export default function RichTextEditor({
     onChange,
     label,
     id,
+    layout,
     'aria-required': ariaRequired,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedby,
@@ -734,6 +738,7 @@ export default function RichTextEditor({
             initialMarkdown,
             onChange: (md) => onChangeRef.current(md),
             attributes,
+            layout,
         }),
     );
 
@@ -743,8 +748,10 @@ export default function RichTextEditor({
     // after mount must toggle aria-invalid/aria-describedby on the live editable).
     const attributesKey = JSON.stringify(attributes);
     useEffect(() => {
-        editor?.setOptions({ editorProps: { attributes: composeEditorAttributes(JSON.parse(attributesKey) as Record<string, string>) } });
-    }, [editor, attributesKey]);
+        editor?.setOptions({
+            editorProps: { attributes: composeEditorAttributes(JSON.parse(attributesKey) as Record<string, string>, layout) },
+        });
+    }, [editor, attributesKey, layout]);
 
     // Mobile bottom bar shows only while the editor surface holds focus.
     const isCompact = useIsCompact();

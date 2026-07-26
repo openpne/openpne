@@ -46,12 +46,37 @@ import type { Tokens } from 'marked';
 const originalListTokenizer = Tokenizer.prototype.list;
 
 /**
+ * How the body block sits in its form: `'stack'` is the boxed field inside a padded panel, `'row'` is
+ * the full-width row of a `Panel bleed="full"` body. Opt-in per page, because the compose forms are
+ * converted one at a time and the same components also serve the message and comment forms.
+ */
+export type ComposeLayout = 'stack' | 'row';
+
+/**
  * Textarea chrome (mirrors components/ui/textarea.tsx) applied to the ProseMirror editable —
  * except `block` where the textarea uses `flex`: on a contenteditable div, flex would lay the
  * child block nodes (paragraphs, lists) out in a row, so Enter never visibly breaks the line.
  */
 const EDITOR_CONTENT_CLASS =
     'rich-body block min-h-24 w-full rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/30 md:text-sm';
+
+/**
+ * The same editable inside a `Panel bleed="full"` row (BodyField layout="row"). Below sm the box is
+ * gone and the padding becomes `px-(--frame-inset)`, not 0: the editable IS the writing surface, so
+ * it runs to both screen edges — its host panel pays no side padding — and re-spends the frame's
+ * inset on its own text, which lands 16px from the edge, level with the page heading, while the
+ * tappable surface stays full width. That is the note/Gmail/x.com composer geometry.
+ *
+ * A taller min-h below sm as well: a full-width surface that starts three lines tall reads as a
+ * scrap of a form rather than a page to write on. From sm up this resolves to EDITOR_CONTENT_CLASS.
+ */
+const EDITOR_CONTENT_CLASS_ROW = [
+    'rich-body block w-full min-h-40 border-0 bg-transparent px-(--frame-inset) py-3 shadow-none transition-colors',
+    'text-base text-foreground focus-visible:outline-none md:text-sm',
+    'sm:min-h-24 sm:rounded-field sm:border sm:border-field-border sm:bg-field sm:px-3 sm:py-2 sm:shadow-sm',
+    'sm:focus-visible:border-ring sm:focus-visible:ring-2 sm:focus-visible:ring-ring',
+    'sm:aria-[invalid=true]:border-destructive sm:aria-[invalid=true]:ring-2 sm:aria-[invalid=true]:ring-destructive/30',
+].join(' ');
 
 /** True only for an http/https URL — the sanitizer's link-scheme allowlist, enforced at authoring. */
 function isHttpUrl(url: string): boolean {
@@ -262,8 +287,13 @@ export function composeExtensions(): Extensions {
  * textbox role is what permits aria-label/aria-required on the contenteditable (axe
  * aria-allowed-attr; contenteditable has no implicit role).
  */
-export function composeEditorAttributes(attributes?: Record<string, string>): Record<string, string> {
-    return { class: EDITOR_CONTENT_CLASS, role: 'textbox', 'aria-multiline': 'true', ...attributes };
+export function composeEditorAttributes(attributes?: Record<string, string>, layout: ComposeLayout = 'stack'): Record<string, string> {
+    return {
+        class: layout === 'row' ? EDITOR_CONTENT_CLASS_ROW : EDITOR_CONTENT_CLASS,
+        role: 'textbox',
+        'aria-multiline': 'true',
+        ...attributes,
+    };
 }
 
 /** Parse Markdown into the editor without emitting an update (isolates the early-release API). */
@@ -286,15 +316,16 @@ export function createComposeEditorOptions(opts: {
     initialMarkdown: string;
     onChange: (md: string) => void;
     attributes?: Record<string, string>;
+    layout?: ComposeLayout;
 }): Partial<EditorOptions> {
-    const { initialMarkdown, onChange, attributes } = opts;
+    const { initialMarkdown, onChange, attributes, layout } = opts;
 
     return {
         extensions: composeExtensions(),
         content: initialMarkdown,
         contentType: 'markdown',
         editorProps: {
-            attributes: composeEditorAttributes(attributes),
+            attributes: composeEditorAttributes(attributes, layout),
         },
         onUpdate: ({ editor, transaction }) => {
             // docChanged is the dirty signal for the host form; a bare selection move is not an edit.

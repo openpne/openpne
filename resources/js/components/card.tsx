@@ -6,29 +6,44 @@ type Props = {
     className?: string;
 };
 
+/** How the card meets the screen edge below sm. `true` keeps the hairline outline; 'full' drops it. */
+export type CardBleed = boolean | 'full';
+
+/**
+ * The three ways a card can meet the viewport below sm. Each is a complete swap rather than an
+ * appended override because tailwind-merge does not know our custom `rounded-card` / `shadow-card`
+ * tokens and so would not dedupe them against `rounded-none` / `shadow-none`, leaving the outcome to
+ * stylesheet order.
+ *
+ * `bleed` and `full` both cancel MemberFrame's inset with `-mx-(--frame-inset)`, because a rounded
+ * card inset from both edges wastes scarce width on a screen this narrow. They differ in what marks
+ * the surface: `bleed` keeps top/bottom hairlines, `full` drops every border and the shadow so the
+ * background/card colour difference alone marks it — the note/x.com treatment, and the only one that
+ * lets the content inside align its text with the page heading.
+ */
+const CHROME: Record<'inset' | 'bleed' | 'full', string> = {
+    inset: 'rounded-card border shadow-card',
+    bleed: '-mx-(--frame-inset) rounded-none border-y border-x-0 shadow-card sm:mx-0 sm:rounded-card sm:border-x',
+    full: '-mx-(--frame-inset) rounded-none border-0 sm:mx-0 sm:rounded-card sm:border sm:shadow-card',
+};
+
 /**
  * Rounded card wrapping a block of page content. Clips to the rounded corners by default; pass
  * `overflow="visible"` when a descendant needs to escape the card as its scroll context (e.g. a
  * `position: sticky` toolbar resolving against the page instead of the clipped card).
- *
- * `bleed` gives the card the full phone width: the `-mx-4` exactly cancels MemberFrame's `px-4`, and
- * the side border and corners go with it, since a rounded card inset from both edges wastes scarce
- * width on a screen this narrow. It is a base-class swap rather than an appended override because
- * tailwind-merge does not know our custom `rounded-card` token and so would not dedupe it against
- * `rounded-none`, leaving the outcome to stylesheet order.
  */
 export function Card({
     children,
     className,
     overflow = 'hidden',
     bleed = false,
-}: Props & { overflow?: 'hidden' | 'visible'; bleed?: boolean }) {
+}: Props & { overflow?: 'hidden' | 'visible'; bleed?: CardBleed }) {
     return (
         <div
             className={cn(
                 overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible',
-                bleed ? '-mx-4 rounded-none border-y border-x-0 sm:mx-0 sm:rounded-card sm:border-x' : 'rounded-card border',
-                'border-border bg-card text-card-foreground shadow-card',
+                CHROME[bleed === 'full' ? 'full' : bleed ? 'bleed' : 'inset'],
+                'border-border bg-card text-card-foreground',
                 className,
             )}
         >

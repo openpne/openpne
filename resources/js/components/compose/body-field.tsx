@@ -5,6 +5,10 @@ import { Field } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
+// `import type`, not a named type import: a value-shaped import statement would pull
+// editor-extensions (and with it tiptap) into this chunk, defeating the lazy RichTextEditor split.
+import type { ComposeLayout } from './editor-extensions';
 import {
     applyInputMethod,
     initialEditorMode,
@@ -23,6 +27,9 @@ import { saveComposeEditor } from './save-compose-editor';
 // compose form opens the rich editor and shared across all of them.
 const RichTextEditor = lazy(() => import('./rich-text-editor'));
 
+/** Per-part horizontal inset for the row layout's parts that are NOT the editing surface itself. */
+const ROW_INSET = 'px-(--frame-inset) sm:px-0';
+
 interface BodyFieldProps {
     id: string;
     label: string; // pre-translated by the page
@@ -38,6 +45,12 @@ interface BodyFieldProps {
     editorPreference: ComposeEditorPreference;
     /** The stored record format (undefined = create); read once to pick the initial state. */
     recordFormat?: RecordFormat;
+    /**
+     * `'row'` when the host form is a `Panel bleed="full"` body: below sm the editing surface runs to
+     * both screen edges and the label/error keep the frame inset. Opt-in per page — the message and
+     * comment forms, and the compose pages not converted yet, stay on the boxed `'stack'` layout.
+     */
+    layout?: ComposeLayout;
 }
 
 /**
@@ -60,6 +73,7 @@ export function BodyField({
     onFormatChange,
     editorPreference,
     recordFormat,
+    layout = 'stack',
 }: BodyFieldProps) {
     const t = useT();
     const confirm = useConfirm();
@@ -120,8 +134,16 @@ export function BodyField({
     // the same place whichever is showing, so switching never moves it. Field's clone-injection is not
     // usable here — it cannot reach the contenteditable through <Suspense> — so the label, the aria-*
     // wiring, and the error are rendered by hand for both branches alike.
+    //
+    // In the row layout this block is a row of a `Panel bleed="full"` body, but unlike a FormRow it
+    // spends `--frame-inset` per part rather than on the whole: the editing surface runs to both
+    // screen edges and re-spends the inset on its own text, while the label and error stay inset like
+    // every other row. All of that collapses from sm up, where the panel pads again.
+    const inset = layout === 'row' ? ROW_INSET : undefined;
+    const block = layout === 'row' ? 'space-y-2 py-4 sm:py-0' : 'space-y-2';
+
     const header = (
-        <div className="flex items-center justify-between gap-2">
+        <div className={cn(inset, 'flex items-center justify-between gap-2')}>
             <Label htmlFor={id}>{label}</Label>
             <div className="flex items-center gap-2">
                 <InputMethodBadge method={method} />
@@ -131,18 +153,25 @@ export function BodyField({
     );
 
     const errorNode = error ? (
-        <p id={errorId} role="alert" className="text-xs text-destructive">
+        <p id={errorId} role="alert" className={cn(inset, 'text-xs text-destructive')}>
             {error}
         </p>
     ) : null;
 
     if (mode === 'rich') {
         return (
-            <div className="space-y-2">
+            <div className={block}>
                 {header}
                 <Suspense
                     fallback={
-                        <div className="flex min-h-24 w-full items-center rounded-field border border-field-border bg-field px-3 py-2 text-sm text-muted-foreground">
+                        <div
+                            className={cn(
+                                'flex w-full items-center text-sm text-muted-foreground',
+                                layout === 'row'
+                                    ? 'min-h-40 px-(--frame-inset) py-3 sm:min-h-24 sm:rounded-field sm:border sm:border-field-border sm:bg-field sm:px-3 sm:py-2'
+                                    : 'min-h-24 rounded-field border border-field-border bg-field px-3 py-2',
+                            )}
+                        >
                             {t('Loading editor…')}
                         </div>
                     }
@@ -153,6 +182,7 @@ export function BodyField({
                         onChange={onChange}
                         label={label}
                         id={id}
+                        layout={layout}
                         aria-required={required ? 'true' : undefined}
                         aria-invalid={error ? 'true' : undefined}
                         aria-describedby={errorId}
@@ -164,19 +194,23 @@ export function BodyField({
     }
 
     return (
-        <div className="space-y-2">
+        <div className={block}>
             {header}
             <Textarea
                 id={id}
+                variant={layout === 'row' ? 'bare' : 'field'}
                 required={required}
                 rows={rows}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={errorId}
+                className={layout === 'row' ? 'min-h-40 px-(--frame-inset) py-3 sm:min-h-24 sm:px-3 sm:py-2' : undefined}
             />
             {errorNode}
-            <MarkdownPreview body={value} enabled={format === 'markdown'} />
+            <div className={inset}>
+                <MarkdownPreview body={value} enabled={format === 'markdown'} bare={layout === 'row'} />
+            </div>
         </div>
     );
 }

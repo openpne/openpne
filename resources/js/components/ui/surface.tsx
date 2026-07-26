@@ -1,8 +1,15 @@
 import { Link } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Card } from '@/components/card';
+import { Card, type CardBleed } from '@/components/card';
 import { cn } from '@/lib/utils';
+
+/** Body padding per bleed tier; `full` keeps none below sm so its children own `--frame-inset`. */
+const BODY_PADDING: Record<'inset' | 'bleed' | 'full', string> = {
+    inset: 'px-5 py-4',
+    bleed: 'px-(--frame-inset) py-4 sm:px-5',
+    full: 'py-4 sm:px-5',
+};
 
 /**
  * Underlined title band for the top of a Panel/Card (or a titled subsection). The page <h1> stays
@@ -31,8 +38,13 @@ type PanelProps = {
     /**
      * Forwarded to {@link Card}: run edge to edge below `sm`, and tighten the body padding to match.
      * For title-less panels — a {@link SectionHeader} keeps its own `px-5` and would not line up.
+     *
+     * `'full'` additionally hands the horizontal inset to the body's own children: the panel keeps no
+     * side padding below sm, so each child (a {@link FormRow}, the compose editor) spends
+     * `--frame-inset` itself and can align its text with the page heading. A child that forgets to
+     * would sit at x=0, so `'full'` is only for bodies built out of inset-owning parts.
      */
-    bleed?: boolean;
+    bleed?: CardBleed;
 };
 
 /**
@@ -44,7 +56,9 @@ export function Panel({ title, right, children, className, bodyClassName, flush,
     return (
         <Card className={className} overflow={overflow} bleed={bleed}>
             {title && <SectionHeader title={title} right={right} />}
-            <div className={cn(flush ? undefined : bleed ? 'px-4 py-4 sm:px-5' : 'px-5 py-4', bodyClassName)}>{children}</div>
+            <div className={cn(flush ? undefined : BODY_PADDING[bleed === 'full' ? 'full' : bleed ? 'bleed' : 'inset'], bodyClassName)}>
+                {children}
+            </div>
         </Card>
     );
 }
