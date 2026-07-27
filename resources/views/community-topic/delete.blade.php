@@ -8,7 +8,8 @@
     <x-classic.parts id="deleteConfirmForm" name="form" :title="__('Delete %topic%')">
         <form method="POST" action="{{ route('communityTopic.delete', $topic) }}">
             @csrf
-            <div class="block">{{ __('Delete :name? This cannot be undone.', ['name' => $topic->name]) }}</div>
+            {{-- OpenPNE 3 passes no body option here (no .block); the question is an OpenPNE 4 addition. --}}
+            <p>{{ __('Delete :name? This cannot be undone.', ['name' => $topic->name]) }}</p>
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>

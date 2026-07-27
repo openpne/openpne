@@ -81,10 +81,11 @@ existing themes and customizations depend on:
   `box` / `descriptionBox` / `informationBox` wrap it in `.body`; `listBox` / `alertBox` put a
   `<table>` under `.parts` and `form` puts `<form><table>` there — none use a `.body` wrapper,
   and `div.parts table` draws the grid border either way. Confirm screens have no one shape in
-  OpenPNE 3 — `yesNo` (community delete / drop member), the `form` kind with the question as its
-  `.block` body (community join / quit, topic and event delete), or a hand-written `box` holding a
-  `.block` (diary / message delete) — so each reproduces the one its own OpenPNE 3 screen used,
-  and none of them uses `.body`.
+  OpenPNE 3 — `yesNo` (community delete / drop member), the `form` kind (community join / quit,
+  topic and event delete), or a hand-written `box` holding a `.block` (diary / message delete) —
+  so each reproduces the one its own OpenPNE 3 screen used, and none of them uses `.body`. In the
+  `form` kind, `.block` appears only when OpenPNE 3 passed the `body` option (join / quit); its
+  delete confirms passed none, so their question text is an OpenPNE 4 addition in bare markup.
 - The `#Layout{A..C}` letter — OpenPNE 3's `setLayout` / `view.yml` / `decorate_with` choice — is
   resolved per screen by [`RouteParity::layouts()`](../../app/Compat/RouteParity.php) through the
   `classic_layout()` helper, defaulting to OpenPNE 3's global `layoutC`; gadget pages (home /

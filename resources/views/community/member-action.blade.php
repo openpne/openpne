@@ -27,7 +27,9 @@
                 @csrf
                 <input type="hidden" name="id" value="{{ $community->getKey() }}">
                 <input type="hidden" name="member_id" value="{{ $target->getKey() }}">
-                <div class="block">{{ $message }}</div>
+                {{-- OpenPNE 3's appoint/take-over forms pass no body option (no .block); the
+                     question is an OpenPNE 4 addition. --}}
+                <p>{{ $message }}</p>
                 <div class="operation">
                     <ul class="moreInfo button">
                         <li><input type="submit" class="input_submit" value="{{ $submitLabel }}"></li>
