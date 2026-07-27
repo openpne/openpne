@@ -33,6 +33,9 @@ class CommunityRouteParity extends RouteParity
 
             // join / quit / delete: OpenPNE 3 confirms on GET and runs on POST under one route;
             // split into an explicit GET confirm + POST submit (cf. FriendRouteParity unlink).
+            // When the confirm does not apply (already a member on join; the admin on quit),
+            // OpenPNE 4 redirects to the community home instead of rendering the OpenPNE 3
+            // confirm page (Level 3).
             new RouteMap('community_join', '/community/join', 'community.join.show', 'GET', op3Action: 'join'),
             new RouteMap('community_join', '/community/join', 'community.join', 'POST'),
             new RouteMap('community_quit', '/community/quit', 'community.quit.show', 'GET', op3Action: 'quit'),
