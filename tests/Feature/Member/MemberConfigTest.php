@@ -41,10 +41,10 @@ class MemberConfigTest extends TestCase
             ->assertSee('id="page_member_config"', false)
             ->assertSee('id="LayoutB"', false)
             ->assertSee('id="Left"', false)
-            ->assertSee('class="parts pageNav"', false)
+            ->assertSee('class="dparts pageNav"', false)
             ->assertSee('Please select the item')
-            ->assertDontSee('id="member_config_diary"', false)
-            ->assertDontSee('id="member_config_surface"', false);
+            ->assertDontSee('id="diaryForm"', false)
+            ->assertDontSee('id="generalForm"', false);
     }
 
     public function test_the_category_nav_links_to_the_other_categories(): void
@@ -70,11 +70,11 @@ class MemberConfigTest extends TestCase
         // Asserted by the section's form id (a `name="locale"` marker would be polluted by the global
         // side-banner language gadget).
         $sections = [
-            'diary' => 'member_config_diary',
-            'publicFlag' => 'member_config_age',
-            'language' => 'member_config_language',
-            'general' => 'member_config_surface',
-            'password' => 'member_config_password',
+            'diary' => 'diaryForm',
+            'publicFlag' => 'publicFlagForm',
+            'language' => 'languageForm',
+            'general' => 'generalForm',
+            'password' => 'passwordForm',
             'email' => 'member_config_email',
             'withdrawal' => 'member_config_withdrawal',
         ];
@@ -99,7 +99,7 @@ class MemberConfigTest extends TestCase
         $this->actingAs($member)->get('/member/config?category=profile')
             ->assertOk()
             ->assertSee('Please select the item')
-            ->assertDontSee('id="member_config_diary"', false);
+            ->assertDontSee('id="diaryForm"', false);
 
         $this->actingAs($member)->get('/member/config?category=zzz')->assertOk();
     }
@@ -218,7 +218,7 @@ class MemberConfigTest extends TestCase
         $this->actingAs($member)->get('/member/config?category=publicFlag')
             ->assertOk()
             ->assertSee('Please select the item')
-            ->assertDontSee('id="member_config_age"', false)
+            ->assertDontSee('id="publicFlagForm"', false)
             ->assertDontSee('href="'.route('member.config', ['category' => 'publicFlag']).'"', false);
     }
 
