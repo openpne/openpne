@@ -244,9 +244,7 @@ export function BodyField({
                 className={layout === 'row' ? ROW_SURFACE : undefined}
             />
             {errorNode}
-            <div className={inset}>
-                <MarkdownPreview body={value} enabled={format === 'markdown'} />
-            </div>
+            <MarkdownPreview body={value} enabled={format === 'markdown'} className={inset} />
         </div>
     );
 }
