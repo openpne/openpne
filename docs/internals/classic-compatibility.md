@@ -73,13 +73,14 @@ existing themes and customizations depend on:
 - `secure_page` / `insecure_page` body classes, `LayoutA`–`LayoutE`, `localNav`, gadget
   slots, and the `opSkinBasicPlugin` / `opSkinThemePlugin` CSS hooks.
 - The parts frame, reproducing OpenPNE 3's `_partsLayout.php`:
-  [`x-classic.parts`](../../resources/views/components/classic/parts.blade.php) owns it, so a
-  Classic view never hand-writes the nesting. It emits `.dparts > .parts > .partsHeading`,
-  collapsing to a lone `.parts` for the kinds whose OpenPNE 3 body partial forced it
-  (`informationBox`, `line`, `memberImageBox`, `searchFormLine`). Body markup stays with the
-  caller because it is per-kind: `box` / `descriptionBox` / `informationBox` wrap it in `.body`,
-  while `listBox` / `form` / `alertBox` leave their `<table>` directly under `.parts`, which is
-  what `div.parts table` draws the grid border on.
+  [`x-classic.parts`](../../resources/views/components/classic/parts.blade.php) owns it — new
+  page parts must not hand-write the nesting (a few already-faithful hand-written boxes remain).
+  It emits `.dparts > .parts > .partsHeading`, collapsing to a lone `.parts` for the kinds whose
+  OpenPNE 3 body partial forced it (`informationBox`, `line`, `memberImageBox`,
+  `searchFormLine`). Body markup stays with the caller because it is per-kind:
+  `box` / `descriptionBox` / `informationBox` wrap it in `.body`; `listBox` / `alertBox` put a
+  `<table>` under `.parts` and `form` puts `<form><table>` there — none use a `.body` wrapper,
+  and `div.parts table` draws the grid border either way.
 - The `#Layout{A..C}` letter — OpenPNE 3's `setLayout` / `view.yml` / `decorate_with` choice — is
   resolved per screen by [`RouteParity::layouts()`](../../app/Compat/RouteParity.php) through the
   `classic_layout()` helper, defaulting to OpenPNE 3's global `layoutC`; gadget pages (home /

@@ -3,7 +3,7 @@
      and the kinds whose OpenPNE 3 body partial forced it default to true. `id` is the kind's DOM id
      (custom-CSS seam); null when the kind has none. The body structure (.body, .block, a bare
      table) stays with the caller, as it did with OpenPNE 3's per-kind body partial: .body is not
-     universal (listBox / form / alertBox put their table straight under .parts). --}}
+     universal (listBox / alertBox put a table under .parts; form puts form > table there). --}}
 @props(['id' => null, 'name' => null, 'single' => null, 'title' => null])
 @php($single ??= in_array($name, ['informationBox', 'line', 'memberImageBox', 'searchFormLine'], true))
 @php($outerClass = ($single ? 'parts' : 'dparts').($name ? ' '.$name : ''))
