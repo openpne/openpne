@@ -129,7 +129,9 @@ custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar 
 
 Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is; there is a single static skin (no
-theme switching); the footer has no privacy-policy / terms links (no such routes exist).
+theme switching); the footer has no privacy-policy / terms links (no such routes exist); the
+`#SmtSwitch` smartphone-view toggle is not ported (OpenPNE 4 has no separate smartphone frontend
+to switch to).
 
 ## JavaScript compatibility
 
