@@ -150,8 +150,10 @@ class DiaryFeedRoutesTest extends TestCase
     {
         $viewer = Member::factory()->create();
 
+        // OpenPNE 3 listSuccess.php swaps the result list for its own #diaryList box when empty.
         $this->actingAs($viewer)->get('/diary/list')
             ->assertOk()
-            ->assertSee('id="diary_feed"', false);
+            ->assertSee('id="diaryList"', false)
+            ->assertDontSee('id="diary_feed"', false);
     }
 }

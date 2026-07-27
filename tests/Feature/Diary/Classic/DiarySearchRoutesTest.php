@@ -25,8 +25,8 @@ class DiarySearchRoutesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('id="page_diary_search"', false);
-        // Search shares the feed template.
-        $response->assertSee('id="diary_feed"', false);
+        // Search shares the feed template, down to its #diarySearchFormLine search box.
+        $response->assertSee('id="diarySearchFormLine"', false);
         $response->assertSee('name="keyword"', false);
         $response->assertSee('Search Results');
     }

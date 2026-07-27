@@ -78,7 +78,7 @@ class DiaryCommentRoutesTest extends TestCase
             ->assertSee('id="diary_comment_list"', false)
             ->assertSee('First post')
             ->assertSee('Commenter')
-            ->assertSee('id="diary_comment_form"', false);
+            ->assertSee('id="formDiaryComment"', false); // OpenPNE 3 op_include_form id
     }
 
     public function test_delete_link_shows_only_to_the_comment_or_diary_author(): void

@@ -1,6 +1,6 @@
 {{-- The nickname row plus the subject's viewer-visible profile values. --}}
 @if (count($rows))
-    <x-gadget-part :part-id="$partId" part-name="listBox" :title="__('Profile')">
+    <x-classic.parts :id="$partId" name="listBox" :title="__('Profile')">
         <table>
             @foreach ($rows as $row)
                 <tr>
@@ -9,5 +9,5 @@
                 </tr>
             @endforeach
         </table>
-    </x-gadget-part>
+    </x-classic.parts>
 @endif
