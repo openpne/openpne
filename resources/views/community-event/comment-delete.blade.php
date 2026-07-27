@@ -3,22 +3,19 @@
 @section('title', __('Delete the comment'))
 
 @section('content')
-    <div class="dparts box" id="communityEventComment_delete">
-        <div class="partsHeading"><h3>{{ __('Delete the comment') }}</h3></div>
-        <div class="parts">
+    <x-classic.parts id="deleteConfirmForm" name="form" :title="__('Delete the comment')">
+        <form method="POST" action="{{ route('communityEvent.comment.delete', $comment) }}">
+            @csrf
             <div class="block">
                 <p>{{ __('Do you really want to delete this comment?') }}</p>
                 <blockquote class="commentPreview">{{ $comment->body }}</blockquote>
-                <form method="POST" action="{{ route('communityEvent.comment.delete', $comment) }}">
-                    @csrf
-                    <div class="operation">
-                        <ul class="moreInfo button">
-                            <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>
-                        </ul>
-                    </div>
-                </form>
-                <p><a href="{{ route('communityEvent.show', $comment->event) }}">{{ __('Back') }}</a></p>
             </div>
-        </div>
-    </div>
+            <div class="operation">
+                <ul class="moreInfo button">
+                    <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>
+                    <li><a href="{{ route('communityEvent.show', $comment->event) }}">{{ __('Back') }}</a></li>
+                </ul>
+            </div>
+        </form>
+    </x-classic.parts>
 @endsection
