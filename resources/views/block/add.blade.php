@@ -3,8 +3,10 @@
 @section('title', __('Block'))
 
 @section('content')
-    {{-- Block is OpenPNE 4-native, so the confirm page follows OpenPNE 3's box-kind confirm shape
-         (deleteConfirmSuccess.php) under the OpenPNE 4 id. --}}
+    {{-- Block is OpenPNE 4-native, so the confirm page follows the hand-written box + .block
+         confirm shape of OpenPNE 3's diary/message deleteConfirmSuccess.php (their .block is
+         deliberately not .body: OpenPNE 3 ships no .box .block rule, so the confirm body renders
+         unpadded) under the OpenPNE 4 id. --}}
     <x-classic.parts id="block_add" name="box" :title="__('Block')">
         <div class="block">
             <p>{{ __('Block :name?', ['name' => $target->name]) }}</p>
