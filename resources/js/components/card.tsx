@@ -11,24 +11,17 @@ type Props = {
  * `overflow="visible"` when a descendant needs to escape the card as its scroll context (e.g. a
  * `position: sticky` toolbar resolving against the page instead of the clipped card).
  *
- * `bleed` gives the card the full phone width: the `-mx-4` exactly cancels MemberFrame's `px-4`, and
- * the side border and corners go with it, since a rounded card inset from both edges wastes scarce
- * width on a screen this narrow. It is a base-class swap rather than an appended override because
- * tailwind-merge does not know our custom `rounded-card` token and so would not dedupe it against
- * `rounded-none`, leaving the outcome to stylesheet order.
+ * The card stays inset from the screen edges at every width. Running it edge to edge does buy width,
+ * but it also takes away the strip of page background either side — which is what makes a card read as
+ * a surface lying on the page rather than as the page itself. Tested on device, that flattened every
+ * screen into one field of card colour divided by lines. The width comes from tighter padding instead.
  */
-export function Card({
-    children,
-    className,
-    overflow = 'hidden',
-    bleed = false,
-}: Props & { overflow?: 'hidden' | 'visible'; bleed?: boolean }) {
+export function Card({ children, className, overflow = 'hidden' }: Props & { overflow?: 'hidden' | 'visible' }) {
     return (
         <div
             className={cn(
                 overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible',
-                bleed ? '-mx-4 rounded-none border-y border-x-0 sm:mx-0 sm:rounded-card sm:border-x' : 'rounded-card border',
-                'border-border bg-card text-card-foreground shadow-card',
+                'rounded-card border border-border bg-card text-card-foreground shadow-card',
                 className,
             )}
         >
@@ -38,9 +31,9 @@ export function Card({
 }
 
 export function CardHeader({ children, className }: Props) {
-    return <div className={cn('border-b border-border px-5 py-3', className)}>{children}</div>;
+    return <div className={cn('border-b border-border px-4 py-3 sm:px-5', className)}>{children}</div>;
 }
 
 export function CardBody({ children, className }: Props) {
-    return <div className={cn('px-6 py-5', className)}>{children}</div>;
+    return <div className={cn('px-4 py-5 sm:px-6', className)}>{children}</div>;
 }

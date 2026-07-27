@@ -75,7 +75,7 @@ export default function TimelineShow() {
                 <Panel flush>
                     <List>
                         {replies.map((reply) => (
-                            <li key={reply.id} className="space-y-1 px-5 py-3">
+                            <li key={reply.id} className="space-y-1 px-4 py-3 sm:px-5">
                                 <div className="flex items-center justify-between text-sm">
                                     <Link href={`/member/${reply.author.id}/timeline`} className="font-medium text-link hover:underline">
                                         {reply.author.name}

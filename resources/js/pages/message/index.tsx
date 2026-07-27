@@ -88,7 +88,7 @@ export default function MessageIndex() {
             ) : (
                 <>
                     <Panel flush>
-                        <div className="flex flex-wrap items-center gap-4 border-b border-border px-5 py-3 text-sm">
+                        <div className="flex flex-wrap items-center gap-4 border-b border-border px-4 py-3 text-sm sm:px-5">
                             <label className="flex items-center gap-2 text-foreground">
                                 <Checkbox checked={allSelected} onChange={toggleAll} />
                                 {t('Select All')}

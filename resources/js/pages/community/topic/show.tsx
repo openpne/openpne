@@ -96,7 +96,7 @@ export default function CommunityTopicShow() {
 
             <Panel title={t(':count comments', { count: thread.total })} flush>
                 {thread.lastPage > 1 && (
-                    <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-2.5 text-sm">
+                    <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5 text-sm sm:px-5">
                         {thread.hasOlder && thread.olderPage !== null ? (
                             <Link href={threadLink(thread.olderPage, thread.ascending)} preserveScroll className="text-link hover:underline">
                                 {t('Older')}
@@ -118,11 +118,11 @@ export default function CommunityTopicShow() {
                 )}
 
                 {thread.comments.length === 0 ? (
-                    <p className="px-5 py-4 text-sm text-muted-foreground">{t('No comments yet.')}</p>
+                    <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No comments yet.')}</p>
                 ) : (
                     <List>
                         {thread.comments.map((comment) => (
-                            <li key={comment.id} className="px-5 py-4">
+                            <li key={comment.id} className="px-4 py-4 sm:px-5">
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} size="sm" decorative />
                                     {comment.author ? (
