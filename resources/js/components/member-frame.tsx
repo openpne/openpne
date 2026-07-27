@@ -34,11 +34,13 @@ export function MemberFrame({ chrome: override, children }: { chrome?: Partial<C
     return (
         <main
             className={cn(
-                // 12px, under the 16 that iOS/Material call standard: the frame is only the outermost of
-                // three paddings on the same line (frame → card body → field box), so it gives up 4px to
-                // leave the inner two roomy. The strip of page background it still shows is what keeps a
-                // card reading as a surface on the page rather than as the page itself.
-                'mx-auto px-3 py-8',
+                // 12px below sm only, under the 16 that iOS/Material call standard: the frame is the
+                // outermost of three paddings on the same line (frame → card body → field box), so it
+                // gives up 4px to leave the inner two roomy. The strip of page background it still shows
+                // is what keeps a card reading as a surface on the page rather than as the page itself.
+                // From sm up it restores 16 — the width is only scarce on a phone, and `max-w` is
+                // border-box, so changing it there would widen every content column too.
+                'mx-auto px-3 py-8 sm:px-4',
                 chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
                 GAP[chrome.gap],
                 chrome.foreground && 'text-foreground',
