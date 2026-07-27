@@ -127,7 +127,7 @@ export default function CommunityShow() {
                     }
                 >
                     {recentTopics.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No %topics% to show.')}</p>
+                        <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No %topics% to show.')}</p>
                     ) : (
                         <List>
                             {recentTopics.map((topic) => (
@@ -142,7 +142,7 @@ export default function CommunityShow() {
                             ))}
                         </List>
                     )}
-                    <div className="border-t border-border px-5 py-2.5">
+                    <div className="border-t border-border px-4 py-2.5 sm:px-5">
                         <Link href={`/communityTopic/listCommunity/${community.id}`} className="text-sm text-link hover:underline">
                             {t('See all %topics%')}
                         </Link>
@@ -164,7 +164,7 @@ export default function CommunityShow() {
                     }
                 >
                     {recentEvents.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No events to show.')}</p>
+                        <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No events to show.')}</p>
                     ) : (
                         <List>
                             {recentEvents.map((event) => (
@@ -180,7 +180,7 @@ export default function CommunityShow() {
                             ))}
                         </List>
                     )}
-                    <div className="border-t border-border px-5 py-2.5">
+                    <div className="border-t border-border px-4 py-2.5 sm:px-5">
                         <Link href={`/communityEvent/listCommunity/${community.id}`} className="text-sm text-link hover:underline">
                             {t('See all events')}
                         </Link>

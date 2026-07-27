@@ -143,7 +143,7 @@ export default function MemberSearch() {
             <section className="space-y-3">
                 <Panel flush title={t('Search Results')}>
                     {members.data.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-muted-foreground">{t('No members found.')}</p>
+                        <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No members found.')}</p>
                     ) : (
                         <List>
                             {members.data.map((member) => (

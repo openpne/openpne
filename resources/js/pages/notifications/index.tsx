@@ -99,7 +99,7 @@ export default function NotificationsIndex() {
                                     method="post"
                                     as="button"
                                     href={`/notifications/${item.id}/open`}
-                                    className="flex min-h-11 w-full items-center gap-3 px-5 py-3 text-left text-foreground transition-colors hover:bg-muted/40 active:bg-muted/60"
+                                    className="flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left text-foreground sm:px-5 transition-colors hover:bg-muted/40 active:bg-muted/60"
                                 >
                                     <Avatar
                                         id={item.actor?.id ?? 0}

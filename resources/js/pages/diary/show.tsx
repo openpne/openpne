@@ -113,7 +113,7 @@ export default function DiaryShow() {
                 <Panel title={t('Comments')} flush>
                     <List>
                         {comments.map((comment) => (
-                            <li key={comment.id} className="space-y-2 px-5 py-4">
+                            <li key={comment.id} className="space-y-2 px-4 py-4 sm:px-5">
                                 {/* Flex header (not inline prose) — inline text-link inside a muted
                                     text block trips axe link-in-text-block; this also matches the
                                     topic/event comment header shape. */}
