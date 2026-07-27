@@ -6,9 +6,8 @@
     {{-- Token-gated landing for the emailed confirmation link (reachable logged-in or out, like
          register-complete). The change is the POST below, not this GET render, so a mail scanner /
          prefetch cannot consume the token. --}}
-    <div class="dparts form" id="member_config_email_confirm">
-        <div class="partsHeading"><h3>{{ __('Confirm email change') }}</h3></div>
-        <div class="parts">
+    <x-classic.parts id="member_config_email_confirm" name="box" :title="__('Confirm email change')">
+        <div class="block">
             <p>{{ __('Confirm changing your email address to :email.', ['email' => $newEmail]) }}</p>
             <form method="POST" action="{{ route('member.config.email.confirm.submit', ['token' => $token]) }}">
                 @csrf
@@ -19,5 +18,5 @@
                 </div>
             </form>
         </div>
-    </div>
+    </x-classic.parts>
 @endsection

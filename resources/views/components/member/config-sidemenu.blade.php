@@ -2,7 +2,7 @@
      ?category=. The age category is offered only while the site has a birthday profile item
      (no birthday → no age to gate). --}}
 @props(['current' => null, 'ageAvailable' => true])
-<div class="parts pageNav">
+<x-classic.parts id="pageNav" name="pageNav">
     <ul>
         @foreach (\App\Features\Member\MemberConfigCategory::cases() as $category)
             @continue($category === \App\Features\Member\MemberConfigCategory::PublicFlag && ! $ageAvailable)
@@ -15,4 +15,4 @@
             </li>
         @endforeach
     </ul>
-</div>
+</x-classic.parts>

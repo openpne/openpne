@@ -80,7 +80,9 @@ existing themes and customizations depend on:
   `searchFormLine`). Body markup stays with the caller because it is per-kind:
   `box` / `descriptionBox` / `informationBox` wrap it in `.body`; `listBox` / `alertBox` put a
   `<table>` under `.parts` and `form` puts `<form><table>` there — none use a `.body` wrapper,
-  and `div.parts table` draws the grid border either way.
+  and `div.parts table` draws the grid border either way. OpenPNE 3's hand-written confirm
+  screens (diary / message delete) bypass their own helper and put `.block` inside `box`;
+  confirm pages reproduce that, not `.body`.
 - The `#Layout{A..C}` letter — OpenPNE 3's `setLayout` / `view.yml` / `decorate_with` choice — is
   resolved per screen by [`RouteParity::layouts()`](../../app/Compat/RouteParity.php) through the
   `classic_layout()` helper, defaulting to OpenPNE 3's global `layoutC`; gadget pages (home /

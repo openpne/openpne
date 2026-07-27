@@ -3,9 +3,8 @@
 @section('title', __('Unblock'))
 
 @section('content')
-    <div class="dparts" id="block_remove">
-        <div class="partsHeading"><h3>{{ __('Unblock') }}</h3></div>
-        <div class="parts">
+    <x-classic.parts id="block_remove" name="box" :title="__('Unblock')">
+        <div class="block">
             <p>{{ __('Unblock :name?', ['name' => $target->name]) }}</p>
             <form method="POST" action="{{ route('block.remove.submit', $target) }}">
                 @csrf
@@ -17,5 +16,5 @@
                 </div>
             </form>
         </div>
-    </div>
+    </x-classic.parts>
 @endsection

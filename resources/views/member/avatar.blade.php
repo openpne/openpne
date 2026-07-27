@@ -3,10 +3,16 @@
 @section('title', __('Profile image'))
 
 @section('content')
-    <div class="dparts" id="member_avatar">
-        <div class="partsHeading"><h3>{{ __('Profile image') }}</h3></div>
-        <div class="parts">
-            <p><x-classic.image :file="$avatar" :size="120" :alt="__('Profile image')" /></p>
+    {{-- OpenPNE 3 configImageSuccess.php: the memberImagesBox kind under the memberImageUploadBox id.
+         One avatar here where OpenPNE 3 held three photos, so the kind's photo table is a single
+         cell. --}}
+    <x-classic.parts id="memberImageUploadBox" name="memberImagesBox" :title="__('Profile image')">
+        <table>
+            <tr>
+                <td><x-classic.image :file="$avatar" :size="120" :alt="__('Profile image')" /></td>
+            </tr>
+        </table>
+        <div class="block">
             <form method="POST" action="{{ route('member.avatar.update') }}" enctype="multipart/form-data">
                 @csrf
                 <input type="file" class="input_file" name="image" accept="image/jpeg,image/png,image/gif,image/webp" required>
@@ -28,5 +34,5 @@
                 </form>
             @endif
         </div>
-    </div>
+    </x-classic.parts>
 @endsection
