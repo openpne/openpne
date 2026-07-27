@@ -3,24 +3,25 @@
 @section('title', __('Event Members'))
 
 @section('content')
-    <div class="dparts" id="communityEvent_memberList">
-        <div class="partsHeading"><h3>{{ __('Event Members') }}</h3></div>
-        <div class="parts">
-            @if ($participants->isEmpty())
-                <p>{{ __('No members to show.') }}</p>
-            @else
-                <ul class="memberList">
-                    @foreach ($participants as $member)
-                        <li><a href="{{ route('member.profile.show', $member) }}">{{ $member->name }}</a></li>
-                    @endforeach
-                </ul>
+    @if ($participants->isEmpty())
+        {{-- OpenPNE 3 memberListError.php swaps the photo table for a plain box once nobody has
+             joined. --}}
+        <x-classic.parts id="noMembers" name="box" :title="__('Event Members')">
+            <div class="body">{{ __('No members to show.') }}</div>
+        </x-classic.parts>
+    @else
+        <x-classic.parts id="communityEventMembersList" name="photoTable" :title="__('Event Members')">
+            <ul class="memberList">
+                @foreach ($participants as $member)
+                    <li><a href="{{ route('member.profile.show', $member) }}">{{ $member->name }}</a></li>
+                @endforeach
+            </ul>
 
-                {{ $participants->withQueryString()->links() }}
-            @endif
-        </div>
-    </div>
+            {{ $participants->withQueryString()->links() }}
+        </x-classic.parts>
+    @endif
 
-    <div class="line">
+    <x-classic.parts name="line">
         <a href="{{ route('communityEvent.show', $event) }}">{{ $event->name }}</a>
-    </div>
+    </x-classic.parts>
 @endsection

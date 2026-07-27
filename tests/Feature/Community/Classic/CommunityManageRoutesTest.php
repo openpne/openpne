@@ -317,7 +317,7 @@ class CommunityManageRoutesTest extends TestCase
 
         $this->actingAs($applicant)->get(route('community.show', $community))
             ->assertOk()
-            ->assertSee('id="community_pending"', false)
+            ->assertSee('id="informationAboutCommunity"', false)
             ->assertDontSee('id="community_changeAdminRequest"', false);
     }
 
