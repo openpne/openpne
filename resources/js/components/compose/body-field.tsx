@@ -6,9 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-// `import type`, not a named type import: a value-shaped import statement would pull
-// editor-extensions (and with it tiptap) into this chunk, defeating the lazy RichTextEditor split.
-import type { ComposeLayout } from './editor-extensions';
 import {
     applyInputMethod,
     initialEditorMode,
@@ -27,15 +24,6 @@ import { saveComposeEditor } from './save-compose-editor';
 // compose form opens the rich editor and shared across all of them.
 const RichTextEditor = lazy(() => import('./rich-text-editor'));
 
-/**
- * The row layout's editing surface: below sm it is the only part that does NOT take the frame inset as
- * padding on its box — the box runs the full width and re-spends the inset on its own text instead, so
- * the tappable surface reaches both screen edges while the text lines up with the label above it. A
- * taller min-h as well: a full-width surface three lines tall reads as a scrap of a form rather than a
- * page to write on. From sm up it is the ordinary boxed field again.
- */
-const ROW_SURFACE = 'min-h-40 px-(--frame-inset) py-3 sm:min-h-24 sm:px-3 sm:py-2';
-
 interface BodyFieldProps {
     id: string;
     label: string; // pre-translated by the page
@@ -52,11 +40,10 @@ interface BodyFieldProps {
     /** The stored record format (undefined = create); read once to pick the initial state. */
     recordFormat?: RecordFormat;
     /**
-     * `'row'` when the host form is a `Panel bleed="full"` body: below sm the editing surface runs to
-     * both screen edges and the label/error keep the frame inset. Opt-in per page — the message and
-     * comment forms, and the compose pages not converted yet, stay on the boxed `'stack'` layout.
+     * Pay the horizontal inset ourselves, as on {@link Field} — for a `Panel bleed="full"` body. Opt-in,
+     * because the same block also serves the compose pages not converted yet.
      */
-    layout?: ComposeLayout;
+    inset?: boolean;
 }
 
 /**
@@ -79,7 +66,7 @@ export function BodyField({
     onFormatChange,
     editorPreference,
     recordFormat,
-    layout = 'stack',
+    inset,
 }: BodyFieldProps) {
     const t = useT();
     const confirm = useConfirm();
@@ -92,49 +79,33 @@ export function BodyField({
 
     const errorId = error ? `${id}-error` : undefined;
 
-    // In the row layout this block sits in a `Panel bleed="full"` body, which pays no horizontal
-    // padding — so each part pays the frame inset itself, EXCEPT the editing surface, which runs to
-    // both screen edges and re-spends the inset internally (see ROW_SURFACE). All of it collapses from
-    // sm up, where the panel pads again.
-    const inset = layout === 'row' ? FRAME_INSET : undefined;
+    // The block pays the frame inset once, for all of its parts: the editable is a boxed field like
+    // any other, so nothing inside needs padding of its own.
+    const block = cn('space-y-2', inset && FRAME_INSET);
 
     const errorNode = error ? (
-        <p id={errorId} role="alert" className={cn(inset, 'text-xs text-destructive')}>
+        <p id={errorId} role="alert" className="text-xs text-destructive">
             {error}
         </p>
     ) : null;
 
     // op3: `format === undefined` is the op3 signal (the page omitted the field so the server
-    // preserves the stored format); show the static note, no menu, no editor choice. The row layout
-    // needs its own return: the stack markup is a Fragment whose boxed Textarea would sit at x=0 in a
-    // panel that pays no side padding.
+    // preserves the stored format); show the static note, no menu, no editor choice. `inset` needs its
+    // own return, because the Fragment below would put the note in the form's flow as a second child
+    // and lose the block's padding.
     if (format === undefined) {
         const note = t('This entry keeps its OpenPNE 3 formatting.');
         const textarea = (
-            <Textarea
-                id={id}
-                variant={layout === 'row' ? 'bare' : 'field'}
-                required={required}
-                rows={rows}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                // Only in the row layout: there is no Field to clone-inject these. In the stack layout
-                // Field owns them, and passing them here as well would duplicate the describedby token.
-                aria-invalid={layout === 'row' && error ? true : undefined}
-                aria-describedby={layout === 'row' ? errorId : undefined}
-                className={layout === 'row' ? ROW_SURFACE : undefined}
-            />
+            <Textarea id={id} required={required} rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
         );
 
-        if (layout === 'row') {
+        if (inset) {
             return (
-                <div className="space-y-2">
-                    <div className={inset}>
-                        <Label htmlFor={id}>{label}</Label>
-                    </div>
-                    {textarea}
-                    {errorNode}
-                    <p className={cn(inset, 'text-sm text-muted-foreground')}>{note}</p>
+                <div className={block}>
+                    <Field label={label} htmlFor={id} error={error}>
+                        {textarea}
+                    </Field>
+                    <p className="text-sm text-muted-foreground">{note}</p>
                 </div>
             );
         }
@@ -185,7 +156,7 @@ export function BodyField({
     // usable here — it cannot reach the contenteditable through <Suspense> — so the label, the aria-*
     // wiring, and the error are rendered by hand for both branches alike.
     const header = (
-        <div className={cn(inset, 'flex items-center justify-between gap-2')}>
+        <div className="flex items-center justify-between gap-2">
             <Label htmlFor={id}>{label}</Label>
             <div className="flex items-center gap-2">
                 <InputMethodBadge method={method} />
@@ -196,18 +167,11 @@ export function BodyField({
 
     if (mode === 'rich') {
         return (
-            <div className="space-y-2">
+            <div className={block}>
                 {header}
                 <Suspense
                     fallback={
-                        <div
-                            className={cn(
-                                'flex w-full items-center text-sm text-muted-foreground',
-                                layout === 'row'
-                                    ? `${ROW_SURFACE} sm:rounded-field sm:border sm:border-field-border sm:bg-field`
-                                    : 'min-h-24 rounded-field border border-field-border bg-field px-3 py-2',
-                            )}
-                        >
+                        <div className="flex min-h-24 w-full items-center rounded-field border border-field-border bg-field px-3 py-2 text-sm text-muted-foreground">
                             {t('Loading editor…')}
                         </div>
                     }
@@ -218,7 +182,6 @@ export function BodyField({
                         onChange={onChange}
                         label={label}
                         id={id}
-                        layout={layout}
                         aria-required={required ? 'true' : undefined}
                         aria-invalid={error ? 'true' : undefined}
                         aria-describedby={errorId}
@@ -230,21 +193,19 @@ export function BodyField({
     }
 
     return (
-        <div className="space-y-2">
+        <div className={block}>
             {header}
             <Textarea
                 id={id}
-                variant={layout === 'row' ? 'bare' : 'field'}
                 required={required}
                 rows={rows}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={errorId}
-                className={layout === 'row' ? ROW_SURFACE : undefined}
             />
             {errorNode}
-            <MarkdownPreview body={value} enabled={format === 'markdown'} className={inset} />
+            <MarkdownPreview body={value} enabled={format === 'markdown'} />
         </div>
     );
 }

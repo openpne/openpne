@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { RichBody } from '@/components/rich-body';
 import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 
 /**
  * Live Markdown preview for the compose forms. Debounces edits, then POSTs to /compose/preview (the
@@ -10,7 +9,7 @@ import { cn } from '@/lib/utils';
  * preview can never show markup the saved body would strip. Renders nothing until enabled with a
  * non-empty body. An in-flight request is aborted when the body changes or the component unmounts.
  */
-export function MarkdownPreview({ body, enabled, className }: { body: string; enabled: boolean; className?: string }) {
+export function MarkdownPreview({ body, enabled }: { body: string; enabled: boolean }) {
     const t = useT();
     const [html, setHtml] = useState<string | null>(null);
     const [state, setState] = useState<'idle' | 'pending' | 'error'>('idle');
@@ -66,11 +65,7 @@ export function MarkdownPreview({ body, enabled, className }: { body: string; en
         // aria-busy marks the async refresh; the error line is a status region so a screen reader
         // hears the failure (the rendered body itself is not announced — re-reading the whole
         // preview on every debounce would be noise).
-        //
-        // `className` lands here rather than on a wrapper the caller renders, because this component
-        // returns null far more often than not (unformatted body, or an empty one) — a caller-side
-        // wrapper would survive that and collect the parent's `space-y` gap as phantom spacing.
-        <div className={cn('space-y-1', className)} aria-busy={state === 'pending'}>
+        <div className="space-y-1" aria-busy={state === 'pending'}>
             <p className="text-xs font-medium text-muted-foreground">{t('Preview')}</p>
             {state === 'error' ? (
                 <p className="text-xs text-muted-foreground" role="status">

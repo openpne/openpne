@@ -124,18 +124,6 @@ class FrameInsetContractTest extends TestCase
             $this->declaration($this->js('components/ui/field.tsx'), 'FRAME_INSET'),
             'FRAME_INSET is what every `inset` consumer spends; it must reference the token.',
         );
-
-        $this->assertStringContainsString(
-            self::INSET,
-            $this->declaration($this->js('components/compose/editor-extensions.ts'), 'EDITOR_CONTENT_CLASS_ROW'),
-            'The row editable is the writing surface and must re-spend the inset on its own text.',
-        );
-
-        $this->assertStringContainsString(
-            self::INSET,
-            $this->declaration($this->js('components/compose/body-field.tsx'), 'ROW_SURFACE'),
-            "BodyField's ROW_SURFACE is the full-width surface and must re-spend the inset.",
-        );
     }
 
     /**
@@ -155,21 +143,23 @@ class FrameInsetContractTest extends TestCase
 
         // The function body, not the file: the `import { FRAME_INSET }` line survives the prop being
         // dropped, so a whole-file check would stay green with nothing spending it.
-        $this->assertStringContainsString(
-            'FRAME_INSET',
-            $this->fn($this->js('components/images-field.tsx'), 'ImagesField'),
-            'ImagesField must spend FRAME_INSET for its `inset` prop.',
-        );
+        foreach (['components/images-field.tsx' => 'ImagesField', 'components/compose/body-field.tsx' => 'BodyField'] as $file => $component) {
+            $this->assertStringContainsString(
+                'FRAME_INSET',
+                $this->fn($this->js($file), $component),
+                "{$component} must spend FRAME_INSET for its `inset` prop.",
+            );
+        }
     }
 
     /**
-     * BodyField's op3 branch returns before the layout-aware markup below it, so it needs its own row
-     * handling: falling through to the stack markup would put its boxed Textarea at x=0, since a
-     * `Panel bleed="full"` pays no side padding. Not reachable from diary/new — a new entry is never
-     * op3 — but the edit forms allow it, so the contract is pinned here rather than at the first page
-     * that would expose it.
+     * BodyField's op3 branch returns before the `inset`-aware markup below it, and its stack form is a
+     * Fragment — so falling through would hand the form two children, the second (the note) landing
+     * outside the block that pays the padding. Not reachable from diary/new — a new entry is never op3
+     * — but the edit forms allow it, so the contract is pinned here rather than at the first page that
+     * would expose it.
      */
-    public function test_the_op3_body_branch_honours_the_row_layout(): void
+    public function test_the_op3_body_branch_honours_the_inset(): void
     {
         $source = $this->js('components/compose/body-field.tsx');
         $start = strpos($source, 'if (format === undefined) {');
@@ -178,12 +168,10 @@ class FrameInsetContractTest extends TestCase
         $this->assertNotFalse($end, 'Could not find the end of the op3 branch.');
         $branch = $this->stripComments(substr($source, $start, $end - $start));
 
-        $this->assertStringContainsString("layout === 'row'", $branch, 'The op3 branch must not ignore the row layout.');
-        $this->assertStringContainsString('ROW_SURFACE', $branch, 'The op3 row textarea must be the full-width surface.');
-        $this->assertStringContainsString(
-            'FRAME_INSET',
-            $this->fn($this->js('components/compose/body-field.tsx'), 'BodyField'),
-            "BodyField's inset parts must spend FRAME_INSET.",
+        $this->assertMatchesRegularExpression(
+            '/if \(inset\) \{\s*return \(\s*<div className=\{block\}>/',
+            $branch,
+            'The op3 branch must wrap both its parts in the padded block when inset.',
         );
     }
 }

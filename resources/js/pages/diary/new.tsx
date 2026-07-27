@@ -36,8 +36,8 @@ export default function DiaryNew({
             <h1 className="break-words text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
 
             <Panel overflow="visible" bleed="full">
-                {/* The panel pays no horizontal padding below sm so the body's editing surface can
-                    reach both screen edges; every other child pays the frame inset itself (`inset`). */}
+                {/* The panel drops its own frame below sm and pays no horizontal padding; each field
+                    keeps its box and pays the frame inset itself (`inset`). */}
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
@@ -55,7 +55,7 @@ export default function DiaryNew({
                     <BodyField
                         id="diary_body"
                         label={t('Body')}
-                        layout="row"
+                        inset
                         value={data.body}
                         onChange={(body) => setData('body', body)}
                         error={errors.body}
