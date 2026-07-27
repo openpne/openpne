@@ -13,7 +13,8 @@ export function SettingsSubpage({ title, danger = false, children }: { title: st
         <>
             <Head title={title} />
             <h1 className={cn('text-xl font-semibold', danger ? 'text-destructive' : 'text-foreground')}>{title}</h1>
-            <Card className={danger ? 'border-destructive/40' : undefined}>
+            {/* A danger card stays inset: the destructive outline is the warning, and bleeding drops its sides. */}
+            <Card inset={danger} className={danger ? 'border-destructive/40' : undefined}>
                 <CardBody>{children}</CardBody>
             </Card>
         </>

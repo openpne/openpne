@@ -28,11 +28,8 @@ type PanelProps = {
     flush?: boolean;
     /** Forwarded to {@link Card}: `visible` lets a sticky descendant resolve against the page scroll. */
     overflow?: 'hidden' | 'visible';
-    /**
-     * Forwarded to {@link Card}: run edge to edge below `sm`, and tighten the body padding to match.
-     * For title-less panels — a {@link SectionHeader} keeps its own `px-5` and would not line up.
-     */
-    bleed?: boolean;
+    /** Forwarded to {@link Card}: keep the panel inset from the screen edges below sm. */
+    inset?: boolean;
 };
 
 /**
@@ -40,11 +37,13 @@ type PanelProps = {
  * page background: a Card + optional {@link SectionHeader} band + padded body. Use `flush` when the
  * body is a {@link List} (rows carry their own padding).
  */
-export function Panel({ title, right, children, className, bodyClassName, flush, overflow, bleed }: PanelProps) {
+export function Panel({ title, right, children, className, bodyClassName, flush, overflow, inset }: PanelProps) {
     return (
-        <Card className={className} overflow={overflow} bleed={bleed}>
+        <Card className={className} overflow={overflow} inset={inset}>
             {title && <SectionHeader title={title} right={right} />}
-            <div className={cn(flush ? undefined : bleed ? 'px-4 py-4 sm:px-5' : 'px-5 py-4', bodyClassName)}>{children}</div>
+            {/* Narrower padding below sm on a bleeding panel: spending the frame's 16px twice would give
+                the width straight back. An inset panel keeps the roomier padding. */}
+            <div className={cn(flush ? undefined : inset ? 'px-5 py-4' : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
         </Card>
     );
 }

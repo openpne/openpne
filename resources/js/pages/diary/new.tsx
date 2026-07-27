@@ -35,7 +35,7 @@ export default function DiaryNew({
             <Head title={t('Write a %diary%')} />
             <h1 className="break-words text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
 
-            <Panel overflow="visible" bleed>
+            <Panel overflow="visible">
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();

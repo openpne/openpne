@@ -21,6 +21,9 @@ const GAP: Record<Chrome['gap'], string> = {
  * (h1 + primary action + tabs) resolved from the chrome registry, and central flash. Pages render
  * only their content — a page must not carry its own <main> or FlashMessage (MemberFrameGuardTest
  * enforces both), and headings outside the registry's hub modes stay in the page body ('embedded').
+ *
+ * `--frame-inset` is the horizontal inset this <main> spends and a bleeding Card cancels, declared here
+ * so the pair cannot drift apart (FrameInsetContractTest).
  */
 export function MemberFrame({ chrome: override, children }: { chrome?: Partial<Chrome>; children: ReactNode }) {
     const t = useT();
@@ -34,7 +37,7 @@ export function MemberFrame({ chrome: override, children }: { chrome?: Partial<C
     return (
         <main
             className={cn(
-                'mx-auto px-4 py-8',
+                'mx-auto px-(--frame-inset) py-8 [--frame-inset:1rem]',
                 chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
                 GAP[chrome.gap],
                 chrome.foreground && 'text-foreground',
