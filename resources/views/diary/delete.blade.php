@@ -3,9 +3,8 @@
 @section('title', __('Delete %diary%'))
 
 @section('content')
-    <div class="dparts" id="diary_delete">
-        <div class="partsHeading"><h3>{{ __('Delete %diary%') }}</h3></div>
-        <div class="parts">
+    <x-classic.parts id="formDiaryDelete" name="box" :title="__('Delete %diary%')">
+        <div class="block">
             <p>{{ __('Delete ":title"?', ['title' => $diary->title]) }}</p>
             <form method="POST" action="{{ route('diary.delete', $diary) }}">
                 @csrf
@@ -17,5 +16,5 @@
                 </div>
             </form>
         </div>
-    </div>
+    </x-classic.parts>
 @endsection

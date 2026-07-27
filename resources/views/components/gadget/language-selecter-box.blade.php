@@ -1,6 +1,6 @@
 {{-- A locale switcher (POST /locale), wrapped in a box for the side banner. --}}
 @props(['config' => [], 'subject' => null, 'partId' => null])
-<x-gadget-part :part-id="$partId" part-name="box" :title="__('Language')">
+<x-classic.parts :id="$partId" name="box" :title="__('Language')">
     <div class="body">
         <form method="POST" action="{{ route('locale.switch') }}">
             @csrf
@@ -11,4 +11,4 @@
             <button type="submit" class="input_submit">{{ __('Change') }}</button>
         </form>
     </div>
-</x-gadget-part>
+</x-classic.parts>

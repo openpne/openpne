@@ -1,7 +1,7 @@
 {{-- A member-search form (GET, `name` keyword) to member.search. The ul/li structure carries
      the skin's searchFormLine layout. --}}
 @props(['config' => [], 'subject' => null, 'partId' => null])
-<x-gadget-part :part-id="$partId" part-name="searchFormLine" :single="true">
+<x-classic.parts :id="$partId" name="searchFormLine">
     <div class="sortHandle">
         <form method="GET" action="{{ route('member.search') }}">
             <ul>
@@ -10,4 +10,4 @@
             </ul>
         </form>
     </div>
-</x-gadget-part>
+</x-classic.parts>

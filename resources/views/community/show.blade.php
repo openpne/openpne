@@ -49,7 +49,7 @@
 @section('content')
     {{-- The OpenPNE 3 community details listBox (homeSuccess center column): a th/td table of the
          community's profile fields, followed by the member operations. --}}
-    <x-gadget-part part-id="communityHome" part-name="listBox" :title="__('%Community%')">
+    <x-classic.parts id="communityHome" name="listBox" :title="__('%Community%')">
         <table>
             <tr>
                 <th>{{ __('%Community% Name') }}</th>
@@ -127,7 +127,7 @@
                 @endif
             </ul>
         </div>
-    </x-gadget-part>
+    </x-classic.parts>
 
     {{-- The recent-topics box links into the board. Shown only when the viewer may read the
          board (a members-only board is hidden from non-members). --}}
