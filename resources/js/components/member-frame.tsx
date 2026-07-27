@@ -21,9 +21,6 @@ const GAP: Record<Chrome['gap'], string> = {
  * (h1 + primary action + tabs) resolved from the chrome registry, and central flash. Pages render
  * only their content — a page must not carry its own <main> or FlashMessage (MemberFrameGuardTest
  * enforces both), and headings outside the registry's hub modes stay in the page body ('embedded').
- *
- * `--frame-inset` is the horizontal inset this <main> spends and a bleeding Card cancels, declared here
- * so the pair cannot drift apart (FrameInsetContractTest).
  */
 export function MemberFrame({ chrome: override, children }: { chrome?: Partial<Chrome>; children: ReactNode }) {
     const t = useT();
@@ -37,7 +34,11 @@ export function MemberFrame({ chrome: override, children }: { chrome?: Partial<C
     return (
         <main
             className={cn(
-                'mx-auto px-(--frame-inset) py-8 [--frame-inset:1rem]',
+                // 12px, under the 16 that iOS/Material call standard: the frame is only the outermost of
+                // three paddings on the same line (frame → card body → field box), so it gives up 4px to
+                // leave the inner two roomy. The strip of page background it still shows is what keeps a
+                // card reading as a surface on the page rather than as the page itself.
+                'mx-auto px-3 py-8',
                 chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
                 GAP[chrome.gap],
                 chrome.foreground && 'text-foreground',

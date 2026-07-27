@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
  */
 export function SectionHeader({ title, right, className }: { title: ReactNode; right?: ReactNode; className?: string }) {
     return (
-        <div className={cn('flex items-center gap-2 border-b border-border px-5 py-3', className)}>
+        <div className={cn('flex items-center gap-2 border-b border-border px-4 py-3 sm:px-5', className)}>
             <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{title}</h2>
             {right}
         </div>
@@ -28,8 +28,6 @@ type PanelProps = {
     flush?: boolean;
     /** Forwarded to {@link Card}: `visible` lets a sticky descendant resolve against the page scroll. */
     overflow?: 'hidden' | 'visible';
-    /** Forwarded to {@link Card}: keep the panel inset from the screen edges below sm. */
-    inset?: boolean;
 };
 
 /**
@@ -37,13 +35,13 @@ type PanelProps = {
  * page background: a Card + optional {@link SectionHeader} band + padded body. Use `flush` when the
  * body is a {@link List} (rows carry their own padding).
  */
-export function Panel({ title, right, children, className, bodyClassName, flush, overflow, inset }: PanelProps) {
+export function Panel({ title, right, children, className, bodyClassName, flush, overflow }: PanelProps) {
     return (
-        <Card className={className} overflow={overflow} inset={inset}>
+        <Card className={className} overflow={overflow}>
             {title && <SectionHeader title={title} right={right} />}
-            {/* Narrower padding below sm on a bleeding panel: spending the frame's 16px twice would give
-                the width straight back. An inset panel keeps the roomier padding. */}
-            <div className={cn(flush ? undefined : inset ? 'px-5 py-4' : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
+            {/* Tighter below sm, where the width is scarce: the frame, this padding and a field box each
+                take a bite out of the same line, and 20px here was the widest of the three. */}
+            <div className={cn(flush ? undefined : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
         </Card>
     );
 }
@@ -68,7 +66,7 @@ type ListRowProps = {
  * chevron. Not for grid/tile lists — keep those as their own layout.
  */
 export function ListRow({ href, chevron, children, className }: ListRowProps) {
-    const base = cn('flex min-h-11 items-center gap-3 px-5 py-3 text-foreground', className);
+    const base = cn('flex min-h-11 items-center gap-3 px-4 py-3 text-foreground sm:px-5', className);
     const inner = (
         <>
             {children}

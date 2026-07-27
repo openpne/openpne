@@ -43,8 +43,8 @@ function SettingsGroup({ title, danger = false, children }: { title: string; dan
     return (
         <section className="space-y-3">
             <h2 className={cn('text-lg font-semibold', danger ? 'text-destructive' : 'text-foreground')}>{title}</h2>
-            <Card inset={danger} className={danger ? 'border-destructive/40' : undefined}>
-                <div className={cn('divide-y divide-border', danger ? 'px-6' : 'px-4 sm:px-6')}>{children}</div>
+            <Card className={danger ? 'border-destructive/40' : undefined}>
+                <div className={cn('divide-y divide-border', 'px-4 sm:px-6')}>{children}</div>
             </Card>
         </section>
     );

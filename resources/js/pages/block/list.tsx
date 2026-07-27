@@ -65,7 +65,7 @@ export default function BlockList() {
             <div className="space-y-2">
                 <Panel flush title={t("Blocked members")}>
                     {blocks.data.length === 0 ? (
-                        <p className="px-5 py-4 text-sm text-muted-foreground">{t("No blocked members.")}</p>
+                        <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t("No blocked members.")}</p>
                     ) : (
                         <List>
                             {blocks.data.map((blocked) => (

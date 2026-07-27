@@ -43,7 +43,7 @@ export default function FriendManage() {
                 <section className="space-y-2">
                     <Panel flush title={t('Requests received')}>
                         {received.data.length === 0 ? (
-                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No pending requests.')}</p>
+                            <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No pending requests.')}</p>
                         ) : (
                             <List>
                                 {received.data.map((requester) => (
@@ -68,7 +68,7 @@ export default function FriendManage() {
                 <section className="space-y-2">
                     <Panel flush title={t('Requests sent')}>
                         {sent.data.length === 0 ? (
-                            <p className="px-5 py-4 text-sm text-muted-foreground">{t('No outgoing requests.')}</p>
+                            <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No outgoing requests.')}</p>
                         ) : (
                             <List>
                                 {sent.data.map((target) => (
