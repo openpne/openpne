@@ -75,6 +75,8 @@ class CommunityMemberManageController extends Controller
             messageKey: 'Appoint :name as a sub-administrator of this %community%?',
             submitLabel: __("Appoint this member as this %community%'s sub-administrator"),
             actionRoute: 'community.members.appoint',
+            boxKind: 'form',
+            boxId: 'communitySubAdminRequest',
         );
     }
 
@@ -95,6 +97,8 @@ class CommunityMemberManageController extends Controller
             messageKey: "Demote :name from this %community%'s sub-administrator?",
             submitLabel: __("Demote this member from this %community%'s sub-administrator"),
             actionRoute: 'community.members.demote',
+            boxKind: 'yesNo',
+            boxId: 'removeSubAdminConfirmForm',
         );
     }
 
@@ -115,6 +119,8 @@ class CommunityMemberManageController extends Controller
             messageKey: 'Drop :name from this %community%?',
             submitLabel: __('Drop this member'),
             actionRoute: 'community.members.drop',
+            boxKind: 'yesNo',
+            boxId: 'dropMemberConfirmForm',
         );
     }
 
@@ -139,6 +145,8 @@ class CommunityMemberManageController extends Controller
             messageKey: "Ask :name to take over this %community%'s administration?",
             submitLabel: __("Take over this %community%'s administrator to this member"),
             actionRoute: 'community.members.transfer',
+            boxKind: 'form',
+            boxId: 'communityAdminRequest',
         );
     }
 
@@ -185,8 +193,12 @@ class CommunityMemberManageController extends Controller
      * Shared GET confirm: resolve community + target, gate the viewer, then state-guard the target
      * so an invalid confirm is never rendered. Modern confirms inline, so it redirects to the
      * roster once the guards pass (showJoin pattern); Classic renders the shared confirm blade.
+     *
+     * $boxKind / $boxId carry the Classic parts kind and id of the OpenPNE 3 input page this
+     * confirm replaces — they differ per action (yesNo for the drop/demote confirmations, the form
+     * kind for the appoint/take-over requests), and skins target the id.
      */
-    private function confirm(Request $request, string $ability, Closure $targetOk, string $title, string $messageKey, string $submitLabel, string $actionRoute): View|RedirectResponse
+    private function confirm(Request $request, string $ability, Closure $targetOk, string $title, string $messageKey, string $submitLabel, string $actionRoute, string $boxKind, string $boxId): View|RedirectResponse
     {
         $community = $this->communityFrom($request);
         $target = Member::findOrFail($request->integer('member_id'));
@@ -204,6 +216,8 @@ class CommunityMemberManageController extends Controller
             'message' => __($messageKey, ['name' => $target->name]),
             'submitLabel' => $submitLabel,
             'actionUrl' => route($actionRoute),
+            'boxKind' => $boxKind,
+            'boxId' => $boxId,
         ]);
     }
 

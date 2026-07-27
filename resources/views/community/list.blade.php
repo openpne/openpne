@@ -6,22 +6,22 @@
 @section('title', $title)
 
 @section('content')
-    <div class="dparts" id="community_joinlist">
-        <div class="partsHeading"><h3>{{ $title }}</h3></div>
-        <div class="parts">
-            @if ($communities->isEmpty())
-                <p>{{ __('No %communities% to show.') }}</p>
-            @else
-                <ul class="communityList">
-                    @foreach ($communities as $community)
-                        <li>
-                            <a href="{{ route('community.show', $community) }}">{{ $community->name }}</a>
-                        </li>
-                    @endforeach
-                </ul>
+    @if ($communities->isEmpty())
+        {{-- OpenPNE 3 joinlistError.php swaps the photo table for a plain box once the pager is empty. --}}
+        <x-classic.parts id="noJoinCommunity" name="box" :title="$title">
+            <div class="body">{{ __('No %communities% to show.') }}</div>
+        </x-classic.parts>
+    @else
+        <x-classic.parts id="communityList" name="photoTable" :title="$title">
+            <ul class="communityList">
+                @foreach ($communities as $community)
+                    <li>
+                        <a href="{{ route('community.show', $community) }}">{{ $community->name }}</a>
+                    </li>
+                @endforeach
+            </ul>
 
-                {{ $communities->withQueryString()->links() }}
-            @endif
-        </div>
-    </div>
+            {{ $communities->withQueryString()->links() }}
+        </x-classic.parts>
+    @endif
 @endsection

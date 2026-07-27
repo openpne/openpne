@@ -12,36 +12,34 @@
     @section('top')
         @if ($isPending)
             {{-- The pending-approval notice, shown only while waiting. --}}
-            <div class="dparts" id="community_pending">
-                <div class="parts">
-                    <p>{{ __('You are waiting for the participation approval by %community% administrator.') }}</p>
-                </div>
-            </div>
+            <x-classic.parts id="informationAboutCommunity" name="descriptionBox">
+                <div class="body">{{ __('You are waiting for the participation approval by %community% administrator.') }}</div>
+            </x-classic.parts>
         @else
-            {{-- The admin-transfer nominee's accept/reject banner (this is the confirmation step). --}}
-            <div class="dparts" id="community_changeAdminRequest">
-                <div class="parts">
-                    <p>{{ __('The administrator of this %community% asks you to take over the administration.') }}</p>
-                    <div class="operation">
-                        <ul class="moreInfo button">
-                            <li>
-                                <form method="POST" action="{{ route('community.members.transfer.accept') }}">
-                                    @csrf
-                                    <input type="hidden" name="id" value="{{ $community->getKey() }}">
-                                    <input type="submit" class="input_submit" value="{{ __('Accept') }}">
-                                </form>
-                            </li>
-                            <li>
-                                <form method="POST" action="{{ route('community.members.transfer.reject') }}">
-                                    @csrf
-                                    <input type="hidden" name="id" value="{{ $community->getKey() }}">
-                                    <input type="submit" class="input_submit" value="{{ __('Decline') }}">
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
+            {{-- The admin-transfer nominee's accept/reject banner (this is the confirmation step).
+                 OpenPNE 3 routed the decision through its confirmation centre, so this box is
+                 OpenPNE 4-native and keeps its own id; the yes/no shape is the OpenPNE 3 one. --}}
+            <x-classic.parts id="community_changeAdminRequest" name="yesNo">
+                <div class="block">{{ __('The administrator of this %community% asks you to take over the administration.') }}</div>
+                <div class="operation">
+                    <ul class="moreInfo button">
+                        <li>
+                            <form method="POST" action="{{ route('community.members.transfer.accept') }}">
+                                @csrf
+                                <input type="hidden" name="id" value="{{ $community->getKey() }}">
+                                <input type="submit" class="input_submit" value="{{ __('Accept') }}">
+                            </form>
+                        </li>
+                        <li>
+                            <form method="POST" action="{{ route('community.members.transfer.reject') }}">
+                                @csrf
+                                <input type="hidden" name="id" value="{{ $community->getKey() }}">
+                                <input type="submit" class="input_submit" value="{{ __('Decline') }}">
+                            </form>
+                        </li>
+                    </ul>
                 </div>
-            </div>
+            </x-classic.parts>
         @endif
     @endsection
 @endif
@@ -130,63 +128,59 @@
     </x-classic.parts>
 
     {{-- The recent-topics box links into the board. Shown only when the viewer may read the
-         board (a members-only board is hidden from non-members). --}}
+         board (a members-only board is hidden from non-members). OpenPNE 3 listed the same
+         entries as a row of the communityHome table above, so this box carries no OpenPNE 3
+         kind or id; folding it back into that table is a content change, not a frame one. --}}
     @isset($recentTopics)
-        <div class="dparts" id="community_recentTopics">
-            <div class="partsHeading"><h3>{{ __('Recent %topics%') }}</h3></div>
-            <div class="parts">
-                @if ($recentTopics->isEmpty())
-                    <p>{{ __('No %topics% to show.') }}</p>
-                @else
-                    <ul class="topicList">
-                        @foreach ($recentTopics as $topic)
-                            <li>
-                                <a href="{{ route('communityTopic.show', $topic) }}">{{ $topic->name }} ({{ $topic->comments_count }})</a>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
+        <x-classic.parts id="community_recentTopics" :title="__('Recent %topics%')">
+            @if ($recentTopics->isEmpty())
+                <p>{{ __('No %topics% to show.') }}</p>
+            @else
+                <ul class="topicList">
+                    @foreach ($recentTopics as $topic)
+                        <li>
+                            <a href="{{ route('communityTopic.show', $topic) }}">{{ $topic->name }} ({{ $topic->comments_count }})</a>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
 
-                <div class="operation">
-                    <ul class="moreInfo button">
-                        <li><a href="{{ route('communityTopic.index', $community) }}">{{ __('See all %topics%') }}</a></li>
-                        @if ($canPostTopic)
-                            <li><a href="{{ route('communityTopic.new', $community) }}">{{ __('Post a new %topic%') }}</a></li>
-                        @endif
-                    </ul>
-                </div>
+            <div class="operation">
+                <ul class="moreInfo button">
+                    <li><a href="{{ route('communityTopic.index', $community) }}">{{ __('See all %topics%') }}</a></li>
+                    @if ($canPostTopic)
+                        <li><a href="{{ route('communityTopic.new', $community) }}">{{ __('Post a new %topic%') }}</a></li>
+                    @endif
+                </ul>
             </div>
-        </div>
+        </x-classic.parts>
     @endisset
 
     {{-- The recent-events box links into the event board, shown only when the viewer may read
-         the board (events share the topic read gate). --}}
+         the board (events share the topic read gate). Same OpenPNE 3 lineage as recentTopics. --}}
     @isset($recentEvents)
-        <div class="dparts" id="community_recentEvents">
-            <div class="partsHeading"><h3>{{ __('Recent events') }}</h3></div>
-            <div class="parts">
-                @if ($recentEvents->isEmpty())
-                    <p>{{ __('No events to show.') }}</p>
-                @else
-                    <ul class="topicList">
-                        @foreach ($recentEvents as $event)
-                            <li>
-                                <a href="{{ route('communityEvent.show', $event) }}">{{ $event->name }} ({{ $event->comments_count }})</a>
-                                <span class="eventOpenDate">{{ \App\Support\LocalizedDate::date($event->open_date) }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
+        <x-classic.parts id="community_recentEvents" :title="__('Recent events')">
+            @if ($recentEvents->isEmpty())
+                <p>{{ __('No events to show.') }}</p>
+            @else
+                <ul class="topicList">
+                    @foreach ($recentEvents as $event)
+                        <li>
+                            <a href="{{ route('communityEvent.show', $event) }}">{{ $event->name }} ({{ $event->comments_count }})</a>
+                            <span class="eventOpenDate">{{ \App\Support\LocalizedDate::date($event->open_date) }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
 
-                <div class="operation">
-                    <ul class="moreInfo button">
-                        <li><a href="{{ route('communityEvent.index', $community) }}">{{ __('See all events') }}</a></li>
-                        @if ($canPostEvent)
-                            <li><a href="{{ route('communityEvent.new', $community) }}">{{ __('Post a new event') }}</a></li>
-                        @endif
-                    </ul>
-                </div>
+            <div class="operation">
+                <ul class="moreInfo button">
+                    <li><a href="{{ route('communityEvent.index', $community) }}">{{ __('See all events') }}</a></li>
+                    @if ($canPostEvent)
+                        <li><a href="{{ route('communityEvent.new', $community) }}">{{ __('Post a new event') }}</a></li>
+                    @endif
+                </ul>
             </div>
-        </div>
+        </x-classic.parts>
     @endisset
 @endsection

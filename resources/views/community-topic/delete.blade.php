@@ -3,21 +3,19 @@
 @section('title', __('Delete %topic%'))
 
 @section('content')
-    <div class="dparts box" id="communityTopic_delete">
-        <div class="partsHeading"><h3>{{ __('Delete %topic%') }}</h3></div>
-        <div class="parts">
-            <div class="block">
-                <p>{{ __('Delete :name? This cannot be undone.', ['name' => $topic->name]) }}</p>
-                <form method="POST" action="{{ route('communityTopic.delete', $topic) }}">
-                    @csrf
-                    <div class="operation">
-                        <ul class="moreInfo button">
-                            <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>
-                            <li><a href="{{ route('communityTopic.show', $topic) }}">{{ __('Cancel') }}</a></li>
-                        </ul>
-                    </div>
-                </form>
+    {{-- Unlike the community module's yesNo confirmations, opCommunityTopicPlugin confirms deletion
+         with the form kind: the question is the form's .block body. --}}
+    <x-classic.parts id="deleteConfirmForm" name="form" :title="__('Delete %topic%')">
+        <form method="POST" action="{{ route('communityTopic.delete', $topic) }}">
+            @csrf
+            {{-- OpenPNE 3 passes no body option here (no .block); the question is an OpenPNE 4 addition. --}}
+            <p>{{ __('Delete :name? This cannot be undone.', ['name' => $topic->name]) }}</p>
+            <div class="operation">
+                <ul class="moreInfo button">
+                    <li><input type="submit" class="input_submit" value="{{ __('Delete') }}"></li>
+                    <li><a href="{{ route('communityTopic.show', $topic) }}">{{ __('Cancel') }}</a></li>
+                </ul>
             </div>
-        </div>
-    </div>
+        </form>
+    </x-classic.parts>
 @endsection

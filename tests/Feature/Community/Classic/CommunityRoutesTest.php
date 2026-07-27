@@ -53,7 +53,8 @@ class CommunityRoutesTest extends TestCase
         $response->assertOk();
         $response->assertSee('id="LayoutA"', false);  // the community home layout
         $response->assertSee('id="Left"', false);      // the sidemenu column
-        $response->assertSee('id="communityMembers"', false);
+        // OpenPNE 3 named the community member grid friendList (a copy-paste it never fixed).
+        $response->assertSee('id="friendList"', false);
         $response->assertSee('AdminAlice');
         $response->assertSee('MemberBob');
     }

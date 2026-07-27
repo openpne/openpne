@@ -3,9 +3,10 @@
 @section('title', __('Management member'))
 
 @section('content')
-    <div class="dparts" id="community_memberManage">
-        <div class="partsHeading"><h3>{{ __('Management member') }}</h3></div>
-        <div class="parts">
+    {{-- OpenPNE 3 memberManageSuccess.php hand-writes this box as a lone .parts with no kind and no
+         id, and wraps the roster table in a div.item; the id here is OpenPNE 4's own. --}}
+    <x-classic.parts id="community_memberManage" :single="true" :title="__('Management member')">
+        <div class="item">
             <table>
                 @foreach ($members as $membership)
                     @php($rowMember = $membership->member)
@@ -46,8 +47,8 @@
                     </tr>
                 @endforeach
             </table>
-
-            {{ $members->links() }}
         </div>
-    </div>
+
+        {{ $members->links() }}
+    </x-classic.parts>
 @endsection
