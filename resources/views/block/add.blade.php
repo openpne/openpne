@@ -3,9 +3,12 @@
 @section('title', __('Block'))
 
 @section('content')
-    <div class="dparts" id="block_add">
-        <div class="partsHeading"><h3>{{ __('Block') }}</h3></div>
-        <div class="parts">
+    {{-- Block is OpenPNE 4-native, so the confirm page follows the hand-written box + .block
+         confirm shape of OpenPNE 3's diary/message deleteConfirmSuccess.php (their .block is
+         deliberately not .body: OpenPNE 3 ships no .box .block rule, so the confirm body renders
+         unpadded) under the OpenPNE 4 id. --}}
+    <x-classic.parts id="block_add" name="box" :title="__('Block')">
+        <div class="block">
             <p>{{ __('Block :name?', ['name' => $target->name]) }}</p>
             <form method="POST" action="{{ route('block.add') }}">
                 @csrf
@@ -18,5 +21,5 @@
                 </div>
             </form>
         </div>
-    </div>
+    </x-classic.parts>
 @endsection

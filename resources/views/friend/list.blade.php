@@ -5,25 +5,25 @@
 @section('title', $title)
 
 @section('content')
-    <div class="dparts" id="friend_list">
-        <div class="partsHeading"><h3>{{ $title }}</h3></div>
-        <div class="parts">
-            @if ($friends->isEmpty())
-                <p>{{ __('No %friends% to show.') }}</p>
-            @else
-                <ul class="friendList">
-                    @foreach ($friends as $friend)
-                        <li>
-                            <span class="memberName">{{ $friend->name }}</span>
-                            @if ($owner->is(auth()->user()))
-                                <a href="{{ route('friend.unlink.show', $friend) }}">{{ __('Remove %friend%') }}</a>
-                            @endif
-                        </li>
-                    @endforeach
-                </ul>
+    @if ($friends->isEmpty())
+        {{-- OpenPNE 3 listError.php swaps the photo table for a plain box once the pager is empty. --}}
+        <x-classic.parts id="noFriend" name="box" :title="$title">
+            <div class="body">{{ __('No %friends% to show.') }}</div>
+        </x-classic.parts>
+    @else
+        <x-classic.parts id="friendList" name="photoTable" :title="$title">
+            <ul class="friendList">
+                @foreach ($friends as $friend)
+                    <li>
+                        <span class="memberName">{{ $friend->name }}</span>
+                        @if ($owner->is(auth()->user()))
+                            <a href="{{ route('friend.unlink.show', $friend) }}">{{ __('Remove %friend%') }}</a>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
 
-                {{ $friends->links() }}
-            @endif
-        </div>
-    </div>
+            {{ $friends->links() }}
+        </x-classic.parts>
+    @endif
 @endsection

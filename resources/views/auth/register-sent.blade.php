@@ -5,9 +5,8 @@
 @section('content')
     {{-- Neutral confirmation, shown whether or not the address is already a member
          (enumeration-safe). --}}
-    <div class="dparts" id="requestRegisterURL">
-        <div class="partsHeading"><h3>{{ __('Register') }}</h3></div>
-        <div class="parts">
+    <x-classic.parts id="requestSuccess" name="box" :title="__('Register')">
+        <div class="body">
             <p>{{ __('We sent you a registration link.') }}</p>
             <p>{{ __('Open the link in the mail to begin your registration.') }}</p>
             {{-- Enumeration-safe hint: the screen is identical for a brand-new and an already-registered
@@ -15,5 +14,5 @@
             <p>{{ __('If no email arrives, this address may already be registered. Try signing in, or reset your password.') }}</p>
             <p class="loginLink"><a href="{{ route('login') }}">{{ __('Back to login') }}</a></p>
         </div>
-    </div>
+    </x-classic.parts>
 @endsection

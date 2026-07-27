@@ -3,21 +3,17 @@
 @section('title', __('Send a %friend% request'))
 
 @section('content')
-    <div class="dparts" id="friend_link">
-        <div class="partsHeading"><h3>{{ __('Send a %friend% request') }}</h3></div>
-        <div class="parts">
-            <p>{{ __('Send a %friend% request to :name?', ['name' => $target->name]) }}</p>
-
-            <form method="POST" action="{{ route('friend.link') }}">
-                @csrf
-                <input type="hidden" name="target_id" value="{{ $target->getKey() }}">
-                <div class="operation">
-                    <ul class="moreInfo button">
-                        <li><input type="submit" class="input_submit" value="{{ __('Send request') }}"></li>
-                        <li><a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a></li>
-                    </ul>
-                </div>
-            </form>
-        </div>
-    </div>
+    <x-classic.parts id="friendLink" name="form" :title="__('Send a %friend% request')">
+        <form method="POST" action="{{ route('friend.link') }}">
+            @csrf
+            <input type="hidden" name="target_id" value="{{ $target->getKey() }}">
+            <div class="block">{{ __('Send a %friend% request to :name?', ['name' => $target->name]) }}</div>
+            <div class="operation">
+                <ul class="moreInfo button">
+                    <li><input type="submit" class="input_submit" value="{{ __('Send request') }}"></li>
+                    <li><a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a></li>
+                </ul>
+            </div>
+        </form>
+    </x-classic.parts>
 @endsection
