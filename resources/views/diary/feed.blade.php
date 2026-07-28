@@ -29,21 +29,19 @@
             <div class="body">{{ __('No %diary% entries to show.') }}</div>
         </x-classic.parts>
     @elseif ($variant === 'friends')
-        {{-- listFriendSuccess.php renders the recentList skin: a flat list with neither the author
-             photo nor the body excerpt the all-member feed carries. --}}
+        {{-- listFriendSuccess.php renders the recentList skin: one dl per entry, datetime in the dt
+             and op_diary_link_to_show in the dd. Neither the author photo nor the body excerpt the
+             all-member feed carries appears here. --}}
         <x-classic.parts id="diary_feed" name="recentList" :title="$title">
-            <ul class="diaryList">
-                @foreach ($diaries as $entry)
-                    <li>
-                        <a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a>
-                        <x-diary.image-icon :count="$entry->images_count" />
-                        <span class="diaryAuthor">{{ $entry->member->name }}</span>
-                        <span class="diaryDate">{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</span>
-                    </li>
-                @endforeach
-            </ul>
-
-            {{ $diaries->links() }}
+            <x-classic.pager :paginator="$diaries" />
+            @foreach ($diaries as $entry)
+                <dl>
+                    <dt>{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</dt>
+                    {{-- op_diary_link_to_show with withName: the author trails the link, outside it. --}}
+                    <dd><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a> ({{ $entry->member->name }})<x-diary.image-icon :count="$entry->images_count" /></dd>
+                </dl>
+            @endforeach
+            <x-classic.pager :paginator="$diaries" />
         </x-classic.parts>
     @else
         {{-- listSuccess.php renders the searchResultList skin but hand-writes the band rather than

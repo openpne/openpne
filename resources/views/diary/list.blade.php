@@ -33,20 +33,17 @@
             <x-slot:heading>
                 <h3>{{ $title }}@if ($period) <span class="archivePeriod">{{ $period }}</span>@endif</h3>
             </x-slot:heading>
-            <ul class="diaryList">
-                @foreach ($diaries as $entry)
-                    <li>
-                        <a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a>
-                        <span class="diaryDate">{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</span>
-                        @if ($owner->is(auth()->user()))
-                            <a href="{{ route('diary.edit', $entry) }}">{{ __('Edit') }}</a>
-                            <a href="{{ route('diary.delete.show', $entry) }}">{{ __('Delete') }}</a>
-                        @endif
-                    </li>
-                @endforeach
-            </ul>
-
-            {{ $diaries->links() }}
+            {{-- listMemberSuccess.php: one dl per entry, and op_diary_link_to_show without the author
+                 name (every entry here is the same member's). No per-row edit / delete — OpenPNE 3
+                 reaches both from the entry itself. --}}
+            <x-classic.pager :paginator="$diaries" />
+            @foreach ($diaries as $entry)
+                <dl>
+                    <dt>{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</dt>
+                    <dd><a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a><x-diary.image-icon :count="$entry->images_count" /></dd>
+                </dl>
+            @endforeach
+            <x-classic.pager :paginator="$diaries" />
         </x-classic.parts>
     @endif
 @endsection
