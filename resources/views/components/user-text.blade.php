@@ -6,6 +6,9 @@
          .markdownBody (added only for a Markdown body) and emitted once per page via @once. --}}
     @once
         <style>
+            /* A detail box rules off every div inside its dd (.diaryDetailBox dd div); this
+               wrapper is an OpenPNE 4 addition within one, not a section of its own. */
+            .markdownBody { border-top: none; }
             .markdownBody p { margin: 0 0 0.75em; }
             .markdownBody strong { font-weight: bold; }
             .markdownBody em { font-style: italic; }

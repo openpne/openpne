@@ -52,6 +52,19 @@ final class RouteParityRegistry
         return null;
     }
 
+    /** The OpenPNE 3 module a Laravel route renders under, across all parities, or null if none does. */
+    public static function module(string $laravelRoute): ?string
+    {
+        foreach (self::all() as $parity) {
+            $module = $parity->moduleFor($laravelRoute);
+            if ($module !== null) {
+                return $module;
+            }
+        }
+
+        return null;
+    }
+
     /** The Classic layout letter for a Laravel route across all parities, or null for the default (C). */
     public static function layout(string $laravelRoute): ?string
     {

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Compat\PluginStylesheets;
 use App\Compat\RouteParityRegistry;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
@@ -60,6 +61,20 @@ if (! function_exists('classic_custom_css_url')) {
     function classic_custom_css_url(): ?string
     {
         return app(SnsSettingService::class)->hasCustomCss() ? route('design.customizing_css') : null;
+    }
+}
+
+if (! function_exists('classic_plugin_css_url')) {
+    /**
+     * The vendored OpenPNE 3 plugin stylesheet URL for the current route — the module's view.yml
+     * `stylesheets` entry — or null when its module declares none. Linked after the skin and
+     * before the admin custom CSS, the order OpenPNE 3 stacked them in.
+     */
+    function classic_plugin_css_url(): ?string
+    {
+        $path = PluginStylesheets::forRoute(request()->route()?->getName());
+
+        return $path === null ? null : asset($path);
     }
 }
 

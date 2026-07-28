@@ -115,14 +115,41 @@ abstract class RouteParity
      */
     public function bodyId(string $laravelRoute): ?string
     {
+        $map = $this->renderedMap($laravelRoute);
+
+        if ($map === null) {
+            return null;
+        }
+
+        return "page_{$this->moduleOf($map)}_{$map->op3Action}";
+    }
+
+    /**
+     * The OpenPNE 3 module a Laravel route renders under — the same module the body id carries.
+     * OpenPNE 3 keyed its per-module `config/view.yml` (stylesheets, layout) off it. Null when
+     * this parity renders no page for the route.
+     */
+    public function moduleFor(string $laravelRoute): ?string
+    {
+        $map = $this->renderedMap($laravelRoute);
+
+        return $map === null ? null : $this->moduleOf($map);
+    }
+
+    /** The first map rendering $laravelRoute as a page; POST submits (no op3Action) render none. */
+    private function renderedMap(string $laravelRoute): ?RouteMap
+    {
         foreach ($this->maps() as $map) {
             if ($map->laravelRoute === $laravelRoute && $map->op3Action !== null) {
-                $module = $map->op3Module ?? $this->module;
-
-                return "page_{$module}_{$map->op3Action}";
+                return $map;
             }
         }
 
         return null;
+    }
+
+    private function moduleOf(RouteMap $map): string
+    {
+        return $map->op3Module ?? $this->module;
     }
 }

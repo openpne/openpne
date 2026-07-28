@@ -95,7 +95,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement("link to the member's diary list", L::Two, S::Ported, 'lineLinkToDiaryMemberList'),
                 new ScreenElement('diary body line breaks + auto-link', L::Two, S::Ported, 'op_url_cmd(nl2br(body))', 'x-user-text (BodyText)'),
                 new ScreenElement('diary body decoration (rich text)', L::Three, S::Ported, 'op_decoration(body)', 'Op3Text span rendering; colors validated, unbalanced tags auto-closed'),
-                new ScreenElement('Japanese datetime format', L::Three, S::Ported, "op_format_date(created_at, 'XDateTimeJa')", 'LocalizedDate; inline single-line (XDateTimeJaBr stacks the parts for the OpenPNE 3 sidebar column)'),
+                new ScreenElement('Japanese datetime format', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate::dateTimeLines; year / date / time stacked in the dt column'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; author avatar links to the profile'),
                 new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + prev/next month + day-archive links (MemberDiaryDays)'),
                 new ScreenElement('diary images', L::Three, S::Ported, '$diary->getDiaryImagesJoinFile()', 'DiaryImage thumbnails via the shared _images partial; each fetch FilePolicy-gated by diary visibility'),
