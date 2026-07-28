@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Classic;
 
+use App\Features\Notifications\NotificationCenterWindow;
 use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Message;
@@ -78,10 +79,49 @@ class NotificationCenterTest extends TestCase
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
-        $this->assertStringContainsString('<span id="nc_icon1" title="1">1</span>', $content);
-        $this->assertStringContainsString('<span id="nc_icon2" title="1">1</span>', $content);
+        $this->assertStringContainsString('<span id="nc_icon1">1</span>', $content);
+        $this->assertStringContainsString('<span id="nc_icon2">1</span>', $content);
         // One diary comment — not three. The message and the request belong to the other two.
-        $this->assertStringContainsString('<span id="nc_icon3" title="1">1</span>', $content);
+        $this->assertStringContainsString('<span id="nc_icon3">1</span>', $content);
+    }
+
+    /**
+     * The badges count the window the panel shows, not the whole table. OpenPNE 3 sliced its store
+     * to 20 as it wrote, so its counts and its list saw the same items by construction; counting
+     * past the window would badge events the panel has no room to account for.
+     */
+    public function test_an_unread_event_older_than_the_panels_window_is_not_badged(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented']);
+        foreach (range(1, NotificationCenterWindow::LIMIT) as $ignored) {
+            $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now());
+        }
+
+        // The one unread row is the oldest, so the newest 20 — all read — are the whole window.
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertSee('id="notificationCenter"', false)
+            ->assertDontSee('id="nc_icon3"', false);
+    }
+
+    public function test_only_the_unread_rows_inside_the_window_are_partitioned(): void
+    {
+        $viewer = Member::factory()->create();
+        $actor = Member::factory()->create();
+        // Older than the window, and unread — must not reach a badge.
+        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()]);
+        foreach (range(1, NotificationCenterWindow::LIMIT - 1) as $ignored) {
+            $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now());
+        }
+        // Inside the window: one unread, one read.
+        $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now());
+        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()]);
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('<span id="nc_icon1">1</span>', $content);
+        $this->assertStringNotContainsString('id="nc_icon3"', $content);
     }
 
     /** A kind nobody has classified still has to reach a badge rather than vanish from all three. */
@@ -92,7 +132,7 @@ class NotificationCenterTest extends TestCase
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()
-            ->assertSee('<span id="nc_icon3" title="1">1</span>', false);
+            ->assertSee('<span id="nc_icon3">1</span>', false);
     }
 
     public function test_a_badge_is_absent_while_its_count_is_zero(): void
@@ -105,19 +145,18 @@ class NotificationCenterTest extends TestCase
             ->assertDontSee('id="nc_icon3"', false);
     }
 
-    public function test_a_count_past_the_badges_width_is_clamped_but_still_readable(): void
+    /** The window is the ceiling, so a badge never has more digits than the skin sized it for. */
+    public function test_a_badge_cannot_exceed_the_windows_cap(): void
     {
         $viewer = Member::factory()->create();
         $actor = Member::factory()->create();
-        for ($i = 0; $i < 120; $i++) {
+        foreach (range(1, NotificationCenterWindow::LIMIT + 30) as $ignored) {
             $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()]);
         }
 
-        // The skin sizes the badge for OpenPNE 3's capped count, so the digits stop — but the
-        // number they stand for stays one hover away.
         $this->actingAs($viewer)->get('/')
             ->assertOk()
-            ->assertSee('<span id="nc_icon1" title="120">99+</span>', false);
+            ->assertSee('<span id="nc_icon1">'.NotificationCenterWindow::LIMIT.'</span>', false);
     }
 
     /** Reading the feed clears the badges, because they count the same unread rows it lists. */
@@ -174,12 +213,13 @@ class NotificationCenterTest extends TestCase
     }
 
     /** @param array<string, mixed> $data */
-    private function seedRow(Member $member, string $type, array $data): void
+    private function seedRow(Member $member, string $type, array $data, ?\DateTimeInterface $readAt = null): void
     {
         $member->notifications()->create([
             'id' => (string) Str::uuid(),
             'type' => $type,
             'data' => $data,
+            'read_at' => $readAt,
         ]);
     }
 }

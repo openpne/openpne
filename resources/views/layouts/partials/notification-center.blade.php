@@ -42,12 +42,12 @@
             <div id="notificationCenterError">{{ __('There is no new notification.') }}</div>
         </div>
         {{-- A badge is absent at zero, as OpenPNE 3's was, and shows what its own compartment of
-             the panel holds. The skin sizes it for OpenPNE 3's capped count, so the digits stop at
-             99+ and the number they stand for stays in the title. --}}
+             the panel holds. It needs no clamp: the window caps the whole centre at 20, which is
+             what the skin sizes these for. --}}
         @foreach (\App\Features\Notifications\NotificationCenterCategory::cases() as $ncCategory)
             @php($ncCount = $ncCounts[$ncCategory->value] ?? 0)
             @if ($ncCount > 0)
-                <span id="{{ $ncCategory->badgeId() }}" title="{{ $ncCount }}">{{ $ncCount > 99 ? '99+' : $ncCount }}</span>
+                <span id="{{ $ncCategory->badgeId() }}">{{ $ncCount }}</span>
             @endif
         @endforeach
     </div>

@@ -13,16 +13,17 @@ document covers the delivery model around it.
    `friend_requests` rows, unread `message_recipients`, pending `community_join_requests`).
    No notification table, no seen state: acting on the item (accept / reject / read) is what
    makes the count drop. [`App\Features\Home\UnreadCounts`](../../app/Features/Home/UnreadCounts.php).
-2. **Display surfaces over layer 1** — nav badges and the dashboard notice block. They only
-   read layer-1 counts.
+2. **Display surfaces over layer 1** — Modern's nav badges, its dashboard notice block, and the
+   Classic home cautions. They only read layer-1 counts. The Classic header's notification centre
+   is *not* one of these: it badges layer 3 (below).
 3. **Per-event records** — one row per event in the standard Laravel `notifications` table
    (the `database` channel of each notification class), carrying a `kind` discriminator plus
    entity ids. Read state is the row's own `read_at`. Read by the feed
    ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`):
    rows are hydrated at render time from their ids (a withdrawn actor degrades to
    a fallback label), opening a row marks it read and redirects to its target, and viewing the
-   feed marks nothing — only opening a row or the explicit mark-all does. The nav badge is the
-   unread-row count (via `UnreadCounts`, alongside the layer-1 numbers).
+   feed marks nothing — only opening a row or the explicit mark-all does. Modern's nav badge is
+   the unread-row count (via `UnreadCounts`, alongside the layer-1 numbers).
 
    Both surfaces serve it. A row's sentence is
    [`NotificationKindLabel`](../../app/Features/Notifications/NotificationKindLabel.php)'s, so
@@ -30,15 +31,22 @@ document covers the delivery model around it.
    as a POST to the open route, which keeps target resolution — and its access checks — on that
    request rather than on every listed row.
 
-   Classic also reaches these rows from the header notification centre, whose three badges partition
-   them by [`NotificationCenterCategory`](../../app/Features/Notifications/NotificationCenterCategory.php)
-   — that panel is the one place a `%friend%` request can be answered without leaving the page, and
-   the buttons follow the request's own state rather than the row's `read_at`. See
+   Classic also reaches these rows from the header notification centre. Its badges and its panel
+   share one capped window
+   ([`NotificationCenterWindow`](../../app/Features/Notifications/NotificationCenterWindow.php)),
+   split by
+   [`NotificationCenterCategory`](../../app/Features/Notifications/NotificationCenterCategory.php),
+   so a badge can never stand over rows the panel does not show — counting the whole unread table
+   there would. The feed's own mark-all still counts everything, since it pages past that window.
+   The panel is also the one place a `%friend%` request can be answered without leaving the page,
+   and those buttons follow the request's own state rather than the row's `read_at`. See
    [classic-compatibility.md](classic-compatibility.md).
 
 **Read-state separation is the invariant**: layer-1 counts never consume `read_at`, and reading
-the feed never mutates domain state. OpenPNE 3's notification centre failed by mixing aggregate
-and per-event information behind one ambiguous read model; the layers keep the two truths apart.
+the feed never mutates domain state. OpenPNE 3 kept only the per-event side — a `member_config`
+array capped at 20, which both its badges and its panel read — so a count there could never
+disagree with the list under it. These layers answer more questions than that store could, which
+is why each display surface has to say which layer it is reading.
 
 ## The per-member catalog
 

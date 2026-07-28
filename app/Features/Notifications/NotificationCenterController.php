@@ -62,7 +62,7 @@ class NotificationCenterController extends Controller
             abort(404);
         }
 
-        $requester = Member::find($row->data['requester_id'] ?? null);
+        $requester = Member::find(ListNotificationCenterRows::requesterId($row));
         if ($requester === null) {
             return $this->resolved($row, __('This member is unavailable.'));
         }

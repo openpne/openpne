@@ -203,7 +203,7 @@ class ModernOnlyCoverageTest extends TestCase
      */
     public function test_allowlisted_names_are_registered_routes(): void
     {
-        foreach ([...self::KNOWN_LEAKS, ...self::REDIRECTS_UNDER_MODERN] as $name) {
+        foreach ([...self::KNOWN_LEAKS, ...self::REDIRECTS_UNDER_MODERN, ...self::FRAGMENTS] as $name) {
             $this->assertTrue(Route::has($name), "Allowlisted route [{$name}] no longer exists — remove it or fix the name.");
         }
     }

@@ -41,6 +41,11 @@
         }
         loaded = true;
 
+        // Back to waiting, so a retry after a failure does not sit under the last attempt's
+        // "nothing here" while its rows are on the way.
+        if (loading) loading.style.display = '';
+        if (empty) empty.style.display = 'none';
+
         fetch(trigger.getAttribute('data-notification-center-url'), {
             credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -61,6 +66,7 @@
                     if (empty) empty.style.display = 'block';
                     return;
                 }
+                if (empty) empty.style.display = 'none';
                 panel.insertAdjacentHTML('beforeend', html);
                 bindRows();
             })
@@ -99,6 +105,13 @@
             button.style.display = 'none';
         });
 
+        // OpenPNE 3 put a spinner here while it waited. Keeping it means the row says something
+        // between the click and the answer instead of going blank, and aria-busy says the same
+        // thing to a reader that cannot see it.
+        var spinner = box.querySelector('.ncfriendloading');
+        if (spinner) spinner.style.display = 'block';
+        box.setAttribute('aria-busy', 'true');
+
         var result = box.querySelector('.ncfriendresultmessage');
         var token = document.querySelector('meta[name="csrf-token"]');
 
@@ -116,17 +129,25 @@
                 return response.json();
             })
             .then(function (data) {
+                if (spinner) spinner.style.display = 'none';
+                box.setAttribute('aria-busy', 'false');
                 if (result) {
                     result.textContent = data.message;
                     result.style.display = 'block';
+                    // The row that was focused is gone; the outcome takes its place in the reading
+                    // order rather than pulling focus out of the panel.
+                    result.focus({ preventScroll: true });
                 }
             })
             .catch(function () {
                 // Say nothing rather than something wrong: the pages state the outcome truthfully.
+                if (spinner) spinner.style.display = 'none';
+                box.setAttribute('aria-busy', 'false');
                 buttons.forEach(function (button) {
                     button.disabled = false;
                     button.style.display = '';
                 });
+                buttons[0]?.focus({ preventScroll: true });
             });
     }
 

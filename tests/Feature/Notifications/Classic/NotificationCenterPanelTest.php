@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications\Classic;
 
-use App\Features\Notifications\Queries\ListNotificationCenterRows;
+use App\Features\Notifications\NotificationCenterWindow;
 use App\Models\Member;
 use App\Notifications\Diary\DiaryCommentedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
@@ -94,13 +94,13 @@ class NotificationCenterPanelTest extends TestCase
     public function test_the_panel_keeps_openpne3s_cap_and_stays_out_of_shared_caches(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
-        foreach (range(1, ListNotificationCenterRows::LIMIT + 5) as $ignored) {
+        foreach (range(1, NotificationCenterWindow::LIMIT + 5) as $ignored) {
             $this->seedDiaryComment($viewer, $actor);
         }
 
         $response = $this->actingAs($viewer)->get(route('notifications.center'))->assertOk();
 
-        $this->assertSame(ListNotificationCenterRows::LIMIT, substr_count((string) $response->getContent(), 'data-notify-id='));
+        $this->assertSame(NotificationCenterWindow::LIMIT, substr_count((string) $response->getContent(), 'data-notify-id='));
         $cacheControl = (string) $response->headers->get('Cache-Control');
         $this->assertStringContainsString('private', $cacheControl);
         $this->assertStringContainsString('no-store', $cacheControl);
@@ -115,7 +115,7 @@ class NotificationCenterPanelTest extends TestCase
     public function test_a_full_panel_costs_what_a_near_empty_one_does(): void
     {
         $few = $this->memberWithRows(2);
-        $many = $this->memberWithRows(ListNotificationCenterRows::LIMIT);
+        $many = $this->memberWithRows(NotificationCenterWindow::LIMIT);
 
         $this->assertSame($this->queryCountFor($few), $this->queryCountFor($many));
     }

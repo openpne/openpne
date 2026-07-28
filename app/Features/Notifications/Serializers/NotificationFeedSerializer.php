@@ -9,6 +9,7 @@ use App\Features\Notifications\NotificationCenterCategory;
 use App\Features\Notifications\NotificationCenterRow;
 use App\Features\Notifications\NotificationFeedRow;
 use App\Features\Notifications\NotificationKindLabel;
+use App\Features\Notifications\Queries\ListNotificationCenterRows;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
@@ -90,7 +91,7 @@ class NotificationFeedSerializer
                 actorName: $actor?->name,
                 actorAvatar: $actor?->avatar?->file,
                 awaitingDecision: $category === NotificationCenterCategory::Friend
-                    && isset($awaitingByRequester[$row->data['requester_id'] ?? 0]),
+                    && isset($awaitingByRequester[ListNotificationCenterRows::requesterId($row) ?? 0]),
             );
         })->values();
     }
