@@ -107,8 +107,8 @@
 
     {{-- OpenPNE 3 homeSuccess.php closes the page with a class-less ul outside the listBox, holding
          only the membership operations: the roster lives in the sidemenu and delete inside the edit
-         screen. The administrator cannot leave (they must hand the community over first), and the
-         join entry keys off membership alone, so an approval applicant still gets it. --}}
+         screen. The administrator cannot leave (they must hand the community over first); the join
+         entry is withheld from a pending applicant (see below). --}}
     <ul>
         @if ($role?->canManage())
             <li><a href="{{ route('community.edit', ['id' => $community->getKey()]) }}">{{ __('Edit this %community%') }}</a></li>

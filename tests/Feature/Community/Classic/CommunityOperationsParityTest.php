@@ -152,6 +152,24 @@ class CommunityOperationsParityTest extends TestCase
         $this->assertStringContainsString('<td><a href="'.$home.'">'.$community->name.'</a></td>', $html);
     }
 
+    public function test_the_operation_labels_speak_openpne3_japanese(): void
+    {
+        // English-only assertions cannot catch a drifted ja value, so the visible labels are
+        // pinned in the OpenPNE 3 wording (…に参加する / …を退会する / …を削除する).
+        $community = Community::factory()->create();
+        $stranger = Member::factory()->create();
+        $ja = fn ($member) => (string) $this->actingAs($member)->withSession(['locale' => 'ja'])
+            ->get(route('community.show', $community))->assertOk()->getContent();
+
+        $this->assertStringContainsString('このコミュニティに参加する', $ja($stranger));
+        $this->assertStringContainsString('このコミュニティを退会する', $ja($this->joined($community)));
+
+        $admin = $this->joined($community, CommunityRole::Admin);
+        $edit = (string) $this->actingAs($admin)->withSession(['locale' => 'ja'])
+            ->get(route('community.edit', ['id' => $community->getKey()]))->assertOk()->getContent();
+        $this->assertStringContainsString('コミュニティを削除する', $edit);
+    }
+
     private function link(string $url, string $label): string
     {
         return '<li><a href="'.$url.'">'.$label.'</a></li>';
