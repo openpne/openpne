@@ -79,7 +79,34 @@ class CommunityEventRoutesTest extends TestCase
         $response = $this->actingAs($this->joined($community))->get(route('communityEvent.index', $community));
 
         $response->assertOk();
-        $response->assertSee('Counted (2)');
+        // listCommunitySuccess.php formats the label as sprintf('%s(%d)') — no space before the count.
+        $response->assertSee('Counted(2)');
+    }
+
+    public function test_board_draws_the_openpne3_recent_list(): void
+    {
+        $community = Community::factory()->create();
+        $author = Member::factory()->create(['name' => 'Evan']);
+        $event = CommunityEvent::factory()->create([
+            'community_id' => $community->getKey(), 'name' => 'A meetup',
+            'member_id' => $author->getKey(), 'open_date' => '2026-07-01',
+        ]);
+        DB::table('community_events')->where('id', $event->getKey())->update(['updated_at' => '2026-06-04 13:44:00']);
+
+        $response = $this->actingAs($this->joined($community))
+            ->withSession(['locale' => 'ja'])
+            ->get(route('communityEvent.index', $community))
+            ->assertOk();
+
+        // One dl per event: the last-activity datetime in the dt, the "name(count)" link in the dd,
+        // then the open date as the single trailing parenthetical (the author stays on the show page).
+        $response->assertSee('<dt>2026年06月04日 13:44</dt>', false);
+        $response->assertSee(
+            '<dd><a href="'.route('communityEvent.show', $event).'">A meetup(0)</a> (2026年07月01日)</dd>',
+            false,
+        );
+        // The pager brackets the list, as op_include_pager_navigation does above and below it.
+        $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
     }
 
     public function test_members_only_board_is_hidden_from_non_members(): void

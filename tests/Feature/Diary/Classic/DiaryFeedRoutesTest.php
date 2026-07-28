@@ -6,6 +6,7 @@ use App\Features\Member\Actions\SetAvatar;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Visibility;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -137,6 +138,31 @@ class DiaryFeedRoutesTest extends TestCase
         $response->assertSee('<th>Title</th><td>Hello world (0)<', false);
         $response->assertDontSee('>Hello world (0)</a>', false);
         // The pager brackets the list, as op_include_pager_navigation does above and below the block.
+        $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
+    }
+
+    public function test_friend_feed_draws_the_openpne3_recent_list(): void
+    {
+        $viewer = Member::factory()->create();
+        $friend = Member::factory()->create(['name' => 'Fran']);
+        DB::table('friendships')->insert([
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+        ]);
+        $diary = Diary::factory()->create([
+            'member_id' => $friend->getKey(),
+            'title' => 'Friend entry',
+            'visibility' => Visibility::Friends,
+            'created_at' => CarbonImmutable::create(2026, 6, 4, 13, 44),
+        ]);
+
+        $response = $this->actingAs($viewer)->withSession(['locale' => 'ja'])->get('/diary/listFriend')->assertOk();
+
+        // listFriendSuccess.php: one dl per entry, op_format_date(XDateTimeJa) in the dt and
+        // op_diary_link_to_show in the dd — the author trails the link rather than sitting inside it.
+        $response->assertSee('<dt>2026年06月04日 13:44</dt>', false);
+        $response->assertSee('<dd><a href="'.route('diary.show', $diary).'">Friend entry (0)</a> (Fran)</dd>', false);
+        // The pager brackets the list, as op_include_pager_navigation does above and below it.
         $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
     }
 

@@ -370,6 +370,26 @@ class CommunityRoutesTest extends TestCase
         $this->assertDatabaseCount('community_join_requests', 0);
     }
 
+    public function test_pending_page_draws_the_openpne3_manage_list(): void
+    {
+        $community = Community::factory()->approval()->create();
+        $admin = $this->memberWithRole($community, CommunityRole::Admin);
+        $applicant = Member::factory()->create(['name' => 'Pat']);
+        DB::table('community_join_requests')->insert([
+            'community_id' => $community->getKey(),
+            'member_id' => $applicant->getKey(),
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('community.members.pending', ['id' => $community->getKey()]))->assertOk();
+
+        // _partsManageList.php: a 76×76 photo over the member link, then one operation per cell.
+        $response->assertSee('<div class="dparts manageList" id="community_memberManage">', false);
+        $response->assertSee('<div class="item"><table><tbody>', false);
+        $response->assertSee('<td class="photo"><a href="'.route('member.profile.show', $applicant).'">', false);
+        // The pager brackets the queue.
+        $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
+    }
+
     public function test_non_admin_cannot_approve_members(): void
     {
         $community = Community::factory()->approval()->create();

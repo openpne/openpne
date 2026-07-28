@@ -4,30 +4,35 @@
 
 @section('content')
     {{-- Join approvals, which OpenPNE 3 served from confirmation/list rather than per community, so
-         this box has no OpenPNE 3 kind or id to restore. --}}
-    <x-classic.parts id="community_memberManage" :title="__('Pending members')">
+         the OpenPNE 3 id does not carry over. The roster shape does: _partsManageList.php is
+         OpenPNE 3's per-member operation list (76×76 photo over the name, one operation per cell). --}}
+    <x-classic.parts id="community_memberManage" name="manageList" :title="__('Pending members')">
         @if ($applicants->isEmpty())
             <p>{{ __('No pending requests.') }}</p>
         @else
-            <ul class="requestList">
+            <x-classic.pager :paginator="$applicants" />
+            <div class="item"><table><tbody>
                 @foreach ($applicants as $applicant)
-                    <li>
-                        <span class="memberName">{{ $applicant->name }}</span>
-                        <form method="POST" action="{{ route('community.members.approve', ['id' => $community->getKey()]) }}" class="inline">
-                            @csrf
-                            <input type="hidden" name="member_id" value="{{ $applicant->getKey() }}">
-                            <input type="submit" class="input_submit" value="{{ __('Approve') }}">
-                        </form>
-                        <form method="POST" action="{{ route('community.members.decline', ['id' => $community->getKey()]) }}" class="inline">
-                            @csrf
-                            <input type="hidden" name="member_id" value="{{ $applicant->getKey() }}">
-                            <input type="submit" class="input_submit" value="{{ __('Decline') }}">
-                        </form>
-                    </li>
+                    <tr>
+                        <td class="photo"><a href="{{ route('member.profile.show', $applicant) }}"><x-classic.image :file="$applicant->avatar?->file" :size="76" :alt="$applicant->name" /></a><br /><a href="{{ route('member.profile.show', $applicant) }}">{{ $applicant->name }}</a></td>
+                        <td>
+                            <form method="POST" action="{{ route('community.members.approve', ['id' => $community->getKey()]) }}">
+                                @csrf
+                                <input type="hidden" name="member_id" value="{{ $applicant->getKey() }}">
+                                <input type="submit" class="input_submit" value="{{ __('Approve') }}">
+                            </form>
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ route('community.members.decline', ['id' => $community->getKey()]) }}">
+                                @csrf
+                                <input type="hidden" name="member_id" value="{{ $applicant->getKey() }}">
+                                <input type="submit" class="input_submit" value="{{ __('Decline') }}">
+                            </form>
+                        </td>
+                    </tr>
                 @endforeach
-            </ul>
-
-            {{ $applicants->links() }}
+            </tbody></table></div>
+            <x-classic.pager :paginator="$applicants" />
         @endif
     </x-classic.parts>
 @endsection

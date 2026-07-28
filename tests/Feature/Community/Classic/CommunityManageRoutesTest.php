@@ -42,6 +42,25 @@ class CommunityManageRoutesTest extends TestCase
         $this->actingAs($stranger)->get(route('community.members.manage', $community))->assertNotFound();
     }
 
+    public function test_roster_rows_carry_the_openpne3_cell_classes(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->join($community, CommunityRole::Admin);
+        $this->join($community, CommunityRole::Member);
+
+        $response = $this->actingAs($admin)->get(route('community.members.manage', $community))->assertOk();
+        $content = (string) $response->getContent();
+
+        // memberManageSuccess.php names every cell, and a row with no operation still prints one
+        // (&nbsp;) so the columns stay aligned — here the admin's own row in all three operations.
+        $response->assertSee('<td class="member">', false);
+        foreach (['drop', 'sub_admin_request', 'admin_request'] as $cell) {
+            $this->assertMatchesRegularExpression('#<td class="'.$cell.'">\s*&nbsp;\s*</td>#', $content);
+        }
+        // The pager brackets the roster, as memberManageSuccess.php's pager slot does.
+        $this->assertSame(2, substr_count($content, 'class="pagerRelative"'));
+    }
+
     public function test_admin_viewer_sees_appoint_demote_and_drop_links_per_row(): void
     {
         $community = Community::factory()->create();
