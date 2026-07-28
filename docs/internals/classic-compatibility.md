@@ -175,10 +175,15 @@ custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar 
 vendored `NOTIFY_CENTER.png` sprite with the `#nc_icon1` / `#nc_icon2` / `#nc_icon3` badges the
 skin positions over its three glyphs — unread messages, pending `%friend%` requests, unread
 notifications, hidden at zero. The sprite stays the one `img.ncbutton` OpenPNE 3 styled, and an
-image map makes its glyphs links; three background slices would drop that hook, and the rules
-replacing it would sit in the document, past the reach of a site's own stylesheet. The same three
-numbers head the home cautions, so both read [`UnreadCounts`](../../app/Features/Home/UnreadCounts.php),
-which memoizes per request.
+image map makes its cells links; three background slices would drop that hook, and the rules
+replacing it would sit in the document, past the reach of a site's own stylesheet. The map divides
+the sprite cell by cell rather than tracing the glyph inside each, and each badge is a link to the
+same place as the icon it sits on, `aria-hidden` and out of the tab order — the skin drops the
+badge over that icon and lets a wide one hang past the sprite, so a badge that were not a target
+itself would swallow the clicks it covers and waste the ones it overhangs, while a badge that
+joined the tab order would announce the count twice. The area carries the accessible name and the
+tooltip. The same three numbers head the home cautions, so both read
+[`UnreadCounts`](../../app/Features/Home/UnreadCounts.php), which memoizes per request.
 
 The home cautions are OpenPNE 3's `information` parts customizations on `member/homeSuccess`,
 [one box holding the set](../../resources/views/home/partials/cautions.blade.php) in the order
@@ -192,7 +197,7 @@ to switch to); the notification centre's `#notificationCenterDetail` dropdown �
 `.push` rows and their inline YES/NO — is not ported, the icons linking to the message, request and
 feed screens instead (Modern's bell is the same shape), and its badges count unread items rather
 than OpenPNE 3's notification events capped at 20, so they are clamped at `99+` with the number kept
-in the badge's name; the unread-`%diary%`-comment caution has nothing to port to (OpenPNE 4 tracks
+in the link's name; the unread-`%diary%`-comment caution has nothing to port to (OpenPNE 4 tracks
 no per-entry comment read state).
 
 ### Error screens

@@ -38,10 +38,57 @@ class NotificationCenterTest extends TestCase
 
         $response->assertSee('id="notificationCenter"', false);
         $response->assertSee('<img class="ncbutton" src="'.e(asset('images/NOTIFY_CENTER.png')).'" width="92" height="32" alt="" usemap="#notificationCenterMap">', false);
-        // The sprite's three glyph runs, each linking to the screen behind that icon.
-        $response->assertSee('<area shape="rect" coords="2,0,28,32" href="'.e(route('message.index')).'"', false);
-        $response->assertSee('<area shape="rect" coords="36,0,60,32" href="'.e(route('friend.manage')).'"', false);
-        $response->assertSee('<area shape="rect" coords="66,0,89,32" href="'.e(route('notifications.index')).'"', false);
+        // The sprite's three cells, wall to wall: an area narrowed to the glyph inside it would
+        // leave the gaps between icons dead.
+        $response->assertSee('<area shape="rect" coords="0,0,30,32" href="'.e(route('message.index')).'"', false);
+        $response->assertSee('<area shape="rect" coords="31,0,61,32" href="'.e(route('friend.manage')).'"', false);
+        $response->assertSee('<area shape="rect" coords="62,0,92,32" href="'.e(route('notifications.index')).'"', false);
+    }
+
+    /**
+     * The skin drops each badge over the icon it counts and lets a wide one hang past the sprite,
+     * so a badge that were not a target itself would both swallow the clicks it covers and waste
+     * the ones it overhangs. Every badge leads where its icon leads.
+     */
+    public function test_a_badge_leads_where_the_icon_it_sits_on_leads(): void
+    {
+        $viewer = Member::factory()->create();
+        $sender = Member::factory()->create();
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString(
+            '<a href="'.e(route('friend.manage')).'" id="nc_icon2" class="notificationCenterBadge" aria-hidden="true" tabindex="-1">1</a>',
+            $content,
+        );
+    }
+
+    /**
+     * The count rides on the area: that is what a screen reader and a hover reach, and the badge
+     * showing the digits repeats the destination without repeating the announcement.
+     */
+    public function test_the_count_is_announced_on_the_link_rather_than_on_the_badge(): void
+    {
+        $viewer = Member::factory()->create();
+        $sender = Member::factory()->create();
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        $name = e(__(':count pending %friend% requests', ['count' => 1]));
+        $this->assertStringContainsString('href="'.e(route('friend.manage')).'" alt="'.$name.'" title="'.$name.'"', $content);
+        // The badge repeats the area rather than joining it: hidden and out of the tab order, so
+        // the count is announced once and the keyboard still sees three links.
+        $this->assertStringContainsString('id="nc_icon2" class="notificationCenterBadge" aria-hidden="true" tabindex="-1">1</a>', $content);
+    }
+
+    public function test_an_icon_with_nothing_waiting_is_named_for_where_it_leads(): void
+    {
+        $content = (string) $this->actingAs(Member::factory()->create())->get('/')->assertOk()->getContent();
+
+        $name = e(__('Pending %friend% requests'));
+        $this->assertStringContainsString('href="'.e(route('friend.manage')).'" alt="'.$name.'" title="'.$name.'"', $content);
     }
 
     public function test_a_badge_is_absent_while_its_count_is_zero(): void
@@ -70,7 +117,7 @@ class NotificationCenterTest extends TestCase
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
         foreach (['nc_icon1', 'nc_icon2', 'nc_icon3'] as $id) {
-            $this->assertMatchesRegularExpression('/<span id="'.$id.'"[^>]*>1<\/span>/', $content);
+            $this->assertMatchesRegularExpression('/<a [^>]*id="'.$id.'"[^>]*>1<\/a>/', $content);
         }
     }
 
@@ -84,9 +131,10 @@ class NotificationCenterTest extends TestCase
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
         // The skin sizes the badge for OpenPNE 3's capped count, so the digits stop — but the
-        // number a member acts on stays in the accessible name and the tooltip.
-        $label = e(__(':count pending %friend% requests', ['count' => 120]));
-        $this->assertStringContainsString('<span id="nc_icon2" role="img" aria-label="'.$label.'" title="'.$label.'">99+</span>', $content);
+        // number a member acts on stays on the link.
+        $name = e(__(':count pending %friend% requests', ['count' => 120]));
+        $this->assertStringContainsString('id="nc_icon2" class="notificationCenterBadge" aria-hidden="true" tabindex="-1">99+</a>', $content);
+        $this->assertStringContainsString('alt="'.$name.'" title="'.$name.'"', $content);
     }
 
     public function test_a_guest_on_a_web_public_page_gets_no_notification_center(): void

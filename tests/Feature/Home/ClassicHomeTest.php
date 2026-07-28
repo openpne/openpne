@@ -177,8 +177,10 @@ class ClassicHomeTest extends TestCase
         $messageBadge = e(__(':count unread messages', ['count' => 2]));
         $friendBadge = e(__(':count pending %friend% requests', ['count' => 3]));
 
-        $this->assertStringContainsString('<span id="nc_icon1" role="img" aria-label="'.$messageBadge.'" title="'.$messageBadge.'">2</span>', $content);
-        $this->assertStringContainsString('<span id="nc_icon2" role="img" aria-label="'.$friendBadge.'" title="'.$friendBadge.'">3</span>', $content);
+        $this->assertStringContainsString('id="nc_icon1" class="notificationCenterBadge" aria-hidden="true" tabindex="-1">2</a>', $content);
+        $this->assertStringContainsString('id="nc_icon2" class="notificationCenterBadge" aria-hidden="true" tabindex="-1">3</a>', $content);
+        $this->assertStringContainsString('alt="'.$messageBadge.'" title="'.$messageBadge.'"', $content);
+        $this->assertStringContainsString('alt="'.$friendBadge.'" title="'.$friendBadge.'"', $content);
         $this->assertStringContainsString(e(__('There are new :count messages!', ['count' => 2])), $content);
         $this->assertStringContainsString(e(__("You've gotten :count %friend% requests", ['count' => 3])), $content);
     }
