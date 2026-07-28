@@ -138,6 +138,9 @@ renders under ([`RouteParity::moduleFor()`](../../app/Compat/RouteParity.php)) t
 `config/view.yml` `stylesheets` entry, and the shell links it between the skin and the custom CSS.
 Global linking is not equivalent — each file also restyles shared kinds (`.commentList`,
 `.recentList`, `.prevNextLinkLine`), which OpenPNE 3 left untouched on other modules' screens.
+Plugin images a template names directly are vendored the same way — the message list's row status
+icons, `opMessagePlugin/images/icon_mail_*.gif` — and the byte lock in
+[`PluginStylesheetsTest`](../../tests/Unit/Compat/PluginStylesheetsTest.php) covers both kinds.
 
 An unset member/community image falls back to the OpenPNE 3 `no_image.gif`, vendored at
 [`public/images/no_image.gif`](../../public/images/no_image.gif) and rendered through the shared

@@ -37,9 +37,8 @@ class ClassicPartsFrameGuardTest extends TestCase
             'components/gadget/timeline-all',
             'components/gadget/timeline-friend',
             'components/gadget/timeline-profile',
-            // opMessagePlugin deleteListConfirmSuccess.php / listSuccess.php / deleteConfirmSuccess.php / showSuccess.php
+            // opMessagePlugin deleteListConfirmSuccess.php / deleteConfirmSuccess.php / showSuccess.php
             'message/bulk_purge_confirm',
-            'message/list',
             'message/purge_confirm',
             'message/show',
         ], $this->viewsContaining('class="dparts'));

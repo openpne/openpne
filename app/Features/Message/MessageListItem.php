@@ -8,7 +8,8 @@ use Carbon\CarbonInterface;
 /**
  * One row in a message box list, normalized across the four boxes so the list view renders them
  * uniformly. `counterparty` is the From (inbox) or To (sent/draft) member, null when that member
- * was deleted. `messageId` keys the show route.
+ * was deleted. `messageId` keys the show route. `unread` drives the row highlight and is the inbox's
+ * state alone; `status` is the wider state the row icon draws.
  */
 final readonly class MessageListItem
 {
@@ -18,5 +19,6 @@ final readonly class MessageListItem
         public string $subject,
         public CarbonInterface $date,
         public bool $unread,
+        public MessageRowStatus $status,
     ) {}
 }
