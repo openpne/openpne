@@ -5,6 +5,8 @@ namespace App\Features\Notifications\Serializers;
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\Diary\DiaryAccess;
+use App\Features\Notifications\NotificationCenterCategory;
+use App\Features\Notifications\NotificationCenterRow;
 use App\Features\Notifications\NotificationFeedRow;
 use App\Features\Notifications\NotificationKindLabel;
 use App\Models\Community;
@@ -60,6 +62,37 @@ class NotificationFeedSerializer
             createdAt: $row->created_at,
             read: $row->read_at !== null,
         ));
+    }
+
+    /**
+     * Rows for the Classic notification centre panel. Takes the requesters whose %friend% request
+     * is still open so the panel can offer the decision inline; resolving that per row would be a
+     * query per row.
+     *
+     * @param  Collection<int, DatabaseNotification>  $rows
+     * @param  array<int, bool>  $awaitingByRequester  keyed by requester id
+     * @return Collection<int, NotificationCenterRow>
+     */
+    public static function centerRows(Collection $rows, array $awaitingByRequester): Collection
+    {
+        $actors = self::actors($rows);
+
+        return $rows->map(function (DatabaseNotification $row) use ($actors, $awaitingByRequester): NotificationCenterRow {
+            $actor = $actors->get(self::actorId($row));
+            $category = NotificationCenterCategory::for($row->data['kind'] ?? null);
+
+            return new NotificationCenterRow(
+                id: $row->getKey(),
+                label: self::label($row, $actors),
+                category: $category,
+                read: $row->read_at !== null,
+                actorId: $actor?->getKey(),
+                actorName: $actor?->name,
+                actorAvatar: $actor?->avatar?->file,
+                awaitingDecision: $category === NotificationCenterCategory::Friend
+                    && isset($awaitingByRequester[$row->data['requester_id'] ?? 0]),
+            );
+        })->values();
     }
 
     /** The member the row is "about" (its avatar/name), or null for unknown kinds. */

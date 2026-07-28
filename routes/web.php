@@ -23,6 +23,7 @@ use App\Features\Member\MemberMfaController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Member\MfaResetLinkController;
 use App\Features\Message\MessageController;
+use App\Features\Notifications\NotificationCenterController;
 use App\Features\Notifications\NotificationFeedController;
 use App\Features\Notifications\NotificationSettingsController;
 use App\Features\Profile\ProfileController;
@@ -358,6 +359,16 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/', 'index')->name('notifications.index');
         Route::post('/read-all', 'readAll')->name('notifications.readAll');
         Route::post('/{notification}/open', 'open')->whereUuid('notification')->name('notifications.open');
+    });
+
+    // The Classic header panel: its rows, and the two decisions OpenPNE 3 let a member take without
+    // leaving the page.
+    Route::prefix('notifications/center')->controller(NotificationCenterController::class)->group(function () {
+        Route::get('/', 'panel')->name('notifications.center');
+        Route::post('/{notification}/friend-accept', 'acceptFriend')->whereUuid('notification')
+            ->middleware('throttle:friend-request')->name('notifications.center.friendAccept');
+        Route::post('/{notification}/friend-reject', 'rejectFriend')->whereUuid('notification')
+            ->name('notifications.center.friendReject');
     });
 
     Route::prefix('friend')->controller(FriendController::class)->group(function () {

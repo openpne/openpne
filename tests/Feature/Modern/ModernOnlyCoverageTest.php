@@ -45,6 +45,14 @@ class ModernOnlyCoverageTest extends TestCase
     private const KNOWN_LEAKS = [];
 
     /**
+     * Not pages: HTML fragments a Classic shell's own script fetches. Under modern_only that shell
+     * never renders, so nothing asks for them — there is no surface for them to render wrong.
+     */
+    private const FRAGMENTS = [
+        'notifications.center',
+    ];
+
+    /**
      * Parameterless OpenPNE 3 confirm pages: Classic renders a confirm Blade, Modern confirms inline,
      * so under modern_only a direct GET redirects to the community. Their parameterized siblings
      * (delete/unlink/purge confirms) are asserted case-by-case below, like the show pages.
@@ -238,14 +246,14 @@ class ModernOnlyCoverageTest extends TestCase
                 continue;
             }
             if (in_array($name, self::COVERED, true) || in_array($name, self::KNOWN_LEAKS, true)
-                || in_array($name, self::REDIRECTS_UNDER_MODERN, true)) {
+                || in_array($name, self::REDIRECTS_UNDER_MODERN, true) || in_array($name, self::FRAGMENTS, true)) {
                 continue;
             }
 
             $unclassified[] = "{$name} ({$uri})";
         }
 
-        $this->assertSame([], $unclassified, 'Unclassified parameterless modern_only pages (add to COVERED once Modernized, to REDIRECTS_UNDER_MODERN for a confirm page, or to KNOWN_LEAKS): '.implode(', ', $unclassified));
+        $this->assertSame([], $unclassified, 'Unclassified parameterless modern_only pages (add to COVERED once Modernized, to REDIRECTS_UNDER_MODERN for a confirm page, to FRAGMENTS if it is not a page, or to KNOWN_LEAKS): '.implode(', ', $unclassified));
     }
 
     /**

@@ -1,80 +1,57 @@
 {{-- OpenPNE 3's `#notificationCenter` (`_header.php`), secure pages only: one sprite of three
-     icons — envelope, members, at-sign — each with the count that is waiting behind it.
+     icons — envelope, members, at-sign — each carrying the number waiting behind it.
 
-     The sprite stays a single `img.ncbutton`, the hook OpenPNE 3's skins and customer CSS style
-     it through, and the three icons become links through an image map. Cutting it into three
-     background slices would drop that hook, and the rules replacing it would sit in the document
-     after the admin's custom stylesheet, out of its reach.
+     The sprite is one control, not three. OpenPNE 3 bound a single click to `.ncbutton` and opened
+     this panel in place; the icons never navigated and the badges were never targets. Splitting it
+     into three links reads right and behaves wrong, which for a surface whose only audience already
+     knows the original is worse than an unfamiliar control — so the panel is what we restore, and
+     `.ncbutton` goes back to being what it is in OpenPNE 3: the click hook (no stylesheet, here or
+     there, ever matched it).
+
+     Without JavaScript the trigger stays an ordinary link to the feed, so the control is never
+     dead; the script cancels that and opens the panel instead. Rows arrive on first open, as
+     OpenPNE 3's did, so a page whose panel is never opened pays nothing for it.
 
      Resolved from the member guard rather than the default one: the Classic shell also renders
      for a guest (a web-public profile) and for an error page, where there is nobody to count for. --}}
 @php
     $ncViewer = request()->user('member');
-    $ncIcons = [];
-
-    if ($ncViewer instanceof \App\Models\Member) {
-        $ncCounts = app(\App\Features\Home\UnreadCounts::class)->for($ncViewer);
-        // The sprite's three cells, not the glyph runs inside them: the ink measures 26/24/23px
-        // wide, which would leave the gaps between icons dead and the at-sign barely tappable.
-        $ncIcons = [
-            [
-                'id' => 'nc_icon1',
-                'coords' => '0,0,30,32',
-                'href' => route('message.index'),
-                'count' => $ncCounts['unreadMessages'],
-                'name' => $ncCounts['unreadMessages'] > 0
-                    ? __(':count unread messages', ['count' => $ncCounts['unreadMessages']])
-                    : __('Messages'),
-            ],
-            [
-                'id' => 'nc_icon2',
-                'coords' => '31,0,61,32',
-                'href' => route('friend.manage'),
-                'count' => $ncCounts['friendRequests'],
-                'name' => $ncCounts['friendRequests'] > 0
-                    ? __(':count pending %friend% requests', ['count' => $ncCounts['friendRequests']])
-                    : __('Pending %friend% requests'),
-            ],
-            [
-                'id' => 'nc_icon3',
-                'coords' => '62,0,92,32',
-                'href' => route('notifications.index'),
-                'count' => $ncCounts['notifications'],
-                'name' => $ncCounts['notifications'] > 0
-                    ? __(':count unread notifications', ['count' => $ncCounts['notifications']])
-                    : __('Notifications'),
-            ],
-        ];
-    }
+    $ncCounts = $ncViewer instanceof \App\Models\Member
+        ? app(\App\Features\Notifications\NotificationCenterCounts::class)->for($ncViewer)
+        : null;
 @endphp
-@if ($ncIcons)
+@if ($ncCounts !== null)
     @once
-        {{-- The skin colours the badge by id but leaves the underline a link would bring. --}}
-        <style>.notificationCenterBadge { text-decoration: none; }</style>
+        {{-- OpenPNE 3's rows were plain divs it made clickable with script; ours submit, so the
+             button has to stop looking like one. Class selectors, so a site can outrank these with
+             an ordinary more-specific rule. --}}
+        <style>
+            .ncbuttonLink { text-decoration: none; }
+            .notificationCenterRowLink { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+        </style>
     @endonce
     <div id="notificationCenter">
-        <img class="ncbutton" src="{{ asset('images/NOTIFY_CENTER.png') }}" width="92" height="32" alt="" usemap="#notificationCenterMap">
-        {{-- The area is what a screen reader reaches, so the count is its name. --}}
-        <map name="notificationCenterMap" id="notificationCenterMap">
-            @foreach ($ncIcons as $ncIcon)
-                <area shape="rect" coords="{{ $ncIcon['coords'] }}" href="{{ $ncIcon['href'] }}" alt="{{ $ncIcon['name'] }}" title="{{ $ncIcon['name'] }}">
-            @endforeach
-        </map>
-        {{-- A badge is absent at zero, as OpenPNE 3's was. The skin sizes it for OpenPNE 3's
-             capped count, so the digits stop at 99+ — the number they stand for is the badge's own
-             tooltip, which is the point at which a member wants it.
-
-             It leads where the icon it sits on leads: the skin drops the badge over that icon and
-             lets a wide one hang past the sprite, so a badge that were not itself a target would
-             both swallow the clicks it covers and waste the ones it overhangs. The link wraps the
-             span instead of replacing it, keeping OpenPNE 3's `span#nc_iconN` for a site that
-             styles it by element; the span stays out of flow, so the wrapper takes no space. It
-             repeats the area rather than joining it — hidden and out of the tab order — so the
-             count is announced once and the keyboard still sees three links. --}}
-        @foreach ($ncIcons as $ncIcon)
-            @if ($ncIcon['count'] > 0)
-                <a href="{{ $ncIcon['href'] }}" class="notificationCenterBadge" title="{{ $ncIcon['name'] }}" aria-hidden="true" tabindex="-1"><span id="{{ $ncIcon['id'] }}">{{ $ncIcon['count'] > 99 ? '99+' : $ncIcon['count'] }}</span></a>
+        <a href="{{ route('notifications.index') }}" class="ncbuttonLink" aria-label="{{ __('Notification Center') }}"
+           aria-expanded="false" aria-controls="notificationCenterDetail"
+           data-notification-center-url="{{ route('notifications.center') }}">
+            <img class="ncbutton" src="{{ asset('images/NOTIFY_CENTER.png') }}" width="92" height="32" alt="">
+        </a>
+        <div id="notificationCenterDetail">
+            <div id="notificationCenterDetailHeader">{{ __('Notification Center') }}</div>
+            <div id="notificationCenterLoading"><img src="{{ asset('images/ajax-loader.gif') }}" alt=""></div>
+            <div id="notificationCenterError">{{ __('There is no new notification.') }}</div>
+        </div>
+        {{-- A badge is absent at zero, as OpenPNE 3's was, and shows what its own compartment of
+             the panel holds. The skin sizes it for OpenPNE 3's capped count, so the digits stop at
+             99+ and the number they stand for stays in the title. --}}
+        @foreach (\App\Features\Notifications\NotificationCenterCategory::cases() as $ncCategory)
+            @php($ncCount = $ncCounts[$ncCategory->value] ?? 0)
+            @if ($ncCount > 0)
+                <span id="{{ $ncCategory->badgeId() }}" title="{{ $ncCount }}">{{ $ncCount > 99 ? '99+' : $ncCount }}</span>
             @endif
         @endforeach
     </div>
+    @once
+        <script src="{{ asset('js/classic-notification-center.js') }}" defer></script>
+    @endonce
 @endif

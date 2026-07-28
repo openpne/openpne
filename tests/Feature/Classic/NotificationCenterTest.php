@@ -9,17 +9,20 @@ use App\Models\MemberProfile;
 use App\Models\Message;
 use App\Models\MessageRecipient;
 use App\Models\Profile;
+use App\Notifications\Diary\DiaryCommentedNotification;
+use App\Notifications\Friend\FriendRequestedNotification;
+use App\Notifications\Message\MessageReceivedNotification;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * OpenPNE 3's `#notificationCenter`: the header sprite and its three badges. Who gets it is the
- * load-bearing part — the Classic shell also renders for a guest and for an error page, where
- * there is no member to count for.
+ * OpenPNE 3's `#notificationCenter`: the header sprite, its three badges, and the panel they head.
+ * Two things are load-bearing — who gets it at all (the Classic shell also renders for a guest and
+ * for an error page, where there is nobody to count for), and that the sprite stays ONE control
+ * that opens in place rather than three that navigate.
  */
 class NotificationCenterTest extends TestCase
 {
@@ -32,65 +35,64 @@ class NotificationCenterTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::SurfaceMode, 'classic_default');
     }
 
-    public function test_a_signed_in_member_gets_the_sprite_and_its_image_map(): void
+    public function test_the_sprite_is_one_trigger_that_falls_back_to_the_feed(): void
     {
         $response = $this->actingAs(Member::factory()->create())->get('/')->assertOk();
 
-        $response->assertSee('id="notificationCenter"', false);
-        $response->assertSee('<img class="ncbutton" src="'.e(asset('images/NOTIFY_CENTER.png')).'" width="92" height="32" alt="" usemap="#notificationCenterMap">', false);
-        // The sprite's three cells, wall to wall: an area narrowed to the glyph inside it would
-        // leave the gaps between icons dead.
-        $response->assertSee('<area shape="rect" coords="0,0,30,32" href="'.e(route('message.index')).'"', false);
-        $response->assertSee('<area shape="rect" coords="31,0,61,32" href="'.e(route('friend.manage')).'"', false);
-        $response->assertSee('<area shape="rect" coords="62,0,92,32" href="'.e(route('notifications.index')).'"', false);
+        // The trigger is a real link, so the control works before the script does — and there is no
+        // image map: OpenPNE 3's icons were indicators, never three separate destinations.
+        $response->assertSee('id="notificationCenter"', false)
+            ->assertSee('href="'.e(route('notifications.index')).'"', false)
+            ->assertSee('data-notification-center-url="'.e(route('notifications.center')).'"', false)
+            ->assertSee('<img class="ncbutton" src="'.e(asset('images/NOTIFY_CENTER.png')).'" width="92" height="32" alt="">', false)
+            ->assertDontSee('usemap', false)
+            ->assertDontSee('<area', false);
+    }
+
+    public function test_the_panel_and_its_script_ship_with_the_shell(): void
+    {
+        $this->actingAs(Member::factory()->create())->get('/')
+            ->assertOk()
+            ->assertSee('id="notificationCenterDetail"', false)
+            ->assertSee('id="notificationCenterLoading"', false)
+            ->assertSee('id="notificationCenterError"', false)
+            ->assertSee(__('There is no new notification.'))
+            ->assertSee('aria-expanded="false"', false)
+            ->assertSee('aria-controls="notificationCenterDetail"', false)
+            // The sprite carries no alt, so the name has to live on the trigger.
+            ->assertSee('aria-label="'.e(__('Notification Center')).'"', false)
+            ->assertSee(e(asset('js/classic-notification-center.js')), false);
     }
 
     /**
-     * The skin drops each badge over the icon it counts and lets a wide one hang past the sprite,
-     * so a badge that were not a target itself would both swallow the clicks it covers and waste
-     * the ones it overhangs. Every badge leads where its icon leads.
+     * The badges partition one set of rows. Before this they were counted off three different
+     * sources, so an unread message was counted by its own badge AND by the third one.
      */
-    public function test_a_badge_leads_where_the_icon_it_sits_on_leads(): void
+    public function test_the_three_badges_partition_the_panels_rows_without_overlap(): void
     {
         $viewer = Member::factory()->create();
-        $sender = Member::factory()->create();
-        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        $actor = Member::factory()->create();
+        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()]);
+        $this->seedRow($viewer, FriendRequestedNotification::class, ['kind' => 'friend_requested', 'requester_id' => $actor->getKey()]);
+        $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented', 'commenter_id' => $actor->getKey()]);
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
-        // The link wraps OpenPNE 3's span rather than replacing it, so a site styling
-        // `span#nc_icon2` by element keeps matching.
-        $this->assertStringContainsString(
-            '<a href="'.e(route('friend.manage')).'" class="notificationCenterBadge" title="'.e(__(':count pending %friend% requests', ['count' => 1])).'" aria-hidden="true" tabindex="-1"><span id="nc_icon2">1</span></a>',
-            $content,
-        );
+        $this->assertStringContainsString('<span id="nc_icon1" title="1">1</span>', $content);
+        $this->assertStringContainsString('<span id="nc_icon2" title="1">1</span>', $content);
+        // One diary comment — not three. The message and the request belong to the other two.
+        $this->assertStringContainsString('<span id="nc_icon3" title="1">1</span>', $content);
     }
 
-    /**
-     * The count rides on the area: that is what a screen reader and a hover reach, and the badge
-     * showing the digits repeats the destination without repeating the announcement.
-     */
-    public function test_the_count_is_announced_on_the_link_rather_than_on_the_badge(): void
+    /** A kind nobody has classified still has to reach a badge rather than vanish from all three. */
+    public function test_an_unclassified_row_lands_in_the_third_badge(): void
     {
         $viewer = Member::factory()->create();
-        $sender = Member::factory()->create();
-        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'something_added_later']);
 
-        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
-
-        $name = e(__(':count pending %friend% requests', ['count' => 1]));
-        $this->assertStringContainsString('href="'.e(route('friend.manage')).'" alt="'.$name.'" title="'.$name.'"', $content);
-        // The badge repeats the area rather than joining it: hidden and out of the tab order, so
-        // the count is announced once and the keyboard still sees three links.
-        $this->assertStringContainsString('aria-hidden="true" tabindex="-1"><span id="nc_icon2">1</span></a>', $content);
-    }
-
-    public function test_an_icon_with_nothing_waiting_is_named_for_where_it_leads(): void
-    {
-        $content = (string) $this->actingAs(Member::factory()->create())->get('/')->assertOk()->getContent();
-
-        $name = e(__('Pending %friend% requests'));
-        $this->assertStringContainsString('href="'.e(route('friend.manage')).'" alt="'.$name.'" title="'.$name.'"', $content);
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertSee('<span id="nc_icon3" title="1">1</span>', false);
     }
 
     public function test_a_badge_is_absent_while_its_count_is_zero(): void
@@ -103,42 +105,31 @@ class NotificationCenterTest extends TestCase
             ->assertDontSee('id="nc_icon3"', false);
     }
 
-    public function test_each_badge_reports_its_own_count(): void
-    {
-        $viewer = Member::factory()->create();
-        $sender = Member::factory()->create();
-        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
-        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
-        $viewer->notifications()->create([
-            'id' => (string) Str::uuid(),
-            'type' => 'test',
-            'data' => ['kind' => 'friend_requested', 'requester_id' => $sender->getKey()],
-        ]);
-
-        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
-
-        foreach (['nc_icon1', 'nc_icon2', 'nc_icon3'] as $id) {
-            $this->assertMatchesRegularExpression('/<a [^>]*><span id="'.$id.'">1<\/span><\/a>/', $content);
-        }
-    }
-
     public function test_a_count_past_the_badges_width_is_clamped_but_still_readable(): void
     {
         $viewer = Member::factory()->create();
-        foreach (Member::factory()->count(120)->create() as $sender) {
-            DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        $actor = Member::factory()->create();
+        for ($i = 0; $i < 120; $i++) {
+            $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()]);
         }
 
-        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
-
         // The skin sizes the badge for OpenPNE 3's capped count, so the digits stop — but the
-        // number a member acts on stays on the link.
-        $name = e(__(':count pending %friend% requests', ['count' => 120]));
-        // Clamped digits are the one case where the tooltip is the only way to the real number,
-        // and the badge is what a member hovers — so it carries it too, not just the area.
-        $this->assertStringContainsString('title="'.$name.'" aria-hidden="true" tabindex="-1"><span id="nc_icon2">99+</span></a>', $content);
-        $this->assertStringContainsString('alt="'.$name.'" title="'.$name.'"', $content);
+        // number they stand for stays one hover away.
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertSee('<span id="nc_icon1" title="120">99+</span>', false);
+    }
+
+    /** Reading the feed clears the badges, because they count the same unread rows it lists. */
+    public function test_reading_everything_clears_the_badges(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received']);
+
+        $this->actingAs($viewer)->post(route('notifications.readAll'));
+        $this->freshRequestState();
+
+        $this->actingAs($viewer)->get('/')->assertOk()->assertDontSee('id="nc_icon1"', false);
     }
 
     public function test_a_guest_on_a_web_public_page_gets_no_notification_center(): void
@@ -162,6 +153,7 @@ class NotificationCenterTest extends TestCase
         $sender = Member::factory()->create();
         $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
         MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $sender->getKey()]);
 
         // The Classic error screen is the site's own shell (see ClassicErrorPageTest), so the
         // header it carries is the whole header.
@@ -179,5 +171,15 @@ class NotificationCenterTest extends TestCase
         $this->get('/no-such-url-at-all')
             ->assertNotFound()
             ->assertDontSee('id="notificationCenter"', false);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function seedRow(Member $member, string $type, array $data): void
+    {
+        $member->notifications()->create([
+            'id' => (string) Str::uuid(),
+            'type' => $type,
+            'data' => $data,
+        ]);
     }
 }

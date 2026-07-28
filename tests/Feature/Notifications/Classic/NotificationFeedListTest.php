@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications\Classic;
 
-use App\Features\Notifications\Queries\CountUnreadNotifications;
+use App\Features\Notifications\NotificationCenterCounts;
 use App\Models\Member;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Message\MessageReceivedNotification;
@@ -93,26 +93,27 @@ class NotificationFeedListTest extends TestCase
         $this->assertNotNull($row->fresh()->read_at);
     }
 
-    public function test_the_shell_badge_and_the_mark_all_button_share_one_count(): void
+    public function test_the_shell_badges_and_the_mark_all_button_share_one_count(): void
     {
         $viewer = Member::factory()->create();
-        $counter = new class extends CountUnreadNotifications
+        $counter = new class extends NotificationCenterCounts
         {
             public int $calls = 0;
 
-            public function __invoke(Member $viewer): int
+            protected function count(Member $viewer): array
             {
                 $this->calls++;
 
-                return parent::__invoke($viewer);
+                return parent::count($viewer);
             }
         };
-        $this->app->instance(CountUnreadNotifications::class, $counter);
+        $this->app->instance(NotificationCenterCounts::class, $counter);
 
         $this->actingAs($viewer)->get('/notifications')->assertOk();
 
-        // The Classic shell's badge already made the request count them; the page reads the same
-        // request-scoped UnreadCounts rather than counting again.
+        // The Classic shell's badges already made the request count them; the page reads the same
+        // request-scoped counts rather than counting again. Its three compartments partition the
+        // unread rows, so their sum is what the mark-all button needs.
         $this->assertSame(1, $counter->calls);
     }
 

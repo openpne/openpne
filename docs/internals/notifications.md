@@ -30,6 +30,12 @@ document covers the delivery model around it.
    as a POST to the open route, which keeps target resolution — and its access checks — on that
    request rather than on every listed row.
 
+   Classic also reaches these rows from the header notification centre, whose three badges partition
+   them by [`NotificationCenterCategory`](../../app/Features/Notifications/NotificationCenterCategory.php)
+   — that panel is the one place a `%friend%` request can be answered without leaving the page, and
+   the buttons follow the request's own state rather than the row's `read_at`. See
+   [classic-compatibility.md](classic-compatibility.md).
+
 **Read-state separation is the invariant**: layer-1 counts never consume `read_at`, and reading
 the feed never mutates domain state. OpenPNE 3's notification centre failed by mixing aggregate
 and per-event information behind one ambiguous read model; the layers keep the two truths apart.

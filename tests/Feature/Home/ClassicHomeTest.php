@@ -160,7 +160,14 @@ class ClassicHomeTest extends TestCase
             ->assertDontSee('class="parts informationBox"', false);
     }
 
-    public function test_the_header_badges_and_the_cautions_report_the_same_numbers(): void
+    /**
+     * The cautions count the mailbox and the request list; the header badges count the notification
+     * centre's own rows (NotificationCenterTest). Those answer different questions and are not
+     * reconciled — OpenPNE 3's diverged the same way, its badges coming from the event store while
+     * these cautions ran their own queries. What this pins is that the cautions keep asking layer 1,
+     * so a member with nothing in the centre is still told what is waiting.
+     */
+    public function test_the_cautions_count_the_mailbox_rather_than_the_notification_rows(): void
     {
         $viewer = Member::factory()->create();
         $senders = Member::factory()->count(3)->create();
@@ -174,14 +181,9 @@ class ClassicHomeTest extends TestCase
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
-        $messageBadge = e(__(':count unread messages', ['count' => 2]));
-        $friendBadge = e(__(':count pending %friend% requests', ['count' => 3]));
-
-        $this->assertStringContainsString('<span id="nc_icon1">2</span></a>', $content);
-        $this->assertStringContainsString('<span id="nc_icon2">3</span></a>', $content);
-        $this->assertStringContainsString('alt="'.$messageBadge.'" title="'.$messageBadge.'"', $content);
-        $this->assertStringContainsString('alt="'.$friendBadge.'" title="'.$friendBadge.'"', $content);
         $this->assertStringContainsString(e(__('There are new :count messages!', ['count' => 2])), $content);
         $this->assertStringContainsString(e(__("You've gotten :count %friend% requests", ['count' => 3])), $content);
+        // No notification rows were written, so the centre has nothing to badge.
+        $this->assertStringNotContainsString('id="nc_icon', $content);
     }
 }
