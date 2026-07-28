@@ -133,6 +133,9 @@ class DiaryFeedRoutesTest extends TestCase
         $response->assertSee('<td rowspan="4" class="photo">', false);
         $response->assertSee('<tr class="operation">', false);
         $response->assertSee('<span class="moreInfo"><a href="'.route('diary.show', $diary).'">View this diary</a></span>', false);
+        // The title cell prints unlinked — the photo cell and the operation row carry the links.
+        $response->assertSee('<th>Title</th><td>Hello world (0)<', false);
+        $response->assertDontSee('>Hello world (0)</a>', false);
         // The pager brackets the list, as op_include_pager_navigation does above and below the block.
         $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
     }

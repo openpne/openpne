@@ -63,7 +63,9 @@
                             <th>{{ __('%Nickname%') }}</th><td>{{ $entry->member->name }}</td>
                         </tr>
                         <tr>
-                            <th>{{ __('Title') }}</th><td><a href="{{ $url }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a><x-diary.image-icon :count="$entry->images_count" /></td>
+                            {{-- OpenPNE 3 prints the title unlinked; the photo cell and the
+                                 operation row carry the two links to the diary. --}}
+                            <th>{{ __('Title') }}</th><td>{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}<x-diary.image-icon :count="$entry->images_count" /></td>
                         </tr>
                         <tr>
                             <th>{{ __('Body') }}</th><td>{{ \App\Support\BodyRenderer::excerpt($entry->body, $entry->format) }}</td>
