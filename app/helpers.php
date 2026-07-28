@@ -7,6 +7,7 @@ use App\Compat\RouteParityRegistry;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
+use Illuminate\Support\Facades\Schema;
 
 if (! function_exists('sns_name')) {
     /** Site SNS name (header/logo, page titles, mail), or the configured app name by default. */
@@ -117,6 +118,12 @@ if (! function_exists('classic_banner')) {
      */
     function classic_banner(string $placement): string
     {
+        // The shell renders before the schema exists on a pre-migrate boot (and on the error page
+        // a broken database is a plausible reason to be there at all); no banners, not a crash.
+        if (! Schema::hasTable('banners')) {
+            return '';
+        }
+
         $banner = Banner::where('name', $placement)->first();
 
         if ($banner === null) {

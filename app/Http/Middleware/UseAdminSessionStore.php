@@ -2,10 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\AdminRealm;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -46,7 +46,7 @@ class UseAdminSessionStore
         // Pin both branches on every request: config() and shouldUse() mutations
         // outlive the request wherever one process serves several (tests, any
         // future long-lived runtime), so the member branch must restore, not assume.
-        $admin = $this->isAdminRealm($request);
+        $admin = AdminRealm::matches($request);
 
         config([
             'session.cookie' => $this->cookieName($admin ? config('session.admin_cookie') : $this->memberCookie),
@@ -89,23 +89,5 @@ class UseAdminSessionStore
         }
 
         return '__Secure-'.$base;
-    }
-
-    private function isAdminRealm(Request $request): bool
-    {
-        // 'admin' mirrors AdminPanelProvider->path('admin'); the Livewire and Filament
-        // prefixes come from the same resolvers those packages register routes with.
-        // All three are pinned against the real routes by AdminSessionStoreTest.
-        // Livewire endpoints belong to the admin realm: nothing outside app/Filament
-        // renders Livewire (architecture-test enforced), and the Filament system routes
-        // (export/import downloads) authenticate against the admin guard.
-        $livewire = ltrim(EndpointResolver::prefix(), '/');
-        $filament = (string) config('filament.system_route_prefix', 'filament');
-
-        return $request->is(
-            'admin', 'admin/*',
-            $livewire, $livewire.'/*',
-            $filament, $filament.'/*',
-        );
     }
 }

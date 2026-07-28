@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Http\Middleware\NoReferrer;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -69,12 +70,24 @@ class FortifyRoutesTest extends TestCase
             $this->assertNull(Route::getRoutes()->getByName($name), "route [{$name}] must not exist");
         }
 
-        $this->post('/user/two-factor-authentication')->assertNotFound();
-        $this->delete('/user/two-factor-authentication')->assertNotFound();
-        $this->post('/user/confirmed-two-factor-authentication')->assertNotFound();
-        $this->get('/user/two-factor-qr-code')->assertNotFound();
-        $this->get('/user/two-factor-secret-key')->assertNotFound();
-        $this->get('/user/two-factor-recovery-codes')->assertNotFound();
+        // Nothing serves their paths either. Asserted against the route table rather than a
+        // response status: the catch-all Route::fallback() answers any unrouted GET, so a 404
+        // would no longer distinguish "not registered" from "registered and returning 404".
+        foreach ([
+            ['POST', '/user/two-factor-authentication'],
+            ['DELETE', '/user/two-factor-authentication'],
+            ['POST', '/user/confirmed-two-factor-authentication'],
+            ['GET', '/user/two-factor-qr-code'],
+            ['GET', '/user/two-factor-secret-key'],
+            ['GET', '/user/two-factor-recovery-codes'],
+        ] as [$method, $path]) {
+            $request = Request::create($path, $method);
+            $matched = collect(Route::getRoutes()->getRoutesByMethod()[$method] ?? [])
+                ->reject(fn (RoutingRoute $route): bool => $route->isFallback)
+                ->first(fn (RoutingRoute $route): bool => $route->matches($request));
+
+            $this->assertNull($matched, "[{$method} {$path}] must not be routed");
+        }
     }
 
     public function test_the_two_factor_management_posts_are_throttled_but_the_render_is_not(): void
