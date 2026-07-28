@@ -6,6 +6,7 @@ namespace App\Support;
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -29,7 +30,15 @@ final class ClassicErrorPage
     {
         $status = $e->getStatusCode();
 
-        if (! in_array($status, self::STATUSES, true)
+        // Only requests routed through the web group get the shell: system routes (the storage
+        // file server, vendor endpoints) never ran the session/locale/header middleware and must
+        // keep their native errors. Checked before the surface so they don't query settings either.
+        $route = $request->route();
+        $isWebRoute = $route instanceof Route
+            && in_array('web', $route->gatherMiddleware(), true);
+
+        if (! $isWebRoute
+            || ! in_array($status, self::STATUSES, true)
             || $request->expectsJson()
             || AdminRealm::matches($request)
             || SurfaceResolver::forError($request) !== SurfaceResolver::CLASSIC) {

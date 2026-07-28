@@ -176,4 +176,13 @@ class ClassicErrorPageTest extends TestCase
         $this->freshRequestState();
         $this->getJson('/dashboard')->assertUnauthorized();
     }
+
+    public function test_a_system_route_outside_the_web_group_keeps_its_native_error(): void
+    {
+        // The framework's private-file server (storage.local) runs without the web group — no
+        // session, no locale, no shell dependencies — so its errors must stay native.
+        $this->get('/storage/definitely-missing')
+            ->assertForbidden()
+            ->assertDontSee('page_default_error');
+    }
 }
