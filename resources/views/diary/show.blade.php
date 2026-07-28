@@ -109,6 +109,9 @@
         </x-classic.parts>
     @endif
 
+    {{-- OpenPNE 3 showSuccess.php wraps the comment form in `if ($myMemberId)`: the thread stays
+         readable to a guest on a web-public entry, commenting does not. --}}
+    @auth
     <x-classic.parts id="formDiaryComment" name="form" :title="__('Post a comment')">
         <form method="POST" action="{{ route('diary.comment.store', $diary) }}" enctype="multipart/form-data">
             @csrf
@@ -133,6 +136,7 @@
             </div>
         </form>
     </x-classic.parts>
+    @endauth
 
     {{-- Back to the author's diary list. --}}
     <x-classic.parts id="lineLinkToDiaryMemberList" name="line">

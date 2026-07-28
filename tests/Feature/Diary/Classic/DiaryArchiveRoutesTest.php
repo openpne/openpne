@@ -14,6 +14,8 @@ class DiaryArchiveRoutesTest extends TestCase
 
     public function test_guest_is_redirected_to_login(): void
     {
+        // No such member: a guest gets the same login bounce as for an author who publishes
+        // nothing web-public, so the response is no member-existence oracle (DiaryGuestAccessTest).
         $this->get('/diary/listMember/1/2026/3')->assertRedirect('/login');
     }
 

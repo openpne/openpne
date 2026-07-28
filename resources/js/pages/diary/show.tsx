@@ -144,6 +144,8 @@ export default function DiaryShow() {
                 </Panel>
             )}
 
+            {/* The thread is readable on a web-public entry; commenting needs an account. */}
+            {auth.user && (
             <Panel title={t('Post a comment')}>
                 <form onSubmit={submitComment} className="space-y-3">
                     {diary.visibility === 'open' && (
@@ -158,6 +160,7 @@ export default function DiaryShow() {
                     </Button>
                 </form>
             </Panel>
+            )}
         </>
     );
 }

@@ -133,7 +133,7 @@ class DiarySerializer
      *
      * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
      */
-    public static function comment(DiaryComment $comment, Member $viewer): array
+    public static function comment(DiaryComment $comment, ?Member $viewer): array
     {
         return [
             'id' => $comment->getKey(),
@@ -155,7 +155,7 @@ class DiarySerializer
      * @param  Collection<int, DiaryComment>  $comments
      * @return list<array>
      */
-    public static function comments(Collection $comments, Member $viewer): array
+    public static function comments(Collection $comments, ?Member $viewer): array
     {
         return $comments->map(fn (DiaryComment $comment): array => self::comment($comment, $viewer))->all();
     }

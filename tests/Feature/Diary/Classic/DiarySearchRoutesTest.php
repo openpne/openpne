@@ -12,9 +12,15 @@ class DiarySearchRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guest_is_redirected_to_login(): void
+    public function test_a_guest_searches_only_web_public_entries(): void
     {
-        $this->get('/diary/search')->assertRedirect('/login');
+        Diary::factory()->create(['title' => 'Open note', 'visibility' => Visibility::Open]);
+        Diary::factory()->create(['title' => 'Members note', 'visibility' => Visibility::Members]);
+
+        $this->get('/diary/search?keyword=note')
+            ->assertOk()
+            ->assertSee('Open note')
+            ->assertDontSee('Members note');
     }
 
     public function test_search_page_renders_form_with_body_id(): void

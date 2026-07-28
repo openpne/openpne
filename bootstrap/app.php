@@ -5,6 +5,7 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\UseAdminSessionStore;
 use App\Support\ClassicErrorPage;
+use App\Support\GuestLoginRedirect;
 use App\Support\SecurityLog;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -71,14 +72,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // landing stays surface-aware; the framework default would pick the Modern /dashboard.
         $middleware->redirectUsersTo(fn () => route('home'));
 
-        // OpenPNE 3 sent a guest to the login form with this notice rather than a bare form. The
+        // OpenPNE 3 sent a guest to the login form with a notice rather than a bare form. The
         // callback runs only where the framework redirects a guest, so /login itself never flashes
         // it — the same exclusion OpenPNE 3 made for its homepage and login actions.
-        $middleware->redirectGuestsTo(function (): string {
-            session()->flash('status', __('Please login to visit this page'));
-
-            return route('login');
-        });
+        $middleware->redirectGuestsTo(fn (): string => GuestLoginRedirect::target());
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Give the security log 429 observability (rate-limit tuning depends on it). A

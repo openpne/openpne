@@ -18,11 +18,26 @@ class FileDeliveryTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login(): void
+    public function test_a_guest_gets_the_original_bytes_of_a_member_avatar(): void
     {
-        $file = $this->memberImage(Member::factory()->create(), 'image/png', 'bytes');
+        // The route carries no login of its own — FilePolicy is the whole gate — so a guest gets
+        // exactly what a web-public page shows.
+        $file = $this->memberImage(Member::factory()->create(), 'image/png', 'AVATAR');
 
-        $this->get(route('file.show', $file->name))->assertRedirect(route('login'));
+        $response = $this->get(route('file.show', $file->name));
+
+        $response->assertOk();
+        $this->assertSame('AVATAR', $response->streamedContent());
+    }
+
+    public function test_a_guest_is_denied_a_file_the_policy_does_not_open(): void
+    {
+        // 404, the same answer a member who may not read it gets: the response never distinguishes
+        // "not yours" from "no such file", and never invites a login for bytes.
+        $file = File::factory()->create(['related_entity_type' => null, 'related_entity_id' => null, 'type' => 'image/png']);
+        $this->writeBytes($file, 'orphan');
+
+        $this->get(route('file.show', $file->name))->assertNotFound();
     }
 
     public function test_owner_gets_the_bytes_inline_with_hardening_headers(): void

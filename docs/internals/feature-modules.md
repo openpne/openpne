@@ -183,8 +183,17 @@ Authorization is part of the feature contract, not a view concern.
   Query bakes in its visibility constraints (`public_flag` equivalents,
   friendships, blocks, membership) rather than returning a broad set for the UI to
   filter. [`ListDiaries`](../../app/Features/Diary/Queries/ListDiaries.php) is the
-  reference: it short-circuits when the owner blocks the viewer, then constrains
+  reference: it delegates to
+  [`DiaryVisibilityScope`](../../app/Features/Diary/DiaryVisibilityScope.php), which
+  short-circuits when the owner blocks the viewer, then constrains
   `visibility <= clearanceFor(viewer, owner)`.
+- **A guest is a viewer too.** Where a feature has a guest-reachable screen, `?Member`
+  runs the whole way through the Query and its row-level twin, and the guest threshold is
+  `Visibility::Open` **and** the feature's web-public switch — `DiaryVisibility`
+  / `TimelineVisibility` `allowsWebPublic()`. The switch belongs in the scope and the
+  row check, not in the controller: images and other bytes are fetched by URL through
+  [`FilePolicy`](../../app/Policies/FilePolicy.php), which no page mediates, so a
+  controller-only gate would leave a published URL readable after the switch went off.
 
 A relation lookup exposed as a feature primitive is **named by direction and
 use**, because a block is one-directional. [`BlockLookup`](../../app/Features/Block/BlockLookup.php)
@@ -229,15 +238,20 @@ invariant.
    `FormRequest`. Input crosses the adapter boundary as a Data object or typed
    arguments.
 2. A read Query MUST embed its own visibility constraints; an adapter MUST NOT
-   fetch a broad set and hide forbidden rows in the view.
-3. A feature's side effects (mail, unread, file deletion, counter repair) MUST
+   fetch a broad set and hide forbidden rows in the view. A guest-reachable read
+   MUST apply the feature's web-public switch inside the Query and the row-level
+   check, never only in the controller.
+3. A guest-reachable route MUST still carry `auth.session`: without it a session
+   whose password hash is stale keeps a non-null viewer, and every gate on the page
+   reads that viewer's clearance (`PublicRouteBoundaryTest`).
+4. A feature's side effects (mail, unread, file deletion, counter repair) MUST
    originate in an Action — directly, or via an event the Action emits — never in
    a controller, view, or Filament Resource.
-4. A model MUST reach the Modern surface through a Serializer, not Eloquent
+5. A model MUST reach the Modern surface through a Serializer, not Eloquent
    `toArray()`, so the exposed columns stay explicit.
-5. A route MUST NOT live under `/m/`, carry a `surface` route default, or use a
+6. A route MUST NOT live under `/m/`, carry a `surface` route default, or use a
    `.modern.` route name — the URL space is canonical-only and the surface is
    resolved per request (`RouteSpaceGuardTest`).
-6. A `Delete*` Action that checks the acting member MUST keep the deletion +
+7. A `Delete*` Action that checks the acting member MUST keep the deletion +
    cleanup in an author-less `purge(…)` the admin panel calls; `__invoke` only
    adds the member-actor check. The cleanup is not duplicated in the Resource.

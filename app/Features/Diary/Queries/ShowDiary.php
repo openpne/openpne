@@ -8,7 +8,7 @@ use App\Models\Member;
 
 class ShowDiary
 {
-    public function __invoke(Member $viewer, int $diaryId): ?Diary
+    public function __invoke(?Member $viewer, int $diaryId): ?Diary
     {
         $diary = Diary::with(['member.avatar.file', 'images.file'])->find($diaryId);
 

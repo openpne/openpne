@@ -5,6 +5,7 @@ namespace Tests\Feature\File;
 use App\Models\File;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -133,12 +134,25 @@ class FilePolicyTest extends TestCase
         $this->assertFalse(Gate::forUser($viewer)->allows('view', $this->postImage($post)));
     }
 
-    public function test_open_post_image_is_guest_readable(): void
+    public function test_open_post_image_is_guest_readable_only_while_the_sns_allows_web_public(): void
     {
+        // The image is fetched by URL, so the SnsSetting has to gate the policy itself: switching
+        // web-public posting off must stop the bytes, not merely the audience option on the form.
         $owner = Member::factory()->create();
         $post = TimelinePost::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Open]);
+        $image = $this->postImage($post);
 
-        $this->assertTrue(Gate::forUser(null)->allows('view', $this->postImage($post)));
+        $this->assertFalse(Gate::forUser(null)->allows('view', $image));
+
+        $this->setSnsSetting(SnsSettingKey::TimelineAllowWebPublic, true);
+        $this->assertTrue(Gate::forUser(null)->allows('view', $image));
+    }
+
+    public function test_a_member_avatar_is_guest_readable(): void
+    {
+        // OpenPNE 3 put no login in front of image delivery, and a web-public profile or diary
+        // shows its author's avatar.
+        $this->assertTrue(Gate::forUser(null)->allows('view', $this->memberImage(Member::factory()->create())));
     }
 
     private function memberImage(Member $owner): File

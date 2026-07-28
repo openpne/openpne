@@ -8,6 +8,7 @@ use App\Features\Diary\Actions\DeleteDiary;
 use App\Features\Diary\Actions\UpdateDiary;
 use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Queries\AdjacentDiaries;
+use App\Features\Diary\Queries\HasWebPublicDiary;
 use App\Features\Diary\Queries\ListDiaries;
 use App\Features\Diary\Queries\ListFriendDiaries;
 use App\Features\Diary\Queries\ListRecentDiaries;
@@ -22,6 +23,7 @@ use App\Http\Requests\Diary\StoreDiaryRequest;
 use App\Http\Requests\Diary\UpdateDiaryRequest;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\GuestLoginRedirect;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -35,16 +37,22 @@ class DiaryController extends Controller
 {
     use RespondsWithSurface;
 
-    public function listMember(Request $request, ListDiaries $query, ?Member $member = null): View|InertiaResponse
+    public function listMember(Request $request, ListDiaries $query, HasWebPublicDiary $publishes, ?Member $member = null): View|InertiaResponse|RedirectResponse
     {
-        $viewer = $this->viewer();
+        $viewer = $this->viewerOrGuest();
+        if ($viewer === null && ($member === null || ! $publishes($member))) {
+            // OpenPNE 3 executeListMember: a guest reaches an author's archive only when that
+            // author has a web-public entry, and the id-less "my archive" needs a viewer at all.
+            return GuestLoginRedirect::response();
+        }
+
         $owner = $this->memberSubject($member);
         // Modern narrows the archive by keyword; Classic ignores it (OpenPNE 3 has no such filter),
         // so each surface runs its own query inside its closure — Classic keyword-free, unchanged.
         $keyword = $this->keywordParam($request);
 
         return $this->respondWith($request, 'diary', [
-            SurfaceResolver::CLASSIC => fn () => view('diary.list', [
+            SurfaceResolver::CLASSIC => fn () => $this->classicScreen('diary.list', [
                 'owner' => $owner,
                 'diaries' => $query($viewer, $owner),
             ]),
@@ -56,7 +64,7 @@ class DiaryController extends Controller
 
                 return Inertia::render('diary/list', [
                     'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
-                    'isOwner' => $viewer->is($owner),
+                    'isOwner' => $viewer?->is($owner) ?? false,
                     'diaries' => DiarySerializer::paginator($diaries),
                     'monthlyCounts' => (new MemberDiaryMonthlyCounts)($viewer, $owner, $keyword),
                     'keyword' => $keyword,
@@ -66,8 +74,15 @@ class DiaryController extends Controller
         ]);
     }
 
-    public function listMemberArchive(Request $request, ListDiaries $query, Member $member): View|InertiaResponse
+    public function listMemberArchive(Request $request, ListDiaries $query, HasWebPublicDiary $publishes, Member $member): View|InertiaResponse|RedirectResponse
     {
+        $viewer = $this->viewerOrGuest();
+        // Guest eligibility is the author's, not the window's: an empty month on an author who
+        // publishes still renders (OpenPNE 3 hasOpenDiary runs before the date is even read).
+        if ($viewer === null && ! $publishes($member)) {
+            return GuestLoginRedirect::response();
+        }
+
         // Read the date off the route by name: a positional scalar would collide with the
         // `surface` default on the /m/* route. Segments are digit-constrained by the route.
         $day = $request->route('day');
@@ -78,12 +93,11 @@ class DiaryController extends Controller
         );
         abort_if($period === null, 404);
 
-        $viewer = $this->viewer();
         $member = $this->memberSubject($member);
         $keyword = $this->keywordParam($request);
 
         return $this->respondWith($request, 'diary', [
-            SurfaceResolver::CLASSIC => fn () => view('diary.list', [
+            SurfaceResolver::CLASSIC => fn () => $this->classicScreen('diary.list', [
                 'owner' => $member,
                 'diaries' => $query($viewer, $member, period: $period),
                 'period' => $period->label,
@@ -97,7 +111,7 @@ class DiaryController extends Controller
 
                 return Inertia::render('diary/list', [
                     'owner' => ['id' => $member->getKey(), 'name' => $member->name],
-                    'isOwner' => $viewer->is($member),
+                    'isOwner' => $viewer?->is($member) ?? false,
                     'diaries' => DiarySerializer::paginator($diaries),
                     'period' => $period->label,
                     'monthlyCounts' => (new MemberDiaryMonthlyCounts)($viewer, $member, $keyword),
@@ -111,7 +125,7 @@ class DiaryController extends Controller
 
     public function list(Request $request, ListRecentDiaries $query): View|InertiaResponse
     {
-        return $this->feed($request, 'recent', $query($this->viewer()));
+        return $this->feed($request, 'recent', $query($this->viewerOrGuest()));
     }
 
     public function listFriend(Request $request, ListFriendDiaries $query): View|InertiaResponse
@@ -121,6 +135,7 @@ class DiaryController extends Controller
 
     public function search(Request $request, SearchDiaries $query, ListRecentDiaries $recent): View|InertiaResponse
     {
+        $viewer = $this->viewerOrGuest();
         $keyword = $this->keywordParam($request);
 
         // OpenPNE 3 forwards an empty search to the list action — identical results, body id, and
@@ -130,7 +145,7 @@ class DiaryController extends Controller
             return $this->feed(
                 $request,
                 'recent',
-                $recent($this->viewer())->withPath(route('diary.list')),
+                $recent($viewer)->withPath(route('diary.list')),
                 bodyIdRoute: 'diary.list',
             );
         }
@@ -138,7 +153,7 @@ class DiaryController extends Controller
         return $this->feed(
             $request,
             'search',
-            $query($this->viewer(), $keyword),
+            $query($viewer, $keyword),
             keyword: $keyword,
             hasKeyword: true,
         );
@@ -154,7 +169,7 @@ class DiaryController extends Controller
     private function feed(Request $request, string $variant, LengthAwarePaginator $diaries, string $keyword = '', bool $hasKeyword = false, ?string $bodyIdRoute = null): View|InertiaResponse
     {
         return $this->respondWith($request, 'diary', [
-            SurfaceResolver::CLASSIC => fn () => view('diary.feed', [
+            SurfaceResolver::CLASSIC => fn () => $this->classicScreen('diary.feed', [
                 'variant' => $variant,
                 'keyword' => $keyword,
                 'hasKeyword' => $hasKeyword,
@@ -173,11 +188,19 @@ class DiaryController extends Controller
         ], bodyIdRoute: $bodyIdRoute);
     }
 
-    public function show(Request $request, int $diary, ShowDiary $query, AdjacentDiaries $adjacent): View|InertiaResponse
+    public function show(Request $request, int $diary, ShowDiary $query, AdjacentDiaries $adjacent): View|InertiaResponse|RedirectResponse
     {
-        $viewer = $this->viewer();
+        $viewer = $this->viewerOrGuest();
         $found = $query($viewer, $diary);
-        abort_if($found === null, 404);
+        if ($found === null) {
+            // OpenPNE 3 sends a guest to login for both a missing entry and one that is not
+            // web-public, so the response never tells a signed-out visitor which it was.
+            if ($viewer === null) {
+                return GuestLoginRedirect::response();
+            }
+
+            abort(404);
+        }
         // ShowDiary already gated the block (null → 404 above); record the author for the
         // Classic friend localNav when viewing someone else's diary.
         $this->markLocalNavSubject($found->member);
@@ -194,7 +217,7 @@ class DiaryController extends Controller
                 $thread->comments->each->setRelation('diary', $found);
 
                 // Classic keeps OpenPNE 3's previous(older)/next(newer) template vars for parity.
-                return view('diary.show', [
+                return $this->classicScreen('diary.show', [
                     'diary' => $found,
                     'thread' => $thread,
                     'previousDiary' => $older,
@@ -314,6 +337,16 @@ class DiaryController extends Controller
         $keyword = $request->query('keyword', '');
 
         return is_string($keyword) ? $keyword : '';
+    }
+
+    /**
+     * A guest-reachable Classic diary screen. OpenPNE 3 flipped the diary actions to `is_secure`
+     * only for an authenticated viewer (opDiaryPluginActions::postExecute), so a signed-out one
+     * gets the pre-login body class — and with it the skin rules and footer slot keyed off it.
+     */
+    private function classicScreen(string $view, array $data): View
+    {
+        return view($view, $data)->with('pageClass', auth()->check() ? 'secure_page' : 'insecure_page');
     }
 
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */

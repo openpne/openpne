@@ -20,10 +20,21 @@ class DiaryFeedRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_guests_are_redirected_to_login(): void
+    public function test_the_friend_feed_still_redirects_a_guest_to_login(): void
     {
-        $this->get('/diary/list')->assertRedirect('/login');
         $this->get('/diary/listFriend')->assertRedirect('/login');
+    }
+
+    public function test_a_guest_gets_the_feed_limited_to_web_public_entries(): void
+    {
+        Diary::factory()->create(['title' => 'Open note', 'visibility' => Visibility::Open]);
+        Diary::factory()->create(['title' => 'Members note', 'visibility' => Visibility::Members]);
+
+        $this->get('/diary/list')->assertInertia(fn ($page) => $page
+            ->component('diary/feed')
+            ->has('diaries.data', 1)
+            ->where('diaries.data.0.title', 'Open note')
+        );
     }
 
     public function test_recent_feed_renders_inertia_with_recent_variant(): void

@@ -20,7 +20,10 @@ final class TimelineAccess
         $owner = $post->member;
 
         if ($viewer === null) {
-            return $post->visibility->value <= Visibility::Open->value;
+            // The web-public setting is checked here, not only where a page is routed: a post's
+            // images are fetched by URL through FilePolicy, which no timeline page mediates.
+            return TimelineVisibility::allowsWebPublic()
+                && $post->visibility->value <= Visibility::Open->value;
         }
 
         if ($viewer->is($owner)) {

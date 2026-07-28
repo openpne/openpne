@@ -36,10 +36,12 @@ use App\Http\Controllers\PublicFileController;
 use App\Http\Middleware\AsBackgroundFetch;
 use App\Http\Middleware\EnsureMemberInviteAllowed;
 use App\Http\Middleware\EnsureOpenRegistration;
+use App\Http\Middleware\EnsureWebPublicDiaryEnabled;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\SetLocale;
 use App\Models\Member;
 use App\Support\ClassicErrorPage;
+use App\Support\GuestLoginRedirect;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -102,13 +104,17 @@ Route::post('/admin/locale/session', function (Request $request) {
 // non-web-public profile is redirected to login by ProfileController; per-value visibility, the
 // is_public_web gate, and owner→viewer block are enforced in ShowProfile. whereNumber keeps the
 // literal /member/* routes (avatar, config, profile) from matching the {member} wildcard.
-Route::get('/member/{member}', [ProfileController::class, 'show'])
-    ->whereNumber('member')->name('member.profile.show');
-// OpenPNE 3 member_profile_raw alias (/member/profile/id/:id/*) → canonical /member/{id}.
-// OpenPNE 3's trailing splat matched extra path segments; capture and ignore them so the
-// whole legacy URL space redirects instead of 404ing past the id.
-Route::get('/member/profile/id/{member}/{tail?}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
-    ->whereNumber('member')->where('tail', '.*')->name('member.profile.raw_compat');
+// auth.session even though the route is public: without it a session whose password hash is stale
+// keeps a non-null viewer here, and every gate downstream reads that viewer's clearance.
+Route::middleware('auth.session')->group(function () {
+    Route::get('/member/{member}', [ProfileController::class, 'show'])
+        ->whereNumber('member')->name('member.profile.show');
+    // OpenPNE 3 member_profile_raw alias (/member/profile/id/:id/*) → canonical /member/{id}.
+    // OpenPNE 3's trailing splat matched extra path segments; capture and ignore them so the
+    // whole legacy URL space redirects instead of 404ing past the id.
+    Route::get('/member/profile/id/{member}/{tail?}', fn (int $member) => redirect()->route('member.profile.show', ['member' => $member]))
+        ->whereNumber('member')->where('tail', '.*')->name('member.profile.raw_compat');
+});
 
 // Fortify's own route registration is off (Fortify::ignoreRoutes() in FortifyServiceProvider):
 // enabling the two-factor feature would otherwise also ship Fortify's /user/two-factor-*
@@ -262,6 +268,65 @@ Route::get('/file/public/{file:name}', [PublicFileController::class, 'show'])->n
 // inspect any uploaded file. Bound by the opaque `name` token.
 Route::get('/admin/file/{file:name}/raw', [AdminFileController::class, 'show'])->name('admin.file.raw');
 
+// File byte delivery and its OpenPNE 3-compatible thumbnail twin, bound by the opaque `name` token.
+// Login-free because the bytes a web-public diary or profile shows must render for the guest reading
+// it; FilePolicy still gates every fetch by the owning entity, so a guest gets exactly the avatars,
+// banners, explicit public assets and web-public diary/timeline images — everything else is 404,
+// the same answer a member who may not read it gets. Disk backends stream through the app too
+// (never a bare disk URL). auth.session for the same reason as the profile route above.
+Route::middleware('auth.session')->group(function () {
+    Route::get('/file/{file:name}', [FileController::class, 'show'])->name('file.show');
+
+    // The size must be whitelisted (ImageTransform), so arbitrary sizes 404.
+    Route::get('/cache/img/{format}/{geometry}/{name}.{ext}', [ImageController::class, 'show'])
+        ->where([
+            'format' => 'jpg|png|gif|webp',
+            'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',
+            // OpenPNE 3 file names allow [\w._-] (its route used ^[\w\d_\.\-]+$), e.g.
+            // m_42_..._jpg or a literal test1.jpg; new names are Str::random alnum. `.`
+            // is allowed too — the greedy match still binds the trailing `.{ext}`, and
+            // the File-name lookup (plus Flysystem's traversal guard) gates what is served.
+            'name' => '[A-Za-z0-9_.-]+',
+            'ext' => 'jpg|png|gif|webp',
+        ])
+        ->name('image.show');
+});
+
+// The read half of the diary module, guest-reachable as in OpenPNE 3 (diary/config/security.yml
+// marks index/list/search/listMember/show `is_secure: false`). What a guest actually sees is the
+// web-public (Open) tier, enforced per row and per query by DiaryAccess / DiaryVisibilityScope, and
+// EnsureWebPublicDiaryEnabled closes the whole group once the SNS switches web-public diaries off.
+// Writing, the friend feed and the id-less "my archive" stay in the auth group below.
+Route::middleware(['auth.session', EnsureWebPublicDiaryEnabled::class])->group(function () {
+    // OpenPNE 3 diary_index forwarded /diary to the list action; redirected here (URL preserved,
+    // canonical URL is /diary/list).
+    Route::get('/diary', fn () => redirect()->route('diary.list'))->name('diary.index_compat');
+
+    // A guest must not learn from the response whether an id belongs to a member at all, so the
+    // binding failure answers exactly as an author with no web-public diary does (login). A member
+    // keeps the ordinary 404.
+    $memberMissing = function (Request $request) {
+        if ($request->user() === null) {
+            return GuestLoginRedirect::response();
+        }
+
+        throw new NotFoundHttpException;
+    };
+
+    Route::prefix('diary')->controller(DiaryController::class)->group(function () use ($memberMissing) {
+        // Literal-prefix routes must precede the {diary} wildcard.
+        Route::get('/search', 'search')->name('diary.search');
+        Route::get('/list', 'list')->name('diary.list');
+        Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->missing($memberMissing)->name('diary.list_member');
+        // Calendar archive: same listMember view narrowed to a month or day.
+        Route::get('/listMember/{member}/{year}/{month}/{day?}', 'listMemberArchive')
+            ->where(['member' => '[0-9]+', 'year' => '[12][0-9]{3}', 'month' => '0?[1-9]|1[0-2]', 'day' => '0?[1-9]|[12][0-9]|3[01]'])
+            ->missing($memberMissing)
+            ->name('diary.list_member.archive');
+        Route::get('/{diary}', 'show')->whereNumber('diary')->name('diary.show');
+    });
+});
+
 // Member invitation (OpenPNE 3 member/invite): a logged-in member invites an address, which issues a
 // registration token and mails the link. Gated to modes that allow member invites (open/invite);
 // admin_only/closed 404 it. The send is throttled per member to bound invite mail.
@@ -314,23 +379,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/remove/{member}', 'submitRemove')->name('block.remove.submit');
     });
 
+    // The write half; the guest-reachable read screens are the group above.
     Route::prefix('diary')->controller(DiaryController::class)->group(function () {
-        // Literal-prefix routes must precede the {diary} wildcard.
-        Route::get('/search', 'search')->name('diary.search');
-        Route::get('/list', 'list')->name('diary.list');
         Route::get('/listFriend', 'listFriend')->name('diary.list_friend');
-        Route::get('/listMember/{member?}', 'listMember')->whereNumber('member')->name('diary.list_member');
-        // Calendar archive: same listMember view narrowed to a month or day.
-        Route::get('/listMember/{member}/{year}/{month}/{day?}', 'listMemberArchive')
-            ->where(['member' => '[0-9]+', 'year' => '[12][0-9]{3}', 'month' => '0?[1-9]|1[0-2]', 'day' => '0?[1-9]|[12][0-9]|3[01]'])
-            ->name('diary.list_member.archive');
         Route::get('/new', 'new')->name('diary.new');
         Route::post('/create', 'store')->middleware('throttle:posting')->name('diary.store');
         Route::get('/edit/{diary}', 'edit')->whereNumber('diary')->name('diary.edit');
         Route::post('/update/{diary}', 'update')->whereNumber('diary')->middleware('throttle:posting')->name('diary.update');
         Route::get('/deleteConfirm/{diary}', 'showDelete')->whereNumber('diary')->name('diary.delete.show');
         Route::post('/delete/{diary}', 'delete')->whereNumber('diary')->name('diary.delete');
-        Route::get('/{diary}', 'show')->whereNumber('diary')->name('diary.show');
     });
 
     // OpenPNE 3 diaryComment module. create keys off the diary id; deleteConfirm/delete key
@@ -437,26 +494,6 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // fields + per-value visibility. GET renders, POST saves — same URL as OpenPNE 3.
     Route::get('/member/edit/profile', [ProfileController::class, 'edit'])->name('member.profile.edit');
     Route::post('/member/edit/profile', [ProfileController::class, 'update'])->name('member.profile.update');
-
-    // File byte delivery, bound by the opaque `name` token. FileController gates every
-    // fetch through FilePolicy, so disk backends stream through the app too (never a
-    // bare disk URL).
-    Route::get('/file/{file:name}', [FileController::class, 'show'])->name('file.show');
-
-    // OpenPNE 3-compatible thumbnail delivery. Same FilePolicy gate as the original;
-    // the size must be whitelisted (ImageTransform), so arbitrary sizes 404.
-    Route::get('/cache/img/{format}/{geometry}/{name}.{ext}', [ImageController::class, 'show'])
-        ->where([
-            'format' => 'jpg|png|gif|webp',
-            'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',
-            // OpenPNE 3 file names allow [\w._-] (its route used ^[\w\d_\.\-]+$), e.g.
-            // m_42_..._jpg or a literal test1.jpg; new names are Str::random alnum. `.`
-            // is allowed too — the greedy match still binds the trailing `.{ext}`, and
-            // the File-name lookup (plus Flysystem's traversal guard) gates what is served.
-            'name' => '[A-Za-z0-9_.-]+',
-            'ext' => 'jpg|png|gif|webp',
-        ])
-        ->name('image.show');
 
     // Community core (canonical / Classic). The literal routes precede the /{community} wildcard,
     // and {community} is digit-constrained, so a literal like /community/search can never be

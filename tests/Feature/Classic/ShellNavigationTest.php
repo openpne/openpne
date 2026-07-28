@@ -35,7 +35,8 @@ class ShellNavigationTest extends TestCase
             ->assertDontSee('%my_friend%', false); // term layer resolved the caption
     }
 
-    public function test_secure_global_nav_uses_openpne3_ids_and_hides_unreachable_items(): void
+    /** Hiding an item whose URL has no route is covered per-item in NavigationServiceTest. */
+    public function test_secure_global_nav_uses_openpne3_ids(): void
     {
         $this->seed(NavigationSeeder::class);
         $member = Member::factory()->create();
@@ -47,8 +48,8 @@ class ShellNavigationTest extends TestCase
             ->assertSee('id="globalNav__member_logout"', false)
             // /member/config is now a real page (the member settings page), so it renders.
             ->assertSee('id="globalNav__member_config"', false)
-            // /diary index is still unported — hidden by the renderer's route check.
-            ->assertDontSee('id="globalNav_diary_index"', false)
+            // The OpenPNE 3 diary top (/diary) is a redirect to the feed, so the item resolves.
+            ->assertSee('id="globalNav_diary_index"', false)
             ->getContent();
 
         // logout is GET-unreachable in OpenPNE 4, so it renders as a POST form button.
