@@ -74,7 +74,9 @@ existing themes and customizations depend on:
   slots, and the `opSkinBasicPlugin` / `opSkinThemePlugin` CSS hooks.
 - The parts frame, reproducing OpenPNE 3's `_partsLayout.php`:
   [`x-classic.parts`](../../resources/views/components/classic/parts.blade.php) owns it — new
-  page parts must not hand-write the nesting (a few already-faithful hand-written boxes remain).
+  page parts must not hand-write the nesting. The already-faithful hand-written boxes that
+  predate it are frozen as a locked set by
+  [`ClassicPartsFrameGuardTest`](../../tests/Unit/Views/ClassicPartsFrameGuardTest.php).
   It emits `.dparts > .parts > .partsHeading`, collapsing to a lone `.parts` for the kinds whose
   OpenPNE 3 body partial forced it (`informationBox`, `line`, `memberImageBox`,
   `searchFormLine`). Body markup stays with the caller because it is per-kind:
