@@ -1,6 +1,21 @@
 @extends('layouts.classic')
 
-@php($title = $owner->is(auth()->user()) ? __('%Friends%') : __(":name's %friends%", ['name' => $owner->name]))
+@php
+    $isOwner = $owner->is(auth()->user());
+    $title = $isOwner ? __('%Friends%') : __(":name's %friends%", ['name' => $owner->name]);
+    $items = $friends->map(fn ($friend) => [
+        'url' => route('member.profile.show', $friend),
+        'file' => $friend->avatar?->file,
+        'name' => $friend->name,
+        'count' => $friend->friendships_count,
+        // OpenPNE 3 unlinks from friend/unlink, reached off the member profile; that entry point is
+        // not ported yet, so the per-row link stays bare in the name cell rather than leaving no
+        // route to unfriending at all.
+        'action' => $isOwner
+            ? ['url' => route('friend.unlink.show', $friend), 'label' => __('Remove %friend%')]
+            : null,
+    ])->all();
+@endphp
 
 @section('title', $title)
 
@@ -12,18 +27,7 @@
         </x-classic.parts>
     @else
         <x-classic.parts id="friendList" name="photoTable" :title="$title">
-            <ul class="friendList">
-                @foreach ($friends as $friend)
-                    <li>
-                        <span class="memberName">{{ $friend->name }}</span>
-                        @if ($owner->is(auth()->user()))
-                            <a href="{{ route('friend.unlink.show', $friend) }}">{{ __('Remove %friend%') }}</a>
-                        @endif
-                    </li>
-                @endforeach
-            </ul>
-
-            {{ $friends->links() }}
+            <x-classic.photo-table :items="$items" :paginator="$friends" />
         </x-classic.parts>
     @endif
 @endsection

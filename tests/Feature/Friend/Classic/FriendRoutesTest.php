@@ -39,6 +39,46 @@ class FriendRoutesTest extends TestCase
         $response->assertSee('Bob');
     }
 
+    public function test_list_page_renders_the_openpne3_photo_table_with_counts_and_a_pager(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create(['name' => 'Bob']);
+        $carol = Member::factory()->create(['name' => 'Carol']);
+        $this->makeFriends($alice, $bob);
+        $this->makeFriends($bob, $carol);
+
+        $response = $this->actingAs($alice)->get('/friend/list');
+
+        $response->assertOk();
+        $response->assertSee('<tr class="photo">', false);
+        $response->assertSee('<tr class="text">', false);
+        // Bob's own friend count (Alice and Carol) rides the label, as OpenPNE 3 getNameAndCount did.
+        $response->assertSee('>Bob (2)</a>', false);
+        $response->assertSee('class="pagerRelative"', false);
+        // The owner keeps the unlink link: no other screen offers it yet.
+        $response->assertSee('href="'.route('friend.unlink.show', $bob).'"', false);
+    }
+
+    public function test_list_pager_keeps_the_id_subject_across_pages(): void
+    {
+        $alice = Member::factory()->create(['name' => 'Alice']);
+        $bob = Member::factory()->create(['name' => 'Bob']);
+        foreach (Member::factory()->count(21)->create() as $friend) {
+            $this->makeFriends($bob, $friend);
+        }
+
+        $first = $this->actingAs($alice)->get("/friend/list?id={$bob->getKey()}");
+        $first->assertOk();
+        // Without withQueryString, "Next" would drop ?id= and page 2 would silently
+        // become the viewer's own list.
+        $first->assertSee('id='.$bob->getKey().'&amp;page=2', false);
+
+        // Page 2 still shows Bob's 21-friend list (the viewer's own list has none).
+        $second = $this->actingAs($alice)->get("/friend/list?id={$bob->getKey()}&page=2");
+        $second->assertOk();
+        $second->assertSee('21 - 21 of 21');
+    }
+
     public function test_list_page_with_id_query_shows_other_owner_friends(): void
     {
         $alice = Member::factory()->create(['name' => 'Alice']);
@@ -51,6 +91,8 @@ class FriendRoutesTest extends TestCase
         $response->assertOk();
         $response->assertSee('Carol');
         $response->assertSee("Bob's friends");
+        // Someone else's list offers no unlink action.
+        $response->assertDontSee('href="'.route('friend.unlink.show', $carol).'"', false);
     }
 
     public function test_list_page_for_unknown_owner_returns_404(): void

@@ -19,6 +19,8 @@ class EventParticipants
     {
         return $event->participants()
             ->with('avatar.file')
+            // "name (friend count)" per row, as one subquery for the page.
+            ->withCount('friendships')
             ->orderBy('community_event_members.id')
             ->paginate($perPage);
     }

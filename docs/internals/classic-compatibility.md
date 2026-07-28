@@ -88,6 +88,15 @@ existing themes and customizations depend on:
   so each reproduces the one its own OpenPNE 3 screen used, and none of them uses `.body`. In the
   `form` kind, `.block` appears only when OpenPNE 3 passed the `body` option (join / quit); its
   delete confirms passed none, so their question text is an OpenPNE 4 addition in bare markup.
+- The paged member/community grid, reproducing `_partsPhotoTable.php`:
+  [`x-classic.photo-table`](../../resources/views/components/classic/photo-table.blade.php) emits the
+  `tr.photo` / `tr.text` bands with empty tail `<td>`s and brackets the table with
+  [`x-classic.pager`](../../resources/views/components/classic/pager.blade.php)
+  (`div.pagerRelative` > `p.prev` / `p.number` / `p.next`, `_pagerNavigation.php` +
+  `_pagerTotal.php`). The count readout renders on a single page too, so the pager is not
+  conditional on `hasPages()`. It stays a separate implementation from the gadget grid
+  ([`x-gadget.nine-table`](../../resources/views/components/gadget/nine-table.blade.php)) because
+  OpenPNE 3 keeps `_partsNineTable.php` and `_partsPhotoTable.php` as diverging twins.
 - The `#Layout{A..C}` letter — OpenPNE 3's `setLayout` / `view.yml` / `decorate_with` choice — is
   resolved per screen by [`RouteParity::layouts()`](../../app/Compat/RouteParity.php) through the
   `classic_layout()` helper, defaulting to OpenPNE 3's global `layoutC`; gadget pages (home /
