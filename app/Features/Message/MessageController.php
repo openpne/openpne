@@ -322,13 +322,16 @@ class MessageController extends Controller
 
     private function list(Request $request, MessageBox $box, ListMessages $query): View|InertiaResponse
     {
-        $messages = $query($this->viewer(), $box);
-
+        // The query runs inside the chosen closure: only Classic draws the status icons, so only
+        // it pays the replied lookup.
         return $this->respondWith($request, 'message', [
-            SurfaceResolver::CLASSIC => fn () => view('message.list', ['box' => $box, 'messages' => $messages]),
+            SurfaceResolver::CLASSIC => fn () => view('message.list', [
+                'box' => $box,
+                'messages' => $query($this->viewer(), $box, withRepliedStatus: true),
+            ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('message/index', [
                 'box' => $box->value,
-                'messages' => MessageSerializer::paginator($messages),
+                'messages' => MessageSerializer::paginator($query($this->viewer(), $box)),
             ]),
         ]);
     }
@@ -340,13 +343,7 @@ class MessageController extends Controller
 
         return $this->respondWith($request, 'message', [
             SurfaceResolver::CLASSIC => fn () => view('message.show', ['view' => $view]),
-            SurfaceResolver::MODERN => function () use ($view) {
-                // Avatars aren't loaded by ShowMessage (Classic renders none); hydrate the same From/To
-                // instances the view holds before serializing so the Modern shape has them N+1-free.
-                $view->message->loadMissing('sender.avatar.file', 'recipients.recipient.avatar.file', 'draftRecipient.avatar.file');
-
-                return Inertia::render('message/show', ['message' => MessageSerializer::view($view)]);
-            },
+            SurfaceResolver::MODERN => fn () => Inertia::render('message/show', ['message' => MessageSerializer::view($view)]),
         ]);
     }
 

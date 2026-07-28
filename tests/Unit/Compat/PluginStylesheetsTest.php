@@ -25,6 +25,12 @@ class PluginStylesheetsTest extends TestCase
             'opDiaryPlugin/css/diary.css' => '82a8852e045e5891b538528c38559e7d',
             'opCommunityTopicPlugin/css/communityTopic.css' => 'a222acbbda97c3db931c15bd17d9c798',
             'opMessagePlugin/css/message.css' => '4c62db3435618cd0299727253ccd4d9e',
+            // The message list's row status icons (listSuccess.php): unopened / opened / sent /
+            // replied. message.css does not reference them — the templates do, by path.
+            'opMessagePlugin/images/icon_mail_1.gif' => '3d40a300272ec2812ae4ca958b7038d9',
+            'opMessagePlugin/images/icon_mail_2.gif' => 'f20567b31473c2d80f0b8c2e225307f7',
+            'opMessagePlugin/images/icon_mail_3.gif' => '1c118e37db2cee0417d41d75de81757f',
+            'opMessagePlugin/images/icon_mail_4.gif' => '251cde24c20378a312056c26635818da',
             // communityTopic.css's only url(): ../../images/icon_2.gif from the css directory,
             // which is why the plugins keep OpenPNE 3's web-root-relative layout under public/.
             'images/icon_2.gif' => '5eeff8dd69a4d7606d8455fac953eb8a',
@@ -34,6 +40,10 @@ class PluginStylesheetsTest extends TestCase
             'opDiaryPlugin/css/diary.css',
             'opCommunityTopicPlugin/css/communityTopic.css',
             'opMessagePlugin/css/message.css',
+            'opMessagePlugin/images/icon_mail_1.gif',
+            'opMessagePlugin/images/icon_mail_2.gif',
+            'opMessagePlugin/images/icon_mail_3.gif',
+            'opMessagePlugin/images/icon_mail_4.gif',
             'images/icon_2.gif',
             'images/icon_alert.gif',
         ]));

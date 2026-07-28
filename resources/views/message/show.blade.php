@@ -27,6 +27,12 @@
 
             <table>
                 <tr>
+                    {{-- The photo cell spans the three rows, and only when there is exactly one
+                         counterpart: a multi-recipient message (or a withdrawn one) shows none. --}}
+                    @if (count($view->counterparties) === 1)
+                        @php($only = $view->counterparties[0])
+                        <td class="photo" rowspan="3"><a href="{{ route('member.profile.show', $only) }}"><x-classic.image :file="$only->avatar?->file" :size="76" :alt="$only->name" /></a></td>
+                    @endif
                     <th>{{ $view->viewerIsSender ? __('Recipient') : __('Sender') }}</th>
                     <td>
                         <ul>
