@@ -10,14 +10,17 @@
             <div class="body">{{ __('No members to show.') }}</div>
         </x-classic.parts>
     @else
-        <x-classic.parts id="communityEventMembersList" name="photoTable" :title="__('Event Members')">
-            <ul class="memberList">
-                @foreach ($participants as $member)
-                    <li><a href="{{ route('member.profile.show', $member) }}">{{ $member->name }}</a></li>
-                @endforeach
-            </ul>
+        @php
+            $items = $participants->map(fn ($member) => [
+                'url' => route('member.profile.show', $member),
+                'file' => $member->avatar?->file,
+                'name' => $member->name,
+                'count' => $member->friendships_count,
+            ])->all();
+        @endphp
 
-            {{ $participants->withQueryString()->links() }}
+        <x-classic.parts id="communityEventMembersList" name="photoTable" :title="__('Event Members')">
+            <x-classic.photo-table :items="$items" :paginator="$participants->withQueryString()" />
         </x-classic.parts>
     @endif
 

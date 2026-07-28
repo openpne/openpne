@@ -248,7 +248,9 @@ class CommunityEventRoutesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('id="page_communityEvent_memberList"', false);
-        $response->assertSee($attendee->name);
+        $response->assertSee('<tr class="photo">', false);
+        $response->assertSee('>'.$attendee->name.' (0)</a>', false);
+        $response->assertSee('class="pagerRelative"', false);
     }
 
     public function test_community_home_shows_the_recent_events_box_for_board_readers(): void

@@ -2,6 +2,7 @@
 
 namespace App\Features\Community\Queries;
 
+use App\Features\Community\CommunityRole;
 use App\Models\Community;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -16,10 +17,21 @@ class ListMemberCommunities
 {
     public const PER_PAGE = 20;
 
-    /** @return LengthAwarePaginator<int, Community> */
+    /**
+     * The paged list carries `owner_is_admin` so the grid can crown the communities $member
+     * administers — OpenPNE 3 crowns by the *listed* member's role, not the viewer's, so the
+     * crown reads the same to everyone looking at that member's list. The unpaged take() path
+     * (gadgets) draws no crown, so the projection stays here.
+     *
+     * @return LengthAwarePaginator<int, Community>
+     */
     public function __invoke(Member $member, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
-        return $this->query($member)->paginate($perPage);
+        return $this->query($member)
+            ->withExists(['members as owner_is_admin' => fn ($q) => $q
+                ->where('member_id', $member->getKey())
+                ->where('role', CommunityRole::Admin)])
+            ->paginate($perPage);
     }
 
     /**

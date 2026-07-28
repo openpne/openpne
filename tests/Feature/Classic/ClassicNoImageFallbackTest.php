@@ -8,6 +8,7 @@ use App\Models\CommunityMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -49,6 +50,25 @@ class ClassicNoImageFallbackTest extends TestCase
         $this->actingAs($viewer)->get('/member/search')
             ->assertOk()
             ->assertSee('Avatarless Member')
+            ->assertSee('images/no_image.gif', false);
+    }
+
+    public function test_friend_photo_table_shows_the_thumbnail_for_one_friend_and_the_fallback_for_another(): void
+    {
+        $owner = Member::factory()->create();
+        $withAvatar = Member::factory()->create();
+        $withoutAvatar = Member::factory()->create();
+        app(SetAvatar::class)($withAvatar, UploadedFile::fake()->image('me.png', 100, 100));
+        foreach ([$withAvatar, $withoutAvatar] as $friend) {
+            DB::table('friendships')->insert([
+                ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey()],
+                ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey()],
+            ]);
+        }
+
+        $this->actingAs($owner)->get('/friend/list')
+            ->assertOk()
+            ->assertSee($withAvatar->fresh()->avatar->file->thumbnailUrl(76, 76, square: true), false)
             ->assertSee('images/no_image.gif', false);
     }
 
