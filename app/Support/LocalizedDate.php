@@ -7,9 +7,7 @@ use Illuminate\Support\Facades\App;
 
 /**
  * Ports OpenPNE 3 op_format_date's culture-aware presets. Japanese renders the kanji pattern
- * op_format_date hard-codes for ja_JP; other locales use Carbon's localized format. OpenPNE 3's
- * XDateTimeJaBr stacks the date in a narrow sidebar column — the Classic layout shows it inline,
- * so the single-line XDateTimeJa form is the faithful equivalent.
+ * op_format_date hard-codes for ja_JP; other locales use Carbon's localized format.
  */
 final class LocalizedDate
 {
@@ -21,6 +19,22 @@ final class LocalizedDate
         }
 
         return $date->locale(App::getLocale())->isoFormat('LLL');
+    }
+
+    /**
+     * op_format_date XDateTimeJaBr, split into lines instead of carrying the `\n` its callers
+     * pass through nl2br: ["2026年", "06月04日", "13:44"] for ja, so a narrow dt column stacks the
+     * parts. Other cultures fall back to the same one-line datetime XDateTimeJa gives them.
+     *
+     * @return list<string>
+     */
+    public static function dateTimeLines(CarbonInterface $date): array
+    {
+        if (App::getLocale() === 'ja') {
+            return [$date->format('Y年'), $date->format('m月d日'), $date->format('H:i')];
+        }
+
+        return [self::dateTime($date)];
     }
 
     /** op_format_date XDateJa ('D' preset): "2026年06月04日" for ja, a localized date otherwise. */

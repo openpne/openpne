@@ -11,6 +11,10 @@
     <title>@yield('title') | {{ sns_title() ?: sns_name() }}</title>
     {{-- Default skin, served statically; $classicSkinCss overrides which skin stylesheet is linked. --}}
     <link rel="stylesheet" href="{{ $classicSkinCss ?? asset('opSkinBasicPlugin/css/main.css') }}">
+    {{-- The page module's OpenPNE 3 plugin stylesheet, linked after the skin it overrides. --}}
+    @if ($pluginCssUrl = classic_plugin_css_url())
+        <link rel="stylesheet" href="{{ $pluginCssUrl }}">
+    @endif
     {{-- Admin custom CSS, linked after the skin so it overrides it. --}}
     @if ($customCssUrl = classic_custom_css_url())
         <link rel="stylesheet" href="{{ $customCssUrl }}">

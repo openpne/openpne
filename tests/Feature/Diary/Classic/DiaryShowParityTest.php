@@ -4,14 +4,16 @@ namespace Tests\Feature\Diary\Classic;
 
 use App\Models\Diary;
 use App\Models\DiaryComment;
+use App\Models\DiaryImage;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Locks the diary.show surface elements that openpne:screen-parity marks Ported (L1): the
- * comment list, the comment post form (with its is_open notice), and the owner edit entry.
+ * Locks the diary.show surface elements that openpne:screen-parity marks Ported (L1): the entry's
+ * own dl, the comment list, the comment post form (with its is_open notice), and the owner edit entry.
  * A regression here would silently turn a Ported claim false, so the inventory leans on this.
  * Anchors are routes/seeded data, not translated copy, so they survive wording changes.
  */
@@ -112,6 +114,60 @@ class DiaryShowParityTest extends TestCase
             ->assertDontSee('prevNextLinkLine', false);
     }
 
+    public function test_renders_the_entry_as_a_dl_headed_by_its_author(): void
+    {
+        $owner = Member::factory()->create(['name' => 'Alice']);
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'title' => 'Rainy day']);
+
+        $html = $this->actingAs($owner)->get("/diary/{$diary->getKey()}")->assertOk()->getContent();
+
+        // OpenPNE 3 names the author in the heading ("Diary of %1%") and carries the entry title
+        // into the dd, so the dt column holds nothing but the timestamp.
+        $this->assertStringContainsString('<h3>Diary of Alice</h3>', $html);
+        $this->assertMatchesRegularExpression(
+            '~<dl>\s*<dt>[^<]+.*</dt>\s*<dd>\s*<div class="title">\s*<p class="heading">Rainy day</p>~s',
+            $html,
+        );
+
+        // OpenPNE 3 ja: 「%1%さんの日記」 — no space before さん.
+        $ja = $this->actingAs($owner)->withSession(['locale' => 'ja'])
+            ->get("/diary/{$diary->getKey()}")->assertOk()->getContent();
+        $this->assertStringContainsString('<h3>Aliceさんの日記</h3>', $ja);
+    }
+
+    public function test_markdown_bodies_scope_their_border_reset_above_the_plugin_css(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create([
+            'member_id' => $owner->getKey(),
+            'body' => '**bold**',
+            'format' => BodyFormat::Markdown,
+        ]);
+
+        $html = $this->actingAs($owner)->get("/diary/{$diary->getKey()}")->assertOk()->getContent();
+
+        // diary.css's `.diaryDetailBox dd div` is specificity 0-1-2; a bare `.markdownBody` reset
+        // loses to it regardless of order, so the override must carry the scoped selector.
+        $this->assertStringContainsString('.diaryDetailBox dd div.markdownBody { border-top: none; }', $html);
+    }
+
+    public function test_renders_the_attached_images_ahead_of_the_body_text(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'body' => 'Attached above.']);
+        DiaryImage::factory()->create(['diary_id' => $diary->getKey(), 'number' => 1]);
+
+        $html = $this->actingAs($owner)->get("/diary/{$diary->getKey()}")->assertOk()->getContent();
+
+        $body = strpos($html, '<div class="body">');
+        $photo = strpos($html, '<ul class="photo">');
+        $text = strpos($html, 'Attached above.');
+
+        $this->assertNotFalse($photo);
+        $this->assertGreaterThan($body, $photo); // both inside the dd's body div
+        $this->assertGreaterThan($photo, $text);
+    }
+
     public function test_renders_the_ported_owner_edit_entry(): void
     {
         $owner = Member::factory()->create();
@@ -119,7 +175,11 @@ class DiaryShowParityTest extends TestCase
 
         $this->actingAs($owner)->get("/diary/{$diary->getKey()}")
             ->assertOk()
-            ->assertSee("/diary/edit/{$diary->getKey()}", false);
+            ->assertSee("/diary/edit/{$diary->getKey()}", false)
+            // OpenPNE 3's entry: a GET form to diary_edit in the operation area, not a bare link.
+            ->assertSee('<div class="operation">', false)
+            ->assertSee('<form action="'.route('diary.edit', $diary).'">', false)
+            ->assertSee('class="input_submit"', false);
     }
 
     public function test_owner_edit_entry_is_hidden_from_other_members(): void
