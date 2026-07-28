@@ -4,6 +4,7 @@ namespace Tests\Feature\Member;
 
 use App\Features\Member\Actions\SetAvatar;
 use App\Files\FileStorage;
+use App\Http\Requests\Member\AvatarRequest;
 use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,6 +26,20 @@ class AvatarTest extends TestCase
             // No avatar yet: no remove form (DELETE shares the /member/avatar URL with the
             // upload POST, so the @method('DELETE') field is what distinguishes it).
             ->assertDontSee('value="DELETE"', escape: false);
+    }
+
+    public function test_the_edit_page_states_the_upload_limit_and_the_content_warning(): void
+    {
+        // The stated byte limit is derived from the rule the upload is actually validated against.
+        $bytes = AvatarRequest::MAX_KILOBYTES * 1024;
+
+        $this->actingAs(Member::factory()->create())
+            ->get(route('member.avatar.edit'))
+            ->assertOk()
+            ->assertSee('<li>Please upload a GIF, JPEG or PNG within '.$bytes.' bytes.</li>', escape: false)
+            ->assertSee('infringe copyright or portrait rights')
+            // OpenPNE 3's three-photo note has no counterpart on a single-avatar model.
+            ->assertDontSee('3 photos');
     }
 
     public function test_the_edit_page_shows_the_avatar_thumbnail(): void

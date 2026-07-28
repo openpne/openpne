@@ -21,6 +21,13 @@
                     <td><input type="password" id="login_password" name="password"
                                class="input_text" autocomplete="current-password" required></td>
                 </tr>
+                {{-- OpenPNE 3 appends is_remember_me to the login form after the credentials, so it
+                     renders as the row below the password. Fortify reads the `remember` input. --}}
+                <tr>
+                    <th><label for="login_remember">{{ __('Remember me') }}</label></th>
+                    <td><input type="checkbox" class="input_checkbox" id="login_remember" name="remember" value="1"
+                               @checked(old('remember'))></td>
+                </tr>
                 <tr>
                     <td colspan="2">
                         {{-- Fortify flashes the failed-login message on the email key. --}}

@@ -25,6 +25,12 @@
         <x-classic.parts id="noFriend" name="box" :title="$title">
             <div class="body">{{ __('No %friends% to show.') }}</div>
         </x-classic.parts>
+
+        {{-- listError.php closes the empty list with the history-back line; the populated list has
+             its pager instead. --}}
+        <x-classic.parts id="backLink" name="line">
+            <a href="#" onclick="history.back(); return false;">{{ __('Back to previous page') }}</a>
+        </x-classic.parts>
     @else
         <x-classic.parts id="friendList" name="photoTable" :title="$title">
             <x-classic.photo-table :items="$items" :paginator="$friends" />

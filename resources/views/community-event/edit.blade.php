@@ -34,4 +34,18 @@
             </div>
         </form>
     </x-classic.parts>
+
+    {{-- OpenPNE 3 editSuccess.php's buttonBox kind, body-less: the kind puts its form inside the
+         operation li. --}}
+    <x-classic.parts id="toDelete" name="buttonBox" :title="__('Delete the event and comments')">
+        <div class="operation">
+            <ul class="moreInfo button">
+                <li>
+                    <form method="GET" action="{{ route('communityEvent.delete.show', $event) }}">
+                        <input type="submit" class="input_submit" value="{{ __('Delete') }}">
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </x-classic.parts>
 @endsection

@@ -103,29 +103,34 @@
                 <td>{{ __($community->topic_post_authority->label()) }}</td>
             </tr>
         </table>
-
-        <div class="operation">
-            <ul class="moreInfo button">
-                <li><a href="{{ route('community.members', ['id' => $community->getKey()]) }}">{{ __('Member list') }}</a></li>
-
-                @if ($role === null && ! $isPending)
-                    <li><a href="{{ route('community.join.show', ['id' => $community->getKey()]) }}">{{ __('Join this %community%') }}</a></li>
-                @elseif ($isPending)
-                    <li><span class="pending">{{ __('Your join request is pending.') }}</span></li>
-                @endif
-
-                @if ($role?->canManage())
-                    <li><a href="{{ route('community.edit', ['id' => $community->getKey()]) }}">{{ __('Edit settings') }}</a></li>
-                @endif
-                @if ($role === \App\Features\Community\CommunityRole::Admin)
-                    <li><a href="{{ route('community.members.pending', ['id' => $community->getKey()]) }}">{{ __('Pending members') }}</a></li>
-                    <li><a href="{{ route('community.delete.show', $community) }}">{{ __('Delete %community%') }}</a></li>
-                @elseif ($role !== null)
-                    <li><a href="{{ route('community.quit.show', ['id' => $community->getKey()]) }}">{{ __('Leave this %community%') }}</a></li>
-                @endif
-            </ul>
-        </div>
     </x-classic.parts>
+
+    {{-- OpenPNE 3 homeSuccess.php closes the page with a class-less ul outside the listBox, holding
+         only the membership operations: the roster lives in the sidemenu and delete inside the edit
+         screen. The administrator cannot leave (they must hand the community over first); the join
+         entry is withheld from a pending applicant (see below). --}}
+    <ul>
+        @if ($role?->canManage())
+            <li><a href="{{ route('community.edit', ['id' => $community->getKey()]) }}">{{ __('Edit this %community%') }}</a></li>
+        @endif
+        @if ($role !== \App\Features\Community\CommunityRole::Admin)
+            @if ($role === null)
+                {{-- OpenPNE 3 shows Join to a pending applicant too, but its join page rendered an
+                     error there; OpenPNE 4's confirm redirects a pending viewer straight back, so
+                     the link would be a no-op — the waiting notice above carries the state. --}}
+                @unless ($isPending)
+                    <li><a href="{{ route('community.join.show', ['id' => $community->getKey()]) }}">{{ __('Join this %community%') }}</a></li>
+                @endunless
+            @else
+                <li><a href="{{ route('community.quit.show', ['id' => $community->getKey()]) }}">{{ __('Leave this %community%') }}</a></li>
+            @endif
+        @endif
+        {{-- OpenPNE 4-native: OpenPNE 3 reached the join queue from its confirmation centre, which
+             is not ported, so this page is the only way in. --}}
+        @if ($role === \App\Features\Community\CommunityRole::Admin)
+            <li><a href="{{ route('community.members.pending', ['id' => $community->getKey()]) }}">{{ __('Pending members') }}</a></li>
+        @endif
+    </ul>
 
     {{-- The recent-topics box links into the board. Shown only when the viewer may read the
          board (a members-only board is hidden from non-members). OpenPNE 3 listed the same

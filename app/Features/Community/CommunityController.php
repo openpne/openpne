@@ -208,6 +208,7 @@ class CommunityController extends Controller
                     'community' => $community,
                     'categories' => $categories,
                     'policies' => JoinPolicy::cases(),
+                    'canDelete' => $community !== null && Gate::allows('delete', $community),
                 ]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/edit', [

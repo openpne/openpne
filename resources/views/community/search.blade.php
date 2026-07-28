@@ -29,6 +29,14 @@
                 </ul>
             </div>
         </form>
+
+        {{-- searchSuccess.php passes the create link as the form kind's moreInfo option, which the
+             OpenPNE 3 parts frame renders after the form as div.moreInfo > ul.moreInfo. --}}
+        <div class="moreInfo">
+            <ul class="moreInfo">
+                <li><a href="{{ route('community.edit') }}">{{ __('Create a new %community%') }}</a></li>
+            </ul>
+        </div>
     </x-classic.parts>
 
     @if ($communities->isEmpty())
