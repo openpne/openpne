@@ -30,7 +30,7 @@
         {{-- OpenPNE 3's parts frame renders its moreInfo option as div.moreInfo > ul.moreInfo. --}}
         <div class="moreInfo">
             <ul class="moreInfo">
-                <li><a href="{{ route('community.members', ['id' => $community->getKey()]) }}">{{ __('Show all') }} ({{ $community->members_count }})</a></li>
+                <li><a href="{{ route('community.members', ['id' => $community->getKey()]) }}">{{ __('Show all') }}({{ $community->members_count }})</a></li>
                 @if ($canManageMembers)
                     <li><a href="{{ route('community.members.manage', $community) }}">{{ __('Management member') }}</a></li>
                 @endif

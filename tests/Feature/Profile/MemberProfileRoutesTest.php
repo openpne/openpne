@@ -206,6 +206,21 @@ class MemberProfileRoutesTest extends TestCase
             ->assertSee("/friend/link?id={$owner->getKey()}");
     }
 
+    public function test_classic_own_profile_carries_the_own_page_notice(): void
+    {
+        $owner = Member::factory()->create();
+
+        // OpenPNE 3 gave the own-page notice and the friend-request entry the same descriptionBox
+        // (profileSuccess.php): the page URL to share, plus the way back to the profile editor.
+        $this->actingAs($owner)->get("/member/{$owner->getKey()}")
+            ->assertOk()
+            ->assertSee('informationAboutThisIsYourProfilePage')
+            ->assertSee('This is how other members see your page.')
+            ->assertSee(route('member.profile.show', $owner))
+            ->assertSee(route('member.profile.edit'))
+            ->assertDontSee('/friend/link?id=');
+    }
+
     public function test_classic_friend_profile_omits_the_request_box(): void
     {
         $owner = Member::factory()->create();

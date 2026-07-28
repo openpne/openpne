@@ -2,5 +2,14 @@
 @if (count($items))
     <x-classic.parts :id="$partId" name="nineTable" :title="__('%Friends%')">
         <x-gadget.nine-table :items="$items" :rows="$rows" :cols="$cols" :type="$type" />
+        {{-- OpenPNE 3's parts frame renders its moreInfo option as div.moreInfo > ul.moreInfo. --}}
+        <div class="moreInfo">
+            <ul class="moreInfo">
+                <li><a href="{{ route('friend.list', ['id' => $subject->getKey()]) }}">{{ __('Show all') }}({{ $total }})</a></li>
+                @if ($isSelf)
+                    <li><a href="{{ route('friend.manage') }}">{{ __('Manage %my_friends%') }}</a></li>
+                @endif
+            </ul>
+        </div>
     </x-classic.parts>
 @endif

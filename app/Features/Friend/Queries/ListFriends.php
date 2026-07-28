@@ -31,6 +31,16 @@ class ListFriends
         return $this->query($viewer, $owner)->limit($limit)->get();
     }
 
+    /**
+     * The owner's whole friend count, for a widget that shows a slice and links to the rest — the
+     * take() slice can never stand in for it. One aggregate, so the same block rule applies as to
+     * the list itself.
+     */
+    public function count(Member $viewer, Member $owner): int
+    {
+        return $this->query($viewer, $owner)->count();
+    }
+
     /** @return BelongsToMany<Member, Member> */
     private function query(Member $viewer, Member $owner): BelongsToMany
     {
