@@ -133,11 +133,17 @@ class MessageListParityTest extends TestCase
 
         $body = (string) $this->actingAs($recipient)->get('/message/receiveList')->assertOk()->getContent();
 
-        $this->assertStringContainsString('>Select All</a> /', $body);
-        $this->assertStringContainsString('>Deselect All</a>', $body);
+        // OpenPNE 3's own labels — a visible parity element, held in both locales.
+        $this->assertStringContainsString('>Check All</a> /', $body);
+        $this->assertStringContainsString('>Clear All</a>', $body);
         $this->assertSame(2, substr_count($body, 'c.checked='));
         // The header checkbox they replace is gone; only the row boxes remain.
         $this->assertSame(1, substr_count($body, 'type="checkbox"'));
+
+        $ja = (string) $this->actingAs($recipient)->withSession(['locale' => 'ja'])
+            ->get('/message/receiveList')->assertOk()->getContent();
+        $this->assertStringContainsString('>全てをチェック</a> /', $ja);
+        $this->assertStringContainsString('>全てのチェックをはずす</a>', $ja);
     }
 
     public function test_the_table_declares_the_five_openpne3_columns(): void

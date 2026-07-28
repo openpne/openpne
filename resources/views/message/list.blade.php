@@ -62,8 +62,10 @@
 
                 <div class="operation">
                     <p>
-                        <a href="#" onclick="{{ $toggleAll('true') }}">{{ __('Select All') }}</a> /
-                        <a href="#" onclick="{{ $toggleAll('false') }}">{{ __('Deselect All') }}</a>
+                        {{-- OpenPNE 3's own labels (Check All / Clear All): a visible parity
+                             element, so its screen wording wins over key reuse. --}}
+                        <a href="#" onclick="{{ $toggleAll('true') }}">{{ __('Check All') }}</a> /
+                        <a href="#" onclick="{{ $toggleAll('false') }}">{{ __('Clear All') }}</a>
                     </p>
                     <ul class="moreInfo button">
                         @if ($isTrash)

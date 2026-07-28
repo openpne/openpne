@@ -24,11 +24,16 @@ class ListMessages
     /** OpenPNE 3 app_message_pagenatesize default. */
     public const PER_PAGE = 20;
 
-    /** @return LengthAwarePaginator<int, MessageListItem> */
-    public function __invoke(Member $viewer, MessageBox $box, int $perPage = self::PER_PAGE): LengthAwarePaginator
+    /**
+     * $withRepliedStatus opts into the inbox replied lookup (one extra query) — only the Classic
+     * status icons read it, so only that surface pays for it.
+     *
+     * @return LengthAwarePaginator<int, MessageListItem>
+     */
+    public function __invoke(Member $viewer, MessageBox $box, int $perPage = self::PER_PAGE, bool $withRepliedStatus = false): LengthAwarePaginator
     {
         return match ($box) {
-            MessageBox::Receive => $this->received($viewer, $perPage),
+            MessageBox::Receive => $this->received($viewer, $perPage, $withRepliedStatus),
             MessageBox::Sent => $this->authored($viewer, false, $perPage),
             MessageBox::Draft => $this->authored($viewer, true, $perPage),
             MessageBox::Trash => $this->trash($viewer, $perPage),
@@ -36,7 +41,7 @@ class ListMessages
     }
 
     /** @return LengthAwarePaginator<int, MessageListItem> */
-    private function received(Member $viewer, int $perPage): LengthAwarePaginator
+    private function received(Member $viewer, int $perPage, bool $withRepliedStatus): LengthAwarePaginator
     {
         $page = MessageRecipient::query()
             ->ofDelivered()
@@ -48,9 +53,9 @@ class ListMessages
             ->orderByDesc('created_at')
             ->paginate($perPage);
 
-        $replied = $this->repliedTo($viewer, $page->getCollection()->map(
+        $replied = $withRepliedStatus ? $this->repliedTo($viewer, $page->getCollection()->map(
             static fn (MessageRecipient $r): int => (int) $r->message_id
-        )->all());
+        )->all()) : [];
 
         return $page->through(fn (MessageRecipient $r): MessageListItem => new MessageListItem(
             (int) $r->message_id,
