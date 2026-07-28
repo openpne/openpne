@@ -25,7 +25,7 @@ class ClassicPagerComponentTest extends TestCase
     public function test_a_single_page_still_renders_the_count_readout(): void
     {
         $this->assertSame(
-            '<div class="pagerRelative"> <p class="number">Showing 1 - 3 of 3</p> </div>',
+            '<div class="pagerRelative"> <p class="number">1 - 3 of 3</p> </div>',
             $this->render($this->pager(total: 3, page: 1)),
         );
     }
@@ -39,9 +39,9 @@ class ClassicPagerComponentTest extends TestCase
     {
         $this->assertSame(
             '<div class="pagerRelative">'
-                .' <p class="prev"><a href="/friend/list?page=1">Show previous</a></p>'
-                .' <p class="number">Showing 6 - 10 of 12</p>'
-                .' <p class="next"><a href="/friend/list?page=3">Show next</a></p> </div>',
+                .' <p class="prev"><a href="/friend/list?page=1">Previous</a></p>'
+                .' <p class="number">6 - 10 of 12</p>'
+                .' <p class="next"><a href="/friend/list?page=3">Next</a></p> </div>',
             $this->render($this->pager(total: 12, page: 2)),
         );
     }
@@ -50,10 +50,10 @@ class ClassicPagerComponentTest extends TestCase
     {
         $first = $this->render($this->pager(total: 12, page: 1));
         $this->assertStringNotContainsString('class="prev"', $first);
-        $this->assertStringContainsString('<a href="/friend/list?page=2">Show next</a>', $first);
+        $this->assertStringContainsString('<a href="/friend/list?page=2">Next</a>', $first);
 
         $last = $this->render($this->pager(total: 12, page: 3));
-        $this->assertStringContainsString('<a href="/friend/list?page=2">Show previous</a>', $last);
+        $this->assertStringContainsString('<a href="/friend/list?page=2">Previous</a>', $last);
         $this->assertStringNotContainsString('class="next"', $last);
     }
 

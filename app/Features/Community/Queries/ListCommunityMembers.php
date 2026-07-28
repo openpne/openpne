@@ -23,6 +23,9 @@ class ListCommunityMembers
             ->with(['member' => fn ($q) => $q->with('avatar.file')->withCount('friendships')])
             ->orderByDesc('role') // Admin=3 > SubAdmin=2 > Member=1
             ->orderBy('id')
-            ->paginate($perPage);
+            // withQueryString keeps the ?id= subject on pager links — without it, page 2 resolves
+            // community id 0 and 404s.
+            ->paginate($perPage)
+            ->withQueryString();
     }
 }

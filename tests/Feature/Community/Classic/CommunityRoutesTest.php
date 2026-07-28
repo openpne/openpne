@@ -249,6 +249,25 @@ class CommunityRoutesTest extends TestCase
         $response->assertDontSee('class="role"', false);
     }
 
+    public function test_member_list_pager_keeps_the_id_subject_across_pages(): void
+    {
+        $community = Community::factory()->create();
+        $viewer = Member::factory()->create();
+        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        foreach (Member::factory()->count(20)->create() as $member) {
+            CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+        }
+
+        $first = $this->actingAs($viewer)->get("/community/member/list?id={$community->getKey()}");
+        $first->assertOk();
+        // Without withQueryString, "Next" would drop ?id= and page 2 would 404 on community 0.
+        $first->assertSee('id='.$community->getKey().'&amp;page=2', false);
+
+        $second = $this->actingAs($viewer)->get("/community/member/list?id={$community->getKey()}&page=2");
+        $second->assertOk();
+        $second->assertSee('21 - 21 of 21');
+    }
+
     public function test_creating_a_community_makes_the_creator_admin(): void
     {
         $member = Member::factory()->create();
