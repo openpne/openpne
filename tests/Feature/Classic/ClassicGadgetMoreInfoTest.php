@@ -77,8 +77,10 @@ class ClassicGadgetMoreInfoTest extends TestCase
 
         $this->actingAs($owner)->get("/member/{$owner->getKey()}")
             ->assertOk()
-            ->assertSee(route('friend.manage'))
-            ->assertSee('Manage my friends');
+            // The manage label points at friend.list (where OpenPNE 3's manage screen folded),
+            // never at the pending-request screen.
+            ->assertSee('Manage my friends')
+            ->assertDontSee('href="'.route('friend.manage').'"', false);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertOk()

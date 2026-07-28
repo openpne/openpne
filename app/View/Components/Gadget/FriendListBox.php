@@ -12,7 +12,7 @@ use Illuminate\View\Component;
  * subject owns the list (home: the viewer; profile: the viewed member); a profile the viewer may
  * not see is already a 404 in the controller, so listing the owner's friends here is safe.
  *
- * Two queries at most: the grid slice and one aggregate for the "show all (n)" total.
+ * The "show all (n)" total adds exactly one aggregate to the slice path (the slice itself carries its eager loads).
  */
 class FriendListBox extends Component
 {

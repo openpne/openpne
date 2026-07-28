@@ -11,6 +11,8 @@
                 {{ route('member.profile.show', $owner) }}
             </p>
             <p>
+                {{-- OpenPNE 3 embeds the link inside the sentence (「プロフィール編集」より…);
+                     values stay escaped here, so the link follows the sentence instead. --}}
                 {{ __('To change your profile, use the profile editor.') }}<br>
                 <a href="{{ route('member.profile.edit') }}">{{ __('Edit Profile') }}</a>
             </p>

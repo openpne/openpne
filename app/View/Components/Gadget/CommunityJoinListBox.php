@@ -10,7 +10,7 @@ use Illuminate\View\Component;
 /**
  * The subject member's joined communities as a row × col thumbnail grid.
  *
- * Two queries at most: the grid slice and one aggregate for the "show all (n)" total.
+ * The "show all (n)" total adds exactly one aggregate to the slice path (the slice itself carries its eager loads).
  */
 class CommunityJoinListBox extends Component
 {
