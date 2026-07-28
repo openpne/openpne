@@ -8,10 +8,10 @@
 
 @section('content')
     <x-classic.parts id="diary_show" name="diaryDetailBox">
-        {{-- OpenPNE 3 showSuccess.php keeps the diary's effective audience inside partsHeading,
-             beside the h3, in the .public hook. --}}
+        {{-- OpenPNE 3 showSuccess.php heads the box with the author, not the entry title (that sits
+             in the dd), and keeps the diary's effective audience beside it in the .public hook. --}}
         <x-slot:heading>
-            <h3>{{ $diary->title }}</h3>
+            <h3>{{ __('%Diary% of :name', ['name' => $diary->member->name]) }}</h3>
             <p class="public">({{ __($diary->visibility->label()) }})</p>
         </x-slot:heading>
 
@@ -25,18 +25,32 @@
                 @endif
             </div>
         @endif
-        <p class="diaryMeta">
-            {{ $diary->member->name }} &mdash; {{ \App\Support\LocalizedDate::dateTime($diary->created_at) }}
-        </p>
-        <div class="diaryBody"><x-user-text :value="$diary->body" :format="$diary->format" /></div>
 
-        @include('community-topic._images', ['images' => $diary->images])
+        {{-- The entry itself is a one-row dl: the stacked timestamp in the dt column, title and
+             body in the dd, images ahead of the body text. --}}
+        <dl>
+            <dt>@foreach (\App\Support\LocalizedDate::dateTimeLines($diary->created_at) as $line){{ $line }}@if (! $loop->last)<br />@endif@endforeach</dt>
+            <dd>
+                <div class="title">
+                    <p class="heading">{{ $diary->title }}</p>
+                </div>
+                <div class="body">
+                    @include('community-topic._images', ['images' => $diary->images])
+                    <x-user-text :value="$diary->body" :format="$diary->format" />
+                </div>
+            </dd>
+        </dl>
 
         @if ($diary->member->is(auth()->user()))
-            <p>
-                <a href="{{ route('diary.edit', $diary) }}">{{ __('Edit') }}</a>
+            <div class="operation">
+                <form action="{{ route('diary.edit', $diary) }}">
+                    <ul class="moreInfo button">
+                        <li><input type="submit" class="input_submit" value="{{ __('Edit this %diary%') }}"></li>
+                    </ul>
+                </form>
+                {{-- OpenPNE 4 addition: OpenPNE 3 offers deletion from the edit screen. --}}
                 <a href="{{ route('diary.delete.show', $diary) }}">{{ __('Delete') }}</a>
-            </p>
+            </div>
         @endif
     </x-classic.parts>
 
@@ -122,6 +136,6 @@
 
     {{-- Back to the author's diary list. --}}
     <x-classic.parts id="lineLinkToDiaryMemberList" name="line">
-        <a href="{{ route('diary.list_member', $diary->member) }}">{{ __(":name's %diary%", ['name' => $diary->member->name]) }}</a>
+        <a href="{{ route('diary.list_member', $diary->member) }}">{{ __('%Diaries% of :name', ['name' => $diary->member->name]) }}</a>
     </x-classic.parts>
 @endsection
