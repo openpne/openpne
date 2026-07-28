@@ -115,6 +115,31 @@ class DiaryFeedRoutesTest extends TestCase
             ->assertSee('images/no_image.gif', false);
     }
 
+    public function test_recent_feed_draws_the_openpne3_result_band(): void
+    {
+        $viewer = Member::factory()->create();
+        $author = Member::factory()->create(['name' => 'Author']);
+        $diary = Diary::factory()->create([
+            'member_id' => $author->getKey(),
+            'title' => 'Hello world',
+            'visibility' => Visibility::Members,
+        ]);
+
+        $response = $this->actingAs($viewer)->get('/diary/list')->assertOk();
+
+        // listSuccess.php hand-writes the band: a fixed rowspan-4 photo cell, then nickname / title /
+        // body rows, closed by tr.operation pairing the datetime with the entry link.
+        $response->assertSee('<div class="ditem"><div class="item"><table><tbody>', false);
+        $response->assertSee('<td rowspan="4" class="photo">', false);
+        $response->assertSee('<tr class="operation">', false);
+        $response->assertSee('<span class="moreInfo"><a href="'.route('diary.show', $diary).'">View this diary</a></span>', false);
+        // The title cell prints unlinked — the photo cell and the operation row carry the links.
+        $response->assertSee('<th>Title</th><td>Hello world (0)<', false);
+        $response->assertDontSee('>Hello world (0)</a>', false);
+        // The pager brackets the list, as op_include_pager_navigation does above and below the block.
+        $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
+    }
+
     public function test_friend_feed_omits_the_author_thumbnail(): void
     {
         // OpenPNE 3 listFriendSuccess.php has no author photo, unlike the all-member list.

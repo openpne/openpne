@@ -33,6 +33,9 @@ class MemberSearchController extends Controller
         $ageRange = $showAge ? $this->arrayParam($request, 'age') : [];
 
         $members = $query($viewer, $name, $profileFilters, $dateRanges, $monthDayRanges, $ageRange);
+        // Both surfaces show the self-introduction under the nickname, so resolve it once for the
+        // whole result page (one query, no per-row read) rather than inside either branch.
+        $introductions = $selfIntroductions($viewer, array_map(fn (Member $m): int => $m->getKey(), $members->items()));
         $lang = app()->getLocale() === 'ja' ? 'ja_JP' : 'en';
         $profiles = $query->searchableProfiles();
         $birthdayName = $query->birthdayProfileName();
@@ -49,12 +52,10 @@ class MemberSearchController extends Controller
                 'birthdayName' => $birthdayName,
                 'showAge' => $showAge,
                 'lang' => $lang,
+                'introductions' => $introductions,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('member/search', [
-                'members' => MemberSearchSerializer::paginator(
-                    $members,
-                    $selfIntroductions($viewer, array_map(fn (Member $m): int => $m->getKey(), $members->items())),
-                ),
+                'members' => MemberSearchSerializer::paginator($members, $introductions),
                 'profiles' => MemberSearchSerializer::formFields($profiles, $lang, $birthdayName),
                 'showAge' => $showAge,
                 // Cast to object so an empty filter set serialises as {} (a keyed map), not [].
