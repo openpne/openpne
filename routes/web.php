@@ -39,6 +39,7 @@ use App\Http\Middleware\EnsureOpenRegistration;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\SetLocale;
 use App\Models\Member;
+use App\Support\ClassicErrorPage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -46,6 +47,7 @@ use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticatedSessionController;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 // Canonical OpenPNE 3 homepage (member/home). Resolves by surface: a Modern surface redirects to
 // the Inertia dashboard, Classic renders the OpenPNE 3 gadget home.
@@ -611,3 +613,8 @@ Route::any('/m/{path?}', function (Request $request, string $path = '') {
 
     return redirect()->to('/'.$path.($query === null ? '' : '?'.$query), 308);
 })->where('path', '.*')->name('compat.m_prefix');
+
+// An unmatched URL 404s from the router, before the web group runs — no session, so no signed-in
+// member, locale, or Classic shell to render it in. Routing it here makes it an ordinary request
+// whose 404 goes through the same renderer as every other one.
+Route::fallback(fn (Request $request) => ClassicErrorPage::respond($request, new NotFoundHttpException));

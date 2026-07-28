@@ -44,8 +44,9 @@ Per request it pins, both ways:
 
 1. **The admin realm is exactly**: `admin`, `admin/*`, the Livewire endpoint
    prefix (`EndpointResolver::prefix()`, APP_KEY-derived), and the Filament
-   system route prefix (`filament/*` — export/import downloads). Pinned against
-   the real routes by `AdminSessionStoreTest`.
+   system route prefix (`filament/*` — export/import downloads). One predicate,
+   [`AdminRealm::matches()`](../../app/Support/AdminRealm.php), pinned against the
+   real routes by `AdminSessionStoreTest`.
 2. **Livewire renders only on the admin realm** (no components outside
    `app/Filament`, architecture-test enforced). A member-realm Livewire
    component would run on the admin session store — extend the realm

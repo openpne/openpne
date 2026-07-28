@@ -11,8 +11,11 @@
     <title>@yield('title') | {{ sns_title() ?: sns_name() }}</title>
     {{-- Default skin, served statically; $classicSkinCss overrides which skin stylesheet is linked. --}}
     <link rel="stylesheet" href="{{ $classicSkinCss ?? asset('opSkinBasicPlugin/css/main.css') }}">
-    {{-- The page module's OpenPNE 3 plugin stylesheet, linked after the skin it overrides. --}}
-    @if ($pluginCssUrl = classic_plugin_css_url())
+    {{-- The page module's OpenPNE 3 plugin stylesheet, linked after the skin it overrides.
+         $suppressPluginCss is for a screen rendered over a route it is not the screen of (the
+         error page): the route's module would otherwise lend it a stylesheet it never had. --}}
+    @php($pluginCssUrl = ($suppressPluginCss ?? false) ? null : classic_plugin_css_url())
+    @if ($pluginCssUrl)
         <link rel="stylesheet" href="{{ $pluginCssUrl }}">
     @endif
     {{-- Admin custom CSS, linked after the skin so it overrides it. --}}
@@ -52,16 +55,19 @@
                      to layoutC. --}}
                 @php($layout = $layout ?? classic_layout())
                 <div id="Layout{{ $layout }}" class="Layout">
-                    {{-- The alertBox markup the ported skin styles flash messages with. --}}
+                    {{-- OpenPNE 3's two flash slots, as its `alertBox` parts (`#flashError` /
+                         `#flashNotice` are customization ids skins and customer CSS target). The
+                         icon cell is decorative — the message text is what a screen reader gets,
+                         through the role OpenPNE 3 had no equivalent of. --}}
                     @if (session('error'))
-                        <div class="alertBox">
-                            <table><tr><th></th><td role="alert">{{ session('error') }}</td></tr></table>
-                        </div>
+                        <x-classic.parts id="flashError" name="alertBox">
+                            <table><tr><th><img src="{{ asset('images/icon_alert.gif') }}" alt=""></th><td role="alert">{{ session('error') }}</td></tr></table>
+                        </x-classic.parts>
                     @endif
                     @if (session('status'))
-                        <div class="alertBox">
-                            <table><tr><th></th><td role="status">{{ session('status') }}</td></tr></table>
-                        </div>
+                        <x-classic.parts id="flashNotice" name="alertBox">
+                            <table><tr><th><img src="{{ asset('images/icon_alert.gif') }}" alt=""></th><td role="status">{{ session('status') }}</td></tr></table>
+                        </x-classic.parts>
                     @endif
 
                     @hasSection('top')
