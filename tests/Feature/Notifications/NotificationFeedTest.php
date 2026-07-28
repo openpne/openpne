@@ -31,12 +31,14 @@ class NotificationFeedTest extends TestCase
         $older = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()], createdAt: now()->subHour());
         $newer = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => 12], createdAt: now());
 
-        $this->actingAs($viewer)->get('/notifications')
+        $this->actingOnModern($viewer)->get('/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('notifications/index')
                 ->where('feed.data.0.id', $newer->getKey())
                 ->where('feed.data.0.kind', 'message_received')
+                // The sentence ships resolved; the client prints it rather than holding its own table.
+                ->where('feed.data.0.label', __(':name sent you a message.', ['name' => $actor->name]))
                 ->where('feed.data.0.read', false)
                 ->where('feed.data.0.actor.name', $actor->name)
                 ->where('feed.data.1.id', $older->getKey())
@@ -49,7 +51,7 @@ class NotificationFeedTest extends TestCase
         [$viewer, $other, $actor] = Member::factory()->count(3)->create()->all();
         $this->seedRow($other, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
-        $this->actingAs($viewer)->get('/notifications')
+        $this->actingOnModern($viewer)->get('/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page->where('feed.meta.total', 0));
     }
@@ -60,9 +62,12 @@ class NotificationFeedTest extends TestCase
         $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
         $actor->delete();
 
-        $this->actingAs($viewer)->get('/notifications')
+        $this->actingOnModern($viewer)->get('/notifications')
             ->assertOk()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('feed.data.0.actor', null));
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('feed.data.0.actor', null)
+                ->where('feed.data.0.label', __(':name sent you a %friend% request.', ['name' => __('Withdrawn member')])),
+            );
     }
 
     public function test_open_marks_the_row_read_and_redirects_to_its_target(): void
@@ -211,7 +216,7 @@ class NotificationFeedTest extends TestCase
         $appointed = $this->seedRow($viewer, 'community_sub_admin_appointed', ['appointer_id' => $appointer->getKey(), 'community_id' => $community->getKey()], createdAt: now()->subMinute());
         $transfer = $this->seedRow($viewer, 'community_admin_transfer_requested', ['requester_id' => $requester->getKey(), 'community_id' => $community->getKey()], createdAt: now());
 
-        $this->actingAs($viewer)->get('/notifications')
+        $this->actingOnModern($viewer)->get('/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('feed.data.0.kind', 'community_admin_transfer_requested')
@@ -285,6 +290,18 @@ class NotificationFeedTest extends TestCase
                 ->where('unread.friendRequests', 1)
                 ->where('unread.notifications', 0),
             );
+    }
+
+    /**
+     * The suite runs classic_default, so a test about the Modern payload has to ask for that
+     * surface — the same feed on Classic answers with Blade. Classic's own rendering is
+     * Tests\Feature\Notifications\Classic\NotificationFeedListTest.
+     */
+    private function actingOnModern(Member $viewer): static
+    {
+        config()->set('openpne.surface_mode', 'modern_default');
+
+        return $this->actingAs($viewer);
     }
 
     /** @param array<string, mixed> $data */

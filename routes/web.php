@@ -352,7 +352,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // so it renders Inertia directly like /dashboard — not a surface twin.
     Route::get('/community/recent', [HomeController::class, 'communityActivity'])->name('community.recent');
 
-    // The per-event notification feed (layer 3). Modern-only, like /community/recent — OpenPNE 3's
+    // The per-event notification feed (layer 3). Served on both surfaces, though OpenPNE 3's
     // notification centre had no PC page to be compatible with.
     Route::prefix('notifications')->controller(NotificationFeedController::class)->group(function () {
         Route::get('/', 'index')->name('notifications.index');

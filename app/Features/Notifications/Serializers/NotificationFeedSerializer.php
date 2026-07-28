@@ -5,6 +5,8 @@ namespace App\Features\Notifications\Serializers;
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\Diary\DiaryAccess;
+use App\Features\Notifications\NotificationFeedRow;
+use App\Features\Notifications\NotificationKindLabel;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
@@ -16,7 +18,7 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 
 /**
- * Modern feed shapes for the per-event notification rows (layer 3). Rows store only the kind
+ * Feed shapes for the per-event notification rows (layer 3). Rows store only the kind
  * discriminator and entity ids; everything displayed is hydrated at render time, so a withdrawn
  * actor degrades to a fallback label instead of freezing stale text into the row.
  */
@@ -24,7 +26,7 @@ class NotificationFeedSerializer
 {
     /**
      * @param  LengthAwarePaginator<int, DatabaseNotification>  $rows
-     * @return array{data: list<array{id: string, kind: string, reason: ?string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string}}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     * @return array{data: list<array{id: string, kind: string, reason: ?string, label: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string}}>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
      */
     public static function paginator(LengthAwarePaginator $rows): array
     {
@@ -39,6 +41,25 @@ class NotificationFeedSerializer
                 'total' => $rows->total(),
             ],
         ];
+    }
+
+    /**
+     * The same rows for the Classic list, which pages with <x-classic.pager> and so needs the
+     * paginator itself rather than a meta array.
+     *
+     * @param  LengthAwarePaginator<int, DatabaseNotification>  $rows
+     * @return LengthAwarePaginator<int, NotificationFeedRow>
+     */
+    public static function classicRows(LengthAwarePaginator $rows): LengthAwarePaginator
+    {
+        $actors = self::actors(collect($rows->items()));
+
+        return $rows->through(fn (DatabaseNotification $row): NotificationFeedRow => new NotificationFeedRow(
+            id: $row->getKey(),
+            label: self::label($row, $actors),
+            createdAt: $row->created_at,
+            read: $row->read_at !== null,
+        ));
     }
 
     /** The member the row is "about" (its avatar/name), or null for unknown kinds. */
@@ -96,7 +117,7 @@ class NotificationFeedSerializer
 
     /**
      * @param  Collection<int, Member>  $actors
-     * @return array{id: string, kind: string, reason: ?string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string}}
+     * @return array{id: string, kind: string, reason: ?string, label: string, createdAt: string, read: bool, actor: ?array{id: int, name: string, imageUrl: ?string, avatarColor: ?string}}
      */
     private static function row(DatabaseNotification $row, Collection $actors): array
     {
@@ -107,6 +128,7 @@ class NotificationFeedSerializer
             'kind' => $row->data['kind'] ?? 'unknown',
             // Sub-discriminator for kinds that label by cause (a comment's reply/related).
             'reason' => $row->data['reason'] ?? null,
+            'label' => self::label($row, $actors),
             'createdAt' => $row->created_at?->toISOString() ?? '',
             'read' => $row->read_at !== null,
             'actor' => $actor === null ? null : [
@@ -116,6 +138,16 @@ class NotificationFeedSerializer
                 'avatarColor' => $actor->avatar_color?->hex(),
             ],
         ];
+    }
+
+    /** @param  Collection<int, Member>  $actors */
+    private static function label(DatabaseNotification $row, Collection $actors): string
+    {
+        return NotificationKindLabel::for(
+            $row->data['kind'] ?? null,
+            $row->data['reason'] ?? null,
+            $actors->get(self::actorId($row))?->name,
+        );
     }
 
     private static function profileUrl(?int $memberId): ?string

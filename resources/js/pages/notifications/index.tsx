@@ -18,6 +18,8 @@ interface FeedItem {
     id: string;
     kind: string;
     reason: string | null;
+    /** Already translated: the sentence is resolved server-side so both surfaces share one source. */
+    label: string;
     createdAt: string;
     read: boolean;
     actor: FeedActor | null;
@@ -33,44 +35,6 @@ export default function NotificationsIndex() {
     const t = useT();
     const { feed, unread } = usePage<FeedProps>().props;
     const title = t('Notifications');
-
-    const label = (item: FeedItem): string => {
-        const name = item.actor?.name ?? t('Withdrawn member');
-        switch (item.kind) {
-            case 'friend_requested':
-                return t(':name sent you a %friend% request.', { name });
-            case 'friend_request_accepted':
-                return t(':name accepted your %friend% request.', { name });
-            case 'message_received':
-                return t(':name sent you a message.', { name });
-            case 'diary_commented':
-                return item.reason === 'related'
-                    ? t(':name commented on a %diary% you commented on.', { name })
-                    : t(':name commented on your %diary%.', { name });
-            case 'community_topic_commented':
-                if (item.reason === 'related') return t(':name commented on a %topic% you commented on.', { name });
-                if (item.reason === 'community') return t(':name commented on a %topic% in your %community%.', { name });
-                return t(':name commented on your %topic%.', { name });
-            case 'community_event_commented':
-                if (item.reason === 'related') return t(':name commented on an event you commented on.', { name });
-                if (item.reason === 'community') return t(':name commented on an event in your %community%.', { name });
-                return t(':name commented on your event.', { name });
-            case 'community_joined':
-                return t(':name joined your %community%.', { name });
-            case 'community_admin_transfer_requested':
-                return t(':name asked you to take over a %community% administration.', { name });
-            case 'community_sub_admin_appointed':
-                return t(':name appointed you as a %community% sub-administrator.', { name });
-            case 'diary_posted':
-                return t(':name posted a new %diary%.', { name });
-            case 'community_topic_posted':
-                return t(':name posted a new %topic%.', { name });
-            case 'community_event_posted':
-                return t(':name posted a new event.', { name });
-            default:
-                return t('New notification');
-        }
-    };
 
     return (
         <>
@@ -111,7 +75,7 @@ export default function NotificationsIndex() {
                                     />
                                     <span className="min-w-0 flex-1">
                                         <span className={'block text-sm ' + (item.read ? 'text-muted-foreground' : 'font-medium')}>
-                                            {label(item)}
+                                            {item.label}
                                         </span>
                                         <span className="block text-xs text-muted-foreground">{formatDateTime(item.createdAt)}</span>
                                     </span>

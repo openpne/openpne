@@ -18,11 +18,17 @@ document covers the delivery model around it.
 3. **Per-event records** — one row per event in the standard Laravel `notifications` table
    (the `database` channel of each notification class), carrying a `kind` discriminator plus
    entity ids. Read state is the row's own `read_at`. Read by the feed
-   ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`,
-   Modern-only): rows are hydrated at render time from their ids (a withdrawn actor degrades to
+   ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`):
+   rows are hydrated at render time from their ids (a withdrawn actor degrades to
    a fallback label), opening a row marks it read and redirects to its target, and viewing the
    feed marks nothing — only opening a row or the explicit mark-all does. The nav badge is the
    unread-row count (via `UnreadCounts`, alongside the layer-1 numbers).
+
+   Both surfaces serve it. A row's sentence is
+   [`NotificationKindLabel`](../../app/Features/Notifications/NotificationKindLabel.php)'s, so
+   Classic Blade and the Modern client print one wording from one source. Classic lists each row
+   as a POST to the open route, which keeps target resolution — and its access checks — on that
+   request rather than on every listed row.
 
 **Read-state separation is the invariant**: layer-1 counts never consume `read_at`, and reading
 the feed never mutates domain state. OpenPNE 3's notification centre failed by mixing aggregate
