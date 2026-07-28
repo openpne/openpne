@@ -1,5 +1,6 @@
 {
     "(and :count more errors)": "(and :count more error)|(and :count more errors)|(and :count more errors)",
+    "Read (adjective)": "Read",
     "Show next": "Next",
     "Show previous": "Previous",
     "Showing :first - :last of :total": ":first - :last of :total"

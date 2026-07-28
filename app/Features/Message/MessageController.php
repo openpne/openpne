@@ -340,13 +340,7 @@ class MessageController extends Controller
 
         return $this->respondWith($request, 'message', [
             SurfaceResolver::CLASSIC => fn () => view('message.show', ['view' => $view]),
-            SurfaceResolver::MODERN => function () use ($view) {
-                // Avatars aren't loaded by ShowMessage (Classic renders none); hydrate the same From/To
-                // instances the view holds before serializing so the Modern shape has them N+1-free.
-                $view->message->loadMissing('sender.avatar.file', 'recipients.recipient.avatar.file', 'draftRecipient.avatar.file');
-
-                return Inertia::render('message/show', ['message' => MessageSerializer::view($view)]);
-            },
+            SurfaceResolver::MODERN => fn () => Inertia::render('message/show', ['message' => MessageSerializer::view($view)]),
         ]);
     }
 

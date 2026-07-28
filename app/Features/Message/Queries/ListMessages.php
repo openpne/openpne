@@ -4,6 +4,7 @@ namespace App\Features\Message\Queries;
 
 use App\Features\Message\MessageBox;
 use App\Features\Message\MessageListItem;
+use App\Features\Message\MessageRowStatus;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
@@ -37,7 +38,7 @@ class ListMessages
     /** @return LengthAwarePaginator<int, MessageListItem> */
     private function received(Member $viewer, int $perPage): LengthAwarePaginator
     {
-        return MessageRecipient::query()
+        $page = MessageRecipient::query()
             ->ofDelivered()
             ->recipientLive()
             ->where('recipient_id', $viewer->getKey())
@@ -45,14 +46,49 @@ class ListMessages
             // OpenPNE 3 dates the inbox by the receipt (MessageSendList.created_at), not the message,
             // so a message delivered later sorts by its delivery time, not its authoring time.
             ->orderByDesc('created_at')
-            ->paginate($perPage)
-            ->through(fn (MessageRecipient $r): MessageListItem => new MessageListItem(
-                (int) $r->message_id,
-                $r->message?->sender,
-                (string) $r->message?->subject,
-                $r->created_at,
-                $r->read_at === null,
-            ));
+            ->paginate($perPage);
+
+        $replied = $this->repliedTo($viewer, $page->getCollection()->map(
+            static fn (MessageRecipient $r): int => (int) $r->message_id
+        )->all());
+
+        return $page->through(fn (MessageRecipient $r): MessageListItem => new MessageListItem(
+            (int) $r->message_id,
+            $r->message?->sender,
+            (string) $r->message?->subject,
+            $r->created_at,
+            $r->read_at === null,
+            match (true) {
+                isset($replied[(int) $r->message_id]) => MessageRowStatus::Replied,
+                $r->read_at === null => MessageRowStatus::Unopened,
+                default => MessageRowStatus::Opened,
+            },
+        ));
+    }
+
+    /**
+     * Which of these messages the viewer has replied to (OpenPNE 3 is_hensin: a sent message of
+     * theirs whose return_message_id points back, folded onto parent_id here). Trash state does not
+     * clear it — OpenPNE 3 keeps the sender's row when the reply is trashed. One query per page.
+     *
+     * @param  list<int>  $messageIds
+     * @return array<int, true>
+     */
+    private function repliedTo(Member $viewer, array $messageIds): array
+    {
+        if ($messageIds === []) {
+            return [];
+        }
+
+        $parentIds = Message::query()
+            ->where('sender_id', $viewer->getKey())
+            ->where('is_draft', false)
+            ->whereIn('parent_id', $messageIds)
+            ->pluck('parent_id')
+            ->map(static fn ($id): int => (int) $id)
+            ->all();
+
+        return array_fill_keys($parentIds, true);
     }
 
     /**
@@ -76,6 +112,7 @@ class ListMessages
                 (string) $m->subject,
                 $m->created_at,
                 false,
+                $draft ? MessageRowStatus::Draft : MessageRowStatus::Sent,
             ));
     }
 
@@ -129,6 +166,12 @@ class ListMessages
                 (string) $message->subject,
                 Carbon::parse($row->sort_at),
                 false,
+                // OpenPNE 3 labels a trashed row by the box it came from, not by a read state.
+                match (true) {
+                    $row->role === 'received' => MessageRowStatus::Received,
+                    $message->is_draft => MessageRowStatus::Draft,
+                    default => MessageRowStatus::Sent,
+                },
             );
         });
     }
