@@ -10,8 +10,8 @@
          row still reads as a row: `input_submit` is OpenPNE 3's styling for a form's confirm
          button, and colour is inherited so a theme's own palette carries. --}}
     @once
-        {{-- Class selectors, not ids: a site's own CSS overrides these on equal or lower
-             specificity, the way it can with the skin's own rules. --}}
+        {{-- Class selectors, not ids: this block sits after the site's own CSS, so a site beats it
+             with an ordinary more-specific selector. Ids here would leave nothing to outrank. --}}
         <style>
             .notificationFeedRow { display: inline; }
             .notificationFeedLink { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
