@@ -3,9 +3,10 @@
 @section('title', __('Delete post'))
 
 @section('content')
-    <div class="dparts" id="timeline_delete">
-        <div class="partsHeading"><h3>{{ __('Delete post') }}</h3></div>
-        <div class="parts">
+    {{-- OpenPNE 3 confirms a deletion inline in JavaScript rather than on a page, so this follows the
+         box + .block shape its hand-written diary/message confirmations use. --}}
+    <x-classic.parts id="timeline_delete" name="box" :title="__('Delete post')">
+        <div class="block">
             <p>{{ __('Delete this post?') }}</p>
             <form method="POST" action="{{ route('timeline.delete', $post) }}">
                 @csrf
@@ -17,5 +18,5 @@
                 </div>
             </form>
         </div>
-    </div>
+    </x-classic.parts>
 @endsection
