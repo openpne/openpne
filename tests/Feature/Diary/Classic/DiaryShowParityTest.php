@@ -6,6 +6,7 @@ use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DiaryImage;
 use App\Models\Member;
+use App\Support\BodyFormat;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -120,13 +121,34 @@ class DiaryShowParityTest extends TestCase
 
         $html = $this->actingAs($owner)->get("/diary/{$diary->getKey()}")->assertOk()->getContent();
 
-        // OpenPNE 3 names the author in the heading and carries the entry title into the dd, so the
-        // dt column holds nothing but the timestamp.
-        $this->assertStringContainsString('<h3>'.e("Alice's diary").'</h3>', $html);
+        // OpenPNE 3 names the author in the heading ("Diary of %1%") and carries the entry title
+        // into the dd, so the dt column holds nothing but the timestamp.
+        $this->assertStringContainsString('<h3>Diary of Alice</h3>', $html);
         $this->assertMatchesRegularExpression(
             '~<dl>\s*<dt>[^<]+.*</dt>\s*<dd>\s*<div class="title">\s*<p class="heading">Rainy day</p>~s',
             $html,
         );
+
+        // OpenPNE 3 ja: 「%1%さんの日記」 — no space before さん.
+        $ja = $this->actingAs($owner)->withSession(['locale' => 'ja'])
+            ->get("/diary/{$diary->getKey()}")->assertOk()->getContent();
+        $this->assertStringContainsString('<h3>Aliceさんの日記</h3>', $ja);
+    }
+
+    public function test_markdown_bodies_scope_their_border_reset_above_the_plugin_css(): void
+    {
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create([
+            'member_id' => $owner->getKey(),
+            'body' => '**bold**',
+            'format' => BodyFormat::Markdown,
+        ]);
+
+        $html = $this->actingAs($owner)->get("/diary/{$diary->getKey()}")->assertOk()->getContent();
+
+        // diary.css's `.diaryDetailBox dd div` is specificity 0-1-2; a bare `.markdownBody` reset
+        // loses to it regardless of order, so the override must carry the scoped selector.
+        $this->assertStringContainsString('.diaryDetailBox dd div.markdownBody { border-top: none; }', $html);
     }
 
     public function test_renders_the_attached_images_ahead_of_the_body_text(): void
