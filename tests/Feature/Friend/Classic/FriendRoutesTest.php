@@ -135,6 +135,29 @@ class FriendRoutesTest extends TestCase
         $response->assertSee('Carol');
     }
 
+    public function test_manage_page_draws_the_openpne3_manage_list(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create(['name' => 'Bob']);
+        $carol = Member::factory()->create(['name' => 'Carol']);
+        DB::table('friend_requests')->insert([
+            ['requester_id' => $bob->getKey(), 'target_id' => $alice->getKey()],
+            ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey()],
+        ]);
+
+        $response = $this->actingAs($alice)->get('/friend/manage')->assertOk();
+        $content = (string) $response->getContent();
+
+        // _partsManageList.php: a 76×76 photo over the member link, then one operation per cell.
+        $response->assertSee('<div class="dparts manageList" id="friend_manage_received">', false);
+        $response->assertSee('<div class="item"><table><tbody>', false);
+        $response->assertSee('<td class="photo"><a href="'.route('member.profile.show', $bob).'">', false);
+        // The sender cannot withdraw a request, so the sent row's operation cell is the empty one.
+        $this->assertMatchesRegularExpression('#<td>&nbsp;</td>#', $content);
+        // Each box brackets its own list with its own pager.
+        $this->assertSame(4, substr_count($content, 'class="pagerRelative"'));
+    }
+
     public function test_link_show_page_renders_for_a_target_member(): void
     {
         $alice = Member::factory()->create();

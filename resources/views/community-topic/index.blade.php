@@ -17,19 +17,18 @@
         @if ($topics->isEmpty())
             <p>{{ __('No %topics% to show.') }}</p>
         @else
-            <ul class="topicList">
-                @foreach ($topics as $topic)
-                    <li>
-                        <span class="topicDate">{{ \App\Support\LocalizedDate::dateTime($topic->updated_at) }}</span>
-                        <a href="{{ route('communityTopic.show', $topic) }}">{{ $topic->name }} ({{ $topic->comments_count }})</a>
-                        @if ($topic->member)
-                            <span class="topicAuthor">{{ $topic->member->name }}</span>
-                        @endif
-                    </li>
-                @endforeach
-            </ul>
-
-            {{ $topics->withQueryString()->links() }}
+            {{-- One dl per topic: last-activity datetime in the dt, and the link labelled
+                 "name(count)" — no space, untruncated, unlike the diary feed's label. The author is
+                 OpenPNE 4's own addition, trailing the link the way _topicCommentSnsListBox.php
+                 trails its community name. --}}
+            <x-classic.pager :paginator="$topics->withQueryString()" />
+            @foreach ($topics as $topic)
+                <dl>
+                    <dt>{{ \App\Support\LocalizedDate::dateTime($topic->updated_at) }}</dt>
+                    <dd><a href="{{ route('communityTopic.show', $topic) }}">{{ $topic->name }}({{ $topic->comments_count }})</a>@if ($topic->member) ({{ $topic->member->name }})@endif</dd>
+                </dl>
+            @endforeach
+            <x-classic.pager :paginator="$topics->withQueryString()" />
         @endif
     </x-classic.parts>
 

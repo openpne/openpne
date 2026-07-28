@@ -17,21 +17,18 @@
         @if ($events->isEmpty())
             <p>{{ __('No events to show.') }}</p>
         @else
-            <ul class="topicList">
-                @foreach ($events as $event)
-                    <li>
-                        {{-- OpenPNE 3 listCommunitySuccess: last-activity datetime + name (comment count). --}}
-                        <span class="topicDate">{{ \App\Support\LocalizedDate::dateTime($event->updated_at) }}</span>
-                        <a href="{{ route('communityEvent.show', $event) }}">{{ $event->name }} ({{ $event->comments_count }})</a>
-                        <span class="eventOpenDate">{{ \App\Support\LocalizedDate::date($event->open_date) }}</span>
-                        @if ($event->member)
-                            <span class="topicAuthor">{{ $event->member->name }}</span>
-                        @endif
-                    </li>
-                @endforeach
-            </ul>
-
-            {{ $events->withQueryString()->links() }}
+            {{-- One dl per event: last-activity datetime in the dt, and the link labelled
+                 "name(count)" — no space, untruncated. The open date is OpenPNE 4's own addition,
+                 trailing the link the way _eventCommentSnsListBox.php trails its community name —
+                 one parenthetical, as that precedent; the author stays on the show page. --}}
+            <x-classic.pager :paginator="$events->withQueryString()" />
+            @foreach ($events as $event)
+                <dl>
+                    <dt>{{ \App\Support\LocalizedDate::dateTime($event->updated_at) }}</dt>
+                    <dd><a href="{{ route('communityEvent.show', $event) }}">{{ $event->name }}({{ $event->comments_count }})</a> ({{ \App\Support\LocalizedDate::date($event->open_date) }})</dd>
+                </dl>
+            @endforeach
+            <x-classic.pager :paginator="$events->withQueryString()" />
         @endif
     </x-classic.parts>
 
