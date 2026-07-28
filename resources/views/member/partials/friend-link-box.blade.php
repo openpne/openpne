@@ -1,7 +1,24 @@
-{{-- The friend-request entry in its descriptionBox parts wrapper (id/class preserved for theme
-     CSS overrides). $friendStatus is null for the viewer's own profile and for guests; blocked
-     pairs never reach this page. --}}
-@if (in_array($friendStatus ?? null, ['none', 'sent', 'received'], true))
+{{-- The own-page notice and the friend-request entry, which OpenPNE 3 gave the same descriptionBox
+     and the same id (profileSuccess.php, op_top) — kept, id/class included, for theme CSS
+     overrides. $friendStatus is null for the viewer's own profile and for guests; blocked pairs
+     never reach this page, and a guest gets neither box. --}}
+@if ($isSelf ?? false)
+    <x-classic.parts id="informationAboutThisIsYourProfilePage" name="descriptionBox">
+        <div class="body">
+            <p>{{ __('This is how other members see your page.') }}</p>
+            <p>
+                {{ __('To tell other members about your page, use this URL.') }}<br>
+                {{ route('member.profile.show', $owner) }}
+            </p>
+            <p>
+                {{-- OpenPNE 3 embeds the link inside the sentence (「プロフィール編集」より…);
+                     values stay escaped here, so the link follows the sentence instead. --}}
+                {{ __('To change your profile, use the profile editor.') }}<br>
+                <a href="{{ route('member.profile.edit') }}">{{ __('Edit Profile') }}</a>
+            </p>
+        </div>
+    </x-classic.parts>
+@elseif (in_array($friendStatus ?? null, ['none', 'sent', 'received'], true))
     <x-classic.parts id="informationAboutThisIsYourProfilePage" name="descriptionBox">
         <div class="body">
             @if ($friendStatus === 'none')

@@ -9,5 +9,16 @@
             </p>
             <p class="text">{{ $subject->name }}</p>
         </div>
+        @if ($subject->is(auth()->user()))
+            {{-- OpenPNE 3's parts frame renders its moreInfo option as div.moreInfo > ul.moreInfo.
+                 Its other-member entry, "Show more Photos", has no counterpart: a member holds one
+                 avatar here, so there is no album page to open. --}}
+            <div class="moreInfo">
+                <ul class="moreInfo">
+                    <li><a href="{{ route('member.avatar.edit') }}">{{ __('Edit Photo') }}</a></li>
+                    <li><a href="{{ route('member.profile.mine_compat') }}">{{ __('Show Profile') }}</a></li>
+                </ul>
+            </div>
+        @endif
     </x-classic.parts>
 @endif
