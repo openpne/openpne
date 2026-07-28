@@ -104,13 +104,17 @@ class MemberRouteParity extends RouteParity
     }
 
     /**
-     * Surface elements per OpenPNE 3 member template. Only the login screen is inventoried here;
-     * the form is reproduced in resources/views/auth/login.blade.php (rendered by Fortify's
-     * surface-aware loginView). Levels follow docs/internals/classic-compatibility.md.
+     * Surface elements per OpenPNE 3 member template, for the screens inventoried so far: the login
+     * form (reproduced in resources/views/auth/login.blade.php, rendered by Fortify's surface-aware
+     * loginView) and the search-result gap. Levels follow docs/internals/classic-compatibility.md.
      */
     public function screens(): array
     {
         return [
+            // member/search → searchSuccess.php + _partsSearchResultList.php → resources/views/member/search.blade.php
+            'search' => [
+                new ScreenElement('last-login row on each result', L::Three, S::Missing, 'searchSuccess.php op_format_last_login_time', 'OpenPNE 4 stores no last-login time, so the row has no source'),
+            ],
             // member/login → _partsLogin.php (.loginForm) → resources/views/auth/login.blade.php
             'login' => [
                 new ScreenElement('mail address + password inputs', L::One, S::Ported, 'opAuthLoginFormMailAddress (mail_address, password)', 'field names not preserved (email/password, Level 3)'),

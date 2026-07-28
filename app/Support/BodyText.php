@@ -55,7 +55,18 @@ final class BodyText
      */
     public static function excerpt(?string $text): string
     {
-        $singleLine = strtr(self::stripDecoration($text), ["\r\n" => ' ', "\r" => ' ', "\n" => ' ']);
+        return self::truncateToRows(self::stripDecoration($text));
+    }
+
+    /**
+     * op_truncate($text, 36, '', 3) without the decoration strip: newlines collapse to spaces and the
+     * text is cut to display width 108, no ellipsis. <x-classic.search-result-list> applies it to every
+     * caption/value row after the first, as the OpenPNE 3 partial does, over values that are not stored
+     * bodies (a self-introduction, a community description).
+     */
+    public static function truncateToRows(?string $text): string
+    {
+        $singleLine = strtr((string) $text, ["\r\n" => ' ', "\r" => ' ', "\n" => ' ']);
 
         return mb_strimwidth($singleLine, 0, self::EXCERPT_WIDTH, '');
     }

@@ -72,22 +72,28 @@
             <div class="body">{{ __('No members found.') }}</div>
         </x-classic.parts>
     @else
+        {{-- OpenPNE 3 closed each band with a last-login row; OpenPNE 4 stores no last-login time
+             (MemberRouteParity screen gap), so a member with no visible self-introduction shows the
+             nickname alone. The nickname prints as text: OpenPNE 3 passed use_op_link_to_member here
+             but _partsSearchResultList.php never read it.
+
+             Inline PHP rather than a block: Blade pairs the first raw-PHP opener in a file with the
+             first terminator, so a block here would swallow the inline PHP in the form above. --}}
+        @php($results = $members->map(fn ($member) => [
+            'url' => route('member.profile.show', $member),
+            'file' => $member->avatar?->file,
+            'name' => $member->name,
+            'rows' => array_values(array_filter([
+                ['caption' => __('%Nickname%'), 'value' => $member->name],
+                isset($introductions[$member->getKey()])
+                    ? ['caption' => __('Self Introduction'), 'value' => $introductions[$member->getKey()]]
+                    : null,
+            ])),
+        ])->all())
         {{-- searchCommunityResult is what OpenPNE 3 named the *member* result list: a copy-paste from
              the community search it never fixed, and skins target it, so it is restored verbatim. --}}
         <x-classic.parts id="searchCommunityResult" name="searchResultList" :title="__('Search Results')">
-            <ul class="memberList">
-                @foreach ($members as $member)
-                    @php($avatar = $member->avatar?->file)
-                    <li>
-                        <a href="{{ route('member.profile.show', $member) }}">
-                            <x-classic.image :file="$avatar" :size="76" :alt="$member->name" />
-                            {{ $member->name }}
-                        </a>
-                    </li>
-                @endforeach
-            </ul>
-
-            {{ $members->links() }}
+            <x-classic.search-result-list :items="$results" :paginator="$members" />
         </x-classic.parts>
     @endif
 @endsection

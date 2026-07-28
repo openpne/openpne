@@ -132,9 +132,10 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('empty-state message', L::Three, S::Ported, 'op_include_box diaryList'),
                 new ScreenElement('title + comment count', L::Two, S::Ported, 'op_diary_get_title_and_count', 'DiaryTitle: title truncated to display width 36 + "(N)"'),
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "op_format_date(created_at, 'XDateTimeJa')", 'LocalizedDate'),
-                new ScreenElement('author thumbnail', L::Two, S::Ported, 'image_tag_sf_image(Member->getImageFilename, 76x76)', 'Member->avatar 76×76 square linking to the entry; rendered only when set (OpenPNE 4 has no default-avatar placeholder)'),
+                new ScreenElement('author thumbnail', L::Two, S::Ported, 'image_tag_sf_image(Member->getImageFilename, 76x76)', 'Member->avatar 76×76 square linking to the entry, in the rowspan photo cell; falls back to no_image.gif'),
                 new ScreenElement('body excerpt', L::Two, S::Ported, 'op_truncate(op_decoration(body, true), 36, ..., 3)', 'BodyText::excerpt; single-line width 108 (OpenPNE 3 wraps to 3×36); <op:*> decoration tags stripped'),
-                new ScreenElement('has-images icon', L::Three, S::Ported, 'op_diary_image_icon', 'images_count-driven .imageIcon marker (OpenPNE 4 ships no camera gif, so a CSS-hook span)'),
+                new ScreenElement('has-images icon', L::Three, S::Ported, 'op_diary_image_icon', 'images_count-driven icon_camera.gif, kept under the .imageIcon styling hook'),
+                new ScreenElement('view-this-entry link', L::Three, S::Ported, 'listSuccess.php tr.operation link_to diary_show', 'span.moreInfo link beside the datetime'),
             ],
             // listFriendSuccess.php → diary/feed.blade.php (variant=friends, no search form)
             'listFriend' => [
@@ -143,7 +144,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('empty-state message', L::Three, S::Ported, 'op_include_box diaryList'),
                 new ScreenElement('per-entry title + comment count', L::Two, S::Ported, 'op_diary_get_title_and_count', 'DiaryTitle: title truncated to display width 36 + "(N)"'),
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "op_format_date(created_at, 'XDateTimeJa')", 'LocalizedDate'),
-                new ScreenElement('has-images icon', L::Three, S::Ported, 'op_diary_image_icon', 'images_count-driven .imageIcon marker (OpenPNE 4 ships no camera gif, so a CSS-hook span)'),
+                new ScreenElement('has-images icon', L::Three, S::Ported, 'op_diary_image_icon', 'images_count-driven icon_camera.gif, kept under the .imageIcon styling hook'),
             ],
             // listMemberSuccess.php → diary/list.blade.php
             'listMember' => [

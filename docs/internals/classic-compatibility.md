@@ -97,6 +97,13 @@ existing themes and customizations depend on:
   conditional on `hasPages()`. It stays a separate implementation from the gadget grid
   ([`x-gadget.nine-table`](../../resources/views/components/gadget/nine-table.blade.php)) because
   OpenPNE 3 keeps `_partsNineTable.php` and `_partsPhotoTable.php` as diverging twins.
+- The paged search-result list, reproducing `_partsSearchResultList.php`:
+  [`x-classic.search-result-list`](../../resources/views/components/classic/search-result-list.blade.php)
+  emits `div.ditem > div.item > table` per result, a `rowspan` `td.photo` holding the thumbnail and
+  a "Details" link, and `th`/`td` caption rows, again bracketed by `x-classic.pager`. `rowspan`
+  follows the caller's row count, which varies per result. Every row after the first is cut to
+  display width 108 (`BodyText::truncateToRows`, OpenPNE 3's `op_truncate($v, 36, '', 3)`). The
+  diary feed hand-writes this band instead of calling the component, as `listSuccess.php` does.
 - The `#Layout{A..C}` letter — OpenPNE 3's `setLayout` / `view.yml` / `decorate_with` choice — is
   resolved per screen by [`RouteParity::layouts()`](../../app/Compat/RouteParity.php) through the
   `classic_layout()` helper, defaulting to OpenPNE 3's global `layoutC`; gadget pages (home /

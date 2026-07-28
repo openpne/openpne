@@ -38,6 +38,33 @@ class MemberSearchTest extends TestCase
             ->assertSee('Findable Alice');
     }
 
+    public function test_classic_results_add_a_self_introduction_row_only_when_one_is_visible(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->memberWithIntro($this->selfIntroProfile(), 'Runner and cook.')->update(['name' => 'Zula Alice']);
+        Member::factory()->create(['name' => 'Zula Bob']);
+
+        $response = $this->actingAs($viewer)->get('/member/search?name=Zula')->assertOk();
+
+        $response->assertSee('Runner and cook.');
+        // _partsSearchResultList.php sizes the photo cell by the row count, so the member with a
+        // visible self-introduction spans one row more than the one without.
+        $this->assertSame(1, substr_count((string) $response->getContent(), '<td rowspan="2" class="photo">'));
+        $this->assertSame(1, substr_count((string) $response->getContent(), '<td rowspan="1" class="photo">'));
+    }
+
+    public function test_classic_results_hide_a_self_introduction_above_the_viewers_clearance(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->memberWithIntro($this->selfIntroProfile(), 'Friends only.', Visibility::Friends)
+            ->update(['name' => 'Zula Carol']);
+
+        $this->actingAs($viewer)->get('/member/search?name=Zula')
+            ->assertOk()
+            ->assertSee('Zula Carol')
+            ->assertDontSee('Friends only.');
+    }
+
     public function test_modern_search_renders(): void
     {
         config(['openpne.surface_mode' => 'modern_default']);
