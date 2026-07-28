@@ -10,9 +10,11 @@
          row still reads as a row: `input_submit` is OpenPNE 3's styling for a form's confirm
          button, and colour is inherited so a theme's own palette carries. --}}
     @once
+        {{-- Class selectors, not ids: a site's own CSS overrides these on equal or lower
+             specificity, the way it can with the skin's own rules. --}}
         <style>
-            #notification_feed dd form { display: inline; }
-            #notification_feed dd button { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
+            .notificationFeedRow { display: inline; }
+            .notificationFeedLink { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
         </style>
     @endonce
     <x-classic.parts id="notification_feed" name="recentList" :title="__('Notifications')">
@@ -24,11 +26,11 @@
                 <dl>
                     <dt>@if ($item->createdAt){{ \App\Support\LocalizedDate::dateTime($item->createdAt) }}@endif</dt>
                     <dd>
-                        <form method="POST" action="{{ route('notifications.open', $item->id) }}">
+                        <form method="POST" action="{{ route('notifications.open', $item->id) }}" class="notificationFeedRow">
                             @csrf
                             {{-- Unread is the row's emphasis, not a colour: strong carries it to a
                                  screen reader too, and the skins already style it. --}}
-                            <button type="submit">@if ($item->read){{ $item->label }}@else<strong>{{ $item->label }}</strong>@endif</button>
+                            <button type="submit" class="notificationFeedLink">@if ($item->read){{ $item->label }}@else<strong>{{ $item->label }}</strong>@endif</button>
                         </form>
                     </dd>
                 </dl>

@@ -31,7 +31,7 @@ class NotificationFeedListTest extends TestCase
         $response->assertViewIs('notifications.index')
             ->assertSee('class="dparts recentList"', false)
             ->assertSee(__(':name sent you a %friend% request.', ['name' => $actor->name]))
-            ->assertSee('<form method="POST" action="'.route('notifications.open', $row->getKey()).'">', false)
+            ->assertSee('<form method="POST" action="'.route('notifications.open', $row->getKey()).'" class="notificationFeedRow">', false)
             ->assertSee('name="_token"', false);
     }
 
