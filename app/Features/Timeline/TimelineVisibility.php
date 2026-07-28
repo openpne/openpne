@@ -30,7 +30,12 @@ final class TimelineVisibility
         return self::allowsWebPublic() ? $rule : $rule->except([Visibility::Open]);
     }
 
-    private static function allowsWebPublic(): bool
+    /**
+     * Whether the SNS serves web-public (Open) posts at all. Read by the read path too
+     * (TimelineAccess / TimelineVisibilityScope): turning the setting off must hide posts already
+     * stored as Open from guests, not merely stop new ones being written.
+     */
+    public static function allowsWebPublic(): bool
     {
         return (bool) app(SnsSettingService::class)->get(SnsSettingKey::TimelineAllowWebPublic);
     }

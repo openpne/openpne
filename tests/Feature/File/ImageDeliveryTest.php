@@ -62,11 +62,25 @@ class ImageDeliveryTest extends TestCase
         $this->assertSame([240, 120], $this->dimensions($response->getContent()));
     }
 
-    public function test_guests_are_redirected_to_login(): void
+    public function test_a_guest_gets_an_avatar_at_both_thumbnail_and_original_size(): void
     {
+        // The route carries no login of its own — FilePolicy is the whole gate. Both geometries are
+        // pinned: the thumbnail is what a page embeds, w_h is the full-size variant of the same URL.
         $file = $this->avatar(Member::factory()->create());
 
-        $this->get($file->thumbnailUrl(120, 120, square: true))->assertRedirect(route('login'));
+        $this->get($file->thumbnailUrl(120, 120, square: true))->assertOk();
+        $this->get($this->url($file, 'w_h'))->assertOk();
+    }
+
+    public function test_a_guest_is_denied_a_thumbnail_the_policy_does_not_open(): void
+    {
+        $file = File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => null,
+            'related_entity_id' => null,
+        ]);
+
+        $this->get($this->url($file, 'w120_h120_sq'))->assertNotFound();
     }
 
     public function test_a_blocked_member_gets_404(): void

@@ -19,7 +19,12 @@ final class TimelineVisibilityScope
     public static function apply(Builder $query, ?Member $viewer, Member $owner): void
     {
         if ($viewer === null) {
+            // Nothing at all once web-public posting is off — a post stored as Open stays stored,
+            // it just stops being served (the query counterpart of TimelineAccess).
             $query->where('visibility', '<=', Visibility::Open->value);
+            if (! TimelineVisibility::allowsWebPublic()) {
+                $query->whereRaw('1 = 0');
+            }
         } elseif (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
             $query->whereRaw('1 = 0');
         } else {

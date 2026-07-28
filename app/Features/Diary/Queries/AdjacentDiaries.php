@@ -2,10 +2,9 @@
 
 namespace App\Features\Diary\Queries;
 
-use App\Features\Block\BlockLookup;
+use App\Features\Diary\DiaryVisibilityScope;
 use App\Models\Diary;
 use App\Models\Member;
-use App\Support\Visibility;
 
 /**
  * The viewer-visible diaries immediately older and newer than $diary within its own author's
@@ -16,16 +15,16 @@ use App\Support\Visibility;
 class AdjacentDiaries
 {
     /** @return array{older: ?Diary, newer: ?Diary} */
-    public function __invoke(Member $viewer, Diary $diary): array
+    public function __invoke(?Member $viewer, Diary $diary): array
     {
         $owner = $diary->member;
 
-        if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
-            return ['older' => null, 'newer' => null];
-        }
+        $visible = function () use ($viewer, $owner) {
+            $query = Diary::query()->where('member_id', $owner->getKey());
+            DiaryVisibilityScope::apply($query, $viewer, $owner);
 
-        $clearance = Visibility::clearanceFor($viewer, $owner);
-        $visible = fn () => $owner->diaries()->where('visibility', '<=', $clearance->value);
+            return $query;
+        };
 
         return [
             'older' => $visible()->where('id', '<', $diary->getKey())->orderByDesc('id')->first(),

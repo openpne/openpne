@@ -18,6 +18,14 @@ abstract class Controller
         return $viewer;
     }
 
+    /** The member behind the request, or null — for a guest-reachable route, which has no auth guard. */
+    protected function viewerOrGuest(): ?Member
+    {
+        $viewer = auth()->user();
+
+        return $viewer instanceof Member ? $viewer : null;
+    }
+
     /** The uniform redirect-and-flash for a form submit. */
     protected function redirectAfterSubmit(string $canonicalName, ?string $status = null, ?string $error = null): RedirectResponse
     {

@@ -26,10 +26,11 @@ class DiaryRichRowCostTest extends TestCase
     }
 
     /** @return list<string> */
-    private function queriesFor(Member $viewer, string $uri): array
+    private function queriesFor(?Member $viewer, string $uri): array
     {
+        DB::flushQueryLog(); // the log survives disableQueryLog(), so a second call would stack
         DB::enableQueryLog();
-        $this->actingAs($viewer)->get($uri)->assertOk();
+        ($viewer === null ? $this : $this->actingAs($viewer))->get($uri)->assertOk();
         $queries = array_column(DB::getQueryLog(), 'query');
         DB::disableQueryLog();
 
@@ -67,6 +68,31 @@ class DiaryRichRowCostTest extends TestCase
         foreach ($this->queriesFor($owner, "/diary/listMember/{$owner->getKey()}") as $query) {
             $this->assertStringNotContainsString('from diary_images where diary_images.diary_id in', str_replace(['"', '`'], '', $query));
         }
+    }
+
+    public function test_the_guest_feed_and_archive_cost_does_not_grow_with_the_row_count(): void
+    {
+        // The guest path resolves its author per row (a feed spans authors), so an eager-load lost
+        // on the way to the web-public tier would show up as a query per entry rather than a fixed
+        // cost. Compared row-count to row-count, not against a pinned absolute.
+        $author = Member::factory()->create();
+        $entries = fn (int $n) => collect(range(1, $n))->each(fn () => $this->attachImage(
+            Diary::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Open]),
+        ));
+
+        $archive = "/diary/listMember/{$author->getKey()}";
+
+        $entries(1);
+        // Warm the per-process caches (settings, terms, navigation) so the baseline measures the
+        // page, not the first request in the process.
+        $this->queriesFor(null, '/diary/list');
+        $this->queriesFor(null, $archive);
+        $one = count($this->queriesFor(null, '/diary/list'));
+        $oneArchive = count($this->queriesFor(null, $archive));
+
+        $entries(4);
+        $this->assertSame($one, count($this->queriesFor(null, '/diary/list')));
+        $this->assertSame($oneArchive, count($this->queriesFor(null, $archive)));
     }
 
     public function test_classic_list_member_never_runs_the_modern_monthly_counts_query(): void

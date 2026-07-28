@@ -16,9 +16,10 @@ class DiaryFeedRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_guests_are_redirected_to_login(): void
+    public function test_the_friend_feed_still_redirects_a_guest_to_login(): void
     {
-        $this->get('/diary/list')->assertRedirect('/login');
+        // The all-member feed is guest-reachable (web-public tier, DiaryGuestAccessTest); the
+        // friend feed is defined by a viewer's friendships, so it stays behind the login.
         $this->get('/diary/listFriend')->assertRedirect('/login');
     }
 
