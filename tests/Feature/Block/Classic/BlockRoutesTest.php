@@ -32,6 +32,18 @@ class BlockRoutesTest extends TestCase
         $response->assertSee('id="page_block_list"', false);
         $response->assertSee('Mallory');
         $response->assertSee('name="id"', false);
+        // The Classic pager brackets the list, as op_include_pager_navigation does elsewhere.
+        $this->assertSame(2, substr_count((string) $response->getContent(), 'class="pagerRelative"'));
+    }
+
+    public function test_list_without_blocks_renders_no_pager(): void
+    {
+        $member = Member::factory()->create();
+
+        $response = $this->actingAs($member)->get('/block/list');
+
+        $response->assertOk();
+        $response->assertDontSee('class="pagerRelative"', false);
     }
 
     public function test_show_add_renders_confirmation(): void

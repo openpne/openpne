@@ -18,6 +18,7 @@
         @if ($blocks->isEmpty())
             <p>{{ __('No blocked members.') }}</p>
         @else
+            <x-classic.pager :paginator="$blocks" />
             <ul class="blockList">
                 @foreach ($blocks as $blocked)
                     <li>
@@ -26,8 +27,7 @@
                     </li>
                 @endforeach
             </ul>
-
-            {{ $blocks->links() }}
+            <x-classic.pager :paginator="$blocks" />
         @endif
     </x-classic.parts>
 @endsection
