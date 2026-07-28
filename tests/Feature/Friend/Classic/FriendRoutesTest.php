@@ -39,6 +39,26 @@ class FriendRoutesTest extends TestCase
         $response->assertSee('Bob');
     }
 
+    public function test_list_page_renders_the_openpne3_photo_table_with_counts_and_a_pager(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create(['name' => 'Bob']);
+        $carol = Member::factory()->create(['name' => 'Carol']);
+        $this->makeFriends($alice, $bob);
+        $this->makeFriends($bob, $carol);
+
+        $response = $this->actingAs($alice)->get('/friend/list');
+
+        $response->assertOk();
+        $response->assertSee('<tr class="photo">', false);
+        $response->assertSee('<tr class="text">', false);
+        // Bob's own friend count (Alice and Carol) rides the label, as OpenPNE 3 getNameAndCount did.
+        $response->assertSee('>Bob (2)</a>', false);
+        $response->assertSee('class="pagerRelative"', false);
+        // The owner keeps the unlink link: no other screen offers it yet.
+        $response->assertSee('href="'.route('friend.unlink.show', $bob).'"', false);
+    }
+
     public function test_list_page_with_id_query_shows_other_owner_friends(): void
     {
         $alice = Member::factory()->create(['name' => 'Alice']);
@@ -51,6 +71,8 @@ class FriendRoutesTest extends TestCase
         $response->assertOk();
         $response->assertSee('Carol');
         $response->assertSee("Bob's friends");
+        // Someone else's list offers no unlink action.
+        $response->assertDontSee('href="'.route('friend.unlink.show', $carol).'"', false);
     }
 
     public function test_list_page_for_unknown_owner_returns_404(): void

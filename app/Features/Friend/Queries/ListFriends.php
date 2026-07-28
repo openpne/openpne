@@ -13,7 +13,9 @@ class ListFriends
     /** @return LengthAwarePaginator<int, Member> */
     public function __invoke(Member $viewer, Member $owner, int $perPage = 20): LengthAwarePaginator
     {
-        return $this->query($viewer, $owner)->paginate($perPage);
+        // The paged grid labels each row "name (friend count)"; a subquery keeps that one query for
+        // the whole page. take() stays uncounted — its gadgets print the bare name.
+        return $this->query($viewer, $owner)->withCount('friendships')->paginate($perPage);
     }
 
     /**

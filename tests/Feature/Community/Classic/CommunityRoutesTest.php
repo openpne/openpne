@@ -207,6 +207,48 @@ class CommunityRoutesTest extends TestCase
         $response->assertSee('Bobs Club');
     }
 
+    public function test_join_list_photo_table_crowns_the_owners_communities_and_keeps_the_id_in_the_pager(): void
+    {
+        $viewer = Member::factory()->create();
+        $owner = Member::factory()->create();
+        foreach (Community::factory()->count(20)->create() as $community) {
+            CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $owner->getKey()]);
+        }
+        // Highest id sorts first, so the crowned community lands on page 1.
+        $led = Community::factory()->create(['name' => 'Led Club']);
+        CommunityMember::factory()->admin()->create(['community_id' => $led->getKey(), 'member_id' => $owner->getKey()]);
+
+        $response = $this->actingAs($viewer)->get("/community/joinList?id={$owner->getKey()}");
+
+        $response->assertOk();
+        $response->assertSee('<tr class="photo">', false);
+        $response->assertSee('>Led Club (1)</a>', false);
+        // OpenPNE 3 crowns by the listed member's role, not the viewer's, so a visitor sees it too.
+        $this->assertSame(1, substr_count((string) $response->getContent(), 'class="crown"'));
+        $response->assertSee('joinList?id='.$owner->getKey().'&amp;page=2', false);
+    }
+
+    public function test_member_list_photo_table_crowns_the_admin_instead_of_labelling_roles(): void
+    {
+        $community = Community::factory()->create();
+        $admin = Member::factory()->create(['name' => 'AdminAlice']);
+        $sub = Member::factory()->create(['name' => 'SubBob']);
+        $plain = Member::factory()->create(['name' => 'PlainCarol']);
+        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+        CommunityMember::factory()->subAdmin()->create(['community_id' => $community->getKey(), 'member_id' => $sub->getKey()]);
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $plain->getKey()]);
+
+        $response = $this->actingAs($plain)->get("/community/member/list?id={$community->getKey()}");
+
+        $response->assertOk();
+        $response->assertSee('id="communityMembersList"', false);
+        $response->assertSee('<tr class="photo">', false);
+        $response->assertSee('>AdminAlice (0)</a>', false);
+        // Only the admin is crowned; the sub-admin's role no longer prints as a label.
+        $this->assertSame(1, substr_count((string) $response->getContent(), 'class="crown"'));
+        $response->assertDontSee('class="role"', false);
+    }
+
     public function test_creating_a_community_makes_the_creator_admin(): void
     {
         $member = Member::factory()->create();
