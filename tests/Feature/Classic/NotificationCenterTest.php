@@ -58,8 +58,10 @@ class NotificationCenterTest extends TestCase
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
+        // The link wraps OpenPNE 3's span rather than replacing it, so a site styling
+        // `span#nc_icon2` by element keeps matching.
         $this->assertStringContainsString(
-            '<a href="'.e(route('friend.manage')).'" id="nc_icon2" class="notificationCenterBadge" aria-hidden="true" tabindex="-1">1</a>',
+            '<a href="'.e(route('friend.manage')).'" class="notificationCenterBadge" title="'.e(__(':count pending %friend% requests', ['count' => 1])).'" aria-hidden="true" tabindex="-1"><span id="nc_icon2">1</span></a>',
             $content,
         );
     }
@@ -80,7 +82,7 @@ class NotificationCenterTest extends TestCase
         $this->assertStringContainsString('href="'.e(route('friend.manage')).'" alt="'.$name.'" title="'.$name.'"', $content);
         // The badge repeats the area rather than joining it: hidden and out of the tab order, so
         // the count is announced once and the keyboard still sees three links.
-        $this->assertStringContainsString('id="nc_icon2" class="notificationCenterBadge" aria-hidden="true" tabindex="-1">1</a>', $content);
+        $this->assertStringContainsString('aria-hidden="true" tabindex="-1"><span id="nc_icon2">1</span></a>', $content);
     }
 
     public function test_an_icon_with_nothing_waiting_is_named_for_where_it_leads(): void
@@ -117,7 +119,7 @@ class NotificationCenterTest extends TestCase
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
         foreach (['nc_icon1', 'nc_icon2', 'nc_icon3'] as $id) {
-            $this->assertMatchesRegularExpression('/<a [^>]*id="'.$id.'"[^>]*>1<\/a>/', $content);
+            $this->assertMatchesRegularExpression('/<a [^>]*><span id="'.$id.'">1<\/span><\/a>/', $content);
         }
     }
 
@@ -133,7 +135,9 @@ class NotificationCenterTest extends TestCase
         // The skin sizes the badge for OpenPNE 3's capped count, so the digits stop — but the
         // number a member acts on stays on the link.
         $name = e(__(':count pending %friend% requests', ['count' => 120]));
-        $this->assertStringContainsString('id="nc_icon2" class="notificationCenterBadge" aria-hidden="true" tabindex="-1">99+</a>', $content);
+        // Clamped digits are the one case where the tooltip is the only way to the real number,
+        // and the badge is what a member hovers — so it carries it too, not just the area.
+        $this->assertStringContainsString('title="'.$name.'" aria-hidden="true" tabindex="-1"><span id="nc_icon2">99+</span></a>', $content);
         $this->assertStringContainsString('alt="'.$name.'" title="'.$name.'"', $content);
     }
 

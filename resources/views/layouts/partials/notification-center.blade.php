@@ -54,24 +54,26 @@
     @endonce
     <div id="notificationCenter">
         <img class="ncbutton" src="{{ asset('images/NOTIFY_CENTER.png') }}" width="92" height="32" alt="" usemap="#notificationCenterMap">
-        {{-- The area is the only thing here that is announced or hoverable, so the count rides on
-             it: the badge that shows the digits cannot be reached by either. --}}
+        {{-- The area is what a screen reader reaches, so the count is its name. --}}
         <map name="notificationCenterMap" id="notificationCenterMap">
             @foreach ($ncIcons as $ncIcon)
                 <area shape="rect" coords="{{ $ncIcon['coords'] }}" href="{{ $ncIcon['href'] }}" alt="{{ $ncIcon['name'] }}" title="{{ $ncIcon['name'] }}">
             @endforeach
         </map>
         {{-- A badge is absent at zero, as OpenPNE 3's was. The skin sizes it for OpenPNE 3's
-             capped count, so the digits stop at 99+ and the real number stays on the area.
+             capped count, so the digits stop at 99+ — the number they stand for is the badge's own
+             tooltip, which is the point at which a member wants it.
 
              It leads where the icon it sits on leads: the skin drops the badge over that icon and
              lets a wide one hang past the sprite, so a badge that were not itself a target would
-             both swallow the clicks it covers and waste the ones it overhangs. It repeats the area
-             rather than joining it — hidden and out of the tab order — so the count is announced
-             once and the keyboard still sees three links. --}}
+             both swallow the clicks it covers and waste the ones it overhangs. The link wraps the
+             span instead of replacing it, keeping OpenPNE 3's `span#nc_iconN` for a site that
+             styles it by element; the span stays out of flow, so the wrapper takes no space. It
+             repeats the area rather than joining it — hidden and out of the tab order — so the
+             count is announced once and the keyboard still sees three links. --}}
         @foreach ($ncIcons as $ncIcon)
             @if ($ncIcon['count'] > 0)
-                <a href="{{ $ncIcon['href'] }}" id="{{ $ncIcon['id'] }}" class="notificationCenterBadge" aria-hidden="true" tabindex="-1">{{ $ncIcon['count'] > 99 ? '99+' : $ncIcon['count'] }}</a>
+                <a href="{{ $ncIcon['href'] }}" class="notificationCenterBadge" title="{{ $ncIcon['name'] }}" aria-hidden="true" tabindex="-1"><span id="{{ $ncIcon['id'] }}">{{ $ncIcon['count'] > 99 ? '99+' : $ncIcon['count'] }}</span></a>
             @endif
         @endforeach
     </div>
