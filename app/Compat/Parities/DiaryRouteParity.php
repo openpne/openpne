@@ -120,7 +120,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea + per-record Markdown toggle and live preview; the OpenPNE 3 WYSIWYG rich-text widget is a separate later stage'),
                 new ScreenElement('existing image edit / delete', L::Three, S::Ported, '_formEditImage / DiaryImageForm', 'current-image thumbnails + remove_images[] checkboxes; UpdateDiary frees and refills the slots'),
                 new ScreenElement('save button', L::Two, S::Ported, 'op_include_form diaryForm button'),
-                new ScreenElement('delete-diary box', L::Three, S::Missing, "formDiaryDelete url_for('diary_delete_confirm')", 'OpenPNE 4 places the delete entry on the show page instead'),
+                new ScreenElement('delete-diary box', L::Three, S::Ported, "formDiaryDelete url_for('diary_delete_confirm')", 'GET form to the delete confirm page; the show page keeps its own delete entry'),
                 new ScreenElement('LayoutB two-column + sidemenu (author, recent diaries)', L::Two, S::Ported, "decorate_with('layoutB') + get_component('diary','sidemenu')", 'x-diary.sidemenu; author avatar links to the profile'),
                 new ScreenElement('calendar archive sidemenu', L::Two, S::Ported, '_sidemenu.php Calendar_Month_Weekdays', 'DiaryCalendar month grid + prev/next month + day-archive links (MemberDiaryDays)'),
             ],

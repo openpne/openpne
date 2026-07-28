@@ -6,6 +6,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class AvatarRequest extends FormRequest
 {
+    /** The upload size cap, in kilobytes. The editor states it, so it is read from here. */
+    public const MAX_KILOBYTES = 5120;
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
@@ -17,7 +20,7 @@ class AvatarRequest extends FormRequest
         return [
             // Raster image only: `image` rejects non-images; `mimes` further drops SVG
             // (scriptable) and other exotic types so only deliverable avatars get in.
-            'image' => ['required', 'file', 'image', 'mimes:jpeg,png,gif,webp', "dimensions:max_width={$max},max_height={$max}", 'max:5120'],
+            'image' => ['required', 'file', 'image', 'mimes:jpeg,png,gif,webp', "dimensions:max_width={$max},max_height={$max}", 'max:'.self::MAX_KILOBYTES],
         ];
     }
 }

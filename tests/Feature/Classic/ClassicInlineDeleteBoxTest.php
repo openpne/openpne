@@ -1,0 +1,111 @@
+<?php
+
+namespace Tests\Feature\Classic;
+
+use App\Features\Community\CommunityRole;
+use App\Models\Community;
+use App\Models\CommunityEvent;
+use App\Models\CommunityMember;
+use App\Models\CommunityTopic;
+use App\Models\Diary;
+use App\Models\Member;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * OpenPNE 3 puts the delete entry inside the edit screen of a diary, community, topic and event —
+ * a box below the form whose GET button opens the delete confirmation. Labels render in English
+ * here, as everywhere in the Classic suite.
+ */
+class ClassicInlineDeleteBoxTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_the_diary_editor_carries_the_delete_box(): void
+    {
+        $member = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $member->getKey()]);
+
+        $response = $this->actingAs($member)->get(route('diary.edit', $diary))->assertOk();
+
+        $response->assertSee('<div class="dparts box" id="formDiaryDelete">', false);
+        $response->assertSee('<h3>Delete this diary</h3>', false);
+        $response->assertSee('<form method="GET" action="'.route('diary.delete.show', $diary).'">', false);
+    }
+
+    public function test_the_community_editor_carries_the_delete_box_for_the_administrator(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->joined($community, CommunityRole::Admin);
+
+        $response = $this->actingAs($admin)->get(route('community.edit', ['id' => $community->getKey()]))->assertOk();
+
+        $response->assertSee('<div class="dparts buttonBox" id="deleteForm">', false);
+        $response->assertSee('<h3>Delete this community</h3>', false);
+        $response->assertSee('Tell its members in advance');
+        $response->assertSee('<form method="GET" action="'.route('community.delete.show', $community).'">', false);
+    }
+
+    public function test_the_sub_administrator_may_edit_the_community_but_not_delete_it(): void
+    {
+        $community = Community::factory()->create();
+        $this->joined($community, CommunityRole::Admin);
+        $subAdmin = $this->joined($community, CommunityRole::SubAdmin);
+
+        $this->actingAs($subAdmin)->get(route('community.edit', ['id' => $community->getKey()]))
+            ->assertOk()
+            ->assertDontSee('id="deleteForm"', false)
+            ->assertDontSee(route('community.delete.show', $community), false);
+    }
+
+    public function test_the_create_form_has_no_delete_box(): void
+    {
+        $this->actingAs(Member::factory()->create())->get(route('community.edit'))
+            ->assertOk()
+            ->assertDontSee('id="deleteForm"', false);
+    }
+
+    public function test_the_topic_editor_carries_the_delete_box(): void
+    {
+        $community = Community::factory()->create();
+        $author = $this->joined($community);
+        $topic = CommunityTopic::factory()->create([
+            'community_id' => $community->getKey(),
+            'member_id' => $author->getKey(),
+        ]);
+
+        $response = $this->actingAs($author)->get(route('communityTopic.edit', $topic))->assertOk();
+
+        $response->assertSee('<div class="dparts buttonBox" id="toDelete">', false);
+        $response->assertSee('<h3>Delete the topic and comments</h3>', false);
+        $response->assertSee('<form method="GET" action="'.route('communityTopic.delete.show', $topic).'">', false);
+    }
+
+    public function test_the_event_editor_carries_the_delete_box(): void
+    {
+        $community = Community::factory()->create();
+        $author = $this->joined($community);
+        $event = CommunityEvent::factory()->create([
+            'community_id' => $community->getKey(),
+            'member_id' => $author->getKey(),
+        ]);
+
+        $response = $this->actingAs($author)->get(route('communityEvent.edit', $event))->assertOk();
+
+        $response->assertSee('<div class="dparts buttonBox" id="toDelete">', false);
+        $response->assertSee('<h3>Delete the event and comments</h3>', false);
+        $response->assertSee('<form method="GET" action="'.route('communityEvent.delete.show', $event).'">', false);
+    }
+
+    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    {
+        $member = Member::factory()->create();
+        CommunityMember::factory()->create([
+            'community_id' => $community->getKey(),
+            'member_id' => $member->getKey(),
+            'role' => $role,
+        ]);
+
+        return $member;
+    }
+}

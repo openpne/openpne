@@ -84,4 +84,21 @@
             </div>
         </form>
     </x-classic.parts>
+
+    @if ($canDelete)
+        {{-- OpenPNE 3 editSuccess.php's buttonBox kind, shown to the administrator only (a sub-admin
+             may edit but not delete). The kind puts its form inside the operation li. --}}
+        <x-classic.parts id="deleteForm" name="buttonBox" :title="__('Delete this %community%')">
+            <div class="block">{{ __('This deletes the %community%. Tell its members in advance when you do.') }}</div>
+            <div class="operation">
+                <ul class="moreInfo button">
+                    <li>
+                        <form method="GET" action="{{ route('community.delete.show', $community) }}">
+                            <input type="submit" class="input_submit" value="{{ __('Delete') }}">
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </x-classic.parts>
+    @endif
 @endsection

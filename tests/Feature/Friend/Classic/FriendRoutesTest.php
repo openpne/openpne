@@ -380,6 +380,41 @@ class FriendRoutesTest extends TestCase
         $response->assertSessionHas('error');
     }
 
+    public function test_an_empty_list_closes_with_the_history_back_line(): void
+    {
+        $alice = Member::factory()->create();
+
+        $this->actingAs($alice)->get('/friend/list')
+            ->assertOk()
+            ->assertSee('id="noFriend"', false)
+            ->assertSee('<div class="parts line" id="backLink">', false)
+            ->assertSee('<a href="#" onclick="history.back(); return false;">Back to previous page</a>', false);
+    }
+
+    public function test_a_populated_list_has_no_history_back_line(): void
+    {
+        $alice = Member::factory()->create();
+        $this->makeFriends($alice, Member::factory()->create());
+
+        $this->actingAs($alice)->get('/friend/list')
+            ->assertOk()
+            ->assertDontSee('id="backLink"', false);
+    }
+
+    public function test_the_unlink_confirmation_asks_in_its_heading_with_the_member_linked(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create(['name' => 'Bob']);
+        $this->makeFriends($alice, $bob);
+
+        $this->actingAs($alice)->get(route('friend.unlink.show', $bob))
+            ->assertOk()
+            ->assertSee(
+                '<h3>Do you delete <a href="'.route('member.profile.show', $bob).'">Bob</a> from my friend?</h3>',
+                false
+            );
+    }
+
     private function makeFriends(Member $a, Member $b): void
     {
         DB::table('friendships')->insert([

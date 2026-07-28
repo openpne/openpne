@@ -30,7 +30,10 @@ class MemberAvatarController extends Controller
     public function edit(Request $request): View|InertiaResponse
     {
         return $this->respondWith($request, 'member', [
-            SurfaceResolver::CLASSIC => fn (): View => view('member.avatar', ['avatar' => $this->viewer()->avatar?->file]),
+            SurfaceResolver::CLASSIC => fn (): View => view('member.avatar', [
+                'avatar' => $this->viewer()->avatar?->file,
+                'maxUploadBytes' => AvatarRequest::MAX_KILOBYTES * 1024,
+            ]),
             SurfaceResolver::MODERN => fn (): InertiaResponse => Inertia::render('member/avatar', [
                 'avatar' => $this->avatarImage(),
                 'badgeColor' => $this->badgeColor(),

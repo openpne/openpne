@@ -54,6 +54,42 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect('/'); // surface-aware root landing
     }
 
+    public function test_the_classic_login_form_offers_the_remember_me_checkbox(): void
+    {
+        $this->get('/login')
+            ->assertStatus(200)
+            ->assertSee('<label for="login_remember">Remember me</label>', false)
+            ->assertSee('name="remember"', false);
+    }
+
+    public function test_checking_remember_me_issues_the_recaller_cookie(): void
+    {
+        $member = Member::factory()->create();
+
+        $response = $this->post('/login', [
+            'email' => $member->email,
+            'password' => 'password',
+            'remember' => '1',
+        ]);
+
+        $this->assertAuthenticatedAs($member);
+        $response->assertCookie(auth()->guard()->getRecallerName());
+        $this->assertNotNull($member->fresh()->remember_token);
+    }
+
+    public function test_leaving_remember_me_unchecked_issues_no_recaller_cookie(): void
+    {
+        $member = Member::factory()->create();
+
+        $response = $this->post('/login', [
+            'email' => $member->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticatedAs($member);
+        $response->assertCookieMissing(auth()->guard()->getRecallerName());
+    }
+
     public function test_a_successful_login_verifies_credentials_exactly_once(): void
     {
         // With the two-factor feature on, Fortify's login pipeline calls the authentication
