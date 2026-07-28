@@ -97,6 +97,25 @@ class CommunityRoutesTest extends TestCase
         $response->assertDontSee('Osaka Cooks');
     }
 
+    public function test_search_results_draw_the_openpne3_result_band(): void
+    {
+        $member = Member::factory()->create();
+        $community = Community::factory()->create([
+            'name' => 'Tokyo Runners',
+            'description' => "Morning runs.\nEveryone welcome.",
+        ]);
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+
+        $response = $this->actingAs($member)->get('/community/search')->assertOk();
+
+        // _partsSearchResultList.php: the photo cell spans the name / member count / description rows.
+        $response->assertSee('<td rowspan="3" class="photo">', false);
+        $response->assertSee('<a href="'.route('community.show', $community).'">Details</a>', false);
+        $response->assertSee('<th>Count of Members</th><td>1</td>', false);
+        // A later row's newlines collapse into the OpenPNE 3 three-row cell.
+        $response->assertSee('<td>Morning runs. Everyone welcome.</td>', false);
+    }
+
     public function test_search_accepts_the_openpne3_search_query_alias(): void
     {
         $member = Member::factory()->create();

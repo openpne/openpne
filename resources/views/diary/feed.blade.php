@@ -28,36 +28,53 @@
         <x-classic.parts id="diaryList" name="box" :title="$title">
             <div class="body">{{ __('No %diary% entries to show.') }}</div>
         </x-classic.parts>
-    @else
-        {{-- The two OpenPNE 3 templates disagree on the kind: the all-member feed and search render
-             the searchResultList skin (listSuccess.php), the friend feed recentList
-             (listFriendSuccess.php). --}}
-        <x-classic.parts id="diary_feed" :name="$variant === 'friends' ? 'recentList' : 'searchResultList'" :title="$title">
+    @elseif ($variant === 'friends')
+        {{-- listFriendSuccess.php renders the recentList skin: a flat list with neither the author
+             photo nor the body excerpt the all-member feed carries. --}}
+        <x-classic.parts id="diary_feed" name="recentList" :title="$title">
             <ul class="diaryList">
                 @foreach ($diaries as $entry)
                     <li>
-                        {{-- OpenPNE 3 listSuccess shows the author's avatar (76×76) linking to the
-                             entry, with the no_image fallback when unset; listFriendSuccess (friends)
-                             omits it entirely. --}}
-                        @if ($variant !== 'friends')
-                            @php($authorAvatar = $entry->member->avatar?->file)
-                            <a class="photo" href="{{ route('diary.show', $entry) }}"><x-classic.image :file="$authorAvatar" :size="76" :alt="$entry->member->name" /></a>
-                        @endif
                         <a href="{{ route('diary.show', $entry) }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a>
-                        {{-- A camera marker when the entry has photos. OpenPNE 4 ships no gif;
-                             the .imageIcon hook lets themes/customers style it. --}}
-                        @if ($entry->images_count > 0)<span class="imageIcon" title="{{ __('This entry has photos') }}" aria-label="{{ __('This entry has photos') }}">📷</span>@endif
+                        <x-diary.image-icon :count="$entry->images_count" />
                         <span class="diaryAuthor">{{ $entry->member->name }}</span>
                         <span class="diaryDate">{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</span>
-                        {{-- OpenPNE 3 listSuccess shows a body excerpt; listFriendSuccess (friends) does not. --}}
-                        @if ($variant !== 'friends')
-                            <p class="summary">{{ \App\Support\BodyRenderer::excerpt($entry->body, $entry->format) }}</p>
-                        @endif
                     </li>
                 @endforeach
             </ul>
 
             {{ $diaries->links() }}
+        </x-classic.parts>
+    @else
+        {{-- listSuccess.php renders the searchResultList skin but hand-writes the band rather than
+             calling _partsSearchResultList.php, and it diverges from that partial: the photo cell
+             carries no "Details" link, rowspan is fixed at 4, and the closing tr.operation pairs the
+             datetime with the entry link. Kept hand-written here for the same reason — folding these
+             differences into <x-classic.search-result-list> would parameterise the shared partial for
+             a single caller. --}}
+        <x-classic.parts id="diary_feed" name="searchResultList" :title="$title">
+            <x-classic.pager :paginator="$diaries" />
+            <div class="block">
+                @foreach ($diaries as $entry)
+                    @php($url = route('diary.show', $entry))
+                    <div class="ditem"><div class="item"><table><tbody>
+                        <tr>
+                            <td rowspan="4" class="photo"><a href="{{ $url }}"><x-classic.image :file="$entry->member->avatar?->file" :size="76" :alt="$entry->member->name" /></a></td>
+                            <th>{{ __('%Nickname%') }}</th><td>{{ $entry->member->name }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ __('Title') }}</th><td><a href="{{ $url }}">{{ \App\Features\Diary\DiaryTitle::withCount($entry) }}</a><x-diary.image-icon :count="$entry->images_count" /></td>
+                        </tr>
+                        <tr>
+                            <th>{{ __('Body') }}</th><td>{{ \App\Support\BodyRenderer::excerpt($entry->body, $entry->format) }}</td>
+                        </tr>
+                        <tr class="operation">
+                            <th>{{ __('Created At') }}</th><td><span class="text">{{ \App\Support\LocalizedDate::dateTime($entry->created_at) }}</span> <span class="moreInfo"><a href="{{ $url }}">{{ __('View this %diary%') }}</a></span></td>
+                        </tr>
+                    </tbody></table></div></div>
+                @endforeach
+            </div>
+            <x-classic.pager :paginator="$diaries" />
         </x-classic.parts>
     @endif
 @endsection

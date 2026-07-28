@@ -38,16 +38,20 @@
             <div class="body">{{ __('No %communities% found.') }}</div>
         </x-classic.parts>
     @else
+        @php
+            $results = $communities->map(fn ($community) => [
+                'url' => route('community.show', $community),
+                'file' => $community->image,
+                'name' => $community->name,
+                'rows' => [
+                    ['caption' => __('%Community% Name'), 'value' => $community->name],
+                    ['caption' => __('Count of Members'), 'value' => (string) $community->members_count],
+                    ['caption' => __('Description'), 'value' => (string) $community->description],
+                ],
+            ])->all();
+        @endphp
         <x-classic.parts id="searchCommunityResult" name="searchResultList" :title="__('Search Results')">
-            <ul class="communityList">
-                @foreach ($communities as $community)
-                    <li>
-                        <a href="{{ route('community.show', $community) }}">{{ $community->name }}</a>
-                    </li>
-                @endforeach
-            </ul>
-
-            {{ $communities->withQueryString()->links() }}
+            <x-classic.search-result-list :items="$results" :paginator="$communities->withQueryString()" />
         </x-classic.parts>
     @endif
 @endsection
