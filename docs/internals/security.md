@@ -288,8 +288,9 @@ Deliberately not set:
 - **A content CSP (`script-src`)** — the Vite/Inertia bundle has no nonce/hash
   wiring, and the absence is also what lets the panel's inline Livewire/Alpine
   scripts run.
-- **`Cross-Origin-Resource-Policy`** — web-public avatars and banners are
-  served for cross-origin embedding, which `same-origin` would break.
+- **`Cross-Origin-Resource-Policy`** — web-public bytes (avatars, banners, and
+  the images of a web-public diary or timeline post) are served for cross-origin
+  embedding, which `same-origin` would break.
 
 ## Uploaded image metadata
 

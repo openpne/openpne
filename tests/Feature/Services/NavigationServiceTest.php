@@ -93,7 +93,7 @@ class NavigationServiceTest extends TestCase
     public function test_hides_unresolved_and_missing_route_items(): void
     {
         $this->makeNav('secure_global', '@homepage', '@homepage', ['en' => 'Unconverted'], 0); // not normalized
-        $this->makeNav('secure_global', '/diary', 'diary/index', ['en' => 'Diary'], 1); // no route
+        $this->makeNav('secure_global', '/diary/comment/history', 'diaryComment/history', ['en' => 'History'], 1); // no route
 
         $items = app(NavigationService::class)->visibleEntries('secure_global', 'en');
 

@@ -15,6 +15,10 @@ class DiaryRouteParity extends RouteParity
     public function maps(): array
     {
         return [
+            // OpenPNE 3 diary_index forwarded /diary to the list action (so it rendered
+            // page_diary_list); OpenPNE 4 preserves the URL with a redirect to the canonical
+            // /diary/list.
+            new RouteMap('diary_index', '/diary', 'diary.index_compat', 'GET', op3Action: 'list'),
             new RouteMap('diary_show', '/diary/:id', 'diary.show', 'GET', op3Action: 'show'),
             new RouteMap('diary_search', '/diary/search', 'diary.search', 'GET', op3Action: 'search'),
             new RouteMap('diary_list', '/diary/list', 'diary.list', 'GET', op3Action: 'list'),
@@ -60,11 +64,15 @@ class DiaryRouteParity extends RouteParity
     public function gaps(): array
     {
         return [
-            'diary_index' => 'Diary top (/diary) is not ported.',
             // Comment create/delete and image attachments are ported (above) on both surfaces. Still
             // deferred within comments: notifications, unread tracking, and this history feed.
             'diary_comment_history' => 'Comment history feed is not ported.',
         ];
+    }
+
+    public function compatRedirects(): array
+    {
+        return ['/diary' => 'diary.list'];
     }
 
     /**

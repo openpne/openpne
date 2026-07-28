@@ -20,7 +20,11 @@ final class DiaryAccess
         $owner = $diary->member;
 
         if ($viewer === null) {
-            return $diary->visibility->value <= Visibility::Open->value;
+            // The web-public switch is checked here, not only where a page is routed: a diary's
+            // images are fetched by URL, so a controller-level gate would leave a known image URL
+            // readable after the switch went off.
+            return DiaryVisibility::allowsWebPublic()
+                && $diary->visibility->value <= Visibility::Open->value;
         }
 
         if ($viewer->is($owner)) {

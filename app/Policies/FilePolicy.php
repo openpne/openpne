@@ -49,9 +49,11 @@ class FilePolicy extends BasePolicy
             // placement), so anyone may fetch it. Writes are admin-only, so the public set is
             // exactly the images an operator placed.
             $owner instanceof BannerImage => true,
-            // A member's image (avatar) is visible to any signed-in member the owner
-            // has not blocked. ownerBlocksViewer is one-way (BasePolicy).
-            $owner instanceof Member => $viewer !== null && ! $this->ownerBlocksViewer($owner, $viewer),
+            // A member's image (avatar) is visible to any member the owner has not blocked, and to
+            // a guest — it is what a web-public profile or diary shows the author as, and OpenPNE 3
+            // put no login in front of image delivery at all. ownerBlocksViewer is one-way
+            // (BasePolicy); a guest is nobody to block.
+            $owner instanceof Member => $viewer === null || ! $this->ownerBlocksViewer($owner, $viewer),
             // A diary image inherits the diary's visibility: a web-public (Open) diary's images are
             // public (guest-readable); otherwise the viewer's clearance on the author, blocked → none.
             $owner instanceof Diary => DiaryAccess::canView($viewer, $owner),

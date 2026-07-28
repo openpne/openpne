@@ -36,9 +36,14 @@ class DiaryComment extends Model
     /**
      * OpenPNE 3 lets the comment author or the diary author delete a comment. A withdrawn
      * author (member_id null) can no longer act, so only the diary author can then remove it.
+     * A guest (null) never can — the thread is readable on a web-public diary, not actionable.
      */
-    public function isDeletableBy(Member $member): bool
+    public function isDeletableBy(?Member $member): bool
     {
+        if ($member === null) {
+            return false;
+        }
+
         return ($this->member_id !== null && $member->is($this->member))
             || $member->is($this->diary->member);
     }

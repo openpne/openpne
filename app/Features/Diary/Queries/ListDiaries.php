@@ -2,11 +2,10 @@
 
 namespace App\Features\Diary\Queries;
 
-use App\Features\Block\BlockLookup;
 use App\Features\Diary\ArchivePeriod;
+use App\Features\Diary\DiaryVisibilityScope;
 use App\Models\Diary;
 use App\Models\Member;
-use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ListDiaries
@@ -19,16 +18,12 @@ class ListDiaries
      *
      * @return LengthAwarePaginator<int, Diary>
      */
-    public function __invoke(Member $viewer, Member $owner, int $perPage = 20, ?ArchivePeriod $period = null, string $keyword = ''): LengthAwarePaginator
+    public function __invoke(?Member $viewer, Member $owner, int $perPage = 20, ?ArchivePeriod $period = null, string $keyword = ''): LengthAwarePaginator
     {
-        $query = $owner->diaries()->with('member.avatar.file')->withCount(['comments', 'images']);
+        $query = Diary::query()->where('member_id', $owner->getKey())
+            ->with('member.avatar.file')->withCount(['comments', 'images']);
 
-        if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
-            $query->whereRaw('1 = 0');
-        } else {
-            $clearance = Visibility::clearanceFor($viewer, $owner);
-            $query->where('visibility', '<=', $clearance->value);
-        }
+        DiaryVisibilityScope::apply($query, $viewer, $owner);
 
         if ($period !== null) {
             $query->where('created_at', '>=', $period->start)->where('created_at', '<', $period->end);

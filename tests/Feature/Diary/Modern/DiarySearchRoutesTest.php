@@ -18,9 +18,16 @@ class DiarySearchRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    public function test_guest_is_redirected_to_login(): void
+    public function test_a_guest_searches_only_web_public_entries(): void
     {
-        $this->get('/diary/search')->assertRedirect('/login');
+        Diary::factory()->create(['title' => 'Open note', 'visibility' => Visibility::Open]);
+        Diary::factory()->create(['title' => 'Members note', 'visibility' => Visibility::Members]);
+
+        $this->get('/diary/search?keyword=note')->assertInertia(fn ($page) => $page
+            ->component('diary/feed')
+            ->has('diaries.data', 1)
+            ->where('diaries.data.0.title', 'Open note')
+        );
     }
 
     public function test_search_renders_inertia_with_keyword_and_filtered_results(): void

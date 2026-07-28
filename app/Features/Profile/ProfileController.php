@@ -19,6 +19,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Models\Member;
 use App\Services\GadgetService;
+use App\Support\GuestLoginRedirect;
 use App\Support\PreferenceKey;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
@@ -39,7 +40,7 @@ class ProfileController extends Controller
 
         // A guest can only reach a web-public profile; otherwise send them to log in.
         if ($viewer === null && $member->profile_visibility !== Visibility::Open) {
-            return redirect()->guest(route('login'));
+            return GuestLoginRedirect::response();
         }
 
         $this->memberSubject($member); // 404 when the owner has blocked the viewer

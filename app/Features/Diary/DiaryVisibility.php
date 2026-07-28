@@ -47,7 +47,12 @@ final class DiaryVisibility
         return self::allowsWebPublic() ? $rule : $rule->except([Visibility::Open]);
     }
 
-    private static function allowsWebPublic(): bool
+    /**
+     * Whether the SNS serves web-public (Open) diaries at all. Read by the read path too
+     * (DiaryAccess / DiaryVisibilityScope): turning the gate off must hide entries already
+     * stored as Open from guests, not merely stop new ones being written.
+     */
+    public static function allowsWebPublic(): bool
     {
         return (bool) config('openpne.diary.allow_web_public');
     }
