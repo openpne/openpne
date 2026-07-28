@@ -171,11 +171,29 @@ custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar 
 `footer_before` / `footer_after` setting, chosen by the page's `secure_page` / `insecure_page` class
 (OpenPNE 3 `isSecurePage`); `$classicFooterHtml` overrides it per request.
 
+`#notificationCenter` sits between the logo and `#globalNav`, for a signed-in member only: the
+vendored `NOTIFY_CENTER.png` sprite with the `#nc_icon1` / `#nc_icon2` / `#nc_icon3` badges the
+skin positions over its three glyphs — unread messages, pending `%friend%` requests, unread
+notifications, hidden at zero. The sprite stays the one `img.ncbutton` OpenPNE 3 styled, and an
+image map makes its glyphs links; three background slices would drop that hook, and the rules
+replacing it would sit in the document, past the reach of a site's own stylesheet. The same three
+numbers head the home cautions, so both read [`UnreadCounts`](../../app/Features/Home/UnreadCounts.php),
+which memoizes per request.
+
+The home cautions are OpenPNE 3's `information` parts customizations on `member/homeSuccess`,
+[one box holding the set](../../resources/views/home/partials/cautions.blade.php) in the order
+OpenPNE 3 sorted the customize attribute names into.
+
 Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is; there is a single static skin (no
 theme switching); the footer has no privacy-policy / terms links (no such routes exist); the
 `#SmtSwitch` smartphone-view toggle is not ported (OpenPNE 4 has no separate smartphone frontend
-to switch to).
+to switch to); the notification centre's `#notificationCenterDetail` dropdown — the jQuery-templated
+`.push` rows and their inline YES/NO — is not ported, the icons linking to the message, request and
+feed screens instead (Modern's bell is the same shape), and its badges count unread items rather
+than OpenPNE 3's notification events capped at 20, so they are clamped at `99+` with the number kept
+in the badge's name; the unread-`%diary%`-comment caution has nothing to port to (OpenPNE 4 tracks
+no per-entry comment read state).
 
 ### Error screens
 

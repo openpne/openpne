@@ -6,8 +6,11 @@ use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\Gadget;
 use App\Models\Member;
+use App\Models\Message;
+use App\Models\MessageRecipient;
 use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ClassicHomeTest extends TestCase
@@ -106,5 +109,77 @@ class ClassicHomeTest extends TestCase
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertDontSee(e(route('community.show', $community)), false);
+    }
+
+    public function test_unread_messages_and_friend_requests_each_add_a_caution(): void
+    {
+        $viewer = Member::factory()->create();
+        $sender = Member::factory()->create();
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($content, 'class="parts informationBox"'));
+        // The friend line is OpenPNE 3's `p.caution`; the message line is its own `ul > li` with the
+        // star and an inner span — _unreadMessage.php never matched the others.
+        $this->assertStringContainsString('<a href="'.e(route('friend.manage')).'">'.e(__('Check requests')).'</a>', $content);
+        $this->assertStringContainsString('★<span class="caution">'.e(__('There are new :count messages!', ['count' => 1])).'</span>', $content);
+        $this->assertStringContainsString('<a href="'.e(route('message.index')).'"><strong>'.e(__('Read messages')).'</strong></a>', $content);
+    }
+
+    public function test_cautions_keep_the_openpne3_order(): void
+    {
+        $viewer = Member::factory()->create();
+        $sender = Member::factory()->create();
+        $community = Community::factory()->create(['name' => 'Runners Club']);
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $community->forceFill(['pending_admin_member_id' => $viewer->getKey()])->save();
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        // OpenPNE 3 sorted the customize attribute names: cautionAboutChangeAdminRequest,
+        // cautionAboutFriendPre, then unreadMessage.
+        $friendLine = strpos($content, e(__('Check requests')));
+        $messageLine = strpos($content, e(__('Read messages')));
+
+        $this->assertGreaterThan(strpos($content, 'Runners Club'), $friendLine);
+        $this->assertGreaterThan($friendLine, $messageLine);
+    }
+
+    public function test_a_member_with_nothing_waiting_gets_no_information_box(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertDontSee('class="parts informationBox"', false);
+    }
+
+    public function test_the_header_badges_and_the_cautions_report_the_same_numbers(): void
+    {
+        $viewer = Member::factory()->create();
+        $senders = Member::factory()->count(3)->create();
+        foreach ($senders as $sender) {
+            DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        }
+        foreach ($senders->take(2) as $sender) {
+            $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+            MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        }
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        $messageBadge = e(__(':count unread messages', ['count' => 2]));
+        $friendBadge = e(__(':count pending %friend% requests', ['count' => 3]));
+
+        $this->assertStringContainsString('<span id="nc_icon1" role="img" aria-label="'.$messageBadge.'" title="'.$messageBadge.'">2</span>', $content);
+        $this->assertStringContainsString('<span id="nc_icon2" role="img" aria-label="'.$friendBadge.'" title="'.$friendBadge.'">3</span>', $content);
+        $this->assertStringContainsString(e(__('There are new :count messages!', ['count' => 2])), $content);
+        $this->assertStringContainsString(e(__("You've gotten :count %friend% requests", ['count' => 3])), $content);
     }
 }

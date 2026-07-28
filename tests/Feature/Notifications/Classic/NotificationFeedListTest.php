@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications\Classic;
 
+use App\Features\Notifications\Queries\CountUnreadNotifications;
 use App\Models\Member;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Message\MessageReceivedNotification;
@@ -73,6 +74,7 @@ class NotificationFeedListTest extends TestCase
             ->assertSee(__('Mark all as read'));
 
         $row->markAsRead();
+        $this->freshRequestState(); // the count is memoized per request, and this is the next one
 
         // Same condition the Modern page hides its button on: nothing left to mark.
         $this->actingAs($viewer)->get('/notifications')
@@ -89,6 +91,29 @@ class NotificationFeedListTest extends TestCase
             ->assertRedirect('/friend/manage');
 
         $this->assertNotNull($row->fresh()->read_at);
+    }
+
+    public function test_the_shell_badge_and_the_mark_all_button_share_one_count(): void
+    {
+        $viewer = Member::factory()->create();
+        $counter = new class extends CountUnreadNotifications
+        {
+            public int $calls = 0;
+
+            public function __invoke(Member $viewer): int
+            {
+                $this->calls++;
+
+                return parent::__invoke($viewer);
+            }
+        };
+        $this->app->instance(CountUnreadNotifications::class, $counter);
+
+        $this->actingAs($viewer)->get('/notifications')->assertOk();
+
+        // The Classic shell's badge already made the request count them; the page reads the same
+        // request-scoped UnreadCounts rather than counting again.
+        $this->assertSame(1, $counter->calls);
     }
 
     public function test_an_empty_feed_says_so_and_drops_the_pager(): void

@@ -2,7 +2,7 @@
 
 namespace App\Features\Notifications;
 
-use App\Features\Notifications\Queries\CountUnreadNotifications;
+use App\Features\Home\UnreadCounts;
 use App\Features\Notifications\Serializers\NotificationFeedSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -26,17 +26,18 @@ class NotificationFeedController extends Controller
 
     private const PAGE = 30;
 
-    public function index(Request $request, CountUnreadNotifications $unread): View|Response
+    public function index(Request $request, UnreadCounts $unread): View|Response
     {
         $viewer = $this->viewer();
         $rows = $viewer->notifications()->paginate(self::PAGE);
 
         return $this->respondWith($request, 'notifications', [
-            // Modern shares the unread count on every page; Classic has no such shell prop, so the
-            // mark-all button asks for it here (and hides on zero, as Modern's does).
+            // Modern shares the unread count on every page; Classic has no such prop, so the
+            // mark-all button asks for it here (and hides on zero, as Modern's does). Through
+            // UnreadCounts, which the Classic shell's badges already made this request read.
             SurfaceResolver::CLASSIC => fn (): View => view('notifications.index', [
                 'feed' => NotificationFeedSerializer::classicRows($rows),
-                'unreadCount' => $unread($viewer),
+                'unreadCount' => $unread->for($viewer)['notifications'],
             ]),
             SurfaceResolver::MODERN => fn (): Response => Inertia::render('notifications/index', [
                 'feed' => NotificationFeedSerializer::paginator($rows),
