@@ -10,8 +10,11 @@ namespace App\Compat;
  * Per module, not global. The files override shared skin rules — diary.css restyles
  * `.commentList` / `.recentList` / `.prevNextLinkLine`, message.css restyles
  * `.prevNextLinkLine` too — so linking them everywhere would change screens OpenPNE 3 left
- * alone. A module absent here declares no stylesheet in OpenPNE 3 (e.g. `community`, whose home
- * embeds topic and event components without loading communityTopic.css).
+ * alone. A module absent here declares no stylesheet in its `view.yml`. That is not the whole
+ * story for `community`: its home embeds the topic and event list components, and those
+ * partials call `addStylesheet` themselves, so OpenPNE 3 does load communityTopic.css there.
+ * Reproducing that means following the component, not the module — recorded as a gap in
+ * CommunityRouteParity::screens() rather than papered over with a module entry here.
  */
 final class PluginStylesheets
 {

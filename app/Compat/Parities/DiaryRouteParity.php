@@ -15,13 +15,15 @@ class DiaryRouteParity extends RouteParity
     public function maps(): array
     {
         return [
+            new RouteMap('diary_show', '/diary/:id', 'diary.show', 'GET', op3Action: 'show'),
+            new RouteMap('diary_search', '/diary/search', 'diary.search', 'GET', op3Action: 'search'),
+            // The canonical list precedes the /diary alias below: screens() keys off op3Action and
+            // takes the first match, so the `list` screen must resolve to the page, not the redirect.
+            new RouteMap('diary_list', '/diary/list', 'diary.list', 'GET', op3Action: 'list'),
             // OpenPNE 3 diary_index forwarded /diary to the list action (so it rendered
             // page_diary_list); OpenPNE 4 preserves the URL with a redirect to the canonical
             // /diary/list.
             new RouteMap('diary_index', '/diary', 'diary.index_compat', 'GET', op3Action: 'list'),
-            new RouteMap('diary_show', '/diary/:id', 'diary.show', 'GET', op3Action: 'show'),
-            new RouteMap('diary_search', '/diary/search', 'diary.search', 'GET', op3Action: 'search'),
-            new RouteMap('diary_list', '/diary/list', 'diary.list', 'GET', op3Action: 'list'),
             new RouteMap('diary_list_friend', '/diary/listFriend', 'diary.list_friend', 'GET', op3Action: 'listFriend'),
             new RouteMap('diary_list_mine', '/diary/listMember', 'diary.list_member', 'GET', op3Action: 'listMember'),
             new RouteMap('diary_list_member', '/diary/listMember/:id', 'diary.list_member', 'GET',
