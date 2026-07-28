@@ -179,9 +179,11 @@ class NavigationService
         // Route::matches() validates uri/method without binding parameters, so this never mutates
         // the routes (the current page's route is a shared instance). Only GET routes count: a
         // POST-only path is not a navigable link (logout, the one exception, is handled earlier).
+        // The fallback route is skipped or every path would look reachable — it is what serves the
+        // 404 these links exist to avoid.
         $request = Request::create($path, 'GET');
         foreach (Route::getRoutes()->getRoutesByMethod()['GET'] ?? [] as $route) {
-            if ($route->matches($request)) {
+            if (! $route->isFallback && $route->matches($request)) {
                 return ! in_array($route->getName(), self::SHIM_ROUTES, true);
             }
         }

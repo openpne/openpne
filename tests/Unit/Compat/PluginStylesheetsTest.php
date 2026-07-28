@@ -28,11 +28,14 @@ class PluginStylesheetsTest extends TestCase
             // communityTopic.css's only url(): ../../images/icon_2.gif from the css directory,
             // which is why the plugins keep OpenPNE 3's web-root-relative layout under public/.
             'images/icon_2.gif' => '5eeff8dd69a4d7606d8455fac953eb8a',
+            // The Classic shell's flash alertBox icon (OpenPNE 3 `_partsAlertBox.php`).
+            'images/icon_alert.gif' => '05daef255575c91468b475c2915a9a3c',
         ], $this->md5sOf([
             'opDiaryPlugin/css/diary.css',
             'opCommunityTopicPlugin/css/communityTopic.css',
             'opMessagePlugin/css/message.css',
             'images/icon_2.gif',
+            'images/icon_alert.gif',
         ]));
     }
 

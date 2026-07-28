@@ -4,13 +4,17 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\UseAdminSessionStore;
+use App\Support\ClassicErrorPage;
 use App\Support\SecurityLog;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -48,15 +52,33 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // the admin realm's Livewire endpoints.
         $middleware->prepend(UseAdminSessionStore::class);
 
-        $middleware->web(append: [
+        // A response that aborts inside the group unwinds through only the middleware it had already
+        // entered, so a slot at the end of the group misses the 419, the guest redirect and the
+        // implicit-binding 404 — all pages a member sees. SecurityHeaders sets static headers, so it
+        // goes outermost as it does in the Filament panel stack; SetLocale needs the session, so it
+        // goes right after StartSession/ShareErrorsFromSession and ahead of the first middleware
+        // that can abort. PreventRequestForgery has to join the priority list to be that anchor.
+        $middleware->web(prepend: [
+            SecurityHeaders::class,
+        ], append: [
             SetLocale::class,
             HandleInertiaRequests::class,
-            SecurityHeaders::class,
         ]);
+        $middleware->appendToPriorityList(ShareErrorsFromSession::class, PreventRequestForgery::class);
+        $middleware->prependToPriorityList(PreventRequestForgery::class, SetLocale::class);
 
         // An already-authenticated member on /login or /register goes through the root so the
         // landing stays surface-aware; the framework default would pick the Modern /dashboard.
         $middleware->redirectUsersTo(fn () => route('home'));
+
+        // OpenPNE 3 sent a guest to the login form with this notice rather than a bare form. The
+        // callback runs only where the framework redirects a guest, so /login itself never flashes
+        // it — the same exclusion OpenPNE 3 made for its homepage and login actions.
+        $middleware->redirectGuestsTo(function (): string {
+            session()->flash('status', __('Please login to visit this page'));
+
+            return route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Give the security log 429 observability (rate-limit tuning depends on it). A
@@ -76,6 +98,12 @@ $app = Application::configure(basePath: dirname(__DIR__))
                 ]);
             }
         })->stop();
+
+        // Render the errors a member can walk into inside the Classic shell. A render callback
+        // rather than resources/views/errors/4xx.blade.php overrides: those apply to every realm
+        // and surface, and the choice here is per-request. Returning null leaves the framework's
+        // own error response untouched. See App\Support\ClassicErrorPage.
+        $exceptions->render(fn (HttpExceptionInterface $e, Request $request) => ClassicErrorPage::render($request, $e));
     })->create();
 
 // Let the env file and storage directory be relocated to deployer-chosen paths

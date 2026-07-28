@@ -174,6 +174,24 @@ theme switching); the footer has no privacy-policy / terms links (no such routes
 `#SmtSwitch` smartphone-view toggle is not ported (OpenPNE 4 has no separate smartphone frontend
 to switch to).
 
+### Error screens
+
+403 / 404 / 419 render OpenPNE 3's `default/error` screen inside the shell —
+[`ClassicErrorPage`](../../app/Support/ClassicErrorPage.php), wired as an exception render
+callback rather than as `resources/views/errors/*.blade.php` overrides because the choice is
+per-request: JSON clients, the admin realm and Modern keep the framework's own pages, as does
+every 5xx on all surfaces (the shell reads the database a 5xx often means is broken). The screen
+is bare message text plus the `#backLink` history-back line under `page_default_error` /
+`layoutC`, and it suppresses the plugin stylesheet the failing URL's module would otherwise lend
+it. Its body id is the one literal one: no route resolves here, so the parity has nothing to
+derive it from. An unmatched URL arrives via `Route::fallback()` rather than the router's own 404, which
+fires ahead of the `web` group and so carries no session, locale or response headers; the
+fallback is GET-only, so an unrouted non-GET request answers 405.
+
+The shell's two flash slots are OpenPNE 3's `alertBox` parts, `#flashError` / `#flashNotice` ids
+and `icon_alert.gif` included. A guest redirected to the login form arrives carrying OpenPNE 3's
+"Please login to visit this page" notice in the second one.
+
 ## JavaScript compatibility
 
 Legacy OpenPNE 3 JavaScript is Classic-only and ported only where a real

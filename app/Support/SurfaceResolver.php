@@ -49,12 +49,34 @@ class SurfaceResolver
             return self::CLASSIC;
         }
 
+        return self::viewerSurface($request);
+    }
+
+    /**
+     * The surface an error page renders in. An error is not a feature — the request may have
+     * matched no route at all — so only the client and viewer gates apply.
+     */
+    public static function forError(Request $request): string
+    {
+        // Same reason as resolve(): the Modern client cannot consume Classic Blade.
+        if ($request->hasHeader('X-Inertia')) {
+            return self::MODERN;
+        }
+
+        return self::viewerSurface($request);
+    }
+
+    /**
+     * The viewer's own surface, with no feature or client gate: modern_only, else the member's
+     * durable choice (member_preferences), else the mode's default surface.
+     */
+    private static function viewerSurface(Request $request): string
+    {
         $mode = self::surfaceMode();
         if (! $mode->classicAvailable()) {
             return self::MODERN;
         }
 
-        // A member's durable choice (member_preferences) outranks the mode's default surface.
         $member = $request->user('member');
         if ($member instanceof Member && ($preferred = $member->preferredSurface()) !== null) {
             return $preferred->value;
