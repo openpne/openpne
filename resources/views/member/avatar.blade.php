@@ -9,30 +9,36 @@
     <x-classic.parts id="memberImageUploadBox" name="memberImagesBox" :title="__('Profile image')">
         <table>
             <tr>
-                <td><x-classic.image :file="$avatar" :size="120" :alt="__('Profile image')" /></td>
+                <td>
+                    <x-classic.image :file="$avatar" :size="120" :alt="__('Profile image')" />
+                    @if ($avatar)
+                        {{-- OpenPNE 3 removes a photo from under the photo itself. Beside the
+                             uploader it would take a second floated column and squeeze the notes. --}}
+                        <br>
+                        <form method="POST" action="{{ route('member.avatar.destroy') }}">
+                            @csrf
+                            @method('DELETE')
+                            <input type="submit" class="input_submit" value="{{ __('Remove') }}">
+                        </form>
+                    @endif
+                </td>
             </tr>
         </table>
         <div class="block">
+            {{-- The kind's stylesheet floats this form into a fixed column and indents the notes ul
+                 past it, so the button takes OpenPNE 3's `form > p`: an .operation ul picks up that
+                 indent and lands on the notes. --}}
             <form method="POST" action="{{ route('member.avatar.update') }}" enctype="multipart/form-data">
                 @csrf
-                <input type="file" class="input_file" name="image" accept="image/jpeg,image/png,image/gif,image/webp" required>
-                <div class="operation">
-                    <ul class="moreInfo button">
-                        <li><input type="submit" class="input_submit" value="{{ __('Upload') }}"></li>
-                    </ul>
-                </div>
+                <p><input type="file" class="input_file" name="image" accept="image/jpeg,image/png,image/gif,image/webp" required></p>
+                <p><input type="submit" class="input_submit" value="{{ __('Upload') }}"></p>
             </form>
-            @if ($avatar)
-                <form method="POST" action="{{ route('member.avatar.destroy') }}">
-                    @csrf
-                    @method('DELETE')
-                    <div class="operation">
-                        <ul class="moreInfo button">
-                            <li><input type="submit" class="input_submit" value="{{ __('Remove') }}"></li>
-                        </ul>
-                    </div>
-                </form>
-            @endif
+            {{-- The memberImagesBox kind's upload notes. OpenPNE 3's third note capped the member at
+                 three photos; OpenPNE 4 holds one avatar, so it has nothing to say here. --}}
+            <ul>
+                <li>{{ __('Please upload a GIF, JPEG or PNG within :max_size bytes.', ['max_size' => $maxUploadBytes]) }}</li>
+                <li>{{ __('Photos that infringe copyright or portrait rights, violent or obscene photos, and photos other members would find offensive are prohibited. Post them at your own responsibility.') }}</li>
+            </ul>
         </div>
     </x-classic.parts>
 @endsection

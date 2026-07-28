@@ -80,6 +80,22 @@ class ClassicHomeTest extends TestCase
             ->assertSee(e(route('community.show', $community)), false);
     }
 
+    public function test_several_cautions_share_one_information_box(): void
+    {
+        $member = Member::factory()->create();
+        foreach (['Runners Club', 'Cycling Club'] as $name) {
+            $community = Community::factory()->create(['name' => $name]);
+            CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+            $community->forceFill(['pending_admin_member_id' => $member->getKey()])->save();
+        }
+
+        $content = (string) $this->actingAs($member)->get('/')->assertOk()->getContent();
+
+        // OpenPNE 3 hung every caution off the single informationBox body — one box, N lines.
+        $this->assertSame(1, substr_count($content, 'class="parts informationBox"'));
+        $this->assertSame(2, substr_count($content, '<p class="caution">'));
+    }
+
     public function test_non_nominee_sees_no_admin_transfer_caution(): void
     {
         $member = Member::factory()->create();
