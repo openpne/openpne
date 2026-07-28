@@ -17,21 +17,10 @@ class ListMemberCommunities
 {
     public const PER_PAGE = 20;
 
-    /**
-     * The paged list carries `owner_is_admin` so the grid can crown the communities $member
-     * administers — OpenPNE 3 crowns by the *listed* member's role, not the viewer's, so the
-     * crown reads the same to everyone looking at that member's list. The unpaged take() path
-     * (gadgets) draws no crown, so the projection stays here.
-     *
-     * @return LengthAwarePaginator<int, Community>
-     */
+    /** @return LengthAwarePaginator<int, Community> */
     public function __invoke(Member $member, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
-        return $this->query($member)
-            ->withExists(['members as owner_is_admin' => fn ($q) => $q
-                ->where('member_id', $member->getKey())
-                ->where('role', CommunityRole::Admin)])
-            ->paginate($perPage);
+        return $this->query($member)->paginate($perPage);
     }
 
     /**
@@ -45,13 +34,32 @@ class ListMemberCommunities
         return $this->query($member)->limit($limit)->get();
     }
 
-    /** @return Builder<Community> */
+    /**
+     * The member's whole joined-community count, for a widget that shows a slice and links to the
+     * rest — the take() slice can never stand in for it. One aggregate.
+     */
+    public function count(Member $member): int
+    {
+        return $this->query($member)->count();
+    }
+
+    /**
+     * Every path carries `owner_is_admin` so any grid can crown the communities $member
+     * administers — OpenPNE 3 crowns by the *listed* member's role, not the viewer's, so the crown
+     * reads the same to everyone looking at that member's list. It is one correlated EXISTS in the
+     * select list, not a query per row, so the slice paths pay it at the same order as the page.
+     *
+     * @return Builder<Community>
+     */
     private function query(Member $member): Builder
     {
         return Community::query()
             ->whereHas('members', fn ($q) => $q->where('member_id', $member->getKey()))
             ->with(['category', 'image'])
             ->withCount('members')
+            ->withExists(['members as owner_is_admin' => fn ($q) => $q
+                ->where('member_id', $member->getKey())
+                ->where('role', CommunityRole::Admin)])
             ->orderByDesc('id');
     }
 }

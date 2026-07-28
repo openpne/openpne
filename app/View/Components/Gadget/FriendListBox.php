@@ -11,6 +11,8 @@ use Illuminate\View\Component;
  * The subject member's friends as a row × col thumbnail grid. The
  * subject owns the list (home: the viewer; profile: the viewed member); a profile the viewer may
  * not see is already a 404 in the controller, so listing the owner's friends here is safe.
+ *
+ * The "show all (n)" total adds exactly one aggregate to the slice path (the slice itself carries its eager loads).
  */
 class FriendListBox extends Component
 {
@@ -22,6 +24,11 @@ class FriendListBox extends Component
     public int $cols;
 
     public string $type;
+
+    /** The subject's whole friend count, which the grid slice does not report. */
+    public int $total = 0;
+
+    public bool $isSelf = false;
 
     /** @param array<string, mixed> $config */
     public function __construct(
@@ -43,6 +50,11 @@ class FriendListBox extends Component
             'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
             'name' => $member->name,
         ])->all();
+
+        if ($subject !== null && $this->items !== []) {
+            $this->total = $listFriends->count($subject, $subject);
+            $this->isSelf = $subject->is(auth()->user());
+        }
     }
 
     public function render(): View

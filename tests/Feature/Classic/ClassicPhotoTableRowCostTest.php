@@ -14,8 +14,9 @@ use Tests\TestCase;
 /**
  * The Classic photo table labels every row "name (friend count)", which is the shape that invites an
  * N+1. The counts are subqueries on the paged query instead, so a page of 12 costs what a page of 3
- * does. The gadget grids share the same list queries but print no count, so their unpaged path must
- * stay free of the count subquery entirely.
+ * does. The gadget grids share the same list queries and print one number — the whole-set total
+ * behind "show all (n)" — so their unpaged path buys it with a single aggregate and keeps the
+ * per-row count subquery out.
  */
 class ClassicPhotoTableRowCostTest extends TestCase
 {
@@ -44,7 +45,7 @@ class ClassicPhotoTableRowCostTest extends TestCase
         );
     }
 
-    public function test_the_friend_list_gadget_neither_counts_nor_grows(): void
+    public function test_the_friend_list_gadget_totals_with_one_aggregate_and_no_per_row_count(): void
     {
         Gadget::create(['context' => 'home', 'zone' => 'sideMenu', 'name' => 'friendListBox', 'sort_order' => 0]);
         app(GadgetService::class)->clearCache();
@@ -54,11 +55,30 @@ class ClassicPhotoTableRowCostTest extends TestCase
 
         $this->assertSame($this->queryCountFor($small, '/'), $this->queryCountFor($large, '/'));
 
-        // take() must not pick up the paged path's withCount: the gadget prints bare names, and the
+        $queries = $this->queriesFor($large, '/');
+
+        // "Show all (n)" is the whole set, which the grid slice cannot report — but one aggregate
+        // answers it, and take() must still not pick up the paged path's per-row withCount, whose
         // alias is the marker that the subquery ran.
-        foreach ($this->queriesFor($large, '/') as $query) {
+        foreach ($queries as $query) {
             $this->assertStringNotContainsString('friendships_count', $query);
         }
+        $this->assertSame(1, $this->aggregateCountsOver($queries, 'friendships'));
+    }
+
+    public function test_the_community_list_gadget_totals_with_one_aggregate_and_crowns_in_the_slice(): void
+    {
+        Gadget::create(['context' => 'home', 'zone' => 'sideMenu', 'name' => 'communityJoinListBox', 'sort_order' => 0]);
+        app(GadgetService::class)->clearCache();
+
+        $small = $this->memberInCommunities(3);
+        $large = $this->memberInCommunities(12);
+
+        $this->assertSame($this->queryCountFor($small, '/'), $this->queryCountFor($large, '/'));
+
+        // The crown flag is a correlated exists in the slice's select list, not a query per row, so
+        // the aggregate for the total stays the gadget's only extra round trip.
+        $this->assertSame(1, $this->aggregateCountsOver($this->queriesFor($large, '/'), 'communities'));
     }
 
     private function memberWithFriends(int $count): Member
@@ -72,6 +92,34 @@ class ClassicPhotoTableRowCostTest extends TestCase
         }
 
         return $member;
+    }
+
+    private function memberInCommunities(int $count): Member
+    {
+        $member = Member::factory()->create();
+        foreach (Community::factory()->count($count)->create() as $community) {
+            CommunityMember::factory()->create([
+                'community_id' => $community->getKey(),
+                'member_id' => $member->getKey(),
+            ]);
+        }
+
+        return $member;
+    }
+
+    /**
+     * How many of $queries are a standalone COUNT over $table. Anchored on the aggregate select so
+     * a `count(*)` nested in a list query's select list is not mistaken for a round trip.
+     *
+     * @param  list<string>  $queries
+     */
+    private function aggregateCountsOver(array $queries, string $table): int
+    {
+        return count(array_filter(
+            $queries,
+            fn (string $query) => str_starts_with($query, 'select count(*) as ')
+                && str_contains($query, $table),
+        ));
     }
 
     private function communityWithMembers(Member $viewer, int $count): Community

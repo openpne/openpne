@@ -9,10 +9,12 @@ use Illuminate\View\Component;
 
 /**
  * The subject member's joined communities as a row × col thumbnail grid.
+ *
+ * The "show all (n)" total adds exactly one aggregate to the slice path (the slice itself carries its eager loads).
  */
 class CommunityJoinListBox extends Component
 {
-    /** @var list<array{url: string, imageUrl: ?string, name: string}> */
+    /** @var list<array{url: string, imageUrl: ?string, name: string, crown: bool}> */
     public array $items;
 
     public int $rows;
@@ -20,6 +22,9 @@ class CommunityJoinListBox extends Component
     public int $cols;
 
     public string $type;
+
+    /** The subject's whole joined-community count, which the grid slice does not report. */
+    public int $total = 0;
 
     /** @param array<string, mixed> $config */
     public function __construct(
@@ -40,7 +45,12 @@ class CommunityJoinListBox extends Component
             'url' => route('community.show', $community),
             'imageUrl' => $community->image?->thumbnailUrl(76, 76, square: true),
             'name' => $community->name,
+            'crown' => (bool) $community->owner_is_admin,
         ])->all();
+
+        if ($subject !== null && $this->items !== []) {
+            $this->total = $listCommunities->count($subject);
+        }
     }
 
     public function render(): View
