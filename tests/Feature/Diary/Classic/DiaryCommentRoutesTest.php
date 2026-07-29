@@ -114,11 +114,13 @@ class DiaryCommentRoutesTest extends TestCase
         $this->assertNotFalse($textPos);
         $openPos = strrpos(substr($content, 0, $photoPos), '<div class="body">');
         $this->assertNotFalse($openPos, 'ul.photo must be preceded by a div.body open');
-        $closePos = strpos($content, '</div>', $textPos);
+        // The FIRST close after the open (nothing inside the body nests a div): if it precedes the
+        // text, the photos and the text are not sharing one div.body.
+        $closePos = strpos($content, '</div>', $openPos);
         $this->assertNotFalse($closePos);
         $this->assertLessThan($photoPos, $openPos);
         $this->assertLessThan($textPos, $photoPos, 'photos render above the comment text');
-        $this->assertLessThan($closePos, $textPos, 'the body div closes after the text, so the photos sit inside it');
+        $this->assertLessThan($closePos, $textPos, 'the body div must not close before the text — photos and text share it');
     }
 
     public function test_delete_link_shows_only_to_the_comment_or_diary_author(): void
