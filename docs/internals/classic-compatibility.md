@@ -202,6 +202,12 @@ The home cautions are OpenPNE 3's `information` parts customizations on `member/
 [one box holding the set](../../resources/views/home/partials/cautions.blade.php) in the order
 OpenPNE 3 sorted the customize attribute names into.
 
+`/friend/manage` is OpenPNE 3's screen: the member's own roster with the unlink column
+(`manageSuccess.php`). The pending-request queues — a page OpenPNE 3 never had — live on the
+OpenPNE 4-native `/friend/requests`, so the OpenPNE 3 URL is never answered by an unfamiliar
+screen. Unlinking follows `executeUnlink`: someone who is not a `%friend%` (a vanished member
+included) gets a notice back on manage rather than a 404, and a self or empty id goes home.
+
 Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is; there is a single static skin (no
 theme switching); the footer has no privacy-policy / terms links (no such routes exist); the

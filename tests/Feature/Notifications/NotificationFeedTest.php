@@ -102,7 +102,7 @@ class NotificationFeedTest extends TestCase
         $row = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/friend/manage');
+            ->assertRedirect('/friend/requests');
     }
 
     public function test_open_falls_back_to_the_feed_when_the_target_is_gone(): void

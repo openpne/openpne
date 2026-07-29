@@ -3,17 +3,13 @@
 @php
     $isOwner = $owner->is(auth()->user());
     $title = $isOwner ? __('%Friends%') : __(":name's %friends%", ['name' => $owner->name]);
+    // No unlink action here: OpenPNE 3's list is a pure photo table, and unlinking lives on
+    // friend/manage, where the roster carries its delete column.
     $items = $friends->map(fn ($friend) => [
         'url' => route('member.profile.show', $friend),
         'file' => $friend->avatar?->file,
         'name' => $friend->name,
         'count' => $friend->friendships_count,
-        // OpenPNE 3 unlinks from friend/unlink, reached off the member profile; that entry point is
-        // not ported yet, so the per-row link stays bare in the name cell rather than leaving no
-        // route to unfriending at all.
-        'action' => $isOwner
-            ? ['url' => route('friend.unlink.show', $friend), 'label' => __('Remove %friend%')]
-            : null,
     ])->all();
 @endphp
 
@@ -28,9 +24,7 @@
 
         {{-- listError.php closes the empty list with the history-back line; the populated list has
              its pager instead. --}}
-        <x-classic.parts id="backLink" name="line">
-            <a href="#" onclick="history.back(); return false;">{{ __('Back to previous page') }}</a>
-        </x-classic.parts>
+        <x-classic.history-back :fallback="route('home')" />
     @else
         <x-classic.parts id="friendList" name="photoTable" :title="$title">
             <x-classic.photo-table :items="$items" :paginator="$friends" />
