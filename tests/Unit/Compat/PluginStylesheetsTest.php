@@ -45,6 +45,7 @@ class PluginStylesheetsTest extends TestCase
             // glyphicon sprites bootstrap.css references by ../img/.
             'opTimelinePlugin/css/bootstrap.css' => 'a7c8c5042e47ac53101fbe6c4331dec3',
             'opTimelinePlugin/css/timeline.css' => '9e3c72893e4c1617cde5922525a98a6a',
+            'opTimelinePlugin/css/counter.css' => 'f556cf953f96f99cc7f098203bc14024',
             'opTimelinePlugin/img/glyphicons-halflings.png' => '2516339970d710819585f90773aebe0a',
             'opTimelinePlugin/img/glyphicons-halflings-white.png' => '9bbc6e9602998a385c2ea13df56470fd',
             // The Classic shell's skin itself — every other lock hangs off markup this styles.
@@ -63,6 +64,7 @@ class PluginStylesheetsTest extends TestCase
             'images/ajax-loader.gif',
             'opTimelinePlugin/css/bootstrap.css',
             'opTimelinePlugin/css/timeline.css',
+            'opTimelinePlugin/css/counter.css',
             'opTimelinePlugin/img/glyphicons-halflings.png',
             'opTimelinePlugin/img/glyphicons-halflings-white.png',
             'opSkinBasicPlugin/css/main.css',
