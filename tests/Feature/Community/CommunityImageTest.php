@@ -143,7 +143,7 @@ class CommunityImageTest extends TestCase
 
         $this->actingAs($admin)->get(route('community.show', $community))
             ->assertOk()
-            ->assertSee($file->thumbnailUrl(120, 120, square: true), escape: false);
+            ->assertSee($file->thumbnailUrl(180, 180, square: true), escape: false); // OpenPNE 3's 180×180
 
         $this->actingAs($admin)->get(route('community.edit', ['id' => $community->getKey()]))
             ->assertOk()
