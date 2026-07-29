@@ -13,8 +13,8 @@ namespace App\Compat;
  * alone. A module absent here declares no stylesheet in its `view.yml`. That is not the whole
  * story for `community`: its home embeds the topic and event list components, and those
  * partials call `addStylesheet` themselves, so OpenPNE 3 does load communityTopic.css there.
- * Reproducing that means following the component, not the module — recorded as a gap in
- * CommunityRouteParity::screens() rather than papered over with a module entry here.
+ * That component-driven load follows the screen, not the module, so it is not mapped here:
+ * the page pushes its own link onto the layout's pluginCss stack (community/show.blade.php).
  */
 final class PluginStylesheets
 {

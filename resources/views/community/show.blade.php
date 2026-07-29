@@ -2,6 +2,17 @@
 
 @section('title', $community->name)
 
+{{-- OpenPNE 3 loads communityTopic.css here through the embedded topic/event list components'
+     addStylesheet, not the community module's view.yml — so the link is pushed by this screen,
+     and the module map (PluginStylesheets) stays silent for community. The components add it
+     inside their view ACL, so a viewer who gets no board rows gets no stylesheet either
+     ($recentTopics/$recentEvents are null exactly then). --}}
+@if (isset($recentTopics) || isset($recentEvents))
+    @push('pluginCss')
+        <link rel="stylesheet" href="{{ asset('opCommunityTopicPlugin/css/communityTopic.css') }}">
+    @endpush
+@endif
+
 @section('sidemenu')
     <x-community.sidemenu :community="$community" :members="$sidebarMembers" :can-manage-members="$role?->canManage() ?? false" />
 @endsection
@@ -81,9 +92,21 @@
                     </td>
                 </tr>
             @endif
+            {{-- The config rows follow OpenPNE 3's registry order (topic access, then register
+                 policy, then description), taken from a live OpenPNE 3 render — the source
+                 builds them from its community-config registry, so the shipped order is the
+                 template's own. --}}
             <tr>
                 <th>{{ __('Count of Members') }}</th>
                 <td>{{ $community->members_count }}</td>
+            </tr>
+            <tr>
+                <th>{{ __('Authority to Read %Topic%') }}</th>
+                <td>{{ __($community->topic_read_access->label()) }}</td>
+            </tr>
+            <tr>
+                <th>{{ __('Authority to Create %Topic%') }}</th>
+                <td>{{ __($community->topic_post_authority->label()) }}</td>
             </tr>
             <tr>
                 <th>{{ __('Register policy') }}</th>
@@ -94,18 +117,62 @@
                 <th>{{ __('%Community% Description') }}</th>
                 <td>@if ($community->description)<x-user-text :value="$community->description" />@endif</td>
             </tr>
-            <tr>
-                <th>{{ __('Authority to Read %Topic%') }}</th>
-                <td>{{ __($community->topic_read_access->label()) }}</td>
-            </tr>
-            <tr>
-                <th>{{ __('Authority to Create %Topic%') }}</th>
-                <td>{{ __($community->topic_post_authority->label()) }}</td>
-            </tr>
+            {{-- The OpenPNE 3 recent-event and recent-topic rows (communityTopic plugin's lastRow
+                 customize, events first). A row renders only when the viewer may read the board
+                 ($recentEvents/$recentTopics are null otherwise); with no entries it still shows,
+                 message-less, carrying the create link. More appears only over a non-empty list. --}}
+            @isset($recentEvents)
+                <tr class="communityEvent">
+                    <th>{{ __('%Community% Events') }}</th>
+                    <td>
+                        @unless ($recentEvents->isEmpty())
+                            <ul class="articleList">
+                                @foreach ($recentEvents as $event)
+                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($event->updated_at, app()->getLocale()) }}</span> <a href="{{ route('communityEvent.show', $event) }}">{{ \App\Features\Community\CommunityPostTitle::withCount($event) }}</a></li>
+                                @endforeach
+                            </ul>
+                        @endunless
+                        <div class="moreInfo">
+                            <ul class="moreInfo">
+                                @unless ($recentEvents->isEmpty())
+                                    <li><a href="{{ route('communityEvent.index', $community) }}">{{ __('More') }}</a></li>
+                                @endunless
+                                @if ($canPostEvent)
+                                    <li><a href="{{ route('communityEvent.new', $community) }}">{{ __('Create a new event') }}</a></li>
+                                @endif
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            @endisset
+            @isset($recentTopics)
+                <tr class="communityTopic">
+                    <th>{{ __('%Community% %Topics%') }}</th>
+                    <td>
+                        @unless ($recentTopics->isEmpty())
+                            <ul class="articleList">
+                                @foreach ($recentTopics as $topic)
+                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($topic->updated_at, app()->getLocale()) }}</span> <a href="{{ route('communityTopic.show', $topic) }}">{{ \App\Features\Community\CommunityPostTitle::withCount($topic) }}</a></li>
+                                @endforeach
+                            </ul>
+                        @endunless
+                        <div class="moreInfo">
+                            <ul class="moreInfo">
+                                @unless ($recentTopics->isEmpty())
+                                    <li><a href="{{ route('communityTopic.index', $community) }}">{{ __('More') }}</a></li>
+                                @endunless
+                                @if ($canPostTopic)
+                                    <li><a href="{{ route('communityTopic.new', $community) }}">{{ __('Create a new %topic%') }}</a></li>
+                                @endif
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            @endisset
         </table>
     </x-classic.parts>
 
-    {{-- OpenPNE 3 homeSuccess.php closes the page with a class-less ul outside the listBox, holding
+    {{-- OpenPNE 3 homeSuccess.php closes the page with a class-less ul after the listBox, holding
          only the membership operations: the roster lives in the sidemenu and delete inside the edit
          screen. The administrator cannot leave (they must hand the community over first); the join
          entry is withheld from a pending applicant (see below). --}}
@@ -131,61 +198,4 @@
             <li><a href="{{ route('community.members.pending', ['id' => $community->getKey()]) }}">{{ __('Pending members') }}</a></li>
         @endif
     </ul>
-
-    {{-- The recent-topics box links into the board. Shown only when the viewer may read the
-         board (a members-only board is hidden from non-members). OpenPNE 3 listed the same
-         entries as a row of the communityHome table above, so this box carries no OpenPNE 3
-         kind or id; folding it back into that table is a content change, not a frame one. --}}
-    @isset($recentTopics)
-        <x-classic.parts id="community_recentTopics" :title="__('Recent %topics%')">
-            @if ($recentTopics->isEmpty())
-                <p>{{ __('No %topics% to show.') }}</p>
-            @else
-                <ul class="topicList">
-                    @foreach ($recentTopics as $topic)
-                        <li>
-                            <a href="{{ route('communityTopic.show', $topic) }}">{{ $topic->name }} ({{ $topic->comments_count }})</a>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-
-            <div class="operation">
-                <ul class="moreInfo button">
-                    <li><a href="{{ route('communityTopic.index', $community) }}">{{ __('See all %topics%') }}</a></li>
-                    @if ($canPostTopic)
-                        <li><a href="{{ route('communityTopic.new', $community) }}">{{ __('Post a new %topic%') }}</a></li>
-                    @endif
-                </ul>
-            </div>
-        </x-classic.parts>
-    @endisset
-
-    {{-- The recent-events box links into the event board, shown only when the viewer may read
-         the board (events share the topic read gate). Same OpenPNE 3 lineage as recentTopics. --}}
-    @isset($recentEvents)
-        <x-classic.parts id="community_recentEvents" :title="__('Recent events')">
-            @if ($recentEvents->isEmpty())
-                <p>{{ __('No events to show.') }}</p>
-            @else
-                <ul class="topicList">
-                    @foreach ($recentEvents as $event)
-                        <li>
-                            <a href="{{ route('communityEvent.show', $event) }}">{{ $event->name }} ({{ $event->comments_count }})</a>
-                            <span class="eventOpenDate">{{ \App\Support\LocalizedDate::date($event->open_date) }}</span>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-
-            <div class="operation">
-                <ul class="moreInfo button">
-                    <li><a href="{{ route('communityEvent.index', $community) }}">{{ __('See all events') }}</a></li>
-                    @if ($canPostEvent)
-                        <li><a href="{{ route('communityEvent.new', $community) }}">{{ __('Post a new event') }}</a></li>
-                    @endif
-                </ul>
-            </div>
-        </x-classic.parts>
-    @endisset
 @endsection
