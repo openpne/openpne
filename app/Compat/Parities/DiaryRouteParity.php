@@ -136,7 +136,7 @@ class DiaryRouteParity extends RouteParity
             ],
             // listSuccess.php (all-member feed; the search variant shares it) → diary/feed.blade.php
             'list' => [
-                new ScreenElement('feed scope: every entry open to the membership (Open included)', L::Two, S::Ported, 'getDiaryPager PUBLIC_FLAG_SNS (saving an Open diary normalizes it to public_flag=1 + is_open, which that query matches)', 'DiaryVisibilityScope::applyFeed visibility <= Members. OpenPNE 3 drops one shape: a raw legacy public_flag=4 row predating its normalization, which its show page still serves — a migration bug, not a contract. The upgrade converts those rows to Open, so they list here.'),
+                new ScreenElement('feed scope: every entry open to the membership (Open included)', L::Two, S::Ported, 'getDiaryPager PUBLIC_FLAG_SNS (saving an Open diary normalizes it to public_flag=1 + is_open, which that query matches)', "DiaryVisibilityScope::applyFeed visibility <= Members. One deliberate harness delta: the parity seed re-injects a pre-1.1.1 raw public_flag=4 row (OpenPNE 3's own 1.1.1 migration normalized those to 1 + is_open) to exercise the upgrade's legacy branch; OpenPNE 3's runtime drops that shape from this list while still serving its show page, and the upgrade's Open conversion lists it here."),
                 new ScreenElement('keyword search form', L::Two, S::Ported, "url_for('@diary_search')"),
                 new ScreenElement('pager navigation', L::Two, S::Ported, 'op_include_pager_navigation'),
                 new ScreenElement('author nickname', L::Two, S::Ported, '$diary->Member->name'),

@@ -25,10 +25,11 @@ class DiaryFeedRoutesTest extends TestCase
 
     /**
      * A web-public entry belongs in the member feed: OpenPNE 3 lists it too, because saving one
-     * normalizes it to public_flag=1 + is_open, which its list query (public_flag = 1) matches.
-     * The one shape it drops — a raw legacy public_flag=4 row that predates that normalization —
-     * is an OpenPNE 3 migration bug (the same row IS viewable on its show page), not a contract:
-     * the upgrade converts those rows to Open, and here they list like any other Open entry.
+     * normalizes it to public_flag=1 + is_open, which its list query (public_flag = 1) matches —
+     * and its 1.1.1 migration normalized every pre-existing raw public_flag=4 row the same way.
+     * The parity seed deliberately re-injects that pre-1.1.1 shape (which OpenPNE 3's runtime
+     * then drops from this list) to exercise the upgrade's legacy branch; the upgrade converts
+     * it to Open, and here it lists like any other Open entry.
      */
     public function test_the_member_feed_includes_web_public_entries(): void
     {
