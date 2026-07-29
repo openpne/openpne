@@ -1,6 +1,6 @@
 /**
  * The Classic header's notification center: OpenPNE 3 opened its panel in place rather than
- * navigating, and that is the behaviour this restores.
+ * navigating, and that is the behavior this restores.
  *
  * Everything here is an enhancement over markup that already works. The trigger ships as a link to
  * the feed and the rows ship as forms, so a browser that never runs this — or fails to fetch —
