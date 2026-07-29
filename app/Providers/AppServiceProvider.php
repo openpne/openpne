@@ -7,6 +7,7 @@ use App\Captcha\AltchaCaptcha;
 use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
 use App\Features\Home\UnreadCounts;
+use App\Features\Notifications\NotificationCenterWindow;
 use App\Http\Middleware\UseAdminSessionStore;
 use App\Models\BannerImage;
 use App\Models\Community;
@@ -57,6 +58,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Request-scoped so the shell's nav badges and the dashboard notices reuse one set of counts.
         $this->app->scoped(UnreadCounts::class);
+
+        // Likewise for the Classic header sprite's window: read once per request, however many
+        // surfaces in that request ask (see NotificationCenterWindow).
+        $this->app->scoped(NotificationCenterWindow::class);
 
         $this->app->singleton(Captcha::class, function ($app): Captcha {
             $config = $app['config']['openpne.captcha'];

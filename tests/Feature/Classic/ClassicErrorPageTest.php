@@ -79,7 +79,9 @@ class ClassicErrorPageTest extends TestCase
         $this->actingAs($member)->get($this->probeRoute(403))
             ->assertForbidden()
             ->assertSee('id="page_default_error"', false)
-            ->assertSee("You can't access this page.");
+            ->assertSee("You can't access this page.")
+            // The shell an error carries is the whole shell, header included (NotificationCenterTest).
+            ->assertSee('id="notificationCenter"', false);
 
         $this->actingAs($member)->get($this->probeRoute(419))
             ->assertStatus(419)

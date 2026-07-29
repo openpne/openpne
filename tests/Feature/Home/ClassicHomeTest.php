@@ -6,8 +6,11 @@ use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\Gadget;
 use App\Models\Member;
+use App\Models\Message;
+use App\Models\MessageRecipient;
 use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ClassicHomeTest extends TestCase
@@ -106,5 +109,81 @@ class ClassicHomeTest extends TestCase
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertDontSee(e(route('community.show', $community)), false);
+    }
+
+    public function test_unread_messages_and_friend_requests_each_add_a_caution(): void
+    {
+        $viewer = Member::factory()->create();
+        $sender = Member::factory()->create();
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($content, 'class="parts informationBox"'));
+        // The friend line is OpenPNE 3's `p.caution`; the message line is its own `ul > li` with the
+        // star and an inner span — _unreadMessage.php never matched the others.
+        $this->assertStringContainsString('<a href="'.e(route('friend.manage')).'">'.e(__('Check requests')).'</a>', $content);
+        $this->assertStringContainsString('★<span class="caution">'.e(__('There are new :count messages!', ['count' => 1])).'</span>', $content);
+        $this->assertStringContainsString('<a href="'.e(route('message.index')).'"><strong>'.e(__('Read messages')).'</strong></a>', $content);
+    }
+
+    public function test_cautions_keep_the_openpne3_order(): void
+    {
+        $viewer = Member::factory()->create();
+        $sender = Member::factory()->create();
+        $community = Community::factory()->create(['name' => 'Runners Club']);
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $community->forceFill(['pending_admin_member_id' => $viewer->getKey()])->save();
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        // OpenPNE 3 sorted the customize attribute names: cautionAboutChangeAdminRequest,
+        // cautionAboutFriendPre, then unreadMessage.
+        $friendLine = strpos($content, e(__('Check requests')));
+        $messageLine = strpos($content, e(__('Read messages')));
+
+        $this->assertGreaterThan(strpos($content, 'Runners Club'), $friendLine);
+        $this->assertGreaterThan($friendLine, $messageLine);
+    }
+
+    public function test_a_member_with_nothing_waiting_gets_no_information_box(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertDontSee('class="parts informationBox"', false);
+    }
+
+    /**
+     * The cautions count the mailbox and the request list; the header badges count the notification
+     * center's own rows (NotificationCenterTest). Those answer different questions and are not
+     * reconciled — OpenPNE 3's diverged the same way, its badges coming from the event store while
+     * these cautions ran their own queries. What this pins is that the cautions keep asking layer 1,
+     * so a member with nothing in the center is still told what is waiting.
+     */
+    public function test_the_cautions_count_the_mailbox_rather_than_the_notification_rows(): void
+    {
+        $viewer = Member::factory()->create();
+        $senders = Member::factory()->count(3)->create();
+        foreach ($senders as $sender) {
+            DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        }
+        foreach ($senders->take(2) as $sender) {
+            $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+            MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        }
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString(e(__('There are new :count messages!', ['count' => 2])), $content);
+        $this->assertStringContainsString(e(__("You've gotten :count %friend% requests", ['count' => 3])), $content);
+        // No notification rows were written, so the center has nothing to badge.
+        $this->assertStringNotContainsString('id="nc_icon', $content);
     }
 }
