@@ -57,7 +57,10 @@ class ClassicSideBannerGadgetTest extends TestCase
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertSee('id="sideBanner"', false)
-            ->assertSee(route('locale.switch'), false) // the language-selecter form
+            // OpenPNE 3's bare form: label + colon + self-submitting select. No box, no button.
+            ->assertSee('data-language-switch', false)
+            ->assertSee('<label for="language_culture">', false)
+            ->assertDontSee('class="dparts box"', false)
             ->assertSee('English');
     }
 
