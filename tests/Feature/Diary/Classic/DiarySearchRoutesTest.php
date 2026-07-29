@@ -37,6 +37,21 @@ class DiarySearchRoutesTest extends TestCase
         $response->assertSee('Search Results');
     }
 
+    /** The search scope is the feed's: the all-members tier, web-public included, per author. */
+    public function test_a_members_search_includes_web_public_and_excludes_friends_entries(): void
+    {
+        $viewer = Member::factory()->create();
+        Diary::factory()->create(['title' => 'campfire open', 'visibility' => Visibility::Open]);
+        Diary::factory()->create(['title' => 'campfire members', 'visibility' => Visibility::Members]);
+        Diary::factory()->create(['title' => 'campfire friends', 'visibility' => Visibility::Friends]);
+
+        $this->actingAs($viewer)->get('/diary/search?keyword=campfire')
+            ->assertOk()
+            ->assertSee('campfire open')
+            ->assertSee('campfire members')
+            ->assertDontSee('campfire friends');
+    }
+
     public function test_keyword_filters_the_results(): void
     {
         $viewer = Member::factory()->create();

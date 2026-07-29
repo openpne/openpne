@@ -23,6 +23,74 @@ class DiaryFeedRoutesTest extends TestCase
         $this->get('/diary/listFriend')->assertRedirect('/login');
     }
 
+    /**
+     * A web-public entry belongs in the member feed, as in OpenPNE 3: an Open save is stored
+     * there as public_flag=1 + is_open, which is exactly what its feed query lists.
+     */
+    public function test_the_member_feed_includes_web_public_entries(): void
+    {
+        $viewer = Member::factory()->create();
+        Diary::factory()->create(['title' => 'Open note', 'visibility' => Visibility::Open]);
+        Diary::factory()->create(['title' => 'Members note', 'visibility' => Visibility::Members]);
+        Diary::factory()->create(['title' => 'Friends note', 'visibility' => Visibility::Friends]);
+
+        $this->actingAs($viewer)->get('/diary/list')
+            ->assertOk()
+            ->assertSee('Open note')
+            ->assertSee('Members note')
+            ->assertDontSee('Friends note');
+    }
+
+    /**
+     * Being the author earns no seat in this feed: OpenPNE 3's all-member list carries only the
+     * all-members tier, your own restricted entries included. Their home is the member list page.
+     */
+    public function test_the_member_feed_excludes_the_viewers_own_restricted_entries(): void
+    {
+        $viewer = Member::factory()->create();
+        Diary::factory()->create(['member_id' => $viewer->getKey(), 'title' => 'My friends note', 'visibility' => Visibility::Friends]);
+        Diary::factory()->create(['member_id' => $viewer->getKey(), 'title' => 'My private note', 'visibility' => Visibility::Private]);
+        Diary::factory()->create(['member_id' => $viewer->getKey(), 'title' => 'My members note', 'visibility' => Visibility::Members]);
+
+        $this->actingAs($viewer)->get('/diary/list')
+            ->assertOk()
+            ->assertSee('My members note')
+            ->assertDontSee('My friends note')
+            ->assertDontSee('My private note');
+    }
+
+    /**
+     * The friend feed spans every tier a friend opens to friends — Open and Members included, as
+     * OpenPNE 3's friend list (public_flag IN (1,2)) did — and nothing from anyone else.
+     */
+    public function test_the_friend_feed_spans_the_friends_tiers_and_no_one_elses(): void
+    {
+        $viewer = Member::factory()->create();
+        $friend = Member::factory()->create();
+        $stranger = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
+        ]);
+        foreach ([
+            ['Friend open note', Visibility::Open],
+            ['Friend members note', Visibility::Members],
+            ['Friend friends note', Visibility::Friends],
+            ['Friend private note', Visibility::Private],
+        ] as [$title, $visibility]) {
+            Diary::factory()->create(['member_id' => $friend->getKey(), 'title' => $title, 'visibility' => $visibility]);
+        }
+        Diary::factory()->create(['member_id' => $stranger->getKey(), 'title' => 'Stranger members note', 'visibility' => Visibility::Members]);
+
+        $this->actingAs($viewer)->get('/diary/listFriend')
+            ->assertOk()
+            ->assertSee('Friend open note')
+            ->assertSee('Friend members note')
+            ->assertSee('Friend friends note')
+            ->assertDontSee('Friend private note')
+            ->assertDontSee('Stranger members note');
+    }
+
     public function test_recent_feed_renders_members_diaries_with_body_id(): void
     {
         $viewer = Member::factory()->create();
