@@ -106,13 +106,19 @@ class DiaryCommentRoutesTest extends TestCase
 
         // Stacked dt: year / date / time joined by <br />.
         $this->assertStringContainsString('<dt>2026年<br />06月24日<br />21:05</dt>', $content);
-        // div.body opens, then ul.photo, then p.text — the OpenPNE 3 order.
-        $bodyPos = strpos($content, 'with picture');
+        // div.body opens, then ul.photo, then the text, and only then does the div close —
+        // the OpenPNE 3 order, with the close position pinning "inside" for real.
         $photoPos = strpos($content, '<ul class="photo">');
-        $openPos = strrpos(substr($content, 0, $photoPos), '<div class="body">');
+        $textPos = strpos($content, 'with picture');
         $this->assertNotFalse($photoPos);
-        $this->assertNotFalse($openPos, 'ul.photo must sit inside div.body');
-        $this->assertLessThan($bodyPos, $photoPos, 'photos render above the comment text');
+        $this->assertNotFalse($textPos);
+        $openPos = strrpos(substr($content, 0, $photoPos), '<div class="body">');
+        $this->assertNotFalse($openPos, 'ul.photo must be preceded by a div.body open');
+        $closePos = strpos($content, '</div>', $textPos);
+        $this->assertNotFalse($closePos);
+        $this->assertLessThan($photoPos, $openPos);
+        $this->assertLessThan($textPos, $photoPos, 'photos render above the comment text');
+        $this->assertLessThan($closePos, $textPos, 'the body div closes after the text, so the photos sit inside it');
     }
 
     public function test_delete_link_shows_only_to_the_comment_or_diary_author(): void

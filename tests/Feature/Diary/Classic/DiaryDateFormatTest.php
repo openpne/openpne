@@ -10,9 +10,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Locks the OpenPNE 3 op_format_date display on the diary show page: the entry stacks its
- * created-at over three lines in the dt column (XDateTimeJaBr + nl2br), the comment list keeps
- * the one-line form, both in the kanji pattern under the Japanese locale.
+ * Locks the OpenPNE 3 op_format_date display on the diary show page: entry and comment timestamps
+ * both stack year / date / time in their dt columns (XDateTimeJaBr + nl2br) under the Japanese
+ * locale; other locales keep the one-line form.
  */
 class DiaryDateFormatTest extends TestCase
 {
