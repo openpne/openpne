@@ -41,6 +41,24 @@ class DiaryCommentHistoryRoutesTest extends TestCase
             ->assertSee('<a href="'.route('diary.show', $diary).'">HistoryDiary (1)</a> (HistoryAuthor)', false);
     }
 
+    /** op_diary_get_title_and_count: display width 36, full-width counting double, no ellipsis. */
+    public function test_a_long_title_is_cut_to_openpne3s_display_width(): void
+    {
+        $viewer = Member::factory()->create();
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create([
+            'member_id' => $owner->getKey(),
+            'title' => str_repeat('あ', 30), // width 60, cut at 36 → 18 chars
+            'visibility' => Visibility::Members,
+        ]);
+        DiaryComment::factory()->create(['diary_id' => $diary->getKey(), 'member_id' => $viewer->getKey()]);
+
+        $this->actingAs($viewer)->get('/diary/comment/history')
+            ->assertOk()
+            ->assertSee('>'.str_repeat('あ', 18).' (1)</a>', false)
+            ->assertDontSee(str_repeat('あ', 19));
+    }
+
     public function test_the_pager_brackets_the_list_and_pages_by_twenty(): void
     {
         $viewer = Member::factory()->create();

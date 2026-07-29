@@ -17,7 +17,7 @@
             @foreach ($diaries as $diary)
                 <dl>
                     <dt>{{ \App\Support\LocalizedDate::dateTime(\Illuminate\Support\Carbon::parse($diary->last_comment_time)) }}</dt>
-                    <dd><a href="{{ route('diary.show', $diary) }}">{{ $diary->title }} ({{ $diary->comments_count }})</a> ({{ $diary->member->name }})</dd>
+                    <dd><a href="{{ route('diary.show', $diary) }}">{{ \App\Features\Diary\DiaryTitle::withCount($diary) }}</a> ({{ $diary->member->name }})</dd>
                 </dl>
             @endforeach
             <x-classic.pager :paginator="$diaries" />
