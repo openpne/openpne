@@ -86,7 +86,8 @@
 
             @foreach ($thread->comments as $comment)
                 <dl>
-                    <dt>{{ \App\Support\LocalizedDate::dateTime($comment->created_at) }}</dt>
+                    {{-- XDateTimeJaBr, as the entry's own dt: year / date / time stacked. --}}
+                    <dt>@foreach (\App\Support\LocalizedDate::dateTimeLines($comment->created_at) as $line){{ $line }}@if (! $loop->last)<br />@endif@endforeach</dt>
                     <dd>
                         <div class="title">
                             <p class="heading">
@@ -101,8 +102,11 @@
                                 @endif
                             </p>
                         </div>
-                        <div class="body"><p class="text"><x-user-text :value="$comment->body" /></p></div>
-                        @include('community-topic._images', ['images' => $comment->images])
+                        {{-- diaryComment/_list.php puts the photos inside div.body, above the text. --}}
+                        <div class="body">
+                            @include('community-topic._images', ['images' => $comment->images])
+                            <p class="text"><x-user-text :value="$comment->body" /></p>
+                        </div>
                     </dd>
                 </dl>
             @endforeach

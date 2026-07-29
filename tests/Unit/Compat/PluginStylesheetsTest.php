@@ -41,6 +41,8 @@ class PluginStylesheetsTest extends TestCase
             'images/NOTIFY_CENTER.png' => '3bb8a12cf45a980b2dd84ff48e7a39eb',
             // The spinner the notification center panel shows until its rows arrive.
             'images/ajax-loader.gif' => '7b9776076d5fceef4993b55c9383dedd',
+            // The Classic shell's skin itself — every other lock hangs off markup this styles.
+            'opSkinBasicPlugin/css/main.css' => 'cebe2274146d22c93ab021d0b7659a40',
         ], $this->md5sOf([
             'opDiaryPlugin/css/diary.css',
             'opCommunityTopicPlugin/css/communityTopic.css',
@@ -53,6 +55,7 @@ class PluginStylesheetsTest extends TestCase
             'images/icon_alert.gif',
             'images/NOTIFY_CENTER.png',
             'images/ajax-loader.gif',
+            'opSkinBasicPlugin/css/main.css',
         ]));
     }
 

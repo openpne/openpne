@@ -10,9 +10,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Locks the OpenPNE 3 op_format_date display on the diary show page: the entry stacks its
- * created-at over three lines in the dt column (XDateTimeJaBr + nl2br), the comment list keeps
- * the one-line form, both in the kanji pattern under the Japanese locale.
+ * Locks the OpenPNE 3 op_format_date display on the diary show page: entry and comment timestamps
+ * both stack year / date / time in their dt columns (XDateTimeJaBr + nl2br) under the Japanese
+ * locale; other locales keep the one-line form.
  */
 class DiaryDateFormatTest extends TestCase
 {
@@ -49,7 +49,7 @@ class DiaryDateFormatTest extends TestCase
             ->assertSee('<dt>June 4, 2026 1:44 PM</dt>', false);
     }
 
-    public function test_show_renders_the_japanese_comment_datetime(): void
+    public function test_show_stacks_the_japanese_comment_datetime(): void
     {
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $owner->getKey()]);
@@ -58,10 +58,11 @@ class DiaryDateFormatTest extends TestCase
             'created_at' => CarbonImmutable::create(2026, 6, 4, 9, 5),
         ]);
 
+        // XDateTimeJaBr, as the entry's own dt: the comment timestamp stacks too.
         $this->actingAs($owner)
             ->withSession(['locale' => 'ja'])
             ->get("/diary/{$diary->getKey()}")
             ->assertOk()
-            ->assertSee('2026年06月04日 09:05');
+            ->assertSee('<dt>2026年<br />06月04日<br />09:05</dt>', false);
     }
 }
