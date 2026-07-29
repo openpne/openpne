@@ -77,16 +77,16 @@ class ClassicGadgetMoreInfoTest extends TestCase
 
         $this->actingAs($owner)->get("/member/{$owner->getKey()}")
             ->assertOk()
-            // The manage label points at friend.list (where OpenPNE 3's manage screen folded),
-            // never at the pending-request screen (which the shell's own header does link to).
-            ->assertSee('<a href="'.route('friend.list').'">Manage my friends</a>', false)
-            ->assertDontSee('<a href="'.route('friend.manage').'"', false);
+            // OpenPNE 3's gadget links straight to friend/manage — the roster with unlink links —
+            // under its own title. Never the pending-request screen.
+            ->assertSee('<a href="'.route('friend.manage').'">'.e(__('%my_friend% Setting')).'</a>', false)
+            ->assertDontSee('<a href="'.route('friend.requests').'"', false);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertOk()
             ->assertSee('Show all(2)')                             // the subject's total, not the viewer's
             ->assertSee('/friend/list?id='.$owner->getKey())
-            ->assertDontSee('Manage my friends');
+            ->assertDontSee(e(__('%my_friend% Setting')), false);
     }
 
     public function test_community_grid_counts_the_whole_list_and_links_to_the_subjects_join_list(): void

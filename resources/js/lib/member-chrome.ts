@@ -123,9 +123,9 @@ const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
     { href: '/community/recent', label: t('Recent activity'), active: active === 'recent' },
 ];
 
-const friendTabs = (active: 'list' | 'manage'): ChromeTab[] => [
+const friendTabs = (active: 'list' | 'requests'): ChromeTab[] => [
     { href: '/friend/list', label: FRIENDS, active: active === 'list' },
-    { href: '/friend/manage', label: t('Requests'), active: active === 'manage' },
+    { href: '/friend/requests', label: t('Requests'), active: active === 'requests' },
 ];
 
 interface CommunityRef {
@@ -353,11 +353,11 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             ? { mode: 'section', title: FRIENDS, tabsLabel: FRIENDS, tabs: friendTabs('list') }
             : { mode: 'contextual', title: FRIENDS, context: memberContext(owner) };
     },
-    'friend/manage': () => ({
+    'friend/requests': () => ({
         mode: 'section',
         title: FRIENDS,
         tabsLabel: FRIENDS,
-        tabs: friendTabs('manage'),
+        tabs: friendTabs('requests'),
     }),
     // One Messages hub: stable h1 (= nav label) with the four boxes as tabs; the active box lives
     // in the tabs and the browser Head title, not the h1.
@@ -435,7 +435,7 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'member/search',
     'member/config',
     'notifications/index',
-    'friend/manage',
+    'friend/requests',
     'member/show',
     'block/add',
     'block/list',

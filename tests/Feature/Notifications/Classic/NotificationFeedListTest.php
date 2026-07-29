@@ -88,7 +88,7 @@ class NotificationFeedListTest extends TestCase
 
         $this->actingAs($viewer)->get('/notifications')->assertOk();
         $this->actingAs($viewer)->post(route('notifications.open', $row->getKey()))
-            ->assertRedirect('/friend/manage');
+            ->assertRedirect('/friend/requests');
 
         $this->assertNotNull($row->fresh()->read_at);
     }
