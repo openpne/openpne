@@ -24,6 +24,8 @@ use App\Features\CommunityEvent\Serializers\CommunityEventSerializer;
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\CommunityTopic\Queries\RecentCommunityTopics;
 use App\Features\CommunityTopic\Serializers\CommunityTopicSerializer;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\CommunityRequest;
@@ -189,6 +191,21 @@ class CommunityController extends Controller
         ]);
     }
 
+    /**
+     * One choice list per enum, shared verbatim by both surfaces so the OpenPNE 3 wording lives in
+     * the enum alone. Slugs on the wire — the enums' own rule.
+     *
+     * @param  array<int, JoinPolicy|TopicReadAccess|TopicPostAuthority>  $cases
+     * @return list<array{slug: string, label: string}>
+     */
+    private static function choices(array $cases): array
+    {
+        return array_map(fn ($case): array => [
+            'slug' => $case->slug(),
+            'label' => $case->label(),
+        ], $cases);
+    }
+
     public function edit(Request $request): View|InertiaResponse
     {
         $community = $this->optionalCommunityFrom($request);
@@ -207,7 +224,9 @@ class CommunityController extends Controller
                 return view('community.edit', [
                     'community' => $community,
                     'categories' => $categories,
-                    'policies' => JoinPolicy::cases(),
+                    'policies' => self::choices(JoinPolicy::cases()),
+                    'topicReadChoices' => self::choices(TopicReadAccess::cases()),
+                    'topicPostChoices' => self::choices(TopicPostAuthority::cases()),
                     'canDelete' => $community !== null && Gate::allows('delete', $community),
                 ]);
             },
@@ -216,19 +235,20 @@ class CommunityController extends Controller
                     'id' => $community->getKey(),
                     'name' => $community->name,
                     'description' => $community->description ?? '',
-                    'registerPolicy' => $community->register_policy->value,
+                    'registerPolicy' => $community->register_policy->slug(),
                     'categoryId' => $community->community_category_id,
                     'isJoinNotificationEnabled' => $community->is_join_notification_enabled,
+                    'topicReadAccess' => $community->topic_read_access->slug(),
+                    'topicPostAuthority' => $community->topic_post_authority->slug(),
                     'imageUrl' => $community->image?->thumbnailUrl(180, 180, square: true),
                 ],
                 'categories' => $categories->map(fn (CommunityCategory $category): array => [
                     'id' => $category->getKey(),
                     'name' => $category->name,
                 ])->values()->all(),
-                'policies' => array_map(fn (JoinPolicy $policy): array => [
-                    'value' => $policy->value,
-                    'label' => $policy->label(),
-                ], JoinPolicy::cases()),
+                'policies' => self::choices(JoinPolicy::cases()),
+                'topicReadChoices' => self::choices(TopicReadAccess::cases()),
+                'topicPostChoices' => self::choices(TopicPostAuthority::cases()),
                 'canDelete' => $community !== null && Gate::allows('delete', $community),
             ]),
         ]);

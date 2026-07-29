@@ -57,6 +57,8 @@ class UpdateCommunity
                 'register_policy' => $data->registerPolicy,
                 'community_category_id' => $data->categoryId,
                 'is_join_notification_enabled' => $data->isJoinNotificationEnabled,
+                'topic_read_access' => $data->topicReadAccess,
+                'topic_post_authority' => $data->topicPostAuthority,
             ]);
 
             // A new upload wins over a remove flag. Capture the prior File (if any) to purge after commit.
