@@ -23,6 +23,27 @@ class DiaryFeedRoutesTest extends TestCase
         $this->get('/diary/listFriend')->assertRedirect('/login');
     }
 
+    /**
+     * A web-public entry belongs in the member feed: OpenPNE 3 lists it too, because saving one
+     * normalizes it to public_flag=1 + is_open, which its list query (public_flag = 1) matches.
+     * The one shape it drops — a raw legacy public_flag=4 row that predates that normalization —
+     * is an OpenPNE 3 migration bug (the same row IS viewable on its show page), not a contract:
+     * the upgrade converts those rows to Open, and here they list like any other Open entry.
+     */
+    public function test_the_member_feed_includes_web_public_entries(): void
+    {
+        $viewer = Member::factory()->create();
+        Diary::factory()->create(['title' => 'Open note', 'visibility' => Visibility::Open]);
+        Diary::factory()->create(['title' => 'Members note', 'visibility' => Visibility::Members]);
+        Diary::factory()->create(['title' => 'Friends note', 'visibility' => Visibility::Friends]);
+
+        $this->actingAs($viewer)->get('/diary/list')
+            ->assertOk()
+            ->assertSee('Open note')
+            ->assertSee('Members note')
+            ->assertDontSee('Friends note');
+    }
+
     public function test_recent_feed_renders_members_diaries_with_body_id(): void
     {
         $viewer = Member::factory()->create();
