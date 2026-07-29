@@ -136,6 +136,7 @@ class DiaryRouteParity extends RouteParity
             ],
             // listSuccess.php (all-member feed; the search variant shares it) → diary/feed.blade.php
             'list' => [
+                new ScreenElement('feed scope: every entry open to the membership (Open included)', L::Two, S::Ported, 'getDiaryPager PUBLIC_FLAG_SNS (saving an Open diary normalizes it to public_flag=1 + is_open, which that query matches)', 'DiaryVisibilityScope::applyFeed visibility <= Members'),
                 new ScreenElement('keyword search form', L::Two, S::Ported, "url_for('@diary_search')"),
                 new ScreenElement('pager navigation', L::Two, S::Ported, 'op_include_pager_navigation'),
                 new ScreenElement('author nickname', L::Two, S::Ported, '$diary->Member->name'),
