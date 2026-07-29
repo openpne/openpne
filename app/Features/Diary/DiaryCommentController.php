@@ -42,6 +42,10 @@ class DiaryCommentController extends Controller
             return redirect()->route('diary.show', $comment->diary);
         }
 
+        // The confirm keeps the diary owner's context, as the diary pages it sits between do —
+        // OpenPNE 3 rendered it with the friend localNav, not the default set.
+        $this->markLocalNavSubject($comment->diary->member);
+
         return view('diary.comment.delete', [
             'comment' => $comment,
             'pageId' => RouteParityRegistry::bodyId('diary.comment.delete.show'),

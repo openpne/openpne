@@ -45,6 +45,9 @@ class CommunityTopicCommentController extends Controller
             return redirect()->route('communityTopic.show', $comment->topic);
         }
 
+        // The confirm keeps the community context its topic pages carry.
+        $this->markLocalNavCommunity($comment->topic->community);
+
         return view('community-topic.comment-delete', [
             'comment' => $comment,
             'pageId' => RouteParityRegistry::bodyId('communityTopic.comment.delete.show'),

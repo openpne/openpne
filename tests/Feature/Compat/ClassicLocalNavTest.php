@@ -85,6 +85,23 @@ class ClassicLocalNavTest extends TestCase
             ->assertSee(route('member.profile.show', $friend), false);
     }
 
+    /**
+     * The comment-delete confirm sits between two pages that carry the diary owner's context, so
+     * it keeps the friend set too (OpenPNE 3 rendered it with sf_nav_type=friend, not default).
+     */
+    public function test_the_diary_comment_delete_confirm_keeps_the_owners_friend_localnav(): void
+    {
+        $viewer = Member::factory()->create();
+        $owner = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members]);
+        $comment = $diary->comments()->create(['member_id' => $viewer->getKey(), 'body' => 'mine', 'number' => 1]);
+
+        $this->actingAs($viewer)->get(route('diary.comment.delete.show', $comment))
+            ->assertOk()
+            ->assertSee('<ul class="friend">', false)
+            ->assertSee(route('member.profile.show', $owner), false);
+    }
+
     public function test_a_guest_on_a_web_public_profile_sees_no_localnav(): void
     {
         $owner = Member::factory()->create(['profile_visibility' => Visibility::Open]);

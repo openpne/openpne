@@ -4,6 +4,7 @@ namespace Tests\Feature\Compat;
 
 use App\Features\Community\CommunityRole;
 use App\Models\Community;
+use App\Models\CommunityEvent;
 use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Member;
@@ -56,6 +57,31 @@ class ClassicCommunityLocalNavTest extends TestCase
                 ->assertOk()
                 ->assertSee('<ul class="community">', false)
                 ->assertSee(route('community.show', $community), false);
+        }
+    }
+
+    /**
+     * The topic / event comment-delete confirms keep the community context their parent pages
+     * carry (OpenPNE 3 sf_nav_type=community).
+     */
+    public function test_comment_delete_confirms_keep_the_community_localnav(): void
+    {
+        $community = Community::factory()->create();
+        $admin = Member::factory()->create();
+        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+        $topicComment = $topic->comments()->create(['member_id' => $admin->getKey(), 'body' => 'c', 'number' => 1]);
+        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+        $eventComment = $event->comments()->create(['member_id' => $admin->getKey(), 'body' => 'c', 'number' => 1]);
+
+        foreach ([
+            route('communityTopic.comment.delete.show', $topicComment),
+            route('communityEvent.comment.delete.show', $eventComment),
+        ] as $url) {
+            $this->actingAs($admin)->get($url)
+                ->assertOk()
+                ->assertSee('<ul class="community">', false)
+                ->assertSee('id='.$community->getKey(), false);
         }
     }
 
