@@ -121,8 +121,10 @@ class TimelineController extends Controller
         $viewer = $this->viewer();
         $action($viewer, $request->toData(), $request->file('image'));
 
+        // The inline forms return to their own page (allowlisted token), page 1, where the fresh
+        // post now leads the feed; the standalone compose page keeps its member-timeline landing.
         return redirect()
-            ->route('timeline.member', ['member' => $viewer->getKey()])
+            ->route($request->returnRoute() ?? 'timeline.member', $request->returnRoute() !== null ? [] : ['member' => $viewer->getKey()])
             ->with('status', __('Posted.'));
     }
 
