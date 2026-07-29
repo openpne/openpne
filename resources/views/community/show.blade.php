@@ -4,10 +4,14 @@
 
 {{-- OpenPNE 3 loads communityTopic.css here through the embedded topic/event list components'
      addStylesheet, not the community module's view.yml — so the link is pushed by this screen,
-     and the module map (PluginStylesheets) stays silent for community. --}}
-@push('pluginCss')
-    <link rel="stylesheet" href="{{ asset('opCommunityTopicPlugin/css/communityTopic.css') }}">
-@endpush
+     and the module map (PluginStylesheets) stays silent for community. The components add it
+     inside their view ACL, so a viewer who gets no board rows gets no stylesheet either
+     ($recentTopics/$recentEvents are null exactly then). --}}
+@if (isset($recentTopics) || isset($recentEvents))
+    @push('pluginCss')
+        <link rel="stylesheet" href="{{ asset('opCommunityTopicPlugin/css/communityTopic.css') }}">
+    @endpush
+@endif
 
 @section('sidemenu')
     <x-community.sidemenu :community="$community" :members="$sidebarMembers" :can-manage-members="$role?->canManage() ?? false" />

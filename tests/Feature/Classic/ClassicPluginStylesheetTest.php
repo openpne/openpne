@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Classic;
 
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Models\Community;
 use App\Models\Diary;
 use App\Models\Member;
@@ -53,6 +54,19 @@ class ClassicPluginStylesheetTest extends TestCase
         $this->assertNotFalse($plugin);
         $this->assertGreaterThan($skin, $plugin);
         $this->assertGreaterThan($plugin, $custom);
+    }
+
+    public function test_a_viewer_without_board_access_gets_no_component_stylesheet(): void
+    {
+        // OpenPNE 3's list components addStylesheet inside their view ACL: an outsider to a
+        // members-only board gets neither the rows nor the stylesheet.
+        $community = Community::factory()->create([
+            'topic_read_access' => TopicReadAccess::MembersOnly,
+        ]);
+
+        $this->actingAs(Member::factory()->create())->get(route('community.show', $community))
+            ->assertOk()
+            ->assertDontSee('opCommunityTopicPlugin', false);
     }
 
     public function test_the_component_stylesheet_follows_the_screen_not_the_community_module(): void
