@@ -68,7 +68,9 @@ class ShellNavigationTest extends TestCase
 
         $this->assertMatchesRegularExpression(
             '#<li id="globalNav__member_logout">\s*<form method="POST" action="[^"]*/logout">#', $content);
-        $this->assertStringContainsString('#globalNav li form button { padding: 0 8px; height: 40px;', $content);
+        // font: inherit must LEAD the block (the shorthand resets a line-height declared
+        // before it), and :where() keeps the selector overridable by any site CSS.
+        $this->assertStringContainsString(':where(#globalNav li form) button { font: inherit; padding: 0 8px; height: 40px; line-height: 40px;', $content);
     }
 
     public function test_guest_on_a_classic_page_does_not_see_the_local_nav(): void

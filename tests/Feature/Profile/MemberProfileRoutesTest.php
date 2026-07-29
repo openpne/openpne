@@ -43,8 +43,6 @@ class MemberProfileRoutesTest extends TestCase
         $this->assertLessThan($center, $box, 'the notice box sits in #Top, above the Center column');
     }
 
-    use RefreshDatabase;
-
     public function test_classic_renders_the_member_profile_with_visible_values(): void
     {
         $owner = Member::factory()->create(['name' => 'Owner']);

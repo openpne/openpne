@@ -8,11 +8,14 @@
 @endphp
 @once
     {{-- The logout tab is a POST form button (nav-item), dressed as the plain tab OpenPNE 3 drew;
-         mirrors the skin's #globalNav li a rules so the header reads as one row of tabs. --}}
+         mirrors the skin's #globalNav li a rules so the header reads as one row of tabs.
+         :where() zeroes the selector's specificity: this block sits after a site's own CSS, so
+         any ordinary selector of theirs must still win. font: inherit leads the block — as a
+         shorthand it would reset a line-height declared before it. --}}
     <style>
-        #globalNav li form { margin: 0; }
-        #globalNav li form button { padding: 0 8px; height: 40px; line-height: 40px; display: block; color: #FFFFFF; text-decoration: none; background: none; border: 0; font: inherit; cursor: pointer; }
-        #globalNav li form button:hover { background: transparent url({{ asset('opSkinBasicPlugin/images/bg_globalnav_hover.gif') }}) repeat-x scroll 0 0; }
+        :where(#globalNav li form) { margin: 0; }
+        :where(#globalNav li form) button { font: inherit; padding: 0 8px; height: 40px; line-height: 40px; display: block; color: #FFFFFF; text-decoration: none; background: none; border: 0; cursor: pointer; }
+        :where(#globalNav li form) button:hover { background: transparent url({{ asset('opSkinBasicPlugin/images/bg_globalnav_hover.gif') }}) repeat-x scroll 0 0; }
     </style>
 @endonce
 <div id="globalNav">
