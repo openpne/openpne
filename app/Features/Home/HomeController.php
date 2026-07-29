@@ -30,7 +30,7 @@ class HomeController extends Controller
     /** Items shown per digest section on the Modern dashboard. */
     private const PREVIEW = 5;
 
-    public function index(Request $request, GadgetService $gadgets): View|RedirectResponse
+    public function index(Request $request, GadgetService $gadgets, UnreadCounts $unread): View|RedirectResponse
     {
         $viewer = $request->user();
         if ($viewer === null) {
@@ -49,6 +49,9 @@ class HomeController extends Controller
             // _cautionAboutChangeAdminRequest, restored as a direct link to each community's banner
             // (Modern surfaces this through the feed + bell instead). Cheap: pending_admin_member_id is indexed.
             'adminTransferCommunities' => Community::where('pending_admin_member_id', $viewer->getKey())->get(),
+            // The remaining cautions are the header badge numbers, read from the same request-scoped
+            // service the shell reads, so a caution and its badge can never disagree.
+            'unread' => $unread->for($viewer),
         ]);
     }
 

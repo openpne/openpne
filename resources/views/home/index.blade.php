@@ -6,10 +6,10 @@
 @php($hasGadgets = collect($zones)->flatten(1)->isNotEmpty())
 
 @if ($hasGadgets)
-    @include('partials.gadget-sections', ['zones' => $zones, 'contentTop' => 'home.partials.admin-transfer-caution'])
+    @include('partials.gadget-sections', ['zones' => $zones, 'contentTop' => 'home.partials.cautions'])
 @else
     @section('content')
-        @include('home.partials.admin-transfer-caution')
+        @include('home.partials.cautions')
         {{-- No gadgets configured yet: a minimal landing until the admin adds gadgets. OpenPNE 3
              leaves the column empty instead, so there is no kind to reproduce. --}}
         <x-classic.parts id="home_index" :title="__('Home')">

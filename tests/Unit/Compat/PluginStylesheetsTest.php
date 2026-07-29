@@ -36,6 +36,11 @@ class PluginStylesheetsTest extends TestCase
             'images/icon_2.gif' => '5eeff8dd69a4d7606d8455fac953eb8a',
             // The Classic shell's flash alertBox icon (OpenPNE 3 `_partsAlertBox.php`).
             'images/icon_alert.gif' => '05daef255575c91468b475c2915a9a3c',
+            // The header notification center's icon sprite (OpenPNE 3 `_header.php`). The skin
+            // positions the three badges over its glyphs, so its geometry is part of the contract.
+            'images/NOTIFY_CENTER.png' => '3bb8a12cf45a980b2dd84ff48e7a39eb',
+            // The spinner the notification center panel shows until its rows arrive.
+            'images/ajax-loader.gif' => '7b9776076d5fceef4993b55c9383dedd',
         ], $this->md5sOf([
             'opDiaryPlugin/css/diary.css',
             'opCommunityTopicPlugin/css/communityTopic.css',
@@ -46,6 +51,8 @@ class PluginStylesheetsTest extends TestCase
             'opMessagePlugin/images/icon_mail_4.gif',
             'images/icon_2.gif',
             'images/icon_alert.gif',
+            'images/NOTIFY_CENTER.png',
+            'images/ajax-loader.gif',
         ]));
     }
 

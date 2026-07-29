@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications\Classic;
 
+use App\Features\Notifications\NotificationCenterWindow;
 use App\Models\Member;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Message\MessageReceivedNotification;
@@ -73,6 +74,7 @@ class NotificationFeedListTest extends TestCase
             ->assertSee(__('Mark all as read'));
 
         $row->markAsRead();
+        $this->freshRequestState(); // the count is memoized per request, and this is the next one
 
         // Same condition the Modern page hides its button on: nothing left to mark.
         $this->actingAs($viewer)->get('/notifications')
@@ -89,6 +91,26 @@ class NotificationFeedListTest extends TestCase
             ->assertRedirect('/friend/manage');
 
         $this->assertNotNull($row->fresh()->read_at);
+    }
+
+    /**
+     * The feed pages through everything, so its mark-all follows the whole unread set — not the
+     * header center's 20-row window. An unread row the center cannot badge still has something for
+     * this button to mark.
+     */
+    public function test_mark_all_survives_an_unread_row_older_than_the_centers_window(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->seedRow($viewer, 'diary_commented', [], createdAt: now()->subSecond());
+        foreach (range(1, NotificationCenterWindow::LIMIT) as $ignored) {
+            $this->seedRow($viewer, 'diary_commented', [], readAt: now());
+        }
+
+        // The center's window is the newest 20, all read, so its badges are empty.
+        $this->actingAs($viewer)->get('/notifications')
+            ->assertOk()
+            ->assertDontSee('id="nc_icon', false)
+            ->assertSee('action="'.route('notifications.readAll').'"', false);
     }
 
     public function test_an_empty_feed_says_so_and_drops_the_pager(): void
@@ -140,7 +162,7 @@ class NotificationFeedListTest extends TestCase
     }
 
     /** @param array<string, mixed> $data */
-    private function seedRow(Member $member, string $kind, array $data, ?\DateTimeInterface $readAt = null): DatabaseNotification
+    private function seedRow(Member $member, string $kind, array $data, ?\DateTimeInterface $readAt = null, ?\DateTimeInterface $createdAt = null): DatabaseNotification
     {
         /** @var DatabaseNotification $row */
         $row = $member->notifications()->create([
@@ -148,6 +170,7 @@ class NotificationFeedListTest extends TestCase
             'type' => $kind === 'message_received' ? MessageReceivedNotification::class : FriendRequestedNotification::class,
             'data' => ['kind' => $kind, ...$data],
             'read_at' => $readAt,
+            'created_at' => $createdAt ?? now(),
         ]);
 
         return $row;

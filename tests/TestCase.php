@@ -41,8 +41,10 @@ abstract class TestCase extends BaseTestCase
      * Simulate the next HTTP request arriving on a fresh worker: forget every cached
      * object that captured the previous request's session store (guards, the session
      * manager's built driver, the redirector), so UseAdminSessionStore's per-realm
-     * pin can take effect. Required between requests in any test that crosses the
-     * member/admin realm boundary within one test method.
+     * pin can take effect, plus the scoped bindings that memoize per request. The test
+     * container outlives a request, so both are required between requests in any test
+     * that crosses the member/admin realm boundary or changes what a scoped service
+     * already counted, within one test method.
      */
     protected function freshRequestState(): void
     {
@@ -50,6 +52,7 @@ abstract class TestCase extends BaseTestCase
         $this->app['session']->forgetDrivers();
         $this->app->forgetInstance('session.store');
         $this->app->forgetInstance('redirect');
+        $this->app->forgetScopedInstances();
     }
 
     /** Render a templated notification mail's plain-text body (the MailMessage delivers text/plain only). */

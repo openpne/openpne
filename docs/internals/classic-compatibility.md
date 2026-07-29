@@ -171,11 +171,46 @@ custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar 
 `footer_before` / `footer_after` setting, chosen by the page's `secure_page` / `insecure_page` class
 (OpenPNE 3 `isSecurePage`); `$classicFooterHtml` overrides it per request.
 
+`#notificationCenter` sits between the logo and `#globalNav`, for a signed-in member only: the
+vendored `NOTIFY_CENTER.png` sprite with the `#nc_icon1` / `#nc_icon2` / `#nc_icon3` badges the skin
+positions over its three glyphs, hidden at zero.
+
+The sprite is **one** control. OpenPNE 3 bound a single click to `.ncbutton` and opened
+`#notificationCenterDetail` in place; the icons never navigated and the badges were never targets,
+so splitting them into three links reads right and behaves wrong — which, for a surface whose only
+audience already knows the original, costs more than an unfamiliar control would. `.ncbutton` is
+therefore what it is in OpenPNE 3: the click hook, matched by no stylesheet here or there.
+
+The trigger ships as an ordinary link to the feed and the rows as forms, so the control works before
+[the script](../../public/js/classic-notification-center.js) does; the script cancels the navigation
+and opens the panel instead, fetching the rows on first open as OpenPNE 3 did — a page whose panel
+is never opened pays nothing for it. The rows arrive as HTML because their sentences are already
+resolved in PHP; only the two inline `%friend%` decisions answer in JSON. Those decisions read who
+they are about from the member's own notification row rather than from the request body, and follow
+the request's own state, so marking the panel read never retracts a decision still owed.
+
+The badges count the rows that panel lists —
+[`NotificationCenterCounts`](../../app/Features/Notifications/NotificationCenterCounts.php) over the
+three compartments in
+[`NotificationCenterCategory`](../../app/Features/Notifications/NotificationCenterCategory.php),
+memoized per request. Deliberately not the layer-1 counts behind the home cautions: a badge heading
+a panel has to count what is in it, or opting a kind out of the web channel leaves a badge standing
+over an empty list and the third badge re-counts the first two. The cautions keep asking layer 1 and
+the two are not reconciled — OpenPNE 3's diverged the same way.
+
+The home cautions are OpenPNE 3's `information` parts customizations on `member/homeSuccess`,
+[one box holding the set](../../resources/views/home/partials/cautions.blade.php) in the order
+OpenPNE 3 sorted the customize attribute names into.
+
 Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is; there is a single static skin (no
 theme switching); the footer has no privacy-policy / terms links (no such routes exist); the
 `#SmtSwitch` smartphone-view toggle is not ported (OpenPNE 4 has no separate smartphone frontend
-to switch to).
+to switch to); the notification center's badges count unread notification rows rather than OpenPNE
+3's `member_config` event store, so they are clamped at `99+` with the number kept in the title, and
+its panel answers a decision by replacing the buttons with the outcome rather than OpenPNE 3's
+hardcoded Japanese; the unread-`%diary%`-comment caution has nothing to port to (OpenPNE 4 tracks
+no per-entry comment read state).
 
 ### Error screens
 

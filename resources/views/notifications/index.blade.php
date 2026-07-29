@@ -8,7 +8,7 @@
          opens it. Where a row leads is decided by that POST, so listing costs no per-row lookup. --}}
     {{-- Opening a row marks it read, so it submits rather than links. The chrome comes off so a
          row still reads as a row: `input_submit` is OpenPNE 3's styling for a form's confirm
-         button, and colour is inherited so a theme's own palette carries. --}}
+         button, and color is inherited so a theme's own palette carries. --}}
     @once
         {{-- Class selectors, not ids: this block sits after the site's own CSS, so a site beats it
              with an ordinary more-specific selector. Ids here would leave nothing to outrank. --}}
@@ -28,7 +28,7 @@
                     <dd>
                         <form method="POST" action="{{ route('notifications.open', $item->id) }}" class="notificationFeedRow">
                             @csrf
-                            {{-- Unread is the row's emphasis, not a colour: strong carries it to a
+                            {{-- Unread is the row's emphasis, not a color: strong carries it to a
                                  screen reader too, and the skins already style it. --}}
                             <button type="submit" class="notificationFeedLink">@if ($item->read){{ $item->label }}@else<strong>{{ $item->label }}</strong>@endif</button>
                         </form>

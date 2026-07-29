@@ -176,13 +176,6 @@ class FriendController extends Controller
 
     private function messageFor(FriendActionFailure $reason): string
     {
-        return match ($reason) {
-            FriendActionFailure::SelfFriendship => __('You cannot send a %friend% request to yourself.'),
-            FriendActionFailure::AlreadyFriends => __('You are already %friends%.'),
-            FriendActionFailure::DuplicateRequest => __('A pending request already exists.'),
-            FriendActionFailure::Blocked => __('This member is unavailable.'),
-            FriendActionFailure::RequestNotFound => __('No pending %friend% request found.'),
-            FriendActionFailure::NotFriends => __('You are not %friends% with this member.'),
-        };
+        return FriendActionMessage::for($reason);
     }
 }

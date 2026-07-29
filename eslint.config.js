@@ -9,7 +9,7 @@ import tseslint from 'typescript-eslint';
 // `@typescript/native`, while the `typescript` package is aliased to `@typescript/typescript6` so
 // tooling gets a TS 6 API. Drop the alias (package.json) once typescript-eslint supports the TS 7.1 API.
 export default tseslint.config(
-    { ignores: ['public/build'] },
+    { ignores: ['public/build', 'public/js/filament'] },
     js.configs.recommended,
     tseslint.configs.recommended,
     {
@@ -51,5 +51,14 @@ export default tseslint.config(
         // Global augmentation via declaration merging uses intentionally empty interfaces.
         files: ['resources/js/types/globals.d.ts'],
         rules: { '@typescript-eslint/no-empty-object-type': 'off' },
+    },
+    {
+        // The Classic surface's scripts are served as-is from public/ — no bundler, no modules, and
+        // no browser API newer than the ones OpenPNE 3's own audience is on.
+        files: ['public/js/*.js'],
+        languageOptions: {
+            sourceType: 'script',
+            globals: globals.browser,
+        },
     },
 );
