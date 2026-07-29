@@ -41,6 +41,12 @@ class PluginStylesheetsTest extends TestCase
             'images/NOTIFY_CENTER.png' => '3bb8a12cf45a980b2dd84ff48e7a39eb',
             // The spinner the notification center panel shows until its rows arrive.
             'images/ajax-loader.gif' => '7b9776076d5fceef4993b55c9383dedd',
+            // The timeline rows' stylesheets (component-driven, layout pluginCss stack) and the
+            // glyphicon sprites bootstrap.css references by ../img/.
+            'opTimelinePlugin/css/bootstrap.css' => 'a7c8c5042e47ac53101fbe6c4331dec3',
+            'opTimelinePlugin/css/timeline.css' => '9e3c72893e4c1617cde5922525a98a6a',
+            'opTimelinePlugin/img/glyphicons-halflings.png' => '2516339970d710819585f90773aebe0a',
+            'opTimelinePlugin/img/glyphicons-halflings-white.png' => '9bbc6e9602998a385c2ea13df56470fd',
             // The Classic shell's skin itself — every other lock hangs off markup this styles.
             'opSkinBasicPlugin/css/main.css' => 'cebe2274146d22c93ab021d0b7659a40',
         ], $this->md5sOf([
@@ -55,6 +61,10 @@ class PluginStylesheetsTest extends TestCase
             'images/icon_alert.gif',
             'images/NOTIFY_CENTER.png',
             'images/ajax-loader.gif',
+            'opTimelinePlugin/css/bootstrap.css',
+            'opTimelinePlugin/css/timeline.css',
+            'opTimelinePlugin/img/glyphicons-halflings.png',
+            'opTimelinePlugin/img/glyphicons-halflings-white.png',
             'opSkinBasicPlugin/css/main.css',
         ]));
     }
