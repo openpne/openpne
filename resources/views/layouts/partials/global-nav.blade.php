@@ -14,8 +14,8 @@
          shorthand it would reset a line-height declared before it. --}}
     <style>
         :where(#globalNav li form) { margin: 0; }
-        :where(#globalNav li form) button { font: inherit; padding: 0 8px; height: 40px; line-height: 40px; display: block; color: #FFFFFF; text-decoration: none; background: none; border: 0; cursor: pointer; }
-        :where(#globalNav li form) button:hover { background: transparent url({{ asset('opSkinBasicPlugin/images/bg_globalnav_hover.gif') }}) repeat-x scroll 0 0; }
+        :where(#globalNav li form button) { font: inherit; padding: 0 8px; height: 40px; line-height: 40px; display: block; color: #FFFFFF; text-decoration: none; background: none; border: 0; cursor: pointer; }
+        :where(#globalNav li form button:hover) { background: transparent url({{ asset('opSkinBasicPlugin/images/bg_globalnav_hover.gif') }}) repeat-x scroll 0 0; }
     </style>
 @endonce
 <div id="globalNav">
