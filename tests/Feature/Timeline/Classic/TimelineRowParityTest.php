@@ -80,9 +80,28 @@ class TimelineRowParityTest extends TestCase
             ->assertSee('href="'.route('timeline.show', $post).'#timeline-reply-form"', false);
 
         // The thread page anchors its reply form, so the jump lands on it — and its own root row
-        // carries the same link as a same-page jump.
+        // carries the same link as a same-page jump, inside OpenPNE 3's show shell.
         $this->actingAs($member)->get(route('timeline.show', $post))->assertOk()
-            ->assertSee('id="timeline-reply-form"', false);
+            ->assertSeeInOrder([
+                '<div class="timeline-large">',
+                '<div id="timeline-list">',
+                '<div class="timeline-post" data-timeline-id="'.$post->getKey().'">',
+                'id="timeline-reply-form"',
+            ], false);
+    }
+
+    public function test_the_profile_gadget_pushes_css_only_when_it_renders(): void
+    {
+        $owner = Member::factory()->create();
+        Gadget::create(['context' => 'profile', 'zone' => 'contents', 'name' => 'timelineProfile', 'sort_order' => 0]);
+        app(GadgetService::class)->clearCache();
+
+        // The owner's own empty timeline still renders the box (post link), so the CSS loads;
+        // someone else's empty timeline drops the box and the CSS with it.
+        $this->actingAs($owner)->get('/member/'.$owner->getKey())->assertOk()
+            ->assertSee('opTimelinePlugin/css/timeline.css', false);
+        $this->actingAs(Member::factory()->create())->get('/member/'.$owner->getKey())->assertOk()
+            ->assertDontSee('opTimelinePlugin', false);
     }
 
     public function test_the_list_pages_use_the_classic_pager(): void

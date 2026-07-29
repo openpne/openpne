@@ -14,9 +14,14 @@
             <p role="status">{{ session('status') }}</p>
         @endif
 
-        {{-- The thread root renders as the shared row; its comment link is a same-page jump to
-             the reply form below. --}}
-        @include('timeline._post', ['post' => $post])
+        {{-- OpenPNE 3 showSuccess.php's div.timeline-large > div#timeline-list shell around the
+             thread root, which renders as the shared row; its comment link is a same-page jump
+             to the reply form below. --}}
+        <div class="timeline-large">
+            <div id="timeline-list">
+                @include('timeline._post', ['post' => $post])
+            </div>
+        </div>
 
         {{-- Replies, oldest first (OpenPNE 3 reads by id). --}}
         @if ($post->replies->isNotEmpty())
