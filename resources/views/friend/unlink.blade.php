@@ -22,7 +22,8 @@
                         <input type="submit" class="input_submit" value="{{ __('Remove %friend%') }}">
                     </form>
                 </li>
-                <li><a href="{{ route('friend.list') }}">{{ __('Cancel') }}</a></li>
+                {{-- unlinkInput.php's no_url: back to the manage roster this confirm came from. --}}
+                <li><a href="{{ route('friend.manage') }}">{{ __('Cancel') }}</a></li>
             </ul>
         </div>
     </x-classic.parts>

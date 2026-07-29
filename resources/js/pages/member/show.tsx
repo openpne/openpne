@@ -139,12 +139,12 @@ export default function MemberShow() {
                             </ActionLink>
                         )}
                         {friendStatus === 'sent' && (
-                            <Link href="/friend/manage" className="text-sm text-muted-foreground hover:underline">
+                            <Link href="/friend/requests" className="text-sm text-muted-foreground hover:underline">
                                 {t('%Friend% request pending.')}
                             </Link>
                         )}
                         {friendStatus === 'received' && (
-                            <Link href="/friend/manage" className="text-sm text-link hover:underline">
+                            <Link href="/friend/requests" className="text-sm text-link hover:underline">
                                 {t(':name sent you a %friend% request.', { name: owner.name })}
                             </Link>
                         )}

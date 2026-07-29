@@ -56,18 +56,36 @@ class FriendController extends Controller
         ]);
     }
 
-    public function manage(Request $request, ListPendingRequests $query): View|InertiaResponse
+    /**
+     * OpenPNE 3's friend/manage: the member's own roster with an unlink column. Modern folded
+     * roster management into friend/list, so a Modern viewer is sent there — before the query,
+     * which a redirect would only throw away.
+     */
+    public function manage(Request $request, ListFriends $query): View|RedirectResponse
+    {
+        if (SurfaceResolver::resolve($request, 'friend') === SurfaceResolver::MODERN) {
+            return redirect()->route('friend.list');
+        }
+
+        $viewer = $this->viewer();
+
+        return $this->classic('friend.manage', [
+            'friends' => $query($viewer, $viewer),
+        ]);
+    }
+
+    public function requests(Request $request, ListPendingRequests $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
         $received = $query($viewer, PendingRequestDirection::Received, pageName: 'received_page');
         $sent = $query($viewer, PendingRequestDirection::Sent, pageName: 'sent_page');
 
         return $this->respondWith($request, 'friend', [
-            self::SURFACE_CLASSIC => fn () => view('friend.manage', [
+            self::SURFACE_CLASSIC => fn () => view('friend.requests', [
                 'received' => $received,
                 'sent' => $sent,
             ]),
-            self::SURFACE_MODERN => fn () => Inertia::render('friend/manage', [
+            self::SURFACE_MODERN => fn () => Inertia::render('friend/requests', [
                 'received' => FriendSerializer::paginator($received),
                 'sent' => FriendSerializer::paginator($sent),
             ]),
@@ -87,7 +105,7 @@ class FriendController extends Controller
             return redirect()->route('friend.list');
         }
         if ($target->hasPendingRequestFrom($viewer)) {
-            return redirect()->route('friend.manage');
+            return redirect()->route('friend.requests');
         }
 
         return $this->respondWith($request, 'friend', [
@@ -116,7 +134,7 @@ class FriendController extends Controller
         try {
             $action($this->viewer(), $request->requester());
         } catch (FriendActionException $e) {
-            return $this->redirectAfterSubmit('friend.manage', error: $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit('friend.requests', error: $this->messageFor($e->reason));
         }
 
         return $this->redirectAfterSubmit('friend.list', status: __('%Friend% request accepted.'));
@@ -127,38 +145,76 @@ class FriendController extends Controller
         try {
             $action($this->viewer(), $request->requester());
         } catch (FriendActionException $e) {
-            return $this->redirectAfterSubmit('friend.manage', error: $this->messageFor($e->reason));
+            return $this->redirectAfterSubmit('friend.requests', error: $this->messageFor($e->reason));
         }
 
-        return $this->redirectAfterSubmit('friend.manage', status: __('%Friend% request rejected.'));
+        return $this->redirectAfterSubmit('friend.requests', status: __('%Friend% request rejected.'));
     }
 
-    public function showUnlink(Request $request, Member $member): View|RedirectResponse
+    public function showUnlink(Request $request, string $member): View|RedirectResponse
     {
-        $viewer = $this->viewer();
-        if ($viewer->is($member) || ! $viewer->isFriendsWith($member)) {
-            abort(404);
+        $target = $this->unlinkTarget($request, (int) $member);
+        if ($target instanceof RedirectResponse) {
+            return $target;
         }
 
         // Modern confirms unfriend inline (Radix AlertDialog) — send a Modern viewer to the profile.
         if (SurfaceResolver::resolve($request, 'friend') === SurfaceResolver::MODERN) {
-            return redirect()->route('member.profile.show', $member);
+            return redirect()->route('member.profile.show', $target);
         }
 
-        $this->markLocalNavSubject($member); // the target's friend localNav
+        $this->markLocalNavSubject($target); // the target's friend localNav
 
-        return $this->classic('friend.unlink', ['target' => $member]);
+        return $this->classic('friend.unlink', ['target' => $target]);
     }
 
-    public function submitUnlink(Request $request, Member $member, Unfriend $action): RedirectResponse
+    public function submitUnlink(Request $request, string $member, Unfriend $action): RedirectResponse
     {
-        try {
-            $action($this->viewer(), $member);
-        } catch (FriendActionException $e) {
-            return $this->redirectAfterSubmit('friend.list', error: $this->messageFor($e->reason));
+        $target = $this->unlinkTarget($request, (int) $member);
+        if ($target instanceof RedirectResponse) {
+            return $target;
         }
 
-        return $this->redirectAfterSubmit('friend.list', status: __('%Friend% removed.'));
+        try {
+            $action($this->viewer(), $target);
+        } catch (FriendActionException $e) {
+            return $this->redirectAfterSubmit($this->unlinkReturnRoute($request), error: $this->messageFor($e->reason));
+        }
+
+        return $this->redirectAfterSubmit($this->unlinkReturnRoute($request), status: __('%Friend% removed.'));
+    }
+
+    /**
+     * OpenPNE 3's executeUnlink gate: a missing or self id goes home, and a member who is not a
+     * %friend% — including one who no longer exists — is told so where the roster lives. Nothing
+     * here 404s: the answer to "you cannot unlink this" is a notice, not an error page.
+     */
+    private function unlinkTarget(Request $request, int $id): Member|RedirectResponse
+    {
+        $viewer = $this->viewer();
+        if ($id === 0 || $viewer->getKey() === $id) {
+            return redirect()->route('home');
+        }
+
+        $target = Member::find($id);
+        if ($target === null || ! $viewer->isFriendsWith($target)) {
+            return redirect()->route($this->unlinkReturnRoute($request))
+                ->with('error', $this->messageFor(FriendActionFailure::NotFriends));
+        }
+
+        return $target;
+    }
+
+    /**
+     * Where an unlink outcome lands: OpenPNE 3 always returned to friend/manage, which Classic
+     * keeps; Modern's roster lives on friend/list, and routing it through manage would only add
+     * a second redirect.
+     */
+    private function unlinkReturnRoute(Request $request): string
+    {
+        return SurfaceResolver::resolve($request, 'friend') === SurfaceResolver::MODERN
+            ? 'friend.list'
+            : 'friend.manage';
     }
 
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */

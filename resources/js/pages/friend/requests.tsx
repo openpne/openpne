@@ -22,7 +22,7 @@ function MemberCell({ member }: { member: FriendMember }) {
     );
 }
 
-export default function FriendManage() {
+export default function FriendRequests() {
     const t = useT();
     const { received, sent } = usePage<ManageProps>().props;
 

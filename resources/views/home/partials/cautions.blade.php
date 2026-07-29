@@ -26,7 +26,7 @@
             @if ($friendRequests)
                 <p class="caution">
                     {{ __("You've gotten :count %friend% requests", ['count' => $friendRequests]) }}
-                    <a href="{{ route('friend.manage') }}">{{ __('Check requests') }}</a>
+                    <a href="{{ route('friend.requests') }}">{{ __('Check requests') }}</a>
                 </p>
             @endif
 

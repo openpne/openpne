@@ -55,6 +55,8 @@ class RouteParityBodyIdTest extends TestCase
 
         $this->assertSame('page_friend_list', $parity->bodyId('friend.list'));
         $this->assertSame('page_friend_manage', $parity->bodyId('friend.manage'));
+        // The pending-request queues are OpenPNE 4-native; their id must never borrow the manage hook.
+        $this->assertSame('page_friend_requests', $parity->bodyId('friend.requests'));
         $this->assertSame('page_friend_unlink', $parity->bodyId('friend.unlink.show'));
         // friend.link.show has no named OpenPNE 3 route (fallback-reached) but still carries
         // the action, so its body id stays page_friend_link.

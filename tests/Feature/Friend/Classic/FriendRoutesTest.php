@@ -18,6 +18,7 @@ class FriendRoutesTest extends TestCase
     {
         $this->get('/friend/list')->assertRedirect('/login');
         $this->get('/friend/manage')->assertRedirect('/login');
+        $this->get('/friend/requests')->assertRedirect('/login');
         $this->get('/friend/link?id=1')->assertRedirect('/login');
         $this->post('/friend/link')->assertRedirect('/login');
         $this->post('/friend/accept')->assertRedirect('/login');
@@ -55,8 +56,8 @@ class FriendRoutesTest extends TestCase
         // Bob's own friend count (Alice and Carol) rides the label, as OpenPNE 3 getNameAndCount did.
         $response->assertSee('>Bob (2)</a>', false);
         $response->assertSee('class="pagerRelative"', false);
-        // The owner keeps the unlink link: no other screen offers it yet.
-        $response->assertSee('href="'.route('friend.unlink.show', $bob).'"', false);
+        // OpenPNE 3's list is a pure photo table: unlinking lives on friend/manage.
+        $response->assertDontSee('href="'.route('friend.unlink.show', $bob).'"', false);
     }
 
     public function test_list_pager_keeps_the_id_subject_across_pages(): void
@@ -91,8 +92,6 @@ class FriendRoutesTest extends TestCase
         $response->assertOk();
         $response->assertSee('Carol');
         $response->assertSee("Bob's friends");
-        // Someone else's list offers no unlink action.
-        $response->assertDontSee('href="'.route('friend.unlink.show', $carol).'"', false);
     }
 
     public function test_list_page_for_unknown_owner_returns_404(): void
@@ -117,7 +116,7 @@ class FriendRoutesTest extends TestCase
         $this->actingAs($alice)->get("/friend/list?id={$bob->getKey()}")->assertNotFound();
     }
 
-    public function test_manage_page_renders_received_and_sent_requests(): void
+    public function test_requests_page_renders_received_and_sent_requests(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create(['name' => 'Bob']);
@@ -127,15 +126,15 @@ class FriendRoutesTest extends TestCase
             ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey()],
         ]);
 
-        $response = $this->actingAs($alice)->get('/friend/manage');
+        $response = $this->actingAs($alice)->get('/friend/requests');
 
         $response->assertOk();
-        $response->assertSee('id="page_friend_manage"', false);
+        $response->assertSee('id="page_friend_requests"', false);
         $response->assertSee('Bob');
         $response->assertSee('Carol');
     }
 
-    public function test_manage_page_draws_the_openpne3_manage_list(): void
+    public function test_requests_page_draws_the_openpne3_manage_list(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create(['name' => 'Bob']);
@@ -145,17 +144,46 @@ class FriendRoutesTest extends TestCase
             ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey()],
         ]);
 
-        $response = $this->actingAs($alice)->get('/friend/manage')->assertOk();
+        $response = $this->actingAs($alice)->get('/friend/requests')->assertOk();
         $content = (string) $response->getContent();
 
         // _partsManageList.php: a 76×76 photo over the member link, then one operation per cell.
-        $response->assertSee('<div class="dparts manageList" id="friend_manage_received">', false);
+        $response->assertSee('<div class="dparts manageList" id="friend_requests_received">', false);
         $response->assertSee('<div class="item"><table><tbody>', false);
         $response->assertSee('<td class="photo"><a href="'.route('member.profile.show', $bob).'">', false);
         // The sender cannot withdraw a request, so the sent row's operation cell is the empty one.
         $this->assertMatchesRegularExpression('#<td>&nbsp;</td>#', $content);
         // Each box brackets its own list with its own pager.
         $this->assertSame(4, substr_count($content, 'class="pagerRelative"'));
+    }
+
+    public function test_manage_page_draws_the_roster_with_the_unlink_column(): void
+    {
+        $alice = Member::factory()->create();
+        $bob = Member::factory()->create(['name' => 'Bob']);
+        $this->makeFriends($alice, $bob);
+
+        $response = $this->actingAs($alice)->get('/friend/manage')->assertOk();
+        $content = (string) $response->getContent();
+
+        // manageSuccess.php: one manageList parts, the menu's delete class on the operation cell.
+        $response->assertSee('id="page_friend_manage"', false);
+        $response->assertSee('<div class="dparts manageList" id="manageList">', false);
+        $response->assertSee('<td class="photo"><a href="'.route('member.profile.show', $bob).'">', false);
+        $response->assertSee('<td class="delete"><a href="'.route('friend.unlink.show', $bob).'">'.e(__('Delete from %my_friend%.')).'</a></td>', false);
+        // The pager brackets the roster, as _partsManageList.php draws it.
+        $this->assertSame(2, substr_count($content, 'class="pagerRelative"'));
+    }
+
+    public function test_an_empty_manage_page_shows_the_warning_box_and_history_back(): void
+    {
+        $alice = Member::factory()->create();
+
+        $this->actingAs($alice)->get('/friend/manage')
+            ->assertOk()
+            ->assertSee('id="manageFriendWarning"', false)
+            ->assertSee(e(__("You don't have any %friend%.")), false)
+            ->assertSee('<a href="'.route('friend.list').'" data-history-back>', false);
     }
 
     public function test_link_show_page_renders_for_a_target_member(): void
@@ -206,7 +234,7 @@ class FriendRoutesTest extends TestCase
             ->assertRedirect(route('friend.list'));
     }
 
-    public function test_link_show_page_redirects_to_manage_when_request_already_pending(): void
+    public function test_link_show_page_redirects_to_requests_when_request_already_pending(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create();
@@ -216,7 +244,7 @@ class FriendRoutesTest extends TestCase
         ]);
 
         $this->actingAs($alice)->get("/friend/link?id={$bob->getKey()}")
-            ->assertRedirect(route('friend.manage'));
+            ->assertRedirect(route('friend.requests'));
     }
 
     public function test_unlink_show_page_renders(): void
@@ -232,19 +260,37 @@ class FriendRoutesTest extends TestCase
         $response->assertSee('Bob');
     }
 
-    public function test_unlink_show_page_returns_404_when_not_friends(): void
+    /**
+     * OpenPNE 3's executeUnlink answers a member you cannot unlink with a notice on the manage
+     * page, never an error page — a vanished member included. Self and empty ids go home, and a
+     * non-numeric id is the one shape its route never matched.
+     */
+    public function test_unlink_answers_who_it_cannot_unlink_with_a_notice_not_a_404(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create();
 
-        $this->actingAs($alice)->get("/friend/unlink/{$bob->getKey()}")->assertNotFound();
-    }
+        foreach (['get', 'post'] as $method) {
+            $this->actingAs($alice)->{$method}("/friend/unlink/{$bob->getKey()}")
+                ->assertRedirect(route('friend.manage'))
+                ->assertSessionHas('error', __('This member is not your %friend%.'));
 
-    public function test_unlink_show_page_returns_404_for_self(): void
-    {
-        $alice = Member::factory()->create();
+            $this->actingAs($alice)->{$method}('/friend/unlink/999999')
+                ->assertRedirect(route('friend.manage'))
+                ->assertSessionHas('error', __('This member is not your %friend%.'));
 
-        $this->actingAs($alice)->get("/friend/unlink/{$alice->getKey()}")->assertNotFound();
+            $this->actingAs($alice)->{$method}("/friend/unlink/{$alice->getKey()}")
+                ->assertRedirect(route('home'));
+
+            $this->actingAs($alice)->{$method}('/friend/unlink/0')
+                ->assertRedirect(route('home'));
+
+        }
+
+        // A non-numeric id never matches the route, so it falls to the app-wide unmatched
+        // contract: the Classic 404 shell on GET, 405 on any other method.
+        $this->actingAs($alice)->get('/friend/unlink/abc')->assertNotFound();
+        $this->actingAs($alice)->post('/friend/unlink/abc')->assertStatus(405);
     }
 
     public function test_submitting_link_creates_a_pending_request_and_redirects_with_flash(): void
@@ -336,11 +382,11 @@ class FriendRoutesTest extends TestCase
 
         $response = $this->actingAs($alice)->post('/friend/accept', ['requester_id' => $bob->getKey()]);
 
-        $response->assertRedirect(route('friend.manage'));
+        $response->assertRedirect(route('friend.requests'));
         $response->assertSessionHas('error');
     }
 
-    public function test_reject_deletes_request_and_redirects_to_manage(): void
+    public function test_reject_deletes_request_and_redirects_to_requests(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create();
@@ -351,7 +397,7 @@ class FriendRoutesTest extends TestCase
 
         $response = $this->actingAs($alice)->post('/friend/reject', ['requester_id' => $bob->getKey()]);
 
-        $response->assertRedirect(route('friend.manage'));
+        $response->assertRedirect(route('friend.requests'));
         $response->assertSessionHas('status');
         $this->assertDatabaseCount('friend_requests', 0);
     }
@@ -364,20 +410,10 @@ class FriendRoutesTest extends TestCase
 
         $response = $this->actingAs($alice)->post("/friend/unlink/{$bob->getKey()}");
 
-        $response->assertRedirect(route('friend.list'));
+        // executeUnlink lands back on the manage roster it came from.
+        $response->assertRedirect(route('friend.manage'));
         $response->assertSessionHas('status');
         $this->assertDatabaseCount('friendships', 0);
-    }
-
-    public function test_unlink_when_not_friends_flashes_error(): void
-    {
-        $alice = Member::factory()->create();
-        $bob = Member::factory()->create();
-
-        $response = $this->actingAs($alice)->post("/friend/unlink/{$bob->getKey()}");
-
-        $response->assertRedirect(route('friend.list'));
-        $response->assertSessionHas('error');
     }
 
     public function test_an_empty_list_closes_with_the_history_back_line(): void
@@ -388,7 +424,9 @@ class FriendRoutesTest extends TestCase
             ->assertOk()
             ->assertSee('id="noFriend"', false)
             ->assertSee('<div class="parts line" id="backLink">', false)
-            ->assertSee('<a href="#" onclick="history.back(); return false;">Back to previous page</a>', false);
+            // A real destination before the script attaches; history.back() once it does.
+            ->assertSee('<a href="'.route('home').'" data-history-back>Back to previous page</a>', false)
+            ->assertSee(e(asset('js/classic-history-back.js')), false);
     }
 
     public function test_a_populated_list_has_no_history_back_line(): void
@@ -412,7 +450,9 @@ class FriendRoutesTest extends TestCase
             ->assertSee(
                 '<h3>Do you delete <a href="'.route('member.profile.show', $bob).'">Bob</a> from my friend?</h3>',
                 false
-            );
+            )
+            // unlinkInput.php's no_url: cancel returns to the manage roster.
+            ->assertSee('<a href="'.route('friend.manage').'">'.e(__('Cancel')).'</a>', false);
     }
 
     private function makeFriends(Member $a, Member $b): void

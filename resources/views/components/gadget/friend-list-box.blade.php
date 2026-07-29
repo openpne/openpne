@@ -7,10 +7,7 @@
             <ul class="moreInfo">
                 <li><a href="{{ route('friend.list', ['id' => $subject->getKey()]) }}">{{ __('Show all') }}({{ $total }})</a></li>
                 @if ($isSelf)
-                    {{-- OpenPNE 3's friend/manage (the roster with unlink links) folded into
-                         friend/list here; /friend/manage is the pending-request screen and would
-                         misdirect this label. --}}
-                    <li><a href="{{ route('friend.list') }}">{{ __('Manage %my_friends%') }}</a></li>
+                    <li><a href="{{ route('friend.manage') }}">{{ __('%my_friend% Setting') }}</a></li>
                 @endif
             </ul>
         </div>

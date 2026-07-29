@@ -124,7 +124,7 @@ class ClassicHomeTest extends TestCase
         $this->assertSame(1, substr_count($content, 'class="parts informationBox"'));
         // The friend line is OpenPNE 3's `p.caution`; the message line is its own `ul > li` with the
         // star and an inner span — _unreadMessage.php never matched the others.
-        $this->assertStringContainsString('<a href="'.e(route('friend.manage')).'">'.e(__('Check requests')).'</a>', $content);
+        $this->assertStringContainsString('<a href="'.e(route('friend.requests')).'">'.e(__('Check requests')).'</a>', $content);
         $this->assertStringContainsString('★<span class="caution">'.e(__('There are new :count messages!', ['count' => 1])).'</span>', $content);
         $this->assertStringContainsString('<a href="'.e(route('message.index')).'"><strong>'.e(__('Read messages')).'</strong></a>', $content);
     }

@@ -58,6 +58,8 @@ class ModernOnlyCoverageTest extends TestCase
      * (delete/unlink/purge confirms) are asserted case-by-case below, like the show pages.
      */
     private const REDIRECTS_UNDER_MODERN = [
+        // Not a confirm: OpenPNE 3's roster-management URL, whose Modern home is friend/list.
+        'friend.manage',
         'community.join.show',
         'community.quit.show',
         'community.members.appoint.show',
@@ -71,7 +73,7 @@ class ModernOnlyCoverageTest extends TestCase
         'home', 'dashboard',
         'diary.list', 'diary.list_friend', 'diary.search', 'diary.new',
         'timeline.index', 'timeline.new',
-        'friend.list', 'friend.manage', 'friend.link.show',
+        'friend.list', 'friend.requests', 'friend.link.show',
         'block.list', 'block.add.show',
         'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
         'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
@@ -116,7 +118,8 @@ class ModernOnlyCoverageTest extends TestCase
             'timeline' => ['/timeline'],
             'timeline new' => ['/timeline/new'],
             'friend list' => ['/friend/list'],
-            'friend manage' => ['/friend/manage'],
+            'friend manage (redirects to the list)' => ['/friend/manage'],
+            'friend requests' => ['/friend/requests'],
             'block list' => ['/block/list'],
             'member search' => ['/member/search'],
             'member config' => ['/member/config'],

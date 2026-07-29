@@ -27,9 +27,9 @@
                     <a href="{{ route('friend.link.show', ['id' => $owner->getKey()]) }}">{{ __('Send a %friend% request') }}</a>
                 </p>
             @elseif ($friendStatus === 'sent')
-                <p><a href="{{ route('friend.manage') }}">{{ __('%Friend% request pending.') }}</a></p>
+                <p><a href="{{ route('friend.requests') }}">{{ __('%Friend% request pending.') }}</a></p>
             @else
-                <p><a href="{{ route('friend.manage') }}">{{ __(':name sent you a %friend% request.', ['name' => $owner->name]) }}</a></p>
+                <p><a href="{{ route('friend.requests') }}">{{ __(':name sent you a %friend% request.', ['name' => $owner->name]) }}</a></p>
             @endif
         </div>
     </x-classic.parts>
