@@ -15,6 +15,7 @@ class DiaryRouteParity extends RouteParity
     public function maps(): array
     {
         return [
+            new RouteMap('diary_comment_history', '/diary/comment/history', 'diary.comment.history', 'GET', op3Action: 'history', op3Module: 'diaryComment'),
             new RouteMap('diary_show', '/diary/:id', 'diary.show', 'GET', op3Action: 'show'),
             new RouteMap('diary_search', '/diary/search', 'diary.search', 'GET', op3Action: 'search'),
             // The canonical list precedes the /diary alias below: screens() keys off op3Action and
@@ -68,7 +69,6 @@ class DiaryRouteParity extends RouteParity
         return [
             // Comment create/delete and image attachments are ported (above) on both surfaces. Still
             // deferred within comments: notifications, unread tracking, and this history feed.
-            'diary_comment_history' => 'Comment history feed is not ported.',
         ];
     }
 
@@ -85,6 +85,13 @@ class DiaryRouteParity extends RouteParity
     public function screens(): array
     {
         return [
+            // historySuccess.php → diary/comment/history.blade.php
+            'history' => [
+                new ScreenElement('recentList of commented diaries by last comment', L::Two, S::Ported, "DiaryCommentUpdate getPager (viewer's subscriptions, owner comments excluded)", 'DiaryCommentHistory::paginate — one builder with the home box, so page and box cannot diverge'),
+                new ScreenElement('diary link with comment count and author', L::Two, S::Ported, 'op_diary_link_to_show(diary, true, false)'),
+                new ScreenElement('pager above and below', L::Two, S::Ported, 'op_include_pager_navigation ×2'),
+                new ScreenElement('empty state box', L::Three, S::Ported, "op_include_box('diaryList', 'There are no diaries.')"),
+            ],
             // showSuccess.php + diaryComment/_list.php component
             'show' => [
                 // Comment thread (diaryComment/list component). The list renders, but several of

@@ -7,6 +7,7 @@ use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\Member;
 use App\Support\Visibility;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,23 @@ class DiaryCommentHistory
 {
     /** @return Collection<int, Diary> */
     public function __invoke(Member $viewer, int $limit = 5): Collection
+    {
+        return $this->query($viewer)->limit($limit)->get();
+    }
+
+    /**
+     * The full history page (OpenPNE 3 diaryComment/history): same set and order as the home box,
+     * twenty to a page. One builder feeds both, so the page can never disagree with the box.
+     *
+     * @return LengthAwarePaginator<int, Diary>
+     */
+    public function paginate(Member $viewer, int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->query($viewer)->paginate($perPage)->withQueryString();
+    }
+
+    /** @return Builder<Diary> */
+    private function query(Member $viewer): Builder
     {
         $viewerId = $viewer->getKey();
 
@@ -64,6 +82,6 @@ class DiaryCommentHistory
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'diaries.member_id');
 
-        return $query->orderByDesc('last_comment_time')->orderByDesc('diaries.id')->limit($limit)->get();
+        return $query->orderByDesc('last_comment_time')->orderByDesc('diaries.id');
     }
 }

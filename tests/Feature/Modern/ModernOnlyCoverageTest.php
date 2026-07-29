@@ -58,8 +58,9 @@ class ModernOnlyCoverageTest extends TestCase
      * (delete/unlink/purge confirms) are asserted case-by-case below, like the show pages.
      */
     private const REDIRECTS_UNDER_MODERN = [
-        // Not a confirm: OpenPNE 3's roster-management URL, whose Modern home is friend/list.
+        // Not confirms: OpenPNE 3 URLs whose Modern home is another canonical page.
         'friend.manage',
+        'diary.comment.history',
         'community.join.show',
         'community.quit.show',
         'community.members.appoint.show',

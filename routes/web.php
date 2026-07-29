@@ -410,6 +410,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // OpenPNE 3 diaryComment module. create keys off the diary id; deleteConfirm/delete key
     // off the comment id (literal /diary/comment/* never collides with diary.show's numeric id).
     Route::controller(DiaryCommentController::class)->group(function () {
+        // OpenPNE 3 @diary_comment_history: the diaries the viewer commented on, by last comment.
+        Route::get('/diary/comment/history', 'history')->name('diary.comment.history');
         Route::post('/diary/{diary}/comment/create', 'store')->whereNumber('diary')->middleware('throttle:posting')->name('diary.comment.store');
         Route::get('/diary/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('diary.comment.delete.show');
         Route::post('/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('diary.comment.delete');

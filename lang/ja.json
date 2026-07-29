@@ -1095,6 +1095,7 @@
     "The withdrawing member’s ID.": "退会するメンバーの ID。",
     "The withdrawing member’s name.": "退会するメンバーの名前。",
     "There are new :count messages!": "新着メッセージが:count件あります！",
+    "There are no %diaries%.": "%diary%がありません。",
     "There are no messages": "メッセージはありません",
     "There is no new notification.": "新しい通知はありません",
     "These codes are shown only this once.": "これらのコードが表示されるのはこの1回だけです。",
