@@ -15,31 +15,43 @@ interface EditCommunity {
     id: number;
     name: string;
     description: string;
-    registerPolicy: number;
+    registerPolicy: string;
     categoryId: number | null;
     isJoinNotificationEnabled: boolean;
+    topicReadAccess: string;
+    topicPostAuthority: string;
     imageUrl: string | null;
+}
+
+/** One enum choice, slug on the wire and the OpenPNE 3 caption as its label. */
+interface Choice {
+    slug: string;
+    label: string;
 }
 
 interface EditProps extends PageProps {
     community: EditCommunity | null; // null = create mode
     categories: { id: number; name: string }[];
-    policies: { value: number; label: string }[];
+    policies: Choice[];
+    topicReadChoices: Choice[];
+    topicPostChoices: Choice[];
     canDelete: boolean;
 }
 
 export default function CommunityEdit() {
     const t = useT();
     const confirm = useConfirm();
-    const { community, categories, policies, canDelete } = usePage<EditProps>().props;
+    const { community, categories, policies, topicReadChoices, topicPostChoices, canDelete } = usePage<EditProps>().props;
     const isEdit = community !== null;
 
     const form = useForm({
         name: community?.name ?? '',
         description: community?.description ?? '',
-        register_policy: community?.registerPolicy ?? policies[0]?.value ?? 1,
+        register_policy: community?.registerPolicy ?? policies[0]?.slug ?? 'open',
         community_category_id: community?.categoryId ? String(community.categoryId) : '',
         is_join_notification_enabled: community?.isJoinNotificationEnabled ?? true,
+        topic_read_access: community?.topicReadAccess ?? topicReadChoices[0]?.slug ?? 'everyone',
+        topic_post_authority: community?.topicPostAuthority ?? topicPostChoices[0]?.slug ?? 'members',
         image: null as File | null,
         remove_image: false,
     });
@@ -96,11 +108,39 @@ export default function CommunityEdit() {
                         <Select
                             id="register_policy"
                             value={form.data.register_policy}
-                            onChange={(e) => form.setData('register_policy', Number(e.target.value))}
+                            onChange={(e) => form.setData('register_policy', e.target.value)}
                         >
                             {policies.map((policy) => (
-                                <option key={policy.value} value={policy.value}>
+                                <option key={policy.slug} value={policy.slug}>
                                     {t(policy.label)}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+
+                    <Field label={t('Authority to Read %Topic%')} htmlFor="topic_read_access">
+                        <Select
+                            id="topic_read_access"
+                            value={form.data.topic_read_access}
+                            onChange={(e) => form.setData('topic_read_access', e.target.value)}
+                        >
+                            {topicReadChoices.map((choice) => (
+                                <option key={choice.slug} value={choice.slug}>
+                                    {t(choice.label)}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
+
+                    <Field label={t('Authority to Create %Topic%')} htmlFor="topic_post_authority">
+                        <Select
+                            id="topic_post_authority"
+                            value={form.data.topic_post_authority}
+                            onChange={(e) => form.setData('topic_post_authority', e.target.value)}
+                        >
+                            {topicPostChoices.map((choice) => (
+                                <option key={choice.slug} value={choice.slug}>
+                                    {t(choice.label)}
                                 </option>
                             ))}
                         </Select>

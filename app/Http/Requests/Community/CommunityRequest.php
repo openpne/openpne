@@ -4,6 +4,8 @@ namespace App\Http\Requests\Community;
 
 use App\Features\Community\Data\CommunityFormData;
 use App\Features\Community\JoinPolicy;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Http\Requests\Concerns\PostImageRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,7 +27,12 @@ class CommunityRequest extends FormRequest
             // OpenPNE 3 community.name is varchar(64) UNIQUE.
             'name' => ['required', 'string', 'max:64', Rule::unique('communities', 'name')->ignore($id)],
             'description' => ['nullable', 'string'],
-            'register_policy' => ['required', Rule::in(array_map(static fn (JoinPolicy $p): int => $p->value, JoinPolicy::cases()))],
+            // Enum fields travel as slugs (the enums' own rule: never the raw int) and are
+            // REQUIRED: an absent-means-default here would let a partial payload silently reopen
+            // a community that was members-only — both forms always submit all three.
+            'register_policy' => ['required', 'string', Rule::in(array_map(static fn (JoinPolicy $p): string => $p->slug(), JoinPolicy::cases()))],
+            'topic_read_access' => ['required', 'string', Rule::in(array_map(static fn (TopicReadAccess $a): string => $a->slug(), TopicReadAccess::cases()))],
+            'topic_post_authority' => ['required', 'string', Rule::in(array_map(static fn (TopicPostAuthority $a): string => $a->slug(), TopicPostAuthority::cases()))],
             'community_category_id' => ['nullable', 'integer', 'exists:community_categories,id'],
             'is_join_notification_enabled' => ['boolean'],
             // Single top image (OpenPNE 3 CommunityFileForm), with a remove toggle. The bytes are
@@ -42,12 +49,14 @@ class CommunityRequest extends FormRequest
         return new CommunityFormData(
             name: $validated['name'],
             description: $validated['description'] ?? null,
-            registerPolicy: JoinPolicy::from((int) $validated['register_policy']),
+            registerPolicy: JoinPolicy::fromSlug($validated['register_policy']),
             categoryId: isset($validated['community_category_id']) ? (int) $validated['community_category_id'] : null,
             // Default on (OpenPNE 3 treats an absent value as on): both edit forms always submit the
             // field (Modern sends the boolean, Classic via a hidden 0), so an absent value is a non-form
             // caller, which should still get the default rather than a silent off.
             isJoinNotificationEnabled: $this->boolean('is_join_notification_enabled', true),
+            topicReadAccess: TopicReadAccess::fromSlug($validated['topic_read_access']),
+            topicPostAuthority: TopicPostAuthority::fromSlug($validated['topic_post_authority']),
         );
     }
 }

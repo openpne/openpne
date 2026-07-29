@@ -38,7 +38,9 @@ class CommunityManagementRoutesTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('community/edit')
                 ->where('community', null)
-                ->has('policies.0.value')
+                ->has('policies.0.slug')
+                ->has('topicReadChoices.0.slug')
+                ->has('topicPostChoices.0.slug')
                 ->where('canDelete', false)
             );
     }
@@ -72,7 +74,9 @@ class CommunityManagementRoutesTest extends TestCase
 
         $response = $this->actingAs($member)->post('/community/edit', [
             'name' => 'Modern Community',
-            'register_policy' => 1,
+            'register_policy' => 'open',
+            'topic_read_access' => 'everyone',
+            'topic_post_authority' => 'members',
         ]);
 
         $community = Community::where('name', 'Modern Community')->firstOrFail();
@@ -91,7 +95,9 @@ class CommunityManagementRoutesTest extends TestCase
         // No is_join_notification_enabled in the payload → the default-on contract (not a silent off).
         $this->actingAs($member)->post('/community/edit', [
             'name' => 'Defaulted Community',
-            'register_policy' => 1,
+            'register_policy' => 'open',
+            'topic_read_access' => 'everyone',
+            'topic_post_authority' => 'members',
         ])->assertRedirect();
 
         $this->assertDatabaseHas('communities', ['name' => 'Defaulted Community', 'is_join_notification_enabled' => true]);
@@ -116,7 +122,9 @@ class CommunityManagementRoutesTest extends TestCase
 
         $this->actingAs($admin)->post("/community/edit?id={$community->getKey()}", [
             'name' => $community->name,
-            'register_policy' => $community->register_policy->value,
+            'register_policy' => $community->register_policy->slug(),
+            'topic_read_access' => $community->topic_read_access->slug(),
+            'topic_post_authority' => $community->topic_post_authority->slug(),
             'is_join_notification_enabled' => false,
         ])->assertRedirect(route('community.show', $community));
 
@@ -132,7 +140,7 @@ class CommunityManagementRoutesTest extends TestCase
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
 
         $this->actingAs($admin)
-            ->post("/community/edit?id={$community->getKey()}", ['name' => 'Steady Name', 'register_policy' => 2])
+            ->post("/community/edit?id={$community->getKey()}", ['name' => 'Steady Name', 'register_policy' => 'approval', 'topic_read_access' => 'everyone', 'topic_post_authority' => 'members'])
             ->assertRedirect(route('community.show', $community));
 
         $this->assertDatabaseHas('communities', ['id' => $community->getKey(), 'register_policy' => 2]);

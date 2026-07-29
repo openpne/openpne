@@ -4,6 +4,8 @@ namespace Tests\Feature\Community\Classic;
 
 use App\Features\Community\CommunityRole;
 use App\Features\Community\Events\CommunityJoinRequested;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Models\Community;
 use App\Models\CommunityCategory;
 use App\Models\CommunityMember;
@@ -160,7 +162,9 @@ class CommunityRoutesTest extends TestCase
         $response = $this->actingAs($admin)->post('/community/edit?'.http_build_query(['id' => $community->getKey()]), [
             'name' => $community->name,
             'description' => 'updated',
-            'register_policy' => $community->register_policy->value,
+            'register_policy' => $community->register_policy->slug(),
+            'topic_read_access' => $community->topic_read_access->slug(),
+            'topic_post_authority' => $community->topic_post_authority->slug(),
             'community_category_id' => $adminOnly->getKey(),
         ]);
 
@@ -170,6 +174,121 @@ class CommunityRoutesTest extends TestCase
             'community_category_id' => $adminOnly->getKey(),
             'description' => 'updated',
         ]);
+    }
+
+    /**
+     * OpenPNE 3's two opCommunityTopicPlugin settings, radios with its own choice captions. A
+     * members-only community must render with its stored choice checked — not the default.
+     */
+    public function test_editing_renders_the_topic_settings_with_the_stored_choice_checked(): void
+    {
+        $community = Community::factory()->create([
+            'topic_read_access' => TopicReadAccess::MembersOnly,
+            'topic_post_authority' => TopicPostAuthority::AdminsOnly,
+        ]);
+        $admin = $this->memberWithRole($community, CommunityRole::Admin);
+
+        $content = (string) $this->actingAs($admin)
+            ->get(route('community.edit', ['id' => $community->getKey()]))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(e(__('Authority to Read %Topic%')), $content);
+        $this->assertStringContainsString(
+            '<input type="radio" name="topic_read_access" value="members_only" class="input_radio" checked>', $content);
+        $this->assertStringContainsString(
+            '<input type="radio" name="topic_post_authority" value="admins_only" class="input_radio" checked>', $content);
+        // The other option renders unchecked, with OpenPNE 3's caption.
+        $this->assertStringNotContainsString(
+            '<input type="radio" name="topic_read_access" value="everyone" class="input_radio" checked>', $content);
+        $this->assertStringContainsString('value="everyone" class="input_radio"', $content);
+        $this->assertStringContainsString(e(__('Everyone can read')), $content);
+    }
+
+    public function test_the_create_form_preselects_the_openpne3_defaults(): void
+    {
+        $member = Member::factory()->create();
+
+        $content = (string) $this->actingAs($member)->get('/community/edit')->assertOk()->getContent();
+
+        // Both fields are required on the wire, so the create form itself supplies the defaults.
+        $this->assertStringContainsString(
+            '<input type="radio" name="topic_read_access" value="everyone" class="input_radio" checked>', $content);
+        $this->assertStringContainsString(
+            '<input type="radio" name="topic_post_authority" value="members" class="input_radio" checked>', $content);
+    }
+
+    public function test_saving_persists_the_topic_settings(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->memberWithRole($community, CommunityRole::Admin);
+
+        $this->actingAs($admin)->post('/community/edit?'.http_build_query(['id' => $community->getKey()]), [
+            'name' => $community->name,
+            'register_policy' => 'open',
+            'topic_read_access' => 'members_only',
+            'topic_post_authority' => 'admins_only',
+            'is_join_notification_enabled' => '1',
+        ])->assertRedirect(route('community.show', $community));
+
+        $this->assertDatabaseHas('communities', [
+            'id' => $community->getKey(),
+            'topic_read_access' => TopicReadAccess::MembersOnly->value,
+            'topic_post_authority' => TopicPostAuthority::AdminsOnly->value,
+        ]);
+    }
+
+    /**
+     * The enum fields are REQUIRED slugs: an absent field must never silently reset a members-only
+     * community open, and the old int protocol must not creep back in.
+     */
+    public function test_saving_rejects_missing_unknown_or_integer_enum_values(): void
+    {
+        $community = Community::factory()->create([
+            'topic_read_access' => TopicReadAccess::MembersOnly,
+        ]);
+        $admin = $this->memberWithRole($community, CommunityRole::Admin);
+        $url = '/community/edit?'.http_build_query(['id' => $community->getKey()]);
+        $base = ['name' => $community->name, 'register_policy' => 'open', 'topic_post_authority' => 'members'];
+
+        // Absent
+        $this->actingAs($admin)->post($url, $base)->assertSessionHasErrors('topic_read_access');
+        // Unknown slug
+        $this->actingAs($admin)->post($url, $base + ['topic_read_access' => 'sometimes'])
+            ->assertSessionHasErrors('topic_read_access');
+        // Raw int (the DB value) is not the wire contract
+        $this->actingAs($admin)->post($url, $base + ['topic_read_access' => '2'])
+            ->assertSessionHasErrors('topic_read_access');
+        $this->actingAs($admin)->post($url, ['name' => $community->name, 'register_policy' => '1',
+            'topic_read_access' => 'everyone', 'topic_post_authority' => 'members'])
+            ->assertSessionHasErrors('register_policy');
+
+        // And nothing moved.
+        $this->assertDatabaseHas('communities', [
+            'id' => $community->getKey(),
+            'topic_read_access' => TopicReadAccess::MembersOnly->value,
+        ]);
+    }
+
+    public function test_a_validation_error_round_trips_the_chosen_topic_settings(): void
+    {
+        $community = Community::factory()->create();
+        $admin = $this->memberWithRole($community, CommunityRole::Admin);
+
+        // A failing name keeps the just-chosen radios checked via old(), not the stored state.
+        $editUrl = route('community.edit', ['id' => $community->getKey()]);
+        $this->actingAs($admin)->from($editUrl)
+            ->post('/community/edit?'.http_build_query(['id' => $community->getKey()]), [
+                'name' => '',
+                'register_policy' => 'open',
+                'topic_read_access' => 'members_only',
+                'topic_post_authority' => 'admins_only',
+            ])->assertRedirect($editUrl)->assertSessionHasErrors('name');
+
+        // The flashed old input drives the re-render, not the stored Everyone/Members.
+        $content = (string) $this->actingAs($admin)->get($editUrl)->assertOk()->getContent();
+        $this->assertStringContainsString(
+            '<input type="radio" name="topic_read_access" value="members_only" class="input_radio" checked>', $content);
     }
 
     public function test_editing_renders_and_persists_the_join_notification_toggle(): void
@@ -185,7 +304,9 @@ class CommunityRoutesTest extends TestCase
         // Unchecking submits the hidden 0, turning it off.
         $this->actingAs($admin)->post('/community/edit?'.http_build_query(['id' => $community->getKey()]), [
             'name' => $community->name,
-            'register_policy' => $community->register_policy->value,
+            'register_policy' => $community->register_policy->slug(),
+            'topic_read_access' => $community->topic_read_access->slug(),
+            'topic_post_authority' => $community->topic_post_authority->slug(),
             'is_join_notification_enabled' => '0',
         ])->assertRedirect(route('community.show', $community));
 
@@ -201,7 +322,9 @@ class CommunityRoutesTest extends TestCase
         // Uncheck (hidden 0) but trip validation with a blank name.
         $this->actingAs($admin)->from($editUrl)->post('/community/edit?'.http_build_query(['id' => $community->getKey()]), [
             'name' => '',
-            'register_policy' => $community->register_policy->value,
+            'register_policy' => $community->register_policy->slug(),
+            'topic_read_access' => $community->topic_read_access->slug(),
+            'topic_post_authority' => $community->topic_post_authority->slug(),
             'is_join_notification_enabled' => '0',
         ])->assertRedirect($editUrl)->assertSessionHasErrors('name');
 
@@ -294,7 +417,9 @@ class CommunityRoutesTest extends TestCase
         $response = $this->actingAs($member)->post('/community/edit', [
             'name' => 'New Club',
             'description' => 'Hello',
-            'register_policy' => 1,
+            'register_policy' => 'open',
+            'topic_read_access' => 'everyone',
+            'topic_post_authority' => 'members',
             'community_category_id' => null,
         ]);
 
