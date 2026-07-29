@@ -4,14 +4,16 @@
 @include('timeline._stylesheets')
 <div class="dparts homeFriendTimeline"@if ($partId !== null) id="{{ $partId }}"@endif><div class="parts">
     <div class="partsHeading"><h3>{{ __('%Activity% of %Friend%') }}</h3></div>
-    <p><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
-    @if ($posts->isNotEmpty())
-        <div class="timeline">
+    {{-- The no-JS compose path; classic-timeline-compose.js swaps it for the inline form. --}}
+    <p data-timeline-compose-fallback><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
+    <div class="timeline">
+        @include('timeline._compose', ['returnTo' => 'home'])
+        @if ($posts->isNotEmpty())
             <div id="timeline-list">
                 @foreach ($posts as $post)
                     @include('timeline._post', ['post' => $post])
                 @endforeach
             </div>
-        </div>
-    @endif
+        @endif
+    </div>
 </div></div>
