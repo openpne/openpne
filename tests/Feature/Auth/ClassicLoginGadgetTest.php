@@ -31,7 +31,7 @@ class ClassicLoginGadgetTest extends TestCase
         // The gadget reuses the shared partial: same box id, fields, and (baseline) register link.
         $this->get('/login')
             ->assertOk()
-            ->assertSee('id="loginForm"', false)
+            ->assertSee('id="MailAddressLogin" class="loginForm"', false)
             ->assertSee('name="email"', false)
             ->assertSee('name="password"', false)
             ->assertSee(route('register'), false); // registrationOpen flows through LoginFormData
@@ -45,7 +45,7 @@ class ClassicLoginGadgetTest extends TestCase
         $this->get('/login') // guest
             ->assertOk()
             ->assertSee('<p>Welcome notice</p>', false)
-            ->assertSee('id="loginForm"', false);
+            ->assertSee('id="MailAddressLogin" class="loginForm"', false);
     }
 
     public function test_fixed_login_form_is_the_empty_state(): void
@@ -53,7 +53,7 @@ class ClassicLoginGadgetTest extends TestCase
         // No login gadgets configured: the fixed single-column form still renders.
         $this->get('/login')
             ->assertOk()
-            ->assertSee('id="loginForm"', false)
+            ->assertSee('id="MailAddressLogin" class="loginForm"', false)
             ->assertSee('name="email"', false);
     }
 }

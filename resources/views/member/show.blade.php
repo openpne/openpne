@@ -6,10 +6,13 @@
 @php($hasGadgets = collect($zones)->flatten(1)->isNotEmpty())
 
 @if ($hasGadgets)
-    @include('partials.gadget-sections', ['zones' => $zones, 'contentTop' => 'member.partials.friend-link-box'])
+    {{-- The own-page / add-%friend% box sits in #Top, above the columns, as OpenPNE 3 placed it. --}}
+    @include('partials.gadget-sections', ['zones' => $zones, 'topPrepend' => 'member.partials.friend-link-box'])
 @else
-    @section('content')
+    @section('top')
         @include('member.partials.friend-link-box')
+    @endsection
+    @section('content')
         {{-- No profile gadgets configured: the fixed profile box (avatar + values + own-page links).
              OpenPNE 3 always rendered this page from gadgets, so there is no OpenPNE 3 kind or id to
              restore here. --}}

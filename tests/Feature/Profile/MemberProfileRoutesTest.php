@@ -23,6 +23,26 @@ class MemberProfileRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * OpenPNE 3 puts the own-page notice (and the add-%friend% box on someone else's page) in the
+     * #Top slot, full-width above the columns — not inside the Center column.
+     */
+    public function test_the_profile_notice_box_renders_in_the_top_slot(): void
+    {
+        $owner = Member::factory()->create();
+
+        $content = (string) $this->actingAs($owner)->get("/member/{$owner->getKey()}")->assertOk()->getContent();
+
+        $top = strpos($content, '<div id="Top">');
+        $box = strpos($content, 'id="informationAboutThisIsYourProfilePage"');
+        $center = strpos($content, '<div id="Center">');
+        $this->assertNotFalse($top);
+        $this->assertNotFalse($box);
+        $this->assertNotFalse($center);
+        $this->assertGreaterThan($top, $box);
+        $this->assertLessThan($center, $box, 'the notice box sits in #Top, above the Center column');
+    }
+
     public function test_classic_renders_the_member_profile_with_visible_values(): void
     {
         $owner = Member::factory()->create(['name' => 'Owner']);
