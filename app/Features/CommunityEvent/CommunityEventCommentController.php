@@ -58,6 +58,9 @@ class CommunityEventCommentController extends Controller
             return redirect()->route('communityEvent.show', $comment->event);
         }
 
+        // The confirm keeps the community context its event pages carry.
+        $this->markLocalNavCommunity($comment->event->community);
+
         return view('community-event.comment-delete', [
             'comment' => $comment,
             'pageId' => RouteParityRegistry::bodyId('communityEvent.comment.delete.show'),

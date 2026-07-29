@@ -4,7 +4,10 @@ namespace Tests\Feature\Diary\Classic;
 
 use App\Models\Diary;
 use App\Models\DiaryComment;
+use App\Models\DiaryCommentImage;
 use App\Models\Member;
+use App\Support\Visibility;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -79,6 +82,37 @@ class DiaryCommentRoutesTest extends TestCase
             ->assertSee('First post')
             ->assertSee('Commenter')
             ->assertSee('id="formDiaryComment"', false); // OpenPNE 3 op_include_form id
+    }
+
+    /**
+     * diaryComment/_list.php: the timestamp stacks year / date / time in the dt (XDateTimeJaBr),
+     * and the photos sit inside div.body ABOVE the text.
+     */
+    public function test_a_comment_row_stacks_its_timestamp_and_keeps_photos_above_the_text(): void
+    {
+        $viewer = Member::factory()->create();
+        $author = Member::factory()->create();
+        $diary = Diary::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
+        $comment = $diary->comments()->create([
+            'member_id' => $viewer->getKey(), 'body' => 'with picture', 'number' => 1,
+        ]);
+        // created_at is not fillable; pin it so the stacked dt is assertable byte-exact.
+        $comment->forceFill(['created_at' => CarbonImmutable::create(2026, 6, 24, 21, 5)])->save();
+        DiaryCommentImage::factory()->create(['diary_comment_id' => $comment->getKey()]);
+
+        // ja locale: the stacked pattern is OpenPNE 3's ja_JP culture; other locales stay one line.
+        $content = (string) $this->actingAs($viewer)->withSession(['locale' => 'ja'])
+            ->get(route('diary.show', $diary))->assertOk()->getContent();
+
+        // Stacked dt: year / date / time joined by <br />.
+        $this->assertStringContainsString('<dt>2026年<br />06月24日<br />21:05</dt>', $content);
+        // div.body opens, then ul.photo, then p.text — the OpenPNE 3 order.
+        $bodyPos = strpos($content, 'with picture');
+        $photoPos = strpos($content, '<ul class="photo">');
+        $openPos = strrpos(substr($content, 0, $photoPos), '<div class="body">');
+        $this->assertNotFalse($photoPos);
+        $this->assertNotFalse($openPos, 'ul.photo must sit inside div.body');
+        $this->assertLessThan($bodyPos, $photoPos, 'photos render above the comment text');
     }
 
     public function test_delete_link_shows_only_to_the_comment_or_diary_author(): void
