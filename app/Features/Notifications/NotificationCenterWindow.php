@@ -17,7 +17,8 @@ use Illuminate\Support\Collection;
  * construction. Counting outside the window would put a number on the sprite that the panel cannot
  * account for — a badge over rows that are not there.
  *
- * Bound request-scoped: the shell asks on every page, and the panel asks again for the same window.
+ * Bound request-scoped: within a request the window is read once, however many surfaces ask (the
+ * shell's badges and the panel arrive on different requests, so each runs its own query).
  */
 class NotificationCenterWindow
 {
@@ -29,8 +30,14 @@ class NotificationCenterWindow
     /** @return Collection<int, DatabaseNotification> */
     public function for(Member $viewer): Collection
     {
+        // created_at is second-granular and the key is a random UUID, so a second that produced
+        // more rows than the cap needs a tiebreak or "the newest 20" is not a defined set — the
+        // badge request and the panel request could window differently. The UUID is the contract:
+        // arbitrary, but the same arbitrary for every reader. (reorder: the relation itself adds
+        // a latest() this would otherwise stack under.)
         return $this->cache[$viewer->getKey()] ??= $viewer->notifications()
-            ->latest()
+            ->reorder('created_at', 'desc')
+            ->orderByDesc('id')
             ->limit(self::LIMIT)
             ->get();
     }

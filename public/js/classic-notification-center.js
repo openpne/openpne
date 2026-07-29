@@ -147,7 +147,9 @@
                     button.disabled = false;
                     button.style.display = '';
                 });
-                buttons[0]?.focus({ preventScroll: true });
+                // No optional chaining anywhere in this file: it ships unbuilt, and a browser that
+                // has fetch but cannot parse ?. would die at syntax before the feature gate runs.
+                if (buttons[0]) buttons[0].focus({ preventScroll: true });
             });
     }
 

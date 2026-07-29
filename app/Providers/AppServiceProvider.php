@@ -59,8 +59,8 @@ class AppServiceProvider extends ServiceProvider
         // Request-scoped so the shell's nav badges and the dashboard notices reuse one set of counts.
         $this->app->scoped(UnreadCounts::class);
 
-        // Likewise for the Classic header sprite: one window read once, whether the shell is
-        // badging it or the panel is listing it (see NotificationCenterWindow).
+        // Likewise for the Classic header sprite's window: read once per request, however many
+        // surfaces in that request ask (see NotificationCenterWindow).
         $this->app->scoped(NotificationCenterWindow::class);
 
         $this->app->singleton(Captcha::class, function ($app): Captcha {

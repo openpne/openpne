@@ -101,7 +101,7 @@ class NotificationFeedListTest extends TestCase
     public function test_mark_all_survives_an_unread_row_older_than_the_centres_window(): void
     {
         $viewer = Member::factory()->create();
-        $this->seedRow($viewer, 'diary_commented', []);
+        $this->seedRow($viewer, 'diary_commented', [], createdAt: now()->subSecond());
         foreach (range(1, NotificationCenterWindow::LIMIT) as $ignored) {
             $this->seedRow($viewer, 'diary_commented', [], readAt: now());
         }
@@ -162,7 +162,7 @@ class NotificationFeedListTest extends TestCase
     }
 
     /** @param array<string, mixed> $data */
-    private function seedRow(Member $member, string $kind, array $data, ?\DateTimeInterface $readAt = null): DatabaseNotification
+    private function seedRow(Member $member, string $kind, array $data, ?\DateTimeInterface $readAt = null, ?\DateTimeInterface $createdAt = null): DatabaseNotification
     {
         /** @var DatabaseNotification $row */
         $row = $member->notifications()->create([
@@ -170,6 +170,7 @@ class NotificationFeedListTest extends TestCase
             'type' => $kind === 'message_received' ? MessageReceivedNotification::class : FriendRequestedNotification::class,
             'data' => ['kind' => $kind, ...$data],
             'read_at' => $readAt,
+            'created_at' => $createdAt ?? now(),
         ]);
 
         return $row;

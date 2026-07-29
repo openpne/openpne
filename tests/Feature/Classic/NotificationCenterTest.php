@@ -93,9 +93,11 @@ class NotificationCenterTest extends TestCase
     public function test_an_unread_event_older_than_the_panels_window_is_not_badged(): void
     {
         $viewer = Member::factory()->create();
-        $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented']);
+        // Explicitly a second older: created_at is second-granular, so an implicit "seeded first =
+        // oldest" would lean on insertion order the window does not promise.
+        $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], createdAt: now()->subSecond());
         foreach (range(1, NotificationCenterWindow::LIMIT) as $ignored) {
-            $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now());
+            $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now(), createdAt: now());
         }
 
         // The one unread row is the oldest, so the newest 20 — all read — are the whole window.
@@ -109,19 +111,52 @@ class NotificationCenterTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $actor = Member::factory()->create();
-        // Older than the window, and unread — must not reach a badge.
-        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()]);
+        // Older than the window by an explicit second, and unread — must not reach a badge.
+        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()], createdAt: now()->subSecond());
         foreach (range(1, NotificationCenterWindow::LIMIT - 1) as $ignored) {
-            $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now());
+            $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now(), createdAt: now());
         }
         // Inside the window: one unread, one read.
-        $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now());
-        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()]);
+        $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now(), createdAt: now());
+        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()], createdAt: now());
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
         $this->assertStringContainsString('<span id="nc_icon1">1</span>', $content);
         $this->assertStringNotContainsString('id="nc_icon3"', $content);
+    }
+
+    /**
+     * created_at is second-granular, so a second that produced more rows than the window holds
+     * needs a defined loser. The UUID is the tiebreak — arbitrary, but the same arbitrary for the
+     * badge request and the panel request, which is the point.
+     */
+    public function test_a_same_second_overflow_evicts_by_id_not_by_chance(): void
+    {
+        $viewer = Member::factory()->create();
+        $actor = Member::factory()->create();
+        $moment = now();
+        // The lexically smallest id in the tie, and the only message kind: if it survives the
+        // window, nc_icon1 appears and this fails.
+        $viewer->notifications()->create([
+            'id' => '00000000-0000-0000-0000-000000000000',
+            'type' => MessageReceivedNotification::class,
+            'data' => ['kind' => 'message_received', 'sender_id' => $actor->getKey()],
+            'created_at' => $moment,
+        ]);
+        foreach (range(1, NotificationCenterWindow::LIMIT) as $n) {
+            $viewer->notifications()->create([
+                'id' => sprintf('ffffffff-0000-0000-0000-%012d', $n),
+                'type' => DiaryCommentedNotification::class,
+                'data' => ['kind' => 'diary_commented'],
+                'created_at' => $moment,
+            ]);
+        }
+
+        $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('<span id="nc_icon3">'.NotificationCenterWindow::LIMIT.'</span>', $content);
+        $this->assertStringNotContainsString('id="nc_icon1"', $content);
     }
 
     /** A kind nobody has classified still has to reach a badge rather than vanish from all three. */
@@ -213,13 +248,14 @@ class NotificationCenterTest extends TestCase
     }
 
     /** @param array<string, mixed> $data */
-    private function seedRow(Member $member, string $type, array $data, ?\DateTimeInterface $readAt = null): void
+    private function seedRow(Member $member, string $type, array $data, ?\DateTimeInterface $readAt = null, ?\DateTimeInterface $createdAt = null): void
     {
         $member->notifications()->create([
             'id' => (string) Str::uuid(),
             'type' => $type,
             'data' => $data,
             'read_at' => $readAt,
+            'created_at' => $createdAt ?? now(),
         ]);
     }
 }
