@@ -56,6 +56,21 @@ class ShellNavigationTest extends TestCase
         $this->assertStringContainsString('<form method="POST" action="'.route('logout').'"', $html);
     }
 
+    /**
+     * The logout entry is a POST form button (the CSRF protection OpenPNE 3's bare link lacked),
+     * dressed as the plain tab OpenPNE 3 drew — its style ships with the nav.
+     */
+    public function test_the_logout_tab_is_a_post_button_dressed_as_a_tab(): void
+    {
+        $this->seed(NavigationSeeder::class);
+
+        $content = (string) $this->actingAs(Member::factory()->create())->get('/')->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '#<li id="globalNav__member_logout">\s*<form method="POST" action="[^"]*/logout">#', $content);
+        $this->assertStringContainsString('#globalNav li form button { padding: 0 8px; height: 40px;', $content);
+    }
+
     public function test_guest_on_a_classic_page_does_not_see_the_local_nav(): void
     {
         // localNav is secure-only in OpenPNE 3; a web-public profile reaches the

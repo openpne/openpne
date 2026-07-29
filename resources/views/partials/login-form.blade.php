@@ -1,13 +1,12 @@
 {{-- The login form with its ALTCHA / registration / error behaviour. Shared by the fixed login
-     page and the loginForm gadget. The box id is the fixed `loginForm` (one form per page), not
-     a gadget-scoped id.
+     page and the loginForm gadget.
 
-     OpenPNE 3 renders this one box outside the parts frame — a bare `div.loginForm` per auth mode,
-     which its themes reach by id instead. The inner div keeps that `.loginForm` class hook (the
-     skin styles its cells, inputs and .password_query through it); the frame around it is the
-     OpenPNE 4 titled box, hence a kind-less dparts. --}}
-<x-classic.parts id="loginForm" :title="__('Login')">
-    <div class="loginForm">
+     OpenPNE 3 draws this with no parts frame at all: a bare div per auth mode
+     (`#MailAddressLogin.loginForm`), no heading, the skin styling its cells, inputs and
+     .password_query through the class. The frame this once added read as a foreign box next to
+     every other OpenPNE 3 screen, so the bare div is what renders — id included, since it is the
+     seam a site's own CSS reaches. --}}
+<div id="MailAddressLogin" class="loginForm">
         <form method="POST" action="{{ route('login') }}">
             @csrf
             <table>
@@ -48,8 +47,7 @@
         @if ($registrationOpen ?? false)
             <p class="registerLink"><a href="{{ route('register') }}">{{ __('Register') }}</a></p>
         @endif
-    </div>
-</x-classic.parts>
+</div>
 
 @if ($captchaRequired ?? false)
     {{-- Registers <altcha-widget>. Kept outside the form table so the production build's

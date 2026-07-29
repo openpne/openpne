@@ -6,6 +6,15 @@
     $navType = auth()->check() ? 'secure_global' : 'insecure_global';
     $navItems = app(\App\Services\NavigationService::class)->visibleEntries($navType, app()->getLocale());
 @endphp
+@once
+    {{-- The logout tab is a POST form button (nav-item), dressed as the plain tab OpenPNE 3 drew;
+         mirrors the skin's #globalNav li a rules so the header reads as one row of tabs. --}}
+    <style>
+        #globalNav li form { margin: 0; }
+        #globalNav li form button { padding: 0 8px; height: 40px; line-height: 40px; display: block; color: #FFFFFF; text-decoration: none; background: none; border: 0; font: inherit; cursor: pointer; }
+        #globalNav li form button:hover { background: transparent url({{ asset('opSkinBasicPlugin/images/bg_globalnav_hover.gif') }}) repeat-x scroll 0 0; }
+    </style>
+@endonce
 <div id="globalNav">
     <ul>
         @foreach ($navItems as $item)
