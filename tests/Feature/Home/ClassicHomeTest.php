@@ -162,10 +162,10 @@ class ClassicHomeTest extends TestCase
 
     /**
      * The cautions count the mailbox and the request list; the header badges count the notification
-     * centre's own rows (NotificationCenterTest). Those answer different questions and are not
+     * center's own rows (NotificationCenterTest). Those answer different questions and are not
      * reconciled — OpenPNE 3's diverged the same way, its badges coming from the event store while
      * these cautions ran their own queries. What this pins is that the cautions keep asking layer 1,
-     * so a member with nothing in the centre is still told what is waiting.
+     * so a member with nothing in the center is still told what is waiting.
      */
     public function test_the_cautions_count_the_mailbox_rather_than_the_notification_rows(): void
     {
@@ -183,7 +183,7 @@ class ClassicHomeTest extends TestCase
 
         $this->assertStringContainsString(e(__('There are new :count messages!', ['count' => 2])), $content);
         $this->assertStringContainsString(e(__("You've gotten :count %friend% requests", ['count' => 3])), $content);
-        // No notification rows were written, so the centre has nothing to badge.
+        // No notification rows were written, so the center has nothing to badge.
         $this->assertStringNotContainsString('id="nc_icon', $content);
     }
 }

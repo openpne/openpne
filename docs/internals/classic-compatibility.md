@@ -206,7 +206,7 @@ Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.g
 broken in OpenPNE 3) and its fixed 950px width are kept as-is; there is a single static skin (no
 theme switching); the footer has no privacy-policy / terms links (no such routes exist); the
 `#SmtSwitch` smartphone-view toggle is not ported (OpenPNE 4 has no separate smartphone frontend
-to switch to); the notification centre's badges count unread notification rows rather than OpenPNE
+to switch to); the notification center's badges count unread notification rows rather than OpenPNE
 3's `member_config` event store, so they are clamped at `99+` with the number kept in the title, and
 its panel answers a decision by replacing the buttons with the outcome rather than OpenPNE 3's
 hardcoded Japanese; the unread-`%diary%`-comment caution has nothing to port to (OpenPNE 4 tracks

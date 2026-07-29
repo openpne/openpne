@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Features\Notifications;
 
 /**
- * The three compartments OpenPNE 3's notification centre split its events into — one per badge on
- * the sprite, in that order. Everything the centre shows is classified here and nowhere else, so a
+ * The three compartments OpenPNE 3's notification center split its events into — one per badge on
+ * the sprite, in that order. Everything the center shows is classified here and nowhere else, so a
  * badge can never count an event its panel does not list, or count one twice.
  */
 enum NotificationCenterCategory: string

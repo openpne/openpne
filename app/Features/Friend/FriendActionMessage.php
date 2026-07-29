@@ -8,7 +8,7 @@ use App\Features\Friend\Exceptions\FriendActionFailure;
 
 /**
  * What a member is told when a %friend% action refuses. Shared so the pages and the notification
- * centre answer the same failure with the same sentence.
+ * center answer the same failure with the same sentence.
  */
 class FriendActionMessage
 {

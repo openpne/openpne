@@ -13,7 +13,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The panel's rows: the centre's window, hydrated. Read and unread both appear — the panel is a
+ * The panel's rows: the center's window, hydrated. Read and unread both appear — the panel is a
  * log, and the skin greys the read ones out.
  */
 class ListNotificationCenterRows

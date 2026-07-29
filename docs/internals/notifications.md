@@ -14,7 +14,7 @@ document covers the delivery model around it.
    No notification table, no seen state: acting on the item (accept / reject / read) is what
    makes the count drop. [`App\Features\Home\UnreadCounts`](../../app/Features/Home/UnreadCounts.php).
 2. **Display surfaces over layer 1** — Modern's nav badges, its dashboard notice block, and the
-   Classic home cautions. They only read layer-1 counts. The Classic header's notification centre
+   Classic home cautions. They only read layer-1 counts. The Classic header's notification center
    is *not* one of these: it badges layer 3 (below).
 3. **Per-event records** — one row per event in the standard Laravel `notifications` table
    (the `database` channel of each notification class), carrying a `kind` discriminator plus
@@ -31,7 +31,7 @@ document covers the delivery model around it.
    as a POST to the open route, which keeps target resolution — and its access checks — on that
    request rather than on every listed row.
 
-   Classic also reaches these rows from the header notification centre. Its badges and its panel
+   Classic also reaches these rows from the header notification center. Its badges and its panel
    share one capped window
    ([`NotificationCenterWindow`](../../app/Features/Notifications/NotificationCenterWindow.php)),
    split by

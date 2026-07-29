@@ -95,10 +95,10 @@ class NotificationFeedListTest extends TestCase
 
     /**
      * The feed pages through everything, so its mark-all follows the whole unread set — not the
-     * header centre's 20-row window. An unread row the centre cannot badge still has something for
+     * header center's 20-row window. An unread row the center cannot badge still has something for
      * this button to mark.
      */
-    public function test_mark_all_survives_an_unread_row_older_than_the_centres_window(): void
+    public function test_mark_all_survives_an_unread_row_older_than_the_centers_window(): void
     {
         $viewer = Member::factory()->create();
         $this->seedRow($viewer, 'diary_commented', [], createdAt: now()->subSecond());
@@ -106,7 +106,7 @@ class NotificationFeedListTest extends TestCase
             $this->seedRow($viewer, 'diary_commented', [], readAt: now());
         }
 
-        // The centre's window is the newest 20, all read, so its badges are empty.
+        // The center's window is the newest 20, all read, so its badges are empty.
         $this->actingAs($viewer)->get('/notifications')
             ->assertOk()
             ->assertDontSee('id="nc_icon', false)

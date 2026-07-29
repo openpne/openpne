@@ -9,10 +9,10 @@ use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 
 /**
- * Everything the notification centre knows about: the member's most recent events, capped where
+ * Everything the notification center knows about: the member's most recent events, capped where
  * OpenPNE 3 capped them.
  *
- * The cap is the centre's whole world, not a page of it. OpenPNE 3 sliced the stored array to
+ * The cap is the center's whole world, not a page of it. OpenPNE 3 sliced the stored array to
  * `op_notification_limit` as it wrote, so its badge counts and its panel read the same 20 items by
  * construction. Counting outside the window would put a number on the sprite that the panel cannot
  * account for — a badge over rows that are not there.

@@ -6,7 +6,7 @@ namespace App\Features\Notifications;
 
 use App\Models\File;
 
-/** One `.push` row in the notification centre panel. */
+/** One `.push` row in the notification center panel. */
 final class NotificationCenterRow
 {
     public function __construct(

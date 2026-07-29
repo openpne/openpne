@@ -66,7 +66,7 @@ class NotificationFeedSerializer
     }
 
     /**
-     * Rows for the Classic notification centre panel. Takes the requesters whose %friend% request
+     * Rows for the Classic notification center panel. Takes the requesters whose %friend% request
      * is still open so the panel can offer the decision inline; resolving that per row would be a
      * query per row.
      *

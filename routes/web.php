@@ -354,7 +354,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/community/recent', [HomeController::class, 'communityActivity'])->name('community.recent');
 
     // The per-event notification feed (layer 3). Served on both surfaces, though OpenPNE 3's
-    // notification centre had no PC page to be compatible with.
+    // notification center had no PC page to be compatible with.
     Route::prefix('notifications')->controller(NotificationFeedController::class)->group(function () {
         Route::get('/', 'index')->name('notifications.index');
         Route::post('/read-all', 'readAll')->name('notifications.readAll');

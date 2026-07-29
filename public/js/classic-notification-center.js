@@ -1,5 +1,5 @@
 /**
- * The Classic header's notification centre: OpenPNE 3 opened its panel in place rather than
+ * The Classic header's notification center: OpenPNE 3 opened its panel in place rather than
  * navigating, and that is the behaviour this restores.
  *
  * Everything here is an enhancement over markup that already works. The trigger ships as a link to

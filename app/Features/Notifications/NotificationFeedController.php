@@ -34,7 +34,7 @@ class NotificationFeedController extends Controller
         return $this->respondWith($request, 'notifications', [
             // Modern shares the unread count on every page; Classic has no such prop, so the
             // mark-all button asks for it here (and hides on zero, as Modern's does). Counted over
-            // the whole feed, not the header centre's window: this page pages through everything,
+            // the whole feed, not the header center's window: this page pages through everything,
             // so an unread row older than that window still has something to mark.
             SurfaceResolver::CLASSIC => fn (): View => view('notifications.index', [
                 'feed' => NotificationFeedSerializer::classicRows($rows),
