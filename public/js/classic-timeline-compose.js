@@ -27,15 +27,16 @@
     var fileName = form.querySelector('#photo-file-name');
     var photoRemove = form.querySelector('#photo-remove');
     var postform = form.querySelector('.timeline-postform');
-    if (!textarea || !area || !counter || !submit || !fileInput) {
-      return;
+    if (!textarea || !area || !counter || !submit || !fileInput || !postform) {
+      return false;
     }
 
     function sync() {
-      var length = submittedLength(textarea.value);
-      counter.textContent = String(MAXLENGTH - length);
-      counter.style.color = length > MAXLENGTH ? '#EE0000' : '';
-      submit.disabled = textarea.value === '' || length > MAXLENGTH;
+      var remaining = MAXLENGTH - submittedLength(textarea.value);
+      counter.textContent = String(remaining);
+      // OpenPNE 3 counter.js: red past the limit, orange for the last 25, black otherwise.
+      counter.style.color = remaining < 0 ? '#FF0000' : (remaining <= 25 ? '#FFA500' : '#000000');
+      submit.disabled = textarea.value === '' || remaining < 0;
     }
 
     function expand() {
@@ -76,15 +77,23 @@
       expand();
     }
     form.hidden = false;
+    return true;
   }
 
   var forms = document.querySelectorAll('[data-timeline-compose]');
+  var allReady = forms.length > 0;
   var i;
   for (i = 0; i < forms.length; i += 1) {
-    setUp(forms[i]);
+    if (!setUp(forms[i])) {
+      allReady = false;
+    }
   }
-  var fallbacks = document.querySelectorAll('[data-timeline-compose-fallback]');
-  for (i = 0; i < fallbacks.length; i += 1) {
-    fallbacks[i].hidden = true;
+  // The links retire only once every box on the page took over; a box that failed to wire keeps
+  // its no-JS path alive.
+  if (allReady) {
+    var fallbacks = document.querySelectorAll('[data-timeline-compose-fallback]');
+    for (i = 0; i < fallbacks.length; i += 1) {
+      fallbacks[i].hidden = true;
+    }
   }
 })();

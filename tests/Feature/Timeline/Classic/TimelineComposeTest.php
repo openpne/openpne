@@ -128,6 +128,20 @@ class TimelineComposeTest extends TestCase
         $this->assertDatabaseMissing('timeline_posts', ['body' => 'Bad token']);
     }
 
+    public function test_an_array_token_fails_validation_instead_of_erroring(): void
+    {
+        $member = Member::factory()->create();
+
+        // return_to[]=… must not reach the route lookup as an array (a 500), nor the Referer.
+        $this->actingAs($member)
+            ->from('https://evil.example/away')
+            ->post(route('timeline.store'), ['body' => 'Array token', 'visibility' => Visibility::Members->value, 'return_to' => ['index']])
+            ->assertRedirect(route('timeline.new'))
+            ->assertSessionHasErrors('return_to');
+
+        $this->assertDatabaseMissing('timeline_posts', ['body' => 'Array token']);
+    }
+
     public function test_a_failed_inline_post_returns_to_its_page_with_the_draft(): void
     {
         $member = Member::factory()->create();
@@ -136,10 +150,11 @@ class TimelineComposeTest extends TestCase
         // the reloaded form shows the draft and the reason in OpenPNE 3's error seam.
         $this->actingAs($member)
             ->from('https://evil.example/away')
-            ->post(route('timeline.store'), ['body' => '', 'visibility' => Visibility::Members->value, 'return_to' => 'index'])
+            ->post(route('timeline.store'), ['body' => 'A kept draft', 'visibility' => 99, 'return_to' => 'index'])
             ->assertRedirect(route('timeline.index'));
 
         $this->actingAs($member)->get(route('timeline.index'))->assertOk()
+            ->assertSee('>A kept draft</textarea>', false)
             ->assertSee('id="timeline-submit-error"', false);
     }
 

@@ -47,7 +47,9 @@ class StoreTimelinePostRequest extends FormRequest
      */
     protected function getRedirectUrl(): string
     {
-        $route = self::RETURN_ROUTES[$this->input('return_to')] ?? 'timeline.new';
+        // input() may hold an array (return_to[]=…); a non-string token is simply not allowlisted.
+        $token = $this->input('return_to');
+        $route = is_string($token) ? (self::RETURN_ROUTES[$token] ?? 'timeline.new') : 'timeline.new';
 
         return route($route);
     }
