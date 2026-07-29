@@ -7,6 +7,8 @@ use App\Features\Community\Actions\UpdateCommunity;
 use App\Features\Community\Data\CommunityFormData;
 use App\Features\Community\Exceptions\CommunityActionFailure;
 use App\Features\Community\JoinPolicy;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Models\Community;
 use App\Models\CommunityCategory;
 use App\Models\CommunityMember;
@@ -22,7 +24,7 @@ class UpdateDeleteCommunityTest extends TestCase
 
     private function data(?int $categoryId = null): CommunityFormData
     {
-        return new CommunityFormData('Renamed', 'new desc', JoinPolicy::Approval, $categoryId, true);
+        return new CommunityFormData('Renamed', 'new desc', JoinPolicy::Approval, $categoryId, true, TopicReadAccess::Everyone, TopicPostAuthority::Members);
     }
 
     public function test_admin_can_update(): void

@@ -25,12 +25,26 @@ enum TopicReadAccess: int
         };
     }
 
-    /** Human-readable label key, translated via __() on either surface. */
+    public static function fromSlug(string $slug): self
+    {
+        foreach (self::cases() as $case) {
+            if ($case->slug() === $slug) {
+                return $case;
+            }
+        }
+
+        throw new \ValueError("Unknown TopicReadAccess slug [{$slug}].");
+    }
+
+    /**
+     * Label key, translated via __() on either surface. OpenPNE 3's own choice captions
+     * (community_config.yml public_flag), which its edit form and community home both printed.
+     */
     public function label(): string
     {
         return match ($this) {
-            self::Everyone => 'Anyone can read',
-            self::MembersOnly => 'Members only',
+            self::Everyone => 'Everyone can read',
+            self::MembersOnly => "Only %community%'s members can read",
         };
     }
 }

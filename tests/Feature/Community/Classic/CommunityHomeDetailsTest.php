@@ -85,8 +85,8 @@ class CommunityHomeDetailsTest extends TestCase
         // The category name and the enum value labels render.
         $response->assertSee('Sports');
         $response->assertSee('Approval required'); // register_policy = Approval
-        $response->assertSee('Anyone can read');   // topic_read_access default = Everyone
-        $response->assertSee('Members can post');  // topic_post_authority default = Members
+        $response->assertSee('Everyone can read');   // topic_read_access default, OpenPNE 3's own caption
+        $response->assertSee(e(__("%Community%'s members can create")), false);  // topic_post_authority default, OpenPNE 3's own caption
     }
 
     public function test_the_sub_administrator_row_is_absent_without_a_sub_admin(): void

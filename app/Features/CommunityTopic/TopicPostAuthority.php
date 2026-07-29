@@ -28,12 +28,26 @@ enum TopicPostAuthority: int
         };
     }
 
-    /** Human-readable label key, translated via __() on either surface. */
+    public static function fromSlug(string $slug): self
+    {
+        foreach (self::cases() as $case) {
+            if ($case->slug() === $slug) {
+                return $case;
+            }
+        }
+
+        throw new \ValueError("Unknown TopicPostAuthority slug [{$slug}].");
+    }
+
+    /**
+     * Label key, translated via __() on either surface. OpenPNE 3's own choice captions
+     * (community_config.yml topic_authority), which its edit form and community home both printed.
+     */
     public function label(): string
     {
         return match ($this) {
-            self::Members => 'Members can post',
-            self::AdminsOnly => 'Admins only',
+            self::Members => "%Community%'s members can create",
+            self::AdminsOnly => "Only %community%'s admin can create",
         };
     }
 }

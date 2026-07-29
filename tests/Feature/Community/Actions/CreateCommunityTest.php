@@ -7,6 +7,8 @@ use App\Features\Community\CommunityRole;
 use App\Features\Community\Data\CommunityFormData;
 use App\Features\Community\Exceptions\CommunityActionFailure;
 use App\Features\Community\JoinPolicy;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Models\CommunityCategory;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +23,7 @@ class CreateCommunityTest extends TestCase
     public function test_creates_community_with_creator_as_admin(): void
     {
         $creator = Member::factory()->create();
-        $data = new CommunityFormData('Hiking', 'desc', JoinPolicy::Approval, null, true);
+        $data = new CommunityFormData('Hiking', 'desc', JoinPolicy::Approval, null, true, TopicReadAccess::MembersOnly, TopicPostAuthority::AdminsOnly);
 
         $community = app(CreateCommunity::class)($creator, $data);
 
@@ -38,7 +40,7 @@ class CreateCommunityTest extends TestCase
     {
         $creator = Member::factory()->create();
         $category = CommunityCategory::factory()->adminOnly()->create();
-        $data = new CommunityFormData('X', null, JoinPolicy::Open, $category->getKey(), true);
+        $data = new CommunityFormData('X', null, JoinPolicy::Open, $category->getKey(), true, TopicReadAccess::Everyone, TopicPostAuthority::Members);
 
         $this->assertFailsWith(CommunityActionFailure::CategoryNotAllowed, fn () => app(CreateCommunity::class)($creator, $data));
         $this->assertDatabaseMissing('communities', ['name' => 'X']);
@@ -48,7 +50,7 @@ class CreateCommunityTest extends TestCase
     {
         $creator = Member::factory()->create();
         $category = CommunityCategory::factory()->create();
-        $data = new CommunityFormData('Y', null, JoinPolicy::Open, $category->getKey(), true);
+        $data = new CommunityFormData('Y', null, JoinPolicy::Open, $category->getKey(), true, TopicReadAccess::Everyone, TopicPostAuthority::Members);
 
         $community = app(CreateCommunity::class)($creator, $data);
 
