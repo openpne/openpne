@@ -39,6 +39,11 @@ class BroadcastTopicCommentPosted implements ShouldQueue
 
     public function handle(CommunityNewPostFanout $fanout, CommunityNewPostRecipients $recipients, MailTemplateService $templates): void
     {
+        // Saves the audience walk only; the send gate itself is the notification's shouldSend().
+        if (! TopicCommentBroadcastNotification::feature()->enabled()) {
+            return;
+        }
+
         $topic = CommunityTopic::with('community')->find($this->topicId);
         $comment = CommunityTopicComment::find($this->commentId);
         $commenter = Member::find($this->commenterId);

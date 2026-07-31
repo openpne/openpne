@@ -41,6 +41,11 @@ class BroadcastDiaryPosted implements ShouldQueue
 
     public function handle(DiaryPostedRecipients $recipients): void
     {
+        // Saves the audience walk only; the send gate itself is the notification's shouldSend().
+        if (! DiaryPostedNotification::feature()->enabled()) {
+            return;
+        }
+
         $diary = Diary::with('member')->find($this->diaryId);
         // Deleted before the job ran, or its author withdrew (the diary would cascade, but be defensive).
         if ($diary === null || $diary->member === null) {

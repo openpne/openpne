@@ -19,6 +19,7 @@ use App\Models\File;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\TimelinePost;
+use App\Support\Feature;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 
@@ -43,6 +44,13 @@ class FilePolicy extends BasePolicy
         }
 
         $owner = $this->owner($file);
+
+        // A file is fetched by URL, so no page mediates it: a switched-off unit's bytes have to be
+        // refused here or its images stay readable while every screen around them is gone. The admin
+        // monitor reads through its own route (AdminFileController), so moderation keeps working.
+        if (! ($this->owningFeature($owner)?->enabled() ?? true)) {
+            return false;
+        }
 
         return match (true) {
             // A banner image is public by design: a banner shows to guests (the before-login
@@ -77,6 +85,24 @@ class FilePolicy extends BasePolicy
             // none. TimelineAccess handles the guest (null) case.
             $owner instanceof TimelinePost => TimelineAccess::canView($viewer, $owner),
             default => false,
+        };
+    }
+
+    /**
+     * The feature unit $owner belongs to, or null for the two owners no unit governs: a member's
+     * avatar and a banner image. A topic/event owner names its own unit — Feature::enabled() walks
+     * to `community` from there, so switching communities off takes their files too.
+     */
+    private function owningFeature(?Model $owner): ?Feature
+    {
+        return match (true) {
+            $owner instanceof Diary, $owner instanceof DiaryComment => Feature::Diary,
+            $owner instanceof Message => Feature::Message,
+            $owner instanceof TimelinePost => Feature::Timeline,
+            $owner instanceof Community => Feature::Community,
+            $owner instanceof CommunityTopic, $owner instanceof CommunityTopicComment => Feature::CommunityTopic,
+            $owner instanceof CommunityEvent, $owner instanceof CommunityEventComment => Feature::CommunityEvent,
+            default => null,
         };
     }
 
