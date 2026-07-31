@@ -19,7 +19,7 @@ namespace App\Support;
  * Deliberately NOT ported from OpenPNE 3's sns_config (obsolete or superseded in OpenPNE 4):
  *   - enable_pc / enable_mobile — single responsive surface (App\Support\SurfaceResolver), no
  *     PC-vs-mobile split;
- *   - enable_friend_link / enable_cmd / enable_language — always-on or handled by other mechanisms.
+ *   - enable_cmd / enable_language — always-on or handled by other mechanisms.
  *
  * App\Upgrade\Steps\SnsSettingUpgrade copies the OpenPNE 3 sns_config values via `op3SourceName()`,
  * for the keys `isMigratedFromOp3()` allows (display + gadget layout + design customization; the
@@ -78,6 +78,28 @@ enum SnsSettingKey: string
     case FooterAfter = 'footer_after';
 
     /**
+     * Feature availability toggles (App\Support\Feature). An absent row means enabled, so an install
+     * that never opened the page runs every feature — OpenPNE 3's lazy `plugin` rows.
+     */
+    case FeatureDiaryEnabled = 'feature_diary_enabled';
+
+    case FeatureMessageEnabled = 'feature_message_enabled';
+
+    case FeatureTimelineEnabled = 'feature_timeline_enabled';
+
+    case FeatureCommunityEnabled = 'feature_community_enabled';
+
+    case FeatureCommunityTopicEnabled = 'feature_community_topic_enabled';
+
+    case FeatureCommunityEventEnabled = 'feature_community_event_enabled';
+
+    /**
+     * OpenPNE 3 kept this one in sns_config (`enable_friend_link`), not in `plugin`. Its upgrade is
+     * still a dedicated step writing only a disabled row, so absent = enabled holds on both sides.
+     */
+    case FeatureFriendEnabled = 'feature_friend_enabled';
+
+    /**
      * OpenPNE 3's default footer (its sns_config footer_before/after seed), the install default for the
      * footer keys so a fresh site shows the same bar it always did.
      */
@@ -95,6 +117,9 @@ enum SnsSettingKey: string
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => SettingGroup::GadgetLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => SettingGroup::Design,
+            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => SettingGroup::Features,
         };
     }
 
@@ -128,6 +153,11 @@ enum SnsSettingKey: string
             // Design keys keep the OpenPNE 3 sns_config name verbatim (1:1 copy).
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => $this->value,
+            // No sns_config column to copy: OpenPNE 3 held plugin availability in its `plugin` table,
+            // and FeatureFriendEnabled's sns_config origin upgrades through its own step (see above).
+            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => null,
         };
     }
 
@@ -142,7 +172,7 @@ enum SnsSettingKey: string
     {
         return match ($this->group()) {
             SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy => $this->op3SourceName() !== null,
-            SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface => false,
+            SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features => false,
         };
     }
 
@@ -175,6 +205,10 @@ enum SnsSettingKey: string
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom => '',
             self::FooterBefore, self::FooterAfter => self::FOOTER_DEFAULT,
+            // On, so a fresh or upgraded install runs every feature until an administrator says otherwise.
+            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => true,
         };
     }
 
@@ -189,7 +223,10 @@ enum SnsSettingKey: string
         }
 
         return match ($this) {
-            self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
+            self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic,
+            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             default => is_string($value) ? trim($value) : (string) $value,
@@ -200,7 +237,10 @@ enum SnsSettingKey: string
     public function encode(mixed $value): string
     {
         return match ($this) {
-            self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic => $value ? '1' : '0',
+            self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic,
+            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => $value ? '1' : '0',
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
             default => (string) $value,
@@ -223,6 +263,12 @@ enum SnsSettingKey: string
             // Fail-closed the OTHER way: here `true` widens exposure, so only an explicit '1' enables
             // it; a malformed/empty value must not open web-public age (the opposite of CaptchaEnabled).
             self::AllowWebPublicAge, self::TimelineAllowWebPublic => $value === '1',
+            // Fail-OPEN, the one place that direction is right: an availability switch, so only an
+            // explicit '0' takes a feature down. A malformed value must not black out a module and
+            // strand its content — the opposite trade-off from the security keys above.
+            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => $value !== '0',
             default => $value,
         };
     }
@@ -251,6 +297,14 @@ enum SnsSettingKey: string
             // viewer's login state.
             self::FooterBefore => __('Footer (insecure pages)'),
             self::FooterAfter => __('Footer (secure pages)'),
+            // A feature toggle is labelled with the feature's own name (App\Support\Feature::label()).
+            self::FeatureDiaryEnabled => __('%Diary%'),
+            self::FeatureMessageEnabled => __('Message'),
+            self::FeatureTimelineEnabled => __('%Activity%'),
+            self::FeatureCommunityEnabled => __('%Community%'),
+            self::FeatureCommunityTopicEnabled => __('%Topic%'),
+            self::FeatureCommunityEventEnabled => __('Event'),
+            self::FeatureFriendEnabled => __('%Friend%'),
         };
     }
 
@@ -262,7 +316,10 @@ enum SnsSettingKey: string
             self::TimelineAllowWebPublic,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
-            self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => false,
+            self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,
+            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => false,
         };
     }
 

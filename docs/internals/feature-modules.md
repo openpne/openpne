@@ -108,7 +108,9 @@ upgrade writes a `classic_default` row so a migrated site keeps its Classic look
 switches a live site.
 
 The selection logic is wired into every dual-surface controller. There is no
-`config/features.php`, so `modern_status` defaults to `native`. The durable member
+`config/features.php`, so `modern_status` defaults to `native`. Whether a feature is served
+**at all** is a separate, DB-authoritative mechanism — the `sns_settings` feature toggles
+([feature-toggles.md](feature-toggles.md)) — which does not use this config. The durable member
 choice (4) is writable — the member config page sets it — so a member can opt into
 either surface persistently. A post-submit redirect targets the canonical route
 name; the follow-up GET resolves the surface the same way as any other request.
