@@ -4,6 +4,9 @@ namespace App\Notifications\Community;
 
 use App\Models\Community;
 use App\Models\Member;
+use App\Notifications\Concerns\GatedByFeature;
+use App\Notifications\FeatureNotification;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -13,14 +16,20 @@ use Illuminate\Notifications\Notification;
  * OpenPNE 3 handshake was dropped), so there is nothing to confirm, no mail template, and no catalog
  * kind to gate.
  */
-class SubAdminAppointedNotification extends Notification implements ShouldQueue
+class SubAdminAppointedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
 
     public function __construct(
         public readonly Community $community,
         public readonly Member $appointer,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::Community;
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array

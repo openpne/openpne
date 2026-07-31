@@ -13,6 +13,6 @@ class CountUnreadNotifications
 {
     public function __invoke(Member $viewer): int
     {
-        return $viewer->unreadNotifications()->count();
+        return VisibleNotifications::apply($viewer->unreadNotifications())->count();
     }
 }

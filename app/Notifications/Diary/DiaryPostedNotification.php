@@ -5,7 +5,10 @@ namespace App\Notifications\Diary;
 use App\Mail\Template\MailTemplate;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Notifications\FeatureNotification;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -17,8 +20,9 @@ use Illuminate\Notifications\Notification;
  * set) and passes the decided list, so `via()` returns it verbatim — one notification instance per
  * recipient, never a per-channel duplicate of the database feed row.
  */
-class DiaryPostedNotification extends Notification implements ShouldQueue
+class DiaryPostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
     use RendersMailTemplate;
 
@@ -28,6 +32,11 @@ class DiaryPostedNotification extends Notification implements ShouldQueue
         public readonly Member $author,
         public readonly array $channels,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::Diary;
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array
