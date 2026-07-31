@@ -11,7 +11,7 @@ import type { PageProps } from '@/types';
  *  web-public profile is reachable signed out) sees only the brand and a sign-in link. */
 export function LeftNav() {
     const t = useT();
-    const { name, auth } = usePage<PageProps>().props;
+    const { name, auth, enabledFeatures } = usePage<PageProps>().props;
 
     return (
         <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-2 border-r border-border px-2 py-4 lg:flex">
@@ -27,10 +27,13 @@ export function LeftNav() {
                     <nav className="flex-1 overflow-y-auto">
                         <NavItems />
                     </nav>
-                    <ActionLink href="/diary/new" className="rounded-full">
-                        <Pencil className="size-5" strokeWidth={2.25} />
-                        {t('Post %diary%')}
-                    </ActionLink>
+                    {/* The desktop half of PostFab — it follows the same unit. */}
+                    {enabledFeatures.diary && (
+                        <ActionLink href="/diary/new" className="rounded-full">
+                            <Pencil className="size-5" strokeWidth={2.25} />
+                            {t('Post %diary%')}
+                        </ActionLink>
+                    )}
                     <div className="border-t border-border pt-2">
                         <AvatarMenu user={auth.user} />
                     </div>

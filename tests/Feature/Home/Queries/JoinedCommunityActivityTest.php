@@ -8,6 +8,7 @@ use App\Models\CommunityEvent;
 use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Member;
+use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -102,5 +103,47 @@ class JoinedCommunityActivityTest extends TestCase
         CommunityEvent::factory()->count(4)->create(['community_id' => $community->getKey()]);
 
         $this->assertCount(5, app(JoinedCommunityActivity::class)($viewer, 5));
+    }
+
+    public function test_a_switched_off_board_leaves_the_events(): void
+    {
+        $viewer = Member::factory()->create();
+        $community = $this->joinedCommunity($viewer);
+        CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+
+        $this->setSnsSetting(Feature::CommunityTopic->settingKey(), false);
+
+        $result = app(JoinedCommunityActivity::class)($viewer);
+
+        $this->assertCount(1, $result);
+        $this->assertInstanceOf(CommunityEvent::class, $result[0]);
+    }
+
+    public function test_a_switched_off_calendar_leaves_the_topics(): void
+    {
+        $viewer = Member::factory()->create();
+        $community = $this->joinedCommunity($viewer);
+        CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+
+        $this->setSnsSetting(Feature::CommunityEvent->settingKey(), false);
+
+        $result = app(JoinedCommunityActivity::class)($viewer);
+
+        $this->assertCount(1, $result);
+        $this->assertInstanceOf(CommunityTopic::class, $result[0]);
+    }
+
+    public function test_switching_communities_off_takes_both_halves(): void
+    {
+        $viewer = Member::factory()->create();
+        $community = $this->joinedCommunity($viewer);
+        CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+
+        $this->setSnsSetting(Feature::Community->settingKey(), false);
+
+        $this->assertCount(0, app(JoinedCommunityActivity::class)($viewer));
     }
 }

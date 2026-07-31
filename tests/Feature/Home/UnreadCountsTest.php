@@ -6,6 +6,7 @@ use App\Features\Home\UnreadCounts;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
+use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -30,6 +31,45 @@ class UnreadCountsTest extends TestCase
         $counts = app(UnreadCounts::class)->for($viewer);
 
         $this->assertSame(['friendRequests' => 1, 'unreadMessages' => 1, 'notifications' => 1], $counts);
+    }
+
+    public function test_a_switched_off_unit_reports_zero_without_querying(): void
+    {
+        // Rows that would count, so the zero proves the skip rather than an empty database.
+        [$viewer, $sender] = Member::factory()->count(2)->create()->all();
+        DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
+        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $this->setSnsSetting(Feature::Message->settingKey(), false);
+
+        DB::enableQueryLog();
+        $counts = app(UnreadCounts::class)->for($viewer);
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $this->assertSame(0, $counts['friendRequests']);
+        $this->assertSame(0, $counts['unreadMessages']);
+        foreach ($queries as $query) {
+            $this->assertStringNotContainsString('friend_requests', $query['query']);
+            $this->assertStringNotContainsString('message_recipients', $query['query']);
+        }
+    }
+
+    public function test_the_notification_count_ignores_the_other_units_toggles(): void
+    {
+        $viewer = Member::factory()->create();
+        $viewer->notifications()->create([
+            'id' => (string) Str::uuid(),
+            'type' => 'test',
+            'data' => ['kind' => 'friend_requested'],
+        ]);
+
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $this->setSnsSetting(Feature::Message->settingKey(), false);
+
+        $this->assertSame(1, app(UnreadCounts::class)->for($viewer)['notifications']);
     }
 
     public function test_memoizes_per_member_within_the_request(): void

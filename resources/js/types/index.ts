@@ -33,12 +33,18 @@ export interface RightRail {
     joinedCommunities: NineTableItem[];
 }
 
+/** The feature units an administrator can switch off — the cases of App\Support\Feature. */
+export type FeatureKey = 'diary' | 'message' | 'timeline' | 'community' | 'communityTopic' | 'communityEvent' | 'friend';
+
 export interface PageProps {
     name: string;
     auth: {
         user: AuthUser | null;
     };
     snsLogo: SnsLogo;
+    /** Dependencies already resolved server-side. Hiding here is presentation only — a switched-off
+     *  unit's rows never reach the payload. */
+    enabledFeatures: Record<FeatureKey, boolean>;
     unread: UnreadCounts | null;
     rightRail: RightRail | null;
     flash: {

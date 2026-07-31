@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { NAV_SECTIONS } from '@/lib/member-chrome';
+import { visibleNavSections } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -7,7 +7,8 @@ import type { PageProps } from '@/types';
  * Shared nav list for LeftNav (desktop) and NavDrawer (mobile), rendered from the member chrome
  * registry — the same source the page frame reads for hub headers, so nav labels and hub h1s cannot
  * drift. Home is the brand row, so it is omitted. Friends and Messages carry an attention badge
- * (pending requests / unread) from the shared `unread` counts.
+ * (pending requests / unread) from the shared `unread` counts. Sections of a switched-off unit are
+ * dropped (the Classic navigation does the same from its own route table).
  */
 export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
     const t = useT();
@@ -16,7 +17,7 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
     return (
         <ul className="flex flex-col gap-1">
-            {NAV_SECTIONS.map(({ href, icon: Icon, label, match, badge }) => {
+            {visibleNavSections(props.enabledFeatures).map(({ href, icon: Icon, label, match, badge }) => {
                 const active = url.startsWith(match);
                 const count = badge ? (unread?.[badge.count] ?? 0) : 0;
                 return (

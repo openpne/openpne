@@ -7,6 +7,7 @@ use App\Features\Friend\Queries\RandomFriends;
 use App\Features\Home\Serializers\RightRailSerializer;
 use App\Features\Home\UnreadCounts;
 use App\Services\TermService;
+use App\Support\Feature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Middleware;
@@ -37,15 +38,20 @@ class HandleInertiaRequests extends Middleware
                     'avatarColor' => $user->avatar_color?->hex(),
                 ] : null,
             ],
+            // Which units the administrator has switched on, dependencies resolved. Presentation only —
+            // a disabled unit's data does not enter the payload either. Free: the core settings map is
+            // already loaded (sns_name above).
+            'enabledFeatures' => Feature::enabledMap(),
             // Shell nav badges: attention counts for the signed-in member, memoized per request so the
             // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
             // Right rail (xl+ only): the viewer's friends and joined communities as thumbnail grids.
             // Evaluated per request for a member; a plain closure (not Inertia::optional) so it is
-            // present on first render, which is where the rail shows.
+            // present on first render, which is where the rail shows. A switched-off unit contributes
+            // no rows and runs no query — the client hides a grid on an empty list.
             'rightRail' => $user ? fn () => RightRailSerializer::rail(
-                (new RandomFriends)($user),
-                (new RandomJoinedCommunities)($user),
+                Feature::Friend->enabled() ? (new RandomFriends)($user) : collect(),
+                Feature::Community->enabled() ? (new RandomJoinedCommunities)($user) : collect(),
             ) : null,
             // Modern brand mark: color + optional logo URL; a null url renders a color initial badge.
             'snsLogo' => [
