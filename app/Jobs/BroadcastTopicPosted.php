@@ -27,6 +27,11 @@ class BroadcastTopicPosted implements ShouldQueue
 
     public function handle(CommunityNewPostFanout $fanout, CommunityNewPostRecipients $recipients, MailTemplateService $templates): void
     {
+        // Saves the audience walk only; the send gate itself is the notification's shouldSend().
+        if (! TopicPostedNotification::feature()->enabled()) {
+            return;
+        }
+
         $topic = CommunityTopic::with('community', 'member')->find($this->topicId);
         if ($topic === null || $topic->community === null || $topic->member === null) {
             return;

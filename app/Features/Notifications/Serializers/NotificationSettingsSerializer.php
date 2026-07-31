@@ -23,6 +23,12 @@ class NotificationSettingsSerializer
 
         foreach (NotificationKind::wiredCases() as $kind) {
             $category = $kind->category();
+            // A switched-off unit sends nothing, so its opt-ins are not choices to offer. The stored
+            // rows stay put and reappear with the unit.
+            if (! $category->feature()->enabled()) {
+                continue;
+            }
+
             $groups[$category->value] ??= [
                 'key' => $category->value,
                 'caption' => $category->caption(),

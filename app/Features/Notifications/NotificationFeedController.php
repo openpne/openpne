@@ -3,6 +3,7 @@
 namespace App\Features\Notifications;
 
 use App\Features\Notifications\Queries\CountUnreadNotifications;
+use App\Features\Notifications\Queries\VisibleNotifications;
 use App\Features\Notifications\Serializers\NotificationFeedSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -29,7 +30,7 @@ class NotificationFeedController extends Controller
     public function index(Request $request, CountUnreadNotifications $unread): View|Response
     {
         $viewer = $this->viewer();
-        $rows = $viewer->notifications()->paginate(self::PAGE);
+        $rows = VisibleNotifications::apply($viewer->notifications())->paginate(self::PAGE);
 
         return $this->respondWith($request, 'notifications', [
             // Modern shares the unread count on every page; Classic has no such prop, so the
@@ -49,8 +50,10 @@ class NotificationFeedController extends Controller
     /** Mark one row read and land on what it is about (or back on the feed when that is gone). */
     public function open(string $notification): RedirectResponse
     {
+        // Filtered before the lookup: a hidden row's target is a switched-off unit's screen, so
+        // opening it must 404 here rather than redirect into one.
         /** @var DatabaseNotification $row */
-        $row = $this->viewer()->notifications()->whereKey($notification)->firstOrFail();
+        $row = VisibleNotifications::apply($this->viewer()->notifications())->whereKey($notification)->firstOrFail();
         $row->markAsRead();
 
         return redirect(NotificationFeedSerializer::targetUrl($row) ?? route('notifications.index'));
@@ -58,7 +61,9 @@ class NotificationFeedController extends Controller
 
     public function readAll(): RedirectResponse
     {
-        $this->viewer()->unreadNotifications()->update(['read_at' => now()]);
+        // Scoped to what the member can see: a hidden row stays unread and resurfaces intact when
+        // its unit comes back.
+        VisibleNotifications::apply($this->viewer()->unreadNotifications())->update(['read_at' => now()]);
 
         return back();
     }

@@ -4,6 +4,9 @@ namespace App\Notifications\Community;
 
 use App\Models\Community;
 use App\Models\Member;
+use App\Notifications\Concerns\GatedByFeature;
+use App\Notifications\FeatureNotification;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -13,14 +16,20 @@ use Illuminate\Notifications\Notification;
  * response lives on the community's own banner (OpenPNE 3 sends no mail for this), so there is no
  * mail template and no per-member catalog kind to gate.
  */
-class AdminTransferRequestedNotification extends Notification implements ShouldQueue
+class AdminTransferRequestedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
 
     public function __construct(
         public readonly Community $community,
         public readonly Member $requester,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::Community;
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array

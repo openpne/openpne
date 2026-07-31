@@ -87,6 +87,11 @@ nothing dereferences the gone row. The two-factor-disabled alert fires only for 
 alert on it, so cancelling a pending set-up — and the operator lockout CLI acting on a member with no
 active factor — sends nothing.
 
+A notification belonging to a feature unit an administrator switched off is dropped by its
+`shouldSend()`, not here — `via()` runs too early for a queued notification to see the change. That
+gate is orthogonal to everything above: template and opt-out channel dropping is unchanged, and the
+feed rows already written stay put. See [feature-toggles.md](feature-toggles.md#notifications).
+
 The community-join notice to admins is `['mail', 'database']` but gated differently: not a member
 catalog kind, so the opt-out is the **per-community** `communities.is_join_notification_enabled`
 (applied by the recipient query — an opted-out community notifies no one), plus the admin's global

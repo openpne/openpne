@@ -8,7 +8,10 @@ use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\Member;
 use App\Notifications\CommentReason;
+use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Notifications\FeatureNotification;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -20,8 +23,9 @@ use Illuminate\Notifications\Notification;
  * fan-out pre-resolves each recipient's channels, so via() returns them verbatim. Same feed kind and
  * mail template as the author/co-commenter notification, distinguished by the Community reason.
  */
-class EventCommentBroadcastNotification extends Notification implements ShouldQueue
+class EventCommentBroadcastNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
     use RendersMailTemplate;
 
@@ -33,6 +37,11 @@ class EventCommentBroadcastNotification extends Notification implements ShouldQu
         public readonly Member $commenter,
         public readonly array $channels,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::CommunityEvent;
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array

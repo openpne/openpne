@@ -7,8 +7,11 @@ use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\Member;
 use App\Notifications\CommentReason;
+use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Notifications\FeatureNotification;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -19,8 +22,9 @@ use Illuminate\Notifications\Notification;
  * database, gated by the recipient's catalog kind for the reason. Shares the community-posting
  * template with topics, so the event title binds the template's topic_name variable.
  */
-class EventCommentedNotification extends Notification implements ShouldQueue
+class EventCommentedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
     use RendersMailTemplate;
 
@@ -30,6 +34,11 @@ class EventCommentedNotification extends Notification implements ShouldQueue
         public readonly CommunityEventComment $comment,
         public readonly CommentReason $reason,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::CommunityEvent;
+    }
 
     /** @return list<string> */
     public function via(Member $notifiable): array

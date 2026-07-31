@@ -27,6 +27,11 @@ class BroadcastEventPosted implements ShouldQueue
 
     public function handle(CommunityNewPostFanout $fanout, CommunityNewPostRecipients $recipients, MailTemplateService $templates): void
     {
+        // Saves the audience walk only; the send gate itself is the notification's shouldSend().
+        if (! EventPostedNotification::feature()->enabled()) {
+            return;
+        }
+
         $event = CommunityEvent::with('community', 'member')->find($this->eventId);
         if ($event === null || $event->community === null || $event->member === null) {
             return;

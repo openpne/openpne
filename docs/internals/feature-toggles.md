@@ -85,6 +85,44 @@ across units — [`ProfileStats`](../../app/Features/Profile/Queries/ProfileStat
 own ([feature-modules.md](feature-modules.md#key-invariants) invariant 2), the dashboard and profile
 adapters hold the rest. `UnreadCounts` reports a switched-off unit's badge as zero, unqueried.
 
+## Notifications
+
+A switched-off unit sends nothing and shows nothing, and its stored rows are left alone.
+
+**The send gate is `shouldSend()`**, contributed by
+[`GatedByFeature`](../../app/Notifications/Concerns/GatedByFeature.php) to every notification that
+implements [`FeatureNotification`](../../app/Notifications/FeatureNotification.php) — the one place a
+notification names its unit. It cannot live in `via()` or `templateChannels*()`: those run when a
+notification is *queued*, and `SendQueuedNotifications` replays the channels decided back then, so a
+unit switched off in the meantime would never be re-read there. `NotificationSender` consults
+`shouldSend()` immediately before every channel send, queued or not. The broadcast jobs bail early
+too, but only to skip the audience walk. Account and security mail (password reset, registration,
+the takeover alerts) belongs to no unit and always sends.
+
+**The display filter is the `type` column** — the class each row was written by — applied by
+[`VisibleNotifications`](../../app/Features/Notifications/Queries/VisibleNotifications.php) to the
+feed, the header center's window and the unread badge count. Not the payload's `kind`: that is a
+nullable JSON path, where a row missing the key falls out of both sides of a comparison and
+disappears silently. `FeatureNotificationMap` lists the classes, and an architecture test walks the
+feature notification namespaces so a class added later cannot skip either half.
+
+Mark-all-read runs through the same filter, so **a hidden row stays unread** and returns exactly as
+the member left it. Opening one 404s rather than redirecting to a switched-off unit's screen. The
+member's notification settings drop a unit's kinds while it is off (`NotificationCategory::feature()`);
+the stored opt-ins stay and apply again when it returns.
+
+## File delivery
+
+A file is fetched by URL and no page mediates it, so
+[`FilePolicy`](../../app/Policies/FilePolicy.php) refuses a switched-off unit's bytes where it
+resolves the owning entity — otherwise a diary's images would still render while the diary itself
+answers 404 ([feature-modules.md](feature-modules.md#key-invariants) invariant 2). A topic or event
+names its own unit and the parent chain does the rest. Avatars and banner images belong to no unit
+and are never gated.
+
+The admin file monitor reads through its own route (`AdminFileController`, admin guard, no policy),
+so an operator keeps moderating a unit they switched off.
+
 ## What a disabled unit does not change
 
 Switching `friend` off does **not** collapse `Visibility::Friends`: existing friendships keep
@@ -93,6 +131,5 @@ they chose. The friend-scoped feeds and pickers other features own keep working 
 
 ## Not in this layer yet
 
-Notifications and file delivery still reach a disabled unit, and the upgrade does not yet carry
-OpenPNE 3's plugin state over. They land in follow-up changes; the admin page is not shipped until
-they do.
+The upgrade does not yet carry OpenPNE 3's plugin state over, and there is no admin page to switch a
+unit from — both land in follow-up changes, and until then the flags move only in the database.

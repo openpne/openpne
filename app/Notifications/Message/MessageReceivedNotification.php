@@ -5,9 +5,12 @@ namespace App\Notifications\Message;
 use App\Mail\Template\MailTemplate;
 use App\Models\Member;
 use App\Models\Message;
+use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Notifications\FeatureNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -19,8 +22,9 @@ use Illuminate\Notifications\Notification;
  * dependOnNot variant) still covers friend senders. This exact chain is what imported opt-outs
  * were saved against, so it must not change shape.
  */
-class MessageReceivedNotification extends Notification implements ShouldQueue
+class MessageReceivedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
     use RendersMailTemplate;
 
@@ -28,6 +32,11 @@ class MessageReceivedNotification extends Notification implements ShouldQueue
         public readonly Member $sender,
         public readonly Message $message,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::Message;
+    }
 
     /** @return list<string> */
     public function via(Member $notifiable): array

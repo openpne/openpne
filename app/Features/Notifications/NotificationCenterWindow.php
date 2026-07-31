@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Features\Notifications;
 
+use App\Features\Notifications\Queries\VisibleNotifications;
 use App\Models\Member;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
@@ -35,7 +36,7 @@ class NotificationCenterWindow
         // badge request and the panel request could window differently. The UUID is the contract:
         // arbitrary, but the same arbitrary for every reader. (reorder: the relation itself adds
         // a latest() this would otherwise stack under.)
-        return $this->cache[$viewer->getKey()] ??= $viewer->notifications()
+        return $this->cache[$viewer->getKey()] ??= VisibleNotifications::apply($viewer->notifications())
             ->reorder('created_at', 'desc')
             ->orderByDesc('id')
             ->limit(self::LIMIT)

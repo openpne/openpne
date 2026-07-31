@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifications\Settings;
 
+use App\Support\Feature;
+
 /**
  * The notification-catalog categories, used to group kinds on the settings pages.
  */
@@ -15,6 +17,19 @@ enum NotificationCategory: string
     case CommunityEvent = 'community_event';
     case FriendLink = 'friend_link';
     case Message = 'message';
+
+    /** The feature unit whose notifications this category configures; off means it has nothing to offer. */
+    public function feature(): Feature
+    {
+        return match ($this) {
+            self::Timeline => Feature::Timeline,
+            self::Diary => Feature::Diary,
+            self::CommunityTopic => Feature::CommunityTopic,
+            self::CommunityEvent => Feature::CommunityEvent,
+            self::FriendLink => Feature::Friend,
+            self::Message => Feature::Message,
+        };
+    }
 
     /** Member-facing group heading (translated; %term% placeholders resolve downstream). */
     public function caption(): string

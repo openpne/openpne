@@ -5,7 +5,10 @@ namespace App\Notifications\Community;
 use App\Mail\Template\MailTemplate;
 use App\Models\Community;
 use App\Models\Member;
+use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Notifications\FeatureNotification;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -17,8 +20,9 @@ use Illuminate\Notifications\Notification;
  * so via() only adds the admin's global mail-template gate. The default body links the community and
  * the new member via app_url_for, so the context carries their ids as well as their names.
  */
-class CommunityJoinedNotification extends Notification implements ShouldQueue
+class CommunityJoinedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
     use RendersMailTemplate;
 
@@ -26,6 +30,11 @@ class CommunityJoinedNotification extends Notification implements ShouldQueue
         public readonly Community $community,
         public readonly Member $newMember,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::Community;
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array

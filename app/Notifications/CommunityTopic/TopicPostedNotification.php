@@ -6,8 +6,11 @@ use App\Mail\Template\MailTemplate;
 use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\Member;
+use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Notifications\FeatureNotification;
 use App\Support\BodyRenderer;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -18,8 +21,9 @@ use Illuminate\Notifications\Notification;
  * recipient's channels once and passes them, so via() returns them verbatim (one instance per
  * recipient). Shares the community-posting mail template with the comment notifications.
  */
-class TopicPostedNotification extends Notification implements ShouldQueue
+class TopicPostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
     use RendersMailTemplate;
 
@@ -30,6 +34,11 @@ class TopicPostedNotification extends Notification implements ShouldQueue
         public readonly Member $author,
         public readonly array $channels,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::CommunityTopic;
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array

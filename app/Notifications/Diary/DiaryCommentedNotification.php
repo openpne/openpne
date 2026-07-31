@@ -7,8 +7,11 @@ use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\Member;
 use App\Notifications\CommentReason;
+use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Notifications\FeatureNotification;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -18,8 +21,9 @@ use Illuminate\Notifications\Notification;
  * Tells the diary owner (Reply) or a co-commenter (Related) a new comment landed. Mail +
  * database, gated by the recipient's catalog kind for the reason.
  */
-class DiaryCommentedNotification extends Notification implements ShouldQueue
+class DiaryCommentedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
     use RendersMailTemplate;
 
@@ -29,6 +33,11 @@ class DiaryCommentedNotification extends Notification implements ShouldQueue
         public readonly DiaryComment $comment,
         public readonly CommentReason $reason,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::Diary;
+    }
 
     /** @return list<string> */
     public function via(Member $notifiable): array

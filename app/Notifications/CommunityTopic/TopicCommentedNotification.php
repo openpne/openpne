@@ -7,8 +7,11 @@ use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Member;
 use App\Notifications\CommentReason;
+use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
+use App\Notifications\FeatureNotification;
 use App\Notifications\Settings\NotificationKind;
+use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -18,8 +21,9 @@ use Illuminate\Notifications\Notification;
  * Tells the topic author (Reply) or a co-commenter (Related) a new comment landed. Mail +
  * database, gated by the recipient's catalog kind for the reason.
  */
-class TopicCommentedNotification extends Notification implements ShouldQueue
+class TopicCommentedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
+    use GatedByFeature;
     use Queueable;
     use RendersMailTemplate;
 
@@ -29,6 +33,11 @@ class TopicCommentedNotification extends Notification implements ShouldQueue
         public readonly CommunityTopicComment $comment,
         public readonly CommentReason $reason,
     ) {}
+
+    public static function feature(): Feature
+    {
+        return Feature::CommunityTopic;
+    }
 
     /** @return list<string> */
     public function via(Member $notifiable): array
