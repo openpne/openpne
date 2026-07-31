@@ -7,6 +7,7 @@ use App\Files\PostImages;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\Visibility;
 use Illuminate\Contracts\Validation\Validator;
 
 /**
@@ -37,6 +38,14 @@ class UpdateDiaryRequest extends StoreDiaryRequest
             'remove_images' => ['array'],
             'remove_images.*' => ['integer'],
         ];
+    }
+
+    /** The edited entry's own audience, so an untouched save re-posts it instead of being rejected. */
+    protected function currentVisibility(): ?Visibility
+    {
+        $diary = $this->route('diary');
+
+        return $diary instanceof Diary ? $diary->visibility : null;
     }
 
     /** Cross-field cap: the images kept after the edit plus the new uploads may not exceed MAX_IMAGES. */

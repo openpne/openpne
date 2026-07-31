@@ -3,6 +3,7 @@
 namespace Tests\Feature\Timeline;
 
 use App\Features\Timeline\TimelineVisibility;
+use App\Support\Feature;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,5 +52,33 @@ class TimelineVisibilityTest extends TestCase
         );
 
         $this->assertFalse($validator->fails());
+    }
+
+    public function test_friends_go_with_the_friend_unit(): void
+    {
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        $this->assertNotContains(Visibility::Friends, TimelineVisibility::options());
+        $this->assertTrue(Validator::make(
+            ['visibility' => (string) Visibility::Friends->value],
+            ['visibility' => TimelineVisibility::rule()],
+        )->fails());
+    }
+
+    public function test_both_gates_off_leave_members_and_private(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::TimelineAllowWebPublic, false);
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        $this->assertSame([Visibility::Members, Visibility::Private], TimelineVisibility::options());
+    }
+
+    public function test_friends_stay_offered_while_the_unit_is_on(): void
+    {
+        $this->assertContains(Visibility::Friends, TimelineVisibility::options());
+        $this->assertFalse(Validator::make(
+            ['visibility' => (string) Visibility::Friends->value],
+            ['visibility' => TimelineVisibility::rule()],
+        )->fails());
     }
 }

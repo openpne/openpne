@@ -4,6 +4,7 @@ namespace Tests\Feature\Profile;
 
 use App\Features\Profile\AgeVisibility;
 use App\Models\Member;
+use App\Support\Feature;
 use App\Support\PreferenceKey;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
@@ -81,6 +82,51 @@ class AgeVisibilityTest extends TestCase
         $member->setPreference(PreferenceKey::AgeVisibility, Visibility::Open);
 
         $this->assertSame(Visibility::Open, AgeVisibility::defaultFor($member));
+    }
+
+    public function test_options_drop_friends_while_the_unit_is_off(): void
+    {
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        $this->assertSame([Visibility::Members, Visibility::Private], AgeVisibility::options());
+        $this->assertFalse($this->passes(AgeVisibility::rule(), (string) Visibility::Friends->value));
+    }
+
+    public function test_a_stored_friends_survives_the_unit_going_off(): void
+    {
+        // The gate is the live audience of an age the member already has, so clamping it to Members
+        // here would widen it on the next profile save (the form re-posts what it shows).
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $member = Member::factory()->create();
+        $member->setPreference(PreferenceKey::AgeVisibility, Visibility::Friends);
+
+        $this->assertSame(Visibility::Friends, AgeVisibility::defaultFor($member));
+        $this->assertSame(
+            [Visibility::Members, Visibility::Friends, Visibility::Private],
+            AgeVisibility::optionsFor($member),
+        );
+        $this->assertTrue($this->passes(AgeVisibility::ruleFor($member), (string) Visibility::Friends->value));
+    }
+
+    public function test_a_member_storing_another_tier_is_not_offered_friends(): void
+    {
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $member = Member::factory()->create();
+        $member->setPreference(PreferenceKey::AgeVisibility, Visibility::Members);
+
+        $this->assertSame([Visibility::Members, Visibility::Private], AgeVisibility::optionsFor($member));
+        $this->assertFalse($this->passes(AgeVisibility::ruleFor($member), (string) Visibility::Friends->value));
+    }
+
+    public function test_friends_stay_offered_to_everyone_while_the_unit_is_on(): void
+    {
+        $member = Member::factory()->create();
+
+        $this->assertSame(
+            [Visibility::Members, Visibility::Friends, Visibility::Private],
+            AgeVisibility::optionsFor($member),
+        );
+        $this->assertTrue($this->passes(AgeVisibility::ruleFor($member), (string) Visibility::Friends->value));
     }
 
     private function passes(Enum $rule, string $value): bool

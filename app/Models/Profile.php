@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\PresetProfileService;
 use App\Support\Visibility;
+use App\Support\VisibilityChoices;
 use Database\Factories\ProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -64,17 +65,13 @@ class Profile extends Model
      * is set. Open (guest-visible) is offered only for a web-public field, matching OpenPNE 3's
      * profile editor which hid "Public to Web" unless the field allowed it.
      *
+     * @param  Visibility|null  $current  audience the member already stores for this field, kept
+     *                                    offered so re-posting the form cannot widen it
      * @return list<Visibility>
      */
-    public function visibilityOptions(): array
+    public function visibilityOptions(?Visibility $current = null): array
     {
-        $options = [Visibility::Members, Visibility::Friends, Visibility::Private];
-
-        if ($this->is_public_web) {
-            array_unshift($options, Visibility::Open);
-        }
-
-        return $options;
+        return VisibilityChoices::offered((bool) $this->is_public_web, $current);
     }
 
     /**
