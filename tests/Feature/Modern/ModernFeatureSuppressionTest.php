@@ -16,6 +16,7 @@ use App\Models\TimelinePost;
 use App\Support\Feature;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -256,29 +257,42 @@ class ModernFeatureSuppressionTest extends TestCase
 
     // --- Shell + settings ---
 
-    public function test_the_right_rail_drops_the_grid_of_a_switched_off_unit(): void
+    /**
+     * The exception to the emptying above: the faces grid's purpose outlives `friend`, so it falls
+     * back to all members instead of vanishing (docs/internals/feature-toggles.md). The grid beside
+     * it, whose purpose is its unit, still empties.
+     */
+    public function test_the_right_rail_falls_back_to_all_members_and_drops_the_community_grid(): void
     {
         $viewer = Member::factory()->create();
-        $this->makeFriends($viewer, Member::factory()->create());
+        $friend = Member::factory()->create();
+        $stranger = Member::factory()->create();
+        $this->makeFriends($viewer, $friend);
         $this->joinedCommunity($viewer);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('rightRail.friends', 1)
+                ->where('rightRail.people.kind', 'friends')
+                ->has('rightRail.people.items', 1)
+                ->where('rightRail.people.items.0.id', $friend->getKey())
                 ->has('rightRail.joinedCommunities', 1));
 
         $this->switchOff(Feature::Friend);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('rightRail.friends', [])
+                ->where('rightRail.people.kind', 'members')
+                // The stranger the friends grid never carried is in the fallback pool; the viewer is not.
+                ->has('rightRail.people.items', 2)
+                ->where('rightRail.people.items', fn (Collection $items) => $items->pluck('id')
+                    ->contains($friend->getKey()) && $items->pluck('id')->contains($stranger->getKey()))
                 ->has('rightRail.joinedCommunities', 1));
 
         $this->switchOff(Feature::Community);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('rightRail.friends', [])
+                ->has('rightRail.people.items', 2)
                 ->where('rightRail.joinedCommunities', []));
     }
 
