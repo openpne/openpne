@@ -32,6 +32,6 @@ enum SettingGroup
     /** Timeline policy settings (e.g. whether members may make posts web-public), edited on the "timeline settings" page. */
     case Timeline;
 
-    /** Per-feature availability toggles (App\Support\Feature); its admin page is not shipped yet. */
+    /** Per-feature availability toggles (App\Support\Feature), edited on the features page. */
     case Features;
 }
