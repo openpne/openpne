@@ -55,7 +55,10 @@ class ProfileFieldRules
 
         $allowed = array_map(fn (Visibility $v): int => $v->value, $profile->visibilityOptions($current));
 
-        return ["visibility.{$profile->getKey()}" => ['nullable', Rule::in($allowed)]];
+        // Required, not nullable: the form always submits the select, and an omitted key would
+        // store null — read as the field's admin default, an audience change the offered list never
+        // approved (default Friends smuggled in, or a stored Friends widened to the default).
+        return ["visibility.{$profile->getKey()}" => ['required', Rule::in($allowed)]];
     }
 
     /** A unique input/textarea rejects a value another member already holds. */

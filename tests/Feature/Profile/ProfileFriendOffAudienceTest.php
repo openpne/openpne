@@ -162,6 +162,45 @@ class ProfileFriendOffAudienceTest extends TestCase
         ]);
     }
 
+    /**
+     * The visibility select is required, not nullable: an omitted key would store null and the read
+     * would fall back to the field's admin default — an audience change the offered list never
+     * approved (a default of Friends smuggled in, or a stored Friends widened to the default).
+     */
+    public function test_omitting_the_audience_key_is_rejected_rather_than_read_as_the_default(): void
+    {
+        $member = Member::factory()->create();
+        $profile = $this->fieldStoredAtFriends($member);
+
+        $this->actingAs($member)->post('/member/edit/profile', [
+            'name' => 'Renamed',
+            'profile' => [$profile->getKey() => 'ramen'],
+        ])->assertSessionHasErrors("visibility.{$profile->getKey()}");
+
+        $this->assertDatabaseHas('member_profiles', [
+            'member_id' => $member->getKey(),
+            'profile_id' => $profile->getKey(),
+            'visibility' => Visibility::Friends->value,
+        ]);
+    }
+
+    public function test_registration_rejects_a_payload_omitting_the_audience_key(): void
+    {
+        $profile = Profile::factory()->create(['form_type' => 'input', 'default_visibility' => Visibility::Friends]);
+        $token = $this->issueToken();
+
+        // Without the select's value the stored null would read as the admin default — Friends,
+        // which the registration form no longer offers.
+        $this->post("/register/{$token}", [
+            'name' => 'Newcomer',
+            'password' => 'sufficiently-long-pw',
+            'password_confirmation' => 'sufficiently-long-pw',
+            'profile' => [$profile->getKey() => 'ramen'],
+        ])->assertSessionHasErrors("visibility.{$profile->getKey()}");
+
+        $this->assertDatabaseMissing('member_profiles', ['profile_id' => $profile->getKey()]);
+    }
+
     public function test_the_unit_switched_on_offers_friends_everywhere(): void
     {
         $this->setSnsSetting(Feature::Friend->settingKey(), true);
