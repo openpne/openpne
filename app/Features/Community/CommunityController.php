@@ -32,6 +32,7 @@ use App\Http\Requests\Community\CommunityRequest;
 use App\Models\Community;
 use App\Models\CommunityCategory;
 use App\Models\Member;
+use App\Support\Feature;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -68,9 +69,13 @@ class CommunityController extends Controller
         // The recent-topics / recent-events boxes only show when the viewer
         // may read that board; events share the topic read gate, so one check covers both.
         $canViewBoard = CommunityTopicAccess::canViewBoard($found, $viewer);
+        // A switched-off unit reuses that same null seam — both surfaces already hide the box on
+        // null — and its query never runs.
+        $showTopics = $canViewBoard && Feature::CommunityTopic->enabled();
+        $showEvents = $canViewBoard && Feature::CommunityEvent->enabled();
 
         return $this->respondWith($request, 'community', [
-            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $canViewBoard, $recentTopics, $recentEvents) {
+            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $showTopics, $showEvents, $recentTopics, $recentEvents) {
                 $this->markLocalNavCommunity($found);
 
                 // The details listBox names the admin and sub-admins; only Classic needs them, so the
@@ -87,9 +92,9 @@ class CommunityController extends Controller
                     'isTransferNominee' => $isTransferNominee,
                     'adminMember' => $staff->firstWhere('role', CommunityRole::Admin)?->member,
                     'subAdminMembers' => $staff->where('role', CommunityRole::SubAdmin)->pluck('member'),
-                    'recentTopics' => $canViewBoard ? $recentTopics($found) : null,
+                    'recentTopics' => $showTopics ? $recentTopics($found) : null,
                     'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
-                    'recentEvents' => $canViewBoard ? $recentEvents($found) : null,
+                    'recentEvents' => $showEvents ? $recentEvents($found) : null,
                     'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
                 ]);
             },
@@ -105,9 +110,9 @@ class CommunityController extends Controller
                 'members' => CommunitySerializer::members($sidebarMembers),
                 // The recent-topics / recent-events boxes link into their boards; null when the viewer
                 // may not read them (events share the topic read gate), so the card is hidden.
-                'recentTopics' => $canViewBoard ? CommunityTopicSerializer::summaries($recentTopics($found)) : null,
+                'recentTopics' => $showTopics ? CommunityTopicSerializer::summaries($recentTopics($found)) : null,
                 'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
-                'recentEvents' => $canViewBoard ? CommunityEventSerializer::summaries($recentEvents($found)) : null,
+                'recentEvents' => $showEvents ? CommunityEventSerializer::summaries($recentEvents($found)) : null,
                 'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
             ]),
         ]);

@@ -7,6 +7,7 @@ namespace Tests\Feature\Services;
 use App\Models\Member;
 use App\Models\Navigation;
 use App\Services\NavigationService;
+use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -120,5 +121,64 @@ class NavigationServiceTest extends TestCase
 
         $this->assertCount(1, $items);
         $this->assertSame(url('/member/search'), $items[0]['href']);
+    }
+
+    /** @return list<string> the labels of the visible items, in order */
+    private function labels(string $type, ?int $subjectId = null): array
+    {
+        return array_column(app(NavigationService::class)->visibleEntries($type, 'en', $subjectId), 'label');
+    }
+
+    public function test_hides_an_item_whose_target_belongs_to_a_switched_off_unit(): void
+    {
+        $this->makeNav('secure_global', '/diary/list', 'diary/list', ['en' => 'Diary'], 10);
+        $this->makeNav('secure_global', '/member/search', '@member_search', ['en' => 'Search Members'], 20);
+
+        $this->assertSame(['Diary', 'Search Members'], $this->labels('secure_global'));
+
+        $this->setSnsSetting(Feature::Diary->settingKey(), false);
+
+        // The ungated item is untouched — only the diary's own link goes.
+        $this->assertSame(['Search Members'], $this->labels('secure_global'));
+    }
+
+    /**
+     * Ownership is the gate on the matched route, not the nav it sits in: the message entry
+     * OpenPNE 3 put in a member's local nav follows messages, and survives friends being off.
+     */
+    public function test_an_item_follows_the_unit_that_owns_its_target_not_the_nav_it_sits_in(): void
+    {
+        $this->makeNav('friend', '/friend/list', '@friend_list', ['en' => 'Friends'], 10);
+        $this->makeNav('friend', '/message/sendToFriend?id=:id', 'message/sendToFriend', ['en' => 'Send Message'], 20);
+
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+        $this->assertSame(['Send Message'], $this->labels('friend', 42));
+
+        $this->setSnsSetting(Feature::Friend->settingKey(), true);
+        $this->setSnsSetting(Feature::Message->settingKey(), false);
+        $this->assertSame(['Friends'], $this->labels('friend', 42));
+    }
+
+    /** The gate is read off the matched route, so an alias URL is covered without naming it here. */
+    public function test_hides_a_compatibility_alias_of_a_switched_off_unit(): void
+    {
+        $this->makeNav('secure_global', '/message/index', 'message/index', ['en' => 'Messages']);
+
+        $this->assertSame(['Messages'], $this->labels('secure_global'));
+
+        $this->setSnsSetting(Feature::Message->settingKey(), false);
+
+        $this->assertSame([], $this->labels('secure_global'));
+    }
+
+    /** A child unit's link goes when the unit it lives inside goes, whatever its own row says. */
+    public function test_hides_a_board_item_when_communities_are_switched_off(): void
+    {
+        $this->makeNav('community', '/communityTopic/listCommunity/:id', 'communityTopic/listCommunity', ['en' => 'Topics']);
+
+        $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
+        $this->setSnsSetting(Feature::Community->settingKey(), false);
+
+        $this->assertSame([], $this->labels('community', 7));
     }
 }

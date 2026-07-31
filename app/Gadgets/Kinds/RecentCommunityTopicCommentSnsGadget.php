@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Gadgets\Kinds;
 
+use App\Support\Feature;
+
 /** Recent topics across every public community (OpenPNE 3 recentCommunityTopicCommentSns). */
 class RecentCommunityTopicCommentSnsGadget extends CommunityRecentListGadget
 {
@@ -20,5 +22,10 @@ class RecentCommunityTopicCommentSnsGadget extends CommunityRecentListGadget
     public function component(): string
     {
         return 'gadget.recent-community-topic-comment-sns';
+    }
+
+    public function feature(): ?Feature
+    {
+        return Feature::CommunityTopic;
     }
 }
