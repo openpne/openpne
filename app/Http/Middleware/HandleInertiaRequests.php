@@ -44,8 +44,9 @@ class HandleInertiaRequests extends Middleware
             // a disabled unit's data does not enter the payload either. Free: the core settings map is
             // already loaded (sns_name above). A guest gets a constant all-false map: the gate's
             // auth-first contract keeps toggle state unobservable to guests (EnsureFeatureEnabled),
-            // so the shared prop must not disclose it either — and no guest-visible component renders
-            // feature chrome, so false is safe. Same shape, so the client types stay non-nullable.
+            // so the shared prop must not disclose it either — and the constant map only ever costs a
+            // guest chrome they could not open anyway (the diary hub's friend tab, member-only), so
+            // false is safe. Same shape, so the client types stay non-nullable.
             'enabledFeatures' => $user
                 ? Feature::enabledMap()
                 : array_fill_keys(array_column(Feature::cases(), 'value'), false),

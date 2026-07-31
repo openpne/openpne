@@ -69,10 +69,26 @@ abstract class GadgetKind
         return null;
     }
 
-    /** Whether the kind's dependency feature is present; an unavailable kind is hidden at render. */
-    public function isAvailable(): bool
+    /**
+     * A second unit this kind's content needs in a context, beyond the one that owns it: a kind
+     * whose whole purpose is a lens another unit owns (a friends-only list) goes when that unit
+     * goes. Per context, because a kind can be that lens in one context and not in another.
+     */
+    public function dependsOn(string $context): ?Feature
     {
-        return $this->feature()?->enabled() ?? true;
+        return null;
+    }
+
+    /** Whether every unit this kind needs here is on; an unavailable kind is hidden at render. */
+    public function isAvailable(string $context): bool
+    {
+        foreach ([$this->feature(), $this->dependsOn($context)] as $required) {
+            if ($required !== null && ! $required->enabled()) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** This kind's OpenPNE 3-compatible DOM id (the custom-CSS seam); null when OpenPNE 3 emitted none. */

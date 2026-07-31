@@ -5,6 +5,7 @@ namespace Tests\Feature\Timeline\Queries;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\Feature;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -68,6 +69,32 @@ class HomeFeedTest extends TestCase
         $private = $this->postFor($friend, Visibility::Private);
 
         $this->assertNotContains($private->getKey(), $this->feedIds($viewer));
+    }
+
+    // Friends switched off -------------------------------------------------------
+
+    /**
+     * The friend branch is a lens the friend unit owns, so the feed stops aggregating through the
+     * graph. Every other tier is untouched, and the friendships themselves stay (a friend opening
+     * that post directly still reads it — TimelineAccess).
+     */
+    public function test_a_friends_friends_only_post_leaves_the_feed_while_friends_are_off(): void
+    {
+        [$viewer, $friend] = Member::factory()->count(2)->create()->all();
+        $this->makeFriends($viewer, $friend);
+        $friendPost = $this->postFor($friend, Visibility::Friends);
+        $ownPrivate = $this->postFor($viewer, Visibility::Private);
+        $ownFriends = $this->postFor($viewer, Visibility::Friends);
+        $members = $this->postFor($friend, Visibility::Members);
+        $open = $this->postFor($friend, Visibility::Open);
+
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        $this->assertEqualsCanonicalizing(
+            [$ownPrivate->getKey(), $ownFriends->getKey(), $members->getKey(), $open->getKey()],
+            $this->feedIds($viewer),
+        );
+        $this->assertNotContains($friendPost->getKey(), $this->feedIds($viewer));
     }
 
     // Block ---------------------------------------------------------------------

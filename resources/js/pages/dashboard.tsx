@@ -150,9 +150,12 @@ export default function Dashboard() {
                             title={t('Latest %diaries%')}
                             viewAllHref="/diary/list"
                             extra={
-                                <Link href="/diary/listFriend" className="text-link hover:underline">
-                                    {t('%Diaries% of %My_friends%')}
-                                </Link>
+                                // The friend lens goes with its unit; the section it hangs off stays.
+                                enabledFeatures.friend && (
+                                    <Link href="/diary/listFriend" className="text-link hover:underline">
+                                        {t('%Diaries% of %My_friends%')}
+                                    </Link>
+                                )
                             }
                         >
                             {diaries.map((diary) => (
