@@ -28,7 +28,11 @@ interface DashboardProps extends PageProps {
  *  viewer's approval. Rendered only when something needs attention. */
 function AnnouncementsPanel({ announcements }: { announcements: Announcements }) {
     const t = useT();
-    const { friendRequests, unreadMessages, communityApprovals } = announcements;
+    const features = usePage<PageProps>().props.enabledFeatures;
+    // Each notice links into the unit it belongs to (the server already reports it as nothing).
+    const friendRequests = features.friend ? announcements.friendRequests : 0;
+    const unreadMessages = features.message ? announcements.unreadMessages : 0;
+    const communityApprovals = features.community ? announcements.communityApprovals : [];
 
     if (friendRequests === 0 && unreadMessages === 0 && communityApprovals.length === 0) {
         return null;
@@ -99,7 +103,7 @@ function TimelineRow({ post }: { post: TimelinePostEntry }) {
 
 export default function Dashboard() {
     const t = useT();
-    const { auth, announcements, diaries, timeline, communityActivity, myDiaries } = usePage<DashboardProps>().props;
+    const { auth, announcements, diaries, timeline, communityActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
     const user = auth.user;
 
     if (!user) {
@@ -124,18 +128,24 @@ export default function Dashboard() {
                             <ListRow href="/member/search" chevron>
                                 <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search members')}</span>
                             </ListRow>
-                            <ListRow href="/community/search" chevron>
-                                <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search %communities%')}</span>
-                            </ListRow>
-                            <ListRow href="/diary/new" chevron>
-                                <span className="min-w-0 flex-1 text-sm text-foreground">{t('Post %diary%')}</span>
-                            </ListRow>
+                            {enabledFeatures.community && (
+                                <ListRow href="/community/search" chevron>
+                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search %communities%')}</span>
+                                </ListRow>
+                            )}
+                            {enabledFeatures.diary && (
+                                <ListRow href="/diary/new" chevron>
+                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Post %diary%')}</span>
+                                </ListRow>
+                            )}
                         </List>
                     </div>
                 </Panel>
             ) : (
                 <>
-                    {diaries.length > 0 && (
+                    {/* A section's rows arrive empty once its unit is switched off; the check keeps
+                        the header and its deep links from outliving them. */}
+                    {enabledFeatures.diary && diaries.length > 0 && (
                         <DigestSection
                             title={t('Latest %diaries%')}
                             viewAllHref="/diary/list"
@@ -151,7 +161,7 @@ export default function Dashboard() {
                         </DigestSection>
                     )}
 
-                    {timeline.length > 0 && (
+                    {enabledFeatures.timeline && timeline.length > 0 && (
                         <DigestSection title={t('%Activity%')} viewAllHref="/timeline">
                             {timeline.map((post) => (
                                 <TimelineRow key={post.id} post={post} />
@@ -159,7 +169,7 @@ export default function Dashboard() {
                         </DigestSection>
                     )}
 
-                    {communityActivity.length > 0 && (
+                    {enabledFeatures.community && communityActivity.length > 0 && (
                         <DigestSection title={t('Recent %community% activity')} viewAllHref="/community/recent">
                             {communityActivity.map((entry) => (
                                 <ActivityRow key={`${entry.kind}-${entry.id}`} entry={entry} />
@@ -167,7 +177,7 @@ export default function Dashboard() {
                         </DigestSection>
                     )}
 
-                    {myDiaries.length > 0 && (
+                    {enabledFeatures.diary && myDiaries.length > 0 && (
                         <DigestSection title={t('My recent %diaries%')} viewAllHref={`/diary/listMember/${user.id}`}>
                             {myDiaries.map((diary) => (
                                 <DiaryRow key={diary.id} diary={diary} />

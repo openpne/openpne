@@ -4,6 +4,7 @@ namespace App\Features\Member\Serializers;
 
 use App\Features\Diary\DiaryVisibility;
 use App\Models\Member;
+use App\Support\Feature;
 use App\Support\Surface;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
@@ -20,13 +21,6 @@ class MemberConfigSerializer
     public static function form(Member $member, Surface $currentSurface): array
     {
         $form = [
-            'diary' => [
-                'value' => (string) DiaryVisibility::defaultFor($member)->value,
-                'options' => array_map(
-                    static fn (Visibility $v): array => ['value' => (string) $v->value, 'label' => $v->label()],
-                    DiaryVisibility::options(),
-                ),
-            ],
             'email' => [
                 'value' => (string) $member->email,
             ],
@@ -42,6 +36,17 @@ class MemberConfigSerializer
                 ],
             ],
         ];
+
+        // The audience default is offered only while diaries are, since its POST target is gated too.
+        if (Feature::Diary->enabled()) {
+            $form['diary'] = [
+                'value' => (string) DiaryVisibility::defaultFor($member)->value,
+                'options' => array_map(
+                    static fn (Visibility $v): array => ['value' => (string) $v->value, 'label' => $v->label()],
+                    DiaryVisibility::options(),
+                ),
+            ];
+        }
 
         // The Classic/Modern picker is meaningful only where Classic is served; under modern_only it is
         // omitted so a member is never offered a surface they cannot get. The client hides the section

@@ -14,7 +14,7 @@ export function PostFab() {
     const t = useT();
     const { url, props } = usePage<PageProps>();
 
-    if (!props.auth.user) {
+    if (!props.auth.user || !props.enabledFeatures.diary) {
         return null;
     }
     // Exact pathname match (strip query/hash), not a prefix.

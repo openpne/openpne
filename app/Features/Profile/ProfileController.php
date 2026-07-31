@@ -19,6 +19,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Models\Member;
 use App\Services\GadgetService;
+use App\Support\Feature;
 use App\Support\GuestLoginRedirect;
 use App\Support\PreferenceKey;
 use App\Support\SurfaceResolver;
@@ -57,7 +58,8 @@ class ProfileController extends Controller
         // Entry point for a friend request. memberSubject above only
         // 404s the owner→viewer block; a viewer who blocks the owner still reaches this page, and
         // the friend-link form rejects any block direction — so hide the entry for both (null).
-        $friendStatus = ($viewer !== null && ! $isSelf && ! BlockLookup::hasAnyBlockBetween($viewer, $member)) ? match (true) {
+        // A switched-off unit takes the same null, so neither surface learns the relationship.
+        $friendStatus = (Feature::Friend->enabled() && $viewer !== null && ! $isSelf && ! BlockLookup::hasAnyBlockBetween($viewer, $member)) ? match (true) {
             $viewer->isFriendsWith($member) => 'friend',
             $member->hasPendingRequestFrom($viewer) => 'sent',
             $viewer->hasPendingRequestFrom($member) => 'received',
@@ -79,12 +81,13 @@ class ProfileController extends Controller
                 // Digest = auth-only: its previews and stats link to routes behind the auth group, and
                 // a guest never sees another member's friends/communities. Classic/guest pay +0 queries
                 // (this closure runs only for a Modern render). images.file feeds the rich diary rows.
+                // Each preview follows its own unit: switched off, it is an empty grid nobody queried.
                 $digest = $viewer === null ? null : ProfileSerializer::digest(
                     (new ProfileStats)($viewer, $member),
-                    (new RecentMemberDiaries)($viewer, $member, 3)->load('images.file'),
+                    Feature::Diary->enabled() ? (new RecentMemberDiaries)($viewer, $member, 3)->load('images.file') : collect(),
                     // 10 tiles fill the 5-column grid's two rows; NineTable trims to 9 (3×3) on mobile.
-                    (new ListFriends)->take($viewer, $member, 10),
-                    (new ListMemberCommunities)->take($member, 10),
+                    Feature::Friend->enabled() ? (new ListFriends)->take($viewer, $member, 10) : collect(),
+                    Feature::Community->enabled() ? (new ListMemberCommunities)->take($member, 10) : collect(),
                 );
 
                 return Inertia::render('member/show', [

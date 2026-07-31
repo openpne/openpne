@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import { Activity, Bell, BookOpen, Mail, Pencil, Plus, Search, Settings, UserCircle2, Users } from 'lucide-react';
+import type { FeatureKey } from '@/types';
 
 /**
  * The member-surface chrome registry: the single source for what the nav and the page frame render
@@ -64,6 +65,8 @@ export interface NavSection {
     icon: Icon;
     label: ChromeLabel;
     badge?: { count: 'friendRequests' | 'unreadMessages' | 'notifications'; label: ChromeLabel };
+    /** The unit that owns this section; absent for the ones an administrator cannot switch off. */
+    feature?: FeatureKey;
 }
 
 // Section labels shared between the nav and the hub headers (the h1 = nav label invariant).
@@ -78,16 +81,18 @@ const SETTINGS = t('Settings');
 
 /** Nav order and metadata (Home is the brand row, so it is omitted). */
 export const NAV_SECTIONS: NavSection[] = [
-    { href: '/diary/list', match: '/diary', icon: BookOpen, label: DIARIES },
-    // '/community' also prefixes /communityTopic|Event, so board pages keep this section active.
-    { href: '/community/search', match: '/community', icon: Users, label: COMMUNITIES },
-    { href: '/timeline', match: '/timeline', icon: Activity, label: ACTIVITY },
+    { href: '/diary/list', match: '/diary', icon: BookOpen, label: DIARIES, feature: 'diary' },
+    // '/community' also prefixes /communityTopic|Event, so board pages keep this section active. The
+    // boards have no section of their own, so this one answers to the container unit alone.
+    { href: '/community/search', match: '/community', icon: Users, label: COMMUNITIES, feature: 'community' },
+    { href: '/timeline', match: '/timeline', icon: Activity, label: ACTIVITY, feature: 'timeline' },
     {
         href: '/friend/list',
         match: '/friend',
         icon: UserCircle2,
         label: FRIENDS,
         badge: { count: 'friendRequests', label: t(':count pending %friend% requests') },
+        feature: 'friend',
     },
     {
         href: '/message',
@@ -95,6 +100,7 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Mail,
         label: MESSAGES,
         badge: { count: 'unreadMessages', label: t(':count unread messages') },
+        feature: 'message',
     },
     {
         href: '/notifications',
@@ -106,6 +112,11 @@ export const NAV_SECTIONS: NavSection[] = [
     { href: '/member/search', match: '/member/search', icon: Search, label: MEMBER_SEARCH },
     { href: '/member/config', match: '/member/config', icon: Settings, label: SETTINGS },
 ];
+
+/** The nav an administrator's current toggles leave: a section whose unit is off answers 404. */
+export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
+    return NAV_SECTIONS.filter((section) => section.feature === undefined || enabled[section.feature]);
+}
 
 const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary%'), icon: Pencil };
 const POST_ACTIVITY: ChromeAction = { href: '/timeline/new', label: t('%Post_activity%'), icon: Pencil };

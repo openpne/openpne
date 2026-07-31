@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Community;
 use App\Models\Member;
 use App\Services\GadgetService;
+use App\Support\Feature;
 use App\Support\SurfaceResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -48,7 +49,9 @@ class HomeController extends Controller
             // Communities awaiting this member's admin-transfer decision: the OpenPNE 3
             // _cautionAboutChangeAdminRequest, restored as a direct link to each community's banner
             // (Modern surfaces this through the feed + bell instead). Cheap: pending_admin_member_id is indexed.
-            'adminTransferCommunities' => Community::where('pending_admin_member_id', $viewer->getKey())->get(),
+            'adminTransferCommunities' => Feature::Community->enabled()
+                ? Community::where('pending_admin_member_id', $viewer->getKey())->get()
+                : collect(),
             // The remaining cautions are the header badge numbers, read from the same request-scoped
             // service the shell reads, so a caution and its badge can never disagree.
             'unread' => $unread->for($viewer),
@@ -69,13 +72,19 @@ class HomeController extends Controller
         /** @var Member $viewer */
         $viewer = $request->user();
 
+        // Each digest belongs to a unit, so a switched-off one contributes an empty section and runs
+        // no query — hiding it on the client would still ship the rows. JoinedCommunityActivity
+        // applies its own units (topics and events independently).
+        $diaryOn = Feature::Diary->enabled();
+        $communityOn = Feature::Community->enabled();
+
         return Inertia::render('dashboard', HomeSerializer::dashboard(
-            (new ListRecentDiaries)->take($viewer, self::PREVIEW),
-            (new HomeFeed)->take($viewer, self::PREVIEW),
+            $diaryOn ? (new ListRecentDiaries)->take($viewer, self::PREVIEW) : collect(),
+            Feature::Timeline->enabled() ? (new HomeFeed)->take($viewer, self::PREVIEW) : collect(),
             $communityActivity($viewer, self::PREVIEW),
-            (new RecentMemberDiaries)($viewer, $viewer, self::PREVIEW),
+            $diaryOn ? (new RecentMemberDiaries)($viewer, $viewer, self::PREVIEW) : collect(),
             $unread->for($viewer),
-            $pendingApprovals($viewer),
+            $communityOn ? $pendingApprovals($viewer) : collect(),
         ));
     }
 

@@ -68,6 +68,23 @@ settings nav and the home links ask the registry directly.
 Resolution is per request throughout. The nav and gadget row caches never embed feature state, so
 switching a unit takes effect without clearing them.
 
+## Modern surface
+
+The Inertia shell shares `enabledFeatures`, the resolved state of every unit
+(`Feature::enabledMap()`, so a call site never re-applies the dependency). The nav sections, the
+compose action, the dashboard sections and the profile digest read it and stop offering a
+switched-off unit.
+
+**Those checks are presentation only.** A disabled unit's data never enters the Inertia payload:
+the controllers and the cross-feature aggregate queries skip the work and hand the serializers
+empty collections, so an emptied section and a genuinely empty one are indistinguishable in the
+JSON — hiding a section in React would otherwise ship the rows it hides. A feature's own queries
+carry no check (their routes already answer 404); the constraint sits in the aggregate that reaches
+across units — [`ProfileStats`](../../app/Features/Profile/Queries/ProfileStats.php) and
+[`JoinedCommunityActivity`](../../app/Features/Home/Queries/JoinedCommunityActivity.php) hold their
+own ([feature-modules.md](feature-modules.md#key-invariants) invariant 2), the dashboard and profile
+adapters hold the rest. `UnreadCounts` reports a switched-off unit's badge as zero, unqueried.
+
 ## What a disabled unit does not change
 
 Switching `friend` off does **not** collapse `Visibility::Friends`: existing friendships keep
@@ -76,7 +93,6 @@ they chose. The friend-scoped feeds and pickers other features own keep working 
 
 ## Not in this layer yet
 
-The Modern surface and the counts it shares (unread badges, profile stats, dashboard payloads),
-notifications, and file delivery still show a disabled unit, and the upgrade does not yet carry
+Notifications and file delivery still reach a disabled unit, and the upgrade does not yet carry
 OpenPNE 3's plugin state over. They land in follow-up changes; the admin page is not shipped until
 they do.

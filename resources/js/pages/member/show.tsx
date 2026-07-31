@@ -7,7 +7,8 @@ import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-import type { NineTableItem, PageProps } from '@/types';
+import { cn } from '@/lib/utils';
+import type { FeatureKey, NineTableItem, PageProps } from '@/types';
 import { DiaryRow } from '../diary/diary-row';
 import type { DiarySummary } from '../diary/types';
 import { profileIsBlank } from './profile-blank';
@@ -43,19 +44,28 @@ interface ShowProps extends PageProps {
     digest: ProfileDigest | null;
 }
 
+// Static class names so Tailwind emits them; the row shrinks as units are switched off.
+const STATS_COLUMNS = ['', 'grid-cols-1', 'grid-cols-2', 'grid-cols-3', 'grid-cols-4'];
+
 /** Tappable count + label per section: one link each so the accessible name reads "12 Friends". */
 function StatsRow({ ownerId, stats }: { ownerId: number; stats: ProfileStats }) {
     const t = useT();
-    const items = [
-        { key: 'diaries', label: t('%Diaries%'), count: stats.diaries, href: `/diary/listMember/${ownerId}` },
-        { key: 'activity', label: t('%Activity%'), count: stats.activity, href: `/member/${ownerId}/timeline` },
-        { key: 'friends', label: t('%Friends%'), count: stats.friends, href: `/friend/list?id=${ownerId}` },
-        { key: 'communities', label: t('%Communities%'), count: stats.communities, href: `/community/joinList?id=${ownerId}` },
+    const features = usePage<PageProps>().props.enabledFeatures;
+    const items: { key: string; feature: FeatureKey; label: string; count: number; href: string }[] = [
+        { key: 'diaries', feature: 'diary', label: t('%Diaries%'), count: stats.diaries, href: `/diary/listMember/${ownerId}` },
+        { key: 'activity', feature: 'timeline', label: t('%Activity%'), count: stats.activity, href: `/member/${ownerId}/timeline` },
+        { key: 'friends', feature: 'friend', label: t('%Friends%'), count: stats.friends, href: `/friend/list?id=${ownerId}` },
+        { key: 'communities', feature: 'community', label: t('%Communities%'), count: stats.communities, href: `/community/joinList?id=${ownerId}` },
     ];
+    const shown = items.filter((item) => features[item.feature]);
+
+    if (shown.length === 0) {
+        return null;
+    }
 
     return (
-        <div className="grid grid-cols-4 gap-2">
-            {items.map((item) => (
+        <div className={cn('grid gap-2', STATS_COLUMNS[shown.length])}>
+            {shown.map((item) => (
                 <Link key={item.key} href={item.href} className="min-w-0 rounded-lg px-2 py-1.5 text-center transition-colors hover:bg-muted/40">
                     <span className="block text-lg font-semibold text-foreground">{item.count}</span>
                     {/* Long sns-term labels (e.g. "Communities") must wrap, not overflow the narrow cell. */}
@@ -86,10 +96,14 @@ function SectionPanel({ title, viewAllHref, flush, children }: { title: string; 
 
 export default function MemberShow() {
     const t = useT();
-    const { auth, profile, digest } = usePage<ShowProps>().props;
+    const { auth, profile, digest, enabledFeatures } = usePage<ShowProps>().props;
     const { owner, fields, isSelf, age, friendStatus, bio } = profile;
 
     const nothingToShow = profileIsBlank(bio, age, fields.length, digest?.stats ?? null);
+    // friendStatus is already null while friends are off; 'friend' is the one status with no entry
+    // to offer, so listing the states keeps the row from rendering empty.
+    const friendEntry = enabledFeatures.friend && ['none', 'sent', 'received'].includes(friendStatus ?? '');
+    const messageEntry = enabledFeatures.message;
 
     return (
         <>
@@ -130,28 +144,34 @@ export default function MemberShow() {
 
                 {/* Primary relationship actions. Gated on an authenticated viewer: the targets need a
                     login, so a guest must not see them. Friend request is primary, message secondary. */}
-                {auth.user && !isSelf && (
+                {auth.user && !isSelf && (friendEntry || messageEntry) && (
                     <div className="flex flex-wrap items-center gap-3">
-                        {friendStatus === 'none' && (
-                            <ActionLink href={`/friend/link?id=${owner.id}`}>
-                                <UserPlus className="size-4" strokeWidth={2.25} aria-hidden />
-                                {t('Send a %friend% request')}
+                        {friendEntry && (
+                            <>
+                                {friendStatus === 'none' && (
+                                    <ActionLink href={`/friend/link?id=${owner.id}`}>
+                                        <UserPlus className="size-4" strokeWidth={2.25} aria-hidden />
+                                        {t('Send a %friend% request')}
+                                    </ActionLink>
+                                )}
+                                {friendStatus === 'sent' && (
+                                    <Link href="/friend/requests" className="text-sm text-muted-foreground hover:underline">
+                                        {t('%Friend% request pending.')}
+                                    </Link>
+                                )}
+                                {friendStatus === 'received' && (
+                                    <Link href="/friend/requests" className="text-sm text-link hover:underline">
+                                        {t(':name sent you a %friend% request.', { name: owner.name })}
+                                    </Link>
+                                )}
+                            </>
+                        )}
+                        {messageEntry && (
+                            <ActionLink href={`/message/sendToFriend?id=${owner.id}`} variant="outline">
+                                <Mail className="size-4" strokeWidth={2.25} aria-hidden />
+                                {t('Send a message')}
                             </ActionLink>
                         )}
-                        {friendStatus === 'sent' && (
-                            <Link href="/friend/requests" className="text-sm text-muted-foreground hover:underline">
-                                {t('%Friend% request pending.')}
-                            </Link>
-                        )}
-                        {friendStatus === 'received' && (
-                            <Link href="/friend/requests" className="text-sm text-link hover:underline">
-                                {t(':name sent you a %friend% request.', { name: owner.name })}
-                            </Link>
-                        )}
-                        <ActionLink href={`/message/sendToFriend?id=${owner.id}`} variant="outline">
-                            <Mail className="size-4" strokeWidth={2.25} aria-hidden />
-                            {t('Send a message')}
-                        </ActionLink>
                     </div>
                 )}
 
@@ -180,7 +200,9 @@ export default function MemberShow() {
                 </Panel>
             ) : null}
 
-            {digest && digest.recentDiaries.length > 0 && (
+            {/* Each preview arrives empty once its unit is off; the check keeps its heading and
+                "View all" from outliving the rows. */}
+            {enabledFeatures.diary && digest && digest.recentDiaries.length > 0 && (
                 <SectionPanel flush title={t('Recent %diaries%')} viewAllHref={`/diary/listMember/${owner.id}`}>
                     <List>
                         {digest.recentDiaries.map((diary) => (
@@ -190,13 +212,13 @@ export default function MemberShow() {
                 </SectionPanel>
             )}
 
-            {digest && digest.friends.length > 0 && (
+            {enabledFeatures.friend && digest && digest.friends.length > 0 && (
                 <SectionPanel title={t('%Friends% (:count)', { count: digest.stats.friends })} viewAllHref={`/friend/list?id=${owner.id}`}>
                     <NineTable items={digest.friends} shape="round" columns={5} />
                 </SectionPanel>
             )}
 
-            {digest && digest.communities.length > 0 && (
+            {enabledFeatures.community && digest && digest.communities.length > 0 && (
                 <SectionPanel
                     title={t('Joined %communities% (:count)', { count: digest.stats.communities })}
                     viewAllHref={`/community/joinList?id=${owner.id}`}
