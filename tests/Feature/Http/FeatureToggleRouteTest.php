@@ -6,6 +6,7 @@ namespace Tests\Feature\Http;
 
 use App\Models\Community;
 use App\Models\CommunityMember;
+use App\Models\Diary;
 use App\Models\Member;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Support\Feature;
@@ -124,6 +125,29 @@ class FeatureToggleRouteTest extends TestCase
         $this->setSnsSetting(Feature::Diary->settingKey(), false);
 
         $this->actingAs($this->member)->post('/member/config/diary')->assertNotFound();
+    }
+
+    /**
+     * The friend diary feed is a lens the friend unit owns inside the diary module. The friendships
+     * it filters by survive the toggle, so the deep link would otherwise keep serving the lens.
+     */
+    public function test_the_friend_diary_feed_closes_with_friends_while_the_diary_stays_open(): void
+    {
+        $friend = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $this->member->getKey(), 'friend_id' => $friend->getKey()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $this->member->getKey()],
+        ]);
+        Diary::factory()->friends()->create(['member_id' => $friend->getKey()]);
+
+        $this->actingAs($this->member)->get('/diary/listFriend')->assertOk();
+
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        $this->actingAs($this->member)->get('/diary/listFriend')->assertNotFound();
+        // The module it lives in is untouched.
+        $this->actingAs($this->member)->get('/diary/list')->assertOk();
+        $this->actingAs($this->member)->get('/diary/new')->assertOk();
     }
 
     public function test_the_notification_centre_friend_decisions_close_with_friends(): void

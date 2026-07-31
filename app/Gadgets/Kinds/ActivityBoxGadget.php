@@ -50,6 +50,12 @@ class ActivityBoxGadget extends GadgetKind
         return Feature::Timeline;
     }
 
+    /** Only the home box is the friend feed; a profile shows the owner's own timeline and stays. */
+    public function dependsOn(string $context): ?Feature
+    {
+        return $context === 'home' ? Feature::Friend : null;
+    }
+
     public function partId(int $gadgetId): ?string
     {
         return 'activityBox_'.$gadgetId;

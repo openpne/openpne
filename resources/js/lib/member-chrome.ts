@@ -122,9 +122,10 @@ const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary
 const POST_ACTIVITY: ChromeAction = { href: '/timeline/new', label: t('%Post_activity%'), icon: Pencil };
 const CREATE_COMMUNITY: ChromeAction = { href: '/community/edit', label: t('Create a %community%'), icon: Plus };
 
-const diaryTabs = (active: 'all' | 'friends' | 'mine'): ChromeTab[] => [
+// The friend tab is a lens the friend unit owns, so it goes with the unit while the diary hub stays.
+const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeTab[] => [
     { href: '/diary/list', label: t('All'), active: active === 'all' },
-    { href: '/diary/listFriend', label: FRIENDS, active: active === 'friends' },
+    ...(friend ? [{ href: '/diary/listFriend', label: FRIENDS, active: active === 'friends' }] : []),
     { href: '/diary/listMember', label: t('My %diaries%'), active: active === 'mine' },
 ];
 
@@ -198,6 +199,10 @@ interface OwnerScoped {
     isOwner: boolean;
 }
 
+// The shell shares the resolved unit map on every page (HandleInertiaRequests).
+const enabled = (props: Record<string, unknown>, feature: FeatureKey): boolean =>
+    (props as { enabledFeatures: Record<FeatureKey, boolean> }).enabledFeatures[feature];
+
 /**
  * Hub chrome per Inertia component, computed from page props where a component doubles as the
  * viewer's hub and another member's contextual list (owner → hub chrome, non-owner → contextual
@@ -208,7 +213,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         mode: 'section',
         title: DIARIES,
         tabsLabel: DIARIES,
-        tabs: diaryTabs((props as { variant: string }).variant === 'friends' ? 'friends' : 'all'),
+        tabs: diaryTabs((props as { variant: string }).variant === 'friends' ? 'friends' : 'all', enabled(props, 'friend')),
         action: WRITE_DIARY,
     }),
     // The viewer's own archive (listMember) is a hub tab alongside the feeds; another member's
@@ -220,7 +225,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                   mode: 'section',
                   title: DIARIES,
                   tabsLabel: DIARIES,
-                  tabs: diaryTabs('mine'),
+                  tabs: diaryTabs('mine', enabled(props, 'friend')),
                   action: WRITE_DIARY,
               }
             : { mode: 'contextual', title: DIARIES, context: memberContext(owner) };

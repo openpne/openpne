@@ -129,4 +129,32 @@ class GadgetKindTest extends TestCase
         $this->assertSame($registered, $mapped,
             'A kind was added or removed: state its feature unit (or null) in featureMap().');
     }
+
+    /**
+     * The second unit a kind needs, per context — a friend lens on top of the unit that owns the
+     * kind. Every kind and context absent here must need nothing beyond its own unit.
+     *
+     * @return array<string, array<string, Feature>>
+     */
+    private static function dependencyMap(): array
+    {
+        return [
+            'diaryFriendList' => ['home' => Feature::Friend],
+            'timelineFriend' => ['home' => Feature::Friend],
+            // The one context-dependent kind: the home box is the friend feed, the profile box is
+            // the owner's own timeline.
+            'activityBox' => ['home' => Feature::Friend],
+        ];
+    }
+
+    /** Walks every kind in every context it offers, so a lens added later cannot skip the map. */
+    public function test_only_the_friend_lenses_depend_on_a_second_unit(): void
+    {
+        foreach (GadgetKindRegistry::all() as $name => $kind) {
+            foreach ($kind->contexts() as $context) {
+                $this->assertSame(self::dependencyMap()[$name][$context] ?? null, $kind->dependsOn($context),
+                    "{$name} in the {$context} context depends on a unit the map does not state");
+            }
+        }
+    }
 }

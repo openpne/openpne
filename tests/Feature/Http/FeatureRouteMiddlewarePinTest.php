@@ -19,6 +19,8 @@ use Tests\TestCase;
  * rather than a route-name scan: ownership is claimed by name prefix, by URL segment (which catches
  * an unnamed alias), and by an explicit map for the endpoints that sit outside their unit's prefix.
  * A route added later to a gated feature therefore fails here until it is gated or allowlisted.
+ * Ownership is single, but the gate set need not be: a route may also depend on another unit
+ * (DEPENDENCIES), and then every gate in the set is required.
  */
 class FeatureRouteMiddlewarePinTest extends TestCase
 {
@@ -27,6 +29,17 @@ class FeatureRouteMiddlewarePinTest extends TestCase
         'member.config.diary' => 'diary',
         'notifications.center.friendAccept' => 'friend',
         'notifications.center.friendReject' => 'friend',
+    ];
+
+    /**
+     * Routes needing a second unit's gate as well as their owner's: a screen one unit owns whose
+     * purpose is another unit's lens (the friend diary feed). Both gates are required here and
+     * neither counts as a stray below, so the pair cannot decay to one.
+     *
+     * @var array<string, list<string>>
+     */
+    private const DEPENDENCIES = [
+        'diary.list_friend' => ['friend'],
     ];
 
     /**
@@ -50,8 +63,10 @@ class FeatureRouteMiddlewarePinTest extends TestCase
                 continue;
             }
 
-            if (! in_array(EnsureFeatureEnabled::class.':'.$feature->value, $route->gatherMiddleware(), true)) {
-                $offenders[] = ($name === '' ? '(unnamed)' : $name)." [{$route->uri()}] expects {$feature->value}";
+            foreach ([$feature->value, ...(self::DEPENDENCIES[$name] ?? [])] as $required) {
+                if (! in_array(EnsureFeatureEnabled::class.':'.$required, $route->gatherMiddleware(), true)) {
+                    $offenders[] = ($name === '' ? '(unnamed)' : $name)." [{$route->uri()}] expects {$required}";
+                }
             }
         }
 
@@ -70,7 +85,8 @@ class FeatureRouteMiddlewarePinTest extends TestCase
                 }
 
                 $declared = substr($middleware, strlen(EnsureFeatureEnabled::class) + 1);
-                if (Feature::tryFrom($declared) !== $this->owner($route)) {
+                $allowed = in_array($declared, self::DEPENDENCIES[(string) $route->getName()] ?? [], true);
+                if (! $allowed && Feature::tryFrom($declared) !== $this->owner($route)) {
                     $offenders[] = $route->getName().' [gated as '.$declared.']';
                 }
             }
@@ -128,9 +144,9 @@ class FeatureRouteMiddlewarePinTest extends TestCase
         $this->assertGreaterThan(0, $gated);
     }
 
-    public function test_the_out_of_prefix_map_names_real_routes(): void
+    public function test_the_route_maps_name_real_routes(): void
     {
-        foreach (array_keys(self::OUT_OF_PREFIX) as $name) {
+        foreach ([...array_keys(self::OUT_OF_PREFIX), ...array_keys(self::DEPENDENCIES)] as $name) {
             $this->assertTrue(Route::has($name), "Mapped route [{$name}] no longer exists — remove it or fix the name.");
         }
         foreach (self::UNGATED as $name) {

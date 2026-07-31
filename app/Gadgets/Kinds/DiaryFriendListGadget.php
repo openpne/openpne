@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Gadgets\Kinds;
 
+use App\Support\Feature;
+
 /** Recently posted diaries by the viewer's friends (OpenPNE 3 diaryFriendList). */
 class DiaryFriendListGadget extends DiaryListGadget
 {
@@ -20,5 +22,11 @@ class DiaryFriendListGadget extends DiaryListGadget
     public function component(): string
     {
         return 'gadget.diary-friend-list';
+    }
+
+    /** The friend lens is this kind's whole content, so it goes when friends go. */
+    public function dependsOn(string $context): ?Feature
+    {
+        return Feature::Friend;
     }
 }

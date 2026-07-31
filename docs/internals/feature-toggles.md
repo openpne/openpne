@@ -137,6 +137,16 @@ deciding who may read friends-only content, so nothing a member published become
 they chose. Existing Friends rows keep that read-time clearance — a direct read or permalink is
 neither widened nor rewritten.
 
+What does go is the **friend lenses other features own**, because a lens's purpose *is* the unit: the
+friend diary feed (`diary.list_friend`, gated as `diary` **and** `friend`), the diary hub tab and the
+dashboard link reaching it, the friend-scoped gadgets, and the home feed's friend branch
+([`TimelineFeedScope::apply()`](../../app/Features/Timeline/TimelineFeedScope.php), so its three
+consumers follow from one place while the own-posts and all-members tiers stay). Two seams state the
+dependency where the owning unit is a different one: `FeatureRouteMiddlewarePinTest`'s dependency map
+(a route needing a second gate) and [`GadgetKind::dependsOn()`](../../app/Gadgets/GadgetKind.php) (a
+second unit per context — `activityBox` goes on the home, where it is the friend feed, and stays on a
+profile, where it is the owner's own timeline).
+
 And a surface whose purpose outlives the unit **falls back to a unit-independent variant** instead
 of disappearing. The right rail's faces grid answers "who is on this SNS", which a site that
 switched friends off — because everyone there already knows everyone — still asks: with `friend`

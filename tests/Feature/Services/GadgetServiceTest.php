@@ -77,19 +77,47 @@ class GadgetServiceTest extends TestCase
     public function test_each_tagged_kind_reports_unavailable_while_its_unit_is_off(): void
     {
         foreach (GadgetKindRegistry::all() as $name => $kind) {
+            $context = $kind->contexts()[0];
             $feature = $kind->feature();
             if ($feature === null) {
-                $this->assertTrue($kind->isAvailable(), "{$name} names no unit, so it is always available");
+                $this->assertTrue($kind->isAvailable($context), "{$name} names no unit, so it is always available");
 
                 continue;
             }
 
-            $this->assertTrue($kind->isAvailable(), "{$name} must be available while its unit is on");
+            $this->assertTrue($kind->isAvailable($context), "{$name} must be available while its unit is on");
 
             $this->setSnsSetting($feature->settingKey(), false);
-            $this->assertFalse($kind->isAvailable(), "{$name} must disappear while {$feature->value} is off");
+            $this->assertFalse($kind->isAvailable($context), "{$name} must disappear while {$feature->value} is off");
             $this->setSnsSetting($feature->settingKey(), true);
         }
+    }
+
+    /**
+     * A friend lens inside another unit goes with friends, in the context where it is one: the home
+     * activity box is the friend feed, the profile box is the owner's own timeline and survives.
+     */
+    public function test_the_friend_lens_gadgets_go_with_friends_while_their_own_unit_stays_on(): void
+    {
+        $viewer = Member::factory()->create();
+        $subject = Member::factory()->create();
+        $this->makeGadget('home', 'contents', 'diaryFriendList', 10);
+        $this->makeGadget('home', 'contents', 'timelineFriend', 20);
+        $this->makeGadget('home', 'contents', 'activityBox', 30);
+        $this->makeGadget('home', 'contents', 'timelineAll', 40);
+        $this->makeGadget('profile', 'contents', 'activityBox');
+
+        $home = fn () => $this->names(app(GadgetService::class)->zones('home', $viewer, $viewer)['contents']);
+        $profile = fn () => $this->names(app(GadgetService::class)->zones('profile', $subject, $viewer)['contents']);
+
+        $this->assertSame(['diaryFriendList', 'timelineFriend', 'activityBox', 'timelineAll'], $home());
+        $this->assertSame(['activityBox'], $profile());
+
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        // The diary and timeline units are untouched, so their unit-wide kinds stay.
+        $this->assertSame(['timelineAll'], $home());
+        $this->assertSame(['activityBox'], $profile());
     }
 
     public function test_a_board_kind_follows_the_communities_it_lives_inside(): void

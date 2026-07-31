@@ -404,7 +404,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     // The write half; the guest-reachable read screens are the group above.
     Route::prefix('diary')->middleware(EnsureFeatureEnabled::class.':diary')->controller(DiaryController::class)->group(function () {
-        Route::get('/listFriend', 'listFriend')->name('diary.list_friend');
+        // Two gates: the screen is a diary, but the lens it applies is the friend unit. Friendships
+        // survive the toggle, so without the second gate this deep link keeps serving the lens.
+        Route::get('/listFriend', 'listFriend')->middleware(EnsureFeatureEnabled::class.':friend')->name('diary.list_friend');
         Route::get('/new', 'new')->name('diary.new');
         Route::post('/create', 'store')->middleware('throttle:posting')->name('diary.store');
         Route::get('/edit/{diary}', 'edit')->whereNumber('diary')->name('diary.edit');
