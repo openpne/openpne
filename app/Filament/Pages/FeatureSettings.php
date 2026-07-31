@@ -18,6 +18,7 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\EmbeddedSchema;
 use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
@@ -130,15 +131,31 @@ class FeatureSettings extends Page
 
     private function buildSection(): Section
     {
+        $parents = [];
+        foreach (Feature::cases() as $feature) {
+            if (($parent = $feature->parent()) !== null) {
+                $parents[$parent->value] = true;
+            }
+        }
+
         $fields = [];
         foreach (Feature::cases() as $feature) {
             $toggle = Toggle::make($feature->settingKey()->value)
                 ->label($feature->label());
 
-            // A nested unit's own switch reads as broken while its parent is off (it changes nothing
-            // that is reachable), so the dependency is stated where the operator flips it.
+            if (isset($parents[$feature->value])) {
+                $toggle->live();
+            }
+
+            // A nested unit is unreachable while its parent is off, and the control itself must say
+            // so — a live disabled state, not only the helper text beneath it. disabled() skips
+            // dehydration by default, which would make save-all overwrite the child's stored value
+            // with the enabled default, so dehydrated() keeps it in the state.
             if (($parent = $feature->parent()) !== null) {
-                $toggle->helperText(__('Part of :parent. This switch has no effect while :parent is off.', ['parent' => $parent->label()]));
+                $toggle
+                    ->disabled(fn (Get $get): bool => ! $get($parent->settingKey()->value))
+                    ->dehydrated()
+                    ->helperText(__('Part of :parent. This switch has no effect while :parent is off.', ['parent' => $parent->label()]));
             }
 
             $fields[] = $toggle;
