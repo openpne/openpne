@@ -127,6 +127,8 @@ class ProfileController extends Controller
         // Private, so there is no operator default to keep following). Consequence, accepted:
         // AgeVisibility::defaultFor() clamps a stored Open to Members while web-public age is off,
         // so saving the profile in that window persists the clamped value (fail-closed direction).
+        // The one clamp that would widen — Friends while friends are off — is why defaultFor() keeps
+        // a stored Friends offered instead.
         $age = $request->validated('age_visibility');
         if ($age !== null && $birthdayExists()) {
             $viewer->setPreference(PreferenceKey::AgeVisibility, Visibility::from((int) $age));
@@ -153,7 +155,7 @@ class ProfileController extends Controller
             'value' => AgeVisibility::defaultFor($viewer)->value,
             'options' => array_map(
                 fn (Visibility $v): array => ['value' => $v->value, 'label' => __($v->label())],
-                AgeVisibility::options(),
+                AgeVisibility::optionsFor($viewer),
             ),
         ];
     }

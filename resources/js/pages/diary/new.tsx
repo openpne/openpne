@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-
-type VisibilityOption = { value: string; label: string };
+import type { VisibilityOption } from './types';
 
 export default function DiaryNew({
     defaultVisibility,

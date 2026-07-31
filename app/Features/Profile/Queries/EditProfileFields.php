@@ -62,16 +62,20 @@ class EditProfileFields
     /**
      * @param  Collection<int, MemberProfile>|null  $rows
      *
-     * Clamp to an offered choice: a stored Open on a field whose is_public_web was later
-     * turned off is no longer selectable (visibilityOptions drops Open), so it would make the
-     * form post an out-of-range value. Open only differs from Members by guest visibility,
-     * which is_public_web already gates, so collapsing it to Members preserves behaviour.
+     * The stored audience is passed back as the sticky current, so a tier the field no longer
+     * offers for new values (Friends, once friends are off) stays selectable on this member's row —
+     * without it, an unrelated profile save would re-post the clamp and widen the value. The clamp
+     * that remains is the Open one: on a field whose is_public_web was later turned off, Open would
+     * post an out-of-range value, and it differs from Members only by the guest visibility
+     * is_public_web already gates. A field the member has no row for is a new value, so the field
+     * default is clamped like any other new content.
      */
     private function currentVisibility(Profile $profile, ?Collection $rows): Visibility
     {
-        $resolved = $rows?->first()?->visibility ?? $profile->default_visibility;
+        $stored = $rows?->first()?->visibility;
+        $resolved = $stored ?? $profile->default_visibility;
 
-        return in_array($resolved, $profile->visibilityOptions(), true) ? $resolved : Visibility::Members;
+        return in_array($resolved, $profile->visibilityOptions($stored), true) ? $resolved : Visibility::Members;
     }
 
     /** A custom select/radio stores the chosen option id; a preset stores the choice key in value. */

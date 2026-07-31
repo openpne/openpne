@@ -86,7 +86,7 @@
                 @php $currentVisibility = (int) old("visibility.{$id}", $field->visibility->value); @endphp
                 <div class="publicFlag">
                     <select name="visibility[{{ $id }}]">
-                        @foreach ($profile->visibilityOptions() as $option)
+                        @foreach ($profile->visibilityOptions($field->visibility) as $option)
                             <option value="{{ $option->value }}" @selected($currentVisibility === $option->value)>{{ __($option->label()) }}</option>
                         @endforeach
                     </select>
