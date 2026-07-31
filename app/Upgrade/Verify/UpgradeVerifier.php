@@ -4,7 +4,6 @@ namespace App\Upgrade\Verify;
 
 use App\Auth\PasswordScheme;
 use App\Models\UpgradeState;
-use App\Support\SnsSettingKey;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
@@ -21,8 +20,8 @@ use Illuminate\Support\Facades\Schema;
  * It does not trust the runner's self-report: it independently re-counts the live source and target.
  *
  *  - Check A (per step): source rows matching the step's filter == the recorded rows_affected == the
- *    target row count. A divergence is source drift (source mutated after the run), target corruption,
- *    or a step that never completed.
+ *    rows the step owns in the target (UpgradeStep::targetFilter). A divergence is source drift
+ *    (source mutated after the run), target corruption, or a step that never completed.
  *  - Check B (file_bin): every file has its bytes and files.byte_size == LENGTH(file_bin.bin), and the
  *    FK is rewired onto files.
  *  - Check C (passwords): the wrap pass's terminal invariant — no bare OpenPNE 3 MD5 at rest, flagged
@@ -139,15 +138,16 @@ final class UpgradeVerifier
         $sourceN = array_intersect($countTables, $absent) !== []
             ? 0
             : $this->sourceCount($step, $options);
-        $targetN = (int) DB::table($step->targetTable())->count();
         $affectedN = (int) $state->rows_affected;
 
-        // The runner stamps surface_mode into sns_settings after a successful run
-        // (UpgradeRunner::stampSurfaceMode — it has no OpenPNE 3 source); that row is not
-        // step output, so the parity comparison must not read it as target drift.
-        if ($step->targetTable() === 'sns_settings') {
-            $targetN -= (int) DB::table('sns_settings')->where('key', SnsSettingKey::SurfaceMode->value)->count();
+        // Only the rows the step owns: a target table can also hold rows from a sibling step, or
+        // ones the runner wrote out of band (sns_settings holds both — the feature flags and the
+        // post-walk surface_mode stamp), and counting those would read as target drift.
+        $target = DB::table($step->targetTable());
+        if ($step->targetFilter() !== null) {
+            $target->whereRaw($step->targetFilter());
         }
+        $targetN = (int) $target->count();
 
         if ($sourceN === $affectedN && $affectedN === $targetN) {
             $this->record($report, $out, $key, true, "{$targetN} rows");

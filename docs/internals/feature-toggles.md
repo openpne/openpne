@@ -136,7 +136,28 @@ Switching `friend` off does **not** collapse `Visibility::Friends`: existing fri
 deciding who may read friends-only content, so nothing a member published becomes more visible than
 they chose. The friend-scoped feeds and pickers other features own keep working on that same data.
 
-## Not in this layer yet
+## Upgrade
 
-The upgrade does not yet carry OpenPNE 3's plugin state over: an upgraded site starts with every
-unit enabled, whatever OpenPNE 3 had switched off, until an operator sets it here.
+An upgraded site comes up with what OpenPNE 3 had switched off still switched off. Two sources feed
+it: the `plugin` table (`opDiaryPlugin`, `opMessagePlugin`, `opTimelinePlugin`,
+`opCommunityTopicPlugin`) and `sns_config.enable_friend_link`, carried by the
+[`FeatureFlagUpgrade`](../../app/Upgrade/Steps/FeatureFlagUpgrade.php) steps.
+
+**Only switched-off units are written.** OpenPNE 3 wrote `plugin` rows lazily, so an absent row is
+an enabled plugin — the same reading OpenPNE 4 gives an absent `sns_settings` row. Carrying the
+enabled rows as well would make the result depend on whether OpenPNE 3 happened to write one; a site
+that never disabled anything migrates with no feature row at all.
+
+`opCommunityTopicPlugin` shipped the topic board and events together; OpenPNE 4 toggles them
+separately, so that one source row becomes two rows through two steps
+(`PluginFeatureUpgrade` + `CommunityEventPluginFeatureUpgrade`). Communities themselves have no
+source: OpenPNE 3 could not switch the container off, so nothing is written and it stays enabled
+while its disabled children carry their own state over.
+
+Several steps write `sns_settings`, and the runner stamps `surface_mode` into it after the walk,
+so each step declares the rows it owns
+([`UpgradeStep::targetFilter()`](../../app/Upgrade/UpgradeStep.php)) and
+[verify](../../app/Upgrade/Verify/UpgradeVerifier.php) counts only those. A feature step owns its
+own keys **at `'0'`**, which also keeps the enabled rows the admin page materializes on its first
+save out of the count — verify is the pre-switchover gate, so an operator switching something off
+between the run and the check is outside its window.
