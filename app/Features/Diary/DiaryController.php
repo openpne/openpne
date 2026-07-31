@@ -249,12 +249,7 @@ class DiaryController extends Controller
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/new', [
                 'defaultVisibility' => (string) $default->value,
-                // Drive the Modern select from the same selectable audiences as Classic, so it
-                // can never submit an option (e.g. Open) it does not visibly render.
-                'visibilityOptions' => array_map(
-                    fn (Visibility $option): array => ['value' => (string) $option->value, 'label' => $option->label()],
-                    DiaryVisibility::options(),
-                ),
+                'visibilityOptions' => self::modernVisibilityOptions(DiaryVisibility::options()),
                 'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);
@@ -277,13 +272,19 @@ class DiaryController extends Controller
         // Render the current images (and let the Modern serializer read them) without an N+1.
         $diary->load('images.file');
 
+        // Editing keeps this entry's own audience offered even where the picker no longer offers
+        // that tier, so saving an untouched form re-posts what is stored instead of widening it.
+        $options = DiaryVisibility::options($diary->visibility);
+
         return $this->respondWith($request, 'diary', [
             SurfaceResolver::CLASSIC => fn () => view('diary.edit', [
                 'diary' => $diary,
-                'visibilityOptions' => DiaryVisibility::options(),
+                'visibilityOptions' => $options,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('diary/edit', [
                 'diary' => DiarySerializer::detail($diary),
+                'visibility' => (string) $diary->visibility->value,
+                'visibilityOptions' => self::modernVisibilityOptions($options),
                 'composeEditor' => $viewer->composeEditor()->value,
             ]),
         ]);
@@ -329,6 +330,21 @@ class DiaryController extends Controller
         }
 
         return $this->redirectAfterSubmit('diary.list_member', status: __('%Diary% deleted.'));
+    }
+
+    /**
+     * Drive the Modern selects from the same audiences Classic renders, so neither form can submit
+     * an option it does not visibly offer. Labels stay translation keys — the client runs t().
+     *
+     * @param  list<Visibility>  $options
+     * @return list<array{value: string, label: string}>
+     */
+    private static function modernVisibilityOptions(array $options): array
+    {
+        return array_map(
+            fn (Visibility $option): array => ['value' => (string) $option->value, 'label' => $option->label()],
+            $options,
+        );
     }
 
     /** Read the ?keyword= query param defensively — an array-shaped param arrives as a non-string. */

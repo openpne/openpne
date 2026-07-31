@@ -5,29 +5,30 @@ namespace App\Features\Timeline;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
+use App\Support\VisibilityChoices;
 use Illuminate\Validation\Rules\Enum;
 
 /**
  * The audiences a member may choose when posting. Single source for the form options and the
  * request validation rule so the two cannot drift: both honour the SnsSettingKey::TimelineAllowWebPublic
- * setting (OpenPNE 3 op_activity_is_open). The form default is Members (OpenPNE 3 public_flag SNS).
+ * setting (OpenPNE 3 op_activity_is_open) and the friend unit's state (VisibilityChoices). The form
+ * default is Members (OpenPNE 3 public_flag SNS).
+ *
+ * A post is never edited (a reply copies its root's audience verbatim), so no form here re-posts a
+ * stored audience and the sticky current its siblings take has no call site.
  */
 final class TimelineVisibility
 {
     /** @return list<Visibility> */
     public static function options(): array
     {
-        $webPublic = self::allowsWebPublic() ? [Visibility::Open] : [];
-
-        return [...$webPublic, Visibility::Members, Visibility::Friends, Visibility::Private];
+        return VisibilityChoices::offered(self::allowsWebPublic());
     }
 
-    /** Validation rule restricting visibility to the selectable audiences. */
+    /** Validation rule restricting visibility to the audiences options() offers. */
     public static function rule(): Enum
     {
-        $rule = new Enum(Visibility::class);
-
-        return self::allowsWebPublic() ? $rule : $rule->except([Visibility::Open]);
+        return VisibilityChoices::rule(self::options());
     }
 
     /**

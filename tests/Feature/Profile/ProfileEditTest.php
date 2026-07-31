@@ -102,7 +102,8 @@ class ProfileEditTest extends TestCase
     public function test_saving_the_profile_persists_the_submitted_age_visibility(): void
     {
         $member = Member::factory()->create();
-        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
+        // Non-editable: the age gate is the subject; an editable field would demand its own select.
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date', 'is_edit_public_flag' => false]);
 
         $this->actingAs($member)->post('/member/edit/profile', [
             'name' => $member->name,
@@ -119,7 +120,7 @@ class ProfileEditTest extends TestCase
         // Deliberate always-save: the form showed a concrete value and submitting affirms it, even
         // when it equals the (hardcoded) default — there is no operator default to keep following.
         $member = Member::factory()->create();
-        Profile::factory()->preset('birthday')->create(['form_type' => 'date']);
+        Profile::factory()->preset('birthday')->create(['form_type' => 'date', 'is_edit_public_flag' => false]);
 
         $this->actingAs($member)->post('/member/edit/profile', [
             'name' => $member->name,
@@ -170,6 +171,7 @@ class ProfileEditTest extends TestCase
         $this->actingAs($member)->post('/member/edit/profile', [
             'name' => 'New Nickname',
             'profile' => [$profile->getKey() => 'a typed value'],
+            'visibility' => [$profile->getKey() => (string) Visibility::Members->value],
         ])->assertRedirect('/member/edit/profile');
 
         $this->assertSame('New Nickname', $member->fresh()->name);
@@ -315,11 +317,13 @@ class ProfileEditTest extends TestCase
         $this->actingAs($member)->post('/member/edit/profile', [
             'name' => $member->name,
             'profile' => [$profile->getKey() => 'not-a-postcode'],
+            'visibility' => [$profile->getKey() => (string) Visibility::Members->value],
         ])->assertSessionHasErrors("profile.{$profile->getKey()}");
 
         $this->actingAs($member)->post('/member/edit/profile', [
             'name' => $member->name,
             'profile' => [$profile->getKey() => '123-4567'],
+            'visibility' => [$profile->getKey() => (string) Visibility::Members->value],
         ])->assertSessionHasNoErrors();
     }
 
@@ -375,6 +379,7 @@ class ProfileEditTest extends TestCase
         $this->actingAs($member)->post('/member/edit/profile', [
             'name' => $member->name,
             'profile' => [$profile->getKey() => 'mine'],
+            'visibility' => [$profile->getKey() => (string) Visibility::Members->value],
         ])->assertSessionHasNoErrors();
     }
 
@@ -409,21 +414,29 @@ class ProfileEditTest extends TestCase
             $this->actingAs($member)->post('/member/edit/profile', [
                 'name' => $member->name,
                 'profile' => [$profile->getKey() => $outOfRange],
+                'visibility' => [$profile->getKey() => (string) Visibility::Members->value],
             ])->assertSessionHasErrors("profile.{$profile->getKey()}");
         }
 
         $this->actingAs($member)->post('/member/edit/profile', [
             'name' => $member->name,
             'profile' => [$profile->getKey() => '2010-06-15'],
+            'visibility' => [$profile->getKey() => (string) Visibility::Members->value],
         ])->assertSessionHasNoErrors();
     }
 
-    /** @param array<int, string|list<string>> $values */
+    /**
+     * Post the payload the real form always produces: a value AND the visibility select for every
+     * editable field (the select is required — an omitted key would read as the admin default).
+     *
+     * @param  array<int, string|list<string>>  $values
+     */
     private function save(Member $member, array $values): void
     {
         $this->actingAs($member)->post('/member/edit/profile', [
             'name' => $member->name,
             'profile' => $values,
+            'visibility' => array_map(fn (): string => (string) Visibility::Members->value, $values),
         ])->assertRedirect('/member/edit/profile');
     }
 }

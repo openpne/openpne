@@ -92,7 +92,7 @@ class MemberConfigController extends Controller
                     'diaryDefault' => DiaryVisibility::defaultFor($viewer),
                     'diaryOptions' => DiaryVisibility::options(),
                     'ageDefault' => AgeVisibility::defaultFor($viewer),
-                    'ageOptions' => AgeVisibility::options(),
+                    'ageOptions' => AgeVisibility::optionsFor($viewer),
                     'locale' => app()->getLocale(),
                     'currentSurface' => $currentSurface,
                     'email' => $viewer->email,

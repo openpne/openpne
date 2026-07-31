@@ -55,7 +55,7 @@ class ProfileFormSerializer
             'value' => is_array($field->value) ? array_map(fn ($v): string => (string) $v, $field->value) : $field->value,
             'visibility' => $field->visibility->value,
             'visibilityOptions' => $profile->is_edit_public_flag
-                ? array_map(fn (Visibility $v): array => ['value' => $v->value, 'label' => __($v->label())], $profile->visibilityOptions())
+                ? array_map(fn (Visibility $v): array => ['value' => $v->value, 'label' => __($v->label())], $profile->visibilityOptions($field->visibility))
                 : [],
         ];
     }

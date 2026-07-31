@@ -34,10 +34,16 @@ class StoreDiaryRequest extends FormRequest
         return [
             'title' => ['required', 'string'],
             'body' => ['required', 'string', new MaxBytes(self::BODY_MAX_BYTES)],
-            'visibility' => ['required', DiaryVisibility::rule()],
+            'visibility' => ['required', DiaryVisibility::rule($this->currentVisibility())],
             // op3 is never author-able: it exists only on bodies migrated from OpenPNE 3.
             'format' => ['sometimes', Rule::in([BodyFormat::Plain->value, BodyFormat::Markdown->value])],
         ];
+    }
+
+    /** The audience being re-posted, which the rule keeps accepting; a new entry has none. */
+    protected function currentVisibility(): ?Visibility
+    {
+        return null;
     }
 
     public function toData(): DiaryFormData

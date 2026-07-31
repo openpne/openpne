@@ -1,5 +1,11 @@
 export type DiaryVisibility = 'open' | 'members' | 'friends' | 'private';
 
+/** One audience a compose/edit form offers: the numeric Visibility as a string, plus its label key. */
+export interface VisibilityOption {
+    value: string;
+    label: string;
+}
+
 /** Minimal author reference: id + name only. Used where the payload carries no avatar (the diary
  *  list `owner`, whose controller sends id/name only). */
 export interface DiaryAuthor {

@@ -6,7 +6,9 @@ use App\Features\Profile\AgeVisibility;
 use App\Features\Profile\Data\ProfileFormData;
 use App\Features\Profile\ProfileFieldRules;
 use App\Models\Member;
+use App\Models\MemberProfile;
 use App\Models\Profile;
+use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -15,12 +17,15 @@ use Illuminate\Foundation\Http\FormRequest;
  * select/radio → the option ids (preset choice keys or custom option ids), country/region →
  * the valid code/region set, date → date, input/textarea → string + the field's regexp/min/max.
  * A per-value visibility is accepted only for member-editable fields, restricted to that field's
- * offered choices (Open only when web-public).
+ * offered choices (Open only when web-public) plus the audience the value already carries.
  */
 class UpdateProfileRequest extends FormRequest
 {
     /** @var Collection<int, Profile>|null */
     private ?Collection $profilesCache = null;
+
+    /** @var array<int, Visibility|null>|null */
+    private ?array $storedVisibilities = null;
 
     public function authorize(): bool
     {
@@ -35,7 +40,7 @@ class UpdateProfileRequest extends FormRequest
         // Submitted only when the Modern form offers the age block (site has a birthday item);
         // the write is additionally gated in the controller, so a crafted value without a
         // birthday item validates but persists nothing.
-        $rules['age_visibility'] = ['sometimes', 'required', AgeVisibility::rule()];
+        $rules['age_visibility'] = ['sometimes', 'required', AgeVisibility::ruleFor($this->user())];
 
         foreach ($this->editableProfiles() as $profile) {
             $rules += $this->rulesForProfile($profile);
@@ -73,7 +78,26 @@ class UpdateProfileRequest extends FormRequest
     {
         $rules = app(ProfileFieldRules::class);
 
-        return $rules->forValue($profile, $this->user()->getKey()) + $rules->visibilityRule($profile);
+        return $rules->forValue($profile, $this->user()->getKey())
+            + $rules->visibilityRule($profile, $this->storedVisibilities()[$profile->getKey()] ?? null);
+    }
+
+    /**
+     * The audience each of the member's values already carries, keyed by field id — the same sticky
+     * current EditProfileFields kept offering, so a re-posted form is accepted as-is instead of
+     * being rejected (or clamped) into a wider audience.
+     *
+     * @return array<int, Visibility|null>
+     */
+    private function storedVisibilities(): array
+    {
+        return $this->storedVisibilities ??= $this->user()->memberProfiles()->get()
+            ->reduce(function (array $carry, MemberProfile $row): array {
+                // A checkbox stores one row per choice, all written with the same audience.
+                $carry[$row->profile_id] ??= $row->visibility;
+
+                return $carry;
+            }, []);
     }
 
     /** @return array<string, string> */
