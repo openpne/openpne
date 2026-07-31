@@ -18,6 +18,10 @@
     @if ($pluginCssUrl)
         <link rel="stylesheet" href="{{ $pluginCssUrl }}">
     @endif
+    {{-- Plugin stylesheets a screen loads through an embedded component rather than its module's
+         view.yml (OpenPNE 3 addStylesheet from the partial): pushed by the page, same cascade
+         slot as the module link above. --}}
+    @stack('pluginCss')
     {{-- Admin custom CSS, linked after the skin so it overrides it. --}}
     @if ($customCssUrl = classic_custom_css_url())
         <link rel="stylesheet" href="{{ $customCssUrl }}">

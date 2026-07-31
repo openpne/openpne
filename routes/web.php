@@ -373,13 +373,19 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     Route::prefix('friend')->controller(FriendController::class)->group(function () {
         Route::get('/list', 'list')->name('friend.list');
+        // OpenPNE 3's friend/manage: the member's own roster with an unlink column.
         Route::get('/manage', 'manage')->name('friend.manage');
+        // The pending-request queues (received / sent) — no OpenPNE 3 page behind this; its
+        // requests were answered from the notification center and home cautions.
+        Route::get('/requests', 'requests')->name('friend.requests');
         Route::get('/link', 'showLink')->name('friend.link.show');
         Route::post('/link', 'submitLink')->middleware('throttle:friend-request')->name('friend.link');
         Route::post('/accept', 'submitAccept')->middleware('throttle:friend-request')->name('friend.accept');
         Route::post('/reject', 'submitReject')->name('friend.reject');
-        Route::get('/unlink/{member}', 'showUnlink')->name('friend.unlink.show');
-        Route::post('/unlink/{member}', 'submitUnlink')->name('friend.unlink.submit');
+        // A scalar id, not an implicit binding: OpenPNE 3 answers a vanished member the same way
+        // it answers a non-friend — a notice on the manage page — and a binding would 404 first.
+        Route::get('/unlink/{member}', 'showUnlink')->whereNumber('member')->name('friend.unlink.show');
+        Route::post('/unlink/{member}', 'submitUnlink')->whereNumber('member')->name('friend.unlink.submit');
     });
 
     Route::prefix('block')->controller(BlockController::class)->group(function () {
@@ -404,6 +410,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // OpenPNE 3 diaryComment module. create keys off the diary id; deleteConfirm/delete key
     // off the comment id (literal /diary/comment/* never collides with diary.show's numeric id).
     Route::controller(DiaryCommentController::class)->group(function () {
+        // OpenPNE 3 @diary_comment_history: the diaries the viewer commented on, by last comment.
+        Route::get('/diary/comment/history', 'history')->name('diary.comment.history');
         Route::post('/diary/{diary}/comment/create', 'store')->whereNumber('diary')->middleware('throttle:posting')->name('diary.comment.store');
         Route::get('/diary/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('diary.comment.delete.show');
         Route::post('/diary/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('diary.comment.delete');

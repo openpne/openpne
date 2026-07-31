@@ -84,7 +84,7 @@ class FriendRoutesTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page->where('friends.data.0.imageUrl', null));
     }
 
-    public function test_modern_manage_serializes_avatar_urls_for_pending_requesters_and_targets(): void
+    public function test_modern_requests_serializes_avatar_urls_for_pending_requesters_and_targets(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create();
@@ -96,14 +96,22 @@ class FriendRoutesTest extends TestCase
             ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey()],
         ]);
 
-        $this->actingAs($alice)->get('/friend/manage')
+        $this->actingAs($alice)->get('/friend/requests')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('received.data.0.imageUrl', $bob->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true))
                 ->where('sent.data.0.imageUrl', $carol->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true))
             );
     }
 
-    public function test_modern_manage_returns_inertia_component_with_received_and_sent(): void
+    public function test_modern_manage_redirects_to_the_list(): void
+    {
+        $alice = Member::factory()->create();
+
+        // Modern folded roster management into friend/list; the OpenPNE 3 URL forwards there.
+        $this->actingAs($alice)->get('/friend/manage')->assertRedirect(route('friend.list'));
+    }
+
+    public function test_modern_requests_returns_inertia_component_with_received_and_sent(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create(['name' => 'Bob']);
@@ -113,11 +121,11 @@ class FriendRoutesTest extends TestCase
             ['requester_id' => $alice->getKey(), 'target_id' => $carol->getKey()],
         ]);
 
-        $response = $this->actingAs($alice)->get('/friend/manage');
+        $response = $this->actingAs($alice)->get('/friend/requests');
 
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('friend/manage')
+            ->component('friend/requests')
             ->where('received.meta.total', 1)
             ->where('received.data.0.name', 'Bob')
             ->where('sent.meta.total', 1)
@@ -204,7 +212,7 @@ class FriendRoutesTest extends TestCase
         $response->assertSessionHas('status');
     }
 
-    public function test_modern_accept_post_redirects_to_manage_on_error(): void
+    public function test_modern_accept_post_redirects_to_requests_on_error(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create();
@@ -212,11 +220,11 @@ class FriendRoutesTest extends TestCase
         $response = $this->actingAs($alice)
             ->post('/friend/accept', ['requester_id' => $bob->getKey()]);
 
-        $response->assertRedirect(route('friend.manage'));
+        $response->assertRedirect(route('friend.requests'));
         $response->assertSessionHas('error');
     }
 
-    public function test_modern_reject_post_redirects_to_manage(): void
+    public function test_modern_reject_post_redirects_to_requests(): void
     {
         $alice = Member::factory()->create();
         $bob = Member::factory()->create();
@@ -228,7 +236,7 @@ class FriendRoutesTest extends TestCase
         $response = $this->actingAs($alice)
             ->post('/friend/reject', ['requester_id' => $bob->getKey()]);
 
-        $response->assertRedirect(route('friend.manage'));
+        $response->assertRedirect(route('friend.requests'));
         $response->assertSessionHas('status');
     }
 
@@ -277,7 +285,7 @@ class FriendRoutesTest extends TestCase
         );
     }
 
-    public function test_modern_manage_paginates_received_and_sent_independently(): void
+    public function test_modern_requests_paginates_received_and_sent_independently(): void
     {
         $alice = Member::factory()->create();
         for ($i = 0; $i < 25; $i++) {
@@ -288,11 +296,11 @@ class FriendRoutesTest extends TestCase
             ]);
         }
 
-        $response = $this->actingAs($alice)->get('/friend/manage?received_page=2');
+        $response = $this->actingAs($alice)->get('/friend/requests?received_page=2');
 
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('friend/manage')
+            ->component('friend/requests')
             ->where('received.meta.currentPage', 2)
             ->where('sent.meta.currentPage', 1)
         );

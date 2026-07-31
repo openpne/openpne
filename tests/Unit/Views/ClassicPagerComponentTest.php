@@ -67,7 +67,7 @@ class ClassicPagerComponentTest extends TestCase
 
     public function test_a_custom_page_name_is_used_so_two_pagers_on_one_screen_stay_independent(): void
     {
-        // friend/manage pages its received and sent lists separately (received_page / sent_page).
+        // friend/requests pages its received and sent lists separately (received_page / sent_page).
         $rendered = $this->render($this->pager(total: 12, page: 2, options: ['pageName' => 'received_page']));
 
         $this->assertStringContainsString('href="/friend/list?received_page=1"', $rendered);

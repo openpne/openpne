@@ -6,6 +6,7 @@ use App\Compat\RouteParityRegistry;
 use App\Features\Diary\Actions\CreateComment;
 use App\Features\Diary\Actions\DeleteComment;
 use App\Features\Diary\Exceptions\DiaryActionException;
+use App\Features\Diary\Queries\DiaryCommentHistory;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Diary\StoreCommentRequest;
@@ -32,6 +33,24 @@ class DiaryCommentController extends Controller
             ->with('status', __('Comment posted.'));
     }
 
+    /**
+     * OpenPNE 3 diaryComment/history: the diaries the viewer commented on, ordered by their last
+     * comment. Modern has no twin — its nearest existing destination is the notification feed,
+     * whose Reply/Related rows serve the "something moved in a thread I joined" need — so a
+     * Modern viewer is sent there.
+     */
+    public function history(Request $request, DiaryCommentHistory $query): View|RedirectResponse
+    {
+        if (SurfaceResolver::resolve($request, 'diary') === SurfaceResolver::MODERN) {
+            return redirect()->route('notifications.index');
+        }
+
+        return view('diary.comment.history', [
+            'diaries' => $query->paginate($this->viewer()),
+            'pageId' => RouteParityRegistry::bodyId('diary.comment.history'),
+        ]);
+    }
+
     public function showDelete(Request $request, DiaryComment $comment): View|RedirectResponse
     {
         $viewer = $this->viewer();
@@ -41,6 +60,10 @@ class DiaryCommentController extends Controller
         if (SurfaceResolver::resolve($request, 'diary') === SurfaceResolver::MODERN) {
             return redirect()->route('diary.show', $comment->diary);
         }
+
+        // The confirm keeps the diary owner's context, as the diary pages it sits between do —
+        // OpenPNE 3 rendered it with the friend localNav, not the default set.
+        $this->markLocalNavSubject($comment->diary->member);
 
         return view('diary.comment.delete', [
             'comment' => $comment,

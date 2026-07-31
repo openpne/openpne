@@ -28,7 +28,7 @@ class FriendRequestedNotification extends Notification implements ShouldQueue
     {
         return $this->mailFromTemplate(MailTemplate::FriendRequested, [
             'member' => ['name' => $this->requester->name],
-            'url' => route('friend.manage'),
+            'url' => route('friend.requests'),
         ]);
     }
 

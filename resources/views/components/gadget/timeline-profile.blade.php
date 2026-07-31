@@ -5,17 +5,20 @@
      shell + JS, so there is no server-DOM contract to preserve). --}}
 @php($isOwn = $subject !== null && $subject->is(auth()->user()))
 @if ($posts->isNotEmpty() || $isOwn)
+    @include('timeline._stylesheets')
     <div class="dparts profileTimeline"@if ($partId !== null) id="{{ $partId }}"@endif><div class="parts">
         <div class="partsHeading"><h3>{{ __("A member's %activity%") }}</h3></div>
         @if ($isOwn)
             <p><a href="{{ route('timeline.new') }}">{{ __('%Post_activity%') }}</a></p>
         @endif
         @if ($posts->isNotEmpty())
-            <ul class="timeline-list">
-                @foreach ($posts as $post)
-                    @include('timeline._post', ['post' => $post])
-                @endforeach
-            </ul>
+            <div class="timeline">
+                <div id="timeline-list">
+                    @foreach ($posts as $post)
+                        @include('timeline._post', ['post' => $post])
+                    @endforeach
+                </div>
+            </div>
         @endif
     </div></div>
 @endif

@@ -6,6 +6,11 @@
         <div class="partsHeading"><h3>{{ __('%Diary% Comment History') }}</h3></div>
         <div class="block">
             @include('components.gadget._diary-article-rows', ['entries' => $entries, 'withName' => true, 'withIcon' => false])
+            <div class="moreInfo">
+                <ul class="moreInfo">
+                    <li><a href="{{ route('diary.comment.history') }}">{{ __('More') }}</a></li>
+                </ul>
+            </div>
         </div>
     </div></div>
 @endif

@@ -15,6 +15,7 @@ class DiaryRouteParity extends RouteParity
     public function maps(): array
     {
         return [
+            new RouteMap('diary_comment_history', '/diary/comment/history', 'diary.comment.history', 'GET', op3Action: 'history', op3Module: 'diaryComment'),
             new RouteMap('diary_show', '/diary/:id', 'diary.show', 'GET', op3Action: 'show'),
             new RouteMap('diary_search', '/diary/search', 'diary.search', 'GET', op3Action: 'search'),
             // The canonical list precedes the /diary alias below: screens() keys off op3Action and
@@ -68,7 +69,6 @@ class DiaryRouteParity extends RouteParity
         return [
             // Comment create/delete and image attachments are ported (above) on both surfaces. Still
             // deferred within comments: notifications, unread tracking, and this history feed.
-            'diary_comment_history' => 'Comment history feed is not ported.',
         ];
     }
 
@@ -85,6 +85,13 @@ class DiaryRouteParity extends RouteParity
     public function screens(): array
     {
         return [
+            // historySuccess.php → diary/comment/history.blade.php
+            'history' => [
+                new ScreenElement('recentList of commented diaries by last comment', L::Two, S::Ported, "DiaryCommentUpdate getPager (viewer's subscriptions, owner comments excluded)", 'DiaryCommentHistory::paginate — one builder with the home box, so page and box cannot diverge'),
+                new ScreenElement('diary link with comment count and author', L::Two, S::Ported, 'op_diary_link_to_show(diary, true, false)'),
+                new ScreenElement('pager above and below', L::Two, S::Ported, 'op_include_pager_navigation ×2'),
+                new ScreenElement('empty state box', L::Three, S::Ported, "op_include_box('diaryList', 'There are no diaries.')"),
+            ],
             // showSuccess.php + diaryComment/_list.php component
             'show' => [
                 // Comment thread (diaryComment/list component). The list renders, but several of
@@ -92,7 +99,7 @@ class DiaryRouteParity extends RouteParity
                 new ScreenElement('comment thread (author, number, delete)', L::One, S::Ported, 'include_component diaryComment/list'),
                 new ScreenElement('comment thread pagination + order toggle', L::Two, S::Ported, 'diaryComment/_list pager (size, ASC/DESC, older/newer)', 'DiaryCommentThread: reversible pager, sizes 20/100, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->body))', 'x-user-text (BodyText); comments carry no op_decoration in OpenPNE 3'),
-                new ScreenElement('comment datetime', L::Three, S::Ported, "op_format_date(comment->created_at, 'XDateTimeJaBr')", 'LocalizedDate; inline single-line'),
+                new ScreenElement('comment datetime', L::Three, S::Ported, "op_format_date(comment->created_at, 'XDateTimeJaBr')", 'LocalizedDate::dateTimeLines; year / date / time stacked, as the entry dt'),
                 new ScreenElement('comment images', L::Three, S::Ported, '$comment->getDiaryCommentImagesJoinFile()', 'DiaryCommentImage thumbnails via the shared _images partial; FilePolicy-gated by the diary visibility'),
                 // Comment post form. Text posting + the web-public notice are faithful; the OpenPNE 3
                 // form is multipart and embeds photo fields, which is a separate deferred element.
@@ -136,6 +143,7 @@ class DiaryRouteParity extends RouteParity
             ],
             // listSuccess.php (all-member feed; the search variant shares it) → diary/feed.blade.php
             'list' => [
+                new ScreenElement('feed scope: every entry open to the membership (Open included)', L::Two, S::Ported, 'getDiaryPager PUBLIC_FLAG_SNS (saving an Open diary normalizes it to public_flag=1 + is_open, which that query matches)', 'DiaryVisibilityScope::applyFeed visibility <= Members'),
                 new ScreenElement('keyword search form', L::Two, S::Ported, "url_for('@diary_search')"),
                 new ScreenElement('pager navigation', L::Two, S::Ported, 'op_include_pager_navigation'),
                 new ScreenElement('author nickname', L::Two, S::Ported, '$diary->Member->name'),

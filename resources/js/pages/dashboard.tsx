@@ -38,7 +38,7 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
         <Panel flush title={t('Notices')}>
             <List>
                 {friendRequests > 0 && (
-                    <ListRow href="/friend/manage" chevron>
+                    <ListRow href="/friend/requests" chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
                             {t(':count pending %friend% requests', { count: friendRequests })}
                         </span>

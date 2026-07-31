@@ -7,12 +7,13 @@
         <p class="photo">
             @if ($image)
                 {{-- The link opens the full-size image; the no_image fallback has none, so it renders bare. --}}
-                <a href="{{ $image->url() }}" target="_blank" rel="noopener"><x-classic.image :file="$image" :size="120" :alt="$community->name" /></a>
+                <a href="{{ $image->url() }}" target="_blank" rel="noopener"><x-classic.image :file="$image" :size="180" :alt="$community->name" /></a>
             @else
-                <x-classic.image :file="null" :size="120" :alt="$community->name" />
+                <x-classic.image :file="null" :size="180" :alt="$community->name" />
             @endif
         </p>
-        <p class="text">{{ $community->name }}</p>
+        {{-- OpenPNE 3 getNameAndCount(): the caption carries the member count. --}}
+        <p class="text">{{ $community->name }} ({{ $community->members_count }})</p>
     </div>
 </x-classic.parts>
 
