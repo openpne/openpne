@@ -100,6 +100,46 @@ class FeatureSettingsTest extends TestCase
         $this->assertFalse(Feature::CommunityEvent->enabled());
     }
 
+    public function test_nested_toggles_read_as_disabled_while_their_container_is_off(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::FeatureCommunityEnabled, false);
+
+        Livewire::test(FeatureSettings::class)
+            ->assertFormFieldIsDisabled('feature_community_topic_enabled')
+            ->assertFormFieldIsDisabled('feature_community_event_enabled')
+            ->assertFormFieldIsEnabled('feature_diary_enabled');
+    }
+
+    /** The container toggle is live: flipping it re-renders the nested state before any save. */
+    public function test_flipping_the_container_disables_the_nested_toggles_without_a_save(): void
+    {
+        Livewire::test(FeatureSettings::class)
+            ->assertFormFieldIsEnabled('feature_community_topic_enabled')
+            ->fillForm(['feature_community_enabled' => false])
+            ->assertFormFieldIsDisabled('feature_community_topic_enabled')
+            ->assertFormFieldIsDisabled('feature_community_event_enabled')
+            ->fillForm(['feature_community_enabled' => true])
+            ->assertFormFieldIsEnabled('feature_community_topic_enabled');
+    }
+
+    /**
+     * disabled() skips dehydration by default, and save-all falls back to the enabled default for a
+     * missing key — dehydrated() is what keeps a disabled child's stored '0' from silently flipping
+     * to '1' on save.
+     */
+    public function test_saving_with_the_container_off_preserves_a_disabled_childs_stored_value(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::FeatureCommunityEnabled, false);
+        $this->setSnsSetting(SnsSettingKey::FeatureCommunityTopicEnabled, false);
+
+        Livewire::test(FeatureSettings::class)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_community_topic_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_community_event_enabled', 'value' => '1']);
+    }
+
     public function test_members_and_guests_cannot_reach_the_page(): void
     {
         $url = FeatureSettings::getUrl();
