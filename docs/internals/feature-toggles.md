@@ -134,7 +134,8 @@ so an operator keeps moderating a unit they switched off.
 
 Switching `friend` off does **not** collapse `Visibility::Friends`: existing friendships keep
 deciding who may read friends-only content, so nothing a member published becomes more visible than
-they chose. The friend-scoped feeds and pickers other features own keep working on that same data.
+they chose. Existing Friends rows keep that read-time clearance — a direct read or permalink is
+neither widened nor rewritten.
 
 And a surface whose purpose outlives the unit **falls back to a unit-independent variant** instead
 of disappearing. The right rail's faces grid answers "who is on this SNS", which a site that
