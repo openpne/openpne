@@ -5,6 +5,7 @@ namespace App\Features\Timeline;
 use App\Features\Block\BlockLookup;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\Feature;
 use App\Support\Visibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,10 @@ use Illuminate\Support\Facades\DB;
  * posts at every visibility, anyone's web-public or all-members posts, and a friend's friends-only
  * posts. Authors who block the viewer are then dropped, so a post whose permalink would 404 for the
  * viewer never surfaces here (the multi-owner counterpart of TimelineAccess / TimelineVisibilityScope).
+ *
+ * The friend branch of apply() follows the `friend` unit, so every consumer of the home feed loses
+ * it from one place. applyFriendsOnly() carries no such check: its only callers are the two
+ * friend-scoped gadgets, which the unit hides whole.
  */
 final class TimelineFeedScope
 {
@@ -28,9 +33,14 @@ final class TimelineFeedScope
                 // Your own posts, at every visibility (including Private).
                 ->where('timeline_posts.member_id', $viewerId)
                 // Anyone's web-public or all-members posts.
-                ->orWhere('timeline_posts.visibility', '<=', Visibility::Members->value)
-                // A friend's friends-only posts.
-                ->orWhere(function (Builder $friends) use ($viewerId) {
+                ->orWhere('timeline_posts.visibility', '<=', Visibility::Members->value);
+
+            // A friend's friends-only posts. This branch IS the friend lens, so it goes with the
+            // unit — the feed stops aggregating through the graph while every other tier stays.
+            // Read-time clearance is untouched: a friend opening such a post still reads it
+            // (TimelineAccess), and no stored audience is reinterpreted.
+            if (Feature::Friend->enabled()) {
+                $audience->orWhere(function (Builder $friends) use ($viewerId) {
                     $friends
                         ->where('timeline_posts.visibility', Visibility::Friends->value)
                         ->whereExists(function ($sub) use ($viewerId) {
@@ -40,6 +50,7 @@ final class TimelineFeedScope
                                 ->whereColumn('friendships.friend_id', 'timeline_posts.member_id');
                         });
                 });
+            }
         });
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
