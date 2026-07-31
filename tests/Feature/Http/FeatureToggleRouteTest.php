@@ -103,6 +103,20 @@ class FeatureToggleRouteTest extends TestCase
         $this->get('/diary/list')->assertRedirect(route('login'));
     }
 
+    public function test_a_guest_meets_a_404_on_a_missing_member_archive_when_diaries_are_off(): void
+    {
+        config()->set('openpne.diary.allow_web_public', true);
+
+        // On: the binding's missing() handler hides whether the id exists behind the login bounce.
+        $this->get('/diary/listMember/999999')->assertRedirect(route('login'));
+
+        $this->setSnsSetting(Feature::Diary->settingKey(), false);
+
+        // Off: the gate outranks SubstituteBindings (bootstrap/app.php priority list), so the
+        // missing() handler never runs and the guest meets the same 404 as everyone else.
+        $this->get('/diary/listMember/999999')->assertNotFound();
+    }
+
     public function test_the_diary_section_of_member_config_closes_with_the_diary(): void
     {
         $this->assertNotSame(404, $this->actingAs($this->member)->post('/member/config/diary')->status());

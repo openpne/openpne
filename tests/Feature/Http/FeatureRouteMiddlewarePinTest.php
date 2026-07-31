@@ -6,7 +6,11 @@ namespace Tests\Feature\Http;
 
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Support\Feature;
+use Illuminate\Auth\Middleware\Authenticate;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Routing\Route as RoutingRoute;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -74,6 +78,54 @@ class FeatureRouteMiddlewarePinTest extends TestCase
 
         $this->assertSame([], $offenders,
             'Routes gated as a unit that does not own them (typo, or the ownership map needs the route): '.implode(', ', $offenders));
+    }
+
+    /**
+     * The gate's slot in the resolved stack (bootstrap/app.php priority list): after auth, so a
+     * guest in an auth group meets the login redirect and the toggle state never shows; before
+     * ThrottleRequests, so a disabled unit's request consumes no limiter; before
+     * SubstituteBindings, so a binding's missing() handler (the /diary/listMember guest bounce)
+     * cannot outrank the 404.
+     */
+    public function test_the_gate_runs_after_auth_and_before_throttle_and_bindings(): void
+    {
+        $router = app(Router::class);
+        $gated = 0;
+
+        foreach (Route::getRoutes() as $route) {
+            $sorted = $router->gatherRouteMiddleware($route);
+            $at = function (string $class) use ($sorted): int|false {
+                foreach ($sorted as $i => $middleware) {
+                    if (is_string($middleware) && str_starts_with($middleware, $class)) {
+                        return $i;
+                    }
+                }
+
+                return false;
+            };
+
+            $gateAt = $at(EnsureFeatureEnabled::class);
+            if ($gateAt === false) {
+                continue;
+            }
+            $gated++;
+
+            foreach ([ThrottleRequests::class, SubstituteBindings::class] as $mustFollow) {
+                $followerAt = $at($mustFollow);
+                if ($followerAt !== false) {
+                    $this->assertLessThan($followerAt, $gateAt,
+                        ($route->getName() ?: $route->uri()).": the gate must precede {$mustFollow}");
+                }
+            }
+
+            $authAt = $at(Authenticate::class);
+            if ($authAt !== false) {
+                $this->assertLessThan($gateAt, $authAt,
+                    ($route->getName() ?: $route->uri()).': auth must precede the gate');
+            }
+        }
+
+        $this->assertGreaterThan(0, $gated);
     }
 
     public function test_the_out_of_prefix_map_names_real_routes(): void
