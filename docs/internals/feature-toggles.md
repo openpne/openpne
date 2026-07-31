@@ -29,6 +29,13 @@ had switched off. Decoding is deliberately **fail-open** — only an explicit `'
 this is an availability switch: a malformed value must not black out a module and strand its
 content. The security keys in the same enum fail *closed*, for the opposite reason.
 
+## Administration
+
+[`FeatureSettings`](../../app/Filament/Pages/FeatureSettings.php) (admin → Settings → Features)
+carries one toggle per unit and, like its sibling settings pages, stores every key of its group on
+save — so the first save materializes all seven rows, including the enabled ones. Only the settings
+cache is cleared; the nav and gadget row caches never embed feature state (see below).
+
 ## Dependencies
 
 `communityTopic` and `communityEvent` live inside `community`
@@ -131,5 +138,5 @@ they chose. The friend-scoped feeds and pickers other features own keep working 
 
 ## Not in this layer yet
 
-The upgrade does not yet carry OpenPNE 3's plugin state over, and there is no admin page to switch a
-unit from — both land in follow-up changes, and until then the flags move only in the database.
+The upgrade does not yet carry OpenPNE 3's plugin state over: an upgraded site starts with every
+unit enabled, whatever OpenPNE 3 had switched off, until an operator sets it here.
