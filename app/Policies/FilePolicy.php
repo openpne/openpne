@@ -39,17 +39,19 @@ class FilePolicy extends BasePolicy
 {
     public function view(?Member $viewer, File $file): bool
     {
-        if ($file->explicit_visibility === File::VISIBILITY_PUBLIC) {
-            return true;
-        }
-
         $owner = $this->owner($file);
 
         // A file is fetched by URL, so no page mediates it: a switched-off unit's bytes have to be
-        // refused here or its images stay readable while every screen around them is gone. The admin
+        // refused here or its images stay readable while every screen around them is gone. Decided
+        // BEFORE the public override — the schema permits a feature-owned file to carry the public
+        // mark, and a switched-off unit's bytes are refused whatever the mark says. The admin
         // monitor reads through its own route (AdminFileController), so moderation keeps working.
         if (! ($this->owningFeature($owner)?->enabled() ?? true)) {
             return false;
+        }
+
+        if ($file->explicit_visibility === File::VISIBILITY_PUBLIC) {
+            return true;
         }
 
         return match (true) {

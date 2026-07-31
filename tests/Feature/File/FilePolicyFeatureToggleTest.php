@@ -63,6 +63,25 @@ class FilePolicyFeatureToggleTest extends TestCase
         $this->assertFalse(Gate::forUser($viewer)->allows('view', $file));
     }
 
+    /**
+     * The schema permits a feature-owned file to also carry the public override; the unit's state
+     * is decided first, so the mark cannot keep a switched-off unit's bytes guest-readable.
+     */
+    public function test_the_public_visibility_override_does_not_outrank_a_switched_off_unit(): void
+    {
+        $viewer = Member::factory()->create();
+        $file = $this->fileOwnedBy('diary', $viewer);
+        $file->forceFill(['explicit_visibility' => File::VISIBILITY_PUBLIC])->save();
+
+        // On: the public mark opens it, to a guest too.
+        $this->assertTrue(Gate::forUser(null)->allows('view', $file));
+
+        $this->switchOff(Feature::Diary);
+
+        $this->assertFalse(Gate::forUser(null)->allows('view', $file));
+        $this->assertFalse(Gate::forUser($viewer)->allows('view', $file));
+    }
+
     public function test_switching_communities_off_denies_a_topic_attachment(): void
     {
         // The board's own flag stays on: Feature::enabled() walks the parent chain, so a file only
