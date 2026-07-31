@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
@@ -7,6 +8,7 @@ use App\Http\Middleware\UseAdminSessionStore;
 use App\Support\ClassicErrorPage;
 use App\Support\GuestLoginRedirect;
 use App\Support\SecurityLog;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -67,6 +69,13 @@ $app = Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->appendToPriorityList(ShareErrorsFromSession::class, PreventRequestForgery::class);
         $middleware->prependToPriorityList(PreventRequestForgery::class, SetLocale::class);
+
+        // Where a route lists the feature gate, it must run right after auth (a guest in an auth
+        // group still meets the login redirect, so the toggle state never shows) but before
+        // ThrottleRequests and SubstituteBindings: a disabled unit's request must not consume a
+        // rate limiter, and must not reach a binding's missing() handler — /diary/listMember's
+        // guest-login fallback would otherwise answer 302 where the spec says 404.
+        $middleware->appendToPriorityList(AuthenticatesRequests::class, EnsureFeatureEnabled::class);
 
         // An already-authenticated member on /login or /register goes through the root so the
         // landing stays surface-aware; the framework default would pick the Modern /dashboard.

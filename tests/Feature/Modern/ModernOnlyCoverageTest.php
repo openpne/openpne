@@ -81,7 +81,7 @@ class ModernOnlyCoverageTest extends TestCase
         'member.config.mfa.edit', 'member.config.notifications.edit',
         'community.search', 'community.list_mine', 'community.edit', 'community.members', 'community.members.pending',
         'community.recent',
-        'message.index', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
+        'message.index', 'message.index_compat', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
         'member.invite',
         'notifications.index',
     ];
@@ -133,6 +133,7 @@ class ModernOnlyCoverageTest extends TestCase
             'community create form' => ['/community/edit'],
             'invite' => ['/invite'],
             'message index' => ['/message'],
+            'message index alias' => ['/message/index'],
             'message inbox' => ['/message/receiveList'],
             'message sent' => ['/message/sendList'],
             'message drafts' => ['/message/draftList'],

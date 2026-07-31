@@ -35,6 +35,7 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\PublicFileController;
 use App\Http\Middleware\AsBackgroundFetch;
+use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureMemberInviteAllowed;
 use App\Http\Middleware\EnsureOpenRegistration;
 use App\Http\Middleware\EnsureWebPublicDiaryEnabled;
@@ -298,7 +299,9 @@ Route::middleware('auth.session')->group(function () {
 // web-public (Open) tier, enforced per row and per query by DiaryAccess / DiaryVisibilityScope, and
 // EnsureWebPublicDiaryEnabled closes the whole group once the SNS switches web-public diaries off.
 // Writing, the friend feed and the id-less "my archive" stay in the auth group below.
-Route::middleware(['auth.session', EnsureWebPublicDiaryEnabled::class])->group(function () {
+// The feature gate precedes it: a switched-off diary 404s the guest too, and the web-public
+// question only arises while the feature is on.
+Route::middleware(['auth.session', EnsureFeatureEnabled::class.':diary', EnsureWebPublicDiaryEnabled::class])->group(function () {
     // OpenPNE 3 diary_index forwarded /diary to the list action; redirected here (URL preserved,
     // canonical URL is /diary/list).
     Route::get('/diary', fn () => redirect()->route('diary.list'))->name('diary.index_compat');
@@ -351,7 +354,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/compose/editor', [EditorPreferenceController::class, 'update'])->name('compose.editor');
     // The dashboard's community activity section, expanded. Modern-only (no OpenPNE 3 equivalent),
     // so it renders Inertia directly like /dashboard — not a surface twin.
-    Route::get('/community/recent', [HomeController::class, 'communityActivity'])->name('community.recent');
+    Route::get('/community/recent', [HomeController::class, 'communityActivity'])
+        ->middleware(EnsureFeatureEnabled::class.':community')->name('community.recent');
 
     // The per-event notification feed (layer 3). Served on both surfaces, though OpenPNE 3's
     // notification center had no PC page to be compatible with.
@@ -365,13 +369,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // leaving the page.
     Route::prefix('notifications/center')->controller(NotificationCenterController::class)->group(function () {
         Route::get('/', 'panel')->name('notifications.center');
+        // Friend decisions taken from the panel: friend-owned endpoints outside the /friend prefix,
+        // so they carry the feature gate individually (the panel itself is not friend-owned).
         Route::post('/{notification}/friend-accept', 'acceptFriend')->whereUuid('notification')
-            ->middleware('throttle:friend-request')->name('notifications.center.friendAccept');
+            ->middleware(['throttle:friend-request', EnsureFeatureEnabled::class.':friend'])->name('notifications.center.friendAccept');
         Route::post('/{notification}/friend-reject', 'rejectFriend')->whereUuid('notification')
-            ->name('notifications.center.friendReject');
+            ->middleware(EnsureFeatureEnabled::class.':friend')->name('notifications.center.friendReject');
     });
 
-    Route::prefix('friend')->controller(FriendController::class)->group(function () {
+    Route::prefix('friend')->middleware(EnsureFeatureEnabled::class.':friend')->controller(FriendController::class)->group(function () {
         Route::get('/list', 'list')->name('friend.list');
         // OpenPNE 3's friend/manage: the member's own roster with an unlink column.
         Route::get('/manage', 'manage')->name('friend.manage');
@@ -397,7 +403,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     });
 
     // The write half; the guest-reachable read screens are the group above.
-    Route::prefix('diary')->controller(DiaryController::class)->group(function () {
+    Route::prefix('diary')->middleware(EnsureFeatureEnabled::class.':diary')->controller(DiaryController::class)->group(function () {
         Route::get('/listFriend', 'listFriend')->name('diary.list_friend');
         Route::get('/new', 'new')->name('diary.new');
         Route::post('/create', 'store')->middleware('throttle:posting')->name('diary.store');
@@ -409,7 +415,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     // OpenPNE 3 diaryComment module. create keys off the diary id; deleteConfirm/delete key
     // off the comment id (literal /diary/comment/* never collides with diary.show's numeric id).
-    Route::controller(DiaryCommentController::class)->group(function () {
+    Route::controller(DiaryCommentController::class)->middleware(EnsureFeatureEnabled::class.':diary')->group(function () {
         // OpenPNE 3 @diary_comment_history: the diaries the viewer commented on, by last comment.
         Route::get('/diary/comment/history', 'history')->name('diary.comment.history');
         Route::post('/diary/{diary}/comment/create', 'store')->whereNumber('diary')->middleware('throttle:posting')->name('diary.comment.store');
@@ -423,7 +429,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     // OpenPNE 3 opTimelinePlugin: the cross-member home feed, a member's timeline, posting, and a
     // single-post permalink. Literal-prefix routes precede the {timelinePost} wildcard.
-    Route::controller(TimelineController::class)->group(function () {
+    Route::controller(TimelineController::class)->middleware(EnsureFeatureEnabled::class.':timeline')->group(function () {
         Route::get('/timeline', 'index')->name('timeline.index');
         Route::get('/member/{member}/timeline', 'member')->whereNumber('member')->name('timeline.member');
         Route::get('/timeline/new', 'new')->name('timeline.new');
@@ -441,17 +447,20 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // OpenPNE 3 linked the single-post permalink at /timeline/show/id/:id (reached via the global
     // /:module/:action fallback); preserve that URL by redirecting to the canonical timeline.show.
     Route::get('/timeline/show/id/{timelinePost}', fn (int $timelinePost) => redirect()->route('timeline.show', ['timelinePost' => $timelinePost]))
-        ->whereNumber('timelinePost')->name('timeline.show.compat');
+        ->whereNumber('timelinePost')->middleware(EnsureFeatureEnabled::class.':timeline')->name('timeline.show.compat');
 
     // OpenPNE 3's SNS-wide timeline lived at /sns/timeline; preserve that URL by redirecting to the
     // canonical home feed at /timeline.
-    Route::get('/sns/timeline', fn () => redirect()->route('timeline.index'))->name('timeline.index.compat');
+    Route::get('/sns/timeline', fn () => redirect()->route('timeline.index'))
+        ->middleware(EnsureFeatureEnabled::class.':timeline')->name('timeline.index.compat');
 
     // OpenPNE 3 member/config — the member's own settings page. GET renders (Classic/Modern); each
     // section saves on its own POST so one change never rewrites another. The OpenPNE 3 access-block
     // category (/member/config?category=accessBlock) is redirected to the Block list inside show().
     Route::get('/member/config', [MemberConfigController::class, 'show'])->name('member.config');
-    Route::post('/member/config/diary', [MemberConfigController::class, 'updateDiary'])->name('member.config.diary');
+    // Diary-owned, outside the /diary prefix (it is a member-config section), so it carries the gate itself.
+    Route::post('/member/config/diary', [MemberConfigController::class, 'updateDiary'])
+        ->middleware(EnsureFeatureEnabled::class.':diary')->name('member.config.diary');
     Route::post('/member/config/age', [MemberConfigController::class, 'updateAge'])->name('member.config.age');
     Route::post('/member/config/surface', [MemberConfigController::class, 'updateSurface'])->name('member.config.surface');
     Route::post('/member/config/password', [MemberConfigController::class, 'updatePassword'])->name('member.config.password');
@@ -517,7 +526,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // Community core (canonical / Classic). The literal routes precede the /{community} wildcard,
     // and {community} is digit-constrained, so a literal like /community/search can never be
     // captured as a community id.
-    Route::prefix('community')->controller(CommunityController::class)->group(function () {
+    Route::prefix('community')->middleware(EnsureFeatureEnabled::class.':community')->controller(CommunityController::class)->group(function () {
         Route::get('/search', 'search')->name('community.search');
         Route::get('/joinList', 'listMine')->name('community.list_mine');
         // Single endpoint for new+edit and create+update (?id= switches), as in OpenPNE 3.
@@ -563,7 +572,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // /{topic} wildcard, and every id is digit-constrained, so a literal like /communityTopic/new
     // can never be captured as a topic id. listCommunity/new/create take a community id; the rest
     // take a topic id.
-    Route::prefix('communityTopic')->controller(CommunityTopicController::class)->group(function () {
+    Route::prefix('communityTopic')->middleware(EnsureFeatureEnabled::class.':communityTopic')->controller(CommunityTopicController::class)->group(function () {
         Route::get('/listCommunity/{community}', 'index')->whereNumber('community')->name('communityTopic.index');
         Route::get('/new/{community}', 'new')->whereNumber('community')->name('communityTopic.new');
         Route::post('/create/{community}', 'store')->whereNumber('community')->middleware('throttle:posting')->name('communityTopic.store');
@@ -576,7 +585,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     // communityTopicComment module. create keys off the topic id; deleteConfirm/delete key off the
     // comment id (literal /communityTopic/comment/* never collides with the numeric topic show).
-    Route::controller(CommunityTopicCommentController::class)->group(function () {
+    Route::controller(CommunityTopicCommentController::class)->middleware(EnsureFeatureEnabled::class.':communityTopic')->group(function () {
         Route::post('/communityTopic/{topic}/comment/create', 'store')->whereNumber('topic')->middleware('throttle:posting')->name('communityTopic.comment.store');
         Route::get('/communityTopic/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityTopic.comment.delete.show');
         Route::post('/communityTopic/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityTopic.comment.delete');
@@ -585,7 +594,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // Community events (Classic only; Modern is none). Same literal-before-wildcard rule as the topic
     // board: listCommunity/new/create take a community id, the rest an event id, and {event} is
     // digit-constrained, so /communityEvent/memberList-style literals can never be read as an event id.
-    Route::prefix('communityEvent')->controller(CommunityEventController::class)->group(function () {
+    Route::prefix('communityEvent')->middleware(EnsureFeatureEnabled::class.':communityEvent')->controller(CommunityEventController::class)->group(function () {
         Route::get('/listCommunity/{community}', 'index')->whereNumber('community')->name('communityEvent.index');
         Route::get('/new/{community}', 'new')->whereNumber('community')->name('communityEvent.new');
         Route::post('/create/{community}', 'store')->whereNumber('community')->middleware('throttle:posting')->name('communityEvent.store');
@@ -600,7 +609,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // communityEventComment module. create keys off the event id and carries the merged RSVP form;
     // deleteConfirm/delete key off the comment id (literal /communityEvent/comment/* never collides
     // with the numeric event show).
-    Route::controller(CommunityEventCommentController::class)->group(function () {
+    Route::controller(CommunityEventCommentController::class)->middleware(EnsureFeatureEnabled::class.':communityEvent')->group(function () {
         Route::post('/communityEvent/{event}/comment/create', 'store')->whereNumber('event')->middleware('throttle:posting')->name('communityEvent.comment.store');
         Route::get('/communityEvent/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityEvent.comment.delete.show');
         Route::post('/communityEvent/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityEvent.comment.delete');
@@ -609,9 +618,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // Private messages. The four boxes plus a per-box show page. OpenPNE 3 keyed show by message id
     // with the box in the path (/message/read|check|checkDelete/:id); those URLs are preserved.
     // /message and /message/index land on the inbox.
-    Route::prefix('message')->controller(MessageController::class)->group(function () {
+    Route::prefix('message')->middleware(EnsureFeatureEnabled::class.':message')->controller(MessageController::class)->group(function () {
         Route::get('/', 'index')->name('message.index');
-        Route::get('/index', 'index');
+        Route::get('/index', 'index')->name('message.index_compat');
         Route::get('/receiveList', 'receive')->name('message.receive');
         Route::get('/sendList', 'send')->name('message.send');
         Route::get('/draftList', 'draft')->name('message.draft');
