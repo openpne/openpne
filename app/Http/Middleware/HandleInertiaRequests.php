@@ -40,8 +40,13 @@ class HandleInertiaRequests extends Middleware
             ],
             // Which units the administrator has switched on, dependencies resolved. Presentation only —
             // a disabled unit's data does not enter the payload either. Free: the core settings map is
-            // already loaded (sns_name above).
-            'enabledFeatures' => Feature::enabledMap(),
+            // already loaded (sns_name above). A guest gets a constant all-false map: the gate's
+            // auth-first contract keeps toggle state unobservable to guests (EnsureFeatureEnabled),
+            // so the shared prop must not disclose it either — and no guest-visible component renders
+            // feature chrome, so false is safe. Same shape, so the client types stay non-nullable.
+            'enabledFeatures' => $user
+                ? Feature::enabledMap()
+                : array_fill_keys(array_column(Feature::cases(), 'value'), false),
             // Shell nav badges: attention counts for the signed-in member, memoized per request so the
             // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,

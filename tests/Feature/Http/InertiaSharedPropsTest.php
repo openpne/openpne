@@ -59,6 +59,27 @@ class InertiaSharedPropsTest extends TestCase
                 ->where('enabledFeatures.diary', true));
     }
 
+    /**
+     * The gate answers a guest auth-first so toggle state is unobservable (EnsureFeatureEnabled);
+     * the shared prop must not disclose it either. A guest gets the same all-false map whatever
+     * the rows say.
+     */
+    public function test_a_guest_learns_no_toggle_state_from_the_shared_props(): void
+    {
+        // The phpunit baseline is classic_default; the login page is Inertia only on Modern.
+        config()->set('openpne.surface_mode', 'modern_only');
+        $allFalse = array_fill_keys(array_column(Feature::cases(), 'value'), false);
+
+        $this->get('/login')
+            ->assertInertia(fn ($page) => $page->where('enabledFeatures', $allFalse));
+
+        $this->setSnsSetting(Feature::Message->settingKey(), false);
+        $this->freshRequestState();
+
+        $this->get('/login')
+            ->assertInertia(fn ($page) => $page->where('enabledFeatures', $allFalse));
+    }
+
     public function test_shared_props_carry_the_member_avatar_thumbnail(): void
     {
         $member = Member::factory()->create();
