@@ -112,8 +112,10 @@ class NotificationCenterTest extends TestCase
         $viewer = Member::factory()->create();
         $actor = Member::factory()->create();
         // Older than the window by an explicit second, and unread — must not reach a badge.
+        // Exactly LIMIT rows share the newer second: one more would tie them into a random-id
+        // eviction, and which row loses must not decide this test.
         $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()], createdAt: now()->subSecond());
-        foreach (range(1, NotificationCenterWindow::LIMIT - 1) as $ignored) {
+        foreach (range(1, NotificationCenterWindow::LIMIT - 2) as $ignored) {
             $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now(), createdAt: now());
         }
         // Inside the window: one unread, one read.
