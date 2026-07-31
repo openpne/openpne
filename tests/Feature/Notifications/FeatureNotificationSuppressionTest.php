@@ -29,6 +29,17 @@ class FeatureNotificationSuppressionTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Self-contained mailer: sentMailCount() reads the array transport's buffer, and the
+        // environment's MAIL_MAILER (smtp under docker) must not decide whether that exists.
+        // Forget any resolved mailer so the override takes effect.
+        config(['mail.default' => 'array']);
+        Mail::forgetMailers();
+    }
+
     /**
      * Queue a diary broadcast the way the fan-out does, and hand back the jobs waiting to run.
      *
