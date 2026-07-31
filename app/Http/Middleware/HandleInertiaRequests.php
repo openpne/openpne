@@ -6,6 +6,8 @@ use App\Features\Community\Queries\RandomJoinedCommunities;
 use App\Features\Friend\Queries\RandomFriends;
 use App\Features\Home\Serializers\RightRailSerializer;
 use App\Features\Home\UnreadCounts;
+use App\Features\Member\Queries\RandomMembers;
+use App\Models\Member;
 use App\Services\TermService;
 use App\Support\Feature;
 use Illuminate\Http\Request;
@@ -50,14 +52,10 @@ class HandleInertiaRequests extends Middleware
             // Shell nav badges: attention counts for the signed-in member, memoized per request so the
             // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
-            // Right rail (xl+ only): the viewer's friends and joined communities as thumbnail grids.
+            // Right rail (xl+ only): a faces grid and the viewer's joined communities as thumbnails.
             // Evaluated per request for a member; a plain closure (not Inertia::optional) so it is
-            // present on first render, which is where the rail shows. A switched-off unit contributes
-            // no rows and runs no query — the client hides a grid on an empty list.
-            'rightRail' => $user ? fn () => RightRailSerializer::rail(
-                Feature::Friend->enabled() ? (new RandomFriends)($user) : collect(),
-                Feature::Community->enabled() ? (new RandomJoinedCommunities)($user) : collect(),
-            ) : null,
+            // present on first render, which is where the rail shows.
+            'rightRail' => $user ? fn () => $this->rightRail($user) : null,
             // Modern brand mark: color + optional logo URL; a null url renders a color initial badge.
             'snsLogo' => [
                 'color' => '#2563eb',
@@ -70,6 +68,25 @@ class HandleInertiaRequests extends Middleware
             'locale' => $locale,
             'terms' => $this->termsForClient($locale),
         ];
+    }
+
+    /**
+     * The faces grid outlives `friend`: switched off, it samples the whole SNS rather than emptying
+     * (docs/internals/feature-toggles.md) — the same rows under the same permissions, a wider pool.
+     * Communities have no such purpose apart from the unit, so they just empty, unqueried; the
+     * client hides a grid on an empty list.
+     *
+     * @return array<string, mixed>
+     */
+    private function rightRail(Member $user): array
+    {
+        $friends = Feature::Friend->enabled();
+
+        return RightRailSerializer::rail(
+            $friends ? 'friends' : 'members',
+            $friends ? (new RandomFriends)($user) : (new RandomMembers)($user),
+            Feature::Community->enabled() ? (new RandomJoinedCommunities)($user) : collect(),
+        );
     }
 
     /**

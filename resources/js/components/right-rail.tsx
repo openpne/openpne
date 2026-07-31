@@ -7,8 +7,8 @@ import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
 /**
- * Desktop-only (xl+) right rail: a member search box plus friends and joined-community thumbnail
- * grids. Hidden below xl and for
+ * Desktop-only (xl+) right rail: a member search box plus a faces grid and a joined-community
+ * thumbnail grid. Hidden below xl and for
  * guests; mobile reaches the same lists through the nav. The rail is nav chrome, so it lives in the
  * shell, not on any one page.
  */
@@ -20,6 +20,9 @@ export function RightRail() {
         return null;
     }
 
+    const people = rightRail.people;
+    const friends = people.kind === 'friends';
+
     return (
         <aside
             aria-label={t('Right rail')}
@@ -27,9 +30,12 @@ export function RightRail() {
         >
             <SearchBox />
 
-            {rightRail.friends.length > 0 && (
-                <RailSection title={t('%Friends%')} viewAllHref="/friend/list">
-                    <NineTable items={rightRail.friends} shape="round" />
+            {people.items.length > 0 && (
+                <RailSection
+                    title={friends ? t('%Friends%') : t('Members')}
+                    viewAllHref={friends ? '/friend/list' : '/member/search'}
+                >
+                    <NineTable items={people.items} shape="round" />
                 </RailSection>
             )}
 

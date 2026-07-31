@@ -29,7 +29,12 @@ export interface NineTableItem {
 }
 
 export interface RightRail {
-    friends: NineTableItem[];
+    /** The faces grid names its audience: the viewer's friends, or an SNS-wide sample while the
+     *  `friend` unit is switched off. Heading and view-all link follow the kind. */
+    people: {
+        kind: 'friends' | 'members';
+        items: NineTableItem[];
+    };
     joinedCommunities: NineTableItem[];
 }
 
