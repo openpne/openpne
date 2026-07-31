@@ -6,6 +6,7 @@ namespace App\Gadgets\Kinds;
 
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
+use App\Support\Feature;
 
 /**
  * Shared base for the OpenPNE 3 diary list gadgets (opDiaryPlugin diaryFriendList / diaryMyList /
@@ -27,6 +28,11 @@ abstract class DiaryListGadget extends GadgetKind
         return [
             new GadgetConfigField('max', ['ja' => '最大表示件数', 'en' => 'Maximum entries'], 'select', GadgetConfigField::INT, true, 5, $choices),
         ];
+    }
+
+    public function feature(): ?Feature
+    {
+        return Feature::Diary;
     }
 
     public function partId(int $gadgetId): ?string

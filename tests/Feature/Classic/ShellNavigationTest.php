@@ -56,6 +56,21 @@ class ShellNavigationTest extends TestCase
         $this->assertStringContainsString('<form method="POST" action="'.route('logout').'"', $html);
     }
 
+    /** A switched-off unit leaves the nav on both its rows, and takes nothing else with it. */
+    public function test_nav_drops_the_rows_of_a_switched_off_unit(): void
+    {
+        $this->seed(NavigationSeeder::class);
+        $this->setSnsSetting(SnsSettingKey::FeatureDiaryEnabled, false);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)->get('/')
+            ->assertOk()
+            ->assertDontSee('id="default_diary_listMember"', false)
+            ->assertDontSee('id="globalNav_diary_index"', false)
+            ->assertSee('id="default__friend_list"', false)
+            ->assertSee('id="globalNav__member_search"', false);
+    }
+
     /**
      * The logout entry is a POST form button (the CSRF protection OpenPNE 3's bare link lacked),
      * dressed as the plain tab OpenPNE 3 drew — its style ships with the nav.
