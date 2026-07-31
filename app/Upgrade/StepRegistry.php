@@ -11,6 +11,7 @@ use App\Upgrade\Steps\CommunityEventCommentImageUpgrade;
 use App\Upgrade\Steps\CommunityEventCommentUpgrade;
 use App\Upgrade\Steps\CommunityEventImageUpgrade;
 use App\Upgrade\Steps\CommunityEventMemberUpgrade;
+use App\Upgrade\Steps\CommunityEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\CommunityEventUpgrade;
 use App\Upgrade\Steps\CommunityJoinRequestUpgrade;
 use App\Upgrade\Steps\CommunityMemberUpgrade;
@@ -24,6 +25,7 @@ use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryImageUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FileUpgrade;
+use App\Upgrade\Steps\FriendFeatureUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\GadgetConfigUpgrade;
@@ -41,6 +43,7 @@ use App\Upgrade\Steps\MessageRecipientUpgrade;
 use App\Upgrade\Steps\MessageUpgrade;
 use App\Upgrade\Steps\NavigationTranslationUpgrade;
 use App\Upgrade\Steps\NavigationUpgrade;
+use App\Upgrade\Steps\PluginFeatureUpgrade;
 use App\Upgrade\Steps\ProfileOptionTranslationUpgrade;
 use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileTranslationUpgrade;
@@ -98,6 +101,11 @@ final class StepRegistry
             AdminUserUpgrade::class,
             // sns_settings is independent (no FK); migrates the display + gadget-layout sns_config keys.
             SnsSettingUpgrade::class,
+            // Same target, also FK-free: OpenPNE 3's feature availability (`plugin`, plus sns_config's
+            // enable_friend_link), each writing only the units OpenPNE 3 had switched off.
+            PluginFeatureUpgrade::class,
+            CommunityEventPluginFeatureUpgrade::class,
+            FriendFeatureUpgrade::class,
             // mail_templates is independent (no FK); mail_template_translations references it, so the
             // parent runs first.
             MailTemplateUpgrade::class,

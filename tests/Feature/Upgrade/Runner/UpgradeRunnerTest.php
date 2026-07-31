@@ -5,9 +5,13 @@ namespace Tests\Feature\Upgrade\Runner;
 use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\UpgradeRunner;
+use App\Upgrade\Steps\CommunityEventPluginFeatureUpgrade;
+use App\Upgrade\Steps\FriendFeatureUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\Steps\PluginFeatureUpgrade;
+use App\Upgrade\Steps\SnsSettingUpgrade;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -68,5 +72,15 @@ class UpgradeRunnerTest extends TestCase
         $runner = new UpgradeRunner(new InsertSelectCompiler, [new MemberUpgrade, new FriendshipUpgrade, new MemberBlockUpgrade]);
 
         $this->assertSame(['member_blocks', 'friendships', 'members'], $runner->targetTables());
+    }
+
+    public function test_a_target_table_several_steps_share_is_reset_once(): void
+    {
+        // The sns_settings steps all write one table; --force-restart clears it once, not per step.
+        $runner = new UpgradeRunner(new InsertSelectCompiler, [
+            new SnsSettingUpgrade, new PluginFeatureUpgrade, new CommunityEventPluginFeatureUpgrade, new FriendFeatureUpgrade,
+        ]);
+
+        $this->assertSame(['sns_settings'], $runner->targetTables());
     }
 }

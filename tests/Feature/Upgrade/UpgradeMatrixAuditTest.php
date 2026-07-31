@@ -112,6 +112,29 @@ class UpgradeMatrixAuditTest extends TestCase
         }
     }
 
+    public function test_steps_sharing_a_target_table_declare_what_they_own(): void
+    {
+        // Verify compares a step's source rows against the rows it owns in the target; with several
+        // steps writing one table, a null targetFilter() would count the siblings' rows as drift.
+        // That the declared filters do not overlap is raw SQL, not checkable here — the mixed
+        // sns_settings table in VerifierSharedTargetTest pins it instead.
+        $stepsByTarget = [];
+        foreach (StepRegistry::all() as $step) {
+            $stepsByTarget[$step->targetTable()][] = $step;
+        }
+
+        foreach ($stepsByTarget as $target => $steps) {
+            if (count($steps) === 1) {
+                continue;
+            }
+
+            foreach ($steps as $step) {
+                $this->assertNotNull($step->targetFilter(),
+                    class_basename($step)." shares target `{$target}` with another step but does not declare targetFilter()");
+            }
+        }
+    }
+
     public function test_every_file_referencing_column_is_owned_or_accounted_for(): void
     {
         // A file's binary is preserved (FileUpgrade keeps every `file` row), but its owner must be

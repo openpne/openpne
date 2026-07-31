@@ -84,6 +84,16 @@ abstract class UpgradeStep
         return [];
     }
 
+    /**
+     * Optional raw SQL boolean scoping the target rows this step owns, for the verify row-count
+     * parity. null = the step owns the whole target table. Required once several steps write one
+     * table, or something outside the steps also writes rows into it.
+     */
+    public function targetFilter(): ?string
+    {
+        return null;
+    }
+
     /** @return list<string> distinct source columns read across mappings and the filter */
     public function consumedSourceColumns(): array
     {

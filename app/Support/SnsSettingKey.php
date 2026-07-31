@@ -94,8 +94,9 @@ enum SnsSettingKey: string
     case FeatureCommunityEventEnabled = 'feature_community_event_enabled';
 
     /**
-     * OpenPNE 3 kept this one in sns_config (`enable_friend_link`), not in `plugin`. Its upgrade is
-     * still a dedicated step writing only a disabled row, so absent = enabled holds on both sides.
+     * OpenPNE 3 kept this one in sns_config (`enable_friend_link`), not in `plugin`. It still
+     * upgrades through App\Upgrade\Steps\FriendFeatureUpgrade, which writes only a disabled row, so
+     * absent = enabled holds on both sides.
      */
     case FeatureFriendEnabled = 'feature_friend_enabled';
 
@@ -153,8 +154,8 @@ enum SnsSettingKey: string
             // Design keys keep the OpenPNE 3 sns_config name verbatim (1:1 copy).
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => $this->value,
-            // No sns_config column to copy: OpenPNE 3 held plugin availability in its `plugin` table,
-            // and FeatureFriendEnabled's sns_config origin upgrades through its own step (see above).
+            // Not a copied value: the feature flags upgrade through App\Upgrade\Steps\FeatureFlagUpgrade
+            // steps, which write a row only for a unit OpenPNE 3 had switched off (see above).
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => null,

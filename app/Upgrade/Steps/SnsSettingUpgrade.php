@@ -40,6 +40,18 @@ class SnsSettingUpgrade extends UpgradeStep
         return ['name'];
     }
 
+    /**
+     * The rows this step owns in a target it shares with the feature-flag steps. surface_mode falls
+     * outside by construction: it is not migrated, the runner stamps it after the walk.
+     */
+    public function targetFilter(): ?string
+    {
+        return sprintf('`key` IN (%s)', implode(', ', array_map(
+            static fn (SnsSettingKey $key): string => "'{$key->value}'",
+            $this->migratedKeys(),
+        )));
+    }
+
     public function gaps(): array
     {
         return [
