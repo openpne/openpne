@@ -27,9 +27,10 @@ class RightRailSharedPropTest extends TestCase
         $this->actingAs($viewer)
             ->get('/dashboard')
             ->assertInertia(fn ($page) => $page
-                ->has('rightRail.friends', 1)
-                ->where('rightRail.friends.0.id', $friend->getKey())
-                ->where('rightRail.friends.0.href', "/member/{$friend->getKey()}")
+                ->where('rightRail.people.kind', 'friends')
+                ->has('rightRail.people.items', 1)
+                ->where('rightRail.people.items.0.id', $friend->getKey())
+                ->where('rightRail.people.items.0.href', "/member/{$friend->getKey()}")
                 ->has('rightRail.joinedCommunities', 1)
                 ->where('rightRail.joinedCommunities.0.href', "/community/{$community->getKey()}")
             );
@@ -40,8 +41,16 @@ class RightRailSharedPropTest extends TestCase
         $this->actingAs(Member::factory()->create())
             ->get('/dashboard')
             ->assertInertia(fn ($page) => $page
-                ->where('rightRail.friends', [])
+                ->where('rightRail.people.kind', 'friends')
+                ->where('rightRail.people.items', [])
                 ->where('rightRail.joinedCommunities', [])
             );
+    }
+
+    public function test_rail_is_absent_for_a_guest(): void
+    {
+        config()->set('openpne.surface_mode', 'modern_only');
+
+        $this->get('/login')->assertInertia(fn ($page) => $page->where('rightRail', null));
     }
 }
