@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Profile;
 
+use App\Features\Profile\Queries\ShowProfile;
 use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Models\Profile;
@@ -10,6 +11,7 @@ use App\Support\Feature;
 use App\Support\PreferenceKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -199,6 +201,42 @@ class ProfileFriendOffAudienceTest extends TestCase
         ])->assertSessionHasErrors("visibility.{$profile->getKey()}");
 
         $this->assertDatabaseMissing('member_profiles', ['profile_id' => $profile->getKey()]);
+    }
+
+    /**
+     * A non-editable field's audience is the administrator's forced policy, not a member pick, so
+     * the picker doctrine does not touch it: a forced default of Friends stays effective while the
+     * unit is off (reinterpreting it as Members would itself widen an audience nobody chose).
+     */
+    public function test_a_forced_admin_default_of_friends_stays_effective(): void
+    {
+        $owner = Member::factory()->create();
+        $profile = Profile::factory()->create([
+            'form_type' => 'input',
+            'is_edit_public_flag' => false,
+            'default_visibility' => Visibility::Friends,
+        ]);
+
+        // The member writes a new value while the unit is off — no select renders, the row stores null.
+        $this->actingAs($owner)->post('/member/edit/profile', [
+            'name' => $owner->name,
+            'profile' => [$profile->getKey() => 'forced-audience value'],
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('member_profiles', [
+            'profile_id' => $profile->getKey(), 'visibility' => null,
+        ]);
+
+        // Read as the forced Friends policy: an existing friend sees it, a stranger does not.
+        $friend = Member::factory()->create();
+        DB::table('friendships')->insert([
+            ['member_id' => $owner->getKey(), 'friend_id' => $friend->getKey()],
+            ['member_id' => $friend->getKey(), 'friend_id' => $owner->getKey()],
+        ]);
+        $stranger = Member::factory()->create();
+
+        $show = app(ShowProfile::class);
+        $this->assertNotNull($show($friend, $owner, 'ja_JP')->firstWhere('profile.id', $profile->getKey()));
+        $this->assertNull($show($stranger, $owner, 'ja_JP')->firstWhere('profile.id', $profile->getKey()));
     }
 
     public function test_the_unit_switched_on_offers_friends_everywhere(): void

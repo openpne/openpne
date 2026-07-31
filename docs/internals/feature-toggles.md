@@ -137,17 +137,23 @@ deciding who may read friends-only content, so nothing a member published become
 they chose. Existing Friends rows keep that read-time clearance — a direct read or permalink is
 neither widened nor rewritten.
 
-What the tier loses is its place in the **pickers**. No new friendship can form, so a form composing
-new content — a diary, a timeline post, a profile value, the age gate — stops offering Friends and
-the matching rule stops accepting it, both built from one option list
-([`VisibilityChoices`](../../app/Support/VisibilityChoices.php)). An edit form is the exception: it
-keeps offering the audience its own row already carries, so saving an untouched form re-posts Friends
-instead of clamping the row to Members — the same sticky current
+What the tier loses is its place in the **pickers** — every audience a *member selects*. No new
+friendship can form, so a form composing new content — a diary, a timeline post, a profile value,
+the age gate — stops offering Friends and the matching rule stops accepting it, both built from one
+option list ([`VisibilityChoices`](../../app/Support/VisibilityChoices.php)). An edit form is the
+exception: it keeps offering the audience its own row already carries, so saving an untouched form
+re-posts Friends instead of clamping the row to Members — the same sticky current
 [`EditProfileFields`](../../app/Features/Profile/Queries/EditProfileFields.php) and
 `AgeVisibility::defaultFor()` hold for a stored value, since the profile form re-posts every audience
 on every save. Where nothing is stored yet the pre-selection clamps to Members **visibly** — the
 registration form's admin default, the member's diary compose default — because the member reads that
 select before submitting, and the stored preference row is left as they set it.
+
+A non-editable profile field (`is_edit_public_flag` off) is a deliberate exception: its audience is
+the **administrator's forced policy**, not a member pick — no select renders and the row stores null,
+read as the field's `default_visibility`. A forced default of Friends therefore stays effective while
+the unit is off; reinterpreting it as Members would itself widen an audience nobody chose. The picker
+doctrine governs member-selectable audiences only.
 
 What does go is the **friend lenses other features own**, because a lens's purpose *is* the unit: the
 friend diary feed (`diary.list_friend`, gated as `diary` **and** `friend`), the diary hub tab and the
