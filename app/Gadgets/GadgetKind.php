@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Gadgets;
 
+use App\Support\Feature;
 use Illuminate\Support\Str;
 
 /**
@@ -59,10 +60,19 @@ abstract class GadgetKind
         return self::MEMBERS;
     }
 
+    /**
+     * The feature unit whose toggle hides this kind at render; null when the kind depends on no
+     * unit (it renders whatever the admin has switched off).
+     */
+    public function feature(): ?Feature
+    {
+        return null;
+    }
+
     /** Whether the kind's dependency feature is present; an unavailable kind is hidden at render. */
     public function isAvailable(): bool
     {
-        return true;
+        return $this->feature()?->enabled() ?? true;
     }
 
     /** This kind's OpenPNE 3-compatible DOM id (the custom-CSS seam); null when OpenPNE 3 emitted none. */

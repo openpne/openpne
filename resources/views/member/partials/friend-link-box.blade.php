@@ -1,3 +1,5 @@
+@use('App\Support\Feature')
+
 {{-- The own-page notice and the friend-request entry, which OpenPNE 3 gave the same descriptionBox
      and the same id (profileSuccess.php, op_top) — kept, id/class included, for theme CSS
      overrides. $friendStatus is null for the viewer's own profile and for guests; blocked pairs
@@ -18,7 +20,9 @@
             </p>
         </div>
     </x-classic.parts>
-@elseif (in_array($friendStatus ?? null, ['none', 'sent', 'received'], true))
+{{-- OpenPNE 3 wrapped only this half in enable_friend_link: the own-page notice above says nothing
+     about friends, so it survives the unit being switched off. --}}
+@elseif (Feature::Friend->enabled() && in_array($friendStatus ?? null, ['none', 'sent', 'received'], true))
     <x-classic.parts id="informationAboutThisIsYourProfilePage" name="descriptionBox">
         <div class="body">
             @if ($friendStatus === 'none')

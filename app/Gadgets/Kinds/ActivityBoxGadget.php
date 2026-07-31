@@ -6,6 +6,7 @@ namespace App\Gadgets\Kinds;
 
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
+use App\Support\Feature;
 
 /**
  * OpenPNE 3 activityBox: a server-rendered activity list placed on both the home and a profile. The
@@ -42,6 +43,11 @@ class ActivityBoxGadget extends GadgetKind
         return [
             new GadgetConfigField('row', ['ja' => '表示する行', 'en' => 'Rows to show'], 'select', GadgetConfigField::INT, true, 5, $oneToTen),
         ];
+    }
+
+    public function feature(): ?Feature
+    {
+        return Feature::Timeline;
     }
 
     public function partId(int $gadgetId): ?string

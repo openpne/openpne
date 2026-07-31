@@ -53,6 +53,21 @@ that is neither gated nor consciously allowlisted, so a route added later cannot
 Deliberately **not** gated: the shared compose preview (its store path gates per feature), blocks,
 member profiles, and the `/m/*` compat redirects (their canonical target answers).
 
+## Classic surface
+
+A 404 is the answer of last resort; the Classic screens stop offering the unit in the first place.
+The navigation ([`NavigationService`](../../app/Services/NavigationService.php)) resolves each row's
+target route and drops the row when that route carries the gate of a switched-off unit — **the
+`routes/web.php` wiring is the ownership record, so there is no second list of route names here**,
+and an unnamed alias or an out-of-prefix endpoint is covered for free. It also means ownership is
+per row, not per nav: the message entry inside a member's local nav goes when messages go, and stays
+when friends go. The gadgets do the same through
+[`GadgetKind::feature()`](../../app/Gadgets/GadgetKind.php), and the community home, the member
+settings nav and the home links ask the registry directly.
+
+Resolution is per request throughout. The nav and gadget row caches never embed feature state, so
+switching a unit takes effect without clearing them.
+
 ## What a disabled unit does not change
 
 Switching `friend` off does **not** collapse `Visibility::Friends`: existing friendships keep
@@ -61,6 +76,7 @@ they chose. The friend-scoped feeds and pickers other features own keep working 
 
 ## Not in this layer yet
 
-Suppressing a disabled unit from the Classic and Modern surfaces, from notifications, and from file
-delivery, plus carrying OpenPNE 3's plugin state over during the upgrade, land in follow-up changes;
-today the flags are gate-only and the admin page is not shipped.
+The Modern surface and the counts it shares (unread badges, profile stats, dashboard payloads),
+notifications, and file delivery still show a disabled unit, and the upgrade does not yet carry
+OpenPNE 3's plugin state over. They land in follow-up changes; the admin page is not shipped until
+they do.

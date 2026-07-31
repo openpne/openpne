@@ -6,6 +6,7 @@ namespace App\Gadgets\Kinds;
 
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
+use App\Support\Feature;
 
 /**
  * OpenPNE 3 allMemberActivityBox: the whole SNS's members-only activity, home-only. Shares OpenPNE 3's
@@ -42,6 +43,11 @@ class AllMemberActivityBoxGadget extends GadgetKind
             new GadgetConfigField('row', ['ja' => '表示する行', 'en' => 'Rows to show'], 'select', GadgetConfigField::INT, true, 5, $oneToTen),
             new GadgetConfigField('is_viewable_activity_form', ['ja' => '投稿フォームを表示', 'en' => 'Show post form'], 'radio', GadgetConfigField::INT, true, 1, [0 => 'No', 1 => 'Yes']),
         ];
+    }
+
+    public function feature(): ?Feature
+    {
+        return Feature::Timeline;
     }
 
     public function partId(int $gadgetId): ?string

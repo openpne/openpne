@@ -1,11 +1,12 @@
 {{-- The settings categories, the current one rendered as plain text, the rest linked to
      ?category=. The age category is offered only while the site has a birthday profile item
-     (no birthday → no age to gate). --}}
+     (no birthday → no age to gate), the diary category only while the unit is switched on. --}}
 @props(['current' => null, 'ageAvailable' => true])
 <x-classic.parts id="pageNav" name="pageNav">
     <ul>
         @foreach (\App\Features\Member\MemberConfigCategory::cases() as $category)
             @continue($category === \App\Features\Member\MemberConfigCategory::PublicFlag && ! $ageAvailable)
+            @continue($category === \App\Features\Member\MemberConfigCategory::Diary && ! \App\Support\Feature::Diary->enabled())
             <li @class(['current' => $current === $category])>
                 @if ($current === $category)
                     {{ $category->caption() }}

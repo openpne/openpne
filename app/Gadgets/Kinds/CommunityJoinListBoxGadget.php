@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Gadgets\Kinds;
 
+use App\Support\Feature;
+
 /** The subject member's joined communities as a thumbnail grid (OpenPNE 3 community/joinListBox). */
 class CommunityJoinListBoxGadget extends GridListGadget
 {
@@ -20,6 +22,11 @@ class CommunityJoinListBoxGadget extends GridListGadget
     public function component(): string
     {
         return 'gadget.community-join-list-box';
+    }
+
+    public function feature(): ?Feature
+    {
+        return Feature::Community;
     }
 
     public function partId(int $gadgetId): ?string

@@ -21,6 +21,7 @@ use App\Http\Requests\Member\UpdatePreferredSurfaceRequest;
 use App\Http\Requests\Member\WithdrawalRequest;
 use App\Models\EmailChangeRequest;
 use App\Notifications\Member\PasswordChangedNotification;
+use App\Support\Feature;
 use App\Support\PreferenceKey;
 use App\Support\SecurityLog;
 use App\Support\Surface;
@@ -76,6 +77,12 @@ class MemberConfigController extends Controller
                 // divergence from OpenPNE 3, which always shows it).
                 $ageAvailable = $birthdayExists();
                 if ($category === MemberConfigCategory::PublicFlag && ! $ageAvailable) {
+                    $category = null;
+                }
+
+                // Same fold for a switched-off diary: the section is gone from the nav, and its URL
+                // lands on the landing rather than a form whose POST target 404s.
+                if ($category === MemberConfigCategory::Diary && ! Feature::Diary->enabled()) {
                     $category = null;
                 }
 

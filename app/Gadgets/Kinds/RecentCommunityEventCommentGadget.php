@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Gadgets\Kinds;
 
+use App\Support\Feature;
+
 /** Recent events across the communities the viewer joined (OpenPNE 3 recentCommunityEventComment). */
 class RecentCommunityEventCommentGadget extends CommunityRecentListGadget
 {
@@ -20,5 +22,10 @@ class RecentCommunityEventCommentGadget extends CommunityRecentListGadget
     public function component(): string
     {
         return 'gadget.recent-community-event-comment';
+    }
+
+    public function feature(): ?Feature
+    {
+        return Feature::CommunityEvent;
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Gadgets\Kinds;
 
+use App\Support\Feature;
+
 /** The subject member's friends as a thumbnail grid (OpenPNE 3 friend/friendListBox). */
 class FriendListBoxGadget extends GridListGadget
 {
@@ -20,6 +22,11 @@ class FriendListBoxGadget extends GridListGadget
     public function component(): string
     {
         return 'gadget.friend-list-box';
+    }
+
+    public function feature(): ?Feature
+    {
+        return Feature::Friend;
     }
 
     public function partId(int $gadgetId): ?string

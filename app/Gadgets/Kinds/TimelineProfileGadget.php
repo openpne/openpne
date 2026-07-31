@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Gadgets\Kinds;
 
 use App\Gadgets\GadgetKind;
+use App\Support\Feature;
 
 /**
  * A profile owner's recent timeline (OpenPNE 3 timelineProfile). Profile-only and unconfigurable —
@@ -30,6 +31,11 @@ class TimelineProfileGadget extends GadgetKind
     public function contexts(): array
     {
         return ['profile'];
+    }
+
+    public function feature(): ?Feature
+    {
+        return Feature::Timeline;
     }
 
     public function partId(int $gadgetId): ?string

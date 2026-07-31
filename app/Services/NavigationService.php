@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Models\Navigation;
+use App\Support\Feature;
 use App\Support\NavigationUri;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -17,9 +20,10 @@ use Illuminate\Support\Facades\Schema;
  *
  * The stored rows (grouped by type, with raw captions) are cached as plain arrays — never Eloquent
  * models, since the production cache store does not allow serializing classes. The admin UI calls
- * clearCache() after a change. Per-request resolution (route existence, %term% captions, subject
- * id) is NOT cached: route sets change between deploys, so a route-existence result must not
- * outlive the request.
+ * clearCache() after a change. Per-request resolution (route matching, feature toggles, %term%
+ * captions, subject id) is NOT cached: route sets change between deploys and a feature unit is
+ * switched off from the admin panel, so neither result may outlive the request — the cached rows
+ * stay feature-agnostic, and switching a unit needs no nav cache clear.
  */
 class NavigationService
 {
@@ -36,15 +40,20 @@ class NavigationService
      */
     private const SHIM_ROUTES = [];
 
-    /** Per-request memo of internal-path existence, keyed by path. */
-    private array $pathExists = [];
+    /**
+     * Per-request memo of the GET route an internal path resolves to (null = none), keyed by path.
+     *
+     * @var array<string, ?RoutingRoute>
+     */
+    private array $pathRoutes = [];
 
     private ?string $logoutPath = null;
 
     /**
      * Render-ready items for a navigation type, in sort order. Each item is
      * ['href' => string, 'label' => string, 'domId' => string, 'isPostLogout' => bool].
-     * Unresolved uris, items pointing at missing routes, and compatibility shims are dropped.
+     * Unresolved uris, items pointing at missing routes, compatibility shims, and items whose
+     * target belongs to a switched-off feature unit are dropped.
      *
      * @return list<array{href: string, label: string, domId: string, isPostLogout: bool}>
      */
@@ -82,7 +91,7 @@ class NavigationService
             $href = $this->applySubject($uri, $subjectId);
             // A `:id` link with no subject in this context (e.g. an upgraded `@member_profile` that
             // landed in a global type) cannot be resolved — hide it rather than link to literal :id.
-            if (str_contains($href, ':id') || ! $this->internalPathExists($href)) {
+            if (str_contains($href, ':id') || ! $this->internalPathIsLinkable($href)) {
                 continue;
             }
 
@@ -166,15 +175,21 @@ class NavigationService
         return $this->logoutPath ??= Route::getRoutes()->getByName('logout')?->uri() ?? 'logout';
     }
 
-    /** Whether a GET request for this path matches a real (non-shim) route. */
-    private function internalPathExists(string $href): bool
+    /** Whether a GET request for this path reaches a page a member can actually open. */
+    private function internalPathIsLinkable(string $href): bool
     {
         $path = parse_url($href, PHP_URL_PATH) ?: '/';
 
-        return $this->pathExists[$path] ??= $this->matchesRealRoute($path);
+        if (! array_key_exists($path, $this->pathRoutes)) {
+            $this->pathRoutes[$path] = $this->matchRealRoute($path);
+        }
+
+        $route = $this->pathRoutes[$path];
+
+        return $route !== null && $this->featureEnabled($route);
     }
 
-    private function matchesRealRoute(string $path): bool
+    private function matchRealRoute(string $path): ?RoutingRoute
     {
         // Route::matches() validates uri/method without binding parameters, so this never mutates
         // the routes (the current page's route is a shared instance). Only GET routes count: a
@@ -184,10 +199,31 @@ class NavigationService
         $request = Request::create($path, 'GET');
         foreach (Route::getRoutes()->getRoutesByMethod()['GET'] ?? [] as $route) {
             if (! $route->isFallback && $route->matches($request)) {
-                return ! in_array($route->getName(), self::SHIM_ROUTES, true);
+                return in_array($route->getName(), self::SHIM_ROUTES, true) ? null : $route;
             }
         }
 
-        return false;
+        return null;
+    }
+
+    /**
+     * Whether every feature unit gating the matched route is on. Ownership is read off the route's
+     * own EnsureFeatureEnabled wiring, so an unnamed alias is covered and there is no second list
+     * of route names to keep in step with routes/web.php.
+     */
+    private function featureEnabled(RoutingRoute $route): bool
+    {
+        foreach ($route->gatherMiddleware() as $middleware) {
+            if (! is_string($middleware) || ! str_starts_with($middleware, EnsureFeatureEnabled::class.':')) {
+                continue;
+            }
+
+            $feature = Feature::tryFrom(substr($middleware, strlen(EnsureFeatureEnabled::class) + 1));
+            if ($feature?->enabled() === false) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

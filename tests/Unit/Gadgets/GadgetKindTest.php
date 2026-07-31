@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Tests\Unit\Gadgets;
 
 use App\Gadgets\GadgetKindRegistry;
+use App\Support\Feature;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-/** Each kind's OpenPNE 3-compatible DOM id (the custom-CSS seam). */
+/** Each kind's OpenPNE 3-compatible DOM id (the custom-CSS seam), and the unit whose toggle hides it. */
 class GadgetKindTest extends TestCase
 {
     /**
@@ -58,5 +59,74 @@ class GadgetKindTest extends TestCase
     public function test_part_id_matches_openpne3(string $name, ?string $expected): void
     {
         $this->assertSame($expected, GadgetKindRegistry::find($name)?->partId(7));
+    }
+
+    /**
+     * The whole registry, so a kind added later must state its unit — or state that it has none.
+     *
+     * @return array<string, ?Feature>
+     */
+    private static function featureMap(): array
+    {
+        return [
+            // The diary lists and the comment history all read the diary module.
+            'diaryList' => Feature::Diary,
+            'diaryFriendList' => Feature::Diary,
+            'diaryMyList' => Feature::Diary,
+            'diaryMemberList' => Feature::Diary,
+            'diaryCommentHistory' => Feature::Diary,
+            // The timeline slices and both activity boxes render timeline posts.
+            'timelineAll' => Feature::Timeline,
+            'timelineFriend' => Feature::Timeline,
+            'timelineProfile' => Feature::Timeline,
+            'activityBox' => Feature::Timeline,
+            'allMemberActivityBox' => Feature::Timeline,
+            // The board / calendar lists follow their own unit (and communities through it).
+            'recentCommunityTopicComment' => Feature::CommunityTopic,
+            'recentCommunityTopicCommentSns' => Feature::CommunityTopic,
+            'recentCommunityEventComment' => Feature::CommunityEvent,
+            'recentCommunityEventCommentSns' => Feature::CommunityEvent,
+            'communityJoinListBox' => Feature::Community,
+            'friendListBox' => Feature::Friend,
+            // birthdayBox lists birthdays, not friendships, so friends being off does not silence it.
+            'birthdayBox' => null,
+            'freeArea' => null,
+            'informationBox' => null,
+            'memberImageBox' => null,
+            'profileListBox' => null,
+            'searchBox' => null,
+            'linkListBox' => null,
+            'languageSelecterBox' => null,
+            'sideBanner' => null,
+            'loginForm' => null,
+        ];
+    }
+
+    /** @return array<string, array{0: string, 1: ?Feature}> */
+    public static function featureCases(): array
+    {
+        $cases = [];
+        foreach (self::featureMap() as $name => $feature) {
+            $cases[$name] = [$name, $feature];
+        }
+
+        return $cases;
+    }
+
+    #[DataProvider('featureCases')]
+    public function test_kind_declares_the_unit_that_hides_it(string $name, ?Feature $expected): void
+    {
+        $this->assertSame($expected, GadgetKindRegistry::find($name)?->feature());
+    }
+
+    public function test_every_registered_kind_is_covered_by_the_feature_map(): void
+    {
+        $registered = array_keys(GadgetKindRegistry::all());
+        $mapped = array_keys(self::featureMap());
+        sort($registered);
+        sort($mapped);
+
+        $this->assertSame($registered, $mapped,
+            'A kind was added or removed: state its feature unit (or null) in featureMap().');
     }
 }

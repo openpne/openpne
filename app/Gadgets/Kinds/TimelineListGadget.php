@@ -6,6 +6,7 @@ namespace App\Gadgets\Kinds;
 
 use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
+use App\Support\Feature;
 
 /**
  * Shared base for the OpenPNE 3 opTimelinePlugin home timeline gadgets (timelineAll / timelineFriend):
@@ -26,5 +27,10 @@ abstract class TimelineListGadget extends GadgetKind
         return [
             new GadgetConfigField('limit', ['ja' => '最大表示件数', 'en' => 'Maximum entries'], 'select', GadgetConfigField::INT, true, 20, $choices),
         ];
+    }
+
+    public function feature(): ?Feature
+    {
+        return Feature::Timeline;
     }
 }

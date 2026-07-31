@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Services;
 
+use App\Gadgets\GadgetKindRegistry;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
+use App\Support\Feature;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +58,50 @@ class GadgetServiceTest extends TestCase
         $zones = app(GadgetService::class)->zones('home', null, $viewer);
 
         $this->assertSame([], $zones['contents']);
+    }
+
+    public function test_hides_a_kind_whose_feature_unit_is_switched_off(): void
+    {
+        $this->makeGadget('home', 'sideMenu', 'friendListBox', 10);
+        $this->makeGadget('home', 'sideMenu', 'memberImageBox', 20);
+        $viewer = Member::factory()->create();
+
+        $this->setSnsSetting(Feature::Friend->settingKey(), false);
+
+        // The kind that names no unit stays; the friend grid goes.
+        $zones = app(GadgetService::class)->zones('home', null, $viewer);
+        $this->assertSame(['memberImageBox'], $this->names($zones['sideMenu']));
+    }
+
+    /** Every tagged kind, so a kind cannot be tagged and then silently keep rendering. */
+    public function test_each_tagged_kind_reports_unavailable_while_its_unit_is_off(): void
+    {
+        foreach (GadgetKindRegistry::all() as $name => $kind) {
+            $feature = $kind->feature();
+            if ($feature === null) {
+                $this->assertTrue($kind->isAvailable(), "{$name} names no unit, so it is always available");
+
+                continue;
+            }
+
+            $this->assertTrue($kind->isAvailable(), "{$name} must be available while its unit is on");
+
+            $this->setSnsSetting($feature->settingKey(), false);
+            $this->assertFalse($kind->isAvailable(), "{$name} must disappear while {$feature->value} is off");
+            $this->setSnsSetting($feature->settingKey(), true);
+        }
+    }
+
+    public function test_a_board_kind_follows_the_communities_it_lives_inside(): void
+    {
+        $this->makeGadget('home', 'contents', 'recentCommunityTopicComment');
+        $viewer = Member::factory()->create();
+
+        // Its own row says enabled; the unit it lives inside overrules it.
+        $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
+        $this->setSnsSetting(Feature::Community->settingKey(), false);
+
+        $this->assertSame([], $this->names(app(GadgetService::class)->zones('home', null, $viewer)['contents']));
     }
 
     public function test_hides_a_members_only_kind_from_a_guest_but_shows_a_public_one(): void
