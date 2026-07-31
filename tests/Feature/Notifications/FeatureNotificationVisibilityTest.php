@@ -11,6 +11,7 @@ use App\Notifications\Message\MessageReceivedNotification;
 use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -30,13 +31,13 @@ class FeatureNotificationVisibilityTest extends TestCase
         $this->freshRequestState();
     }
 
-    private function seedMessageRow(Member $viewer, Member $sender): DatabaseNotification
+    private function seedMessageRow(Member $viewer, Member $sender, ?Carbon $createdAt = null): DatabaseNotification
     {
         return $this->seedRow($viewer, MessageReceivedNotification::class, [
             'kind' => 'message_received',
             'sender_id' => $sender->getKey(),
             'message_id' => 1,
-        ]);
+        ], $createdAt);
     }
 
     private function seedFriendRow(Member $viewer, Member $requester): DatabaseNotification
@@ -48,15 +49,18 @@ class FeatureNotificationVisibilityTest extends TestCase
     }
 
     /** @param array<string, mixed> $data */
-    private function seedRow(Member $viewer, string $type, array $data): DatabaseNotification
+    private function seedRow(Member $viewer, string $type, array $data, ?Carbon $createdAt = null): DatabaseNotification
     {
         /** @var DatabaseNotification $row */
-        $row = $viewer->notifications()->create([
+        $row = $viewer->notifications()->create(array_filter([
             'id' => (string) Str::uuid(),
             'type' => $type,
             'data' => $data,
             'read_at' => null,
-        ]);
+            // Same-second rows tie on created_at and MySQL orders ties arbitrarily; an
+            // order-sensitive test states its timeline explicitly (the #474 deflake pattern).
+            'created_at' => $createdAt,
+        ], static fn ($value) => $value !== null));
 
         return $row;
     }
@@ -100,7 +104,8 @@ class FeatureNotificationVisibilityTest extends TestCase
     public function test_mark_all_read_preserves_hidden_rows_and_they_return_unread(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
-        $hidden = $this->seedMessageRow($viewer, $actor);
+        // The hidden row is explicitly older: the feed assertion below is order-sensitive.
+        $hidden = $this->seedMessageRow($viewer, $actor, now()->subMinute());
         $visible = $this->seedFriendRow($viewer, $actor);
 
         $this->switchMessages(false);
