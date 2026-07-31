@@ -31,6 +31,8 @@ class CreateCommunity
                 'register_policy' => $data->registerPolicy,
                 'community_category_id' => $data->categoryId,
                 'is_join_notification_enabled' => $data->isJoinNotificationEnabled,
+                'topic_read_access' => $data->topicReadAccess,
+                'topic_post_authority' => $data->topicPostAuthority,
             ]);
 
             // The creator is the sole admin (one admin per community).

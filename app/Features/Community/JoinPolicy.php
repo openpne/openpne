@@ -24,6 +24,17 @@ enum JoinPolicy: int
         };
     }
 
+    public static function fromSlug(string $slug): self
+    {
+        foreach (self::cases() as $case) {
+            if ($case->slug() === $slug) {
+                return $case;
+            }
+        }
+
+        throw new \ValueError("Unknown JoinPolicy slug [{$slug}].");
+    }
+
     /** Human-readable label key, translated via __() on either surface. */
     public function label(): string
     {

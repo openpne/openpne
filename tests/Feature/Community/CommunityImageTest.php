@@ -7,6 +7,8 @@ use App\Features\Community\Actions\DeleteCommunity;
 use App\Features\Community\Actions\UpdateCommunity;
 use App\Features\Community\Data\CommunityFormData;
 use App\Features\Community\JoinPolicy;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\File;
@@ -27,7 +29,7 @@ class CommunityImageTest extends TestCase
 
     private function data(string $name = 'Community'): CommunityFormData
     {
-        return new CommunityFormData($name, 'desc', JoinPolicy::Approval, null, true);
+        return new CommunityFormData($name, 'desc', JoinPolicy::Approval, null, true, TopicReadAccess::Everyone, TopicPostAuthority::Members);
     }
 
     private function communityWithAdmin(): array
@@ -141,7 +143,7 @@ class CommunityImageTest extends TestCase
 
         $this->actingAs($admin)->get(route('community.show', $community))
             ->assertOk()
-            ->assertSee($file->thumbnailUrl(120, 120, square: true), escape: false);
+            ->assertSee($file->thumbnailUrl(180, 180, square: true), escape: false); // OpenPNE 3's 180×180
 
         $this->actingAs($admin)->get(route('community.edit', ['id' => $community->getKey()]))
             ->assertOk()
@@ -154,7 +156,9 @@ class CommunityImageTest extends TestCase
 
         $this->actingAs($admin)->post(route('community.save', ['id' => $community->getKey()]), [
             'name' => $community->name,
-            'register_policy' => $community->register_policy->value,
+            'register_policy' => $community->register_policy->slug(),
+            'topic_read_access' => $community->topic_read_access->slug(),
+            'topic_post_authority' => $community->topic_post_authority->slug(),
             'image' => UploadedFile::fake()->create('notes.txt', 10, 'text/plain'),
         ])->assertSessionHasErrors('image');
 

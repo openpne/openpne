@@ -31,9 +31,28 @@
                     <td>
                         <select name="register_policy">
                             @foreach ($policies as $policy)
-                                <option value="{{ $policy->value }}" @selected((int) old('register_policy', $community?->register_policy?->value) === $policy->value)>{{ __($policy->label()) }}</option>
+                                <option value="{{ $policy['slug'] }}" @selected(old('register_policy', $community?->register_policy?->slug()) === $policy['slug'])>{{ __($policy['label']) }}</option>
                             @endforeach
                         </select>
+                    </td>
+                </tr>
+                {{-- OpenPNE 3's two opCommunityTopicPlugin settings (community_config.yml
+                     public_flag / topic_authority), radios as its form drew them. The wording is
+                     the enums' — the same captions the community home prints. --}}
+                <tr>
+                    <th>{{ __('Authority to Read %Topic%') }}</th>
+                    <td>
+                        @foreach ($topicReadChoices as $choice)
+                            <label><input type="radio" name="topic_read_access" value="{{ $choice['slug'] }}" class="input_radio" @checked(old('topic_read_access', $community?->topic_read_access->slug() ?? 'everyone') === $choice['slug'])> {{ __($choice['label']) }}</label>
+                        @endforeach
+                    </td>
+                </tr>
+                <tr>
+                    <th>{{ __('Authority to Create %Topic%') }}</th>
+                    <td>
+                        @foreach ($topicPostChoices as $choice)
+                            <label><input type="radio" name="topic_post_authority" value="{{ $choice['slug'] }}" class="input_radio" @checked(old('topic_post_authority', $community?->topic_post_authority->slug() ?? 'members') === $choice['slug'])> {{ __($choice['label']) }}</label>
+                        @endforeach
                     </td>
                 </tr>
                 <tr>

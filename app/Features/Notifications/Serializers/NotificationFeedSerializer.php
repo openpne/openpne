@@ -123,7 +123,7 @@ class NotificationFeedSerializer
         $data = $row->data;
 
         return match ($data['kind'] ?? null) {
-            'friend_requested' => '/friend/manage',
+            'friend_requested' => '/friend/requests',
             'friend_request_accepted' => self::profileUrl($data['accepter_id'] ?? null),
             'message_received' => self::messageUrl($row, $data['message_id'] ?? null),
             'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
