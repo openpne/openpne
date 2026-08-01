@@ -25,26 +25,20 @@ interface DashboardProps extends PageProps {
 }
 
 /**
- * Attention notices — pending friend requests, unread messages, join requests awaiting the viewer's
- * approval, and unread notifications. Rendered only when something needs attention.
- *
- * A mixed display surface: each row declares which layer it reads (see
- * docs/internals/notifications.md). Requests / messages / approvals are layer-1 live counts served by
- * the `announcements` prop; the last row is layer 3's unread-row count, read from the shared `unread`
- * prop rather than folded into `announcements` so a later client-side refresh of `unread` cannot leave
- * this row standing on a stale server render.
+ * Attention notices — pending friend requests, unread messages, and join requests awaiting the
+ * viewer's approval. Layer-1 "needs action" counts only: the layer-3 unread-notification count is
+ * the nav bell / bottom bar's job — a row restating that badge would say nothing new while
+ * occupying the top of the dashboard.
  */
 function AnnouncementsPanel({ announcements }: { announcements: Announcements }) {
     const t = useT();
-    const { enabledFeatures: features, unread } = usePage<PageProps>().props;
+    const features = usePage<PageProps>().props.enabledFeatures;
     // Each notice links into the unit it belongs to (the server already reports it as nothing).
     const friendRequests = features.friend ? announcements.friendRequests : 0;
     const unreadMessages = features.message ? announcements.unreadMessages : 0;
     const communityApprovals = features.community ? announcements.communityApprovals : [];
-    // No unit gate: notifications are not switchable, and the count is already feature-filtered.
-    const notifications = unread?.notifications ?? 0;
 
-    if (friendRequests === 0 && unreadMessages === 0 && communityApprovals.length === 0 && notifications === 0) {
+    if (friendRequests === 0 && unreadMessages === 0 && communityApprovals.length === 0) {
         return null;
     }
 
@@ -72,13 +66,6 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
                         </span>
                     </ListRow>
                 ))}
-                {notifications > 0 && (
-                    <ListRow href="/notifications" chevron>
-                        <span className="min-w-0 flex-1 text-sm text-foreground">
-                            {t(':count unread notifications', { count: notifications })}
-                        </span>
-                    </ListRow>
-                )}
             </List>
         </Panel>
     );
