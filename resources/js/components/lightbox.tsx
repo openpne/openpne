@@ -120,13 +120,26 @@ export function Lightbox({
                     // Side padding carries the landscape insets — at 94vw the panel's edges (and with
                     // them the prev/next buttons) reach into the cutout, and landscape is the
                     // orientation an image gets viewed in.
-                    className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(94vw,60rem)] -translate-x-1/2 -translate-y-1/2 touch-pan-y touch-pinch-zoom rounded-xl bg-background p-3 pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] text-foreground shadow-xl outline-none"
+                    // Max height counts the top/bottom insets too: a plain 92vh leaves only 4vh below
+                    // a centered panel, less than a landscape home-indicator inset, and the centered
+                    // 2rem-plus-insets margin splits so that each half clears its own side's inset.
+                    // overflow-y-auto contains the overshoot when the image cap plus a wrapped footer
+                    // still exceeds the panel — scrolled, not spilling the footer under the indicator.
+                    className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-[min(94vw,60rem)] -translate-x-1/2 -translate-y-1/2 touch-pan-y touch-pinch-zoom overflow-y-auto rounded-xl bg-background p-3 pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] text-foreground shadow-xl outline-none"
                 >
                     <DialogPrimitive.Title className="sr-only">{t('Image')}</DialogPrimitive.Title>
                     {image && (
                         <div className="space-y-2.5">
                             <div className="relative">
-                                <img src={image.url} alt="" className="mx-auto max-h-[80vh] max-w-full rounded-md" />
+                                {/* The image cap reserves ~9rem inside the panel's max height for the
+                                    footer row, paddings, and the centering margin, so a single-line
+                                    footer fits without scrolling; the panel scrolls only when a
+                                    wrapped footer outgrows the reserve. */}
+                                <img
+                                    src={image.url}
+                                    alt=""
+                                    className="mx-auto max-h-[calc(100dvh-9rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] max-w-full rounded-md"
+                                />
                                 {images.length > 1 && (
                                     <>
                                         {/* aria-disabled, not disabled: a focused button that turns disabled drops
