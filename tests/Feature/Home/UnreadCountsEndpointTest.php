@@ -36,6 +36,13 @@ class UnreadCountsEndpointTest extends TestCase
         $this->get('/unread-counts')->assertRedirect('/login');
     }
 
+    public function test_an_expired_session_gets_a_401_not_a_redirect(): void
+    {
+        // The real client asks with Accept: application/json (unread-sync.tsx), so this — not the
+        // redirect above — is what a poll sees when its session dies; it stays silent on it.
+        $this->getJson('/unread-counts')->assertUnauthorized();
+    }
+
     public function test_a_switched_off_unit_reports_zero(): void
     {
         [$viewer, $sender] = Member::factory()->count(2)->create()->all();

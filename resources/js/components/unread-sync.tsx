@@ -1,29 +1,21 @@
 import { router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
-import { setUnreadTitleCount } from '@/lib/unread-title';
 import type { PageProps, UnreadCounts } from '@/types';
 
 /** How often a visible tab re-reads the counts. */
 const INTERVAL_MS = 60_000;
 
 /**
- * Keeps the shared `unread` counts live while a tab sits open, and mirrors the unread-notification
- * count into the document title. Non-visual; mounted once in the app shell, which persists across
- * SPA navigations (auth pages have no layout, so nothing polls there).
+ * Keeps the shared `unread` counts live while a tab sits open. Non-visual; mounted once in the app
+ * shell, which persists across SPA navigations (auth pages have no layout, so nothing polls there).
  *
- * Refreshes are pushed back into the shared prop, so every badge re-renders from the one source it
- * already reads. Not Inertia's `usePoll`: that still fires on a hidden tab (every tenth interval)
- * and does not refresh on return to the tab, which is the moment a stale badge is seen.
+ * Refreshes are pushed back into the shared prop, so every consumer — the badges, and the title
+ * callback reading `page.props.unread` (app.tsx) — re-renders from the one source it already reads.
+ * Not Inertia's `usePoll`: that still fires on a hidden tab (every tenth interval) and does not
+ * refresh on return to the tab, which is the moment a stale badge is seen.
  */
 export function UnreadSync() {
     const unread = usePage<PageProps>().props.unread;
-
-    // Written during render, not from an effect: the head manager may flush the title for this
-    // commit before effects run, and it reads the count through the Inertia title callback. The
-    // write is idempotent, so StrictMode's double render is harmless. A guest resets it to 0, so
-    // no prefix survives a logout.
-    setUnreadTitleCount(unread?.notifications ?? 0);
-
     const signedIn = unread != null;
 
     useEffect(() => {
