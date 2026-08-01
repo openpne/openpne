@@ -53,14 +53,17 @@ export function SheetContent({
             <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
             <DialogPrimitive.Content
                 className={cn(
-                    'fixed inset-y-0 left-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 shadow-xl outline-none',
+                    // Edge-to-edge by construction (inset-y-0, left-0), so it pads for all three insets
+                    // it can meet: status bar, home indicator, and the landscape cutout on its left.
+                    'fixed inset-y-0 left-0 z-50 flex w-80 max-w-[85vw] flex-col gap-1 bg-background p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] shadow-xl outline-none',
                     className,
                 )}
                 {...props}
             >
                 {children}
+                {/* Absolutely positioned, so the sheet's top padding does not move it: inset it itself. */}
                 <DialogPrimitive.Close
-                    className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground transition hover:bg-accent"
+                    className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] rounded-full p-1 text-muted-foreground transition hover:bg-accent"
                     aria-label={closeLabel}
                 >
                     <X className="size-5" />

@@ -24,7 +24,9 @@ export function BottomNav() {
     return (
         <nav
             aria-label={t('Navigation')}
-            className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+            // Side insets for landscape: the bar spans inset-x-0, so the outer tabs would otherwise
+            // fall under the display cutout / corner radius.
+            className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] backdrop-blur lg:hidden"
         >
             {/* The bar's inner height is what `--modern-bottom-offset` adds the safe-area inset to. */}
             <ul className="flex h-14 items-stretch">

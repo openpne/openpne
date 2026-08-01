@@ -27,7 +27,7 @@ export function PostFab() {
     return (
         <nav
             aria-label={t('Post %diary%')}
-            className="fixed right-5 bottom-[calc(1.25rem+var(--modern-bottom-offset))] z-30 lg:hidden"
+            className="fixed right-[calc(1.25rem+env(safe-area-inset-right))] bottom-[calc(1.25rem+var(--modern-bottom-offset))] z-30 lg:hidden"
         >
             <Link
                 href="/diary/new"

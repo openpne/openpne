@@ -26,7 +26,7 @@ export function RightRail() {
     return (
         <aside
             aria-label={t('Right rail')}
-            className="sticky top-0 hidden h-dvh w-80 shrink-0 flex-col gap-6 overflow-y-auto border-l border-border px-4 py-4 xl:flex"
+            className="sticky top-0 hidden h-dvh w-80 shrink-0 flex-col gap-6 overflow-y-auto border-l border-border px-4 py-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] xl:flex"
         >
             <SearchBox />
 
