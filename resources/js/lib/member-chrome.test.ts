@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { NAV_SECTIONS, resolveChrome, visibleNavSections } from './member-chrome.ts';
+import { bottomNavSections, NAV_SECTIONS, resolveChrome, visibleNavSections } from './member-chrome.ts';
 import type { FeatureKey } from '../types/index.ts';
 
 const allOn: Record<FeatureKey, boolean> = {
@@ -36,6 +36,31 @@ test('the untoggleable sections survive every unit being off', () => {
 test('the communities section stays while only a board is off', () => {
     // Topics and events have no section of their own, so nothing here answers to them.
     assert.equal(hrefs({ ...allOn, communityTopic: false, communityEvent: false }).includes('/community/search'), true);
+});
+
+const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled).map((section) => section.href);
+
+test('the bottom bar carries Home and its three sections in bar order', () => {
+    assert.deepEqual(bottomHrefs(allOn), ['/dashboard', '/diary/list', '/notifications', '/message']);
+});
+
+test('a bottom tab goes with its unit', () => {
+    assert.deepEqual(bottomHrefs({ ...allOn, diary: false }), ['/dashboard', '/notifications', '/message']);
+    assert.deepEqual(bottomHrefs({ ...allOn, message: false }), ['/dashboard', '/diary/list', '/notifications']);
+});
+
+test('Home and notifications survive every unit being off', () => {
+    const allOff = Object.fromEntries(Object.keys(allOn).map((key) => [key, false])) as Record<FeatureKey, boolean>;
+
+    assert.deepEqual(bottomHrefs(allOff), ['/dashboard', '/notifications']);
+});
+
+test('the Home tab matches its own path only', () => {
+    // Prefix matching would light Home up on anything nested under /dashboard.
+    const home = bottomNavSections(allOn).find((section) => section.href === '/dashboard');
+
+    assert.equal(home?.match, '/dashboard');
+    assert.equal(home?.exact, true);
 });
 
 const tabHrefs = (component: string, enabledFeatures: Record<FeatureKey, boolean>, props: Record<string, unknown>) =>

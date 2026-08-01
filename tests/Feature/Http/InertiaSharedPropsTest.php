@@ -8,6 +8,7 @@ use App\Support\AvatarColor;
 use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class InertiaSharedPropsTest extends TestCase
@@ -78,6 +79,24 @@ class InertiaSharedPropsTest extends TestCase
 
         $this->get('/login')
             ->assertInertia(fn ($page) => $page->where('enabledFeatures', $allFalse));
+    }
+
+    /**
+     * The unread-row count reaches the client on every page: the bottom bar's notifications badge and
+     * the dashboard's notices row read it from the shared prop, not from a page payload.
+     */
+    public function test_shared_props_carry_the_unread_notification_count(): void
+    {
+        $viewer = Member::factory()->create();
+        $viewer->notifications()->create([
+            'id' => (string) Str::uuid(),
+            'type' => 'test',
+            'data' => ['kind' => 'friend_requested'],
+        ]);
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('unread.notifications', 1));
     }
 
     public function test_shared_props_carry_the_member_avatar_thumbnail(): void

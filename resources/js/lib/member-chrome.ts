@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Activity, Bell, BookOpen, Mail, Pencil, Plus, Search, Settings, UserCircle2, Users } from 'lucide-react';
+import { Activity, Bell, BookOpen, House, Mail, Pencil, Plus, Search, Settings, UserCircle2, Users } from 'lucide-react';
 import type { FeatureKey } from '@/types';
 
 /**
@@ -62,6 +62,8 @@ export interface NavSection {
     href: string;
     /** Canonical URL prefix marking this section active. */
     match: string;
+    /** Match the whole path instead of the prefix: Home stands for one screen, not for what nests under it. */
+    exact?: boolean;
     icon: Icon;
     label: ChromeLabel;
     badge?: { count: 'friendRequests' | 'unreadMessages' | 'notifications'; label: ChromeLabel };
@@ -116,6 +118,27 @@ export const NAV_SECTIONS: NavSection[] = [
 /** The nav an administrator's current toggles leave: a section whose unit is off answers 404. */
 export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
     return NAV_SECTIONS.filter((section) => section.feature === undefined || enabled[section.feature]);
+}
+
+/** Home is the brand row in the nav lists, so it exists only for the bottom bar, which has no brand. */
+const HOME_SECTION: NavSection = { href: '/dashboard', match: '/dashboard', exact: true, icon: House, label: t('Home') };
+
+/**
+ * The phone bottom bar's tabs after Home, in bar order. A deliberately fixed list — one change
+ * point for the composition — rather than something an administrator picks; per-site composition is
+ * a later question, and a unit switched off still drops its tab through visibleNavSections.
+ */
+const BOTTOM_NAV_HREFS = ['/diary/list', '/notifications', '/message'];
+
+export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
+    const visible = visibleNavSections(enabled);
+
+    return [
+        HOME_SECTION,
+        ...BOTTOM_NAV_HREFS.map((href) => visible.find((section) => section.href === href)).filter(
+            (section) => section !== undefined,
+        ),
+    ];
 }
 
 const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary%'), icon: Pencil };
