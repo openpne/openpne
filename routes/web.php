@@ -15,6 +15,7 @@ use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
 use App\Features\Friend\FriendController;
 use App\Features\Home\HomeController;
+use App\Features\Home\UnreadCountsController;
 use App\Features\Member\EmailChangeLinkController;
 use App\Features\Member\InviteController;
 use App\Features\Member\MemberAvatarController;
@@ -344,6 +345,10 @@ Route::middleware(['auth', 'auth.session', EnsureMemberInviteAllowed::class])->c
 // database-driver sessions outright (see ResetMemberPassword).
 Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+
+    // The shared `unread` badge counts alone (JSON), polled by an open Modern tab. Shell-wide, not
+    // notification-owned: it carries the layer-1 counts too. See docs/internals/notifications.md.
+    Route::get('/unread-counts', [UnreadCountsController::class, 'show'])->name('unread.counts');
 
     // Server-side Markdown preview for the compose forms (diary / topic / event), rendered by the
     // same sanitized pipeline as a stored body. Throttled on its own limiter — a keystroke-driven

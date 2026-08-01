@@ -8,6 +8,7 @@ import { SyncLocaleWithServer } from '@/components/sync-locale';
 // installs the OS prefers-color-scheme listener on every Modern page (the useColorMode UI lives only
 // on the settings page, so without this the listener/sync would load lazily with that page).
 import '@/lib/color-mode';
+import { unreadTitleCount, withUnreadPrefix } from '@/lib/unread-title';
 import type { PageProps } from '@/types';
 
 // Keep this entry free of React component definitions: a component here makes the module a Vite
@@ -21,7 +22,9 @@ import type { PageProps } from '@/types';
 let appName = import.meta.env.VITE_APP_NAME ?? 'OpenPNE';
 
 void createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    // The unread prefix is applied here rather than by writing document.title, because the head
+    // manager owns that write and debounces it (see @/lib/unread-title).
+    title: (title) => withUnreadPrefix(title ? `${title} - ${appName}` : appName, unreadTitleCount()),
     resolve: (name) =>
         resolvePageComponent<ResolvedComponent>(
             `./pages/${name}.tsx`,
