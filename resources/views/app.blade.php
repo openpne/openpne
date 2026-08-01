@@ -2,7 +2,10 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- viewport-fit=cover: without it iOS insets the viewport itself and reports 0 for every
+         env(safe-area-inset-*), so the Modern chrome's safe-area padding would never apply. The
+         chrome pads for the insets itself; Classic has no fixed bottom bar and keeps the default. --}}
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#2563eb">
     <link rel="icon" href="/favicon.ico" sizes="any">

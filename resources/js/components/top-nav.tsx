@@ -12,7 +12,9 @@ export function TopNav() {
     const { name, auth } = usePage<PageProps>().props;
 
     return (
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-background/90 px-3 backdrop-blur lg:hidden">
+        // Height read from `--modern-top-offset` rather than restated: the var *is* this bar's height,
+        // now that the top inset (a standalone PWA draws under the status bar) is part of it.
+        <header className="sticky top-0 z-20 flex h-[var(--modern-top-offset)] items-center gap-2 border-b border-border bg-background/90 pt-[env(safe-area-inset-top)] pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] backdrop-blur lg:hidden">
             {auth.user && <NavDrawer />}
             <Link href="/dashboard" className="flex min-w-0 flex-1 items-center gap-2">
                 <BrandMark size="sm" />

@@ -117,7 +117,10 @@ export function Lightbox({
                     // Definite width, not max-width: a fixed box centered with left-1/2 + translate and
                     // width:auto shrink-to-fits to the ~50vw available right of its left edge, so the
                     // image would render at half screen width. A definite width lets it fill the frame.
-                    className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(94vw,60rem)] -translate-x-1/2 -translate-y-1/2 touch-pan-y touch-pinch-zoom rounded-xl bg-background p-3 text-foreground shadow-xl outline-none"
+                    // Side padding carries the landscape insets — at 94vw the panel's edges (and with
+                    // them the prev/next buttons) reach into the cutout, and landscape is the
+                    // orientation an image gets viewed in.
+                    className="fixed left-1/2 top-1/2 z-50 max-h-[92vh] w-[min(94vw,60rem)] -translate-x-1/2 -translate-y-1/2 touch-pan-y touch-pinch-zoom rounded-xl bg-background p-3 pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] text-foreground shadow-xl outline-none"
                 >
                     <DialogPrimitive.Title className="sr-only">{t('Image')}</DialogPrimitive.Title>
                     {image && (

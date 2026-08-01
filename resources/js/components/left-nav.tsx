@@ -14,7 +14,9 @@ export function LeftNav() {
     const { name, auth, enabledFeatures } = usePage<PageProps>().props;
 
     return (
-        <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-2 border-r border-border px-2 py-4 lg:flex">
+        // Full-height at lg+, so on a tablet running the installed app its first and last rows would
+        // sit under the status bar / home indicator without the insets.
+        <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-2 border-r border-border px-2 py-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] lg:flex">
             <Link
                 href="/dashboard"
                 className="flex min-h-11 items-center gap-3 rounded-full px-2 transition hover:bg-accent"
