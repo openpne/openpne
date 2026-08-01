@@ -6,6 +6,7 @@ import { LeftNav } from '@/components/left-nav';
 import { PostFab } from '@/components/post-fab';
 import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
+import { UnreadSync } from '@/components/unread-sync';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
@@ -37,6 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <RightRail />
             <ConfirmDialogHost />
+            <UnreadSync />
             <PostFab />
             <BottomNav />
         </div>

@@ -46,6 +46,17 @@ document covers the delivery model around it.
    and those buttons follow the request's own state rather than the row's `read_at`. See
    [classic-compatibility.md](classic-compatibility.md).
 
+### Liveness
+
+The shared `unread` counts would otherwise only move on a navigation. An open Modern tab refreshes
+them every 60s while it is visible — and immediately on returning to it — from
+[`GET /unread-counts`](../../app/Features/Home/UnreadCountsController.php), which runs the three
+count queries and nothing else, then pushes the result into the shared prop client-side
+([`unread-sync.tsx`](../../resources/js/components/unread-sync.tsx)). The document title mirrors the
+layer-3 unread-row count as a `(N) ` prefix, applied through Inertia's title callback because the
+head manager owns that DOM write. A failed refresh keeps the counts it has. There is no websocket or
+push at this layer.
+
 **Read-state separation is the invariant**: layer-1 counts never consume `read_at`, and reading
 the feed never mutates domain state. OpenPNE 3 kept only the per-event side — a `member_config`
 array capped at 20, which both its badges and its panel read — so a count there could never
