@@ -19,7 +19,8 @@ import type { PageProps } from '@/types';
  * xl to seat the third column without squeezing the centered page content.
  */
 export function AppShell({ children }: { children: ReactNode }) {
-    // The bottom bar is member nav, so the space it reserves goes with it: a guest gets no bar.
+    // The bottom bar is member nav, so the space it reserves goes with it: a guest gets no bar, and
+    // reserves only the home-indicator strip the page would otherwise scroll its last row under.
     const member = usePage<PageProps>().props.auth.user !== null;
 
     return (
@@ -28,7 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 'mx-auto flex min-h-dvh max-w-6xl [--modern-top-offset:calc(3.5rem+env(safe-area-inset-top))] lg:[--modern-top-offset:0px] xl:max-w-7xl',
                 member
                     ? '[--modern-bottom-offset:calc(3.5rem+env(safe-area-inset-bottom))] lg:[--modern-bottom-offset:0px]'
-                    : '[--modern-bottom-offset:0px]',
+                    : '[--modern-bottom-offset:env(safe-area-inset-bottom)]',
             )}
         >
             <LeftNav />
