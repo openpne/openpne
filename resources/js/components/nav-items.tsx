@@ -1,4 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
+import { UnreadPill } from '@/components/unread-pill';
 import { visibleNavSections } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -35,14 +36,7 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
                         >
                             <Icon className="size-5 shrink-0" strokeWidth={active ? 2.25 : 2} />
                             <span className="flex-1 truncate">{t(label.key, label.replacements)}</span>
-                            {badge && count > 0 && (
-                                <span
-                                    className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold leading-none text-primary-foreground"
-                                    aria-label={t(badge.label.key, { count })}
-                                >
-                                    {count > 99 ? '99+' : count}
-                                </span>
-                            )}
+                            {badge && <UnreadPill count={count} label={t(badge.label.key, { count })} />}
                         </Link>
                     </li>
                 );

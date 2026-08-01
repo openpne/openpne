@@ -13,17 +13,21 @@ document covers the delivery model around it.
    `friend_requests` rows, unread `message_recipients`, pending `community_join_requests`).
    No notification table, no seen state: acting on the item (accept / reject / read) is what
    makes the count drop. [`App\Features\Home\UnreadCounts`](../../app/Features/Home/UnreadCounts.php).
-2. **Display surfaces over layer 1** — Modern's nav badges, its dashboard notice block, and the
-   Classic home cautions. They only read layer-1 counts. The Classic header's notification center
-   is *not* one of these: it badges layer 3 (below).
+2. **Display surfaces over layer 1** — Modern's nav badges, its dashboard notice panel, and the
+   Classic home cautions. A surface may mix layers: the Modern notice panel lists the layer-1
+   counts and, last, the layer-3 unread-row count. What must stay separate is each row's state
+   source and read semantics, not the container. The Classic header's notification center reads
+   layer 3 alone (below).
 3. **Per-event records** — one row per event in the standard Laravel `notifications` table
    (the `database` channel of each notification class), carrying a `kind` discriminator plus
    entity ids. Read state is the row's own `read_at`. Read by the feed
    ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`):
    rows are hydrated at render time from their ids (a withdrawn actor degrades to
    a fallback label), opening a row marks it read and redirects to its target, and viewing the
-   feed marks nothing — only opening a row or the explicit mark-all does. Modern's nav badge is
-   the unread-row count (via `UnreadCounts`, alongside the layer-1 numbers).
+   feed marks nothing — only opening a row or the explicit mark-all does. Modern reports the
+   unread-row count (via `UnreadCounts`, alongside the layer-1 numbers) in three places: the nav
+   badge, the phone bottom bar's notifications tab, and the dashboard notices row. All three read
+   the shared `unread` prop, so none of them can disagree.
 
    Both surfaces serve it. A row's sentence is
    [`NotificationKindLabel`](../../app/Features/Notifications/NotificationKindLabel.php)'s, so
