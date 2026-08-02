@@ -133,12 +133,12 @@ export function BodyField({
         // The trigger's touch target is taller than the label text, so let it overhang the row
         // instead of setting the row's height: otherwise this field's label sits further from its
         // control than every other field's does. FIELD_GAP pays for the overhang below.
-        <div className="flex h-5 items-center justify-between gap-2">
+        // The control sits next to the label rather than across the row: at the far edge, with a
+        // field above and a field below, proximity said nothing about which one it belonged to.
+        <div className="flex h-5 items-center gap-1">
             <Label htmlFor={id}>{label}</Label>
-            <div className="flex items-center gap-2">
-                <InputMethodBadge method={method} />
-                <InputMethodMenu value={method} onSelect={selectMethod} />
-            </div>
+            <InputMethodMenu value={method} onSelect={selectMethod} />
+            <InputMethodBadge method={method} />
         </div>
     );
 
