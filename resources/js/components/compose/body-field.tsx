@@ -122,7 +122,10 @@ export function BodyField({
     // usable here — it cannot reach the contenteditable through <Suspense> — so the label, the aria-*
     // wiring, and the error are rendered by hand for both branches alike.
     const header = (
-        <div className="flex items-center justify-between gap-2">
+        // The trigger's touch target is taller than the label text, so let it overhang the row
+        // instead of setting the row's height: otherwise this field's label sits further from its
+        // control than every other field's does.
+        <div className="flex h-5 items-center justify-between gap-2">
             <Label htmlFor={id}>{label}</Label>
             <div className="flex items-center gap-2">
                 <InputMethodBadge method={method} />
