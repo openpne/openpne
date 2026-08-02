@@ -601,7 +601,12 @@ function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boole
             role="toolbar"
             aria-label={t('Formatting')}
             data-testid="compose-toolbar"
-            className="sticky top-[var(--modern-top-offset)] z-10 -mx-4 flex flex-wrap items-center gap-0.5 border-b border-border bg-card px-4 py-1.5 pointer-coarse:gap-1 sm:-mx-5 sm:px-5"
+            // Tinted, not the card's own colour: the buttons' touch targets are mostly whitespace, so
+            // an untinted row has no visible top edge and the eye reads all of it as the gap below the
+            // label. A band the member can see starts where the field starts.
+            // No vertical padding either: the buttons carry 44px touch targets of their own, and
+            // padding on top of them pushes the row further from the label still.
+            className="sticky top-[var(--modern-top-offset)] z-10 -mx-4 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-4 pointer-coarse:gap-1 sm:-mx-5 sm:px-5"
         >
             {compact ? (
                 <>

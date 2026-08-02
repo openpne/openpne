@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Check, MoreHorizontal } from 'lucide-react';
+import { Check, SlidersHorizontal } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -13,9 +13,11 @@ import { useT } from '@/lib/i18n';
 import type { InputMethod } from './editor-mode';
 
 /**
- * The compose forms' input-method control: a "…" button on the body label row that opens the three
- * ways to write a body. Progressive disclosure on purpose — a member who never opens it is never
- * shown the words "Markdown" or "formatting mode", and simply writes in the default editor.
+ * The compose forms' input-method control: a settings button on the body label row that opens the
+ * three ways to write a body. Progressive disclosure on purpose — a member who never opens it is
+ * never shown the words "Markdown" or "formatting mode", and simply writes in the default editor.
+ * Sliders rather than the overflow "…": the formatting toolbar right below owns that glyph, and two
+ * identical dots a few pixels apart say nothing about which one changes what.
  *
  * Radix (unlike the editor's own formatting overflow, which must not steal focus from the live
  * selection) is the right base here: picking an item rebuilds the editor anyway, so keyboard
@@ -41,9 +43,9 @@ export function InputMethodMenu({ value, onSelect }: { value: InputMethod; onSel
                     data-testid="compose-input-method-trigger"
                     aria-label={t('Change input method')}
                     title={t('Change input method')}
-                    className="inline-flex size-8 pointer-coarse:size-11 items-center justify-center rounded-field text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="-my-3 inline-flex size-8 pointer-coarse:size-11 items-center justify-center rounded-field text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                    <MoreHorizontal className="size-4" />
+                    <SlidersHorizontal className="size-4" />
                 </button>
             </DropdownMenuTrigger>
             {/* Descriptions size the menu, so cap it to the viewport or it overflows a phone screen. */}

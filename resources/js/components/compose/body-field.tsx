@@ -24,6 +24,14 @@ import { saveComposeEditor } from './save-compose-editor';
 // compose form opens the rich editor and shared across all of them.
 const RichTextEditor = lazy(() => import('./rich-text-editor'));
 
+/**
+ * Label row to control. Wider than a plain field's gap because the input-method trigger's touch
+ * target overhangs the row by 12px: anything less and the control below — an opaque toolbar that
+ * paints over the trigger, or a textarea the trigger paints over — overlaps it, and one of the two
+ * takes taps meant for the other. Both branches share it so switching method moves nothing.
+ */
+const FIELD_GAP = 'space-y-3';
+
 interface BodyFieldProps {
     id: string;
     label: string; // pre-translated by the page
@@ -122,12 +130,15 @@ export function BodyField({
     // usable here — it cannot reach the contenteditable through <Suspense> — so the label, the aria-*
     // wiring, and the error are rendered by hand for both branches alike.
     const header = (
-        <div className="flex items-center justify-between gap-2">
+        // The trigger's touch target is taller than the label text, so let it overhang the row
+        // instead of setting the row's height: otherwise this field's label sits further from its
+        // control than every other field's does. FIELD_GAP pays for the overhang below.
+        // The control sits next to the label rather than across the row: at the far edge, with a
+        // field above and a field below, proximity said nothing about which one it belonged to.
+        <div className="flex h-5 items-center gap-1">
             <Label htmlFor={id}>{label}</Label>
-            <div className="flex items-center gap-2">
-                <InputMethodBadge method={method} />
-                <InputMethodMenu value={method} onSelect={selectMethod} />
-            </div>
+            <InputMethodMenu value={method} onSelect={selectMethod} />
+            <InputMethodBadge method={method} />
         </div>
     );
 
@@ -139,7 +150,7 @@ export function BodyField({
 
     if (mode === 'rich') {
         return (
-            <div className="space-y-2">
+            <div className={FIELD_GAP}>
                 {header}
                 <Suspense
                     fallback={
@@ -171,7 +182,7 @@ export function BodyField({
     }
 
     return (
-        <div className="space-y-2">
+        <div className={FIELD_GAP}>
             {header}
             <Textarea
                 id={id}
