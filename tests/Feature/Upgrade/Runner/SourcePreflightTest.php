@@ -17,6 +17,7 @@ use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
+use App\Upgrade\Steps\MemberUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +33,7 @@ class SourcePreflightTest extends TestCase
     use DatabaseMigrations;
 
     private const SOURCE_TABLES = ['diary', 'diary_image', 'community_member', 'community_member_position', 'member_relationship',
-        'member_config', 'community', 'community_config', 'community_category'];
+        'member_config', 'community', 'community_config', 'community_category', 'member', 'sns_config'];
 
     protected function setUp(): void
     {
@@ -204,6 +205,38 @@ class SourcePreflightTest extends TestCase
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::missingColumnMessage('member_config', 'name'), $output);
         $this->assertStringNotContainsString('does not recognise', $output);
+    }
+
+    public function test_a_subquery_config_table_without_the_name_column_aborts(): void
+    {
+        // community_config is CommunityUpgrade's subquery table, not its FROM table, so its columns
+        // are outside the per-step consumed-column check — the scan must not be the thing that
+        // discovers `name` is gone (CommunityUpgrade's own subqueries read it too).
+        foreach (['community', 'community_config', 'community_category', 'community_member_position'] as $table) {
+            $this->createSource($table);
+        }
+        DB::statement('ALTER TABLE `community_config` DROP COLUMN `name`');
+
+        [$ok, $output] = $this->runSteps([new CommunityUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::missingColumnMessage('community_config', 'name'), $output);
+        $this->assertStringNotContainsString('does not recognise', $output);
+    }
+
+    public function test_a_step_subset_reaching_member_config_only_by_subquery_still_requires_name(): void
+    {
+        // The runner is registry-injectable: with MemberUpgrade alone, no step has member_config as
+        // its FROM table, so nothing else demands the column the scan reads.
+        foreach (['member', 'member_config', 'sns_config'] as $table) {
+            $this->createSource($table);
+        }
+        DB::statement('ALTER TABLE `member_config` DROP COLUMN `name`');
+
+        [$ok, $output] = $this->runSteps([new MemberUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::missingColumnMessage('member_config', 'name'), $output);
     }
 
     public function test_unrecognised_community_config_names_are_reported(): void

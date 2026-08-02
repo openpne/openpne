@@ -30,6 +30,12 @@ use Illuminate\Support\Facades\DB;
  */
 final class SourcePreflight
 {
+    /**
+     * The KV config tables whose recognised names are enumerable, so an unrecognised one can be
+     * counted. Both are read by correlated subquery, so their `name` is also required structurally.
+     */
+    private const CONFIG_NAME_TABLES = ['member_config', 'community_config'];
+
     /** @param  list<UpgradeStep>  $steps */
     public function __construct(
         private readonly array $steps,
@@ -138,6 +144,15 @@ final class SourcePreflight
         return "source `{$table}` holds {$rows} row(s) named `{$name}`, which the upgrade does not recognise — a third-party plugin or a source customisation. Not migrated; `openpne:upgrade-matrix` lists the names that are.";
     }
 
+    /** @return list<string> the names the upgrade recognises in one CONFIG_NAME_TABLES table */
+    private static function knownNames(string $table): array
+    {
+        return match ($table) {
+            'member_config' => StepRegistry::knownMemberConfigNames(),
+            'community_config' => StepRegistry::knownCommunityConfigNames(),
+        };
+    }
+
     /** @return list<string> */
     private function readTables(): array
     {
@@ -162,6 +177,17 @@ final class SourcePreflight
         foreach ($this->steps as $step) {
             foreach ($step->consumedSourceColumns() as $column) {
                 $required[$step->sourceTable()][$column] = true;
+            }
+        }
+
+        // consumedSourceColumns() attributes every column to the step's own FROM table, so a table
+        // reached only by correlated subquery gets no column check — and both KV config tables are
+        // read that way (community_config always, member_config whenever the step set excludes the
+        // ones that select FROM it). Their `name` is read by those subqueries and by the scan below,
+        // so require it here rather than letting either be where a customised source blows up.
+        foreach (self::CONFIG_NAME_TABLES as $table) {
+            if (isset($present[$table])) {
+                $required[$table]['name'] = true;
             }
         }
 
@@ -195,17 +221,14 @@ final class SourcePreflight
     public function unknownConfigNames(string $prefix, ?string $database): array
     {
         $readTables = $this->readTables();
-        $sets = [
-            'member_config' => StepRegistry::knownMemberConfigNames(),
-            'community_config' => StepRegistry::knownCommunityConfigNames(),
-        ];
 
         $unknown = [];
-        foreach ($sets as $table => $known) {
+        foreach (self::CONFIG_NAME_TABLES as $table) {
             if (! in_array($table, $readTables, true) || ! $this->tableExists($table, $prefix, $database)) {
                 continue; // not read by this run, or absent — the table checks in inspect() own that case
             }
 
+            $known = self::knownNames($table);
             $rows = DB::select(
                 'select `name`, count(*) as `rows` from '.InsertSelectCompiler::qualify($database, $prefix, $table)
                 .' where `name` not in ('.implode(', ', array_fill(0, count($known), '?')).')'
