@@ -34,7 +34,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { composeEditorAttributes, composeEditorRowsStyle, createComposeEditorOptions } from '@/components/compose/editor-extensions';
+import { composeEditorAttributes, createComposeEditorOptions } from '@/components/compose/editor-extensions';
+import { composeEditorRowsStyle } from '@/components/compose/editor-rows';
 
 type RichTextEditorProps = {
     initialMarkdown: string;
@@ -269,6 +270,26 @@ function MoreMenu({ editor }: { editor: Editor }) {
             if (event.key === 'Escape') {
                 setOpen(false);
                 triggerRef.current?.focus();
+                return;
+            }
+            if (event.key !== 'Tab' || !panelRef.current) {
+                return;
+            }
+            // Tab cycles inside the sheet. The portal put it at the end of <body>, so leaving it by
+            // Tab would drop focus to nothing and then wrap to the top of the document rather than
+            // reach the trigger it belongs to. Escape is the way out; the commands' own
+            // `chain().focus()` still hands focus to the editable.
+            const items = panelRef.current.querySelectorAll<HTMLElement>('button');
+            const first = items[0];
+            const last = items[items.length - 1];
+            if (!first || !last) {
+                return;
+            }
+            const leavingBackwards = event.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current);
+            const leavingForwards = !event.shiftKey && document.activeElement === last;
+            if (leavingBackwards || leavingForwards) {
+                event.preventDefault();
+                (leavingBackwards ? last : first).focus();
             }
         };
         document.addEventListener('pointerdown', onPointerDown, true);

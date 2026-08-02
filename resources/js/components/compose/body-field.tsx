@@ -5,6 +5,7 @@ import { Field } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
+import { composeEditorRowsMinHeight } from './editor-rows';
 import {
     applyInputMethod,
     initialEditorMode,
@@ -142,7 +143,12 @@ export function BodyField({
                 {header}
                 <Suspense
                     fallback={
-                        <div className="flex min-h-24 w-full items-center rounded-field border border-field-border bg-field px-3 py-2 text-sm text-muted-foreground">
+                        // Same height the editable will open at, off the same line-height, so the lazy
+                        // chunk lands without the field jumping.
+                        <div
+                            style={rows ? { minHeight: composeEditorRowsMinHeight(rows) } : undefined}
+                            className="flex min-h-24 w-full items-center rounded-field border border-field-border bg-field px-3 py-2 text-base text-muted-foreground md:text-sm"
+                        >
                             {t('Loading editor…')}
                         </div>
                     }

@@ -53,17 +53,6 @@ const originalListTokenizer = Tokenizer.prototype.list;
 const EDITOR_CONTENT_CLASS =
     'rich-body block min-h-24 w-full rounded-field border border-field-border bg-field px-3 py-2 text-base text-foreground shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/30 md:text-sm';
 
-/**
- * Opening height for a `rows` the host passed, so the editable stands as tall as the textarea the
- * other input methods render for the same `rows`. A textarea sizes to N line boxes plus its box
- * decoration, so this is `1lh` (the element's own line-height, which follows the md text-base →
- * text-sm switch) times N plus the py-2 and 1px border of EDITOR_CONTENT_CLASS above. Carried as an
- * inline style because it is per-instance; with no `rows` the class keeps its min-h-24 floor.
- */
-export function composeEditorRowsStyle(rows: number): string {
-    return `min-height: calc(${rows} * 1lh + 1rem + 2px)`;
-}
-
 /** True only for an http/https URL — the sanitizer's link-scheme allowlist, enforced at authoring. */
 function isHttpUrl(url: string): boolean {
     return /^https?:\/\//i.test(url);
