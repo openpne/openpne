@@ -54,7 +54,7 @@ class ImageCache
         $image = $this->manager->decode($this->original($file));
 
         if ($transform->square) {
-            // Centre-crop to fill the target box exactly (OpenPNE 3 square behaviour).
+            // Center-crop to fill the target box exactly (OpenPNE 3 square behavior).
             $image->cover($transform->width, $transform->height);
         } else {
             // Fit within the box, preserving aspect ratio and never upscaling.

@@ -82,7 +82,7 @@ class CommunityEventRouteParity extends RouteParity
                 new ScreenElement('application deadline row', L::Two, S::Ported, "\$list['Application deadline'] op_format_date('D')"),
                 new ScreenElement('capacity row', L::Two, S::Ported, "\$list['Capacity'] = \$communityEvent->getCapacity()"),
                 new ScreenElement('participant count row + member-list link', L::Two, S::Ported, "\$list['Count of Member'] + link_to('@communityEvent_memberList')"),
-                new ScreenElement('edit entry', L::Two, S::Partial, 'showSuccess.php div.operation > form > ul.button input Edit', 'a text link pair (Edit / Delete); OpenPNE 3 had a centred submit button and reached deletion from the edit screen only'),
+                new ScreenElement('edit entry', L::Two, S::Partial, 'showSuccess.php div.operation > form > ul.button input Edit', 'a text link pair (Edit / Delete); OpenPNE 3 had a centered submit button and reached deletion from the edit screen only'),
                 new ScreenElement('comment thread (number, author, delete)', L::One, S::Ported, "include_component('communityEventComment', 'list')"),
                 new ScreenElement('comment pagination + order toggle', L::Two, S::Ported, '_list.php op_include_pager_navigation (reversible)', 'CommunityEventCommentThread: fixed size 20, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate; inline single-line'),

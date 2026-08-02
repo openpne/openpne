@@ -65,7 +65,7 @@ class CommunityRouteParity extends RouteParity
             new RouteMap(null, null, 'community.members.transfer.reject', 'POST'),
 
             // Pending-member approval. OpenPNE 3 has no named route for it (joins were approved
-            // from the global confirmation centre), so these are native maps; the screen borrows
+            // from the global confirmation center), so these are native maps; the screen borrows
             // page_community_memberManage, the body id of the management page above.
             new RouteMap(null, null, 'community.members.pending', 'GET', op3Action: 'memberManage'),
             new RouteMap(null, null, 'community.members.approve', 'POST'),
@@ -107,7 +107,7 @@ class CommunityRouteParity extends RouteParity
                 new ScreenElement('description row (line breaks + auto-link)', L::Two, S::Ported, "op_url_cmd(nl2br(getConfig('description')))", 'x-user-text (BodyText); the row renders even when empty, as OpenPNE 3 did'),
                 new ScreenElement('topic read / create authority rows', L::Two, S::Ported, 'getConfigs() public_flag + topic_authority'),
                 new ScreenElement('register policy row', L::Two, S::Ported, 'getRawValue()->getRegisterPolicy()'),
-                new ScreenElement('membership operations (edit / join / leave)', L::One, S::Ported, 'homeSuccess.php trailing <ul> link_to community_edit / community_join / community_quit', 'OpenPNE 4 adds a Pending members entry for the administrator (OpenPNE 3 approved joins from its confirmation centre, which is not ported) and withholds Join from a pending applicant, whose OpenPNE 3 link only reached joinError.php'),
+                new ScreenElement('membership operations (edit / join / leave)', L::One, S::Ported, 'homeSuccess.php trailing <ul> link_to community_edit / community_join / community_quit', 'OpenPNE 4 adds a Pending members entry for the administrator (OpenPNE 3 approved joins from its confirmation center, which is not ported) and withholds Join from a pending applicant, whose OpenPNE 3 link only reached joinError.php'),
                 new ScreenElement('recent topics list', L::Two, S::Ported, 'communityTopic/_communityTopicList.php tr.communityTopic ul.articleList', 'a communityHome table row again: update date, 36-width truncated title with comment count, More over a non-empty list, create link per authority'),
                 new ScreenElement('recent events list', L::Two, S::Ported, 'communityEvent/_communityEventList.php tr.communityEvent ul.articleList', 'same shape as recent topics; the date is the update date, as OpenPNE 3 drew it (not the open date)'),
                 new ScreenElement('opCommunityTopicPlugin stylesheet', L::Two, S::Ported, "_communityTopicList.php addStylesheet('/opCommunityTopicPlugin/css/communityTopic')", 'the screen pushes the link itself (layout pluginCss stack), mirroring the component-driven addStylesheet; the community module still declares none'),
@@ -178,8 +178,8 @@ class CommunityRouteParity extends RouteParity
                 new ScreenElement('sub-administrator appoint / demote links', L::One, S::Partial, "td.sub_admin_request link_to('community/subAdminRequest' or 'community/removeSubAdmin')", "appointment takes effect on confirm, so OpenPNE 3's \"requesting … now\" holding state has no counterpart"),
                 new ScreenElement('admin take-over link + pending status', L::One, S::Ported, "td.admin_request link_to('community/changeAdminRequest')"),
                 new ScreenElement('pager navigation (above and below)', L::Two, S::Ported, 'memberManageSuccess.php pager slot rendered twice'),
-                new ScreenElement('join-request approval queue', L::Two, S::Partial, 'community/_cautionAboutCommunityMemberPre.php → confirmation_list?category=community_confirm', 'an OpenPNE 4-native per-community queue (community.members.pending) borrowing this body id, with the manageList roster and approve / decline buttons; OpenPNE 3 approved joins from the global confirmation centre, which is not ported'),
-                new ScreenElement('sub-admin / admin-transfer request notices', L::Two, S::Partial, '_cautionAboutSubAdminRequest.php + _cautionAboutChangeAdminRequest.php p.caution', 'the nominee decides from a banner on the community home plus a feed notification; there is no confirmation centre to link to'),
+                new ScreenElement('join-request approval queue', L::Two, S::Partial, 'community/_cautionAboutCommunityMemberPre.php → confirmation_list?category=community_confirm', 'an OpenPNE 4-native per-community queue (community.members.pending) borrowing this body id, with the manageList roster and approve / decline buttons; OpenPNE 3 approved joins from the global confirmation center, which is not ported'),
+                new ScreenElement('sub-admin / admin-transfer request notices', L::Two, S::Partial, '_cautionAboutSubAdminRequest.php + _cautionAboutChangeAdminRequest.php p.caution', 'the nominee decides from a banner on the community home plus a feed notification; there is no confirmation center to link to'),
             ],
             // subAdminRequestInput.php → community/member-action.blade.php (form kind)
             'subAdminRequest' => [

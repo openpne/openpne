@@ -14,7 +14,7 @@ type Props = {
  * The card stays inset from the screen edges at every width. Running it edge to edge does buy width,
  * but it also takes away the strip of page background either side — which is what makes a card read as
  * a surface lying on the page rather than as the page itself. Tested on device, that flattened every
- * screen into one field of card colour divided by lines. The width comes from tighter padding instead.
+ * screen into one field of card color divided by lines. The width comes from tighter padding instead.
  */
 export function Card({ children, className, overflow = 'hidden' }: Props & { overflow?: 'hidden' | 'visible' }) {
     return (

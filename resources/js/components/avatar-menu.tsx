@@ -13,7 +13,7 @@ import type { AuthUser } from '@/types';
 
 /**
  * Account menu: profile, settings, sign out. Radix DropdownMenu supplies the keyboard/focus/ARIA
- * behaviour. `compact` shows just the avatar (mobile top bar); the default avatar+name row is used
+ * behavior. `compact` shows just the avatar (mobile top bar); the default avatar+name row is used
  * in the desktop sidebar footer. (Appearance and language live on the settings page.)
  */
 export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?: boolean }) {

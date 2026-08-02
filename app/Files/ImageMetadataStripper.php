@@ -9,7 +9,7 @@ namespace App\Files;
  *
  * Deliberately kept:
  *   - JPEG EXIF Orientation (re-emitted as a minimal APP1) — display and thumbnail rotation read it.
- *   - JPEG ICC (APP2) / Adobe (APP14) and PNG iCCP/gAMA — colour fidelity.
+ *   - JPEG ICC (APP2) / Adobe (APP14) and PNG iCCP/gAMA — color fidelity.
  *
  * Fails closed: a structural parse error throws {@see ImageMetadataStripException} rather than
  * returning the original (unstripped) bytes.

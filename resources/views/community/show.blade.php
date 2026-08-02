@@ -28,7 +28,7 @@
             </x-classic.parts>
         @else
             {{-- The admin-transfer nominee's accept/reject banner (this is the confirmation step).
-                 OpenPNE 3 routed the decision through its confirmation centre, so this box is
+                 OpenPNE 3 routed the decision through its confirmation center, so this box is
                  OpenPNE 4-native and keeps its own id; the yes/no shape is the OpenPNE 3 one. --}}
             <x-classic.parts id="community_changeAdminRequest" name="yesNo">
                 <div class="block">{{ __('The administrator of this %community% asks you to take over the administration.') }}</div>
@@ -192,7 +192,7 @@
                 <li><a href="{{ route('community.quit.show', ['id' => $community->getKey()]) }}">{{ __('Leave this %community%') }}</a></li>
             @endif
         @endif
-        {{-- OpenPNE 4-native: OpenPNE 3 reached the join queue from its confirmation centre, which
+        {{-- OpenPNE 4-native: OpenPNE 3 reached the join queue from its confirmation center, which
              is not ported, so this page is the only way in. --}}
         @if ($role === \App\Features\Community\CommunityRole::Admin)
             <li><a href="{{ route('community.members.pending', ['id' => $community->getKey()]) }}">{{ __('Pending members') }}</a></li>

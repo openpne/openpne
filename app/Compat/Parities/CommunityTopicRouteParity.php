@@ -81,7 +81,7 @@ class CommunityTopicRouteParity extends RouteParity
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate; inline single-line'),
                 new ScreenElement('article images (ul.photo, 120×120 linking to full size)', L::Two, S::Ported, '$communityTopic->getImages() ul.photo', 'the shared _images partial; each fetch is FilePolicy-gated by the board visibility'),
                 new ScreenElement('article body line breaks + auto-link', L::Two, S::Ported, 'op_url_cmd(nl2br($communityTopic->getBody()))', 'x-user-text (BodyText)'),
-                new ScreenElement('edit entry', L::Two, S::Partial, 'showSuccess.php div.operation > form > ul.button input Edit', 'a text link pair (Edit / Delete); OpenPNE 3 had a centred submit button and reached deletion from the edit screen only'),
+                new ScreenElement('edit entry', L::Two, S::Partial, 'showSuccess.php div.operation > form > ul.button input Edit', 'a text link pair (Edit / Delete); OpenPNE 3 had a centered submit button and reached deletion from the edit screen only'),
                 new ScreenElement('comment thread (number, author, delete)', L::One, S::Ported, "include_component('communityTopicComment', 'list')"),
                 new ScreenElement('comment pagination + order toggle', L::Two, S::Ported, '_list.php op_include_pager_navigation (reversible)', 'CommunityTopicCommentThread: fixed size 20, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate; inline single-line'),

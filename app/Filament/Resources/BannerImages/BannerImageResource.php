@@ -80,7 +80,7 @@ class BannerImageResource extends Resource
 
     /**
      * HTML attributes that make an <img> open the shared lightbox on click (used on the list thumbnail
-     * and the edit preview). The caller supplies sizing; this adds the behaviour. Empty when there are
+     * and the edit preview). The caller supplies sizing; this adds the behavior. Empty when there are
      * no bytes to show.
      *
      * @return array<string, string>

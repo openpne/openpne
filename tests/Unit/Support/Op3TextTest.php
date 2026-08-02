@@ -33,8 +33,8 @@ class Op3TextTest extends TestCase
             // pin TAG_SPLIT + attribute parsing on the &quot;-delimited values a stored body carries.
             ['&lt;op:b&gt;x&lt;/op:b&gt;', '<span class="op_b">x</span>', 'bold entity'],
             ['&lt;op:s&gt;x&lt;/op:s&gt;', '<span class="op_s">x</span>', 'strike entity (literal entity op tag)'],
-            ['&lt;op:color code=&quot;#ff0000&quot;&gt;x&lt;/op:color&gt;', '<span class="op_color" style="color:#ff0000">x</span>', 'colour entity'],
-            ['&lt;op:font color=&quot;#333333&quot; size=&quot;5&quot;&gt;x&lt;/op:font&gt;', '<span class="op_font" style="color:#333333;font-size:large">x</span>', 'font colour + size entity'],
+            ['&lt;op:color code=&quot;#ff0000&quot;&gt;x&lt;/op:color&gt;', '<span class="op_color" style="color:#ff0000">x</span>', 'color entity'],
+            ['&lt;op:font color=&quot;#333333&quot; size=&quot;5&quot;&gt;x&lt;/op:font&gt;', '<span class="op_font" style="color:#333333;font-size:large">x</span>', 'font color + size entity'],
 
             // OP3 case 1/2/3: strike, broken inner <op> (not op:\w+, stays escaped text), unclosed.
             ['<op:s>どーん</op:s>', '<span class="op_s">どーん</span>', 'OP3 case 1'],
@@ -47,7 +47,7 @@ class Op3TextTest extends TestCase
             // OP3 case 5: quotes in text are escaped here (delta), unlike the OP3 unit test.
             ['<op:i color="#333<op:i>">#333</op:i>', '&lt;op:i color=&quot;#333<span class="op_i">&quot;&gt;#333</span>', 'OP3 case 5 (quotes escaped)'],
 
-            // OP3 case 6: op:font colour → inline style with trailing semicolon.
+            // OP3 case 6: op:font color → inline style with trailing semicolon.
             ['<op:font color="#333333">#333</op:font>', '<span class="op_font" style="color:#333333;">#333</span>', 'OP3 case 6'],
 
             // OP3 case 7: an unknown op tag still becomes a class span.
@@ -60,8 +60,8 @@ class Op3TextTest extends TestCase
                 'OP3 5 open tags',
             ],
 
-            // OP3 case 9: invalid colour dropped, op:font keeps its (empty) style attribute.
-            ['<op:font color="expression(alert(0))">Attack!</op:font>', '<span class="op_font" style="">Attack!</span>', 'OP3 case 9 (invalid colour)'],
+            // OP3 case 9: invalid color dropped, op:font keeps its (empty) style attribute.
+            ['<op:font color="expression(alert(0))">Attack!</op:font>', '<span class="op_font" style="">Attack!</span>', 'OP3 case 9 (invalid color)'],
 
             // Nested, mismatched, stray-close.
             ['<op:b><op:i>x</op:i></op:b>', '<span class="op_b"><span class="op_i">x</span></span>', 'nested'],
@@ -69,14 +69,14 @@ class Op3TextTest extends TestCase
             ['</op:b>text', 'text', 'stray close is dropped (delta: OP3 emitted an orphan </span>)'],
 
             // op:color validation.
-            ['<op:color code="#ff0000">x</op:color>', '<span class="op_color" style="color:#ff0000">x</span>', 'valid colour'],
-            ['<op:color code="red">x</op:color>', '<span class="op_color">x</span>', 'named colour dropped'],
+            ['<op:color code="#ff0000">x</op:color>', '<span class="op_color" style="color:#ff0000">x</span>', 'valid color'],
+            ['<op:color code="red">x</op:color>', '<span class="op_color">x</span>', 'named color dropped'],
 
             // op:font size mapping and clamping.
             ['<op:font size="5">x</op:font>', '<span class="op_font" style="font-size:large">x</span>', 'font size 5'],
             ['<op:font size="9">x</op:font>', '<span class="op_font" style="">x</span>', 'font size out of range dropped'],
             ['<op:font size="abc">x</op:font>', '<span class="op_font" style="">x</span>', 'non-int font size dropped'],
-            ['<op:font color="#00ff00" size="3">x</op:font>', '<span class="op_font" style="color:#00ff00;font-size:small">x</span>', 'font colour + size'],
+            ['<op:font color="#00ff00" size="3">x</op:font>', '<span class="op_font" style="color:#00ff00;font-size:small">x</span>', 'font color + size'],
         ];
 
         foreach ($cases as [$input, $expected, $label]) {

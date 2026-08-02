@@ -315,8 +315,8 @@ Per format:
 - **WebP** — a RIFF walk dropping the `EXIF` and `XMP ` chunks and clearing only
   the EXIF/XMP flag bits of a `VP8X` chunk (ICC/alpha/animation left intact).
 
-Colour-critical segments (ICC/Adobe) are deliberately kept so stripping never
-shifts colours. **EXIF Orientation** is preserved: it is read before stripping
+Color-critical segments (ICC/Adobe) are deliberately kept so stripping never
+shifts colors. **EXIF Orientation** is preserved: it is read before stripping
 and re-emitted as a minimal one-tag APP1 after SOI, because both original
 display and thumbnail generation ([`ImageCache`](../../app/Files/ImageCache.php),
 intervention/image auto-orient) rotate from it. Thumbnail rotation needs

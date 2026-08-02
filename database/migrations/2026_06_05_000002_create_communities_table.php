@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
  * Communities (successor of the OpenPNE 3 `community` table).
  *
  * `description` and `register_policy` are flattened from OpenPNE 3's community_config KV table
- * onto typed columns (the same treatment member_config gets), since they drive behaviour.
+ * onto typed columns (the same treatment member_config gets), since they drive behavior.
  */
 return new class extends Migration
 {

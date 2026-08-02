@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  * friend/community contexts) or an http(s) URL. `source_uri` keeps the original OpenPNE 3 value
  * so the rendered `<li>` id stays byte-for-byte compatible with custom CSS (App\Models\Navigation
  * derives the id from it); it is null for admin-created rows. Captions live in
- * `navigation_translations` keyed by (id, lang), mirroring OpenPNE 3's Doctrine I18n behaviour.
+ * `navigation_translations` keyed by (id, lang), mirroring OpenPNE 3's Doctrine I18n behavior.
  *
  * uri/source_uri are text because OpenPNE 3 stored uri as TEXT (external URLs can be long).
  */

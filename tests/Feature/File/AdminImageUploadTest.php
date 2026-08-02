@@ -15,7 +15,7 @@ use Tests\TestCase;
 
 /**
  * The admin image upload path. The Filament FileUpload field cannot be driven through a Livewire test
- * (no real temp upload), so the byte + visibility behaviour is exercised at the FileUploader seam the
+ * (no real temp upload), so the byte + visibility behavior is exercised at the FileUploader seam the
  * page delegates to — a fake UploadedFile is a real file FileUploader can read.
  */
 class AdminImageUploadTest extends TestCase

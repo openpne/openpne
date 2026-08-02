@@ -149,7 +149,7 @@ class NavigationService
         return $captions[$lang] ?? $captions['en'] ?? $captions['ja_JP'] ?? (string) (reset($captions) ?: '');
     }
 
-    /** Thread the context subject id into a `:id` slot, else append `?id=N` (OpenPNE 3 behaviour). */
+    /** Thread the context subject id into a `:id` slot, else append `?id=N` (OpenPNE 3 behavior). */
     private function applySubject(string $uri, ?int $subjectId): string
     {
         if ($subjectId === null) {

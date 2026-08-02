@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Behaviour of the write limiters (App\Providers\AppServiceProvider). The limit is exercised via a
+ * Behavior of the write limiters (App\Providers\AppServiceProvider). The limit is exercised via a
  * config() override rather than by firing the default 30 requests. An empty body is enough: the
  * throttle middleware counts the hit before the controller (and its validation) runs
  * (Illuminate\Routing\Middleware\ThrottleRequests::handleRequest checks/increments each limit, then

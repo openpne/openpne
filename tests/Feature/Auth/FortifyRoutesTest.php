@@ -120,7 +120,7 @@ class FortifyRoutesTest extends TestCase
 
     public function test_repeated_failed_logins_hit_the_login_rate_limit(): void
     {
-        // Behavioural pin for throttle:login on the POST — the middleware list alone could lie
+        // Behavioral pin for throttle:login on the POST — the middleware list alone could lie
         // if the limiter definition changed shape.
         $member = Member::factory()->create();
 

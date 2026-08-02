@@ -36,7 +36,7 @@ final class Op3Text
     /** Parses one tag token into slash / tagname / attribute string (mirrors the master regex groups). */
     private const TAG_PARSE = '/^(?:&lt;|<)(\/?)(op:\w+)(?:\s+((?:(?!&lt;|<).)*))?(?:&gt;|>)$/i';
 
-    /** OpenPNE 3 opColorToHtml / opFontToHtml colour validation: only #RRGGBB survives (else dropped). */
+    /** OpenPNE 3 opColorToHtml / opFontToHtml color validation: only #RRGGBB survives (else dropped). */
     private const COLOR = '/^#[0-9a-fA-F]{6}$/';
 
     /** OpenPNE 3 opFontToHtml size → CSS font-size. Anything outside 1..7 is dropped. */
