@@ -336,7 +336,10 @@ function MoreMenu({ editor }: { editor: Editor }) {
             {open &&
                 createPortal(
                     <>
-                        <div aria-hidden className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+                        {/* Catches the tap that dismisses the sheet so it cannot also reach a link or
+                            the bottom bar underneath. Deliberately undimmed: this list formats the
+                            selection, and scrimming the text being formatted reads as hiding it. */}
+                        <div aria-hidden className="fixed inset-0 z-50" />
                         <div
                             ref={panelRef}
                             id={panelId}
