@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\DB;
  *    owner subqueries resolve against an empty table.
  *  - an OPTIONAL plugin group partially present → an old/corrupt plugin → hard error naming its floor.
  *
+ * It also counts the KV config rows whose `name` the upgrade does not recognise. That is a warning,
+ * not an error: a third-party plugin or a source customisation is a legitimate reason for the source
+ * to hold names OpenPNE 4 has no home for, and the operator decides whether losing them matters.
+ *
  * Introspection is read-only via information_schema qualified by the source database + prefix:
  * Schema::hasTable() binds to the connection's own (empty-prefix) database and cannot see a
  * --source-prefix / --source-database table. MySQL-only, like the runner.
@@ -73,6 +77,7 @@ final class SourcePreflight
             $tableErrors,
             $this->columnErrors($present, $sourcePrefix, $sourceDatabase),
             array_values(array_unique($absentOptional)),
+            $this->unknownConfigNames($present, $sourcePrefix, $sourceDatabase),
         );
     }
 
@@ -129,6 +134,11 @@ final class SourcePreflight
         return "source table `{$table}` absent — the plugin is not installed; created empty so its step is a no-op (not migrated).";
     }
 
+    public static function unknownConfigNameMessage(string $table, string $name, int $rows): string
+    {
+        return "source `{$table}` holds {$rows} row(s) named `{$name}`, which the upgrade does not recognise — a third-party plugin or a source customisation. Not migrated; `openpne:upgrade-matrix` lists the names that are.";
+    }
+
     /** @return list<string> */
     private function readTables(): array
     {
@@ -170,6 +180,45 @@ final class SourcePreflight
         }
 
         return $errors;
+    }
+
+    /**
+     * Row counts per unrecognised `name`, for the KV config tables this run reads. Enumerating the
+     * recognised names is only possible for these two: the KV shape means a name outside the set is
+     * invisible to the per-step column audit, which is what this replaces at run time.
+     *
+     * @param  array<string, bool>  $present
+     * @return array<string, array<string, int>> table => name => rows, busiest name first
+     */
+    private function unknownConfigNames(array $present, string $prefix, ?string $database): array
+    {
+        $sets = [
+            'member_config' => StepRegistry::knownMemberConfigNames(),
+            'community_config' => StepRegistry::knownCommunityConfigNames(),
+        ];
+
+        $unknown = [];
+        foreach ($sets as $table => $known) {
+            if (! ($present[$table] ?? false)) {
+                continue; // not read by this run, or absent — the table checks above own that case
+            }
+
+            $rows = DB::select(
+                'select `name`, count(*) as `rows` from '.InsertSelectCompiler::qualify($database, $prefix, $table)
+                .' where `name` not in ('.implode(', ', array_fill(0, count($known), '?')).')'
+                .' group by `name` order by `rows` desc, `name` asc',
+                $known,
+            );
+
+            if ($rows !== []) {
+                $unknown[$table] = array_combine(
+                    array_map(static fn (object $row): string => $row->name, $rows),
+                    array_map(static fn (object $row): int => (int) $row->rows, $rows),
+                );
+            }
+        }
+
+        return $unknown;
     }
 
     private function tableExists(string $table, string $prefix, ?string $database): bool

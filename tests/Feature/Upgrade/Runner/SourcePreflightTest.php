@@ -15,6 +15,7 @@ use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
+use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
@@ -22,13 +23,14 @@ use Tests\TestCase;
 
 /**
  * The source preflight: an absent optional plugin group is created empty so its steps no-op; a
- * missing CORE table, a missing consumed column, or a partial plugin group aborts before any write.
+ * missing CORE table, a missing consumed column, or a partial plugin group aborts before any write;
+ * a KV config name outside the recognised set is reported with its row count and migrated past.
  */
 class SourcePreflightTest extends TestCase
 {
     use DatabaseMigrations;
 
-    private const SOURCE_TABLES = ['diary', 'diary_image', 'community_member', 'community_member_position', 'member_relationship'];
+    private const SOURCE_TABLES = ['diary', 'diary_image', 'community_member', 'community_member_position', 'member_relationship', 'member_config'];
 
     protected function setUp(): void
     {
@@ -156,6 +158,57 @@ class SourcePreflightTest extends TestCase
         // reset() (which clears the targets and the checkpoints) must not run before the preflight abort.
         $this->assertDatabaseCount('friendships', 1);
         $this->assertDatabaseCount('openpne4_upgrade_state', 1);
+    }
+
+    public function test_unrecognised_config_names_are_reported_with_row_counts(): void
+    {
+        $this->createSource('member_config');
+        $this->insertConfig([
+            ['member_id' => 1, 'name' => 'op_custom_plugin_flag', 'value' => '1'],
+            ['member_id' => 2, 'name' => 'op_custom_plugin_flag', 'value' => '0'],
+            ['member_id' => 1, 'name' => 'op_another_custom', 'value' => 'x'],
+            ['member_id' => 1, 'name' => 'diary_public_flag', 'value' => '1'],
+            ['member_id' => 1, 'name' => 'is_send_pc_diaryReplyPost_mail', 'value' => '0'],
+            ['member_id' => 1, 'name' => 'op_screen_name', 'value' => 'someone'],
+        ]);
+
+        [$ok, $output] = $this->runSteps([new MemberPreferenceUpgrade], new RunOptions(dryRun: true));
+
+        $this->assertTrue($ok, 'an unrecognised name is a warning, not an abort');
+        $this->assertStringContainsString(
+            SourcePreflight::unknownConfigNameMessage('member_config', 'op_custom_plugin_flag', 2),
+            $output,
+        );
+        $this->assertStringContainsString(
+            SourcePreflight::unknownConfigNameMessage('member_config', 'op_another_custom', 1),
+            $output,
+        );
+        // A migrated preference, a registry-derived notification key, and a deliberately-dropped
+        // name are all recognised, so none of the three is reported.
+        $this->assertStringNotContainsString('named `diary_public_flag`', $output);
+        $this->assertStringNotContainsString('named `is_send_pc_diaryReplyPost_mail`', $output);
+        $this->assertStringNotContainsString('named `op_screen_name`', $output);
+    }
+
+    public function test_a_source_holding_only_recognised_names_reports_nothing(): void
+    {
+        $this->createSource('member_config');
+        $this->insertConfig([['member_id' => 1, 'name' => 'age_public_flag', 'value' => '2']]);
+
+        [$ok, $output] = $this->runSteps([new MemberPreferenceUpgrade], new RunOptions(dryRun: true));
+
+        $this->assertTrue($ok);
+        $this->assertStringNotContainsString('does not recognise', $output);
+    }
+
+    /** @param list<array{member_id: int, name: string, value: string}> $rows */
+    private function insertConfig(array $rows): void
+    {
+        DB::table('member_config')->insert(array_map(static fn (array $row): array => $row + [
+            'name_value_hash' => md5($row['name'].$row['value']),
+            'created_at' => '2020-01-01 00:00:00',
+            'updated_at' => '2020-01-01 00:00:00',
+        ], $rows));
     }
 
     /**

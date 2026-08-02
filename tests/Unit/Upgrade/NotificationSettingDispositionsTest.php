@@ -17,8 +17,12 @@ class NotificationSettingDispositionsTest extends TestCase
 {
     public function test_member_config_notification_keys_point_at_the_settings_upgrade(): void
     {
-        $disposition = StepRegistry::memberConfigDispositions()['is_send_*_mail / is_send_*_web'];
+        $dispositions = StepRegistry::memberConfigDispositions();
 
+        // The family key is also what knownMemberConfigNames() expands, so it must stay a real key.
+        $this->assertArrayHasKey(StepRegistry::MEMBER_CONFIG_NOTIFICATION_FAMILY, $dispositions);
+
+        $disposition = $dispositions[StepRegistry::MEMBER_CONFIG_NOTIFICATION_FAMILY];
         $this->assertStringContainsString('member_notification_settings', $disposition);
         $this->assertStringContainsString('MemberNotificationSettingUpgrade', $disposition);
     }

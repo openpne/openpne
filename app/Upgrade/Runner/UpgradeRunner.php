@@ -66,6 +66,14 @@ final class UpgradeRunner
             return false;
         }
 
+        // Before the plan/run split: an unrecognised config name is a read-only observation about the
+        // source, so a dry run is the cheapest place to see it.
+        foreach ($report->unknownConfigNames as $table => $counts) {
+            foreach ($counts as $name => $rows) {
+                $out('WARN '.SourcePreflight::unknownConfigNameMessage($table, $name, $rows));
+            }
+        }
+
         if ($options->dryRun) {
             foreach ($report->absentOptional as $table) {
                 $out("PLAN would create empty source table `{$table}` (".SourcePreflight::absentPluginMessage($table).')');
