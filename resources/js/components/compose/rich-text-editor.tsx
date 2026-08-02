@@ -351,7 +351,9 @@ function MoreMenu({ editor }: { editor: Editor }) {
                             tabIndex={-1}
                             data-testid="compose-more-panel"
                             // Two columns: the sheet covers whatever the member is formatting, so
-                            // halving its rows is halving how much of the selection it hides.
+                            // halving its rows is halving how much of the selection it hides. The
+                            // order below is by row pair — the grid flows left→right, so it is the
+                            // pairing, not a separator, that groups related commands.
                             className="fixed inset-x-0 bottom-0 z-50 grid max-h-[70dvh] grid-cols-2 gap-x-1 overflow-y-auto rounded-t-xl border-t border-border bg-card p-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-lg outline-none"
                         >
                             <MoreItem label={t('Italic')} icon={Italic} pressed={actions.italic.active} onSelect={() => select(actions.italic.run)} />
@@ -361,7 +363,6 @@ function MoreMenu({ editor }: { editor: Editor }) {
                                 pressed={actions.strike.active}
                                 onSelect={() => select(actions.strike.run)}
                             />
-                            <MoreItem label={t('Inline code')} icon={Code} pressed={actions.code.active} onSelect={() => select(actions.code.run)} />
                             <MoreItem label={t('Heading 3')} icon={Heading3} pressed={actions.h3.active} onSelect={() => select(actions.h3.run)} />
                             <MoreItem label={t('Heading 4')} icon={Heading4} pressed={actions.h4.active} onSelect={() => select(actions.h4.run)} />
                             <MoreItem
@@ -371,6 +372,7 @@ function MoreMenu({ editor }: { editor: Editor }) {
                                 onSelect={() => select(actions.orderedList.run)}
                             />
                             <MoreItem label={t('Quote')} icon={Quote} pressed={actions.quote.active} onSelect={() => select(actions.quote.run)} />
+                            <MoreItem label={t('Inline code')} icon={Code} pressed={actions.code.active} onSelect={() => select(actions.code.run)} />
                             <MoreItem
                                 label={t('Code block')}
                                 icon={SquareCode}
@@ -378,7 +380,6 @@ function MoreMenu({ editor }: { editor: Editor }) {
                                 onSelect={() => select(actions.codeBlock.run)}
                             />
                             <MoreItem label={t('Horizontal rule')} icon={Minus} onSelect={() => select(actions.hr.run)} />
-                            <div role="separator" className="col-span-2 my-1 h-px bg-border" />
                             <MoreItem
                                 label={t('Insert table')}
                                 icon={TableIcon}

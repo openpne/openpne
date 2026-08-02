@@ -33,11 +33,13 @@
  *       characters so nothing breaks structure or emits a raw `<tag` (verified against the server
  *       renderer in round-trip.test.ts).
  */
-import { Node } from '@tiptap/core';
+import { Extension, Node } from '@tiptap/core';
 import type { Editor, EditorOptions, Extensions, MarkdownRendererHelpers, MarkdownToken } from '@tiptap/core';
 import { Markdown } from '@tiptap/markdown';
 import type { MarkdownExtensionOptions } from '@tiptap/markdown';
 import { renderTableToMarkdown, Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import StarterKit from '@tiptap/starter-kit';
 import { Marked, Tokenizer } from 'marked';
 import type { Tokens } from 'marked';
@@ -217,9 +219,62 @@ const ComposeTable = Table.extend({
     },
 });
 
+/** Plugin state: true while the editable is blurred — see {@link BlurredSelection}. */
+const blurredSelectionKey = new PluginKey<boolean>('blurredSelection');
+
+/**
+ * Keeps the selection visible while the editable is blurred. The compact toolbar's "More" sheet
+ * blurs the editor on purpose (to dismiss the soft keyboard), and a blurred contenteditable paints
+ * no selection — so the member would be choosing a command for a range they can no longer see,
+ * even though the selection survives in the editor state and the command still applies to it.
+ *
+ * Decoration only: no node, no mark, nothing the schema or the Markdown serializer can see. Focus
+ * is not editor state and decorations recompute only when the state changes, so the DOM focus/blur
+ * events carry it into plugin state through a meta-only transaction — which has no steps, leaving
+ * `docChanged` false so the host form's dirty signal stays silent (dirty-contract.test.ts).
+ */
+const BlurredSelection = Extension.create({
+    name: 'blurredSelection',
+
+    addProseMirrorPlugins() {
+        return [
+            new Plugin<boolean>({
+                key: blurredSelectionKey,
+                state: {
+                    init: () => false,
+                    apply: (tr, blurred) => (tr.getMeta(blurredSelectionKey) as boolean | undefined) ?? blurred,
+                },
+                props: {
+                    decorations(state) {
+                        if (state.selection.empty || !blurredSelectionKey.getState(state)) {
+                            return null;
+                        }
+                        const { from, to } = state.selection;
+                        return DecorationSet.create(state.doc, [Decoration.inline(from, to, { class: 'blurred-selection' })]);
+                    },
+                    handleDOMEvents: {
+                        // Returning false leaves the event to ProseMirror's own handlers. The redraw
+                        // this dispatch triggers cannot undo the blur: ProseMirror writes the
+                        // selection back to the DOM only while the view still has focus.
+                        blur: (view) => {
+                            view.dispatch(view.state.tr.setMeta(blurredSelectionKey, true));
+                            return false;
+                        },
+                        focus: (view) => {
+                            view.dispatch(view.state.tr.setMeta(blurredSelectionKey, false));
+                            return false;
+                        },
+                    },
+                },
+            }),
+        ];
+    },
+});
+
 /**
  * The editor schema, capped to the server sanitizer allowlist. StarterKit already bundles Link and
- * Underline; underline is dropped, link restricted to http/https.
+ * Underline; underline is dropped, link restricted to http/https. BlurredSelection is the one
+ * view-only member — a decoration, not a schema entry.
  */
 export function composeExtensions(): Extensions {
     return [
@@ -252,6 +307,7 @@ export function composeExtensions(): Extensions {
             // newline → <br>, matching the server soft_break = "<br>".
             markedOptions: { gfm: true, breaks: true },
         }),
+        BlurredSelection,
     ];
 }
 
