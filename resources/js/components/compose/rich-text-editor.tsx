@@ -216,10 +216,15 @@ function MoreItem({
 
 /**
  * Overflow menu for the formatting + table commands the compact row demotes. A plain (non-Radix)
- * popover on purpose: Radix menus pull DOM focus into the menu for arrow-key navigation, which
- * dismisses the soft keyboard and drops the editor selection. Here the trigger and items
- * preventDefault on mousedown, so focus never leaves the contenteditable — the keyboard stays up and
- * commands apply to the live selection.
+ * popover on purpose: Radix menus pull DOM focus into the menu for arrow-key navigation, which drops
+ * the editor selection. Here the items preventDefault on mousedown, so picking one never moves focus
+ * and the command applies to the live selection.
+ *
+ * Opening dismisses the soft keyboard on purpose. The panel is taller than the band left above an
+ * open keyboard, and its max height is layout-viewport based — the keyboard shrinks only the visual
+ * viewport — so the last items would sit behind the keyboard with no way to scroll them out. The
+ * selection lives in the editor state rather than in DOM focus, so each item's `chain().focus()`
+ * brings back both the caret and the keyboard.
  */
 function MoreMenu({ editor }: { editor: Editor }) {
     const t = useT();
@@ -275,7 +280,12 @@ function MoreMenu({ editor }: { editor: Editor }) {
                 aria-controls={open ? panelId : undefined}
                 title={t('More formatting')}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => setOpen((value) => !value)}
+                onClick={() => {
+                    if (!open) {
+                        editor.commands.blur();
+                    }
+                    setOpen((value) => !value);
+                }}
                 className={cn(TOOLBAR_BUTTON_CLASS, open && 'bg-accent text-accent-foreground')}
             >
                 <MoreHorizontal className="size-4" />
