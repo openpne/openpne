@@ -1,4 +1,4 @@
-{{-- The login form with its ALTCHA / registration / error behaviour. Shared by the fixed login
+{{-- The login form with its ALTCHA / registration / error behavior. Shared by the fixed login
      page and the loginForm gadget.
 
      OpenPNE 3 draws this with no parts frame at all: a bare div per auth mode

@@ -9,7 +9,7 @@ use App\Gadgets\GadgetKind;
 /**
  * The login form (OpenPNE 3 default/loginFormBox). Login page only and public; its component reuses
  * the existing login form partial rather than re-implementing the CAPTCHA/registration/error
- * behaviour.
+ * behavior.
  */
 class LoginFormGadget extends GadgetKind
 {

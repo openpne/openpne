@@ -601,7 +601,7 @@ function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boole
             role="toolbar"
             aria-label={t('Formatting')}
             data-testid="compose-toolbar"
-            // Tinted, not the card's own colour: the buttons' touch targets are mostly whitespace, so
+            // Tinted, not the card's own color: the buttons' touch targets are mostly whitespace, so
             // an untinted row has no visible top edge and the eye reads all of it as the gap below the
             // label. A band the member can see starts where the field starts.
             // No vertical padding either: the buttons carry 44px touch targets of their own, and

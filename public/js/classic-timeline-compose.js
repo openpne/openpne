@@ -1,5 +1,5 @@
 /*
- * The OpenPNE 3 inline compose behaviour for the Classic timeline (_timelineAll's script,
+ * The OpenPNE 3 inline compose behavior for the Classic timeline (_timelineAll's script,
  * server-rendered form): reveal the form, retire its no-JS fallback link, expand on focus,
  * count down from 140, gate the submit, and proxy the offscreen file input through the camera
  * button. Every lookup is scoped to one form — the OpenPNE 3 ids repeat when two home gadgets

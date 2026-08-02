@@ -5,7 +5,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 // Link declares its own `size?: undefined`, which would collapse the intersection with the
-// buttonVariants size — drop it in favour of the variant prop.
+// buttonVariants size — drop it in favor of the variant prop.
 type Props = Omit<ComponentProps<typeof Link>, 'size'> & VariantProps<typeof buttonVariants>;
 
 /** An Inertia Link styled as a button (a navigation action, e.g. "Reply"), reusing buttonVariants. */

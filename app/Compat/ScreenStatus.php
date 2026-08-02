@@ -6,7 +6,7 @@ namespace App\Compat;
 enum ScreenStatus: string
 {
     case Ported = 'ported';     // present and faithful
-    case Partial = 'partial';   // present but missing a sub-behaviour
+    case Partial = 'partial';   // present but missing a sub-behavior
     case Missing = 'missing';   // not built yet, no blocker
     case Deferred = 'deferred'; // intentionally waiting on another feature
 

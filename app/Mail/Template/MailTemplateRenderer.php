@@ -42,7 +42,7 @@ class MailTemplateRenderer
             allowedFunctions: ['app_url_for'],
             allowedTests: [],
         );
-        // Opt into Twig 4 behaviour: without this, extends/use/block/parent and attribute() are implicitly
+        // Opt into Twig 4 behavior: without this, extends/use/block/parent and attribute() are implicitly
         // allowed for back-compat, and (since Twig 3.28) every `is <test>` too. Strict mode denies all of
         // them unless allow-listed; imported OpenPNE 3 templates use no tests, so allowedTests stays empty
         // (both the `constant` test and the `constant()` function are thereby denied).

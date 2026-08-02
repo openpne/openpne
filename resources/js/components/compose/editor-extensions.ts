@@ -13,7 +13,7 @@
  * Underline — and any other HTML-representable but not-Markdown mark — is excluded: it has no
  * Markdown form and no matching allowlist element.
  *
- * Two behaviours @tiptap/markdown does not give us out of the box, both reproduced from the server
+ * Two behaviors @tiptap/markdown does not give us out of the box, both reproduced from the server
  * so the round-trip matches (see round-trip.test.ts):
  *   (a) Raw HTML in the source stays literal, never re-parsed as formatting. @tiptap/markdown feeds
  *       raw-HTML tokens through each extension's parseHTML (via generateJSON) whenever
