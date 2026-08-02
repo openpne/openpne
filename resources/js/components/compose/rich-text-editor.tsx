@@ -259,8 +259,9 @@ function MoreMenu({ editor }: { editor: Editor }) {
                 setOpen(false);
             }
         };
-        // Close when keyboard focus leaves the panel (e.g. Tab past the last item) so the popover
-        // never lingers over an external control.
+        // Close if focus reaches anything outside the sheet — a command handing it back to the
+        // editable, say — so the popover never lingers over an external control. Tab alone cannot
+        // get there; it cycles inside (see onKeyDown).
         const onFocusIn = (event: FocusEvent) => {
             if (!inside(event.target)) {
                 setOpen(false);
@@ -340,8 +341,8 @@ function MoreMenu({ editor }: { editor: Editor }) {
                             ref={panelRef}
                             id={panelId}
                             // A named dialog, not a menu: the items are toggles rather than
-                            // arrow-navigated menuitems, and nothing traps focus (aria-modal stays off
-                            // so `chain().focus()` may hand it straight back to the editable).
+                            // arrow-navigated menuitems. Tab cycles within it, but aria-modal stays
+                            // off — a command may hand focus straight back to the editable.
                             role="dialog"
                             aria-label={t('More formatting')}
                             tabIndex={-1}
