@@ -142,7 +142,10 @@ export function BodyField({
 
     if (mode === 'rich') {
         return (
-            <div className="space-y-2">
+            // space-y-3, not -2: the trigger's touch target overhangs the label row by 12px, and the
+            // toolbar below is opaque and stacked above it, so a smaller gap would let the toolbar
+            // cover — and take the taps meant for — the bottom of the trigger.
+            <div className="space-y-3">
                 {header}
                 <Suspense
                     fallback={
