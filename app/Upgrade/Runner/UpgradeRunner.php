@@ -66,9 +66,10 @@ final class UpgradeRunner
             return false;
         }
 
-        // Before the plan/run split: an unrecognised config name is a read-only observation about the
-        // source, so a dry run is the cheapest place to see it.
-        foreach ($report->unknownConfigNames as $table => $counts) {
+        // Only now that the structure is verified: the scan reads columns the checks above guard.
+        // Before the plan/run split, because an unrecognised config name is a read-only observation
+        // about the source and a dry run is the cheapest place to see it.
+        foreach ($preflight->unknownConfigNames($options->sourcePrefix, $options->sourceDatabase) as $table => $counts) {
             foreach ($counts as $name => $rows) {
                 $out('WARN '.SourcePreflight::unknownConfigNameMessage($table, $name, $rows));
             }

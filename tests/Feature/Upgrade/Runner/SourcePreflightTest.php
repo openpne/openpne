@@ -10,6 +10,7 @@ use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\CommunityMemberUpgrade;
+use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryImageUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
@@ -30,7 +31,8 @@ class SourcePreflightTest extends TestCase
 {
     use DatabaseMigrations;
 
-    private const SOURCE_TABLES = ['diary', 'diary_image', 'community_member', 'community_member_position', 'member_relationship', 'member_config'];
+    private const SOURCE_TABLES = ['diary', 'diary_image', 'community_member', 'community_member_position', 'member_relationship',
+        'member_config', 'community', 'community_config', 'community_category'];
 
     protected function setUp(): void
     {
@@ -188,6 +190,42 @@ class SourcePreflightTest extends TestCase
         $this->assertStringNotContainsString('named `diary_public_flag`', $output);
         $this->assertStringNotContainsString('named `is_send_pc_diaryReplyPost_mail`', $output);
         $this->assertStringNotContainsString('named `op_screen_name`', $output);
+    }
+
+    public function test_a_source_without_the_name_column_aborts_instead_of_failing_the_scan(): void
+    {
+        // The unknown-name scan reads `name`, the very column the structural check guards: a source
+        // missing it must reach the abort, not blow up inside the scan.
+        $this->createSource('member_config');
+        DB::statement('ALTER TABLE `member_config` DROP COLUMN `name`');
+
+        [$ok, $output] = $this->runSteps([new MemberPreferenceUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::missingColumnMessage('member_config', 'name'), $output);
+        $this->assertStringNotContainsString('does not recognise', $output);
+    }
+
+    public function test_unrecognised_community_config_names_are_reported(): void
+    {
+        foreach (['community', 'community_config', 'community_category', 'community_member_position'] as $table) {
+            $this->createSource($table); // CommunityUpgrade reads all four
+        }
+        DB::table('community_config')->insert([
+            ['community_id' => 1, 'name' => 'op_custom_community_flag', 'value' => '1',
+                'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00'],
+            ['community_id' => 1, 'name' => 'register_policy', 'value' => 'open',
+                'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00'],
+        ]);
+
+        [$ok, $output] = $this->runSteps([new CommunityUpgrade], new RunOptions(dryRun: true));
+
+        $this->assertTrue($ok);
+        $this->assertStringContainsString(
+            SourcePreflight::unknownConfigNameMessage('community_config', 'op_custom_community_flag', 1),
+            $output,
+        );
+        $this->assertStringNotContainsString('named `register_policy`', $output);
     }
 
     public function test_a_source_holding_only_recognised_names_reports_nothing(): void

@@ -77,7 +77,6 @@ final class SourcePreflight
             $tableErrors,
             $this->columnErrors($present, $sourcePrefix, $sourceDatabase),
             array_values(array_unique($absentOptional)),
-            $this->unknownConfigNames($present, $sourcePrefix, $sourceDatabase),
         );
     }
 
@@ -187,11 +186,15 @@ final class SourcePreflight
      * recognised names is only possible for these two: the KV shape means a name outside the set is
      * invisible to the per-step column audit, which is what this replaces at run time.
      *
-     * @param  array<string, bool>  $present
+     * Deliberately not part of inspect(): the scan itself reads `name`, so a source missing that
+     * column has to reach inspect()'s structural verdict — call this only once that comes back
+     * clean. That also keeps it off verify-upgrade, which has no use for the warning.
+     *
      * @return array<string, array<string, int>> table => name => rows, busiest name first
      */
-    private function unknownConfigNames(array $present, string $prefix, ?string $database): array
+    public function unknownConfigNames(string $prefix, ?string $database): array
     {
+        $readTables = $this->readTables();
         $sets = [
             'member_config' => StepRegistry::knownMemberConfigNames(),
             'community_config' => StepRegistry::knownCommunityConfigNames(),
@@ -199,8 +202,8 @@ final class SourcePreflight
 
         $unknown = [];
         foreach ($sets as $table => $known) {
-            if (! ($present[$table] ?? false)) {
-                continue; // not read by this run, or absent — the table checks above own that case
+            if (! in_array($table, $readTables, true) || ! $this->tableExists($table, $prefix, $database)) {
+                continue; // not read by this run, or absent — the table checks in inspect() own that case
             }
 
             $rows = DB::select(

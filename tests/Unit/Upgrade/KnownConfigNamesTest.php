@@ -8,6 +8,9 @@ use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use App\Support\PreferenceKey;
 use App\Upgrade\StepRegistry;
+use App\Upgrade\Steps\CommunityUpgrade;
+use App\Upgrade\Steps\MemberUpgrade;
+use App\Upgrade\UpgradeStep;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -54,6 +57,60 @@ class KnownConfigNamesTest extends TestCase
             }
             $this->assertContains($name, $known);
         }
+    }
+
+    /**
+     * The registry-derived halves cannot drift, but the names MemberUpgrade and CommunityUpgrade
+     * pin as literals in their subqueries can — and a name a step reads but the set omits is
+     * reported to the operator as unrecognised while being migrated. Read the literals back out of
+     * the SQL the steps emit rather than restating them here, which would be the same second list.
+     */
+    public function test_the_names_the_subquery_steps_actually_read_are_recognised(): void
+    {
+        $sets = [
+            [new MemberUpgrade, 'member_config', StepRegistry::knownMemberConfigNames()],
+            [new CommunityUpgrade, 'community_config', StepRegistry::knownCommunityConfigNames()],
+        ];
+
+        foreach ($sets as [$step, $table, $known]) {
+            $class = $step::class;
+            $read = self::configNamesReadBy($step, $table);
+
+            $this->assertNotEmpty($read, "{$class} reads no config name — the SQL shape changed");
+            foreach ($read as $name) {
+                $this->assertContains($name, $known, "{$class} reads `{$name}` but the preflight would call it unrecognised");
+            }
+        }
+    }
+
+    /**
+     * The `name = '…'` literals a step's column expressions read from one KV table. Each
+     * `{{src:table}}` token opens a subquery, so the names between one token and the next belong to
+     * it — MemberUpgrade also reads sns_config by name, and those are a different table's keys.
+     *
+     * @return list<string>
+     */
+    private static function configNamesReadBy(UpgradeStep $step, string $table): array
+    {
+        $names = [];
+        foreach ($step->columns() as $column) {
+            foreach (explode('{{src:', $column->expr ?? '') as $segment) {
+                if (! str_starts_with($segment, $table.'}}')) {
+                    continue;
+                }
+                preg_match_all("/`name` = '([^']*)'/", $segment, $matches);
+                $names = [...$names, ...$matches[1]];
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    public function test_the_sets_are_never_empty(): void
+    {
+        // The preflight expands them into a `name NOT IN (…)` list, which an empty set makes invalid.
+        $this->assertNotEmpty(StepRegistry::knownMemberConfigNames());
+        $this->assertNotEmpty(StepRegistry::knownCommunityConfigNames());
     }
 
     public function test_community_config_names_are_the_documented_dispositions(): void
