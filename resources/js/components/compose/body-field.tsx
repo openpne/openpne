@@ -24,6 +24,14 @@ import { saveComposeEditor } from './save-compose-editor';
 // compose form opens the rich editor and shared across all of them.
 const RichTextEditor = lazy(() => import('./rich-text-editor'));
 
+/**
+ * Label row to control. Wider than a plain field's gap because the input-method trigger's touch
+ * target overhangs the row by 12px: anything less and the control below — an opaque toolbar that
+ * paints over the trigger, or a textarea the trigger paints over — overlaps it, and one of the two
+ * takes taps meant for the other. Both branches share it so switching method moves nothing.
+ */
+const FIELD_GAP = 'space-y-3';
+
 interface BodyFieldProps {
     id: string;
     label: string; // pre-translated by the page
@@ -124,7 +132,7 @@ export function BodyField({
     const header = (
         // The trigger's touch target is taller than the label text, so let it overhang the row
         // instead of setting the row's height: otherwise this field's label sits further from its
-        // control than every other field's does.
+        // control than every other field's does. FIELD_GAP pays for the overhang below.
         <div className="flex h-5 items-center justify-between gap-2">
             <Label htmlFor={id}>{label}</Label>
             <div className="flex items-center gap-2">
@@ -142,10 +150,7 @@ export function BodyField({
 
     if (mode === 'rich') {
         return (
-            // space-y-3, not -2: the trigger's touch target overhangs the label row by 12px, and the
-            // toolbar below is opaque and stacked above it, so a smaller gap would let the toolbar
-            // cover — and take the taps meant for — the bottom of the trigger.
-            <div className="space-y-3">
+            <div className={FIELD_GAP}>
                 {header}
                 <Suspense
                     fallback={
@@ -177,7 +182,7 @@ export function BodyField({
     }
 
     return (
-        <div className="space-y-2">
+        <div className={FIELD_GAP}>
             {header}
             <Textarea
                 id={id}
