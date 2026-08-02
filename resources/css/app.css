@@ -302,3 +302,10 @@ html body[data-scroll-locked] {
     color: var(--color-muted-foreground);
     font-size: 0.9em;
 }
+/* Stands in for the native selection while a UI that acts on it holds the editor (heldSelection
+   plugin): the "More" sheet blurs on purpose to drop the keyboard, and blurring clears the range.
+   Translucent so the text keeps its own contrast, from --color-selected — the chosen-state accent,
+   which follows the link blue across the light/dark switch. */
+.ProseMirror .held-selection {
+    background: color-mix(in oklab, var(--color-selected) 30%, transparent);
+}
