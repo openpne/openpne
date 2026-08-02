@@ -3,7 +3,7 @@
 namespace App\Compat;
 
 /**
- * One surface element of an OpenPNE 3 screen (a rendered field, link, widget, or behaviour),
+ * One surface element of an OpenPNE 3 screen (a rendered field, link, widget, or behavior),
  * with its Classic-adapter porting status. The third parity axis: route parity says the URL
  * resolves and upgrade matrix says the data moves; this says the screen's content is present.
  *

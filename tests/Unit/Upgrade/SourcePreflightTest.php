@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * The pure (no-DB) parts of the source preflight: the per-step read-table set and the operator-facing
- * messages. The live introspection / ensure-exists behaviour is on the MySQL lane.
+ * messages. The live introspection / ensure-exists behavior is on the MySQL lane.
  */
 class SourcePreflightTest extends TestCase
 {

@@ -95,7 +95,7 @@ class DiaryRouteParity extends RouteParity
             // showSuccess.php + diaryComment/_list.php component
             'show' => [
                 // Comment thread (diaryComment/list component). The list renders, but several of
-                // its OpenPNE 3 behaviours are split out below so they stay visible as gaps.
+                // its OpenPNE 3 behaviors are split out below so they stay visible as gaps.
                 new ScreenElement('comment thread (author, number, delete)', L::One, S::Ported, 'include_component diaryComment/list'),
                 new ScreenElement('comment thread pagination + order toggle', L::Two, S::Ported, 'diaryComment/_list pager (size, ASC/DESC, older/newer)', 'DiaryCommentThread: reversible pager, sizes 20/100, older/newer + latest/oldest toggle'),
                 new ScreenElement('comment body line breaks + auto-link', L::Three, S::Ported, 'op_url_cmd(nl2br($comment->body))', 'x-user-text (BodyText); comments carry no op_decoration in OpenPNE 3'),

@@ -28,7 +28,7 @@ function isCjk(ch: string): boolean {
 
 /**
  * Returns `text-white` or `text-slate-900`, whichever has the higher WCAG contrast ratio against
- * `bgHex`. A contrast-ratio comparison (not a luminance threshold) keeps mid-grey backgrounds
+ * `bgHex`. A contrast-ratio comparison (not a luminance threshold) keeps mid-gray backgrounds
  * readable. Invalid input falls back to white.
  */
 export function pickReadableTextColor(bgHex: string): string {

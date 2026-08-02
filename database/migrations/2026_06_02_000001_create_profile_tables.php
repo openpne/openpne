@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * A `profile` row defines one member-profile field (its form type, validation, default
  * visibility, and where it is shown); `profile_options` holds the choices for custom
  * select/radio/checkbox fields. Captions/labels live in the `*_translations` tables keyed
- * by (id, lang), mirroring OpenPNE 3's Doctrine I18n behaviour. Preset fields
+ * by (id, lang), mirroring OpenPNE 3's Doctrine I18n behavior. Preset fields
  * (`op_preset_*`) source their choices from config/preset_profile.php, not profile_options.
  */
 return new class extends Migration

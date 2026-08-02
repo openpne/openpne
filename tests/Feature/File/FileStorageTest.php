@@ -17,7 +17,7 @@ use Throwable;
 /**
  * Exercises the default DB-BLOB file storage backend. Runs on both supported
  * engines — SQLite (the default test lane) and MySQL (the second lane) — covering
- * the same behaviour. The local-disk backend is exercised as a control.
+ * the same behavior. The local-disk backend is exercised as a control.
  */
 class FileStorageTest extends TestCase
 {
