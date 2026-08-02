@@ -153,6 +153,7 @@ export function BodyField({
                         onChange={onChange}
                         label={label}
                         id={id}
+                        rows={rows}
                         aria-required={required ? 'true' : undefined}
                         aria-invalid={error ? 'true' : undefined}
                         aria-describedby={errorId}

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import {
@@ -33,7 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { composeEditorAttributes, createComposeEditorOptions } from '@/components/compose/editor-extensions';
+import { composeEditorAttributes, composeEditorRowsStyle, createComposeEditorOptions } from '@/components/compose/editor-extensions';
 
 type RichTextEditorProps = {
     initialMarkdown: string;
@@ -41,6 +42,8 @@ type RichTextEditorProps = {
     /** Accessible name; forwarded as aria-label onto the editable and reused for the toolbar. */
     label: string;
     id?: string;
+    /** Opening height in line boxes, read the same way `<textarea rows>` reads it. */
+    rows?: number;
     // Hyphen-named DOM attributes exactly as components/ui/field.tsx clone-injects them.
     'aria-required'?: 'true';
     'aria-invalid'?: 'true';
@@ -190,23 +193,20 @@ function MoreItem({
     label,
     icon: Icon,
     pressed,
-    disabled,
     onSelect,
 }: {
     label: string;
     icon: ComponentType<{ className?: string }>;
     pressed?: boolean;
-    disabled?: boolean;
     onSelect: () => void;
 }) {
     return (
         <button
             type="button"
             aria-pressed={pressed}
-            disabled={disabled}
             onMouseDown={(event) => event.preventDefault()}
             onClick={onSelect}
-            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-foreground transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-foreground transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-accent aria-pressed:text-accent-foreground"
         >
             <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             <span className="flex-1 text-left">{label}</span>
@@ -225,12 +225,23 @@ function MoreItem({
  * viewport — so the last items would sit behind the keyboard with no way to scroll them out. The
  * selection lives in the editor state rather than in DOM focus, so each item's `chain().focus()`
  * brings back both the caret and the keyboard.
+ *
+ * That dismissal is also what lets the panel sit as a bottom sheet on the layout viewport: with no
+ * keyboard the layout viewport is what the member sees, so `bottom-0` is the real bottom of the
+ * screen and the whole list is reachable however short the page is. Anchoring it to the trigger
+ * instead put the tail below the fold of a page with nothing to scroll.
+ *
+ * The sheet is portaled to <body> because the toolbar's `z-10` opens a stacking context: rendered in
+ * place, no z-index could lift it over the app shell's fixed bottom bar, which swallowed the taps on
+ * the last item.
  */
 function MoreMenu({ editor }: { editor: Editor }) {
     const t = useT();
     const actions = useToolbarActions(editor);
     const [open, setOpen] = useState(false);
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
     const panelId = useId();
     const inTable = editor.isActive('table');
 
@@ -238,26 +249,35 @@ function MoreMenu({ editor }: { editor: Editor }) {
         if (!open) {
             return;
         }
+        // The sheet is portaled, so "inside" spans both roots: the trigger's container and the sheet.
+        // Everything else — including the backdrop — is outside and dismisses.
+        const inside = (target: EventTarget | null) =>
+            Boolean(containerRef.current?.contains(target as Node) || panelRef.current?.contains(target as Node));
         const onPointerDown = (event: PointerEvent) => {
-            if (!containerRef.current?.contains(event.target as Node)) {
+            if (!inside(event.target)) {
                 setOpen(false);
             }
         };
         // Close when keyboard focus leaves the panel (e.g. Tab past the last item) so the popover
         // never lingers over an external control.
         const onFocusIn = (event: FocusEvent) => {
-            if (!containerRef.current?.contains(event.target as Node)) {
+            if (!inside(event.target)) {
                 setOpen(false);
             }
         };
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 setOpen(false);
+                triggerRef.current?.focus();
             }
         };
         document.addEventListener('pointerdown', onPointerDown, true);
         document.addEventListener('focusin', onFocusIn);
         document.addEventListener('keydown', onKeyDown);
+        // The portal puts the sheet at the end of <body>, so it no longer follows the trigger in Tab
+        // order: enter it here instead. Nothing is lost — opening already blurred the editor, and the
+        // selection each item applies to lives in the editor state.
+        panelRef.current?.focus();
         return () => {
             document.removeEventListener('pointerdown', onPointerDown, true);
             document.removeEventListener('focusin', onFocusIn);
@@ -271,11 +291,12 @@ function MoreMenu({ editor }: { editor: Editor }) {
     };
 
     return (
-        <div ref={containerRef} className="relative">
+        <div ref={containerRef}>
             <button
+                ref={triggerRef}
                 type="button"
                 aria-label={t('More formatting')}
-                aria-haspopup="true"
+                aria-haspopup="dialog"
                 aria-expanded={open}
                 aria-controls={open ? panelId : undefined}
                 title={t('More formatting')}
@@ -290,64 +311,90 @@ function MoreMenu({ editor }: { editor: Editor }) {
             >
                 <MoreHorizontal className="size-4" />
             </button>
-            {open && (
-                <div
-                    id={panelId}
-                    data-testid="compose-more-panel"
-                    className="absolute right-0 top-full z-50 mt-2 max-h-[60vh] w-60 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-lg"
-                >
-                    <MoreItem label={t('Italic')} icon={Italic} pressed={actions.italic.active} onSelect={() => select(actions.italic.run)} />
-                    <MoreItem label={t('Strikethrough')} icon={Strikethrough} pressed={actions.strike.active} onSelect={() => select(actions.strike.run)} />
-                    <MoreItem label={t('Inline code')} icon={Code} pressed={actions.code.active} onSelect={() => select(actions.code.run)} />
-                    <MoreItem label={t('Heading 3')} icon={Heading3} pressed={actions.h3.active} onSelect={() => select(actions.h3.run)} />
-                    <MoreItem label={t('Heading 4')} icon={Heading4} pressed={actions.h4.active} onSelect={() => select(actions.h4.run)} />
-                    <MoreItem
-                        label={t('Numbered list')}
-                        icon={ListOrdered}
-                        pressed={actions.orderedList.active}
-                        onSelect={() => select(actions.orderedList.run)}
-                    />
-                    <MoreItem label={t('Quote')} icon={Quote} pressed={actions.quote.active} onSelect={() => select(actions.quote.run)} />
-                    <MoreItem label={t('Code block')} icon={SquareCode} pressed={actions.codeBlock.active} onSelect={() => select(actions.codeBlock.run)} />
-                    <MoreItem label={t('Horizontal rule')} icon={Minus} onSelect={() => select(actions.hr.run)} />
-                    <div role="separator" className="my-1 h-px bg-border" />
-                    <MoreItem
-                        label={t('Insert table')}
-                        icon={TableIcon}
-                        onSelect={() => select(() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).scrollIntoView().run())}
-                    />
-                    <MoreItem
-                        label={t('Add row')}
-                        icon={Rows3}
-                        disabled={!inTable}
-                        onSelect={() => select(() => editor.chain().focus().addRowAfter().scrollIntoView().run())}
-                    />
-                    <MoreItem
-                        label={t('Delete row')}
-                        icon={Rows3}
-                        disabled={!inTable}
-                        onSelect={() => select(() => editor.chain().focus().deleteRow().scrollIntoView().run())}
-                    />
-                    <MoreItem
-                        label={t('Add column')}
-                        icon={Columns3}
-                        disabled={!inTable}
-                        onSelect={() => select(() => editor.chain().focus().addColumnAfter().scrollIntoView().run())}
-                    />
-                    <MoreItem
-                        label={t('Delete column')}
-                        icon={Columns3}
-                        disabled={!inTable}
-                        onSelect={() => select(() => editor.chain().focus().deleteColumn().scrollIntoView().run())}
-                    />
-                    <MoreItem
-                        label={t('Delete table')}
-                        icon={Trash2}
-                        disabled={!inTable}
-                        onSelect={() => select(() => editor.chain().focus().deleteTable().scrollIntoView().run())}
-                    />
-                </div>
-            )}
+            {open &&
+                createPortal(
+                    <>
+                        <div aria-hidden className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
+                        <div
+                            ref={panelRef}
+                            id={panelId}
+                            // A named dialog, not a menu: the items are toggles rather than
+                            // arrow-navigated menuitems, and nothing traps focus (aria-modal stays off
+                            // so `chain().focus()` may hand it straight back to the editable).
+                            role="dialog"
+                            aria-label={t('More formatting')}
+                            tabIndex={-1}
+                            data-testid="compose-more-panel"
+                            className="fixed inset-x-0 bottom-0 z-50 max-h-[70dvh] overflow-y-auto rounded-t-xl border-t border-border bg-card p-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-lg outline-none"
+                        >
+                            <MoreItem label={t('Italic')} icon={Italic} pressed={actions.italic.active} onSelect={() => select(actions.italic.run)} />
+                            <MoreItem
+                                label={t('Strikethrough')}
+                                icon={Strikethrough}
+                                pressed={actions.strike.active}
+                                onSelect={() => select(actions.strike.run)}
+                            />
+                            <MoreItem label={t('Inline code')} icon={Code} pressed={actions.code.active} onSelect={() => select(actions.code.run)} />
+                            <MoreItem label={t('Heading 3')} icon={Heading3} pressed={actions.h3.active} onSelect={() => select(actions.h3.run)} />
+                            <MoreItem label={t('Heading 4')} icon={Heading4} pressed={actions.h4.active} onSelect={() => select(actions.h4.run)} />
+                            <MoreItem
+                                label={t('Numbered list')}
+                                icon={ListOrdered}
+                                pressed={actions.orderedList.active}
+                                onSelect={() => select(actions.orderedList.run)}
+                            />
+                            <MoreItem label={t('Quote')} icon={Quote} pressed={actions.quote.active} onSelect={() => select(actions.quote.run)} />
+                            <MoreItem
+                                label={t('Code block')}
+                                icon={SquareCode}
+                                pressed={actions.codeBlock.active}
+                                onSelect={() => select(actions.codeBlock.run)}
+                            />
+                            <MoreItem label={t('Horizontal rule')} icon={Minus} onSelect={() => select(actions.hr.run)} />
+                            <div role="separator" className="my-1 h-px bg-border" />
+                            <MoreItem
+                                label={t('Insert table')}
+                                icon={TableIcon}
+                                onSelect={() =>
+                                    select(() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).scrollIntoView().run())
+                                }
+                            />
+                            {/* Cell commands only exist for a caret inside a table; on a phone list they would
+                                otherwise be five permanently greyed rows the member has to read past. */}
+                            {inTable && (
+                                <>
+                                    <div role="separator" className="my-1 h-px bg-border" />
+                                    <MoreItem
+                                        label={t('Add row')}
+                                        icon={Rows3}
+                                        onSelect={() => select(() => editor.chain().focus().addRowAfter().scrollIntoView().run())}
+                                    />
+                                    <MoreItem
+                                        label={t('Delete row')}
+                                        icon={Rows3}
+                                        onSelect={() => select(() => editor.chain().focus().deleteRow().scrollIntoView().run())}
+                                    />
+                                    <MoreItem
+                                        label={t('Add column')}
+                                        icon={Columns3}
+                                        onSelect={() => select(() => editor.chain().focus().addColumnAfter().scrollIntoView().run())}
+                                    />
+                                    <MoreItem
+                                        label={t('Delete column')}
+                                        icon={Columns3}
+                                        onSelect={() => select(() => editor.chain().focus().deleteColumn().scrollIntoView().run())}
+                                    />
+                                    <MoreItem
+                                        label={t('Delete table')}
+                                        icon={Trash2}
+                                        onSelect={() => select(() => editor.chain().focus().deleteTable().scrollIntoView().run())}
+                                    />
+                                </>
+                            )}
+                        </div>
+                    </>,
+                    document.body,
+                )}
         </div>
     );
 }
@@ -562,6 +609,7 @@ export default function RichTextEditor({
     onChange,
     label,
     id,
+    rows,
     'aria-required': ariaRequired,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedby,
@@ -573,6 +621,9 @@ export default function RichTextEditor({
     const attributes: Record<string, string> = { 'aria-label': label };
     if (id) {
         attributes.id = id;
+    }
+    if (rows) {
+        attributes.style = composeEditorRowsStyle(rows);
     }
     if (ariaRequired) {
         attributes['aria-required'] = 'true';
