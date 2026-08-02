@@ -2,6 +2,9 @@
 
 namespace App\Upgrade;
 
+use App\Notifications\Settings\NotificationChannel;
+use App\Notifications\Settings\NotificationKind;
+use App\Support\PreferenceKey;
 use App\Upgrade\Steps\AdminUserUpgrade;
 use App\Upgrade\Steps\BannerImageUpgrade;
 use App\Upgrade\Steps\BannerUpgrade;
@@ -53,6 +56,12 @@ use App\Upgrade\Steps\SnsSettingUpgrade;
 /** The upgrade steps in run order. Adding a feature = adding its step here. */
 final class StepRegistry
 {
+    /**
+     * The one memberConfigDispositions() key naming a family rather than a literal config name.
+     * Its members are the registered NotificationKind × NotificationChannel keys.
+     */
+    public const MEMBER_CONFIG_NOTIFICATION_FAMILY = 'is_send_*_mail / is_send_*_web';
+
     /** @return list<class-string<UpgradeStep>> */
     public static function classes(): array
     {
@@ -251,6 +260,47 @@ final class StepRegistry
             'mobile_address_pre' => 'Dropped: mobile frontend not in scope.',
             'mobile_address_token' => 'Dropped: mobile frontend not in scope.',
         ];
+    }
+
+    /**
+     * Every literal `member_config` name the upgrade recognises, for the preflight's unknown-name
+     * scan. Three sources, unioned so none of them is a second list that can drift:
+     * memberConfigDispositions() carries the dropped names and the ones MemberUpgrade reads by
+     * subquery, while the migrated preference and notification keys come from the registries the
+     * steps themselves build their filters from — registering a key there keeps it recognised even
+     * if the narrative map lags.
+     *
+     * @return list<string>
+     */
+    public static function knownMemberConfigNames(): array
+    {
+        $names = array_values(array_filter(
+            array_keys(self::memberConfigDispositions()),
+            static fn (string $name): bool => $name !== self::MEMBER_CONFIG_NOTIFICATION_FAMILY,
+        ));
+
+        foreach (PreferenceKey::upgradableCases() as $key) {
+            $names[] = $key->op3SourceName();
+        }
+
+        foreach (NotificationKind::cases() as $kind) {
+            foreach (NotificationChannel::cases() as $channel) {
+                $names[] = $kind->op3ConfigName($channel);
+            }
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * Every literal `community_config` name the upgrade recognises, for the preflight's unknown-name
+     * scan. CommunityUpgrade reads them all by subquery, so the disposition map is the only list.
+     *
+     * @return list<string>
+     */
+    public static function knownCommunityConfigNames(): array
+    {
+        return array_keys(self::communityConfigDispositions());
     }
 
     /**

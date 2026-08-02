@@ -20,12 +20,22 @@ use Illuminate\Support\Facades\DB;
  *    owner subqueries resolve against an empty table.
  *  - an OPTIONAL plugin group partially present → an old/corrupt plugin → hard error naming its floor.
  *
+ * It also counts the KV config rows whose `name` the upgrade does not recognise. That is a warning,
+ * not an error: a third-party plugin or a source customisation is a legitimate reason for the source
+ * to hold names OpenPNE 4 has no home for, and the operator decides whether losing them matters.
+ *
  * Introspection is read-only via information_schema qualified by the source database + prefix:
  * Schema::hasTable() binds to the connection's own (empty-prefix) database and cannot see a
  * --source-prefix / --source-database table. MySQL-only, like the runner.
  */
 final class SourcePreflight
 {
+    /**
+     * The KV config tables whose recognised names are enumerable, so an unrecognised one can be
+     * counted. Both are read by correlated subquery, so their `name` is also required structurally.
+     */
+    private const CONFIG_NAME_TABLES = ['member_config', 'community_config'];
+
     /** @param  list<UpgradeStep>  $steps */
     public function __construct(
         private readonly array $steps,
@@ -129,6 +139,20 @@ final class SourcePreflight
         return "source table `{$table}` absent — the plugin is not installed; created empty so its step is a no-op (not migrated).";
     }
 
+    public static function unknownConfigNameMessage(string $table, string $name, int $rows): string
+    {
+        return "source `{$table}` holds {$rows} row(s) named `{$name}`, which the upgrade does not recognise — a third-party plugin or a source customisation. Not migrated; `openpne:upgrade-matrix` lists the names that are.";
+    }
+
+    /** @return list<string> the names the upgrade recognises in one CONFIG_NAME_TABLES table */
+    private static function knownNames(string $table): array
+    {
+        return match ($table) {
+            'member_config' => StepRegistry::knownMemberConfigNames(),
+            'community_config' => StepRegistry::knownCommunityConfigNames(),
+        };
+    }
+
     /** @return list<string> */
     private function readTables(): array
     {
@@ -156,6 +180,17 @@ final class SourcePreflight
             }
         }
 
+        // consumedSourceColumns() attributes every column to the step's own FROM table, so a table
+        // reached only by correlated subquery gets no column check — and both KV config tables are
+        // read that way (community_config always, member_config whenever the step set excludes the
+        // ones that select FROM it). Their `name` is read by those subqueries and by the scan below,
+        // so require it here rather than letting either be where a customised source blows up.
+        foreach (self::CONFIG_NAME_TABLES as $table) {
+            if (isset($present[$table])) {
+                $required[$table]['name'] = true;
+            }
+        }
+
         $errors = [];
         foreach ($required as $table => $columns) {
             if (! ($present[$table] ?? false)) {
@@ -170,6 +205,46 @@ final class SourcePreflight
         }
 
         return $errors;
+    }
+
+    /**
+     * Row counts per unrecognised `name`, for the KV config tables this run reads. Enumerating the
+     * recognised names is only possible for these two: the KV shape means a name outside the set is
+     * invisible to the per-step column audit, which is what this replaces at run time.
+     *
+     * Deliberately not part of inspect(): the scan itself reads `name`, so a source missing that
+     * column has to reach inspect()'s structural verdict — call this only once that comes back
+     * clean. That also keeps it off verify-upgrade, which has no use for the warning.
+     *
+     * @return array<string, array<string, int>> table => name => rows, busiest name first
+     */
+    public function unknownConfigNames(string $prefix, ?string $database): array
+    {
+        $readTables = $this->readTables();
+
+        $unknown = [];
+        foreach (self::CONFIG_NAME_TABLES as $table) {
+            if (! in_array($table, $readTables, true) || ! $this->tableExists($table, $prefix, $database)) {
+                continue; // not read by this run, or absent — the table checks in inspect() own that case
+            }
+
+            $known = self::knownNames($table);
+            $rows = DB::select(
+                'select `name`, count(*) as `rows` from '.InsertSelectCompiler::qualify($database, $prefix, $table)
+                .' where `name` not in ('.implode(', ', array_fill(0, count($known), '?')).')'
+                .' group by `name` order by `rows` desc, `name` asc',
+                $known,
+            );
+
+            if ($rows !== []) {
+                $unknown[$table] = array_combine(
+                    array_map(static fn (object $row): string => $row->name, $rows),
+                    array_map(static fn (object $row): int => (int) $row->rows, $rows),
+                );
+            }
+        }
+
+        return $unknown;
     }
 
     private function tableExists(string $table, string $prefix, ?string $database): bool
