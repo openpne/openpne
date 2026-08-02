@@ -1,16 +1,4 @@
-import {
-    useEffect,
-    useId,
-    useLayoutEffect,
-    useRef,
-    useState,
-    type ComponentType,
-    type FocusEvent as ReactFocusEvent,
-    type KeyboardEvent as ReactKeyboardEvent,
-    type ReactNode,
-    type RefObject,
-} from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useId, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 import {
@@ -46,7 +34,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { composeEditorAttributes, createComposeEditorOptions } from '@/components/compose/editor-extensions';
-import { useVisualViewport, type ViewportMetrics } from '@/components/compose/use-visual-viewport-bottom';
 
 type RichTextEditorProps = {
     initialMarkdown: string;
@@ -60,34 +47,14 @@ type RichTextEditorProps = {
     'aria-describedby'?: string;
 };
 
-// Below Tailwind's md (768px): the compact layout trades the full sticky row for the mobile bottom bar.
+// Below Tailwind's md (768px): the row carries the compact button set and demotes the rest into "More".
 const COMPACT_QUERY = '(max-width: 767.98px)';
-
-const FOCUSABLE_SELECTOR =
-    'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable="true"]';
-
-/**
- * The next tabbable element after `el` in document order. Because the bar is portalled to <body> (end
- * of document), the tabbable right after the wrapper sentinel is the in-flow control that follows the
- * editor — the next form field — not the portalled bar, which makes it the toolbar's forward escape
- * target. Focusing it ends the bar's session (it is outside the allowed set).
- */
-function nextTabbableAfter(el: HTMLElement | null): HTMLElement | null {
-    if (!el) {
-        return null;
-    }
-    const focusables = Array.from(document.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        (node) => node === el || node.getClientRects().length > 0,
-    );
-    const index = focusables.indexOf(el);
-    return index >= 0 ? (focusables[index + 1] ?? null) : null;
-}
 
 // size-9 (36px) resting; pointer-coarse bumps every target to 44px (Apple HIG / Material touch floor).
 const TOOLBAR_BUTTON_CLASS =
     'inline-flex size-9 pointer-coarse:size-11 items-center justify-center rounded-field text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40 aria-pressed:bg-accent aria-pressed:text-accent-foreground';
 
-/** Track a media query so the mobile bottom bar only engages below md (matches the CSS breakpoint). */
+/** Track a media query so the compact button set engages below md (matches the CSS breakpoint). */
 function useIsCompact(): boolean {
     const [compact, setCompact] = useState(
         () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(COMPACT_QUERY).matches,
@@ -115,7 +82,7 @@ type ToolbarAction = {
 };
 
 /**
- * Single source for every formatting command, so the desktop row and the mobile "More" menu can't
+ * Single source for every formatting command, so the full row and the compact row's "More" menu can't
  * drift and every chain carries `.scrollIntoView()` (ProseMirror otherwise scrolls inconsistently by
  * command — the toolbar's onMouseDown keeps the editor focused, so focus() early-returns and never
  * scrolls on its own). Recomputed each render; `active` reads the live selection.
@@ -218,7 +185,7 @@ function ActionButton({ action }: { action: ToolbarAction }) {
     );
 }
 
-/** Text + icon row inside the mobile "More" menu — the label doubles as the icon's meaning on touch. */
+/** Text + icon row inside the "More" menu — the label doubles as the icon's meaning on touch. */
 function MoreItem({
     label,
     icon: Icon,
@@ -248,35 +215,19 @@ function MoreItem({
 }
 
 /**
- * Overflow menu for the demoted formatting + table commands on mobile. A plain (non-Radix) popover on
- * purpose: Radix menus pull DOM focus into the menu for arrow-key navigation, which dismisses the
- * soft keyboard and drops the editor selection. Here the trigger and items preventDefault on
- * mousedown, so focus never leaves the contenteditable — the keyboard stays up and commands apply to
- * the live selection. Opens upward (bottom-full) since the bar sits at the viewport bottom.
+ * Overflow menu for the formatting + table commands the compact row demotes. A plain (non-Radix)
+ * popover on purpose: Radix menus pull DOM focus into the menu for arrow-key navigation, which
+ * dismisses the soft keyboard and drops the editor selection. Here the trigger and items
+ * preventDefault on mousedown, so focus never leaves the contenteditable — the keyboard stays up and
+ * commands apply to the live selection.
  */
-function MoreMenu({ editor, viewportHeight }: { editor: Editor; viewportHeight: number }) {
+function MoreMenu({ editor }: { editor: Editor }) {
     const t = useT();
     const actions = useToolbarActions(editor);
     const [open, setOpen] = useState(false);
-    const [maxHeight, setMaxHeight] = useState<number | undefined>(undefined);
     const containerRef = useRef<HTMLDivElement>(null);
     const panelId = useId();
     const inTable = editor.isActive('table');
-
-    // Clamp the upward-opening panel to the visible band above the bar so it never spills past the top
-    // of the visual viewport when the keyboard is open: min(60vh of the layout viewport, vv.height −
-    // bar height − margin), with no lower floor — a tiny visual viewport shrinks the panel to what
-    // fits and the panel scrolls internally. viewportHeight 0 = unknown → keep the CSS 60vh cap.
-    useLayoutEffect(() => {
-        if (!open) {
-            return;
-        }
-        const bar = containerRef.current?.closest('[data-testid="compose-mobile-toolbar"]') as HTMLElement | null;
-        const barHeight = bar?.offsetHeight ?? 0;
-        setMaxHeight(
-            viewportHeight > 0 ? Math.min(0.6 * window.innerHeight, viewportHeight - barHeight - 16) : undefined,
-        );
-    }, [open, viewportHeight]);
 
     useEffect(() => {
         if (!open) {
@@ -287,8 +238,8 @@ function MoreMenu({ editor, viewportHeight }: { editor: Editor; viewportHeight: 
                 setOpen(false);
             }
         };
-        // Close when keyboard focus leaves the panel (e.g. Tab from the last item onto the switch
-        // button) so the popover never lingers over an external control.
+        // Close when keyboard focus leaves the panel (e.g. Tab past the last item) so the popover
+        // never lingers over an external control.
         const onFocusIn = (event: FocusEvent) => {
             if (!containerRef.current?.contains(event.target as Node)) {
                 setOpen(false);
@@ -333,8 +284,7 @@ function MoreMenu({ editor, viewportHeight }: { editor: Editor; viewportHeight: 
                 <div
                     id={panelId}
                     data-testid="compose-more-panel"
-                    style={{ maxHeight }}
-                    className="absolute bottom-full right-0 z-50 mb-2 max-h-[60vh] w-60 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-lg"
+                    className="absolute right-0 top-full z-50 mt-2 max-h-[60vh] w-60 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-lg"
                 >
                     <MoreItem label={t('Italic')} icon={Italic} pressed={actions.italic.active} onSelect={() => select(actions.italic.run)} />
                     <MoreItem label={t('Strikethrough')} icon={Strikethrough} pressed={actions.strike.active} onSelect={() => select(actions.strike.run)} />
@@ -393,36 +343,15 @@ function MoreMenu({ editor, viewportHeight }: { editor: Editor; viewportHeight: 
 }
 
 /** Small dialog to set or clear the link on the current selection; only http/https is accepted. */
-function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (open: boolean) => void }) {
+function LinkDialog({ editor }: { editor: Editor }) {
     const t = useT();
-    const [open, setOpenState] = useState(false);
+    const [open, setOpen] = useState(false);
     const [url, setUrl] = useState('');
     const [error, setError] = useState('');
     const urlId = useId();
     const errorId = `${urlId}-error`;
 
-    // CSS breakpoints can't see the soft keyboard: a landscape phone is sm+ (centered panel) yet its
-    // visual viewport may be ~180px tall. While the keyboard is open, clamp the panel into the
-    // visible band by inline style at every width. The class centers with `translate:` (Tailwind v4's
-    // -translate-x-1/2 + sm:-translate-y-1/2 both write the `translate` property), so the override
-    // must set `translate` too — an inline `transform` is a different property and would stack, double-
-    // shifting the panel off-screen.
-    const viewport = useVisualViewport(open);
-    const clampStyle = viewport.keyboardOpen
-        ? {
-              top: viewport.offsetTop + 8,
-              translate: '-50% 0',
-              maxHeight: viewport.height - 16,
-              overflowY: 'auto' as const,
-          }
-        : undefined;
-
     const active = editor.isActive('link');
-
-    const setOpen = (next: boolean) => {
-        setOpenState(next);
-        onOpenChange?.(next);
-    };
 
     function openDialog() {
         setUrl((editor.getAttributes('link').href as string | undefined) ?? '');
@@ -457,12 +386,9 @@ function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (
             </ToolbarButton>
             <DialogContent
                 closeLabel={t('Close')}
-                style={clampStyle}
                 // Hand focus back to the editable on every close path (Apply / × / ESC / overlay-tap).
-                // The default returns focus to the trigger, but on mobile the trigger lives in the
-                // bottom bar, which unmounts as the overlay closes — so focus would fall to <body> and
-                // the bar would not re-activate. Focusing the editor lands focus inside the wrapper and
-                // re-arms the focusin activation, keeping the bar mounted through the handoff.
+                // Radix would otherwise return it to the trigger, undoing the `.focus()` the link
+                // command chain just ran and leaving the caret nowhere to keep typing.
                 onCloseAutoFocus={(event) => {
                     event.preventDefault();
                     editor.commands.focus();
@@ -517,7 +443,7 @@ function LinkDialog({ editor, onOpenChange }: { editor: Editor; onOpenChange?: (
     );
 }
 
-/** Insert/edit table via a dropdown; row/column actions disable outside a table. Desktop only. */
+/** Insert/edit table via a dropdown; row/column actions disable outside a table. md+ only. */
 function TableMenu({ editor }: { editor: Editor }) {
     const t = useT();
     const inTable = editor.isActive('table');
@@ -564,15 +490,18 @@ function TableMenu({ editor }: { editor: Editor }) {
 }
 
 /**
- * md+ toolbar: the full formatting row, sticky at the top of the form column (below the persistent
- * TopNav via --modern-top-offset, which is 0 at lg) with an opaque background so the body scrolls
- * under it. The host Panel opts out of overflow clipping (Panel overflow="visible") so the sticky
- * resolves against the page scroll, and -mx-5 bleeds the band to the card edges — matching the
- * `sm:px-5` the panel body restores. Only that sm+ padding is ever in play here, because this row starts
- * at md while the panel's tighter below-sm padding stops at sm; keep them from overlapping if either
- * breakpoint moves.
+ * The formatting row, sticky at the top of the form column at every width (below the persistent TopNav
+ * via --modern-top-offset, which is 0 at lg) with an opaque background so the body scrolls under it.
+ * The host Panel opts out of overflow clipping (Panel overflow="visible") so the sticky resolves
+ * against the page scroll, and the negative margins bleed the band to the card edges — they must track
+ * the panel body's own `px-4 sm:px-5`.
+ *
+ * Placement is deliberately breakpoint-independent: only the button set narrows, with the rest demoted
+ * into "More". A bar anchored to the visual viewport to ride the soft keyboard was tried and removed —
+ * the measurement differs per engine and display mode and lags scroll, so the bar drifted off the
+ * keyboard on real hardware. Staying in the page's own coordinate system has no such failure mode.
  */
-function DesktopToolbar({ editor }: { editor: Editor }) {
+function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boolean }) {
     const t = useT();
     const actions = useToolbarActions(editor);
 
@@ -580,121 +509,36 @@ function DesktopToolbar({ editor }: { editor: Editor }) {
         <div
             role="toolbar"
             aria-label={t('Formatting')}
-            className="sticky top-[var(--modern-top-offset)] z-10 -mx-5 flex flex-wrap items-center gap-0.5 border-b border-border bg-card px-5 py-1.5 pointer-coarse:gap-1"
+            data-testid="compose-toolbar"
+            className="sticky top-[var(--modern-top-offset)] z-10 -mx-4 flex flex-wrap items-center gap-0.5 border-b border-border bg-card px-4 py-1.5 pointer-coarse:gap-1 sm:-mx-5 sm:px-5"
         >
-            <ActionButton action={actions.bold} />
-            <ActionButton action={actions.italic} />
-            <ActionButton action={actions.strike} />
-            <ActionButton action={actions.code} />
-            <ActionButton action={actions.h2} />
-            <ActionButton action={actions.h3} />
-            <ActionButton action={actions.h4} />
-            <ActionButton action={actions.bulletList} />
-            <ActionButton action={actions.orderedList} />
-            <ActionButton action={actions.quote} />
-            <ActionButton action={actions.codeBlock} />
-            <LinkDialog editor={editor} />
-            <ActionButton action={actions.hr} />
-            <TableMenu editor={editor} />
-        </div>
-    );
-}
-
-/**
- * Below md: a note.com-style bar pinned to the visual-viewport bottom so it rides just above the
- * keyboard. Positioned by TOP in layout-viewport coordinates (`top = viewportBottom − barHeight`),
- * robust whether iOS resizes the layout viewport, pans the visual viewport, or both. Rendered through
- * a portal to <body> so no ancestor transform/filter/backdrop-filter can capture the fixed position
- * (an iOS WebKit containing-block trap that made the bar float mid-screen at the content-column width).
- * At rest (keyboard closed) it pads for the home-indicator safe area; the More panel is a DOM child and
- * rides along.
- */
-function MobileToolbar({
-    editor,
-    metrics,
-    rootRef,
-    sentinelRef,
-    onOverlayOpenChange,
-}: {
-    editor: Editor;
-    metrics: ViewportMetrics;
-    rootRef: RefObject<HTMLDivElement | null>;
-    sentinelRef: RefObject<HTMLSpanElement | null>;
-    onOverlayOpenChange: (open: boolean) => void;
-}) {
-    const t = useT();
-    const actions = useToolbarActions(editor);
-    const [barHeight, setBarHeight] = useState(56);
-
-    // Tab escape routes that compensate for the portal (the bar is not a DOM neighbour of the editor):
-    // Shift+Tab off the first control returns to the editable; Tab off the last control jumps to the
-    // in-flow control after the wrapper sentinel — the next form field, which also dismisses the bar.
-    // Forward ENTRY is handled by the sentinel's onFocus in the parent. `:not([disabled])` so a
-    // disabled table op is never an edge.
-    const onKeyDown = (event: ReactKeyboardEvent) => {
-        if (event.key !== 'Tab') {
-            return;
-        }
-        const buttons = rootRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])');
-        if (!buttons || buttons.length === 0) {
-            return;
-        }
-        const activeEl = document.activeElement;
-        if (event.shiftKey && activeEl === buttons[0]) {
-            event.preventDefault();
-            editor.commands.focus();
-        } else if (!event.shiftKey && activeEl === buttons[buttons.length - 1]) {
-            event.preventDefault();
-            nextTabbableAfter(sentinelRef.current)?.focus();
-        }
-    };
-
-    // Measure the bar (its height varies with the safe-area padding) so the top offset lands its bottom
-    // edge exactly on the visual-viewport bottom. ResizeObserver keeps it correct as the safe-area
-    // padding toggles with the keyboard.
-    useLayoutEffect(() => {
-        const el = rootRef.current;
-        if (!el) {
-            return;
-        }
-        const measure = () => setBarHeight(el.offsetHeight);
-        measure();
-        if (typeof ResizeObserver === 'undefined') {
-            return;
-        }
-        const observer = new ResizeObserver(measure);
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [rootRef]);
-
-    if (typeof document === 'undefined') {
-        return null;
-    }
-
-    // Portalled to <body>, the bar sits outside the page's <main>, so it carries its own region
-    // landmark (axe "region") — the inner element keeps the toolbar role.
-    return createPortal(
-        <div
-            ref={rootRef}
-            role="region"
-            aria-label={t('Editor toolbar')}
-            data-testid="compose-mobile-toolbar"
-            style={{ top: metrics.viewportBottom - barHeight }}
-            onKeyDown={onKeyDown}
-            className={cn(
-                'fixed inset-x-0 z-40 border-t border-border bg-card px-2 py-1.5 shadow-elevated',
-                !metrics.keyboardOpen && 'pb-[calc(0.375rem+env(safe-area-inset-bottom))]',
+            {compact ? (
+                <>
+                    <ActionButton action={actions.bold} />
+                    <ActionButton action={actions.h2} />
+                    <ActionButton action={actions.bulletList} />
+                    <LinkDialog editor={editor} />
+                    <MoreMenu editor={editor} />
+                </>
+            ) : (
+                <>
+                    <ActionButton action={actions.bold} />
+                    <ActionButton action={actions.italic} />
+                    <ActionButton action={actions.strike} />
+                    <ActionButton action={actions.code} />
+                    <ActionButton action={actions.h2} />
+                    <ActionButton action={actions.h3} />
+                    <ActionButton action={actions.h4} />
+                    <ActionButton action={actions.bulletList} />
+                    <ActionButton action={actions.orderedList} />
+                    <ActionButton action={actions.quote} />
+                    <ActionButton action={actions.codeBlock} />
+                    <LinkDialog editor={editor} />
+                    <ActionButton action={actions.hr} />
+                    <TableMenu editor={editor} />
+                </>
             )}
-        >
-            <div role="toolbar" aria-label={t('Formatting')} className="flex items-center gap-0.5 pointer-coarse:gap-1">
-                <ActionButton action={actions.bold} />
-                <ActionButton action={actions.h2} />
-                <ActionButton action={actions.bulletList} />
-                <LinkDialog editor={editor} onOpenChange={onOverlayOpenChange} />
-                <MoreMenu editor={editor} viewportHeight={metrics.height} />
-            </div>
-        </div>,
-        document.body,
+        </div>
     );
 }
 
@@ -747,104 +591,12 @@ export default function RichTextEditor({
         editor?.setOptions({ editorProps: { attributes: composeEditorAttributes(JSON.parse(attributesKey) as Record<string, string>) } });
     }, [editor, attributesKey]);
 
-    // Mobile bottom bar shows only while the editor surface holds focus.
     const isCompact = useIsCompact();
-    const wrapperRef = useRef<HTMLDivElement>(null);
-    const barPortalRef = useRef<HTMLDivElement>(null);
-    const sentinelRef = useRef<HTMLSpanElement>(null);
-    const blurTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-    const [focusWithin, setFocusWithin] = useState(false);
-    const [overlayOpen, setOverlayOpen] = useState(false);
-    const active = focusWithin || overlayOpen;
-    const mobileActive = isCompact && active;
-
-    // ACTIVATION: React synthetic onFocus bubbles through the portal, so focus entering the editor, the
-    // sentinel, or the portalled bar activates the bar.
-    const handleFocusIn = () => {
-        clearTimeout(blurTimer.current);
-        setFocusWithin(true);
-    };
-
-    // DEACTIVATION AUTHORITY (only while active), document-level so it also sees departures from the
-    // portalled bar, which the wrapper's React subtree cannot. Dual mechanism:
-    //   - focusout SCHEDULES the deactivation timer on EVERY focus departure — including blur-to-nowhere
-    //     (el.blur(), tapping non-focusable chrome, iOS keyboard "Done"), where activeElement becomes
-    //     <body> and NO focusin ever fires.
-    //   - focusin CANCELS it only when focus lands back inside the editor surface: the wrapper or the
-    //     portalled bar. Anything past the editor — the next form control included — lets it fire, which
-    //     is what keeps the bar from covering the fields below it (the whole point of showing it only
-    //     while the editor has focus). Reverse entry does not need an exemption here: once the bar is
-    //     gone Shift+Tab reaches the editable directly in document order and remounts it.
-    // Net: bar→next field = no cancel, timer fires; blur-to-null = nothing cancels, timer fires. The
-    // 100ms delay lets Radix's link-sheet close refocus the editable in time (and overlayOpen pins the
-    // bar through the sheet's lifetime regardless).
-    useEffect(() => {
-        if (!mobileActive) {
-            return;
-        }
-        const inAllowedSet = (target: EventTarget | null): boolean =>
-            target instanceof Node &&
-            (Boolean(wrapperRef.current?.contains(target)) || Boolean(barPortalRef.current?.contains(target)));
-        const onDocFocusOut = () => {
-            clearTimeout(blurTimer.current);
-            blurTimer.current = setTimeout(() => setFocusWithin(false), 100);
-        };
-        const onDocFocusIn = (event: FocusEvent) => {
-            if (inAllowedSet(event.target)) {
-                clearTimeout(blurTimer.current);
-            }
-        };
-        document.addEventListener('focusout', onDocFocusOut);
-        document.addEventListener('focusin', onDocFocusIn);
-        return () => {
-            clearTimeout(blurTimer.current);
-            document.removeEventListener('focusout', onDocFocusOut);
-            document.removeEventListener('focusin', onDocFocusIn);
-        };
-    }, [mobileActive]);
-
-    // Focus-order bridge for the portalled bar: Tab out of the editor lands on this in-flow sentinel,
-    // which forwards into the portalled toolbar (first button on forward entry from the editor). The
-    // bar's own keydown handles the reverse escapes. Rendered only while the bar is mounted, so it is
-    // never a stray tab stop.
-    //
-    // Backward entry from the following control only reaches here inside the 100ms before the bar
-    // deactivates; past that the sentinel is gone and Shift+Tab simply lands on the editable in
-    // document order, remounting the bar. Both routes end up in the editor surface, which is the
-    // contract — the last-control branch just keeps the immediate one from skipping the bar entirely.
-    const handleSentinelFocus = (event: ReactFocusEvent) => {
-        const buttons = barPortalRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])');
-        if (!buttons || buttons.length === 0) {
-            return;
-        }
-        const fromInsideWrapper = event.relatedTarget instanceof Node && wrapperRef.current?.contains(event.relatedTarget);
-        (fromInsideWrapper ? buttons[0] : buttons[buttons.length - 1])?.focus();
-    };
-
-    const viewport = useVisualViewport(mobileActive);
 
     return (
-        <div ref={wrapperRef} className="space-y-2" onFocus={handleFocusIn}>
-            {editor && !isCompact && <DesktopToolbar editor={editor} />}
+        <div className="space-y-2">
+            {editor && <FormattingToolbar editor={editor} compact={isCompact} />}
             {editor && <EditorContent editor={editor} />}
-            {editor && mobileActive && (
-                <>
-                    <span
-                        ref={sentinelRef}
-                        data-testid="compose-focus-sentinel"
-                        tabIndex={0}
-                        onFocus={handleSentinelFocus}
-                        className="sr-only"
-                    />
-                    <MobileToolbar
-                        editor={editor}
-                        metrics={viewport}
-                        rootRef={barPortalRef}
-                        sentinelRef={sentinelRef}
-                        onOverlayOpenChange={setOverlayOpen}
-                    />
-                </>
-            )}
         </div>
     );
 }
