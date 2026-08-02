@@ -350,7 +350,9 @@ function MoreMenu({ editor }: { editor: Editor }) {
                             aria-label={t('More formatting')}
                             tabIndex={-1}
                             data-testid="compose-more-panel"
-                            className="fixed inset-x-0 bottom-0 z-50 max-h-[70dvh] overflow-y-auto rounded-t-xl border-t border-border bg-card p-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-lg outline-none"
+                            // Two columns: the sheet covers whatever the member is formatting, so
+                            // halving its rows is halving how much of the selection it hides.
+                            className="fixed inset-x-0 bottom-0 z-50 grid max-h-[70dvh] grid-cols-2 gap-x-1 overflow-y-auto rounded-t-xl border-t border-border bg-card p-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] shadow-lg outline-none"
                         >
                             <MoreItem label={t('Italic')} icon={Italic} pressed={actions.italic.active} onSelect={() => select(actions.italic.run)} />
                             <MoreItem
@@ -376,7 +378,7 @@ function MoreMenu({ editor }: { editor: Editor }) {
                                 onSelect={() => select(actions.codeBlock.run)}
                             />
                             <MoreItem label={t('Horizontal rule')} icon={Minus} onSelect={() => select(actions.hr.run)} />
-                            <div role="separator" className="my-1 h-px bg-border" />
+                            <div role="separator" className="col-span-2 my-1 h-px bg-border" />
                             <MoreItem
                                 label={t('Insert table')}
                                 icon={TableIcon}
@@ -388,7 +390,7 @@ function MoreMenu({ editor }: { editor: Editor }) {
                                 otherwise be five permanently greyed rows the member has to read past. */}
                             {inTable && (
                                 <>
-                                    <div role="separator" className="my-1 h-px bg-border" />
+                                    <div role="separator" className="col-span-2 my-1 h-px bg-border" />
                                     <MoreItem
                                         label={t('Add row')}
                                         icon={Rows3}
