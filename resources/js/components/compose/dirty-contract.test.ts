@@ -40,16 +40,26 @@ test('a selection-only transaction fires onChange 0 times', () => {
     editor.destroy();
 });
 
-test('blurring paints the selection without dirtying the document', () => {
+test('holding the selection paints it without dirtying the document', () => {
     let count = 0;
     const editor = build('hello world', () => {
         count += 1;
     });
     editor.commands.setTextSelection({ from: 1, to: 6 });
-    editor.view.dom.dispatchEvent(new FocusEvent('blur'));
-    assert.match(editor.view.dom.innerHTML, /blurred-selection/);
+    editor.commands.holdSelection(true);
+    assert.match(editor.view.dom.innerHTML, /held-selection/);
     assert.equal(count, 0);
     assert.equal(serializeMarkdown(editor).trim(), 'hello world');
+    editor.destroy();
+});
+
+test('a blur nobody asked to hold paints nothing', () => {
+    // Chromium keeps a contenteditable's selection painted when focus moves to a button and drops it
+    // for a text field; painting on every blur would override that, so the hold is explicit.
+    const editor = build('hello world', () => {});
+    editor.commands.setTextSelection({ from: 1, to: 6 });
+    editor.view.dom.dispatchEvent(new FocusEvent('blur'));
+    assert.doesNotMatch(editor.view.dom.innerHTML, /held-selection/);
     editor.destroy();
 });
 

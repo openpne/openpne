@@ -301,11 +301,14 @@ function MoreMenu({ editor }: { editor: Editor }) {
         // selection each item applies to lives in the editor state.
         panelRef.current?.focus();
         return () => {
+            // Release the painted selection however the sheet closed. Picking a command re-focuses
+            // the editable, which releases it too, but a dismissal need not focus anything.
+            editor.commands.holdSelection(false);
             document.removeEventListener('pointerdown', onPointerDown, true);
             document.removeEventListener('focusin', onFocusIn);
             document.removeEventListener('keydown', onKeyDown);
         };
-    }, [open]);
+    }, [open, editor]);
 
     const select = (run: () => void) => {
         run();
@@ -325,6 +328,9 @@ function MoreMenu({ editor }: { editor: Editor }) {
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
                     if (!open) {
+                        // Hold the selection painted across the blur: it is what the sheet's commands
+                        // will act on, and blurring clears the range the browser would draw.
+                        editor.commands.holdSelection(true);
                         editor.commands.blur();
                     }
                     setOpen((value) => !value);

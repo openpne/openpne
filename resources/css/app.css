@@ -302,10 +302,10 @@ html body[data-scroll-locked] {
     color: var(--color-muted-foreground);
     font-size: 0.9em;
 }
-/* Stand-in for the native selection while the editable is blurred (blurredSelection plugin): a
-   blurred contenteditable paints none, and the "More" sheet blurs on purpose to drop the keyboard.
+/* Stands in for the native selection while a UI that acts on it holds the editor (heldSelection
+   plugin): the "More" sheet blurs on purpose to drop the keyboard, and blurring clears the range.
    Translucent so the text keeps its own contrast, from --color-selected — the chosen-state accent,
    which follows the link blue across the light/dark switch. */
-.ProseMirror .blurred-selection {
+.ProseMirror .held-selection {
     background: color-mix(in oklab, var(--color-selected) 30%, transparent);
 }
