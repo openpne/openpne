@@ -37,4 +37,7 @@ enum SettingGroup
 
     /** Per-feature availability toggles (App\Support\Feature), edited on the features page. */
     case Features;
+
+    /** Per-site branding (brand color, logo mark, favicon), edited on the branding page. */
+    case Branding;
 }

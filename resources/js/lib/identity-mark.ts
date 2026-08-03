@@ -27,17 +27,19 @@ function isCjk(ch: string): boolean {
 }
 
 /**
- * Returns `text-white` or `text-slate-900`, whichever has the higher WCAG contrast ratio against
+ * Returns `text-white` or `text-black`, whichever has the higher WCAG contrast ratio against
  * `bgHex`. A contrast-ratio comparison (not a luminance threshold) keeps mid-gray backgrounds
- * readable. Invalid input falls back to white.
+ * readable, and pure black rather than an off-black keeps the worst case at 4.58:1 — a mid-tone hue
+ * such as #0088aa clears 4.5:1 against neither white nor slate-900. Invalid input falls back to
+ * white. App\Support\BrandColor is the server twin.
  */
 export function pickReadableTextColor(bgHex: string): string {
     if (!/^#[0-9a-fA-F]{6}$/.test(bgHex)) return 'text-white';
 
     const bgLum = wcagRelativeLuminance(bgHex);
     const whiteContrast = contrastRatio(WHITE_LUMINANCE, bgLum);
-    const darkContrast = contrastRatio(SLATE_900_LUMINANCE, bgLum);
-    return darkContrast >= whiteContrast ? 'text-slate-900' : 'text-white';
+    const blackContrast = contrastRatio(BLACK_LUMINANCE, bgLum);
+    return blackContrast >= whiteContrast ? 'text-black' : 'text-white';
 }
 
 function wcagRelativeLuminance(hex: string): number {
@@ -58,5 +60,4 @@ function contrastRatio(l1: number, l2: number): number {
 }
 
 const WHITE_LUMINANCE = 1;
-const SLATE_900_LUMINANCE =
-    0.2126 * srgbToLinear(0x0f / 255) + 0.7152 * srgbToLinear(0x17 / 255) + 0.0722 * srgbToLinear(0x2a / 255);
+const BLACK_LUMINANCE = 0;

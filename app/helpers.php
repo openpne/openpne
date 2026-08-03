@@ -6,6 +6,7 @@ use App\Compat\PluginStylesheets;
 use App\Compat\RouteParityRegistry;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
+use App\Support\BrandColor;
 use App\Support\SnsSettingKey;
 use Illuminate\Support\Facades\Schema;
 
@@ -30,6 +31,40 @@ if (! function_exists('sns_admin_mail_address')) {
     function sns_admin_mail_address(): string
     {
         return (string) app(SnsSettingService::class)->get(SnsSettingKey::AdminMailAddress);
+    }
+}
+
+if (! function_exists('brand_color')) {
+    /**
+     * The per-site brand color as `#rrggbb`, or null when none is set. A stored value that is not a
+     * valid hex color reads as unset: it is inlined into a style attribute and a JSON prop, so a
+     * corrupt setting must fail back to the built-in color rather than reach either.
+     */
+    function brand_color(): ?string
+    {
+        $value = (string) app(SnsSettingService::class)->get(SnsSettingKey::BrandColor);
+
+        return BrandColor::isValid($value) ? $value : null;
+    }
+}
+
+if (! function_exists('brand_logo_url')) {
+    /** Public URL of the uploaded logo mark, or null when none is set (Modern falls back to an initial badge). */
+    function brand_logo_url(): ?string
+    {
+        $token = (string) app(SnsSettingService::class)->get(SnsSettingKey::BrandLogoFile);
+
+        return $token === '' ? null : route('file.public', ['file' => $token]);
+    }
+}
+
+if (! function_exists('brand_favicon_url')) {
+    /** Public URL of the uploaded favicon, or null when none is set (both surfaces keep the shipped icons). */
+    function brand_favicon_url(): ?string
+    {
+        $token = (string) app(SnsSettingService::class)->get(SnsSettingKey::BrandFaviconFile);
+
+        return $token === '' ? null : route('file.public', ['file' => $token]);
     }
 }
 

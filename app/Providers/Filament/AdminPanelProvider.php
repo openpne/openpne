@@ -40,8 +40,9 @@ class AdminPanelProvider extends PanelProvider
             // evaluates the brand name at render, so the DB read happens only per request.
             ->brandName(fn (): string => sns_name())
             // Browsers auto-request /favicon.ico; this makes Filament emit an explicit <link> so the
-            // admin tab shows the OpenPNE mark on the PNG path too. Brand stays the sns_name text.
-            ->favicon(asset('favicon-32x32.png'))
+            // admin tab shows the site's mark on the PNG path too. Brand stays the sns_name text.
+            // Closure for the same reason as brandName above.
+            ->favicon(fn (): string => brand_favicon_url() ?? asset('favicon-32x32.png'))
             // Separate `admin` guard, entirely independent of the member-facing
             // guard: a logged-in member is never treated as an administrator
             // and vice versa.
