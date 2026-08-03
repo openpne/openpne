@@ -138,7 +138,7 @@ export default function MessageIndex() {
                                         </p>
                                     </div>
                                     {m.unread && (
-                                        <span role="img" aria-label={t('Unread')} className="mt-1 size-2 shrink-0 rounded-full bg-primary" />
+                                        <span role="img" aria-label={t('Unread')} className="mt-1 size-2 shrink-0 rounded-full bg-selected" />
                                     )}
                                 </ListRow>
                             ))}

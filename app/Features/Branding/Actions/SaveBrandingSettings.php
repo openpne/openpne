@@ -11,6 +11,7 @@ use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use Throwable;
 
 /**
@@ -40,6 +41,13 @@ class SaveBrandingSettings
      */
     public function __invoke(string $brandColor, array $files = []): void
     {
+        // Reject unknown keys before storing anything: persist() would silently drop them and the
+        // uploaded file would outlive the save as an orphan.
+        $known = [SnsSettingKey::BrandLogoFile->value, SnsSettingKey::BrandFaviconFile->value];
+        if ($unknown = array_diff(array_keys($files), $known)) {
+            throw new InvalidArgumentException('Not a branding file setting: '.implode(', ', $unknown));
+        }
+
         /** @var list<File> $stored */
         $stored = [];
 

@@ -13,6 +13,7 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -95,6 +96,19 @@ class SaveBrandingSettingsTest extends TestCase
         $this->assertNotNull(File::find($current->getKey()));
         // Save-all: every branding key gets a row, the blank ones included.
         $this->assertSame('', $this->storedValue(SnsSettingKey::BrandFaviconFile));
+    }
+
+    public function test_an_unknown_file_key_is_rejected_before_anything_is_stored(): void
+    {
+        try {
+            app(SaveBrandingSettings::class)('', ['sns_name' => $this->png()]);
+            $this->fail('The unknown key should have been rejected.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('sns_name', $e->getMessage());
+        }
+
+        $this->assertSame(0, File::count());
+        $this->assertDatabaseMissing('sns_settings', ['key' => SnsSettingKey::BrandColor->value]);
     }
 
     public function test_a_superseded_token_pointing_at_an_owned_file_is_left_alone(): void

@@ -38,6 +38,10 @@ use Illuminate\Http\UploadedFile;
  * App\Features\Branding\Actions\SaveBrandingSettings — the uploads and the settings write have to
  * succeed or fail together.
  *
+ * The stored tokens are not existence-checked on render (hot path): deleting the referenced File from
+ * the Files resource leaves a dangling URL until a new image is saved here — the same accepted risk
+ * as an ownerless public asset embedded in custom HTML/CSS.
+ *
  * @property-read Schema $form
  */
 class BrandingSettings extends Page
@@ -121,7 +125,7 @@ class BrandingSettings extends Page
                         // attachment, which a <link rel="icon"> cannot use.
                         ->acceptedFileTypes(['image/png'])
                         ->maxSize(1024)
-                        ->rules(['dimensions:ratio=1'])
+                        ->rules(['dimensions:ratio=1,max_width='.self::maxDimension().',max_height='.self::maxDimension()])
                         ->storeFiles(false),
                     'remove_brand_favicon',
                     __('Remove the current favicon'),
