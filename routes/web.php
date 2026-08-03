@@ -43,6 +43,7 @@ use App\Http\Middleware\EnsureWebPublicDiaryEnabled;
 use App\Http\Middleware\NoReferrer;
 use App\Http\Middleware\SetLocale;
 use App\Models\Member;
+use App\Support\BrandColor;
 use App\Support\ClassicErrorPage;
 use App\Support\GuestLoginRedirect;
 use Illuminate\Http\Request;
@@ -244,7 +245,7 @@ Route::get('/manifest.webmanifest', fn () => response()->json([
     'scope' => '/',
     'display' => 'standalone',
     'background_color' => '#ffffff',
-    'theme_color' => '#2563eb',
+    'theme_color' => brand_color() ?? BrandColor::DEFAULT,
     'icons' => [
         ['src' => asset('icon-192x192.png'), 'sizes' => '192x192', 'type' => 'image/png'],
         ['src' => asset('icon-512x512.png'), 'sizes' => '512x512', 'type' => 'image/png'],

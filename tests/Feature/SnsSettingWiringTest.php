@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Notifications\Auth\RegistrationLinkNotification;
+use App\Services\SnsSettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,40 @@ class SnsSettingWiringTest extends TestCase
         $this->assertSame('My Community', sns_name());
         $this->assertSame('Welcome', sns_title());
         $this->assertSame('ops@example.test', sns_admin_mail_address());
+    }
+
+    public function test_branding_helpers_return_stored_overrides(): void
+    {
+        DB::table('sns_settings')->insert([
+            ['key' => 'brand_color', 'value' => '#0088aa'],
+            ['key' => 'brand_logo_file', 'value' => 'logo-token'],
+            ['key' => 'brand_favicon_file', 'value' => 'favicon-token'],
+        ]);
+
+        $this->assertSame('#0088aa', brand_color());
+        $this->assertSame(route('file.public', ['file' => 'logo-token']), brand_logo_url());
+        $this->assertSame(route('file.public', ['file' => 'favicon-token']), brand_favicon_url());
+    }
+
+    public function test_branding_helpers_read_unset_and_corrupt_values_as_unbranded(): void
+    {
+        // Absent (fresh install).
+        $this->assertNull(brand_color());
+        $this->assertNull(brand_logo_url());
+        $this->assertNull(brand_favicon_url());
+
+        // Stored, but empty or not a hex color: the value is inlined into a style attribute and a
+        // JSON prop, so anything unusable has to read as unset.
+        DB::table('sns_settings')->insert([
+            ['key' => 'brand_color', 'value' => 'rebeccapurple'],
+            ['key' => 'brand_logo_file', 'value' => ''],
+            ['key' => 'brand_favicon_file', 'value' => ''],
+        ]);
+        app(SnsSettingService::class)->clearCache();
+
+        $this->assertNull(brand_color());
+        $this->assertNull(brand_logo_url());
+        $this->assertNull(brand_favicon_url());
     }
 
     public function test_system_mail_uses_the_configured_sns_from_address(): void

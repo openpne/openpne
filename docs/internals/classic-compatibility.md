@@ -270,6 +270,9 @@ images it shows (picked from that shared pool), and any HTML are set on the
 
 Modern does not apply the same CSS/HTML. It offers its own migration targets
 (logo, primary color, header image, footer/free area, a scoped safe-HTML slot).
+The logo and the brand color are set on the
+[`BrandingSettings`](../../app/Filament/Pages/BrandingSettings.php) page; the favicon set there is
+the one exception that applies to both surfaces (and to the admin panel).
 Its navigation is component-driven, so the `navigations` table is Classic-only.
 The admin UI MUST label which scope a setting affects so an operator is never
 misled that a Classic-only custom CSS applies to Modern:
@@ -277,7 +280,7 @@ misled that a Classic-only custom CSS applies to Modern:
 ```text
 classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / legacy gadget layout / navigation menu settings
 modern only:   Modern logo / color / header image / modern layout
-both:          SNS name / terms / basic navigation labels / policy URLs
+both:          SNS name / terms / basic navigation labels / policy URLs / favicon
 ```
 
 ## Compatibility levels

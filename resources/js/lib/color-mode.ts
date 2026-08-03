@@ -21,7 +21,9 @@ function applyColorMode(mode: ColorMode): void {
     const isDark = mode === 'dark' || (mode === 'system' && systemPrefersDark());
     document.documentElement.classList.toggle('dark', isDark);
 
-    const chromeColor = isDark ? '#0f172a' : '#2563eb'; // slate-900 / blue-600
+    // Light follows the per-site brand color (app.blade.php stamps it on <html>); dark keeps the
+    // shell's own slate-900 chrome, which the brand color never overrides.
+    const chromeColor = isDark ? '#0f172a' : (document.documentElement.dataset.themeColorLight ?? '#2563eb');
     let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!meta) {
         meta = document.createElement('meta');

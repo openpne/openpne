@@ -3,9 +3,12 @@
 namespace Tests\Feature\Http;
 
 use App\Features\Member\Actions\SetAvatar;
+use App\Files\FileUploader;
+use App\Models\File;
 use App\Models\Member;
 use App\Support\AvatarColor;
 use App\Support\Feature;
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -24,6 +27,22 @@ class InertiaSharedPropsTest extends TestCase
                 ->where('auth.user.avatarColor', null)
                 ->where('snsLogo.color', '#2563eb')
                 ->where('snsLogo.url', null));
+    }
+
+    public function test_shared_props_carry_the_configured_brand_color_and_logo(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::BrandColor, '#0088aa');
+        $logo = app(FileUploader::class)->store(
+            UploadedFile::fake()->image('logo.png', 64, 64),
+            explicitVisibility: File::VISIBILITY_PUBLIC,
+        );
+        $this->setSnsSetting(SnsSettingKey::BrandLogoFile, $logo->name);
+
+        $this->actingAs(Member::factory()->create())
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->where('snsLogo.color', '#0088aa')
+                ->where('snsLogo.url', route('file.public', ['file' => $logo->name])));
     }
 
     public function test_shared_props_carry_the_chosen_badge_color_as_hex(): void
