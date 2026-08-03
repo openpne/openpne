@@ -5,7 +5,7 @@ import { Avatar } from '@/components/avatar';
 import { AvatarMenu } from '@/components/avatar-menu';
 import { BrandMark } from '@/components/brand-mark';
 import { CommunityImage } from '@/components/community-image';
-import { NavDrawer } from '@/components/nav-drawer';
+import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { backTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
 import type { Chrome, ChromeLabel, ChromeScope } from '@/lib/member-chrome';
@@ -22,9 +22,6 @@ function TopBar({ children }: { children: ReactNode }) {
         </header>
     );
 }
-
-const BACK_CONTROL =
-    '-ml-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent';
 
 /**
  * Who the page belongs to, in the brand block's grammar (mark + name, the whole row one link): a
@@ -98,12 +95,12 @@ export function TopNav({ chrome }: { chrome: Chrome }) {
                         type="button"
                         onClick={() => window.history.back()}
                         aria-label={t('Back')}
-                        className={BACK_CONTROL}
+                        className={BAR_CONTROL}
                     >
                         <ArrowLeft className="size-6" aria-hidden />
                     </button>
                 ) : (
-                    <Link href={target.href} aria-label={t('Back')} className={BACK_CONTROL}>
+                    <Link href={target.href} aria-label={t('Back')} className={BAR_CONTROL}>
                         <ArrowLeft className="size-6" aria-hidden />
                     </Link>
                 )}
