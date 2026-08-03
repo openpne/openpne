@@ -16,6 +16,7 @@ use App\Features\Diary\Queries\MemberDiaryMonthlyCounts;
 use App\Features\Diary\Queries\SearchDiaries;
 use App\Features\Diary\Queries\ShowDiary;
 use App\Features\Diary\Serializers\DiarySerializer;
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -61,9 +62,11 @@ class DiaryController extends Controller
                 // pays nothing. loadMissing forwards through the paginator to its collection.
                 $diaries = $query($viewer, $owner, keyword: $keyword);
                 $diaries->loadMissing('images.file');
+                // The owner ref draws the chrome's scope avatar (Modern only, so Classic pays nothing).
+                $owner->loadMissing('avatar.file');
 
                 return Inertia::render('diary/list', [
-                    'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
+                    'owner' => MemberRefSerializer::ref($owner),
                     'isOwner' => $viewer?->is($owner) ?? false,
                     'diaries' => DiarySerializer::paginator($diaries),
                     'monthlyCounts' => (new MemberDiaryMonthlyCounts)($viewer, $owner, $keyword),
@@ -108,9 +111,10 @@ class DiaryController extends Controller
                 // grid becomes a map of when this member wrote about the term.
                 $diaries = $query($viewer, $member, period: $period, keyword: $keyword);
                 $diaries->loadMissing('images.file');
+                $member->loadMissing('avatar.file');
 
                 return Inertia::render('diary/list', [
-                    'owner' => ['id' => $member->getKey(), 'name' => $member->name],
+                    'owner' => MemberRefSerializer::ref($member),
                     'isOwner' => $viewer?->is($member) ?? false,
                     'diaries' => DiarySerializer::paginator($diaries),
                     'period' => $period->label,

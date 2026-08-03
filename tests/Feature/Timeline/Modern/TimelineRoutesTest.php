@@ -3,7 +3,9 @@
 namespace Tests\Feature\Timeline\Modern;
 
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\TimelinePost;
+use App\Support\AvatarColor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -33,6 +35,21 @@ class TimelineRoutesTest extends TestCase
         $this->actingAs($member)
             ->get("/member/{$member->getKey()}/timeline")
             ->assertInertia(fn ($page) => $page->component('timeline/member'));
+    }
+
+    public function test_the_member_timeline_owner_ref_carries_the_avatar_the_chrome_scope_draws(): void
+    {
+        $member = Member::factory()->create();
+        $member->forceFill(['avatar_color' => AvatarColor::Green])->save();
+        MemberImage::factory()->create(['member_id' => $member->getKey()]);
+        $expected = $member->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+
+        $this->actingAs($member)
+            ->get("/member/{$member->getKey()}/timeline")
+            ->assertInertia(fn ($page) => $page
+                ->where('owner.imageUrl', $expected)
+                ->where('owner.avatarColor', '#15803d')
+            );
     }
 
     public function test_modern_member_timeline_carries_the_reply_count(): void

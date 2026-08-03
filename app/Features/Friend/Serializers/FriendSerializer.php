@@ -2,6 +2,7 @@
 
 namespace App\Features\Friend\Serializers;
 
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -15,12 +16,7 @@ class FriendSerializer
     /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null} */
     public static function member(Member $member): array
     {
-        return [
-            'id' => $member->getKey(),
-            'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
-            'avatarColor' => $member->avatar_color?->hex(),
-        ];
+        return MemberRefSerializer::ref($member);
     }
 
     /**
