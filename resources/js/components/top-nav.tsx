@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { type ReactNode, useSyncExternalStore } from 'react';
 import { Avatar } from '@/components/avatar';
 import { AvatarMenu } from '@/components/avatar-menu';
@@ -24,24 +24,27 @@ function TopBar({ children }: { children: ReactNode }) {
 }
 
 /**
- * Who the page belongs to, in the brand block's grammar (mark + name, the whole row one link): a
- * tappable identity is the affordance every social app spends this slot on, so it reads as a way in
- * rather than as part of the back control beside it. The mark is decorative — the name next to it is
- * the accessible name.
+ * Who the page belongs to (mark + name, the whole block one link), centered like every other middle
+ * element — the member bar's one grammar is "the middle is a label; a trailing › means tapping opens
+ * the thing it names" (the disclosure cue, not position, carries tappability). The mark and the
+ * chevron are decorative — the name is the accessible name.
  */
 function ScopeIdentity({ scope }: { scope: ChromeScope }) {
     return (
-        <Link
-            href={scope.kind === 'community' ? `/community/${scope.id}` : `/member/${scope.id}`}
-            className="flex min-w-0 flex-1 items-center gap-2"
-        >
-            {scope.kind === 'community' ? (
-                <CommunityImage name={scope.name} src={scope.imageUrl} className="size-8" textClassName="text-xs" decorative />
-            ) : (
-                <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} size="sm" decorative />
-            )}
-            <span className="truncate font-bold">{scope.name}</span>
-        </Link>
+        <div className="flex min-w-0 flex-1 items-center justify-center">
+            <Link
+                href={scope.kind === 'community' ? `/community/${scope.id}` : `/member/${scope.id}`}
+                className="flex min-w-0 max-w-full items-center gap-2"
+            >
+                {scope.kind === 'community' ? (
+                    <CommunityImage name={scope.name} src={scope.imageUrl} className="size-8" textClassName="text-xs" decorative />
+                ) : (
+                    <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} size="sm" decorative />
+                )}
+                <span className="truncate font-bold">{scope.name}</span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            </Link>
+        </div>
     );
 }
 
@@ -61,6 +64,8 @@ export function TopNav({ chrome }: { chrome: Chrome }) {
     const inAppHistory = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot) > 0;
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
 
+    // Guest only: a guest lands from outside, where logo-left-goes-home is the web convention, and
+    // has neither the bottom nav nor the drawer — this link is their one way home.
     const brand = (
         <Link href="/dashboard" className="flex min-w-0 flex-1 items-center gap-2">
             <BrandMark size="sm" />
@@ -108,7 +113,12 @@ export function TopNav({ chrome }: { chrome: Chrome }) {
                 {/* The !form guard is a second belt: the registry test already pins form ⇒ no scope,
                     but a form must never carry a link beside an unsaved form even if that slips. */}
                 {chrome.scope && !chrome.form ? (
-                    <ScopeIdentity scope={chrome.scope} />
+                    <>
+                        <ScopeIdentity scope={chrome.scope} />
+                        {/* Balances the back control — same box, mirrored margins — so the identity
+                            centers on the bar. */}
+                        <span className="-mr-1 size-10 shrink-0" aria-hidden />
+                    </>
                 ) : (
                     chrome.context && (
                         <>
@@ -164,10 +174,16 @@ export function TopNav({ chrome }: { chrome: Chrome }) {
         );
     }
 
+    // The dashboard's brand is a label, not a link: it would only point at the page it is on, and
+    // "center with no ›" meaning not-tappable is the grammar the other bars rely on. Home from
+    // elsewhere is the bottom nav's job.
     return (
         <TopBar>
             <NavDrawer />
-            {brand}
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+                <BrandMark size="sm" />
+                <span className="truncate font-bold">{name}</span>
+            </div>
             <AvatarMenu user={auth.user} compact />
         </TopBar>
     );
