@@ -7,6 +7,7 @@ import { PostFab } from '@/components/post-fab';
 import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
+import type { Chrome } from '@/lib/member-chrome';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
@@ -16,9 +17,10 @@ import type { PageProps } from '@/types';
  * existing page adds navigation without a nested <main> or duplicate flash. `--modern-top-offset` lets
  * a page's sticky header sit below the mobile top bar, `--modern-bottom-offset` keeps fixed/scrolled
  * content clear of the bottom bar (both 0 on desktop, where the bars are hidden). The frame widens at
- * xl to seat the third column without squeezing the centered page content.
+ * xl to seat the third column without squeezing the centered page content. The resolved chrome comes
+ * from the layout (MemberFrame gets the same object): the mobile top bar varies by page class.
  */
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ chrome, children }: { chrome: Chrome; children: ReactNode }) {
     // The bottom bar is member nav, so the space it reserves goes with it: a guest gets no bar, and
     // reserves only the home-indicator strip the page would otherwise scroll its last row under.
     const member = usePage<PageProps>().props.auth.user !== null;
@@ -34,7 +36,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
             <LeftNav />
             <div className="min-w-0 flex-1 pb-[var(--modern-bottom-offset)]">
-                <TopNav />
+                <TopNav chrome={chrome} />
                 {children}
             </div>
             <RightRail />

@@ -5,7 +5,7 @@ import { FlashMessage } from '@/components/flash-message';
 import { PageHeading } from '@/components/page-heading';
 import { PageTabs } from '@/components/page-tabs';
 import { ActionLink } from '@/components/ui/action-link';
-import { type Chrome, type ChromeLabel, resolveChrome } from '@/lib/member-chrome';
+import type { Chrome, ChromeLabel } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -18,14 +18,13 @@ const GAP: Record<Chrome['gap'], string> = {
 
 /**
  * The default page frame for every member-facing Modern page: the single <main>, the hub header
- * (h1 + primary action + tabs) resolved from the chrome registry, and central flash. Pages render
+ * (h1 + primary action + tabs) from the chrome the layout resolved, and central flash. Pages render
  * only their content — a page must not carry its own <main> or FlashMessage (MemberFrameGuardTest
  * enforces both), and headings outside the registry's hub modes stay in the page body ('embedded').
  */
-export function MemberFrame({ chrome: override, children }: { chrome?: Partial<Chrome>; children: ReactNode }) {
+export function MemberFrame({ chrome, children }: { chrome: Chrome; children: ReactNode }) {
     const t = useT();
-    const { component, props } = usePage<PageProps>();
-    const chrome = resolveChrome(String(component), props, override);
+    const { props } = usePage<PageProps>();
     const label = (l: ChromeLabel) => t(l.key, l.replacements);
     // Frame-level gate: hub actions target member-only routes, so a guest (a web-public profile is
     // reachable signed out) sees the frame without the action.
@@ -48,6 +47,9 @@ export function MemberFrame({ chrome: override, children }: { chrome?: Partial<C
         >
             {chrome.context && (
                 <ContextHeader
+                    // Below lg the top bar carries this trail; display:none also takes it out of the
+                    // accessibility tree, so only one breadcrumb landmark exists at any width.
+                    className="hidden lg:flex"
                     items={chrome.context.map((item) => ({
                         href: item.href,
                         label: typeof item.label === 'string' ? item.label : label(item.label),
