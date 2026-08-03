@@ -33,9 +33,29 @@ test('a popstate steps back, and the navigate it causes is not counted again', (
     tracker.handleNavigate();
     assert.equal(tracker.getSnapshot(), 1);
 
-    // The flag is spent, so the next visit counts as usual.
+    // The pending pop is spent, so the next visit counts as usual.
     tracker.handleNavigate();
     assert.equal(tracker.getSnapshot(), 2);
+});
+
+test('rapid popstates each discount their own navigate', () => {
+    // Holding/double-pressing back fires the popstates before their navigates. A flag (rather
+    // than a counter) would absorb both pops and count the second navigate as a push — an
+    // over-count that could offer a history control whose back leaves the app.
+    const tracker = createBackTracker();
+    tracker.handleNavigate();
+    tracker.handleNavigate();
+    tracker.handleNavigate();
+    assert.equal(tracker.getSnapshot(), 2);
+
+    tracker.handlePopstate();
+    tracker.handlePopstate();
+    assert.equal(tracker.getSnapshot(), 0);
+
+    tracker.handleNavigate();
+    tracker.handleNavigate();
+    assert.equal(tracker.getSnapshot(), 0);
+    assert.equal(tracker.hasInAppHistory(), false);
 });
 
 test('walking back to where the session started leaves no history', () => {

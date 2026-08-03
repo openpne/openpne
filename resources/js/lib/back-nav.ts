@@ -22,7 +22,12 @@ export interface BackTracker {
 export function createBackTracker(): BackTracker {
     let depth = 0;
     let started = false;
-    let popped = false;
+    // A counter, not a flag: rapid back presses can fire several popstates before their navigates
+    // arrive, and a flag would absorb them all and count the later navigates as pushes — an
+    // OVER-count, the unsafe direction (a history control whose back leaves the app). A pop whose
+    // navigate never arrives leaves the counter high and discounts a future push instead: an
+    // under-count, which only degrades to the crumb fallback.
+    let pendingPops = 0;
     const subscribers = new Set<() => void>();
 
     const notify = () => {
@@ -33,8 +38,8 @@ export function createBackTracker(): BackTracker {
 
     return {
         handleNavigate() {
-            if (popped) {
-                popped = false;
+            if (pendingPops > 0) {
+                pendingPops -= 1;
             } else if (!started) {
                 started = true;
             } else {
@@ -43,7 +48,7 @@ export function createBackTracker(): BackTracker {
             notify();
         },
         handlePopstate() {
-            popped = true;
+            pendingPops += 1;
             depth = Math.max(0, depth - 1);
             notify();
         },
