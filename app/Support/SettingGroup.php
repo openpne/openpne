@@ -32,6 +32,9 @@ enum SettingGroup
     /** Timeline policy settings (e.g. whether members may make posts web-public), edited on the "timeline settings" page. */
     case Timeline;
 
+    /** Diary policy settings (e.g. whether members may make entries web-public), edited on the "diary settings" page. */
+    case Diary;
+
     /** Per-feature availability toggles (App\Support\Feature), edited on the features page. */
     case Features;
 }

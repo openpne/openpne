@@ -4,6 +4,7 @@ namespace Tests\Feature\Diary;
 
 use App\Features\Diary\DiaryVisibility;
 use App\Support\Feature;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\Rules\Enum;
@@ -15,7 +16,7 @@ class DiaryVisibilityTest extends TestCase
 
     public function test_options_lead_with_web_public_when_enabled(): void
     {
-        config(['openpne.diary.allow_web_public' => true]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, true);
 
         $this->assertSame(
             [Visibility::Open, Visibility::Members, Visibility::Friends, Visibility::Private],
@@ -25,7 +26,7 @@ class DiaryVisibilityTest extends TestCase
 
     public function test_options_drop_web_public_when_disabled(): void
     {
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
 
         $this->assertSame(
             [Visibility::Members, Visibility::Friends, Visibility::Private],
@@ -35,7 +36,7 @@ class DiaryVisibilityTest extends TestCase
 
     public function test_options_drop_friends_while_the_unit_is_off(): void
     {
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
 
         $this->assertSame([Visibility::Members, Visibility::Private], DiaryVisibility::options());
@@ -43,7 +44,7 @@ class DiaryVisibilityTest extends TestCase
 
     public function test_options_keep_friends_for_an_entry_already_stored_there(): void
     {
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
 
         $this->assertSame(
@@ -56,7 +57,7 @@ class DiaryVisibilityTest extends TestCase
 
     public function test_both_gates_off_leave_members_and_private(): void
     {
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
 
         $this->assertSame([Visibility::Members, Visibility::Private], DiaryVisibility::options());
@@ -68,7 +69,7 @@ class DiaryVisibilityTest extends TestCase
 
     public function test_the_rule_accepts_friends_only_for_an_entry_stored_there(): void
     {
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
 
         $this->assertFalse($this->passes(DiaryVisibility::rule(), Visibility::Friends));
@@ -79,7 +80,7 @@ class DiaryVisibilityTest extends TestCase
 
     public function test_friends_stay_offered_while_the_unit_is_on(): void
     {
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
 
         $this->assertSame(
             [Visibility::Members, Visibility::Friends, Visibility::Private],

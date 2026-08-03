@@ -10,6 +10,7 @@ use App\Models\Diary;
 use App\Models\Member;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Support\Feature;
+use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -88,7 +89,7 @@ class FeatureToggleRouteTest extends TestCase
     public function test_a_guest_meets_a_404_not_the_login_bounce_when_diaries_are_off(): void
     {
         // Web-public diaries are on, so the guest read screens render for a guest today.
-        config()->set('openpne.diary.allow_web_public', true);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, true);
         $this->get('/diary/list')->assertOk();
 
         $this->setSnsSetting(Feature::Diary->settingKey(), false);
@@ -99,14 +100,14 @@ class FeatureToggleRouteTest extends TestCase
 
     public function test_a_guest_still_meets_the_login_bounce_when_only_web_public_diaries_are_off(): void
     {
-        config()->set('openpne.diary.allow_web_public', false);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
 
         $this->get('/diary/list')->assertRedirect(route('login'));
     }
 
     public function test_a_guest_meets_a_404_on_a_missing_member_archive_when_diaries_are_off(): void
     {
-        config()->set('openpne.diary.allow_web_public', true);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, true);
 
         // On: the binding's missing() handler hides whether the id exists behind the login bounce.
         $this->get('/diary/listMember/999999')->assertRedirect(route('login'));
