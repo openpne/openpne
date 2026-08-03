@@ -10,6 +10,7 @@ use App\Models\AdminUser;
 use App\Models\File;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
+use App\Support\SurfaceMode;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -113,5 +114,27 @@ class BrandingSettingsTest extends TestCase
         sort($expected);
 
         $this->assertSame($expected, $actual);
+    }
+
+    public function test_the_copy_labels_the_surface_scope_while_classic_is_available(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::SurfaceMode, SurfaceMode::ClassicDefault);
+
+        Livewire::test(BrandingSettings::class)
+            ->assertSee('モダンの会員画面')
+            ->assertSee('クラシックは文字ロゴのままです')
+            ->assertSee('クラシック・モダン両方');
+    }
+
+    public function test_the_copy_never_mentions_surfaces_under_modern_only(): void
+    {
+        // The modern_only invariant: nothing the operator sees may acknowledge Classic exists —
+        // including the scope labels this page carries in the mixed modes.
+        $this->setSnsSetting(SnsSettingKey::SurfaceMode, SurfaceMode::ModernOnly);
+
+        Livewire::test(BrandingSettings::class)
+            ->assertSee('会員画面')
+            ->assertDontSee('クラシック')
+            ->assertDontSee('モダン');
     }
 }

@@ -10,6 +10,7 @@ use App\Files\ImageMetadataStripException;
 use App\Services\SnsSettingService;
 use App\Support\BrandColor;
 use App\Support\SnsSettingKey;
+use App\Support\SurfaceResolver;
 use BackedEnum;
 use Closure;
 use Filament\Actions\Action;
@@ -84,7 +85,10 @@ class BrandingSettings extends Page
                     ->schema([
                         ColorPicker::make(SnsSettingKey::BrandColor->value)
                             ->label(SnsSettingKey::BrandColor->label())
-                            ->helperText(__('Applies to the Modern member screens and the browser chrome. Leave it blank for the built-in color.'))
+                            ->helperText(self::surfaceScoped(
+                                __('Applies to the Modern member screens and the browser chrome. Leave it blank for the built-in color.'),
+                                __('Applies to the member screens and the browser chrome. Leave it blank for the built-in color.'),
+                            ))
                             // Blank-tolerant: the stored '' means "unbranded". Wrapped in a no-arg
                             // factory so Filament passes the closure through as a validation rule
                             // instead of injecting its ($attribute, $value, $fail) arguments.
@@ -102,7 +106,10 @@ class BrandingSettings extends Page
                 $this->fileSection(
                     SnsSettingKey::BrandLogoFile,
                     brand_logo_url(...),
-                    __('Shown as the brand mark in the Modern member screens. A square image is recommended: it renders in a square slot and is cropped to fill. Classic keeps its text logo.'),
+                    self::surfaceScoped(
+                        __('Shown as the brand mark in the Modern member screens. A square image is recommended: it renders in a square slot and is cropped to fill. Classic keeps its text logo.'),
+                        __('Shown as the brand mark in the member screens. A square image is recommended: it renders in a square slot and is cropped to fill.'),
+                    ),
                     FileUpload::make(SnsSettingKey::BrandLogoFile->value)
                         ->label(__('Upload a new logo'))
                         ->image()
@@ -117,7 +124,10 @@ class BrandingSettings extends Page
                 $this->fileSection(
                     SnsSettingKey::BrandFaviconFile,
                     brand_favicon_url(...),
-                    __('Shown in the browser tab on both surfaces and in the admin panel. PNG only, square.'),
+                    self::surfaceScoped(
+                        __('Shown in the browser tab on both surfaces and in the admin panel. PNG only, square.'),
+                        __('Shown in the browser tab and in the admin panel. PNG only, square.'),
+                    ),
                     FileUpload::make(SnsSettingKey::BrandFaviconFile->value)
                         ->label(__('Upload a new favicon'))
                         ->image()
@@ -248,5 +258,15 @@ class BrandingSettings extends Page
     private static function maxDimension(): int
     {
         return (int) config('openpne.images.max_upload_dimension', 5000);
+    }
+
+    /**
+     * Surface-scope wording. With Classic available the copy must label which surface a setting
+     * affects (docs/internals/classic-compatibility.md); on a modern_only install the operator never
+     * sees Classic, so the copy must not mention surfaces at all.
+     */
+    private static function surfaceScoped(string $withClassic, string $modernOnly): string
+    {
+        return SurfaceResolver::classicAvailable() ? $withClassic : $modernOnly;
     }
 }

@@ -275,7 +275,9 @@ The logo and the brand color are set on the
 the one exception that applies to both surfaces (and to the admin panel).
 Its navigation is component-driven, so the `navigations` table is Classic-only.
 The admin UI MUST label which scope a setting affects so an operator is never
-misled that a Classic-only custom CSS applies to Modern:
+misled that a Classic-only custom CSS applies to Modern — except on a
+modern_only install, where the operator never sees Classic and the copy must
+not mention surfaces at all:
 
 ```text
 classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / legacy gadget layout / navigation menu settings
