@@ -1,13 +1,15 @@
 import { Link, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { type ReactNode, useSyncExternalStore } from 'react';
+import { Avatar } from '@/components/avatar';
 import { AvatarMenu } from '@/components/avatar-menu';
 import { BrandMark } from '@/components/brand-mark';
-import { ContextHeader } from '@/components/context-header';
-import { NavDrawer } from '@/components/nav-drawer';
+import { CommunityImage } from '@/components/community-image';
+import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { backTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
-import type { Chrome, ChromeLabel } from '@/lib/member-chrome';
+import type { Chrome, ChromeLabel, ChromeScope } from '@/lib/member-chrome';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 /** The shell every bar variant shares — one element, one height. Height is read from
@@ -21,12 +23,31 @@ function TopBar({ children }: { children: ReactNode }) {
     );
 }
 
-const BACK_CONTROL =
-    '-ml-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent';
+/**
+ * Who the page belongs to, in the brand block's grammar (mark + name, the whole row one link): a
+ * tappable identity is the affordance every social app spends this slot on, so it reads as a way in
+ * rather than as part of the back control beside it. The mark is decorative — the name next to it is
+ * the accessible name.
+ */
+function ScopeIdentity({ scope }: { scope: ChromeScope }) {
+    return (
+        <Link
+            href={scope.kind === 'community' ? `/community/${scope.id}` : `/member/${scope.id}`}
+            className="flex min-w-0 flex-1 items-center gap-2"
+        >
+            {scope.kind === 'community' ? (
+                <CommunityImage name={scope.name} src={scope.imageUrl} className="size-8" textClassName="text-xs" decorative />
+            ) : (
+                <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} size="sm" decorative />
+            )}
+            <span className="truncate font-bold">{scope.name}</span>
+        </Link>
+    );
+}
 
 /**
  * Mobile (< lg) top bar, varying by page class: hamburger + brand + account menu on the dashboard and
- * on hubs, brand + sign-in for a guest, and back + crumbs on a detail or form page — there the bottom
+ * on hubs, brand + sign-in for a guest, and back + scope on a detail or form page — there the bottom
  * nav is what carries the global links, so the bar can spend its width on where the page sits.
  */
 export function TopNav({ chrome }: { chrome: Chrome }) {
@@ -74,27 +95,52 @@ export function TopNav({ chrome }: { chrome: Chrome }) {
                         type="button"
                         onClick={() => window.history.back()}
                         aria-label={t('Back')}
-                        className={BACK_CONTROL}
+                        className={BAR_CONTROL}
                     >
                         <ArrowLeft className="size-6" aria-hidden />
                     </button>
                 ) : (
-                    <Link href={target.href} aria-label={t('Back')} className={BACK_CONTROL}>
+                    <Link href={target.href} aria-label={t('Back')} className={BAR_CONTROL}>
                         <ArrowLeft className="size-6" aria-hidden />
                     </Link>
                 )}
-                {chrome.context && (
-                    <ContextHeader
-                        variant="bar"
-                        items={chrome.context.map((item) => ({
-                            href: item.href,
-                            label: typeof item.label === 'string' ? item.label : label(item.label),
-                            // The registry's shape distinction: member text arrives as a plain string,
-                            // app vocabulary as a translatable label — unless the label interpolates
-                            // member text itself (":name's %diary%"), which is as unbounded as a string.
-                            fixedLabel: typeof item.label !== 'string' && !item.label.replacements,
-                        }))}
-                    />
+                {/* The !form guard is a second belt: the registry test already pins form ⇒ no scope,
+                    but a form must never carry a link beside an unsaved form even if that slips. */}
+                {chrome.scope && !chrome.form ? (
+                    <ScopeIdentity scope={chrome.scope} />
+                ) : (
+                    chrome.context && (
+                        <>
+                            {/* No scope to be in — a form, or a message with no single counterparty.
+                                The trail stays where it is as plain text, centered so the row reads
+                                as a title rather than as more of the back control. */}
+                            <p className="flex min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden text-sm whitespace-nowrap text-muted-foreground">
+                                {chrome.context.map((item, i) => (
+                                    <span
+                                        key={item.href}
+                                        className={cn(
+                                            'flex min-w-0 items-center gap-1',
+                                            // The registry's shape distinction: member text arrives as a plain
+                                            // string, app vocabulary as a translatable label — unless the label
+                                            // interpolates member text (":name's %diary%"), as unbounded as one.
+                                            typeof item.label !== 'string' && !item.label.replacements && 'shrink-0',
+                                        )}
+                                    >
+                                        {i > 0 && (
+                                            <span aria-hidden className="shrink-0">
+                                                ›
+                                            </span>
+                                        )}
+                                        <span className="min-w-0 truncate">
+                                            {typeof item.label === 'string' ? item.label : label(item.label)}
+                                        </span>
+                                    </span>
+                                ))}
+                            </p>
+                            {/* Balances the back control so the text centers on the bar, not on what is left of it. */}
+                            <span className="size-10 shrink-0" aria-hidden />
+                        </>
+                    )
                 )}
             </TopBar>
         );

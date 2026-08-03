@@ -6,14 +6,14 @@ export interface VisibilityOption {
     label: string;
 }
 
-/** Minimal author reference: id + name only. Used where the payload carries no avatar (the diary
- *  list `owner`, whose controller sends id/name only). */
+/** Minimal author reference: id + name only. */
 export interface DiaryAuthor {
     id: number;
     name: string;
 }
 
-/** An author reference that carries an avatar — the diary byline (feed/detail) and comment authors. */
+/** An author reference that carries an avatar — the diary byline (feed/detail), comment authors, and
+ *  the archive `owner`, whose avatar the chrome shows as the page's scope. */
 export interface DiaryAvatarAuthor extends DiaryAuthor {
     imageUrl: string | null;
     avatarColor: string | null;

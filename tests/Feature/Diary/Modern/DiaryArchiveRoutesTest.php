@@ -5,6 +5,8 @@ namespace Tests\Feature\Diary\Modern;
 use App\Models\Diary;
 use App\Models\DiaryImage;
 use App\Models\Member;
+use App\Models\MemberImage;
+use App\Support\AvatarColor;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -152,6 +154,24 @@ class DiaryArchiveRoutesTest extends TestCase
                 ->where('monthlyCounts.0.month', 3)
                 ->where('monthlyCounts.0.count', 1)
             );
+    }
+
+    public function test_the_owner_ref_carries_the_avatar_the_chrome_scope_draws(): void
+    {
+        $owner = Member::factory()->create();
+        $owner->forceFill(['avatar_color' => AvatarColor::Green])->save();
+        MemberImage::factory()->create(['member_id' => $owner->getKey()]);
+        Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members, 'created_at' => '2026-03-10 09:00:00']);
+        $expected = $owner->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+
+        $ownerRef = fn ($page) => $page
+            ->where('owner.id', $owner->getKey())
+            ->where('owner.imageUrl', $expected)
+            ->where('owner.avatarColor', '#15803d');
+
+        // Both archive entry points serialize the owner the same way.
+        $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}")->assertInertia($ownerRef);
+        $this->actingAs($owner)->get("/diary/listMember/{$owner->getKey()}/2026/3")->assertInertia($ownerRef);
     }
 
     public function test_monthly_counts_are_viewer_scoped(): void

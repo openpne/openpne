@@ -4,11 +4,11 @@ import { Pagination } from '@/components/pagination';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { PaginatedCommunities } from './types';
+import type { MemberRef, PaginatedCommunities } from './types';
 
 interface ListProps extends PageProps {
     communities: PaginatedCommunities;
-    owner: { id: number; name: string };
+    owner: MemberRef;
     isOwner: boolean;
 }
 

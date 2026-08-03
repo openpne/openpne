@@ -82,9 +82,72 @@ test('the diary hub drops the friend tab while friends are off', () => {
     ]);
 });
 
+const owner = { id: 1, name: 'Owner', imageUrl: '/f/1', avatarColor: '#123456' };
+
 test("the owner's diary archive carries the same tab strip", () => {
-    const props = { owner: { id: 1, name: 'Owner' }, isOwner: true };
+    const props = { owner, isOwner: true };
 
     assert.equal(tabHrefs('diary/list', allOn, props).length, 3);
     assert.deepEqual(tabHrefs('diary/list', { ...allOn, friend: false }, props), ['/diary/list', '/diary/listMember']);
+});
+
+const chrome = (component: string, props: Record<string, unknown>) =>
+    resolveChrome(component, { enabledFeatures: allOn, ...props });
+
+test('a community-scoped page is scoped to the community', () => {
+    const community = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
+
+    assert.deepEqual(chrome('community/topic/index', { community, canPost: true }).scope, {
+        kind: 'community',
+        id: 7,
+        name: 'Cyclists',
+        imageUrl: '/f/7',
+    });
+    // The image is optional data, not an optional field: a community without one still scopes.
+    assert.equal(chrome('community/members', { community: { ...community, imageUrl: null } }).scope?.imageUrl, null);
+});
+
+test("another member's list is scoped to that member", () => {
+    assert.deepEqual(chrome('diary/list', { owner, isOwner: false }).scope, {
+        kind: 'member',
+        id: 1,
+        name: 'Owner',
+        imageUrl: '/f/1',
+        avatarColor: '#123456',
+    });
+});
+
+test("the viewer's own hub has no scope", () => {
+    // The hub bar carries the brand, not an identity block: the viewer is not somewhere else.
+    const hub = chrome('diary/list', { owner, isOwner: true });
+
+    assert.equal(hub.mode, 'section');
+    assert.equal(hub.scope, undefined);
+});
+
+test('a form keeps its context but takes no scope', () => {
+    // The bar's contract: a form has nothing to be inside, so its trail stays static text.
+    const forms = [
+        chrome('member/config/email', {}),
+        chrome('diary/edit', { diary: { id: 3, title: 'Draft' } }),
+        chrome('community/topic/edit', { community: { id: 7, name: 'Cyclists', imageUrl: null }, topic: null }),
+    ];
+
+    for (const form of forms) {
+        assert.equal(form.form, true);
+        assert.equal(form.scope, undefined);
+        assert.ok((form.context?.length ?? 0) > 0);
+    }
+});
+
+const counterparties = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({ id: i + 1, name: `Member ${i + 1}`, imageUrl: null, avatarColor: null }));
+
+test('a message is scoped to its counterparty only when there is exactly one', () => {
+    const show = (count: number) => chrome('message/show', { message: { box: 'receive', counterparties: counterparties(count) } });
+
+    // Withdrawn-only (0) and a multi-recipient sent message (2+) have no single member to name.
+    assert.equal(show(0).scope, undefined);
+    assert.equal(show(1).scope?.name, 'Member 1');
+    assert.equal(show(2).scope, undefined);
 });

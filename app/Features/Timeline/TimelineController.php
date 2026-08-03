@@ -3,6 +3,7 @@
 namespace App\Features\Timeline;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\Actions\CreateReply;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
@@ -56,12 +57,17 @@ class TimelineController extends Controller
                 'owner' => $owner,
                 'posts' => $posts,
             ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('timeline/member', [
-                'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
-                'isOwner' => $viewer->is($owner),
-                'viewerId' => $viewer->getKey(),
-                'posts' => TimelinePostSerializer::paginator($posts),
-            ]),
+            SurfaceResolver::MODERN => function () use ($owner, $viewer, $posts) {
+                // The owner ref draws the chrome's scope avatar (Modern only, so Classic pays nothing).
+                $owner->loadMissing('avatar.file');
+
+                return Inertia::render('timeline/member', [
+                    'owner' => MemberRefSerializer::ref($owner),
+                    'isOwner' => $viewer->is($owner),
+                    'viewerId' => $viewer->getKey(),
+                    'posts' => TimelinePostSerializer::paginator($posts),
+                ]);
+            },
         ]);
     }
 
