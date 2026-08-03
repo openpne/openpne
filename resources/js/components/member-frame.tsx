@@ -62,7 +62,10 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
-                    fold={chrome.mode === 'section'}
+                    // Signed-in only: the guest bar stays brand + sign-in (no section title), so
+                    // folding here would leave a guest hub — the web-public diary feed — with no
+                    // visible heading anywhere.
+                    fold={chrome.mode === 'section' && props.auth.user !== null}
                     action={
                         action && (
                             <ActionLink href={action.href}>

@@ -141,8 +141,9 @@ flash. Per-section defaults live in the chrome registry
 source the nav reads, so nav labels and hub headings cannot drift. The layout
 resolves that chrome once and hands the result to both the shell and the frame, so
 the mobile (< lg) top bar varies with the page class: brand on the dashboard, the
-section title on a hub (its in-page h1 folds to `sr-only` there, so the title is
-announced once), and on a detail page back plus the registry's `scope` — the
+section title on a signed-in hub (its in-page h1 folds to `sr-only` there, so the
+title is announced once; a guest keeps the brand bar and the visible h1), and on a
+detail page back plus the registry's `scope` — the
 community or member the page belongs to, as one tappable identity block in the
 brand block's grammar. A form (and any page with no single scope) shows its context
 as static centered text instead. The in-page breadcrumb row is therefore
