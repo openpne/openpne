@@ -4,9 +4,11 @@ import type { FeatureKey } from '@/types';
 
 /**
  * The member-surface chrome registry: the single source for what the nav and the page frame render
- * per section — nav label/icon/badge, hub h1, tabs, and the primary action. NavItems and MemberFrame
- * both read it, so a hub's h1 IS its nav label by construction (they share the key), and a screen
- * missing from the registry still gets the default frame — consistency is the default, not an opt-in.
+ * per section — nav label/icon/badge, hub h1, tabs, and the primary action. NavItems reads it, and
+ * MemberLayout resolves it once per page for both the app shell (which page class the mobile top bar
+ * is) and MemberFrame, so a hub's h1 IS its nav label by construction (they share the key), and a
+ * screen missing from the registry still gets the default frame — consistency is the default, not an
+ * opt-in.
  *
  * Everything here is data (label keys, hrefs, icon references): builders run outside React, so
  * translation happens in the consumer (useT). Per-page deviations live in the maps below, keyed by
