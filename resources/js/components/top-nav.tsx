@@ -107,7 +107,9 @@ export function TopNav({ chrome }: { chrome: Chrome }) {
                         <ArrowLeft className="size-6" aria-hidden />
                     </Link>
                 )}
-                {chrome.scope ? (
+                {/* The !form guard is a second belt: the registry test already pins form ⇒ no scope,
+                    but a form must never carry a link beside an unsaved form even if that slips. */}
+                {chrome.scope && !chrome.form ? (
                     <ScopeIdentity scope={chrome.scope} />
                 ) : (
                     chrome.context && (
