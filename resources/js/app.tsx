@@ -1,4 +1,4 @@
-import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react';
+import { createInertiaApp, type ResolvedComponent, router } from '@inertiajs/react';
 import { LaravelReactI18nProvider } from 'laravel-react-i18n';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
@@ -8,6 +8,7 @@ import { SyncLocaleWithServer } from '@/components/sync-locale';
 // installs the OS prefers-color-scheme listener on every Modern page (the useColorMode UI lives only
 // on the settings page, so without this the listener/sync would load lazily with that page).
 import '@/lib/color-mode';
+import { installBackNav } from '@/lib/back-nav';
 import { withUnreadPrefix } from '@/lib/unread-title';
 import type { PageProps } from '@/types';
 
@@ -39,6 +40,9 @@ void createInertiaApp({
     layout: (name: string) => (name.startsWith('auth/') ? undefined : MemberLayout),
     setup({ el, App, props }) {
         appName = (props.initialPage.props as PageProps).name || appName;
+        // Before the app mounts, so the first `navigate` (the initial load) is counted as the
+        // session's floor rather than as a step the detail bar could offer to go back from.
+        installBackNav(router);
         // `fallbackLocale="en"` (not the app default `ja`) so that an en miss
         // surfaces as the raw English key — matching the "key === English
         // text" omission policy. ja-as-fallback would silently render Japanese

@@ -138,10 +138,15 @@ wired via `createInertiaApp`'s `layout` option in
 single `<main>`, the hub header (h1 = nav label, tabs, primary action), and central
 flash. Per-section defaults live in the chrome registry
 ([`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts)) — the same
-source the nav reads, so nav labels and hub headings cannot drift. **A page renders
-only its content** (no own `<main>`, heading only outside the registry's hub modes,
-no FlashMessage — `MemberFrameGuardTest` enforces this); deviations are registry
-entries, or `Page.layout = (props) => ({ chrome: {…} })` for one-offs.
+source the nav reads, so nav labels and hub headings cannot drift. The layout
+resolves that chrome once and hands the result to both the shell and the frame, so
+the mobile (< lg) top bar varies with the page class: brand on the dashboard and on
+hubs, back + breadcrumbs on a detail or form page, where the bottom nav already
+carries the global links. The in-page breadcrumb row is therefore desktop-only.
+**A page renders only its content** (no own `<main>`, heading only outside the
+registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
+deviations are registry entries, or
+`Page.layout = (props) => ({ chrome: {…} })` for one-offs.
 Modern pages build on the shared primitives in
 [`components/ui/`](../../resources/js/components/ui) (Button, Input, Field, …) and the
 semantic design tokens in [`app.css`](../../resources/css/app.css), not bare controls or
