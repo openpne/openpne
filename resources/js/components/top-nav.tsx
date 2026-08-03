@@ -138,8 +138,9 @@ export function TopNav({ chrome }: { chrome: Chrome }) {
                                     </span>
                                 ))}
                             </p>
-                            {/* Balances the back control so the text centers on the bar, not on what is left of it. */}
-                            <span className="size-10 shrink-0" aria-hidden />
+                            {/* Balances the back control — same box, mirrored -mr-1 against its -ml-1 —
+                                so the text centers on the bar, not on what is left of it. */}
+                            <span className="-mr-1 size-10 shrink-0" aria-hidden />
                         </>
                     )
                 )}
