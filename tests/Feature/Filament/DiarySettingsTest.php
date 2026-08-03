@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
+use App\Features\Diary\DiaryVisibility;
 use App\Filament\Pages\DiarySettings;
 use App\Models\AdminUser;
 use App\Support\SnsSettingKey;
@@ -50,5 +51,19 @@ class DiarySettingsTest extends TestCase
     {
         Livewire::test(DiarySettings::class)
             ->assertSet('data.diary_allow_web_public', true);
+    }
+
+    public function test_saving_takes_effect_on_a_gate_that_already_read_the_setting(): void
+    {
+        // Prime the settings cache first: without save()'s clearCache() the gate would keep serving
+        // web-public diaries for the cache TTL after the administrator switched them off.
+        $this->assertTrue(DiaryVisibility::allowsWebPublic());
+
+        Livewire::test(DiarySettings::class)
+            ->fillForm(['diary_allow_web_public' => false])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertFalse(DiaryVisibility::allowsWebPublic());
     }
 }
