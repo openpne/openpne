@@ -39,6 +39,11 @@ export interface ChromeAction {
     icon: Icon;
 }
 
+/** The entity a page sits inside, drawn as the mobile bar's identity block (image + name → its page). */
+export type ChromeScope =
+    | { kind: 'community'; id: number; name: string; imageUrl: string | null }
+    | { kind: 'member'; id: number; name: string; imageUrl: string | null; avatarColor: string | null };
+
 export interface Chrome {
     /**
      * section = hub header (h1 = nav label) from the registry; contextual = frame header with a
@@ -58,6 +63,13 @@ export interface Chrome {
     foreground?: boolean;
     /** Scope crumbs above the heading (community, and for board content the board). */
     context?: { href: string; label: string | ChromeLabel }[];
+    /**
+     * Who this page belongs to, for the mobile bar's identity block. Absent on a form (its bar shows
+     * the context as static text) and on a page that is its own subject (a community top, a profile).
+     */
+    scope?: ChromeScope;
+    /** A form screen: its mobile bar carries no link beside the back control. */
+    form?: boolean;
 }
 
 export interface NavSection {
@@ -168,11 +180,19 @@ const friendTabs = (active: 'list' | 'requests'): ChromeTab[] => [
 interface CommunityRef {
     id: number;
     name: string;
+    imageUrl: string | null;
 }
 
 const communityContext = (community: CommunityRef): Chrome['context'] => [
     { href: `/community/${community.id}`, label: community.name },
 ];
+
+const communityScope = (community: CommunityRef): ChromeScope => ({
+    kind: 'community',
+    id: community.id,
+    name: community.name,
+    imageUrl: community.imageUrl,
+});
 
 // Board-scoped context: the community crumb plus the board itself, shared by a board's detail
 // (show) and edit pages — an edit page adds the specific topic/event as a third crumb.
@@ -189,6 +209,8 @@ const eventBoardContext = (community: CommunityRef): Chrome['context'] => [
 interface MemberRef {
     id: number;
     name: string;
+    imageUrl: string | null;
+    avatarColor: string | null;
 }
 
 // A contextual page about another member (their diary archive, friends, communities): crumb back
@@ -198,6 +220,14 @@ interface MemberRef {
 const memberContext = (member: MemberRef): Chrome['context'] => [
     { href: `/member/${member.id}`, label: member.name },
 ];
+
+const memberScope = (member: MemberRef): ChromeScope => ({
+    kind: 'member',
+    id: member.id,
+    name: member.name,
+    imageUrl: member.imageUrl,
+    avatarColor: member.avatarColor,
+});
 
 // The message page's own box map keeps the row paths/bulk actions; the hub tabs live here.
 const messageTabs = (active: string): ChromeTab[] => [
@@ -253,17 +283,18 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                   tabs: diaryTabs('mine', enabled(props, 'friend')),
                   action: WRITE_DIARY,
               }
-            : { mode: 'contextual', title: DIARIES, context: memberContext(owner) };
+            : { mode: 'contextual', title: DIARIES, context: memberContext(owner), scope: memberScope(owner) };
     },
     'diary/show': (props) => {
         const { diary } = props as unknown as { diary: { author: MemberRef } };
         return {
             context: [{ href: `/diary/listMember/${diary.author.id}`, label: t(":name's %diary%", { name: diary.author.name }) }],
+            scope: memberScope(diary.author),
         };
     },
     'diary/edit': (props) => {
         const { diary } = props as unknown as { diary: { id: number; title: string } };
-        return { context: [{ href: `/diary/${diary.id}`, label: diary.title }] };
+        return { form: true, context: [{ href: `/diary/${diary.id}`, label: diary.title }] };
     },
     'community/search': () => ({
         mode: 'section',
@@ -284,7 +315,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                   tabs: communityTabs('joined'),
                   action: CREATE_COMMUNITY,
               }
-            : { mode: 'contextual', title: COMMUNITIES, context: memberContext(owner) };
+            : { mode: 'contextual', title: COMMUNITIES, context: memberContext(owner), scope: memberScope(owner) };
     },
     'community/recent': () => ({
         mode: 'section',
@@ -302,6 +333,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             mode: 'contextual',
             title: t('%Topics%'),
             context: communityContext(community),
+            scope: communityScope(community),
             action: canPost
                 ? { href: `/communityTopic/new/${community.id}`, label: t('Create a %topic%'), icon: Plus }
                 : undefined,
@@ -313,6 +345,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             mode: 'contextual',
             title: t('Events'),
             context: communityContext(community),
+            scope: communityScope(community),
             action: canPost
                 ? { href: `/communityEvent/new/${community.id}`, label: t('Create an event'), icon: Plus }
                 : undefined,
@@ -320,17 +353,18 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     },
     'community/topic/show': (props) => {
         const { community } = props as unknown as { community: CommunityRef };
-        return { context: topicBoardContext(community) };
+        return { context: topicBoardContext(community), scope: communityScope(community) };
     },
     'community/event/show': (props) => {
         const { community } = props as unknown as { community: CommunityRef };
-        return { context: eventBoardContext(community) };
+        return { context: eventBoardContext(community), scope: communityScope(community) };
     },
     // Edit mode's third crumb is the topic/event being edited (the page it returns to on cancel);
     // create mode stops at the board, matching diary/edit vs diary/new.
     'community/topic/edit': (props) => {
         const { community, topic } = props as unknown as { community: CommunityRef; topic: { id: number; name: string } | null };
         return {
+            form: true,
             context: topic
                 ? [...topicBoardContext(community)!, { href: `/communityTopic/${topic.id}`, label: topic.name }]
                 : topicBoardContext(community),
@@ -339,6 +373,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     'community/event/edit': (props) => {
         const { community, event } = props as unknown as { community: CommunityRef; event: { id: number; name: string } | null };
         return {
+            form: true,
             context: event
                 ? [...eventBoardContext(community)!, { href: `/communityEvent/${event.id}`, label: event.name }]
                 : eventBoardContext(community),
@@ -346,24 +381,39 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     },
     'community/pending': (props) => {
         const { community } = props as unknown as { community: CommunityRef };
-        return { mode: 'contextual', title: t('Pending members'), context: communityContext(community) };
+        return {
+            mode: 'contextual',
+            title: t('Pending members'),
+            context: communityContext(community),
+            scope: communityScope(community),
+        };
     },
     // Edit mode crumbs to the community; create mode to the hub the create action lives on.
     'community/edit': (props) => {
         const { community } = props as unknown as { community: CommunityRef | null };
         return community
-            ? { context: communityContext(community) }
-            : { context: [{ href: '/community/search', label: COMMUNITIES }] };
+            ? { form: true, context: communityContext(community) }
+            : { form: true, context: [{ href: '/community/search', label: COMMUNITIES }] };
     },
     // The h1-as-link pattern these replaced put the community/event name in the h1 itself; the
     // crumb now carries it, so the h1 shrinks to the plain section label (existing keys reused).
     'community/members': (props) => {
         const { community } = props as unknown as { community: CommunityRef };
-        return { mode: 'contextual', title: t('Members'), context: communityContext(community) };
+        return {
+            mode: 'contextual',
+            title: t('Members'),
+            context: communityContext(community),
+            scope: communityScope(community),
+        };
     },
     'community/manage': (props) => {
         const { community } = props as unknown as { community: CommunityRef };
-        return { mode: 'contextual', title: t('Management member'), context: communityContext(community) };
+        return {
+            mode: 'contextual',
+            title: t('Management member'),
+            context: communityContext(community),
+            scope: communityScope(community),
+        };
     },
     'community/event/members': (props) => {
         const { community, event } = props as unknown as { community: CommunityRef; event: { id: number; name: string } };
@@ -371,6 +421,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             mode: 'contextual',
             title: t('Count of Member'),
             context: [...eventBoardContext(community)!, { href: `/communityEvent/${event.id}`, label: event.name }],
+            scope: communityScope(community),
         };
     },
     'timeline/index': () => ({ mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }),
@@ -378,7 +429,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
             ? { mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }
-            : { mode: 'contextual', title: ACTIVITY, context: memberContext(owner) };
+            : { mode: 'contextual', title: ACTIVITY, context: memberContext(owner), scope: memberScope(owner) };
     },
     // Crumb label is the bare author name, the post card right below carries the same name as
     // content; the page's h1 is a generic post label so nothing renders twice.
@@ -386,13 +437,14 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { post } = props as unknown as { post: { author: MemberRef } };
         return {
             context: [{ href: `/member/${post.author.id}/timeline`, label: post.author.name }],
+            scope: memberScope(post.author),
         };
     },
     'friend/list': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
             ? { mode: 'section', title: FRIENDS, tabsLabel: FRIENDS, tabs: friendTabs('list') }
-            : { mode: 'contextual', title: FRIENDS, context: memberContext(owner) };
+            : { mode: 'contextual', title: FRIENDS, context: memberContext(owner), scope: memberScope(owner) };
     },
     'friend/requests': () => ({
         mode: 'section',
@@ -409,8 +461,12 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: messageTabs((props as { box: string }).box),
     }),
     'message/show': (props) => {
-        const { message } = props as unknown as { message: { box: MessageBoxSlug } };
-        return { context: [MESSAGE_BOX_PARENT[message.box]] };
+        const { message } = props as unknown as { message: { box: MessageBoxSlug; counterparties: MemberRef[] } };
+        // One counterparty is a scope the bar can name. A sent message can carry several recipients
+        // and a fully withdrawn thread none — neither resolves to a single member, so the bar keeps
+        // the box label instead (the same exactly-one rule Classic's show header applies).
+        const only = message.counterparties.length === 1 ? message.counterparties[0] : undefined;
+        return { context: [MESSAGE_BOX_PARENT[message.box]], scope: only ? memberScope(only) : undefined };
     },
     // Reply crumbs back to the original message (its box, then the message itself); a fresh compose
     // crumbs to the Messages hub. parentSubject is null except when replying.
@@ -418,6 +474,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { parentId, parentSubject } = props as unknown as { parentId: number | null; parentSubject: string | null };
         return {
             gap: '6',
+            form: true,
             context:
                 parentId !== null && parentSubject !== null
                     ? [
@@ -441,22 +498,22 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'friend/link': { width: 'narrow' },
     'member/invite': { width: 'narrow' },
     'block/list': { gap: '6' },
-    'member/avatar': { gap: '6', context: CONFIG_CONTEXT },
-    'member/edit-profile': { gap: '6', context: CONFIG_CONTEXT },
+    'member/avatar': { gap: '6', form: true, context: CONFIG_CONTEXT },
+    'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
-    'message/edit': { gap: '6', context: [MESSAGE_BOX_PARENT.draft] },
-    'member/config/email': { gap: '6', context: CONFIG_CONTEXT },
-    'member/config/password': { gap: '6', context: CONFIG_CONTEXT },
-    'member/config/mfa': { gap: '6', context: CONFIG_CONTEXT },
-    'member/config/notifications': { gap: '6', context: CONFIG_CONTEXT },
-    'member/config/withdrawal': { gap: '6', context: CONFIG_CONTEXT },
+    'message/edit': { gap: '6', form: true, context: [MESSAGE_BOX_PARENT.draft] },
+    'member/config/email': { gap: '6', form: true, context: CONFIG_CONTEXT },
+    'member/config/password': { gap: '6', form: true, context: CONFIG_CONTEXT },
+    'member/config/mfa': { gap: '6', form: true, context: CONFIG_CONTEXT },
+    'member/config/notifications': { gap: '6', form: true, context: CONFIG_CONTEXT },
+    'member/config/withdrawal': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'community/show': { foreground: true },
     'community/topic/show': { foreground: true },
     'community/event/show': { foreground: true },
     'diary/show': { foreground: true },
-    'diary/new': { context: [{ href: '/diary/list', label: DIARIES }] },
+    'diary/new': { form: true, context: [{ href: '/diary/list', label: DIARIES }] },
     'timeline/show': { foreground: true },
-    'timeline/new': { context: [{ href: '/timeline', label: ACTIVITY }] },
+    'timeline/new': { form: true, context: [{ href: '/timeline', label: ACTIVITY }] },
 };
 
 /**

@@ -11,10 +11,10 @@ import type { PageProps } from '@/types';
 import { DiaryArchiveGrid } from './archive-grid';
 import type { MonthlyCount } from './archive-months';
 import { DiaryRow } from './diary-row';
-import type { DiaryAuthor, PaginatedDiaries } from './types';
+import type { DiaryAvatarAuthor, PaginatedDiaries } from './types';
 
 interface ListProps extends PageProps {
-    owner: DiaryAuthor;
+    owner: DiaryAvatarAuthor;
     isOwner: boolean;
     diaries: PaginatedDiaries;
     monthlyCounts: MonthlyCount[];

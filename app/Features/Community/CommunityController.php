@@ -26,6 +26,7 @@ use App\Features\CommunityTopic\Queries\RecentCommunityTopics;
 use App\Features\CommunityTopic\Serializers\CommunityTopicSerializer;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\CommunityRequest;
@@ -167,11 +168,16 @@ class CommunityController extends Controller
                 'owner' => $owner,
                 'communities' => $communities,
             ]),
-            SurfaceResolver::MODERN => fn () => Inertia::render('community/list', [
-                'owner' => ['id' => $owner->getKey(), 'name' => $owner->name],
-                'isOwner' => $this->viewer()->is($owner),
-                'communities' => CommunitySerializer::paginator($communities),
-            ]),
+            SurfaceResolver::MODERN => function () use ($owner, $communities) {
+                // The owner ref draws the chrome's scope avatar (Modern only, so Classic pays nothing).
+                $owner->loadMissing('avatar.file');
+
+                return Inertia::render('community/list', [
+                    'owner' => MemberRefSerializer::ref($owner),
+                    'isOwner' => $this->viewer()->is($owner),
+                    'communities' => CommunitySerializer::paginator($communities),
+                ]);
+            },
         ]);
     }
 

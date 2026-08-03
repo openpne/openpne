@@ -3,6 +3,14 @@ export interface CommunityCategory {
     name: string;
 }
 
+/** The member a list belongs to: identity plus what it takes to draw their avatar in the chrome. */
+export interface MemberRef {
+    id: number;
+    name: string;
+    imageUrl: string | null;
+    avatarColor: string | null;
+}
+
 export interface CommunitySummary {
     id: number;
     name: string;

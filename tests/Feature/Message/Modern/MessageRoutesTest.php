@@ -159,6 +159,24 @@ class MessageRoutesTest extends TestCase
             );
     }
 
+    public function test_modern_sent_show_lists_every_recipient_as_a_counterparty(): void
+    {
+        // More than one counterparty is what keeps the chrome from naming a single member as the
+        // page's scope, so the array shape is the server-side half of that rule.
+        [$sender, $first, $second] = Member::factory()->count(3)->create();
+        $message = $this->deliver($sender, $first);
+        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $second->getKey()]);
+
+        $this->actingAs($sender)
+            ->get(route('message.send.show', $message))
+            ->assertInertia(fn ($page) => $page
+                ->component('message/show')
+                ->has('message.counterparties', 2)
+                ->where('message.counterparties.0.id', $first->getKey())
+                ->where('message.counterparties.1.id', $second->getKey())
+            );
+    }
+
     public function test_modern_show_serializes_the_prev_next_pager(): void
     {
         [$sender, $recipient] = Member::factory()->count(2)->create();

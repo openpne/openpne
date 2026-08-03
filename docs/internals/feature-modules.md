@@ -141,8 +141,11 @@ flash. Per-section defaults live in the chrome registry
 source the nav reads, so nav labels and hub headings cannot drift. The layout
 resolves that chrome once and hands the result to both the shell and the frame, so
 the mobile (< lg) top bar varies with the page class: brand on the dashboard and on
-hubs, back + breadcrumbs on a detail or form page, where the bottom nav already
-carries the global links. The in-page breadcrumb row is therefore desktop-only.
+hubs, where the bottom nav already carries the global links; on a detail page back
+plus the registry's `scope` — the community or member the page belongs to, as one
+tappable identity block in the brand block's grammar. A form (and any page with no
+single scope) shows its context as static centered text instead. The in-page
+breadcrumb row is therefore desktop-only.
 **A page renders only its content** (no own `<main>`, heading only outside the
 registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
 deviations are registry entries, or

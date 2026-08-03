@@ -7,6 +7,15 @@ import { BrandMark } from '@/components/brand-mark';
 import { NavItems } from '@/components/nav-items';
 import type { PageProps } from '@/types';
 
+/**
+ * The mobile bar's icon-control shape: a closed circle, so a control can never visually merge with
+ * the flat identity block (brand or page scope) beside it — circles are controls, flat image + name
+ * is identity. Shared by the hamburger here and the detail bar's back control (top-nav.tsx); the
+ * account menu's avatar is already a circle of its own.
+ */
+export const BAR_CONTROL =
+    '-ml-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-accent text-muted-foreground transition hover:border-input';
+
 /** Mobile hamburger that opens a slide-in nav sheet. The account menu stays in the top bar, so the
  *  sheet holds only the brand (home) and nav — no nested menu inside the dialog. */
 export function NavDrawer() {
@@ -16,10 +25,7 @@ export function NavDrawer() {
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger
-                aria-label={t('Menu')}
-                className="-ml-1 inline-flex size-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent"
-            >
+            <DialogTrigger aria-label={t('Menu')} className={BAR_CONTROL}>
                 <Menu className="size-6" />
             </DialogTrigger>
             <SheetContent closeLabel={t('Close')}>
