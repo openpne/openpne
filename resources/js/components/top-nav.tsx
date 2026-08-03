@@ -149,12 +149,13 @@ export function TopNav({ chrome }: { chrome: Chrome }) {
 
     // A hub's h1 is fixed section vocabulary (= its nav label), short enough for the bar and worth a
     // row of a phone's height, so the bar carries it and the in-page heading folds to sr-only. It is
-    // aria-hidden here: that in-page h1 is the page's one announcement of the title.
+    // aria-hidden here: that in-page h1 is the page's one announcement of the title. Centered, like
+    // every static label in the bar — only tappable identity blocks sit left.
     if (chrome.mode === 'section' && chrome.title) {
         return (
             <TopBar>
                 <NavDrawer />
-                <span aria-hidden className="min-w-0 flex-1 truncate text-base font-semibold">
+                <span aria-hidden className="min-w-0 flex-1 truncate text-center text-base font-semibold">
                     {label(chrome.title)}
                 </span>
                 <AvatarMenu user={auth.user} compact />

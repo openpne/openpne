@@ -18,21 +18,21 @@ type Props = {
  * wrapping and the action `shrink-0`, so a long community/member name never clips or squeezes it.
  *
  * Below lg the action lives in the floating ActionFab instead, on every page — a screen has one
- * primary action, and at that width it is the one place it sits. A folded row is zero-height but
- * still a child of the frame's `space-y`, so it has to stay `<main>`'s first child: anything above it
- * (a context row) would put two gaps in a row with nothing visible between them.
+ * primary action, and at that width it is the one place it sits. The folded ROW is sr-only, not
+ * display-hidden: absolute positioning takes it out of the flow, so it neither shows nor spends a
+ * `space-y` gap, while the h1 inside stays in the accessibility tree. The action is display-hidden
+ * separately so its link never takes keyboard focus while invisible.
  */
 export function PageHeading({ title, action, fold, className }: Props) {
     return (
-        <div className={cn(fold ? 'lg:flex lg:min-h-11' : 'flex min-h-11', 'items-center justify-between gap-3', className)}>
-            <h1
-                className={cn(
-                    'text-xl font-semibold text-foreground',
-                    fold ? 'sr-only lg:not-sr-only lg:min-w-0 lg:break-words' : 'min-w-0 break-words',
-                )}
-            >
-                {title}
-            </h1>
+        <div
+            className={cn(
+                fold ? 'sr-only lg:not-sr-only lg:flex lg:min-h-11' : 'flex min-h-11',
+                'items-center justify-between gap-3',
+                className,
+            )}
+        >
+            <h1 className="min-w-0 break-words text-xl font-semibold text-foreground">{title}</h1>
             {action && <div className="hidden shrink-0 lg:block">{action}</div>}
         </div>
     );
