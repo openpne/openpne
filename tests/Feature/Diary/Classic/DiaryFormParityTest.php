@@ -4,13 +4,14 @@ namespace Tests\Feature\Diary\Classic;
 
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
  * Locks the Ported elements of the diary new/edit form that screen-parity tracks, including the
- * web-public audience and its openpne.diary.allow_web_public gate (OpenPNE 3 lets a site disable
+ * web-public audience and its SnsSettingKey::DiaryAllowWebPublic gate (OpenPNE 3 lets a site disable
  * web-public diaries; that capability must survive).
  */
 class DiaryFormParityTest extends TestCase
@@ -39,7 +40,7 @@ class DiaryFormParityTest extends TestCase
 
     public function test_new_form_hides_web_public_when_the_gate_is_disabled(): void
     {
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $member = Member::factory()->create();
 
         $this->actingAs($member)->get('/diary/new')

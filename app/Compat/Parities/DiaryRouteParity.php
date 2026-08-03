@@ -121,7 +121,7 @@ class DiaryRouteParity extends RouteParity
             'new' => [
                 new ScreenElement('title input', L::Two, S::Ported, 'sfWidgetFormInput title'),
                 new ScreenElement('visibility choice (members/friends/private)', L::One, S::Ported, 'public_flag sfWidgetFormChoice'),
-                new ScreenElement('web-public (Open) visibility option', L::Two, S::Ported, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'gated by openpne.diary.allow_web_public (OpenPNE 3 op_diary_plugin_use_open_diary, default on)'),
+                new ScreenElement('web-public (Open) visibility option', L::Two, S::Ported, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'gated by SnsSettingKey::DiaryAllowWebPublic (OpenPNE 3 op_diary_plugin_use_open_diary, default on)'),
                 new ScreenElement('remembered default visibility', L::Three, S::Missing, 'MemberConfigDiaryForm::PUBLIC_FLAG default', 'OpenPNE 4 hardcodes the members default'),
                 new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea + per-record Markdown toggle and live preview; the OpenPNE 3 WYSIWYG rich-text widget is a separate later stage'),
                 new ScreenElement('image upload (x3)', L::Three, S::Ported, 'app_diary_is_upload_images + DiaryImageForm', 'up to PostImages::MAX_IMAGES via the shared _image_fields partial; PostImageRules validation'),
@@ -133,7 +133,7 @@ class DiaryRouteParity extends RouteParity
             'edit' => [
                 new ScreenElement('title input', L::Two, S::Ported, 'sfWidgetFormInput title'),
                 new ScreenElement('visibility choice (members/friends/private)', L::One, S::Ported, 'public_flag sfWidgetFormChoice'),
-                new ScreenElement('web-public (Open) visibility option', L::Two, S::Ported, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'shared diary form; gated by openpne.diary.allow_web_public'),
+                new ScreenElement('web-public (Open) visibility option', L::Two, S::Ported, 'getPublicFlags() PUBLIC_FLAG_OPEN', 'shared diary form; gated by SnsSettingKey::DiaryAllowWebPublic'),
                 new ScreenElement('rich-text body editor', L::Three, S::Partial, 'opWidgetFormRichTextareaOpenPNE', 'plain textarea + per-record Markdown toggle and live preview; the OpenPNE 3 WYSIWYG rich-text widget is a separate later stage'),
                 new ScreenElement('existing image edit / delete', L::Three, S::Ported, '_formEditImage / DiaryImageForm', 'current-image thumbnails + remove_images[] checkboxes; UpdateDiary frees and refills the slots'),
                 new ScreenElement('save button', L::Two, S::Ported, 'op_include_form diaryForm button'),

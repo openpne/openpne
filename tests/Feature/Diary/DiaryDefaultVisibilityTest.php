@@ -5,6 +5,7 @@ namespace Tests\Feature\Diary;
 use App\Features\Diary\DiaryVisibility;
 use App\Models\Member;
 use App\Support\PreferenceKey;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -31,7 +32,7 @@ class DiaryDefaultVisibilityTest extends TestCase
 
     public function test_default_for_clamps_a_stored_open_when_web_public_is_disabled(): void
     {
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $member = Member::factory()->create();
         $member->setPreference(PreferenceKey::DiaryDefaultVisibility, Visibility::Open);
 
@@ -40,7 +41,8 @@ class DiaryDefaultVisibilityTest extends TestCase
 
     public function test_new_form_pre_selects_the_member_default(): void
     {
-        config(['openpne.diary.allow_web_public' => false, 'openpne.surface_mode' => 'modern_default']);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
         $member->setPreference(PreferenceKey::DiaryDefaultVisibility, Visibility::Friends);
 
@@ -55,7 +57,8 @@ class DiaryDefaultVisibilityTest extends TestCase
     {
         // With web-public enabled and an Open default, Modern must both pre-select '0' AND
         // render the Open option — never submit Open from a select that does not show it.
-        config(['openpne.diary.allow_web_public' => true, 'openpne.surface_mode' => 'modern_default']);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, true);
+        config(['openpne.surface_mode' => 'modern_default']);
         $member = Member::factory()->create();
         $member->setPreference(PreferenceKey::DiaryDefaultVisibility, Visibility::Open);
 

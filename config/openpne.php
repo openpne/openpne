@@ -71,25 +71,8 @@ return [
 
     'surface_mode' => env('OPENPNE_SURFACE_MODE', 'modern_only'), // modern_only | classic_default | modern_default
 
-    /*
-    |--------------------------------------------------------------------------
-    | Diary
-    |--------------------------------------------------------------------------
-    |
-    | 'allow_web_public' gates the "Public to Web" diary audience, matching
-    | OpenPNE 3's op_diary_plugin_use_open_diary (admin-configurable, default on).
-    | When false the option is removed from the diary form and rejected on submit,
-    | so a site that disabled anonymous-visible diaries in OpenPNE 3 keeps that
-    | ability.
-    |
-    */
-
-    'diary' => [
-        'allow_web_public' => (bool) env('OPENPNE_DIARY_ALLOW_WEB_PUBLIC', true),
-    ],
-
-    // Timeline web-public is an admin setting (SnsSettingKey::TimelineAllowWebPublic), not an env
-    // flag; the diary flag above has no admin surface, so this env seam is its only control.
+    // The diary and timeline web-public switches are admin settings
+    // (SnsSettingKey::DiaryAllowWebPublic / TimelineAllowWebPublic), not env flags.
 
     /*
     |--------------------------------------------------------------------------

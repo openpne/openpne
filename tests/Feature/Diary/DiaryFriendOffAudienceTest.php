@@ -5,6 +5,7 @@ namespace Tests\Feature\Diary;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\Feature;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -23,7 +24,7 @@ class DiaryFriendOffAudienceTest extends TestCase
     {
         parent::setUp();
 
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
     }
 

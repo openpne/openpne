@@ -3,7 +3,9 @@
 namespace App\Features\Diary;
 
 use App\Models\Member;
+use App\Services\SnsSettingService;
 use App\Support\PreferenceKey;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use App\Support\VisibilityChoices;
 use Illuminate\Validation\Rules\Enum;
@@ -11,7 +13,7 @@ use Illuminate\Validation\Rules\Enum;
 /**
  * The audiences a member may choose when posting or editing a diary. Single source for the
  * form options and the request validation rule so the two cannot drift: both honour the
- * openpne.diary.allow_web_public gate (OpenPNE 3 op_diary_plugin_use_open_diary) and the friend
+ * SnsSettingKey::DiaryAllowWebPublic gate (OpenPNE 3 op_diary_plugin_use_open_diary) and the friend
  * unit's state (VisibilityChoices).
  */
 final class DiaryVisibility
@@ -57,6 +59,6 @@ final class DiaryVisibility
      */
     public static function allowsWebPublic(): bool
     {
-        return (bool) config('openpne.diary.allow_web_public');
+        return (bool) app(SnsSettingService::class)->get(SnsSettingKey::DiaryAllowWebPublic);
     }
 }
