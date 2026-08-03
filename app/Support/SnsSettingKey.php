@@ -22,8 +22,8 @@ namespace App\Support;
  *   - enable_cmd / enable_language — always-on or handled by other mechanisms.
  *
  * App\Upgrade\Steps\SnsSettingUpgrade copies the OpenPNE 3 sns_config values via `op3SourceName()`,
- * for the keys `isMigratedFromOp3()` allows (display + gadget layout + design customization; the
- * security keys are excluded so an OpenPNE 3 value cannot silently override their fail-closed default).
+ * for the keys `isMigratedFromOp3()` allows (the security keys are excluded so an OpenPNE 3 value
+ * cannot silently override their fail-closed default).
  */
 enum SnsSettingKey: string
 {
@@ -50,6 +50,13 @@ enum SnsSettingKey: string
 
     /** Whether members may make a timeline post visible to web guests (OpenPNE 3 op_activity_is_open). */
     case TimelineAllowWebPublic = 'timeline_allow_web_public';
+
+    /**
+     * Whether members may make a diary entry visible to web guests (OpenPNE 3
+     * op_diary_plugin_use_open_diary). Off also closes the guest-reachable diary screens
+     * (App\Http\Middleware\EnsureWebPublicDiaryEnabled), as OpenPNE 3 did.
+     */
+    case DiaryAllowWebPublic = 'diary_allow_web_public';
 
     /** The Classic gadget layout (layoutA/B/C) for the home / profile / login pages (App\Gadgets\GadgetLayout). */
     case GadgetHomeLayout = 'gadget_home_layout';
@@ -115,6 +122,7 @@ enum SnsSettingKey: string
             self::RegistrationMode, self::CaptchaEnabled => SettingGroup::Auth,
             self::AllowWebPublicAge => SettingGroup::Privacy,
             self::TimelineAllowWebPublic => SettingGroup::Timeline,
+            self::DiaryAllowWebPublic => SettingGroup::Diary,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => SettingGroup::GadgetLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => SettingGroup::Design,
@@ -146,6 +154,7 @@ enum SnsSettingKey: string
             // OpenPNE 3's op_activity_is_open is an sfConfig (app.yml) value, not an sns_config row, so
             // there is nothing to copy; upgraded sites fall back to the same off default.
             self::TimelineAllowWebPublic => null,
+            self::DiaryAllowWebPublic => 'op_diary_plugin_use_open_diary',
             // OpenPNE 3 stored the gadget layout as `{type}_layout` in sns_config (the home context
             // is keyed "home", not "gadget").
             self::GadgetHomeLayout => 'home_layout',
@@ -163,16 +172,17 @@ enum SnsSettingKey: string
     }
 
     /**
-     * Whether SnsSettingUpgrade copies this key from OpenPNE 3 sns_config. Display and gadget-layout
-     * keys do; the security keys (registration mode, CAPTCHA) are deliberately excluded — copying an
-     * OpenPNE 3 value could silently override their fail-closed default (e.g. an OpenPNE 3 site with
-     * the CAPTCHA off would turn it off here), so carrying those over is a separate, security-reviewed
-     * decision rather than part of this copy.
+     * Whether SnsSettingUpgrade copies this key from OpenPNE 3 sns_config: a key with an
+     * op3SourceName() does, except in the Auth group, where copying an OpenPNE 3 value could silently
+     * override a security key's fail-closed default (an OpenPNE 3 site with the CAPTCHA off would turn
+     * it off here) — carrying those over is a separate, security-reviewed decision. The match is
+     * exhaustive so that adding a group forces the same decision rather than inheriting one.
      */
     public function isMigratedFromOp3(): bool
     {
         return match ($this->group()) {
-            SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy => $this->op3SourceName() !== null,
+            SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy,
+            SettingGroup::Diary => $this->op3SourceName() !== null,
             SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features => false,
         };
     }
@@ -201,6 +211,10 @@ enum SnsSettingKey: string
             // Off, matching OpenPNE 3's op_activity_is_open default — posts may not be web-public
             // until an admin opts in.
             self::TimelineAllowWebPublic => false,
+            // On, matching OpenPNE 3's op_diary_plugin_use_open_diary default — the one web-public
+            // switch OpenPNE 3 shipped enabled. It offers members the audience rather than publishing
+            // anything itself, and a site that turned it off upgrades an explicit '0'.
+            self::DiaryAllowWebPublic => true,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => 'layoutA',
             // No custom CSS / HTML insertion until an operator sets it; the footer shows OpenPNE 3's bar.
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
@@ -225,6 +239,7 @@ enum SnsSettingKey: string
 
         return match ($this) {
             self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic,
+            self::DiaryAllowWebPublic,
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
@@ -239,6 +254,7 @@ enum SnsSettingKey: string
     {
         return match ($this) {
             self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic,
+            self::DiaryAllowWebPublic,
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => $value ? '1' : '0',
@@ -262,8 +278,10 @@ enum SnsSettingKey: string
             // it on, mirroring RegistrationMode::current()'s restrictive fallback on a bad value.
             self::CaptchaEnabled => $value !== '0',
             // Fail-closed the OTHER way: here `true` widens exposure, so only an explicit '1' enables
-            // it; a malformed/empty value must not open web-public age (the opposite of CaptchaEnabled).
-            self::AllowWebPublicAge, self::TimelineAllowWebPublic => $value === '1',
+            // it; a malformed/empty value must not open a web-public audience (the opposite of
+            // CaptchaEnabled). This is about a STORED value: an absent row returned above, so diary's
+            // on-by-default install fallback is untouched — unreadable is corruption, not consent.
+            self::AllowWebPublicAge, self::TimelineAllowWebPublic, self::DiaryAllowWebPublic => $value === '1',
             // Fail-OPEN, the one place that direction is right: an availability switch, so only an
             // explicit '0' takes a feature down. A malformed value must not black out a module and
             // strand its content — the opposite trade-off from the security keys above.
@@ -285,6 +303,7 @@ enum SnsSettingKey: string
             self::CaptchaEnabled => __('Require CAPTCHA'),
             self::AllowWebPublicAge => __('Allow members to make their age public to the web'),
             self::TimelineAllowWebPublic => __('Allow members to make %activity% posts public to the web'),
+            self::DiaryAllowWebPublic => __('Allow members to make %diary% entries public to the web'),
             self::GadgetHomeLayout => __('Home layout'),
             self::GadgetProfileLayout => __('Profile layout'),
             self::GadgetLoginLayout => __('Login layout'),
@@ -314,7 +333,7 @@ enum SnsSettingKey: string
         return match ($this) {
             self::SnsName, self::AdminMailAddress => true,
             self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge,
-            self::TimelineAllowWebPublic,
+            self::TimelineAllowWebPublic, self::DiaryAllowWebPublic,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,

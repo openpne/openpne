@@ -8,6 +8,7 @@ use App\Models\DiaryComment;
 use App\Models\DiaryImage;
 use App\Models\File;
 use App\Models\Member;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -165,7 +166,7 @@ class DiaryGuestAccessTest extends TestCase
     {
         $author = Member::factory()->create();
         $diary = $this->diary($author, Visibility::Open);
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
 
         foreach ([
             '/diary',
@@ -188,7 +189,7 @@ class DiaryGuestAccessTest extends TestCase
 
         $this->get($file->url())->assertOk();
 
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $this->get($file->url())->assertNotFound();
     }
 
@@ -196,7 +197,7 @@ class DiaryGuestAccessTest extends TestCase
     {
         // The switch governs the web-public audience, never the membership's own access.
         $diary = $this->diary(Member::factory()->create(), Visibility::Open, 'Open entry');
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
 
         $this->actingAs(Member::factory()->create())
             ->get("/diary/{$diary->getKey()}")

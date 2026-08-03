@@ -241,7 +241,7 @@ class MemberConfigTest extends TestCase
     {
         // Web-public off: DiaryVisibility::defaultFor() clamps a stored Open to Members at read time,
         // but the stored row must stay Open — a surface change must not write the clamped value back.
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $member = Member::factory()->create();
         $member->setPreference(PreferenceKey::DiaryDefaultVisibility, Visibility::Open);
 

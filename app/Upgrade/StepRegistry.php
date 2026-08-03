@@ -108,7 +108,7 @@ final class StepRegistry
             GadgetConfigUpgrade::class,
             // admin_user and sns_settings are independent (no FK).
             AdminUserUpgrade::class,
-            // sns_settings is independent (no FK); migrates the display + gadget-layout sns_config keys.
+            // sns_settings is independent (no FK); migrates the sns_config keys SnsSettingKey opts in.
             SnsSettingUpgrade::class,
             // Same target, also FK-free: OpenPNE 3's feature availability (`plugin`, plus sns_config's
             // enable_friend_link), each writing only the units OpenPNE 3 had switched off.

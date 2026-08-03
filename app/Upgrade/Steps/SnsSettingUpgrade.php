@@ -8,13 +8,13 @@ use App\Upgrade\UpgradeStep;
 
 /**
  * OpenPNE 3 `sns_config` → OpenPNE 4 `sns_settings`, for the keys the typed SnsSettingKey registry
- * opts into (display settings + gadget layout). The migrated names and the name→key remap are both
- * derived from SnsSettingKey, so registering a migratable key is all it takes — no second list to drift.
+ * opts into. The migrated names and the name→key remap are both derived from SnsSettingKey, so
+ * registering a migratable key is all it takes — no second list to drift.
  *
  * The security keys (registration mode, CAPTCHA) are excluded via isMigratedFromOp3() so an OpenPNE 3
  * value cannot silently override their fail-closed default; carrying those over is a separate,
- * security-reviewed decision. The migrated values are plain strings (layoutA, the SNS name, …) so
- * `value` copies verbatim.
+ * security-reviewed decision. The migrated values are plain strings (layoutA, the SNS name, '1'/'0'
+ * flags) so `value` copies verbatim.
  */
 class SnsSettingUpgrade extends UpgradeStep
 {

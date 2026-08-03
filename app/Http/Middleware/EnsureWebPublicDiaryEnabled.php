@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Closes the guest-reachable half of the diary module while web-public diaries are switched off
- * (`openpne.diary.allow_web_public`, OpenPNE 3 `op_diary_plugin_use_open_diary`). OpenPNE 3 made
+ * (`SnsSettingKey::DiaryAllowWebPublic`, OpenPNE 3 `op_diary_plugin_use_open_diary`). OpenPNE 3 made
  * the whole module members-only in that case (opDiaryPluginActions::initialize drops the per-action
  * `is_secure: false`), so the screens bounce to login rather than render an empty list.
  *

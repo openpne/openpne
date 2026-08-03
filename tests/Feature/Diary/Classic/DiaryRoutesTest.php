@@ -4,6 +4,7 @@ namespace Tests\Feature\Diary\Classic;
 
 use App\Models\Diary;
 use App\Models\Member;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -242,7 +243,7 @@ class DiaryRoutesTest extends TestCase
 
     public function test_store_rejects_web_public_when_the_gate_is_disabled(): void
     {
-        config(['openpne.diary.allow_web_public' => false]);
+        $this->setSnsSetting(SnsSettingKey::DiaryAllowWebPublic, false);
         $member = Member::factory()->create();
 
         $this->actingAs($member)->post('/diary/create', [
