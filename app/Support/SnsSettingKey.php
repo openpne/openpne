@@ -107,6 +107,18 @@ enum SnsSettingKey: string
      */
     case FeatureFriendEnabled = 'feature_friend_enabled';
 
+    /** Per-site brand color as `#rrggbb`, or '' for none (App\Support\BrandColor). */
+    case BrandColor = 'brand_color';
+
+    /**
+     * The `files.name` token of the uploaded logo mark, or '' for none. An opaque token, not a path:
+     * the bytes are served by App\Http\Controllers\PublicFileController, so no storage:link is needed.
+     */
+    case BrandLogoFile = 'brand_logo_file';
+
+    /** The `files.name` token of the uploaded favicon (PNG), or '' for none. */
+    case BrandFaviconFile = 'brand_favicon_file';
+
     /**
      * OpenPNE 3's default footer (its sns_config footer_before/after seed), the install default for the
      * footer keys so a fresh site shows the same bar it always did.
@@ -129,6 +141,7 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => SettingGroup::Features,
+            self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => SettingGroup::Branding,
         };
     }
 
@@ -168,6 +181,8 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => null,
+            // OpenPNE 4-native: OpenPNE 3 had no per-site logo/color/favicon settings to copy.
+            self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => null,
         };
     }
 
@@ -183,7 +198,8 @@ enum SnsSettingKey: string
         return match ($this->group()) {
             SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy,
             SettingGroup::Diary => $this->op3SourceName() !== null,
-            SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features => false,
+            SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features,
+            SettingGroup::Branding => false,
         };
     }
 
@@ -224,6 +240,9 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => true,
+            // Unbranded until an administrator sets it: the Modern shell keeps its built-in color and
+            // both surfaces keep the shipped favicon.
+            self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => '',
         };
     }
 
@@ -325,6 +344,9 @@ enum SnsSettingKey: string
             self::FeatureCommunityTopicEnabled => __('%Topic%'),
             self::FeatureCommunityEventEnabled => __('Event'),
             self::FeatureFriendEnabled => __('%Friend%'),
+            self::BrandColor => __('Brand color'),
+            self::BrandLogoFile => __('Logo'),
+            self::BrandFaviconFile => __('Favicon'),
         };
     }
 
@@ -339,7 +361,8 @@ enum SnsSettingKey: string
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => false,
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
+            self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => false,
         };
     }
 

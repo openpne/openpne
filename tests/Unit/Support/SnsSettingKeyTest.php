@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use App\Support\SettingGroup;
 use App\Support\SnsSettingKey;
 use PHPUnit\Framework\TestCase;
 
@@ -51,5 +52,18 @@ class SnsSettingKeyTest extends TestCase
         $this->assertSame('op_diary_plugin_use_open_diary', $key->op3SourceName());
         $this->assertTrue($key->isMigratedFromOp3());
         $this->assertSame($key, SnsSettingKey::fromOp3SourceName('op_diary_plugin_use_open_diary'));
+    }
+
+    public function test_branding_keys_are_unbranded_by_default_and_never_upgrade(): void
+    {
+        // OpenPNE 3 had no per-site logo/color/favicon, so there is nothing to copy: a fresh and an
+        // upgraded install both start unbranded, and the value stays whatever the admin page stored.
+        foreach ([SnsSettingKey::BrandColor, SnsSettingKey::BrandLogoFile, SnsSettingKey::BrandFaviconFile] as $key) {
+            $this->assertSame(SettingGroup::Branding, $key->group(), $key->value);
+            $this->assertNull($key->op3SourceName(), $key->value);
+            $this->assertFalse($key->isMigratedFromOp3(), $key->value);
+            $this->assertSame('', $key->default(), $key->value);
+            $this->assertSame('#0088aa', $key->decode('#0088aa'), $key->value);
+        }
     }
 }

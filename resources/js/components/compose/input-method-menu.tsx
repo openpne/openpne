@@ -65,7 +65,7 @@ export function InputMethodMenu({ value, onSelect }: { value: InputMethod; onSel
                             aria-label={item.label}
                             aria-describedby={`${descId}-${item.value}`}
                         >
-                            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center text-primary">
+                            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center text-selected">
                                 <DropdownMenuItemIndicator>
                                     <Check className="size-4" />
                                 </DropdownMenuItemIndicator>

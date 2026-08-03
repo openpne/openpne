@@ -4,8 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" href="{{ asset('favicon-32x32.png') }}" sizes="32x32">
+    {{-- The admin favicon applies to both surfaces; the brand color and logo are Modern-only. --}}
+    @if ($brandFavicon = brand_favicon_url())
+        <link rel="icon" type="image/png" href="{{ $brandFavicon }}">
+    @else
+        <link rel="icon" href="/favicon.ico" sizes="any">
+        <link rel="icon" type="image/png" href="{{ asset('favicon-32x32.png') }}" sizes="32x32">
+    @endif
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ route('webmanifest') }}">
     <title>@yield('title') | {{ sns_title() ?: sns_name() }}</title>

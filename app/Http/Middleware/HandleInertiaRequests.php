@@ -9,6 +9,7 @@ use App\Features\Home\UnreadCounts;
 use App\Features\Member\Queries\RandomMembers;
 use App\Models\Member;
 use App\Services\TermService;
+use App\Support\BrandColor;
 use App\Support\Feature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -59,8 +60,8 @@ class HandleInertiaRequests extends Middleware
             'rightRail' => $user ? fn () => $this->rightRail($user) : null,
             // Modern brand mark: color + optional logo URL; a null url renders a color initial badge.
             'snsLogo' => [
-                'color' => '#2563eb',
-                'url' => null,
+                'color' => brand_color() ?? BrandColor::DEFAULT,
+                'url' => brand_logo_url(),
             ],
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),

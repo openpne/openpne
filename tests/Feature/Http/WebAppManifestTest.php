@@ -25,7 +25,17 @@ class WebAppManifestTest extends TestCase
                 'scope' => '/',
                 'start_url' => '/',
             ])
-            ->assertJsonCount(2, 'icons');
+            ->assertJsonCount(2, 'icons')
+            ->assertJson(['theme_color' => '#2563eb']);
+    }
+
+    public function test_the_manifest_theme_color_follows_the_brand_color(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::BrandColor, '#0088aa');
+
+        $this->get('/manifest.webmanifest')
+            ->assertOk()
+            ->assertJson(['theme_color' => '#0088aa']);
     }
 
     public function test_both_shells_link_the_manifest(): void
