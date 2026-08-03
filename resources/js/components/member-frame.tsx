@@ -43,6 +43,9 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
                 GAP[chrome.gap],
                 chrome.foreground && 'text-foreground',
+                // Clearance for the FAB the shell floats over this content: 56px of circle, 20px off
+                // the bottom bar, so the last row stays readable under it.
+                action && 'pb-24 lg:pb-8',
             )}
         >
             {chrome.context && (
@@ -59,6 +62,7 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {chrome.mode !== 'embedded' && chrome.title && (
                 <PageHeading
                     title={label(chrome.title)}
+                    fold={chrome.mode === 'section'}
                     action={
                         action && (
                             <ActionLink href={action.href}>

@@ -94,6 +94,19 @@ test("the owner's diary archive carries the same tab strip", () => {
 const chrome = (component: string, props: Record<string, unknown>) =>
     resolveChrome(component, { enabledFeatures: allOn, ...props });
 
+test('the dashboard carries the diary action without becoming a hub', () => {
+    const dashboard = chrome('dashboard', {});
+
+    assert.equal(dashboard.action?.href, '/diary/new');
+    // 'embedded' keeps the frame from drawing a heading row: the action is the mobile FAB alone.
+    assert.equal(dashboard.mode, 'embedded');
+    assert.equal(dashboard.title, undefined);
+});
+
+test('the dashboard action goes with the diary unit', () => {
+    assert.equal(resolveChrome('dashboard', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
+});
+
 test('a community-scoped page is scoped to the community', () => {
     const community = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
 

@@ -1,9 +1,9 @@
 import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import { ActionFab } from '@/components/action-fab';
 import { BottomNav } from '@/components/bottom-nav';
 import { ConfirmDialogHost } from '@/components/confirm-dialog';
 import { LeftNav } from '@/components/left-nav';
-import { PostFab } from '@/components/post-fab';
 import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
@@ -18,7 +18,8 @@ import type { PageProps } from '@/types';
  * a page's sticky header sit below the mobile top bar, `--modern-bottom-offset` keeps fixed/scrolled
  * content clear of the bottom bar (both 0 on desktop, where the bars are hidden). The frame widens at
  * xl to seat the third column without squeezing the centered page content. The resolved chrome comes
- * from the layout (MemberFrame gets the same object): the mobile top bar varies by page class.
+ * from the layout (MemberFrame gets the same object): the mobile top bar varies by page class, and
+ * the mobile primary action floats above the bottom bar.
  */
 export function AppShell({ chrome, children }: { chrome: Chrome; children: ReactNode }) {
     // The bottom bar is member nav, so the space it reserves goes with it: a guest gets no bar, and
@@ -42,7 +43,7 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
             <RightRail />
             <ConfirmDialogHost />
             <UnreadSync />
-            <PostFab />
+            <ActionFab chrome={chrome} />
             <BottomNav />
         </div>
     );

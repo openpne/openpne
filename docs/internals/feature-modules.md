@@ -140,12 +140,16 @@ flash. Per-section defaults live in the chrome registry
 ([`lib/member-chrome.ts`](../../resources/js/lib/member-chrome.ts)) — the same
 source the nav reads, so nav labels and hub headings cannot drift. The layout
 resolves that chrome once and hands the result to both the shell and the frame, so
-the mobile (< lg) top bar varies with the page class: brand on the dashboard and on
-hubs, where the bottom nav already carries the global links; on a detail page back
-plus the registry's `scope` — the community or member the page belongs to, as one
-tappable identity block in the brand block's grammar. A form (and any page with no
-single scope) shows its context as static centered text instead. The in-page
-breadcrumb row is therefore desktop-only.
+the mobile (< lg) top bar varies with the page class: brand on the dashboard, the
+section title on a hub (its in-page h1 folds to `sr-only` there, so the title is
+announced once), and on a detail page back plus the registry's `scope` — the
+community or member the page belongs to, as one tappable identity block in the
+brand block's grammar. A form (and any page with no single scope) shows its context
+as static centered text instead. The in-page breadcrumb row is therefore
+desktop-only, and so is the heading row's action button: on mobile the registry's
+`action` is the extended FAB
+([`ActionFab`](../../resources/js/components/action-fab.tsx)) floating above the
+bottom bar.
 **A page renders only its content** (no own `<main>`, heading only outside the
 registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
 deviations are registry entries, or

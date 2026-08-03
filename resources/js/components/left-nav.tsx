@@ -29,7 +29,7 @@ export function LeftNav() {
                     <nav className="flex-1 overflow-y-auto">
                         <NavItems />
                     </nav>
-                    {/* The desktop half of PostFab — it follows the same unit. */}
+                    {/* The desktop counterpart of the dashboard's action FAB — it follows the same unit. */}
                     {enabledFeatures.diary && (
                         <ActionLink href="/diary/new" className="rounded-full">
                             <Pencil className="size-5" strokeWidth={2.25} />

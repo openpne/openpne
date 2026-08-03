@@ -46,9 +46,10 @@ function ScopeIdentity({ scope }: { scope: ChromeScope }) {
 }
 
 /**
- * Mobile (< lg) top bar, varying by page class: hamburger + brand + account menu on the dashboard and
- * on hubs, brand + sign-in for a guest, and back + scope on a detail or form page — there the bottom
- * nav is what carries the global links, so the bar can spend its width on where the page sits.
+ * Mobile (< lg) top bar, varying by page class: hamburger + brand + account menu on the dashboard,
+ * the section title in place of the brand on a hub, brand + sign-in for a guest, and back + scope on
+ * a detail or form page — there the bottom nav is what carries the global links, so the bar can spend
+ * its width on where the page sits.
  */
 export function TopNav({ chrome }: { chrome: Chrome }) {
     const t = useT();
@@ -142,6 +143,21 @@ export function TopNav({ chrome }: { chrome: Chrome }) {
                         </>
                     )
                 )}
+            </TopBar>
+        );
+    }
+
+    // A hub's h1 is fixed section vocabulary (= its nav label), short enough for the bar and worth a
+    // row of a phone's height, so the bar carries it and the in-page heading folds to sr-only. It is
+    // aria-hidden here: that in-page h1 is the page's one announcement of the title.
+    if (chrome.mode === 'section' && chrome.title) {
+        return (
+            <TopBar>
+                <NavDrawer />
+                <span aria-hidden className="min-w-0 flex-1 truncate text-base font-semibold">
+                    {label(chrome.title)}
+                </span>
+                <AvatarMenu user={auth.user} compact />
             </TopBar>
         );
     }
