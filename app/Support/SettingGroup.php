@@ -40,4 +40,7 @@ enum SettingGroup
 
     /** Per-site branding (brand color, logo mark, favicon), edited on the branding page. */
     case Branding;
+
+    /** The administrator-authored message shown on the login screen, edited on the login screen page. */
+    case LoginScreen;
 }

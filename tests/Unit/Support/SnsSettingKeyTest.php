@@ -54,6 +54,20 @@ class SnsSettingKeyTest extends TestCase
         $this->assertSame($key, SnsSettingKey::fromOp3SourceName('op_diary_plugin_use_open_diary'));
     }
 
+    public function test_login_message_is_free_text_bounded_by_the_text_column(): void
+    {
+        $key = SnsSettingKey::LoginMessage;
+
+        $this->assertSame(SettingGroup::LoginScreen, $key->group());
+        // OpenPNE 3 carried this kind of copy in the login gadgets, so there is nothing to copy over.
+        $this->assertNull($key->op3SourceName());
+        $this->assertFalse($key->isMigratedFromOp3());
+        $this->assertSame('', $key->default());
+        // Stored verbatim, like the design blobs: a leading indent is Markdown syntax, not noise.
+        $this->assertSame("  # Hi\n", $key->coerce("  # Hi\n"));
+        $this->assertSame(65535, $key->maxBytes());
+    }
+
     public function test_branding_keys_are_unbranded_by_default_and_never_upgrade(): void
     {
         // OpenPNE 3 had no per-site logo/color/favicon, so there is nothing to copy: a fresh and an

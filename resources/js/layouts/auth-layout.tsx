@@ -13,6 +13,8 @@ const LOCALE_OPTIONS: { value: string; label: string }[] = [
 
 interface AuthLayoutProps {
     title: string;
+    /** Site copy shown between the brand block and the card — outside the form, which stays the only place actions live. */
+    intro?: ReactNode;
     children: ReactNode;
 }
 
@@ -21,7 +23,7 @@ interface AuthLayoutProps {
  * /locale stores the choice in the session; registration promotes it to members.locale). The
  * current locale is inert text — only the other language posts.
  */
-export function AuthLayout({ title, children }: AuthLayoutProps) {
+export function AuthLayout({ title, intro, children }: AuthLayoutProps) {
     const t = useT();
     const { locale, name } = usePage<PageProps>().props;
 
@@ -31,6 +33,8 @@ export function AuthLayout({ title, children }: AuthLayoutProps) {
                 <BrandMark size="lg" />
                 <p className="max-w-full text-center text-lg font-bold break-words text-foreground">{name}</p>
             </header>
+            {/* An aside, not a div: every node needs a landmark (axe region), and site copy is complementary to the sign-in task. */}
+            {intro && <aside className="mb-6 w-full max-w-sm">{intro}</aside>}
             <main className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm">
                 <h1 className="text-center text-xl font-semibold text-foreground">{title}</h1>
                 {children}
