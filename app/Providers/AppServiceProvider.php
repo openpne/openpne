@@ -8,6 +8,7 @@ use App\Captcha\Captcha;
 use App\Captcha\ConfigurableCaptcha;
 use App\Features\Home\UnreadCounts;
 use App\Features\Notifications\NotificationCenterWindow;
+use App\Http\Middleware\StartSession;
 use App\Http\Middleware\UseAdminSessionStore;
 use App\Models\BannerImage;
 use App\Models\Community;
@@ -32,8 +33,11 @@ use App\Services\TermService;
 use App\Translation\TermTranslator;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\StartSession as FrameworkStartSession;
+use Illuminate\Session\SessionManager;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -55,6 +59,15 @@ class AppServiceProvider extends ServiceProvider
         // Singleton so its constructor captures the member-surface session config
         // once per process, before any request's surface pin mutates it.
         $this->app->singleton(UseAdminSessionStore::class);
+
+        // Swapped in through the container rather than by replacing the class in the web group:
+        // the pipeline resolves middleware by name from here, so every stack that lists the
+        // framework class gets ours (web group, Filament panel) while the middleware priority
+        // list — which matches on that name — keeps ordering the session middleware as before.
+        $this->app->singleton(FrameworkStartSession::class, fn ($app): StartSession => new StartSession(
+            $app->make(SessionManager::class),
+            fn () => $app->make(CacheFactory::class),
+        ));
 
         // Request-scoped so the shell's nav badges and the dashboard notices reuse one set of counts.
         $this->app->scoped(UnreadCounts::class);
