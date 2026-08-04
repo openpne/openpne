@@ -152,8 +152,9 @@ export function EntryRow({ href, author, community, title, titleClassName, bylin
             <ListRow href={href} linkLabel={title} className="items-start">
                 {subjectImage}
                 {content}
-                {/* Raised above the row link, which covers everything else. */}
-                <span className="relative z-10 flex shrink-0 items-center gap-3 text-sm">{actions}</span>
+                {/* Raised above the row link, but only the actions themselves take the clicks: the
+                    gaps between them stay transparent, so they open the entry like the rest of the row. */}
+                <span className="pointer-events-none relative z-10 flex shrink-0 items-center gap-3 text-sm [&>*]:pointer-events-auto">{actions}</span>
             </ListRow>
         );
     }
