@@ -51,13 +51,21 @@ export function List({ children, className }: { children: ReactNode; className?:
     return <ul className={cn('divide-y divide-border', className)}>{children}</ul>;
 }
 
+/**
+ * Stretches a link's hit area over its {@link ListRow} — the row is the link's containing block, so
+ * the whole row opens it while the link keeps its own text as the accessible name. For rows that
+ * hold their own controls, which a row-wrapping Link may not nest. Controls stay clickable with
+ * `relative z-10`; give them `pointer-events-none` + `[&>*]:pointer-events-auto` when a wrapper box
+ * would otherwise swallow the clicks between them.
+ */
+export const stretchedLink = 'after:absolute after:inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring';
+
 type ListRowProps = {
     /** When set, the whole row becomes an Inertia Link with hover/active feedback. */
     href?: string;
-    /** Accessible name for the row link on rows that carry their own controls (a checkbox, a button):
-     *  the link is laid over the row instead of wrapping it, since an anchor may not nest interactive
-     *  elements. Controls take `relative z-10` to stay above it. */
-    linkLabel?: string;
+    /** Host a {@link stretchedLink} in the row content instead: same feedback, but the row keeps its
+     *  own controls. Mutually exclusive with `href`. */
+    rowLink?: boolean;
     /** Show a trailing chevron (decorative — only meaningful on linked rows). */
     chevron?: boolean;
     children: ReactNode;
@@ -69,7 +77,7 @@ type ListRowProps = {
  * caller lays out the row content (e.g. avatar + a `min-w-0 flex-1` text block); this appends the
  * chevron. Not for grid/tile lists — keep those as their own layout.
  */
-export function ListRow({ href, linkLabel, chevron, children, className }: ListRowProps) {
+export function ListRow({ href, rowLink, chevron, children, className }: ListRowProps) {
     const base = cn('flex min-h-11 items-center gap-3 px-4 py-3 text-foreground sm:px-5', className);
     const feedback = 'transition-colors hover:bg-muted/40 active:bg-muted/60';
     const inner = (
@@ -78,19 +86,10 @@ export function ListRow({ href, linkLabel, chevron, children, className }: ListR
             {chevron && <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
         </>
     );
-    if (href && linkLabel) {
-        return (
-            <li className={cn(base, feedback, 'relative')}>
-                {inner}
-                {/* Last in the row so it stays after the controls in tab order; the focus outline is
-                    drawn inset, since the overlay sits flush against the row edges. */}
-                <Link
-                    href={href}
-                    aria-label={linkLabel}
-                    className="absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                />
-            </li>
-        );
+    if (rowLink) {
+        // `relative` makes the row the containing block the stretched link resolves against; no
+        // positioned element may sit between them, or the link stretches over that one instead.
+        return <li className={cn(base, feedback, 'relative')}>{inner}</li>;
     }
     return href ? (
         <li>
