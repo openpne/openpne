@@ -58,7 +58,8 @@ export function List({ children, className }: { children: ReactNode; className?:
  * `relative z-10`; give them `pointer-events-none` + `[&>*]:pointer-events-auto` when a wrapper box
  * would otherwise swallow the clicks between them.
  */
-export const stretchedLink = 'after:absolute after:inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring';
+export const stretchedLink =
+    'after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ring';
 
 type ListRowProps = {
     /** When set, the whole row becomes an Inertia Link with hover/active feedback. */
