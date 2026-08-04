@@ -145,19 +145,19 @@ export default function Dashboard() {
                             {enabledFeatures.community && (
                                 <ListRow rowLink chevron>
                                     <span className="min-w-0 flex-1 text-sm text-foreground">
-                                    <Link href="/community/search" className={stretchedLink}>
-                                        {t('Search %communities%')}
-                                    </Link>
-                                </span>
+                                        <Link href="/community/search" className={stretchedLink}>
+                                            {t('Search %communities%')}
+                                        </Link>
+                                    </span>
                                 </ListRow>
                             )}
                             {enabledFeatures.diary && (
                                 <ListRow rowLink chevron>
                                     <span className="min-w-0 flex-1 text-sm text-foreground">
-                                    <Link href="/diary/new" className={stretchedLink}>
-                                        {t('Post %diary%')}
-                                    </Link>
-                                </span>
+                                        <Link href="/diary/new" className={stretchedLink}>
+                                            {t('Post %diary%')}
+                                        </Link>
+                                    </span>
                                 </ListRow>
                             )}
                         </List>
