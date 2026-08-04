@@ -27,9 +27,9 @@ export function AuthLayout({ title, children }: AuthLayoutProps) {
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-4 py-12">
-            <header className="mb-6 flex flex-col items-center gap-3">
+            <header className="mb-6 flex w-full max-w-sm flex-col items-center gap-3">
                 <BrandMark size="lg" />
-                <p className="text-lg font-bold text-foreground">{name}</p>
+                <p className="max-w-full text-center text-lg font-bold break-words text-foreground">{name}</p>
             </header>
             <main className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm">
                 <h1 className="text-center text-xl font-semibold text-foreground">{title}</h1>
