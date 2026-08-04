@@ -43,8 +43,8 @@ class AdminPanelProvider extends PanelProvider
             // tabs of different installs distinguishable from each other.
             ->brandName(fn (): string => sns_name().' '.__('Admin panel'))
             // Browsers auto-request /favicon.ico; this makes Filament emit an explicit <link> so the
-            // admin tab shows the site's mark on the PNG path too. Brand stays the sns_name text.
-            // Closure for the same reason as brandName above.
+            // admin tab shows the site's mark on the PNG path too — kept per-site so tabs of
+            // different installs stay distinguishable. Closure for the same reason as brandName above.
             ->favicon(fn (): string => brand_favicon_url() ?? asset('favicon-32x32.png'))
             // Separate `admin` guard, entirely independent of the member-facing
             // guard: a logged-in member is never treated as an administrator
