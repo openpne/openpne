@@ -12,6 +12,9 @@ use Symfony\Component\HttpFoundation\Response;
  * a plain GET; without this it becomes the back-navigation target, and a later redirect()->back()
  * (a failed login, a validation error) lands on that raw-JSON endpoint — navigating the Classic page
  * to JSON and feeding the Inertia client a non-Inertia response.
+ *
+ * App\Http\Middleware\StartSession rules out non-navigation requests generally; this stays for the
+ * clients it cannot classify (no Fetch Metadata), and is not the pattern to reach for per route.
  */
 class AsBackgroundFetch
 {

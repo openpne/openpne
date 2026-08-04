@@ -40,6 +40,33 @@ Per request it pins, both ways:
   realm's next Inertia POST. Nothing on the admin realm reads it (Livewire
   sends its page-embedded token).
 
+## The previous URL
+
+`redirect()->back()` — which is how a validation error and a failed login return
+to their form — goes to the URL the session recorded last. The framework records
+every routed, non-ajax GET, and that includes the cookie-bearing subresources a
+page loads for itself: the brand mark on the sign-in screen, an avatar, a polling
+fetch. Whichever loads last would become the back target, so the visitor lands on
+an image or a JSON endpoint and never sees the error (the Inertia client is handed
+a response it cannot render).
+
+[`App\Http\Middleware\StartSession`](../../app/Http/Middleware/StartSession.php)
+narrows the rule to requests that are a page the visitor is on:
+
+| `Sec-Fetch-Dest` | Recorded |
+|---|---|
+| `document` | yes — an ordinary navigation |
+| `empty` with `X-Inertia` / `X-Livewire-Navigate` | yes — a client-side visit |
+| `empty` otherwise, `image`, `style`, `script`, `font`, `manifest`, … | no |
+| absent | yes — the client predates Fetch Metadata, so the framework's rule stands |
+
+A fallback match is never recorded whatever its headers: it answers 404, so it is
+not somewhere to send a visitor back to.
+
+It is swapped in by container binding (`AppServiceProvider`), not by replacing the
+class in the `web` group, so the middleware priority list still finds the session
+middleware under the framework's name.
+
 ## Key invariants
 
 1. **The admin realm is exactly**: `admin`, `admin/*`, the Livewire endpoint
