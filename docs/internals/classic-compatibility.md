@@ -273,6 +273,11 @@ Modern does not apply the same CSS/HTML. It offers its own migration targets
 The logo and the brand color are set on the
 [`BrandingSettings`](../../app/Filament/Pages/BrandingSettings.php) page; the favicon set there is
 the one exception that applies to both surfaces (and to the admin panel).
+The login screen's slot is the message on the
+[`LoginScreenSettings`](../../app/Filament/Pages/LoginScreenSettings.php) page, which Classic
+instead carries in its login gadgets. It is Markdown rendered through the member-body sanitizer
+([`MarkdownText`](../../app/Support/MarkdownText.php)), not an operator-HTML seam like the
+Classic slots above.
 Its navigation is component-driven, so the `navigations` table is Classic-only.
 The admin UI MUST label which scope a setting affects so an operator is never
 misled that a Classic-only custom CSS applies to Modern — except on a
@@ -281,7 +286,7 @@ not mention surfaces at all:
 
 ```text
 classic only:  OpenPNE 3-compatible custom CSS / HTML insertion / legacy gadget layout / navigation menu settings
-modern only:   Modern logo / color / header image / modern layout
+modern only:   Modern logo / color / header image / modern layout / login screen message
 both:          SNS name / terms / basic navigation labels / policy URLs / favicon
 ```
 

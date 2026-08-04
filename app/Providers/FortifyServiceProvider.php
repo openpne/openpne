@@ -12,6 +12,9 @@ use App\Features\Auth\LoginFormData;
 use App\Features\Auth\LoginThrottle;
 use App\Models\Member;
 use App\Services\GadgetService;
+use App\Services\SnsSettingService;
+use App\Support\MarkdownText;
+use App\Support\SnsSettingKey;
 use App\Support\SurfaceResolver;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -82,7 +85,9 @@ class FortifyServiceProvider extends ServiceProvider
             $gadgets = app(GadgetService::class);
 
             return $this->screen($request, 'login', 'auth.login',
-                fn () => Inertia::render('auth/login', $props),
+                // The message is a Modern-only slot; Classic carries the same kind of copy in its
+                // login gadgets, so the settings tier is never read on the Classic path.
+                fn () => Inertia::render('auth/login', $props + ['loginMessage' => $this->loginMessage()]),
                 $props + [
                     'zones' => $gadgets->zones('login', viewer: $request->user()),
                     'layout' => $gadgets->layoutLetter('login'),
@@ -190,6 +195,24 @@ class FortifyServiceProvider extends ServiceProvider
                 ? Limit::perMinute(5)->by('password-reset|'.$request->ip())
                 : Limit::none();
         });
+    }
+
+    /**
+     * The administrator's login screen message, as the stored Markdown plus its sanitized HTML, or
+     * null when unset. Rendering goes through App\Support\MarkdownText — the same allowlist pipeline
+     * a member body takes — so the operator's text reaches the client as safe HTML, never raw.
+     *
+     * @return array{body: string, bodyHtml: string}|null
+     */
+    private function loginMessage(): ?array
+    {
+        $body = (string) app(SnsSettingService::class)->get(SnsSettingKey::LoginMessage);
+
+        if (trim($body) === '') {
+            return null;
+        }
+
+        return ['body' => $body, 'bodyHtml' => MarkdownText::render($body)->toHtml()];
     }
 
     /** Whether this IP has failed enough logins that the form must now carry a CAPTCHA. */

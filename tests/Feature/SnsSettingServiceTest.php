@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -58,6 +59,22 @@ class SnsSettingServiceTest extends TestCase
         app(SnsSettingService::class)->clearCache();
 
         $this->assertTrue(app(SnsSettingService::class)->get(SnsSettingKey::CaptchaEnabled));
+    }
+
+    public function test_the_login_screen_message_stays_out_of_the_core_cache(): void
+    {
+        // The core map is deserialized on every request (sns_name() is shared to Modern too), so a
+        // TEXT-sized message must live in its own entry — reading it must not pull it into the core one.
+        DB::table('sns_settings')->insert(['key' => 'login_message', 'value' => str_repeat('a', 1000)]);
+        $service = app(SnsSettingService::class);
+        $service->clearCache();
+
+        $this->assertSame(str_repeat('a', 1000), $service->get(SnsSettingKey::LoginMessage));
+        // Prime the core tier too, so the assertion is about what it holds, not about it being unbuilt.
+        $service->get(SnsSettingKey::SnsName);
+
+        $this->assertArrayNotHasKey('login_message', (array) Cache::get('sns_settings'));
+        $this->assertArrayHasKey('login_message', (array) Cache::get('sns_settings:login_screen'));
     }
 
     public function test_from_op3_source_name_resolves_known_keys_only(): void

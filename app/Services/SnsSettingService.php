@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\Schema;
  * blobs. The Classic HTML-insertion / footer keys load only when a Classic page renders. The custom
  * CSS document is isolated entirely — its body has its own entry, read only by the CSS endpoint, and a
  * separate boolean flag answers "is any custom CSS set" so a Classic render decides whether to <link>
- * it without ever loading the body.
+ * it without ever loading the body. The login screen message has its own entry for the same reason:
+ * it is TEXT-sized and only the login screen reads it.
  */
 class SnsSettingService
 {
@@ -35,6 +36,9 @@ class SnsSettingService
     /** Boolean "is custom CSS set" flag, cached apart from the body so a Classic render never loads it. */
     private const CSS_PRESENT_CACHE_KEY = 'sns_settings:customizing_css_present';
 
+    /** The login screen message; read only while rendering the login screen. */
+    private const LOGIN_SCREEN_CACHE_KEY = 'sns_settings:login_screen';
+
     private const CACHE_TTL = 3600;
 
     /** Resolved value for a key: the stored override, or the key default when no row exists. */
@@ -44,7 +48,11 @@ class SnsSettingService
             return $key->decode($this->customCss());
         }
 
-        $map = $key->group() === SettingGroup::Design ? $this->designOverrides() : $this->coreOverrides();
+        $map = match ($key->group()) {
+            SettingGroup::Design => $this->designOverrides(),
+            SettingGroup::LoginScreen => $this->loginScreenOverrides(),
+            default => $this->coreOverrides(),
+        };
 
         return $key->decode($map[$key->value] ?? null);
     }
@@ -75,10 +83,11 @@ class SnsSettingService
         Cache::forget(self::DESIGN_CACHE_KEY);
         Cache::forget(self::CSS_CACHE_KEY);
         Cache::forget(self::CSS_PRESENT_CACHE_KEY);
+        Cache::forget(self::LOGIN_SCREEN_CACHE_KEY);
     }
 
     /**
-     * Stored overrides for the non-design keys, keyed by setting key. Guards against the table not
+     * Stored overrides for the hot-path keys, keyed by setting key. Guards against the table not
      * existing yet so a pre-migrate / console boot resolves to defaults instead of throwing.
      *
      * @return array<string, string>
@@ -91,7 +100,7 @@ class SnsSettingService
             }
 
             return DB::table('sns_settings')
-                ->whereNotIn('key', $this->designKeyValues())
+                ->whereNotIn('key', $this->isolatedKeyValues())
                 ->pluck('value', 'key')
                 ->all();
         });
@@ -117,6 +126,25 @@ class SnsSettingService
         });
     }
 
+    /**
+     * Stored overrides for the login screen keys, read only while rendering the login screen.
+     *
+     * @return array<string, string>
+     */
+    private function loginScreenOverrides(): array
+    {
+        return Cache::remember(self::LOGIN_SCREEN_CACHE_KEY, self::CACHE_TTL, function (): array {
+            if (! Schema::hasTable('sns_settings')) {
+                return [];
+            }
+
+            return DB::table('sns_settings')
+                ->whereIn('key', self::keyValues(SettingGroup::LoginScreen))
+                ->pluck('value', 'key')
+                ->all();
+        });
+    }
+
     /** The stored custom CSS body, or '' when unset; read only via get(CustomCss) — the CSS endpoint and admin form. */
     private function customCss(): string
     {
@@ -131,21 +159,27 @@ class SnsSettingService
         });
     }
 
-    /** @return list<string> every design key's stored name (excluded from the core map). */
-    private function designKeyValues(): array
+    /** @return list<string> stored names of every key held in a tier of its own, so the core map excludes them. */
+    private function isolatedKeyValues(): array
     {
-        return array_map(
-            static fn (SnsSettingKey $key): string => $key->value,
-            SnsSettingKey::inGroup(SettingGroup::Design),
-        );
+        return array_merge(self::keyValues(SettingGroup::Design), self::keyValues(SettingGroup::LoginScreen));
     }
 
     /** @return list<string> design keys read at Classic render time (design minus the CSS document). */
     private function classicRenderKeyValues(): array
     {
         return array_values(array_filter(
-            $this->designKeyValues(),
+            self::keyValues(SettingGroup::Design),
             static fn (string $value): bool => $value !== SnsSettingKey::CustomCss->value,
         ));
+    }
+
+    /** @return list<string> */
+    private static function keyValues(SettingGroup $group): array
+    {
+        return array_map(
+            static fn (SnsSettingKey $key): string => $key->value,
+            SnsSettingKey::inGroup($group),
+        );
     }
 }
