@@ -64,13 +64,41 @@ class PreviousUrlTest extends TestCase
 
     public function test_a_client_side_visit_is_recorded(): void
     {
-        foreach (['X-Inertia' => 'true', 'X-Livewire-Navigate' => ''] as $header => $value) {
+        // Inertia's client sends X-Requested-With alongside X-Inertia, so the framework's XHR
+        // exclusion covers the very case this must record. Livewire's navigate fetch does not.
+        $visits = [
+            'inertia' => ['X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'],
+            'livewire' => ['X-Livewire-Navigate' => ''],
+        ];
+
+        foreach ($visits as $client => $headers) {
             $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login');
 
-            $this->withHeaders(['Sec-Fetch-Dest' => 'empty', $header => $value])->get('/forgot-password');
+            $this->withHeaders($headers + ['Sec-Fetch-Dest' => 'empty'])->get('/forgot-password');
 
-            $this->assertSame(url('/forgot-password'), $this->previousUrl(), $header);
+            $this->assertSame(url('/forgot-password'), $this->previousUrl(), $client);
         }
+    }
+
+    public function test_a_prefetched_visit_is_not_recorded(): void
+    {
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+
+        // A page the browser fetched in case the visitor goes there is not a page they are on.
+        $this->withHeaders(['Sec-Fetch-Dest' => 'document', 'Sec-Purpose' => 'prefetch'])->get('/forgot-password');
+
+        $this->assertSame(url('/login'), $this->previousUrl());
+    }
+
+    public function test_a_validation_error_returns_to_the_page_a_client_side_visit_reached(): void
+    {
+        $this->withHeader('Sec-Fetch-Dest', 'document')->get('/login')->assertOk();
+        $this->withHeaders(['Sec-Fetch-Dest' => 'empty', 'X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest'])
+            ->get('/forgot-password');
+
+        $this->post('/forgot-password', ['email' => ''])
+            ->assertRedirect('/forgot-password')
+            ->assertSessionHasErrors('email');
     }
 
     public function test_a_subresource_does_not_replace_the_previous_url(): void
