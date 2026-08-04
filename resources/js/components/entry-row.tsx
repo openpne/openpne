@@ -60,9 +60,8 @@ type EntryRowProps = EntrySubject & {
     /** Square photo thumbnails (all attachments) laid out under the excerpt; suppresses the
      *  has-photos camera marker since the photos themselves are the indicator. */
     thumbnails?: string[];
-    /** Trailing action links. Nested links are invalid inside a linked row, so with actions the
-     *  title carries a {@link stretchedLink} instead and the chevron is dropped — the actions hold
-     *  the right edge. */
+    /** Trailing action links. The chevron is dropped when they are present — the actions hold the
+     *  right edge. */
     actions?: ReactNode;
 };
 
@@ -109,13 +108,9 @@ export function EntryRow({ href, author, community, title, titleClassName, bylin
 
     const titleLine = (
         <p className={titleClassName ?? 'truncate font-medium text-foreground'}>
-            {actions ? (
-                <Link href={href} className={stretchedLink}>
-                    {title}
-                </Link>
-            ) : (
-                title
-            )}
+            <Link href={href} className={stretchedLink}>
+                {title}
+            </Link>
         </p>
     );
 
@@ -170,7 +165,7 @@ export function EntryRow({ href, author, community, title, titleClassName, bylin
     }
 
     return (
-        <ListRow href={href} chevron className="items-start">
+        <ListRow rowLink chevron className="items-start">
             {subjectImage}
             {content}
         </ListRow>

@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Users } from 'lucide-react';
 import { useState } from 'react';
 import { CommunityImage } from '@/components/community-image';
@@ -7,7 +7,7 @@ import { Pagination } from '@/components/pagination';
 import { SearchSubmitButton } from '@/components/search-submit-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { List, ListRow, Panel } from '@/components/ui/surface';
+import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunityCategory, PaginatedCommunities } from './types';
@@ -87,10 +87,14 @@ export default function CommunitySearch() {
                     <Panel flush>
                         <List>
                             {communities.data.map((community) => (
-                                <ListRow key={community.id} href={`/community/${community.id}`} chevron>
+                                <ListRow key={community.id} rowLink chevron>
                                     <CommunityImage name={community.name} src={community.imageUrl} className="size-12" decorative />
                                     <div className="min-w-0 flex-1">
-                                        <p className="font-medium text-foreground">{community.name}</p>
+                                        <p className="font-medium text-foreground">
+                                            <Link href={`/community/${community.id}`} className={stretchedLink}>
+                                                {community.name}
+                                            </Link>
+                                        </p>
                                         <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                                             {community.category && (
                                                 <>

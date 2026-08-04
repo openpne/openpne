@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Avatar } from '@/components/avatar';
@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { List, ListRow, Panel } from '@/components/ui/surface';
+import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -149,14 +149,18 @@ export default function MemberSearch() {
                             {members.data.map((member) => (
                                 <ListRow
                                     key={member.id}
-                                    href={`/member/${member.id}`}
+                                    rowLink
                                     chevron
                                     // Top-align only when a self-introduction adds a second line; single-line rows stay centered.
                                     className={member.selfIntroduction ? 'items-start' : undefined}
                                 >
                                     <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="md" decorative />
                                     <div className="min-w-0 flex-1">
-                                        <span className="block truncate text-foreground">{member.name}</span>
+                                        <span className="block truncate text-foreground">
+                                            <Link href={`/member/${member.id}`} className={stretchedLink}>
+                                                {member.name}
+                                            </Link>
+                                        </span>
                                         {member.selfIntroduction && (
                                             <span className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                                                 {member.selfIntroduction}
