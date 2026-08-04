@@ -23,6 +23,8 @@ class BrandingHeadTest extends TestCase
 {
     use RefreshDatabase;
 
+    private string $faviconToken = '';
+
     private function faviconUrl(): string
     {
         $file = app(FileUploader::class)->store(
@@ -30,8 +32,14 @@ class BrandingHeadTest extends TestCase
             explicitVisibility: File::VISIBILITY_PUBLIC,
         );
         $this->setSnsSetting(SnsSettingKey::BrandFaviconFile, $file->name);
+        $this->faviconToken = $file->name;
 
         return route('file.public', ['file' => $file->name]);
+    }
+
+    private function appIconUrl(int $size): string
+    {
+        return route('app_icon', ['token' => $this->faviconToken, 'size' => $size]);
     }
 
     private function modern(): TestResponse
@@ -60,6 +68,7 @@ class BrandingHeadTest extends TestCase
             ->assertSee('data-theme-color-light="#2563eb"', false)
             ->assertSee('<meta name="theme-color" content="#2563eb">', false)
             ->assertSee(asset('favicon-32x32.png'), false)
+            ->assertSee(asset('apple-touch-icon.png'), false)
             // No inline override, so --primary stays whatever the stylesheet declares per theme.
             ->assertDontSee('--primary:', false);
     }
@@ -94,8 +103,8 @@ class BrandingHeadTest extends TestCase
             ->assertSee('<link rel="icon" type="image/png" href="'.$url.'">', false)
             ->assertDontSee('favicon-32x32.png', false)
             ->assertDontSee('/favicon.ico', false)
-            // The home-screen icon is out of scope and stays the shipped one.
-            ->assertSee(asset('apple-touch-icon.png'), false);
+            // The home-screen icon is derived from the same upload, not the shipped asset.
+            ->assertSee('<link rel="apple-touch-icon" href="'.$this->appIconUrl(180).'">', false);
     }
 
     public function test_the_uploaded_favicon_replaces_the_shipped_icons_on_classic(): void
@@ -105,13 +114,14 @@ class BrandingHeadTest extends TestCase
         $this->classic()
             ->assertSee('<link rel="icon" type="image/png" href="'.$url.'">', false)
             ->assertDontSee('favicon-32x32.png', false)
-            ->assertSee(asset('apple-touch-icon.png'), false);
+            ->assertSee('<link rel="apple-touch-icon" href="'.$this->appIconUrl(180).'">', false);
     }
 
     public function test_classic_keeps_the_shipped_icons_when_no_favicon_is_set(): void
     {
         $this->classic()
             ->assertSee(asset('favicon-32x32.png'), false)
+            ->assertSee(asset('apple-touch-icon.png'), false)
             // The brand color is Modern-only; Classic is styled by its skin.
             ->assertDontSee('--primary:', false);
     }
