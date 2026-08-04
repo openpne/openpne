@@ -25,7 +25,10 @@ export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?
                 aria-label={t('Account menu')}
                 className={
                     compact
-                        ? 'shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                        ? // The same 40px box as the bar's other edge controls (hamburger, back), so a
+                          // centered bar label sits on the true center — and the tap target grows past
+                          // the bare 32px avatar. -mr-1 mirrors their -ml-1.
+                          '-mr-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring'
                         : 'flex min-h-11 w-full items-center gap-3 rounded-full px-2 outline-none transition hover:bg-accent focus-visible:bg-accent'
                 }
             >
