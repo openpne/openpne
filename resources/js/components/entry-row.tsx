@@ -1,8 +1,9 @@
+import { Link } from '@inertiajs/react';
 import { Camera, MessageCircle, Users, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
-import { ListRow } from '@/components/ui/surface';
+import { ListRow, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 
 /** Icon + count meta cluster for list rows. Renders nothing at zero. */
@@ -41,8 +42,7 @@ type EntrySubject =
 
 type EntryRowProps = EntrySubject & {
     href: string;
-    /** Plain text, so it can also name the row link. */
-    title: string;
+    title: ReactNode;
     /** Replaces the one-line truncate title styling (e.g. a two-line clamped timeline body). */
     titleClassName?: string;
     /** Plain byline text between the subject name and the date (the activity digest's Topic/Event kind). */
@@ -60,9 +60,9 @@ type EntryRowProps = EntrySubject & {
     /** Square photo thumbnails (all attachments) laid out under the excerpt; suppresses the
      *  has-photos camera marker since the photos themselves are the indicator. */
     thumbnails?: string[];
-    /** Trailing action links. Nested links are invalid inside a linked row, so with actions the row
-     *  link is laid over the row (see {@link ListRow} `linkLabel`) and the chevron is dropped —
-     *  the actions hold the right edge. */
+    /** Trailing action links. Nested links are invalid inside a linked row, so with actions the
+     *  title carries a {@link stretchedLink} instead and the chevron is dropped — the actions hold
+     *  the right edge. */
     actions?: ReactNode;
 };
 
@@ -107,7 +107,17 @@ export function EntryRow({ href, author, community, title, titleClassName, bylin
         <Avatar id={author?.id ?? 0} name={subjectName} src={author?.imageUrl ?? null} color={author?.avatarColor ?? null} size="sm" decorative />
     );
 
-    const titleLine = <p className={titleClassName ?? 'truncate font-medium text-foreground'}>{title}</p>;
+    const titleLine = (
+        <p className={titleClassName ?? 'truncate font-medium text-foreground'}>
+            {actions ? (
+                <Link href={href} className={stretchedLink}>
+                    {title}
+                </Link>
+            ) : (
+                title
+            )}
+        </p>
+    );
 
     // Byline meta (after the name): note, then date, then counts. The image is decorative — the
     // name is right beside it.
@@ -149,7 +159,7 @@ export function EntryRow({ href, author, community, title, titleClassName, bylin
 
     if (actions) {
         return (
-            <ListRow href={href} linkLabel={title} className="items-start">
+            <ListRow rowLink className="items-start">
                 {subjectImage}
                 {content}
                 {/* Raised above the row link, but only the actions themselves take the clicks: the
