@@ -42,8 +42,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.tsx'])
     @inertiaHead
 </head>
-{{-- dvh, not vh: 100vh is the URL-bar-hidden height on mobile, so a page that fits the visible
-     viewport would still scroll by the height of the browser chrome. --}}
+{{-- dvh, not vh: 100vh would keep the document taller than the visible viewport on mobile. --}}
 <body class="min-h-dvh bg-background font-sans text-foreground antialiased">
     @inertia
 </body>

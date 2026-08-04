@@ -40,10 +40,9 @@ export function AuthLayout({ title, intro, width = 'standard', children }: AuthL
     const column = WIDTH[width];
 
     // dvh, not vh: 100vh is the URL-bar-hidden height on a phone, so centering against it drops the
-    // card below the visible fold. The gutter is a minimum — centering supplies the rest — so it
-    // stays small, where the column is tallest relative to the viewport.
+    // card below the fold. The gutter is a minimum — centering supplies the rest.
     return (
-        <div className="flex min-h-dvh flex-col items-center justify-center bg-muted px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pt-[calc(3rem+env(safe-area-inset-top))] sm:pb-[calc(3rem+env(safe-area-inset-bottom))]">
+        <div className="flex min-h-dvh flex-col items-center justify-center bg-muted pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1rem+env(safe-area-inset-right))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] sm:pt-[calc(3rem+env(safe-area-inset-top))] sm:pb-[calc(3rem+env(safe-area-inset-bottom))]">
             <header className={cn('mb-6 flex w-full flex-col items-center gap-3', column)}>
                 <BrandMark size="lg" />
                 <p className="max-w-full text-center text-lg font-bold break-words text-foreground">{name}</p>
