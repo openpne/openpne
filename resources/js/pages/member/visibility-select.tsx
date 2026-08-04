@@ -12,7 +12,7 @@ import { useT } from '@/lib/i18n';
 export function VisibilitySelect({
     options,
     ...props
-}: ComponentProps<'select'> & { options: Array<{ value: number; label: string }> }) {
+}: Omit<ComponentProps<'select'>, 'children' | 'className'> & { options: Array<{ value: number; label: string }> }) {
     const t = useT();
 
     return (
