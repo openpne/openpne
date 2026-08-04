@@ -1,7 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntryRow } from '@/components/entry-row';
-import { List, ListRow, Panel } from '@/components/ui/surface';
+import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { formatDate } from '@/lib/date';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -46,23 +46,29 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
         <Panel flush title={t('Notices')}>
             <List>
                 {friendRequests > 0 && (
-                    <ListRow href="/friend/requests" chevron>
+                    <ListRow rowLink chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
-                            {t(':count pending %friend% requests', { count: friendRequests })}
+                            <Link href="/friend/requests" className={stretchedLink}>
+                                {t(':count pending %friend% requests', { count: friendRequests })}
+                            </Link>
                         </span>
                     </ListRow>
                 )}
                 {unreadMessages > 0 && (
-                    <ListRow href="/message" chevron>
+                    <ListRow rowLink chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
-                            {t(':count unread messages', { count: unreadMessages })}
+                            <Link href="/message" className={stretchedLink}>
+                                {t(':count unread messages', { count: unreadMessages })}
+                            </Link>
                         </span>
                     </ListRow>
                 )}
                 {communityApprovals.map((approval) => (
-                    <ListRow key={approval.communityId} href={`/community/member/pending?id=${approval.communityId}`} chevron>
+                    <ListRow key={approval.communityId} rowLink chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
-                            {t(':count join requests for :community', { count: approval.count, community: approval.communityName })}
+                            <Link href={`/community/member/pending?id=${approval.communityId}`} className={stretchedLink}>
+                                {t(':count join requests for :community', { count: approval.count, community: approval.communityName })}
+                            </Link>
                         </span>
                     </ListRow>
                 ))}
@@ -129,17 +135,29 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground">{t('Find people and places to fill your home.')}</p>
                     <div className="mt-4">
                         <List>
-                            <ListRow href="/member/search" chevron>
-                                <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search members')}</span>
+                            <ListRow rowLink chevron>
+                                <span className="min-w-0 flex-1 text-sm text-foreground">
+                                    <Link href="/member/search" className={stretchedLink}>
+                                        {t('Search members')}
+                                    </Link>
+                                </span>
                             </ListRow>
                             {enabledFeatures.community && (
-                                <ListRow href="/community/search" chevron>
-                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Search %communities%')}</span>
+                                <ListRow rowLink chevron>
+                                    <span className="min-w-0 flex-1 text-sm text-foreground">
+                                        <Link href="/community/search" className={stretchedLink}>
+                                            {t('Search %communities%')}
+                                        </Link>
+                                    </span>
                                 </ListRow>
                             )}
                             {enabledFeatures.diary && (
-                                <ListRow href="/diary/new" chevron>
-                                    <span className="min-w-0 flex-1 text-sm text-foreground">{t('Post %diary%')}</span>
+                                <ListRow rowLink chevron>
+                                    <span className="min-w-0 flex-1 text-sm text-foreground">
+                                        <Link href="/diary/new" className={stretchedLink}>
+                                            {t('Post %diary%')}
+                                        </Link>
+                                    </span>
                                 </ListRow>
                             )}
                         </List>
