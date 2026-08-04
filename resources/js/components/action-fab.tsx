@@ -1,33 +1,30 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useT } from '@/lib/i18n';
 import type { Chrome, ChromeAction } from '@/lib/member-chrome';
-import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 /**
  * Mobile (< lg) primary action: the screen's registry action, floating above the bottom bar. It
  * carries its label because a bare icon reads as one fixed global verb and so misleads on whichever
- * screen it happens to float over; it collapses to the icon while the reader scrolls down, spending
- * the width only while they are not reading. A screen with no registry action shows nothing. Desktop
- * keeps the same action as the heading-row button, so this is hidden at lg+.
+ * screen it happens to float over; it collapses to the icon on the same signal that takes the bars
+ * away, spending the width only while the reader is not reading. A screen with no registry action
+ * shows nothing. Desktop keeps the same action as the heading-row button, so this is hidden at lg+.
  */
-export function ActionFab({ chrome }: { chrome: Chrome }) {
+export function ActionFab({ chrome, extended }: { chrome: Chrome; extended: boolean }) {
     const { props } = usePage<PageProps>();
 
     // The frame's gate verbatim: the heading-row button and this are one action at two widths, and a
-    // guest (a web-public profile is reachable signed out) gets neither. Split from the button below
-    // so the screens without one never reach its scroll listener.
+    // guest (a web-public profile is reachable signed out) gets neither.
     if (!chrome.action || !props.auth.user) {
         return null;
     }
 
-    return <Fab action={chrome.action} />;
+    return <Fab action={chrome.action} extended={extended} />;
 }
 
-function Fab({ action }: { action: ChromeAction }) {
+function Fab({ action, extended }: { action: ChromeAction; extended: boolean }) {
     const t = useT();
-    const extended = useScrollDirection() !== 'down';
     const label = t(action.label.key, action.label.replacements);
 
     // The nav landmark keeps this action inside a region (axe) and carries the fixed positioning, so
