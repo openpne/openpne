@@ -527,6 +527,7 @@
     "Invite a new member": "新しいメンバーを招待",
     "Invite members": "メンバーを招待する",
     "Invite only": "招待制",
+    "It is the home-screen icon too: upload at least 512×512, or the built-in icon is kept at the sizes it cannot fill. Transparent areas are filled with white.": "ホーム画面アイコンにも使われます。512×512 以上をアップロードしてください。満たないサイズには組み込みアイコンが使われます。透過部分は白で塗られます。",
     "Italic": "斜体",
     "Join": "参加",
     "Join :name?": ":nameに参加しますか？",

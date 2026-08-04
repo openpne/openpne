@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Http;
 
+use App\Files\FileUploader;
+use App\Models\File;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class WebAppManifestTest extends TestCase
@@ -26,7 +29,24 @@ class WebAppManifestTest extends TestCase
                 'start_url' => '/',
             ])
             ->assertJsonCount(2, 'icons')
-            ->assertJson(['theme_color' => '#2563eb']);
+            ->assertJson(['theme_color' => '#2563eb'])
+            ->assertJson(['icons' => [['src' => asset('icon-192x192.png')], ['src' => asset('icon-512x512.png')]]]);
+    }
+
+    public function test_the_manifest_icons_follow_the_branding_favicon(): void
+    {
+        $file = app(FileUploader::class)->store(
+            UploadedFile::fake()->image('icon.png', 512, 512),
+            explicitVisibility: File::VISIBILITY_PUBLIC,
+        );
+        $this->setSnsSetting(SnsSettingKey::BrandFaviconFile, $file->name);
+
+        $this->get('/manifest.webmanifest')
+            ->assertOk()
+            ->assertJson(['icons' => [
+                ['src' => route('app_icon', ['size' => 192])],
+                ['src' => route('app_icon', ['size' => 512])],
+            ]]);
     }
 
     public function test_the_manifest_theme_color_follows_the_brand_color(): void
