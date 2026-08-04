@@ -272,7 +272,8 @@ Modern does not apply the same CSS/HTML. It offers its own migration targets
 (logo, primary color, header image, footer/free area, a scoped safe-HTML slot).
 The logo and the brand color are set on the
 [`BrandingSettings`](../../app/Filament/Pages/BrandingSettings.php) page; the favicon set there is
-the one exception that applies to both surfaces (and to the admin panel).
+the one exception that applies to both surfaces (and to the admin panel). Both shells also derive
+their home-screen icon from it ([`AppIcon`](../../app/Files/AppIcon.php)).
 The login screen's slot is the message on the
 [`LoginScreenSettings`](../../app/Filament/Pages/LoginScreenSettings.php) page, which Classic
 instead carries in its login gadgets. It is Markdown rendered through the member-body sanitizer

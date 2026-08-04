@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Compat\PluginStylesheets;
 use App\Compat\RouteParityRegistry;
+use App\Files\AppIcon;
 use App\Models\Banner;
 use App\Services\SnsSettingService;
 use App\Support\BrandColor;
@@ -65,6 +66,24 @@ if (! function_exists('brand_favicon_url')) {
         $token = (string) app(SnsSettingService::class)->get(SnsSettingKey::BrandFaviconFile);
 
         return $token === '' ? null : route('file.public', ['file' => $token]);
+    }
+}
+
+if (! function_exists('app_icon_url')) {
+    /**
+     * URL of the home-screen icon at $size (App\Files\AppIcon::SIZES): derived from the uploaded
+     * favicon when one is set, otherwise the shipped asset. The favicon's token is in the URL, so
+     * replacing it changes what the manifest and the <head> declare — an installed app updates its
+     * icon off that change, not off new bytes at an unchanged URL. Decided on the stored token alone
+     * so a page render costs no more than the settings lookup it already does.
+     */
+    function app_icon_url(int $size): string
+    {
+        $token = (string) app(SnsSettingService::class)->get(SnsSettingKey::BrandFaviconFile);
+
+        return $token === ''
+            ? asset(AppIcon::shippedAsset($size))
+            : route('app_icon', ['token' => $token, 'size' => $size]);
     }
 }
 

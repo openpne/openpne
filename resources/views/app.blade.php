@@ -22,8 +22,7 @@
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" type="image/png" href="{{ asset('favicon-32x32.png') }}" sizes="32x32">
     @endif
-    {{-- Not swapped with the favicon: the home-screen icon and the manifest icons stay the shipped set. --}}
-    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ app_icon_url(180) }}">
     <link rel="manifest" href="{{ route('webmanifest') }}">
     {{-- Apply the saved color mode before first paint so a dark-mode member never sees a light flash.
          lib/color-mode.ts keeps the class in sync after mount. --}}
