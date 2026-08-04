@@ -6,6 +6,7 @@ namespace Tests\Feature\Http;
 
 use App\Files\FileUploader;
 use App\Models\File;
+use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -77,8 +78,14 @@ class AppIconTest extends TestCase
     public function test_a_setting_pointing_at_a_file_it_does_not_own_reads_nothing(): void
     {
         // What SaveBrandingSettings treats as the corrupted-setting case: the token names a member's
-        // own upload, which this public route must not transform and hand to a guest.
-        $file = app(FileUploader::class)->store(UploadedFile::fake()->image('private.png', 512, 512));
+        // own upload, which this route must not transform and hand out as the site's icon. An avatar
+        // specifically, because FilePolicy lets a guest view one — so only the public-visibility
+        // check stands between the setting and the file, and the case guards that check alone.
+        $file = app(FileUploader::class)->store(
+            UploadedFile::fake()->image('avatar.png', 512, 512),
+            'member',
+            (int) Member::factory()->create()->getKey(),
+        );
         $this->setSnsSetting(SnsSettingKey::BrandFaviconFile, $file->name);
 
         $this->get("/app-icon/{$file->name}/512.png")->assertNotFound();
