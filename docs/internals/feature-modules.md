@@ -150,7 +150,13 @@ as static centered text instead. The in-page breadcrumb row is therefore
 desktop-only, and so is the heading row's action button: on mobile the registry's
 `action` is the extended FAB
 ([`ActionFab`](../../resources/js/components/action-fab.tsx)) floating above the
-bottom bar.
+bottom bar. That mobile chrome recedes as a signed-in member reads: scrolling down
+slides both bars away and collapses the FAB (one shell-level listener,
+[`useScrollDirection`](../../resources/js/lib/use-scroll-direction.ts)), and one
+scroll up brings all of it back. A page the registry marks `form` keeps its chrome
+throughout, which makes that flag a behavior contract — a full-page edit / create /
+settings / confirmation screen is a form; an inline comment box, a search row or a
+hub's instant-save controls are not.
 **A page renders only its content** (no own `<main>`, heading only outside the
 registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
 deviations are registry entries, or

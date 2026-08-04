@@ -68,7 +68,12 @@ export interface Chrome {
      * the context as static text) and on a page that is its own subject (a community top, a profile).
      */
     scope?: ChromeScope;
-    /** A form screen: its mobile bar carries no link beside the back control. */
+    /**
+     * A full-page edit / create / settings / confirmation screen. Its mobile bar carries no link
+     * beside the back control, and its chrome stays where it is instead of receding as the reader
+     * scrolls — a screen someone is working through must not move under them. An inline form (a
+     * comment box, a search row, a hub's instant-save controls) does not make the screen one.
+     */
     form?: boolean;
 }
 
@@ -497,10 +502,10 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
 
 /** Non-hub deviations from the frame defaults (width/gap/foreground), keyed by component name. */
 const STATIC_CHROME: Record<string, Partial<Chrome>> = {
-    'block/add': { width: 'narrow' },
-    'block/remove': { width: 'narrow' },
-    'friend/link': { width: 'narrow' },
-    'member/invite': { width: 'narrow' },
+    'block/add': { width: 'narrow', form: true },
+    'block/remove': { width: 'narrow', form: true },
+    'friend/link': { width: 'narrow', form: true },
+    'member/invite': { width: 'narrow', form: true },
     'block/list': { gap: '6' },
     'member/avatar': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },

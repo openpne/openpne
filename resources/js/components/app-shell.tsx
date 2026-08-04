@@ -8,6 +8,7 @@ import { RightRail } from '@/components/right-rail';
 import { TopNav } from '@/components/top-nav';
 import { UnreadSync } from '@/components/unread-sync';
 import type { Chrome } from '@/lib/member-chrome';
+import { useScrollDirection } from '@/lib/use-scroll-direction';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
@@ -19,12 +20,18 @@ import type { PageProps } from '@/types';
  * content clear of the bottom bar (both 0 on desktop, where the bars are hidden). The frame widens at
  * xl to seat the third column without squeezing the centered page content. The resolved chrome comes
  * from the layout (MemberFrame gets the same object): the mobile top bar varies by page class, and
- * the mobile primary action floats above the bottom bar.
+ * the mobile primary action floats above the bottom bar. Reading a long page takes the mobile chrome
+ * away — the bars slide off and the action collapses to its icon while the reader scrolls down, and
+ * one scroll up brings all of it back.
  */
 export function AppShell({ chrome, children }: { chrome: Chrome; children: ReactNode }) {
     // The bottom bar is member nav, so the space it reserves goes with it: a guest gets no bar, and
     // reserves only the home-indicator strip the page would otherwise scroll its last row under.
     const member = usePage<PageProps>().props.auth.user !== null;
+    // One listener for the whole chrome, so the bars and the action cannot fall out of step. A form
+    // keeps its chrome (a screen the reader is filling in must not move under them), and a guest's
+    // bar carries their way in, not nav they can bring back.
+    const hidden = useScrollDirection({ enabled: member && !chrome.form }) === 'down';
 
     return (
         <div
@@ -37,14 +44,20 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         >
             <LeftNav />
             <div className="min-w-0 flex-1 pb-[var(--modern-bottom-offset)]">
-                <TopNav chrome={chrome} />
+                <TopNav chrome={chrome} hidden={hidden} />
                 {children}
             </div>
             <RightRail />
             <ConfirmDialogHost />
             <UnreadSync />
-            <ActionFab chrome={chrome} />
-            <BottomNav />
+            <ActionFab chrome={chrome} extended={!hidden} />
+            <BottomNav hidden={hidden} />
+            {/* Zero height in a browser; in a standalone PWA it holds the status-bar area the top bar
+                draws under, so page content does not run beneath the clock once the bar slides off. */}
+            <div
+                aria-hidden
+                className="pointer-events-none fixed inset-x-0 top-0 z-30 h-[env(safe-area-inset-top)] bg-background/90 backdrop-blur lg:hidden"
+            />
         </div>
     );
 }

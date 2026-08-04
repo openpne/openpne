@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { bottomNavSections, NAV_SECTIONS, resolveChrome, visibleNavSections } from './member-chrome.ts';
+import { bottomNavSections, NAV_SECTIONS, NO_CONTEXT_COMPONENTS, resolveChrome, visibleNavSections } from './member-chrome.ts';
 import type { FeatureKey } from '../types/index.ts';
 
 const allOn: Record<FeatureKey, boolean> = {
@@ -138,18 +138,48 @@ test("the viewer's own hub has no scope", () => {
     assert.equal(hub.scope, undefined);
 });
 
+const cyclists = { id: 7, name: 'Cyclists', imageUrl: null };
+
+/**
+ * Every screen the registry classifies as a form. The flag is a behavior contract — chrome that
+ * stays put while the reader works through the screen — so the set is enumerated here rather than
+ * sampled: a screen joining or leaving it is a UX decision, not an implementation detail.
+ */
+const FORM_SCREENS: Record<string, Record<string, unknown>> = {
+    'diary/new': {},
+    'diary/edit': { diary: { id: 3, title: 'Draft' } },
+    'timeline/new': {},
+    'community/edit': { community: cyclists },
+    'community/topic/edit': { community: cyclists, topic: null },
+    'community/event/edit': { community: cyclists, event: null },
+    'message/compose': { parentId: null, parentSubject: null },
+    'message/edit': {},
+    'member/avatar': {},
+    'member/edit-profile': {},
+    'member/config/email': {},
+    'member/config/password': {},
+    'member/config/mfa': {},
+    'member/config/notifications': {},
+    'member/config/withdrawal': {},
+    // Full-page confirmations and an invitation: no draft to lose, but the same "finish it or leave"
+    // screen, so the chrome holds still for them too.
+    'block/add': {},
+    'block/remove': {},
+    'friend/link': {},
+    'member/invite': {},
+};
+
 test('a form keeps its context but takes no scope', () => {
     // The bar's contract: a form has nothing to be inside, so its trail stays static text.
-    const forms = [
-        chrome('member/config/email', {}),
-        chrome('diary/edit', { diary: { id: 3, title: 'Draft' } }),
-        chrome('community/topic/edit', { community: { id: 7, name: 'Cyclists', imageUrl: null }, topic: null }),
-    ];
+    for (const [component, props] of Object.entries(FORM_SCREENS)) {
+        const form = chrome(component, props);
 
-    for (const form of forms) {
-        assert.equal(form.form, true);
-        assert.equal(form.scope, undefined);
-        assert.ok((form.context?.length ?? 0) > 0);
+        assert.equal(form.form, true, component);
+        assert.equal(form.scope, undefined, component);
+        // The entry points classified as crumbless have no trail to keep; every other form does.
+        if (!NO_CONTEXT_COMPONENTS.includes(component)) {
+            assert.ok((form.context?.length ?? 0) > 0, component);
+        }
     }
 });
 

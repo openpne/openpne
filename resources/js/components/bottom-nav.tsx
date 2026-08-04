@@ -1,7 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
 import { UnreadPill } from '@/components/unread-pill';
 import { bottomNavSections } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 /**
@@ -9,10 +11,21 @@ import type { PageProps } from '@/types';
  * the first screen. Without it the counts live only behind the hamburger, so nothing on a phone says
  * anything is waiting. The tabs stay in the drawer too — this is a shortcut, not the whole nav.
  * Members only: a guest (a web-public profile is reachable signed out) has no member nav to shortcut.
+ * `hidden` slides it away while the reader scrolls down (AppShell owns the signal).
  */
-export function BottomNav() {
+export function BottomNav({ hidden }: { hidden?: boolean }) {
     const t = useT();
     const { url, props } = usePage<PageProps>();
+    const ref = useRef<HTMLElement>(null);
+
+    // `inert` closes the bar to new focus, but whatever already held it keeps it (and its key
+    // handlers) off-screen, so focus is dropped explicitly rather than left to the browser.
+    useEffect(() => {
+        const active = document.activeElement;
+        if (hidden && active instanceof HTMLElement && ref.current?.contains(active)) {
+            active.blur();
+        }
+    }, [hidden]);
 
     if (!props.auth.user) {
         return null;
@@ -23,10 +36,15 @@ export function BottomNav() {
 
     return (
         <nav
+            ref={ref}
             aria-label={t('Navigation')}
+            inert={hidden || undefined}
             // Side insets for landscape: the bar spans inset-x-0, so the outer tabs would otherwise
             // fall under the display cutout / corner radius.
-            className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] backdrop-blur lg:hidden"
+            className={cn(
+                'fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/90 pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] backdrop-blur transition-transform duration-200 motion-reduce:transition-none lg:hidden',
+                hidden && 'translate-y-full',
+            )}
         >
             {/* The bar's inner height is what `--modern-bottom-offset` adds the safe-area inset to. */}
             <ul className="flex h-14 items-stretch">
