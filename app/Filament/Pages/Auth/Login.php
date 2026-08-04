@@ -49,8 +49,7 @@ class Login extends BaseLogin
             ->label(__('Username'))
             ->required()
             ->autocomplete()
-            ->autofocus()
-            ->extraInputAttributes(['tabindex' => 1]);
+            ->autofocus();
     }
 
     /**
