@@ -1,0 +1,25 @@
+import type { ComponentProps } from 'react';
+import { Select } from '@/components/ui/select';
+import { useT } from '@/lib/i18n';
+
+/**
+ * The audience control that annotates a profile field's caption row. Subordinate to the caption by
+ * design: a compact min-height (≈ the label line, not the 44px input target — 28px still clears WCAG
+ * 2.2 SC 2.5.8's 24px) plus no shadow, so it doesn't outweigh or vertically drag the field name it
+ * annotates. min-h (not a fixed height) lets it grow with zoom/text spacing. Option labels are
+ * translation keys.
+ */
+export function VisibilitySelect({
+    options,
+    ...props
+}: Omit<ComponentProps<'select'>, 'children' | 'className'> & { options: Array<{ value: number; label: string }> }) {
+    const t = useT();
+
+    return (
+        <Select className="min-h-7 w-auto shrink-0 px-2 py-0.5 text-sm shadow-none" {...props}>
+            {options.map((opt) => (
+                <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
+            ))}
+        </Select>
+    );
+}

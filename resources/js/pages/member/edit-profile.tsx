@@ -3,12 +3,12 @@ import { Fragment } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import { ProfileFieldInput } from './profile-field-input';
 import type { ProfileForm } from './types';
+import { VisibilitySelect } from './visibility-select';
 
 interface EditProps extends PageProps {
     form: ProfileForm;
@@ -18,8 +18,7 @@ const BIRTHDAY_FIELD = 'op_preset_birthday';
 
 /**
  * The age-visibility gate (member_preferences[age_visibility]), separate from the birthday
- * field's own visibility: that one governs the month/day, this one the age derived from the
- * year. Same compact trailing-select idiom as the per-field visibility controls.
+ * field's own visibility: that one governs the month/day, this one the age derived from the year.
  */
 function AgeVisibilityBlock({
     age,
@@ -40,19 +39,13 @@ function AgeVisibilityBlock({
                 <label htmlFor="age_visibility" className="text-sm font-medium text-foreground">
                     {t('Who can see your age')}
                 </label>
-                <Select
+                <VisibilitySelect
                     id="age_visibility"
                     aria-describedby="age_visibility_help"
-                    className="min-h-7 w-auto shrink-0 px-2 py-0.5 text-sm shadow-none"
+                    options={age.options}
                     value={value}
                     onChange={(e) => onChange(Number(e.target.value))}
-                >
-                    {age.options.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                            {t(opt.label)}
-                        </option>
-                    ))}
-                </Select>
+                />
             </div>
             <p id="age_visibility_help" className="mt-1 text-xs text-muted-foreground">
                 {t('Applies to the age calculated from your birthday, separately from the birthday visibility.')}
@@ -118,20 +111,12 @@ export default function MemberEditProfile() {
                                         error={(errors as Record<string, string>)[`profile.${field.id}`]}
                                         labelRight={
                                             field.is_edit_public_flag ? (
-                                                // Subordinate to the caption: a compact min-height (≈ the label line, not
-                                                // the 44px input target — 28px still clears WCAG 2.2 SC 2.5.8's 24px) plus
-                                                // no shadow, so it doesn't outweigh or vertically drag the field name it
-                                                // annotates. min-h (not a fixed height) lets it grow with zoom/text spacing.
-                                                <Select
+                                                <VisibilitySelect
                                                     aria-label={`${field.caption} ${t('Visibility')}`}
-                                                    className="min-h-7 w-auto shrink-0 px-2 py-0.5 text-sm shadow-none"
+                                                    options={field.visibilityOptions}
                                                     value={data.visibility[field.id]}
                                                     onChange={(e) => setVisibility(field.id, Number(e.target.value))}
-                                                >
-                                                    {field.visibilityOptions.map((opt) => (
-                                                        <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
-                                                    ))}
-                                                </Select>
+                                                />
                                             ) : undefined
                                         }
                                     />

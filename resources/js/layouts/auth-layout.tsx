@@ -2,6 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 // Language autonyms rendered verbatim (never translated): a reader who cannot read the current
@@ -11,10 +12,19 @@ const LOCALE_OPTIONS: { value: string; label: string }[] = [
     { value: 'en', label: 'English' },
 ];
 
+// 'wide' is the member frame's standard column, so a profile form fills the same width before the
+// account exists as it does in the profile editor afterwards.
+const WIDTH = {
+    standard: 'max-w-sm',
+    wide: 'max-w-2xl',
+} as const;
+
 interface AuthLayoutProps {
     title: string;
     /** Site copy shown between the brand block and the card — outside the form, which stays the only place actions live. */
     intro?: ReactNode;
+    /** Widen the whole column for a screen that asks for more than credentials. */
+    width?: keyof typeof WIDTH;
     children: ReactNode;
 }
 
@@ -23,19 +33,21 @@ interface AuthLayoutProps {
  * /locale stores the choice in the session; registration promotes it to members.locale). The
  * current locale is inert text — only the other language posts.
  */
-export function AuthLayout({ title, intro, children }: AuthLayoutProps) {
+export function AuthLayout({ title, intro, width = 'standard', children }: AuthLayoutProps) {
     const t = useT();
     const { locale, name } = usePage<PageProps>().props;
+    // One width for brand, intro and card: they read as a single column, so they share an edge.
+    const column = WIDTH[width];
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-4 py-12">
-            <header className="mb-6 flex w-full max-w-sm flex-col items-center gap-3">
+            <header className={cn('mb-6 flex w-full flex-col items-center gap-3', column)}>
                 <BrandMark size="lg" />
                 <p className="max-w-full text-center text-lg font-bold break-words text-foreground">{name}</p>
             </header>
             {/* An aside, not a div: every node needs a landmark (axe region), and site copy is complementary to the sign-in task. */}
-            {intro && <aside className="mb-6 w-full max-w-sm">{intro}</aside>}
-            <main className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm">
+            {intro && <aside className={cn('mb-6 w-full', column)}>{intro}</aside>}
+            <main className={cn('w-full space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm', column)}>
                 <h1 className="text-center text-xl font-semibold text-foreground">{title}</h1>
                 {children}
             </main>
