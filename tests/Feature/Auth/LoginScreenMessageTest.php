@@ -6,6 +6,7 @@ namespace Tests\Feature\Auth;
 
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -55,6 +56,21 @@ class LoginScreenMessageTest extends TestCase
         $this->get('/login')->assertInertia(fn (AssertableInertia $page) => $page
             ->component('auth/login')
             ->where('loginMessage.bodyHtml', fn ($html) => is_string($html) && ! str_contains($html, 'href="javascript:')));
+    }
+
+    public function test_classic_login_neither_shows_the_message_nor_loads_its_cache_tier(): void
+    {
+        // The message is a Modern-only slot (Classic carries this copy in its login gadgets), and
+        // the read is lazy inside the Modern closure: a Classic render must not warm the tier.
+        // Pins the Fortify closure against a future eager read.
+        config()->set('openpne.surface_mode', 'classic_default');
+        $this->setSnsSetting(SnsSettingKey::LoginMessage, 'Members only. Ask an administrator.');
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertDontSee('Members only. Ask an administrator.');
+
+        $this->assertFalse(Cache::has('sns_settings:login_screen'));
     }
 
     public function test_no_message_leaves_the_prop_null(): void

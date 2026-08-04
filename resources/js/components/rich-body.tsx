@@ -5,10 +5,9 @@ import { UserText } from '@/components/user-text';
  * plain and takes the exact same path as <UserText> (escape + autolink + line breaks); otherwise
  * bodyHtml is pre-rendered, already-safe HTML injected as-is.
  *
- * Invariant: bodyHtml is only ever produced by the server-side sanitized pipeline
- * (App\Support\BodyRenderer / App\Support\MarkdownText) — always server-generated, never built from
- * client input — which is the app's sole source of trusted HTML. This is the one
- * dangerouslySetInnerHTML site.
+ * Invariant: bodyHtml is exclusively the output of the server-side sanitizer pipeline
+ * (App\Support\BodyRenderer / App\Support\MarkdownText), never constructed client-side — the
+ * pipeline is the app's sole source of trusted HTML. This is the one dangerouslySetInnerHTML site.
  */
 export function RichBody({ body, bodyHtml }: { body: string; bodyHtml: string | null }) {
     if (bodyHtml === null) {
