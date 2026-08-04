@@ -3,11 +3,11 @@ import type { FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 import { ProfileFieldInput } from '@/pages/member/profile-field-input';
 import type { ProfileFormField } from '@/pages/member/types';
+import { VisibilitySelect } from '@/pages/member/visibility-select';
 import type { PageProps } from '@/types';
 
 interface RegisterCompleteProps extends PageProps {
@@ -44,7 +44,7 @@ export default function RegisterComplete() {
     const title = t('Create an account');
 
     return (
-        <AuthLayout title={title}>
+        <AuthLayout title={title} width="wide">
             <Head title={title} />
 
             <form onSubmit={submit} className="space-y-4">
@@ -66,25 +66,25 @@ export default function RegisterComplete() {
                 </Field>
 
                 {fields.map((field) => (
-                    <div key={field.id} className="space-y-1">
-                        <ProfileFieldInput
-                            field={field}
-                            value={data.profile[field.id] ?? ''}
-                            onChange={(next) => setProfile(field.id, next)}
-                            error={(errors as Record<string, string>)[`profile.${field.id}`]}
-                        />
-                        {field.is_edit_public_flag && (
-                            <Select
-                                aria-label={t('Visibility')}
-                                value={data.visibility[field.id]}
-                                onChange={(e) => setVisibility(field.id, Number(e.target.value))}
-                            >
-                                {field.visibilityOptions.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
-                                ))}
-                            </Select>
-                        )}
-                    </div>
+                    <ProfileFieldInput
+                        key={field.id}
+                        field={field}
+                        value={data.profile[field.id] ?? ''}
+                        onChange={(next) => setProfile(field.id, next)}
+                        error={(errors as Record<string, string>)[`profile.${field.id}`]}
+                        labelRight={
+                            field.is_edit_public_flag ? (
+                                // On the caption row, as in the profile editor: stacked on a full-width column
+                                // the select reads as a second input of the field rather than as its audience.
+                                <VisibilitySelect
+                                    aria-label={`${field.caption} ${t('Visibility')}`}
+                                    options={field.visibilityOptions}
+                                    value={data.visibility[field.id]}
+                                    onChange={(e) => setVisibility(field.id, Number(e.target.value))}
+                                />
+                            ) : undefined
+                        }
+                    />
                 ))}
 
                 <Button type="submit" loading={processing} className="w-full">
