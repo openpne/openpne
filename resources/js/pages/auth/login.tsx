@@ -2,6 +2,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import 'altcha';
 import { FlashMessage } from '@/components/flash-message';
+import { RichBody } from '@/components/rich-body';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
@@ -10,9 +11,15 @@ import { AuthLayout } from '@/layouts/auth-layout';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
-type Props = { registrationOpen?: boolean; captchaRequired?: boolean; challengeUrl?: string };
+type Props = {
+    registrationOpen?: boolean;
+    captchaRequired?: boolean;
+    challengeUrl?: string;
+    /** The administrator's login screen message, already rendered server-side; null when none is set. */
+    loginMessage: { body: string; bodyHtml: string | null } | null;
+};
 
-export default function Login({ registrationOpen = false, captchaRequired = false, challengeUrl }: Props) {
+export default function Login({ registrationOpen = false, captchaRequired = false, challengeUrl, loginMessage }: Props) {
     const t = useT();
     // Flows that end at the sign-in screen (password reset, email change, 2FA reset) land here with
     // a status flash; Classic renders it in the layout, so without this their success is silent on
@@ -55,7 +62,7 @@ export default function Login({ registrationOpen = false, captchaRequired = fals
     const signIn = t('Sign in');
 
     return (
-        <AuthLayout title={signIn}>
+        <AuthLayout title={signIn} intro={loginMessage ? <RichBody body={loginMessage.body} bodyHtml={loginMessage.bodyHtml} /> : undefined}>
             <Head title={signIn} />
 
             {status && <FlashMessage>{status}</FlashMessage>}
