@@ -38,10 +38,13 @@ class AdminPanelProvider extends PanelProvider
             // Closure, not eager: sns_name() reads the DB, and panel() boots on every console
             // command (migrate included) where the settings table may not exist yet. Filament
             // evaluates the brand name at render, so the DB read happens only per request.
-            ->brandName(fn (): string => sns_name())
+            // The suffix marks the realm in the header and every browser title, so an admin tab
+            // is never mistaken for the member surface; keeping the site name in front keeps
+            // tabs of different installs distinguishable from each other.
+            ->brandName(fn (): string => sns_name().' '.__('Admin panel'))
             // Browsers auto-request /favicon.ico; this makes Filament emit an explicit <link> so the
-            // admin tab shows the site's mark on the PNG path too. Brand stays the sns_name text.
-            // Closure for the same reason as brandName above.
+            // admin tab shows the site's mark on the PNG path too — kept per-site so tabs of
+            // different installs stay distinguishable. Closure for the same reason as brandName above.
             ->favicon(fn (): string => brand_favicon_url() ?? asset('favicon-32x32.png'))
             // Separate `admin` guard, entirely independent of the member-facing
             // guard: a logged-in member is never treated as an administrator
@@ -65,6 +68,9 @@ class AdminPanelProvider extends PanelProvider
                     ->icon(Heroicon::OutlinedShieldCheck)
                     ->url(fn (): string => SecuritySettings::getUrl()),
             ])
+            // Deliberately not brand_color(): the member surface follows the per-site brand
+            // color, while the admin panel keeps a fixed accent of its own — one more cue,
+            // besides the brand-name suffix, that separates the two realms at a glance.
             ->colors([
                 'primary' => Color::Amber,
             ])
