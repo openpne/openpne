@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
@@ -111,12 +111,19 @@ export default function MessageIndex() {
 
                         <List>
                             {messages.data.map((m) => (
-                                <ListRow key={m.id} className="items-start">
+                                <ListRow
+                                    key={m.id}
+                                    href={showPath(m.id)}
+                                    linkLabel={m.subject || t('(No subject)')}
+                                    chevron
+                                    className="items-start"
+                                >
+                                    {/* Raised above the row link, which covers everything else. */}
                                     <Checkbox
                                         checked={selected.includes(m.id)}
                                         onChange={() => toggle(m.id)}
                                         aria-label={m.subject || t('(No subject)')}
-                                        className="mt-1"
+                                        className="relative z-10 mt-1"
                                     />
                                     <Avatar
                                         id={m.counterparty?.id ?? 0}
@@ -128,9 +135,7 @@ export default function MessageIndex() {
                                     />
                                     <div className="min-w-0 flex-1">
                                         <p className={m.unread ? 'truncate font-semibold text-foreground' : 'truncate text-foreground'}>
-                                            <Link href={showPath(m.id)} className="hover:underline">
-                                                {m.subject || t('(No subject)')}
-                                            </Link>
+                                            {m.subject || t('(No subject)')}
                                         </p>
                                         <p className="truncate text-xs text-muted-foreground">
                                             {m.counterparty?.name ?? t('Withdrawn member')} &mdash;{' '}
