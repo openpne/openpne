@@ -1,4 +1,3 @@
-import { Link } from '@inertiajs/react';
 import { Camera, MessageCircle, Users, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Avatar } from '@/components/avatar';
@@ -42,7 +41,8 @@ type EntrySubject =
 
 type EntryRowProps = EntrySubject & {
     href: string;
-    title: ReactNode;
+    /** Plain text, so it can also name the row link. */
+    title: string;
     /** Replaces the one-line truncate title styling (e.g. a two-line clamped timeline body). */
     titleClassName?: string;
     /** Plain byline text between the subject name and the date (the activity digest's Topic/Event kind). */
@@ -60,8 +60,9 @@ type EntryRowProps = EntrySubject & {
     /** Square photo thumbnails (all attachments) laid out under the excerpt; suppresses the
      *  has-photos camera marker since the photos themselves are the indicator. */
     thumbnails?: string[];
-    /** Trailing action links. Nested links are invalid inside a linked row, so with actions the
-     *  title carries the link and the chevron is dropped. */
+    /** Trailing action links. Nested links are invalid inside a linked row, so with actions the row
+     *  link is laid over the row (see {@link ListRow} `linkLabel`) and the chevron is dropped —
+     *  the actions hold the right edge. */
     actions?: ReactNode;
 };
 
@@ -106,17 +107,7 @@ export function EntryRow({ href, author, community, title, titleClassName, bylin
         <Avatar id={author?.id ?? 0} name={subjectName} src={author?.imageUrl ?? null} color={author?.avatarColor ?? null} size="sm" decorative />
     );
 
-    const titleLine = (
-        <p className={titleClassName ?? 'truncate font-medium text-foreground'}>
-            {actions ? (
-                <Link href={href} className="hover:underline">
-                    {title}
-                </Link>
-            ) : (
-                title
-            )}
-        </p>
-    );
+    const titleLine = <p className={titleClassName ?? 'truncate font-medium text-foreground'}>{title}</p>;
 
     // Byline meta (after the name): note, then date, then counts. The image is decorative — the
     // name is right beside it.
@@ -158,10 +149,12 @@ export function EntryRow({ href, author, community, title, titleClassName, bylin
 
     if (actions) {
         return (
-            <ListRow className="items-start">
+            <ListRow href={href} linkLabel={title} className="items-start">
                 {subjectImage}
                 {content}
-                <span className="flex shrink-0 items-center gap-3 text-sm">{actions}</span>
+                {/* Raised above the row link, but only the actions themselves take the clicks: the
+                    gaps between them stay transparent, so they open the entry like the rest of the row. */}
+                <span className="pointer-events-none relative z-10 flex shrink-0 items-center gap-3 text-sm [&>*]:pointer-events-auto">{actions}</span>
             </ListRow>
         );
     }
