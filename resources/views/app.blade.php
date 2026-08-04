@@ -42,7 +42,8 @@
     @vite(['resources/css/app.css', 'resources/js/app.tsx'])
     @inertiaHead
 </head>
-<body class="min-h-screen bg-background font-sans text-foreground antialiased">
+{{-- dvh, not vh: 100vh would keep the document taller than the visible viewport on mobile. --}}
+<body class="min-h-dvh bg-background font-sans text-foreground antialiased">
     @inertia
 </body>
 </html>
