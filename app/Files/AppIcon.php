@@ -6,6 +6,7 @@ use App\Models\File;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Encoders\PngEncoder;
 use Intervention\Image\ImageManager;
@@ -47,7 +48,20 @@ class AppIcon
     {
         $token = (string) $this->settings->get(SnsSettingKey::BrandFaviconFile);
 
-        return $token === '' ? null : File::query()->where('name', $token)->first();
+        if ($token === '') {
+            return null;
+        }
+
+        $file = File::query()->where('name', $token)->first();
+
+        // The same boundary PublicFileController draws, for the same reason SaveBrandingSettings
+        // re-checks before it deletes: a corrupted setting pointing at a member's private image must
+        // not turn this route into a reader for it.
+        if ($file === null || $file->explicit_visibility !== File::VISIBILITY_PUBLIC || ! Gate::allows('view', $file)) {
+            return null;
+        }
+
+        return $file;
     }
 
     /**
@@ -59,19 +73,26 @@ class AppIcon
     {
         $disk = $this->disk();
         $key = "{$source->name}/app-icon-{$size}.png";
+        $tooSmall = "{$source->name}/app-icon-{$size}.unfit";
 
-        // Only a generated icon is ever cached, so a hit also settles that the source was big enough.
         if ($disk->exists($key)) {
             return (string) $disk->get($key);
         }
 
+        // Only the verdict is cached, never the shipped bytes: they are the app's own asset and an
+        // upgrade that replaces them must take effect, but a public request must not re-read the
+        // stored original to reach the same answer every time.
+        if ($disk->exists($tooSmall)) {
+            return self::shippedBytes($size);
+        }
+
         $original = $this->original($source);
 
-        // The image header is enough to rule the source out. The fallback is deliberately not
-        // cached: the shipped icon is the app's own asset and must not be frozen into a
-        // derived-bytes cache that outlives the upgrade that replaces it.
+        // The image header is enough to rule the source out.
         $dimensions = @getimagesizefromstring($original);
         if ($dimensions === false || min($dimensions[0], $dimensions[1]) < $size) {
+            $disk->put($tooSmall, '');
+
             return self::shippedBytes($size);
         }
 

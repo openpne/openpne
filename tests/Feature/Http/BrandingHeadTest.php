@@ -23,6 +23,8 @@ class BrandingHeadTest extends TestCase
 {
     use RefreshDatabase;
 
+    private string $faviconToken = '';
+
     private function faviconUrl(): string
     {
         $file = app(FileUploader::class)->store(
@@ -30,8 +32,14 @@ class BrandingHeadTest extends TestCase
             explicitVisibility: File::VISIBILITY_PUBLIC,
         );
         $this->setSnsSetting(SnsSettingKey::BrandFaviconFile, $file->name);
+        $this->faviconToken = $file->name;
 
         return route('file.public', ['file' => $file->name]);
+    }
+
+    private function appIconUrl(int $size): string
+    {
+        return route('app_icon', ['token' => $this->faviconToken, 'size' => $size]);
     }
 
     private function modern(): TestResponse
@@ -96,7 +104,7 @@ class BrandingHeadTest extends TestCase
             ->assertDontSee('favicon-32x32.png', false)
             ->assertDontSee('/favicon.ico', false)
             // The home-screen icon is derived from the same upload, not the shipped asset.
-            ->assertSee('<link rel="apple-touch-icon" href="'.route('app_icon', ['size' => 180]).'">', false);
+            ->assertSee('<link rel="apple-touch-icon" href="'.$this->appIconUrl(180).'">', false);
     }
 
     public function test_the_uploaded_favicon_replaces_the_shipped_icons_on_classic(): void
@@ -106,7 +114,7 @@ class BrandingHeadTest extends TestCase
         $this->classic()
             ->assertSee('<link rel="icon" type="image/png" href="'.$url.'">', false)
             ->assertDontSee('favicon-32x32.png', false)
-            ->assertSee('<link rel="apple-touch-icon" href="'.route('app_icon', ['size' => 180]).'">', false);
+            ->assertSee('<link rel="apple-touch-icon" href="'.$this->appIconUrl(180).'">', false);
     }
 
     public function test_classic_keeps_the_shipped_icons_when_no_favicon_is_set(): void

@@ -29,6 +29,7 @@ use App\Features\Notifications\NotificationFeedController;
 use App\Features\Notifications\NotificationSettingsController;
 use App\Features\Profile\ProfileController;
 use App\Features\Timeline\TimelineController;
+use App\Files\AppIcon;
 use App\Http\Controllers\Admin\AdminFileController;
 use App\Http\Controllers\AppIconController;
 use App\Http\Controllers\BannerImageController;
@@ -254,9 +255,10 @@ Route::get('/manifest.webmanifest', fn () => response()->json([
 ], options: JSON_UNESCAPED_SLASHES)->header('Content-Type', 'application/manifest+json'))->name('webmanifest');
 
 // Home-screen icon bytes derived from the branding favicon (App\Files\AppIcon). Public, like the
-// manifest and the <head> links that point here.
-Route::get('/app-icon/{size}.png', [AppIconController::class, 'show'])
-    ->where('size', '[0-9]+')
+// manifest and the <head> links that point here. Both segments are constrained here rather than in
+// the controller: an unlisted size must 404 before a typed int parameter can reject it as a 500.
+Route::get('/app-icon/{token}/{size}.png', [AppIconController::class, 'show'])
+    ->where(['token' => '[A-Za-z0-9_.-]+', 'size' => implode('|', AppIcon::SIZES)])
     ->name('app_icon');
 
 // Admin custom CSS, served as a text/css document the Classic shell <link>s (OpenPNE 3 parity:

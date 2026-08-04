@@ -14,19 +14,21 @@ use Illuminate\Http\Response;
  */
 class AppIconController extends Controller
 {
-    public function show(int $size, AppIcon $icons): Response
+    public function show(string $token, int $size, AppIcon $icons): Response
     {
-        abort_unless(in_array($size, AppIcon::SIZES, true), 404);
-
         $source = $icons->source();
-        abort_if($source === null, 404);
+
+        // The token in the URL is a version marker, not a selector: it makes a replaced favicon a
+        // different URL — which is what a manifest diff and a client cache key off — while the file
+        // itself still comes from the setting, so a stale or forged token reads nothing.
+        abort_if($source === null || $source->name !== $token, 404);
 
         return response($icons->bytes($source, $size), 200, [
             'Content-Type' => 'image/png',
             'X-Content-Type-Options' => 'nosniff',
-            // Public but not immutable: unlike a token-keyed file URL this one is stable across
-            // uploads, so it has to expire for a replaced favicon to show up.
-            'Cache-Control' => 'public, max-age=3600',
+            // Not immutable: a source too small to fill this size answers with the shipped icon,
+            // which an upgrade may replace under the same URL.
+            'Cache-Control' => 'public, max-age=86400',
         ]);
     }
 }

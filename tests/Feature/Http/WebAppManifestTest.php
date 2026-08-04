@@ -44,8 +44,8 @@ class WebAppManifestTest extends TestCase
         $this->get('/manifest.webmanifest')
             ->assertOk()
             ->assertJson(['icons' => [
-                ['src' => route('app_icon', ['size' => 192])],
-                ['src' => route('app_icon', ['size' => 512])],
+                ['src' => route('app_icon', ['token' => $file->name, 'size' => 192])],
+                ['src' => route('app_icon', ['token' => $file->name, 'size' => 512])],
             ]]);
     }
 
