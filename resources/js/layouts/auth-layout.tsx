@@ -1,5 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import { BrandMark } from '@/components/brand-mark';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
@@ -22,10 +23,14 @@ interface AuthLayoutProps {
  */
 export function AuthLayout({ title, children }: AuthLayoutProps) {
     const t = useT();
-    const locale = usePage<PageProps>().props.locale;
+    const { locale, name } = usePage<PageProps>().props;
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-4 py-12">
+            <header className="mb-6 flex flex-col items-center gap-3">
+                <BrandMark size="lg" />
+                <p className="text-lg font-bold text-foreground">{name}</p>
+            </header>
             <main className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm">
                 <h1 className="text-center text-xl font-semibold text-foreground">{title}</h1>
                 {children}
