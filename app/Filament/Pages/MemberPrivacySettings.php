@@ -128,7 +128,7 @@ class MemberPrivacySettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('Member privacy settings'))
+        return Section::make()
             ->schema([
                 Toggle::make(SnsSettingKey::AllowWebPublicAge->value)
                     ->label(SnsSettingKey::AllowWebPublicAge->label()),

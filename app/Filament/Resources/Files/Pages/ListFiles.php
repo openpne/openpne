@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Files\Pages;
 
 use App\Filament\Resources\Files\FileResource;
+use App\Filament\Resources\Pages\ListPage;
 use App\Files\FileUploader;
 use App\Files\FormUpload;
 use App\Files\ImageMetadataStripException;
@@ -10,11 +11,10 @@ use App\Models\File;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
-use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Exceptions\Halt;
 use Filament\Support\Icons\Heroicon;
 
-class ListFiles extends ListRecords
+class ListFiles extends ListPage
 {
     protected static string $resource = FileResource::class;
 

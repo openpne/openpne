@@ -4,12 +4,12 @@ namespace App\Filament\Resources\BannerImages\Pages;
 
 use App\Filament\Pages\BannerSettings;
 use App\Filament\Resources\BannerImages\BannerImageResource;
+use App\Filament\Resources\Pages\ListPage;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Icons\Heroicon;
 
-class ListBannerImages extends ListRecords
+class ListBannerImages extends ListPage
 {
     protected static string $resource = BannerImageResource::class;
 

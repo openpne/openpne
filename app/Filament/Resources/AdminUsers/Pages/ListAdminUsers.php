@@ -3,10 +3,10 @@
 namespace App\Filament\Resources\AdminUsers\Pages;
 
 use App\Filament\Resources\AdminUsers\AdminUserResource;
+use App\Filament\Resources\Pages\ListPage;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
 
-class ListAdminUsers extends ListRecords
+class ListAdminUsers extends ListPage
 {
     protected static string $resource = AdminUserResource::class;
 

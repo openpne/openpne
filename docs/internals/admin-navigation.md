@@ -47,6 +47,16 @@ themselves on `modern_only`, so a request-derived set would let exactly those sc
 - **One home per screen.** A screen appears in the sidebar exactly once. Other ways to reach it are
   links inside the pages that need them, never a second entry.
 
+## Page chrome
+
+- **No section heading repeats the page title.** A single-section page leaves the section unheaded;
+  a heading earns its place only by naming a subgroup within the page (`Custom CSS`, `Footer`).
+- **List pages carry no breadcrumbs** — at depth 1 the trail only self-links. The base
+  [`ListPage`](../../app/Filament/Resources/Pages/ListPage.php) drops them; create, edit and view
+  keep Filament's default trail.
+
+[`AdminPageChromeTest`](../../tests/Feature/Filament/AdminPageChromeTest.php) enforces both.
+
 ## Key invariants
 
 1. Every navigable screen sits in one of the five registered groups and declares an explicit

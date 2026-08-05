@@ -3,9 +3,9 @@
 namespace App\Filament\Resources\DiaryComments\Pages;
 
 use App\Filament\Resources\DiaryComments\DiaryCommentResource;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListPage;
 
-class ListDiaryComments extends ListRecords
+class ListDiaryComments extends ListPage
 {
     protected static string $resource = DiaryCommentResource::class;
 }

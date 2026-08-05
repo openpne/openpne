@@ -3,13 +3,13 @@
 namespace App\Filament\Resources\Gadgets\Pages;
 
 use App\Filament\Resources\Gadgets\GadgetResource;
+use App\Filament\Resources\Pages\ListPage;
 use App\Services\GadgetService;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
-class ListGadgets extends ListRecords
+class ListGadgets extends ListPage
 {
     protected static string $resource = GadgetResource::class;
 

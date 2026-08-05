@@ -75,7 +75,7 @@ class InviteMembers extends Page
     {
         return $schema
             ->components([
-                Section::make(__('Member invites'))
+                Section::make()
                     ->description(__('Enter one email address per line. Each receives a registration link.'))
                     ->schema([
                         Textarea::make('emails')

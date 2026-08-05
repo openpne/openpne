@@ -3,9 +3,9 @@
 namespace App\Filament\Resources\CommunityEvents\Pages;
 
 use App\Filament\Resources\CommunityEvents\CommunityEventResource;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListPage;
 
-class ListCommunityEvents extends ListRecords
+class ListCommunityEvents extends ListPage
 {
     protected static string $resource = CommunityEventResource::class;
 }
