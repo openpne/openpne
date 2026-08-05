@@ -36,6 +36,7 @@ use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\PublicFileController;
 use App\Http\Middleware\AsBackgroundFetch;
 use App\Http\Middleware\EnsureFeatureEnabled;
@@ -229,6 +230,17 @@ Route::middleware(['guest', NoReferrer::class])->controller(RegistrationControll
     Route::post('/register/{token}', 'register')->where('token', '[A-Za-z0-9]{40}')
         ->middleware('throttle:register-complete')->name('register.complete');
 });
+
+// Site policy pages, public: someone deciding whether to join reads them before they have an account.
+// The OpenPNE 3 URLs (/userAgreement, /privacyPolicy and their /default/ twins) are permanent, so they
+// 301 to the canonical pair rather than 404 — the moved-URL half of the URL-compatibility contract
+// (App\Compat\Parities\PolicyRouteParity).
+Route::get('/terms', [PolicyController::class, 'terms'])->name('policy.terms');
+Route::get('/privacy', [PolicyController::class, 'privacy'])->name('policy.privacy');
+Route::get('/userAgreement', fn () => redirect()->route('policy.terms', [], 301))->name('policy.terms_compat');
+Route::get('/default/userAgreement', fn () => redirect()->route('policy.terms', [], 301))->name('policy.terms.default_compat');
+Route::get('/privacyPolicy', fn () => redirect()->route('policy.privacy', [], 301))->name('policy.privacy_compat');
+Route::get('/default/privacyPolicy', fn () => redirect()->route('policy.privacy', [], 301))->name('policy.privacy.default_compat');
 
 // Fresh ALTCHA challenge for the widget to solve. Throttled per IP; returns {} when CAPTCHA is off.
 // AsBackgroundFetch keeps this JSON endpoint out of the session's previous-URL history so a later

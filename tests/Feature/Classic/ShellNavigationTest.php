@@ -116,14 +116,17 @@ class ShellNavigationTest extends TestCase
             ->assertSee('Operated by <a href="https://example.test">Example</a>', false);
     }
 
-    public function test_footer_paragraph_is_omitted_when_no_html_is_configured(): void
+    public function test_footer_paragraph_holds_the_policy_links_with_no_html_configured(): void
     {
+        // OpenPNE 3's _footer.php always emitted the paragraph: the privacy policy and terms links
+        // lead it, and the configured HTML follows them.
         $this->setSnsSetting(SnsSettingKey::FooterAfter, '');
         $member = Member::factory()->create();
 
         $html = $this->actingAs($member)->get('/')->assertOk()->getContent();
         $footer = Str::between($html, '<div id="FooterContainer">', '</div>');
 
-        $this->assertStringNotContainsString('<p>', $footer);
+        $this->assertStringContainsString(route('policy.privacy'), $footer);
+        $this->assertStringContainsString(route('policy.terms'), $footer);
     }
 }
