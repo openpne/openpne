@@ -128,7 +128,7 @@ class TimelineSettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('%Activity% settings'))
+        return Section::make()
             ->schema([
                 Toggle::make(SnsSettingKey::TimelineAllowWebPublic->value)
                     ->label(SnsSettingKey::TimelineAllowWebPublic->label()),

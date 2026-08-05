@@ -3,13 +3,13 @@
 namespace App\Filament\Resources\Navigations\Pages;
 
 use App\Filament\Resources\Navigations\NavigationResource;
+use App\Filament\Resources\Pages\ListPage;
 use App\Services\NavigationService;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
-class ListNavigations extends ListRecords
+class ListNavigations extends ListPage
 {
     protected static string $resource = NavigationResource::class;
 

@@ -163,7 +163,7 @@ class FeatureSettings extends Page
             $fields[] = $toggle;
         }
 
-        return Section::make(__('Feature settings'))
+        return Section::make()
             ->description(__('A switched-off feature answers 404 and disappears from navigation and feeds. Nothing is deleted: switching it back on restores the feature as it was.'))
             ->schema($fields);
     }

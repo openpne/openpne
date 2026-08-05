@@ -146,7 +146,7 @@ class SnsBaseSettings extends Page
             $fields[] = $input;
         }
 
-        return Section::make(__('Base settings'))
+        return Section::make()
             ->schema($fields);
     }
 }

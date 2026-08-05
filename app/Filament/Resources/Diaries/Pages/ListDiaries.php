@@ -3,9 +3,9 @@
 namespace App\Filament\Resources\Diaries\Pages;
 
 use App\Filament\Resources\Diaries\DiaryResource;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListPage;
 
-class ListDiaries extends ListRecords
+class ListDiaries extends ListPage
 {
     protected static string $resource = DiaryResource::class;
 }

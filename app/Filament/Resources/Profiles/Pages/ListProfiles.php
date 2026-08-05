@@ -2,11 +2,11 @@
 
 namespace App\Filament\Resources\Profiles\Pages;
 
+use App\Filament\Resources\Pages\ListPage;
 use App\Filament\Resources\Profiles\ProfileResource;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
 
-class ListProfiles extends ListRecords
+class ListProfiles extends ListPage
 {
     protected static string $resource = ProfileResource::class;
 

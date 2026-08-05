@@ -3,10 +3,10 @@
 namespace App\Filament\Resources\CommunityCategories\Pages;
 
 use App\Filament\Resources\CommunityCategories\CommunityCategoryResource;
+use App\Filament\Resources\Pages\ListPage;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Pages\ListRecords;
 
-class ListCommunityCategories extends ListRecords
+class ListCommunityCategories extends ListPage
 {
     protected static string $resource = CommunityCategoryResource::class;
 

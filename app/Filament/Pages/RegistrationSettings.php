@@ -129,7 +129,7 @@ class RegistrationSettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('Registration settings'))
+        return Section::make()
             ->schema([
                 Radio::make(SnsSettingKey::RegistrationMode->value)
                     ->label(SnsSettingKey::RegistrationMode->label())
