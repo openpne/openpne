@@ -58,12 +58,12 @@ class DesignSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Design settings');
+        return __('Custom CSS & HTML');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Design settings');
+        return __('Custom CSS & HTML');
     }
 
     public function mount(): void

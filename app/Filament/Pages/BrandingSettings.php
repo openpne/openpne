@@ -47,6 +47,8 @@ use Illuminate\Http\UploadedFile;
  */
 class BrandingSettings extends Page
 {
+    protected static ?int $navigationSort = 6;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -64,12 +66,12 @@ class BrandingSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Branding');
+        return __('Branding settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Branding');
+        return __('Branding settings');
     }
 
     public function mount(): void

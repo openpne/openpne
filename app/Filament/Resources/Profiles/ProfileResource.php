@@ -21,7 +21,7 @@ class ProfileResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedIdentification;
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 11;
 
     public static function getModelLabel(): string
     {
@@ -35,7 +35,12 @@ class ProfileResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Master Data');
+        return __('Settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Profile item settings');
     }
 
     public static function form(Schema $schema): Schema

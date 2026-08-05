@@ -46,6 +46,8 @@ class MailTemplateSettings extends Page implements HasTable
 
     private const BODY_MAX_BYTES = 65535;
 
+    protected static ?int $navigationSort = 8;
+
     protected string $view = 'filament.pages.mail-template-settings';
 
     public static function getNavigationIcon(): string|BackedEnum|Htmlable|null
@@ -60,12 +62,12 @@ class MailTemplateSettings extends Page implements HasTable
 
     public static function getNavigationLabel(): string
     {
-        return __('Mail templates');
+        return __('Mail template settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Mail templates');
+        return __('Mail template settings');
     }
 
     public function table(Table $table): Table

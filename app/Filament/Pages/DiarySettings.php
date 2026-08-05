@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\DB;
  */
 class DiarySettings extends Page
 {
+    protected static ?int $navigationSort = 9;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -48,12 +50,12 @@ class DiarySettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('%Diary%');
+        return __('%Diary% settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('%Diary%');
+        return __('%Diary% settings');
     }
 
     public function mount(): void
@@ -126,7 +128,7 @@ class DiarySettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('%Diary%'))
+        return Section::make(__('%Diary% settings'))
             ->schema([
                 Toggle::make(SnsSettingKey::DiaryAllowWebPublic->value)
                     ->label(SnsSettingKey::DiaryAllowWebPublic->label())

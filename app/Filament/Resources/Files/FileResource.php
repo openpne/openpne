@@ -19,6 +19,8 @@ class FileResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolder;
 
+    protected static ?int $navigationSort = 6;
+
     public static function getModelLabel(): string
     {
         return __('File');

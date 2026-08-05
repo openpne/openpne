@@ -64,26 +64,31 @@ class AppearanceNavigationTest extends TestCase
             __('Navigation'),
             __('Banner'),
             __('Banner images'),
-            __('Design settings'),
+            __('Custom CSS & HTML'),
         ], $labels);
     }
 
-    public function test_nav_groups_are_ordered_settings_then_appearance_then_master_data(): void
+    public function test_every_nav_group_renders_under_ja_in_registered_order(): void
     {
         app()->setLocale('ja');
 
-        // getNavigation() is keyed by a serialized group label; values()->all() reindexes so array_search
-        // returns positions, not those keys.
-        $order = (new Collection(Filament::getCurrentPanel()->getNavigation()))->map->getLabel()->values()->all();
-        $settings = array_search(__('Settings'), $order, true);
-        $appearance = array_search(__('Appearance (Classic)'), $order, true);
-        $master = array_search(__('Master Data'), $order, true);
+        // getNavigation() is keyed by a serialized group label; values()->all() reindexes to positions.
+        // The Dashboard sits in an unlabelled bucket above the groups, which filter() drops.
+        $order = (new Collection(Filament::getCurrentPanel()->getNavigation()))
+            ->map->getLabel()
+            ->filter()
+            ->values()
+            ->all();
 
-        $this->assertTrue(
-            $settings !== false && $appearance !== false && $master !== false
-                && $settings < $appearance && $appearance < $master,
-            'Groups render in the registered order: Settings, Appearance, Master Data.',
-        );
+        // Every group matched under ja — a lazy label that resolved in the wrong locale would drop its
+        // group out of the registered order.
+        $this->assertSame([
+            __('Members'),
+            __('Content'),
+            __('Settings'),
+            __('Appearance (Classic)'),
+            __('System'),
+        ], $order);
     }
 
     public function test_gadget_form_shows_field_helper_text(): void

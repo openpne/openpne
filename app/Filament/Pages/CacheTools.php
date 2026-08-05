@@ -27,6 +27,8 @@ use Illuminate\Support\Facades\Artisan;
  */
 class CacheTools extends Page
 {
+    protected static ?int $navigationSort = 1;
+
     public static function getNavigationIcon(): string|BackedEnum|Htmlable|null
     {
         return Heroicon::OutlinedArrowPath;
@@ -34,7 +36,7 @@ class CacheTools extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Settings');
+        return __('System');
     }
 
     public static function getNavigationLabel(): string

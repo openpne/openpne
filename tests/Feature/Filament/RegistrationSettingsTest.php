@@ -6,7 +6,7 @@ namespace Tests\Feature\Filament;
 
 use App\Captcha\Captcha;
 use App\Features\Auth\RegistrationMode;
-use App\Filament\Pages\RegistrationAuthSettings;
+use App\Filament\Pages\RegistrationSettings;
 use App\Models\AdminUser;
 use App\Services\SnsSettingService;
 use App\Support\SnsSettingKey;
@@ -21,7 +21,7 @@ use Tests\TestCase;
  * effect immediately (the CAPTCHA wrapper re-reads the toggle rather than freezing it), and a fresh
  * install with no rows falls back to the fail-closed defaults (invite-only, CAPTCHA on).
  */
-class RegistrationAuthSettingsTest extends TestCase
+class RegistrationSettingsTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -35,7 +35,7 @@ class RegistrationAuthSettingsTest extends TestCase
 
     public function test_saving_registration_mode_takes_effect(): void
     {
-        Livewire::test(RegistrationAuthSettings::class)
+        Livewire::test(RegistrationSettings::class)
             ->fillForm(['registration_mode' => 'closed'])
             ->call('save')
             ->assertHasNoErrors();
@@ -46,7 +46,7 @@ class RegistrationAuthSettingsTest extends TestCase
 
     public function test_saving_admin_only_mode_takes_effect(): void
     {
-        Livewire::test(RegistrationAuthSettings::class)
+        Livewire::test(RegistrationSettings::class)
             ->fillForm(['registration_mode' => 'admin_only'])
             ->call('save')
             ->assertHasNoErrors();
@@ -61,7 +61,7 @@ class RegistrationAuthSettingsTest extends TestCase
         $captcha = app(Captcha::class);
         $this->assertFalse($captcha->enabled());
 
-        Livewire::test(RegistrationAuthSettings::class)
+        Livewire::test(RegistrationSettings::class)
             ->fillForm(['captcha_enabled' => true])
             ->call('save')
             ->assertHasNoErrors();
@@ -86,7 +86,7 @@ class RegistrationAuthSettingsTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::RegistrationMode, 'invite');
         $this->setSnsSetting(SnsSettingKey::CaptchaEnabled, true);
 
-        Livewire::test(RegistrationAuthSettings::class)
+        Livewire::test(RegistrationSettings::class)
             ->assertSet('data.registration_mode', 'invite')
             ->assertSet('data.captcha_enabled', true);
     }
@@ -95,7 +95,7 @@ class RegistrationAuthSettingsTest extends TestCase
     {
         app()->setLocale('en');
 
-        Livewire::test(RegistrationAuthSettings::class)
+        Livewire::test(RegistrationSettings::class)
             ->assertSee('Anyone may sign up at the registration page (behind the CAPTCHA); members can also send invitations.')
             ->assertSee('Only people an admin invites can register; members cannot send invitations.')
             ->assertSee('Registration is suspended; even already-issued invitations cannot be completed.');

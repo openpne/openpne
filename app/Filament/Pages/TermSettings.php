@@ -30,6 +30,8 @@ use Illuminate\Support\Facades\DB;
  */
 class TermSettings extends Page
 {
+    protected static ?int $navigationSort = 5;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -40,14 +42,19 @@ class TermSettings extends Page
         return Heroicon::OutlinedTag;
     }
 
+    public static function getNavigationGroup(): ?string
+    {
+        return __('Settings');
+    }
+
     public static function getNavigationLabel(): string
     {
-        return __('Term names');
+        return __('Term settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Term names');
+        return __('Term settings');
     }
 
     public function mount(): void

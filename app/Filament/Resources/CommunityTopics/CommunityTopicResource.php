@@ -27,6 +27,8 @@ class CommunityTopicResource extends Resource
     // Shows the topic name as the view-page title (no infolist; the page hosts the comments RM).
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static ?int $navigationSort = 2;
+
     public static function getModelLabel(): string
     {
         return __('%Topic%');

@@ -3,7 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Features\Auth\RegistrationMode;
-use App\Filament\Pages\RegistrationAuthSettings;
+use App\Filament\Pages\RegistrationSettings;
 use App\Support\SnsSettingKey;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -26,7 +26,7 @@ class RegistrationModeWidget extends StatsOverviewWidget
             Stat::make(SnsSettingKey::RegistrationMode->label(), __($mode->label()))
                 ->description(__('Who may create an account'))
                 ->color($this->color($mode))
-                ->url(RegistrationAuthSettings::getUrl()),
+                ->url(RegistrationSettings::getUrl()),
         ];
     }
 

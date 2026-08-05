@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\DB;
  */
 class TimelineSettings extends Page
 {
+    protected static ?int $navigationSort = 10;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -48,12 +50,12 @@ class TimelineSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('%Activity%');
+        return __('%Activity% settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('%Activity%');
+        return __('%Activity% settings');
     }
 
     public function mount(): void
@@ -126,7 +128,7 @@ class TimelineSettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('%Activity%'))
+        return Section::make(__('%Activity% settings'))
             ->schema([
                 Toggle::make(SnsSettingKey::TimelineAllowWebPublic->value)
                     ->label(SnsSettingKey::TimelineAllowWebPublic->label()),

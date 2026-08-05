@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\DB;
  */
 class MemberPrivacySettings extends Page
 {
+    protected static ?int $navigationSort = 3;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -48,12 +50,12 @@ class MemberPrivacySettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Member privacy');
+        return __('Member privacy settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Member privacy');
+        return __('Member privacy settings');
     }
 
     public function mount(): void
@@ -126,7 +128,7 @@ class MemberPrivacySettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('Member privacy'))
+        return Section::make(__('Member privacy settings'))
             ->schema([
                 Toggle::make(SnsSettingKey::AllowWebPublicAge->value)
                     ->label(SnsSettingKey::AllowWebPublicAge->label()),

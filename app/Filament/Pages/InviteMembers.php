@@ -34,6 +34,8 @@ use Illuminate\Support\Str;
  */
 class InviteMembers extends Page
 {
+    protected static ?int $navigationSort = 2;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -51,17 +53,17 @@ class InviteMembers extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Settings');
+        return __('Members');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('Invite members');
+        return __('Member invites');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Invite members');
+        return __('Member invites');
     }
 
     public function mount(): void
@@ -73,7 +75,7 @@ class InviteMembers extends Page
     {
         return $schema
             ->components([
-                Section::make(__('Invite members'))
+                Section::make(__('Member invites'))
                     ->description(__('Enter one email address per line. Each receives a registration link.'))
                     ->schema([
                         Textarea::make('emails')

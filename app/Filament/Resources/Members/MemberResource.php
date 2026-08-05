@@ -13,12 +13,14 @@ use Illuminate\Database\Eloquent\Model;
 
 // Admin member moderation. List-only: admins read/search, freeze logins (is_login_rejected),
 // and withdraw members. No detail/edit page, mirroring OpenPNE 3 which kept member operations
-// on the list. Nav group is the tentative `Content` moderation bucket.
+// on the list.
 class MemberResource extends Resource
 {
     protected static ?string $model = Member::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
+
+    protected static ?int $navigationSort = 1;
 
     public static function getModelLabel(): string
     {
@@ -32,7 +34,14 @@ class MemberResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Content');
+        return __('Members');
+    }
+
+    // Not the plural model label: that reads "Members" inside a "Members" group, and the label has
+    // to say what this screen is among its siblings.
+    public static function getNavigationLabel(): string
+    {
+        return __('Member list');
     }
 
     /** The primary member (id 1) is the initial administrator account and is never withdrawable. */
