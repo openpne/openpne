@@ -15,10 +15,10 @@
         "@happy-dom/global-registrator": "20.11.1",
         "@tailwindcss/vite": "^4.3.3",
         "@types/node": "^26.1.2",
-        "@types/react": "^19.2.17",
-        "@types/react-dom": "^19.2.3",
+        "@types/react": "^19.2.18",
+        "@types/react-dom": "^19.2.4",
         "@typescript/native": "npm:typescript@^7.0.2",
-        "@vitejs/plugin-react": "^6.0.4",
+        "@vitejs/plugin-react": "^6.0.5",
         "concurrently": "^10.0.4",
         "eslint": "^10.8.0",
         "eslint-plugin-react-hooks": "^7.1.1",
@@ -29,7 +29,7 @@
         "tailwindcss": "^4.0.0",
         "typescript": "npm:@typescript/typescript6@^6.0.2",
         "typescript-eslint": "^8.65.0",
-        "vite": "^8.1.5"
+        "vite": "^8.2.0"
     },
     "dependencies": {
         "@inertiajs/react": "^3.6.1",
@@ -43,7 +43,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "laravel-react-i18n": "^2.0.5",
-        "lucide-react": "^1.27.0",
+        "lucide-react": "^1.28.0",
         "marked": "18.0.7",
         "radix-ui": "^1.6.7",
         "react": "^19.2.8",
