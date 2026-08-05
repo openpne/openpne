@@ -48,6 +48,9 @@ final class SitePolicyMarkdownTransform
             return true;
         }
 
+        // Only the write is guarded. Anything after the commit — the progress lines — stays outside,
+        // or a throwing output closure would flip a committed COMPLETED to FAILED and the resume
+        // would run this non-idempotent rewrite over its own output.
         try {
             UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_RUNNING,
@@ -72,15 +75,6 @@ final class SitePolicyMarkdownTransform
 
                 return $converted;
             });
-
-            $out('DONE '.self::KEY.": {$converted} rows");
-            if ($converted > 0) {
-                // Best-effort: OpenPNE 3 accepted markup this cannot always place (indented blocks,
-                // hand-drawn tables), so the operator is told to read the result once.
-                $out('NOTE site policy text was rewritten as Markdown — review it under Settings > Site policy settings.');
-            }
-
-            return true;
         } catch (Throwable $e) {
             UpgradeState::updateOrCreate(['step_key' => self::KEY], [
                 'status' => UpgradeState::STATUS_FAILED,
@@ -92,6 +86,15 @@ final class SitePolicyMarkdownTransform
 
             return false;
         }
+
+        $out('DONE '.self::KEY.": {$converted} rows");
+        if ($converted > 0) {
+            // Best-effort: OpenPNE 3 accepted markup this cannot always place (indented blocks,
+            // hand-drawn tables), so the operator is told to read the result once.
+            $out('NOTE site policy text was rewritten as Markdown — review it under Settings > Site policy settings.');
+        }
+
+        return true;
     }
 
     /** @return int rows whose body changed */
@@ -115,8 +118,11 @@ final class SitePolicyMarkdownTransform
             // column truncate a legal document mid-sentence; the whole pass rolls back with it.
             $bytes = strlen($markdown);
             if ($bytes > $setting->maxBytes()) {
+                // The walk has already completed, so it will not re-copy a shortened OpenPNE 3 value:
+                // recovery is either editing the imported text down in the admin, or shortening the
+                // source and re-importing from scratch.
                 throw new RuntimeException(
-                    "{$setting->value}: the Markdown rewrite is {$bytes} bytes, over the {$setting->maxBytes()} the column holds — shorten the OpenPNE 3 text and run again"
+                    "{$setting->value}: the Markdown rewrite is {$bytes} bytes, over the {$setting->maxBytes()} the column holds — shorten it under Settings > Site policy settings (or shorten the OpenPNE 3 value and re-run with --force-restart), then run the upgrade again"
                 );
             }
 

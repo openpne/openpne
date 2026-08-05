@@ -78,6 +78,30 @@ class SitePolicyMarkdownTransformTest extends TestCase
         $this->assertStringContainsString('already completed', implode("\n", $this->out));
     }
 
+    public function test_a_failing_progress_line_does_not_undo_a_committed_run(): void
+    {
+        $this->seedSetting('user_agreement', '# 見出しではない');
+
+        // The output closure throws after the rewrite committed. The checkpoint has to stand: a
+        // FAILED overwrite here would send the resume through the rewrite a second time.
+        try {
+            (new SitePolicyMarkdownTransform)->run(['sns_settings'], function (string $line): void {
+                if (str_starts_with($line, 'DONE')) {
+                    throw new RuntimeException('output failed');
+                }
+            });
+            $this->fail('the throwing output closure should have propagated');
+        } catch (RuntimeException) {
+            // expected
+        }
+
+        $this->assertSame(UpgradeState::STATUS_COMPLETED, UpgradeState::where('step_key', 'site_policy_markdown')->value('status'));
+        $this->assertSame('\\# 見出しではない', $this->stored('user_agreement'));
+
+        $this->assertTrue($this->runPass());
+        $this->assertSame('\\# 見出しではない', $this->stored('user_agreement'));
+    }
+
     public function test_a_rewrite_that_outgrows_the_column_fails_the_pass(): void
     {
         // Every character escapes to two, so the rewrite doubles past the 65535-byte column.
