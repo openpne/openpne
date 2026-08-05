@@ -11,7 +11,7 @@ namespace App\Support;
  */
 enum SettingGroup
 {
-    /** Identity / display settings edited on the "SNS base settings" page. */
+    /** Identity / display settings edited on the "Base settings" page. */
     case Base;
 
     /** How the install serves the Classic/Modern surfaces (App\Support\SurfaceMode); no admin page yet — set at install/upgrade and via the openpne:surface-mode command. */

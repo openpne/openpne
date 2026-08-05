@@ -28,6 +28,8 @@ class CommunityEventResource extends Resource
     // Shows the event name as the view-page title (no infolist; the page hosts the relation managers).
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static ?int $navigationSort = 3;
+
     public static function getModelLabel(): string
     {
         return __('Event');

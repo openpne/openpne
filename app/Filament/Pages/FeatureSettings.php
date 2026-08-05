@@ -34,6 +34,8 @@ use Illuminate\Support\Facades\DB;
  */
 class FeatureSettings extends Page
 {
+    protected static ?int $navigationSort = 4;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -51,12 +53,12 @@ class FeatureSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Features');
+        return __('Feature settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Features');
+        return __('Feature settings');
     }
 
     public function mount(): void
@@ -161,7 +163,7 @@ class FeatureSettings extends Page
             $fields[] = $toggle;
         }
 
-        return Section::make(__('Features'))
+        return Section::make(__('Feature settings'))
             ->description(__('A switched-off feature answers 404 and disappears from navigation and feeds. Nothing is deleted: switching it back on restores the feature as it was.'))
             ->schema($fields);
     }

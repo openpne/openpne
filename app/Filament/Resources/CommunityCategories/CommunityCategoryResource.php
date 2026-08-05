@@ -20,7 +20,7 @@ class CommunityCategoryResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 12;
 
     public static function getModelLabel(): string
     {
@@ -34,7 +34,12 @@ class CommunityCategoryResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __('Master Data');
+        return __('Settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('%Community% category settings');
     }
 
     public static function form(Schema $schema): Schema

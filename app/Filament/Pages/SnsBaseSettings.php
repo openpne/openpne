@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\DB;
  */
 class SnsBaseSettings extends Page
 {
+    protected static ?int $navigationSort = 1;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -48,12 +50,12 @@ class SnsBaseSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('SNS base settings');
+        return __('Base settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('SNS base settings');
+        return __('Base settings');
     }
 
     public function mount(): void
@@ -144,7 +146,7 @@ class SnsBaseSettings extends Page
             $fields[] = $input;
         }
 
-        return Section::make(__('SNS base settings'))
+        return Section::make(__('Base settings'))
             ->schema($fields);
     }
 }

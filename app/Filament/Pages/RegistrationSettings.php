@@ -24,14 +24,16 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Edit the registration and authentication settings (who may register, whether the bot challenge is
- * enforced). `sns_settings` is authoritative: every field is stored verbatim on save. While no row
- * exists yet a setting resolves to its fail-closed default (registration invite-only, CAPTCHA on).
+ * Edit the registration settings (who may register, whether the bot challenge is enforced).
+ * `sns_settings` is authoritative: every field is stored verbatim on save. While no row exists yet
+ * a setting resolves to its fail-closed default (registration invite-only, CAPTCHA on).
  *
  * @property-read Schema $form
  */
-class RegistrationAuthSettings extends Page
+class RegistrationSettings extends Page
 {
+    protected static ?int $navigationSort = 2;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -49,12 +51,12 @@ class RegistrationAuthSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Registration & authentication');
+        return __('Registration settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Registration & authentication');
+        return __('Registration settings');
     }
 
     public function mount(): void
@@ -127,7 +129,7 @@ class RegistrationAuthSettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('Registration & authentication'))
+        return Section::make(__('Registration settings'))
             ->schema([
                 Radio::make(SnsSettingKey::RegistrationMode->value)
                     ->label(SnsSettingKey::RegistrationMode->label())
@@ -145,7 +147,8 @@ class RegistrationAuthSettings extends Page
                     ])
                     ->required(),
                 Toggle::make(SnsSettingKey::CaptchaEnabled->value)
-                    ->label(SnsSettingKey::CaptchaEnabled->label()),
+                    ->label(SnsSettingKey::CaptchaEnabled->label())
+                    ->helperText(__('Puts a bot challenge on the registration form, and on login after repeated failures.')),
             ]);
     }
 }
