@@ -35,6 +35,14 @@ export const SHEET_EXIT_ANIMATION = 'modern-sheet-out';
 /** Longer than the animation, so a lost `animationend` still lets the reader leave. */
 const EXIT_FALLBACK_MS = 450;
 
+/**
+ * How long a landed exit waits for its navigation to arrive before it brings the sheet back. A
+ * canceled visit or a popstate that never comes would otherwise leave an inert column held off the
+ * bottom of the screen forever; on a slow network the restore may race a still-inflight arrival,
+ * which costs a re-played entry — visibly odd, but never stuck.
+ */
+const EXIT_RESTORE_MS = 2000;
+
 const immediate: ComposeExit = (navigate) => navigate();
 
 export interface ComposeExitState {
@@ -58,6 +66,18 @@ export function useComposeExitState(compose: boolean): ComposeExitState {
     // slide is the same exit, not another one.
     const pending = useRef<(() => void) | null>(null);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const restore = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const clearTimers = useCallback(() => {
+        if (timer.current !== null) {
+            clearTimeout(timer.current);
+            timer.current = null;
+        }
+        if (restore.current !== null) {
+            clearTimeout(restore.current);
+            restore.current = null;
+        }
+    }, []);
 
     const land = useCallback(() => {
         if (timer.current !== null) {
@@ -66,19 +86,33 @@ export function useComposeExitState(compose: boolean): ComposeExitState {
         }
         const navigate = pending.current;
         pending.current = null;
-        navigate?.();
+        if (navigate === null) {
+            return;
+        }
+        navigate();
+        // The navigation is on its way; if it never arrives (a canceled visit, a popstate that was
+        // not answered), bring the sheet back rather than hold an inert column offscreen forever.
+        restore.current = setTimeout(() => {
+            restore.current = null;
+            setState((s) => (s.exiting ? { exiting: false, url: s.url } : s));
+        }, EXIT_RESTORE_MS);
     }, []);
 
-    // Only the timer is cleaned up: an unmounted shell means the document is going away on its own,
-    // and running a navigation into that is worse than dropping it.
-    useEffect(
-        () => () => {
-            if (timer.current !== null) {
-                clearTimeout(timer.current);
-            }
-        },
-        [],
-    );
+    // The URL moved on — by the exit's own navigation or by one that beat it. Every leftover goes
+    // with it: a stale timer must not fire a second navigation, and stale `exiting` must not greet
+    // a revisit of the same URL as a surface already off the bottom of the screen.
+    useEffect(() => {
+        if (state.url === url) {
+            return;
+        }
+        clearTimers();
+        pending.current = null;
+        setState({ exiting: false, url });
+    }, [url, state.url, clearTimers]);
+
+    // Only the timers are cleaned up: an unmounted shell means the document is going away on its
+    // own, and running a navigation into that is worse than dropping it.
+    useEffect(() => clearTimers, [clearTimers]);
 
     const exit = useCallback<ComposeExit>(
         (navigate) => {
