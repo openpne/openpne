@@ -30,7 +30,8 @@
             .op-mfa-alert__icon { width: 1.75rem; height: 1.75rem; flex-shrink: 0; color: var(--warning-600); }
             .op-mfa-alert__body { flex: 1 1 16rem; min-width: 0; }
             .op-mfa-alert__title { font-weight: 600; color: var(--gray-950); }
-            .op-mfa-alert__text { font-size: 0.875rem; color: var(--gray-500); }
+            /* --gray-600, not the muted --gray-500: over the amber tint that misses WCAG AA at 14px. */
+            .op-mfa-alert__text { font-size: 0.875rem; color: var(--gray-600); }
 
             .dark .op-mfa-alert { border-color: var(--warning-500); }
             .dark .op-mfa-alert__icon { color: var(--warning-400); }
