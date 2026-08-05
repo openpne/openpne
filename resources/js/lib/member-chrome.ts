@@ -75,6 +75,15 @@ export interface Chrome {
      * comment box, a search row, a hub's instant-save controls) does not make the screen one.
      */
     form?: boolean;
+    /**
+     * A screen whose whole job is writing one thing (compose implies `form`). Below lg its chrome is
+     * replaced by a full-page sheet: the top-bar slot carries a lone close control with the back
+     * control's semantics plus the page's own action(s), injected through ComposeSheetAction; the
+     * bottom bar is not rendered; and the surface enters bottom-to-top (nothing under
+     * prefers-reduced-motion). Desktop (lg+) is unchanged. `context` stays: it is the close control's
+     * cold-load fallback and the desktop breadcrumb.
+     */
+    compose?: boolean;
 }
 
 export interface NavSection {
@@ -313,7 +322,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     },
     'diary/edit': (props) => {
         const { diary } = props as unknown as { diary: { id: number; title: string } };
-        return { form: true, context: [{ href: `/diary/${diary.id}`, label: diary.title }] };
+        return { form: true, compose: true, context: [{ href: `/diary/${diary.id}`, label: diary.title }] };
     },
     'community/search': () => ({
         mode: 'section',
@@ -384,6 +393,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { community, topic } = props as unknown as { community: CommunityRef; topic: { id: number; name: string } | null };
         return {
             form: true,
+            compose: true,
             context: topic
                 ? [...topicBoardContext(community)!, { href: `/communityTopic/${topic.id}`, label: topic.name }]
                 : topicBoardContext(community),
@@ -393,6 +403,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { community, event } = props as unknown as { community: CommunityRef; event: { id: number; name: string } | null };
         return {
             form: true,
+            compose: true,
             context: event
                 ? [...eventBoardContext(community)!, { href: `/communityEvent/${event.id}`, label: event.name }]
                 : eventBoardContext(community),
@@ -494,6 +505,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         return {
             gap: '6',
             form: true,
+            compose: true,
             context:
                 parentId !== null && parentSubject !== null
                     ? [
@@ -520,7 +532,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/avatar': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
-    'message/edit': { gap: '6', form: true, context: [MESSAGE_BOX_PARENT.draft] },
+    'message/edit': { gap: '6', form: true, compose: true, context: [MESSAGE_BOX_PARENT.draft] },
     'member/config/email': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/password': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/mfa': { gap: '6', form: true, context: CONFIG_CONTEXT },
@@ -530,9 +542,9 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'community/topic/show': { foreground: true },
     'community/event/show': { foreground: true },
     'diary/show': { foreground: true },
-    'diary/new': { form: true, context: [{ href: '/diary/list', label: DIARIES }] },
+    'diary/new': { form: true, compose: true, context: [{ href: '/diary/list', label: DIARIES }] },
     'timeline/show': { foreground: true },
-    'timeline/new': { form: true, context: [{ href: '/timeline', label: ACTIVITY }] },
+    'timeline/new': { form: true, compose: true, context: [{ href: '/timeline', label: ACTIVITY }] },
 };
 
 /**

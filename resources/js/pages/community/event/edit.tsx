@@ -1,6 +1,7 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { BodyField } from '@/components/compose/body-field';
+import { COMPOSE_FORM_ID, ComposeSheetAction } from '@/components/compose/compose-sheet-action';
 import { initialComposeFormat, type ComposeEditorPreference, type RecordFormat } from '@/components/compose/editor-mode';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
@@ -69,10 +70,21 @@ export default function CommunityEventEdit() {
     return (
         <>
             <Head title={title} />
+            <ComposeSheetAction>
+                <Button
+                    type="submit"
+                    form={COMPOSE_FORM_ID}
+                    size="sm"
+                    loading={form.processing}
+                    disabled={form.data.name.trim() === '' || form.data.body.trim() === '' || form.data.area.trim() === ''}
+                >
+                    {isEdit ? t('Save') : t('Post')}
+                </Button>
+            </ComposeSheetAction>
             <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
 
             <Panel overflow="visible">
-                <form onSubmit={submit} className="space-y-4">
+                <form id={COMPOSE_FORM_ID} onSubmit={submit} className="space-y-4">
                     <Field label={t('Title')} htmlFor="name" error={form.errors.name}>
                         <Input id="name" type="text" required value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} />
                     </Field>
@@ -115,8 +127,10 @@ export default function CommunityEventEdit() {
 
                     <ImagesField id="images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
+                    {/* The sheet header carries this action below lg (ComposeSheetAction above). */}
                     <Button
                         type="submit"
+                        className="max-lg:hidden"
                         loading={form.processing}
                         disabled={form.data.name.trim() === '' || form.data.body.trim() === '' || form.data.area.trim() === ''}
                     >

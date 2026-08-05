@@ -1,12 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
-import { type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
+import { ArrowLeft, ChevronRight, X } from 'lucide-react';
+import { type ComponentType, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { Avatar } from '@/components/avatar';
 import { AvatarMenu } from '@/components/avatar-menu';
 import { BrandMark } from '@/components/brand-mark';
+import { useComposeSlotRef } from '@/components/compose/compose-sheet-action';
 import { CommunityImage } from '@/components/community-image';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
-import { backTarget, backTracker } from '@/lib/back-nav';
+import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
 import type { Chrome, ChromeLabel, ChromeScope } from '@/lib/member-chrome';
 import { cn } from '@/lib/utils';
@@ -43,6 +44,32 @@ function TopBar({ hidden, children }: { hidden?: boolean; children: ReactNode })
 }
 
 /**
+ * The bar's leading control. One target, two faces: back on a detail or form page, close on a compose
+ * sheet — where it leaves the same way, so the glyph and the label are all that differ.
+ */
+function LeadingControl({
+    target,
+    label,
+    icon: Icon,
+}: {
+    target: BackTarget;
+    label: string;
+    icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+}) {
+    const glyph = <Icon className="size-6" aria-hidden />;
+
+    return target.type === 'history' ? (
+        <button type="button" onClick={() => window.history.back()} aria-label={label} className={BAR_CONTROL}>
+            {glyph}
+        </button>
+    ) : (
+        <Link href={target.href} aria-label={label} className={BAR_CONTROL}>
+            {glyph}
+        </Link>
+    );
+}
+
+/**
  * Who the page belongs to (mark + name, the whole block one link), centered like every other middle
  * element — the member bar's one grammar is "the middle is a label; a trailing › means tapping opens
  * the thing it names" (the disclosure cue, not position, carries tappability). The mark and the
@@ -71,13 +98,15 @@ function ScopeIdentity({ scope }: { scope: ChromeScope }) {
  * Mobile (< lg) top bar, varying by page class: hamburger + brand + account menu on the dashboard,
  * the section title in place of the brand on a hub, brand + sign-in for a guest, and back + scope on
  * a detail or form page — there the bottom nav is what carries the global links, so the bar can spend
- * its width on where the page sits.
+ * its width on where the page sits. A compose screen replaces that with the sheet header: close plus
+ * the page's own actions.
  */
 export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
     const { component, props } = usePage<PageProps>();
     const { name, auth } = props;
     const tracker = backTracker();
+    const slotRef = useComposeSlotRef();
     // Subscribed rather than read at render: Inertia fires `navigate` after React has swapped the
     // page, so a plain read would size the new page's bar against the previous page's depth.
     const inAppHistory = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot) > 0;
@@ -113,22 +142,21 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     if (String(component) !== 'dashboard' && chrome.mode !== 'section') {
         const target = backTarget(inAppHistory, chrome.context);
 
+        // A compose sheet spends the bar on leaving and finishing: close, then the page's own
+        // action(s). No trail, no scope, no nav — the sheet is one screen with one job.
+        if (chrome.compose) {
+            return (
+                <TopBar hidden={hidden}>
+                    <LeadingControl target={target} label={t('Close')} icon={X} />
+                    {/* The page's action(s) land here (ComposeSheetAction), pushed to the far end. */}
+                    <div ref={slotRef} className="ml-auto flex items-center gap-2" />
+                </TopBar>
+            );
+        }
+
         return (
             <TopBar hidden={hidden}>
-                {target.type === 'history' ? (
-                    <button
-                        type="button"
-                        onClick={() => window.history.back()}
-                        aria-label={t('Back')}
-                        className={BAR_CONTROL}
-                    >
-                        <ArrowLeft className="size-6" aria-hidden />
-                    </button>
-                ) : (
-                    <Link href={target.href} aria-label={t('Back')} className={BAR_CONTROL}>
-                        <ArrowLeft className="size-6" aria-hidden />
-                    </Link>
-                )}
+                <LeadingControl target={target} label={t('Back')} icon={ArrowLeft} />
                 {/* The !form guard is a second belt: the registry test already pins form ⇒ no scope,
                     but a form must never carry a link beside an unsaved form even if that slips. */}
                 {chrome.scope && !chrome.form ? (

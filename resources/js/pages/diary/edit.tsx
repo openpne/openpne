@@ -1,5 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { BodyField } from '@/components/compose/body-field';
+import { COMPOSE_FORM_ID, ComposeSheetAction } from '@/components/compose/compose-sheet-action';
 import { initialComposeFormat, type ComposeEditorPreference, type RecordFormat } from '@/components/compose/editor-mode';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
@@ -45,10 +46,16 @@ export default function DiaryEdit() {
     return (
         <>
             <Head title={t('Edit %diary%')} />
+            <ComposeSheetAction>
+                <Button type="submit" form={COMPOSE_FORM_ID} size="sm" loading={processing} disabled={data.body.trim() === ''}>
+                    {t('Save')}
+                </Button>
+            </ComposeSheetAction>
             <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit %diary%')}</h1>
 
             <Panel overflow="visible">
                 <form
+                    id={COMPOSE_FORM_ID}
                     onSubmit={(e) => {
                         e.preventDefault();
                         // No forceFormData — a fileless save posts JSON, keeping LF byte-stable
@@ -89,7 +96,8 @@ export default function DiaryEdit() {
 
                     <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 
-                    <Button type="submit" loading={processing} disabled={data.body.trim() === ''}>
+                    {/* The sheet header carries this action below lg (ComposeSheetAction above). */}
+                    <Button type="submit" className="max-lg:hidden" loading={processing} disabled={data.body.trim() === ''}>
                         {t('Save')}
                     </Button>
                 </form>

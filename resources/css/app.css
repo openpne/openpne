@@ -61,6 +61,22 @@
     --shadow-elevated: var(--elevated-shadow);
 }
 
+/* The compose sheet's entry (AppShell, below lg). Travel is one viewport rather than 100% so a short
+   form and a long one rise the same distance. No fill mode on purpose: the transform is gone once the
+   animation ends, so the column is a containing block for fixed descendants only while it slides. */
+@theme {
+    --animate-modern-sheet: modern-sheet-in 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+
+    @keyframes modern-sheet-in {
+        from {
+            transform: translateY(100dvh);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+}
+
 :root {
     /* Neutral ramp with a faint warm tint (hue 83, tiny chroma) instead of pure gray, and a page
        background a touch below pure white so white cards lift — reads as "designed", not stark. */
