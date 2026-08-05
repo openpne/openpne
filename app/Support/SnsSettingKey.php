@@ -126,6 +126,16 @@ enum SnsSettingKey: string
     case LoginMessage = 'login_message';
 
     /**
+     * The site's terms of service and privacy policy bodies, as Markdown (OpenPNE 3 sns_config
+     * user_agreement / privacy_policy). OpenPNE 3 emitted the stored value as raw HTML wrapped in
+     * nl2br; here it renders through the member-body sanitizer, so the upgrade rewrites the
+     * OpenPNE 3 text into Markdown first (App\Upgrade\Runner\Op3PolicyMarkdown).
+     */
+    case UserAgreement = 'user_agreement';
+
+    case PrivacyPolicy = 'privacy_policy';
+
+    /**
      * OpenPNE 3's default footer (its sns_config footer_before/after seed), the install default for the
      * footer keys so a fresh site shows the same bar it always did.
      */
@@ -149,6 +159,7 @@ enum SnsSettingKey: string
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => SettingGroup::Features,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
+            self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
         };
     }
 
@@ -193,6 +204,9 @@ enum SnsSettingKey: string
             // OpenPNE 4-native: OpenPNE 3 put this kind of copy on the login page through the login
             // gadgets (freeArea), which upgrade as gadgets — there is no sns_config column behind it.
             self::LoginMessage => null,
+            // The policy bodies keep the OpenPNE 3 sns_config name verbatim; only their markup is
+            // rewritten, by the post-walk pass (the walk copies the value as-is).
+            self::UserAgreement, self::PrivacyPolicy => $this->value,
         };
     }
 
@@ -207,7 +221,7 @@ enum SnsSettingKey: string
     {
         return match ($this->group()) {
             SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy,
-            SettingGroup::Diary => $this->op3SourceName() !== null,
+            SettingGroup::Diary, SettingGroup::SitePolicy => $this->op3SourceName() !== null,
             SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features,
             SettingGroup::Branding, SettingGroup::LoginScreen => false,
         };
@@ -255,6 +269,9 @@ enum SnsSettingKey: string
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => '',
             // No message until an administrator writes one; the login screen then shows nothing extra.
             self::LoginMessage => '',
+            // Unwritten until an administrator writes them; the pages stay reachable and say so
+            // (OpenPNE 3 shipped an "under construction" default in the same spot).
+            self::UserAgreement, self::PrivacyPolicy => '',
         };
     }
 
@@ -265,7 +282,7 @@ enum SnsSettingKey: string
         // and both bodies give the first character meaning — a stylesheet's @charset / @import is
         // only honored at the very start (OpenPNE 3 stored the design keys with trim disabled), and
         // a Markdown body that opens with an indented code block would lose it.
-        if (in_array($this->group(), [SettingGroup::Design, SettingGroup::LoginScreen], true)) {
+        if (in_array($this->group(), [SettingGroup::Design, SettingGroup::LoginScreen, SettingGroup::SitePolicy], true)) {
             return is_string($value) ? $value : (string) $value;
         }
 
@@ -361,6 +378,8 @@ enum SnsSettingKey: string
             self::BrandLogoFile => __('Logo'),
             self::BrandFaviconFile => __('Favicon'),
             self::LoginMessage => __('Login screen message'),
+            self::UserAgreement => __('Terms of service'),
+            self::PrivacyPolicy => __('Privacy policy'),
         };
     }
 
@@ -377,7 +396,7 @@ enum SnsSettingKey: string
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
-            self::LoginMessage => false,
+            self::LoginMessage, self::UserAgreement, self::PrivacyPolicy => false,
         };
     }
 
@@ -392,15 +411,15 @@ enum SnsSettingKey: string
     }
 
     /**
-     * Maximum stored size in BYTES. The Design CSS/HTML and the login screen message are multi-line
-     * free text bounded only by the `sns_settings.value` TEXT column (65535 bytes, matching OpenPNE 3's
-     * sns_config.value), so they are validated by byte length, not the char-count maxLength() the
-     * short identity fields use.
+     * Maximum stored size in BYTES. The Design CSS/HTML, the login screen message and the policy
+     * bodies are multi-line free text bounded only by the `sns_settings.value` TEXT column (65535
+     * bytes, matching OpenPNE 3's sns_config.value), so they are validated by byte length, not the
+     * char-count maxLength() the short identity fields use.
      */
     public function maxBytes(): int
     {
         return match ($this->group()) {
-            SettingGroup::Design, SettingGroup::LoginScreen => 65535,
+            SettingGroup::Design, SettingGroup::LoginScreen, SettingGroup::SitePolicy => 65535,
             default => $this->maxLength(),
         };
     }

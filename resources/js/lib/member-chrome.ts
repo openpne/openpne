@@ -100,6 +100,14 @@ const NOTIFICATIONS = t('Notifications');
 const MEMBER_SEARCH = t('Search members');
 const SETTINGS = t('Settings');
 
+export type PolicyKind = 'terms' | 'privacy';
+
+/** Titles of the two policy pages, shared by the frame heading and the page's document title. */
+export const POLICY_TITLES: Record<PolicyKind, ChromeLabel> = {
+    terms: t('Terms of service'),
+    privacy: t('Privacy policy'),
+};
+
 /** Nav order and metadata (Home is the brand row, so it is omitted). */
 export const NAV_SECTIONS: NavSection[] = [
     { href: '/diary/list', match: '/diary', icon: BookOpen, label: DIARIES, feature: 'diary' },
@@ -273,6 +281,8 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // heading, and the desktop sidebar already stands the same pill), so this only feeds the mobile
     // FAB — the diary shortcut the diary-forward home is the place for.
     'dashboard': (props) => ({ action: enabled(props, 'diary') ? WRITE_DIARY : undefined }),
+    // One component serves both policy pages, so which one the server rendered picks the heading.
+    'policy/show': (props) => ({ mode: 'contextual', title: POLICY_TITLES[(props as { kind: PolicyKind }).kind], gap: '6' }),
     'diary/feed': (props) => ({
         mode: 'section',
         title: DIARIES,
@@ -549,6 +559,9 @@ export const NO_CONTEXT_COMPONENTS: readonly string[] = [
     'block/remove',
     'friend/link',
     'member/invite',
+    // Reached from the footer / settings / the signed-out login screen, by a guest as well as a
+    // member: there is no one parent to crumb back to.
+    'policy/show',
 ];
 
 export function resolveChrome(

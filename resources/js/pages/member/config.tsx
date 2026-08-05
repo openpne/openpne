@@ -319,6 +319,32 @@ export default function MemberConfig() {
                 </GroupItem>
             </SettingsGroup>
 
+            {/* The site's own documents, not the member's settings — so they read as links out, and
+                they sit above the danger zone rather than after it. Classic reaches them from its
+                footer; Modern has no site-wide footer, so this is a member's way in. */}
+            <SettingsGroup title={t('About this site')}>
+                <GroupItem>
+                    <DetailRow
+                        title={t('Terms of service')}
+                        action={
+                            <ActionLink href="/terms" variant="outline" size="sm">
+                                {t('Read')}
+                            </ActionLink>
+                        }
+                    />
+                </GroupItem>
+                <GroupItem>
+                    <DetailRow
+                        title={t('Privacy policy')}
+                        action={
+                            <ActionLink href="/privacy" variant="outline" size="sm">
+                                {t('Read')}
+                            </ActionLink>
+                        }
+                    />
+                </GroupItem>
+            </SettingsGroup>
+
             <SettingsGroup title={t('Account withdrawal')} danger>
                 <GroupItem>
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">

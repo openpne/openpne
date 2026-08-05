@@ -84,6 +84,7 @@ final class UpgradeRunner
             }
             (new PasswordWrap)->plan($out);
             (new EmojiTransform)->plan($out);
+            (new SitePolicyMarkdownTransform)->plan($out);
             $out('PLAN would set surface_mode=classic_default if unset (keep the migrated site on the Classic surface).');
 
             return $this->walk($options, $out);
@@ -115,6 +116,12 @@ final class UpgradeRunner
             // expressible in an INSERT...SELECT, and only now is every text table populated.
             if ($walked) {
                 $walked = (new EmojiTransform)->run($this->targetTables(), $out);
+            }
+
+            // Reformat the policy bodies after the walk: OpenPNE 3 stored them as raw HTML honouring
+            // newlines, OpenPNE 4 renders them as Markdown, and no INSERT...SELECT can bridge that.
+            if ($walked) {
+                $walked = (new SitePolicyMarkdownTransform)->run($this->targetTables(), $out);
             }
 
             // Migrate the BLOBs only after the walk: FileUpgrade (first step) has populated `files`, so

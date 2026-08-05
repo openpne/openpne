@@ -84,6 +84,19 @@ class SnsSettingUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('sns_settings', ['key' => 'footer_after', 'value' => 'Member footer']);
     }
 
+    public function test_migrates_the_policy_bodies_verbatim(): void
+    {
+        // Verbatim here, Markdown later: the walk copies the text and the post-walk
+        // SitePolicyMarkdownTransform is what reformats it.
+        $this->seedConfig('user_agreement', "第1条(適用)\n本規約は…");
+        $this->seedConfig('privacy_policy', '<h2>取得する情報</h2>');
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'user_agreement', 'value' => "第1条(適用)\n本規約は…"]);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'privacy_policy', 'value' => '<h2>取得する情報</h2>']);
+    }
+
     public function test_migrates_the_web_public_age_setting(): void
     {
         $this->seedConfig('is_allow_web_public_flag_age', '1');

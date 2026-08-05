@@ -109,12 +109,15 @@
 
         <div id="Footer">
             <div id="FooterContainer">
-                {{-- Trusted admin/operator HTML, chosen by the page's secure_page/insecure_page
-                     class. $classicFooterHtml stays a per-request override seam. --}}
+                {{-- OpenPNE 3 _footer.php: the two policy links lead, then the trusted admin/operator
+                     HTML chosen by the page's secure_page/insecure_page class. $classicFooterHtml
+                     stays a per-request override seam. --}}
                 @php($footerHtml = $classicFooterHtml ?? classic_footer_html(($pageClass ?? 'secure_page') !== 'insecure_page'))
-                @if ($footerHtml)
-                    <p>{!! $footerHtml !!}</p>
-                @endif
+                <p>
+                    <a href="{{ route('policy.privacy') }}" target="_blank" rel="noopener">{{ __('Privacy policy') }}</a>
+                    <a href="{{ route('policy.terms') }}" target="_blank" rel="noopener">{{ __('Terms of service') }}</a>
+                    {!! $footerHtml !!}
+                </p>
             </div>
         </div><!-- Footer -->
 

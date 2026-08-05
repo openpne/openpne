@@ -11,6 +11,7 @@ use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\Parities\FriendRouteParity;
 use App\Compat\Parities\MemberRouteParity;
 use App\Compat\Parities\MessageRouteParity;
+use App\Compat\Parities\PolicyRouteParity;
 use App\Compat\Parities\TimelineRouteParity;
 
 /** The route parities. Adding a feature's Classic adapter = adding its parity here. */
@@ -30,6 +31,7 @@ final class RouteParityRegistry
             MessageRouteParity::class,
             TimelineRouteParity::class,
             AuthRouteParity::class,
+            PolicyRouteParity::class,
         ];
     }
 

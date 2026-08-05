@@ -167,9 +167,10 @@ is component-driven, not data-driven from this table. A stored `uri` is a normal
 the renderer hides any item whose path matches no route or an OpenPNE 3 compatibility shim, and
 renders a logout-style item (GET-unreachable in OpenPNE 4) as a POST form button. The `<li>` id is
 `{prefix}_{op_url_to_id(source_uri)}` — `source_uri` keeps the original OpenPNE 3 value so a site's
-custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar renders the admin
-`footer_before` / `footer_after` setting, chosen by the page's `secure_page` / `insecure_page` class
-(OpenPNE 3 `isSecurePage`); `$classicFooterHtml` overrides it per request.
+custom CSS keeps matching after the upgrade normalizes `uri`. The `#Footer` bar carries the privacy
+policy and terms links ahead of the admin `footer_before` / `footer_after` setting, chosen by the
+page's `secure_page` / `insecure_page` class (OpenPNE 3 `isSecurePage`); `$classicFooterHtml`
+overrides the setting per request.
 
 `#notificationCenter` sits between the logo and `#globalNav`, for a signed-in member only: the
 vendored `NOTIFY_CENTER.png` sprite with the `#nc_icon1` / `#nc_icon2` / `#nc_icon3` badges the skin
@@ -210,8 +211,7 @@ included) gets a notice back on manage rather than a 404, and a self or empty id
 
 Carried gaps in this slice: the skin's one dead `url(./skin/default/img/marker.gif)` ref (already
 broken in OpenPNE 3) and its fixed 950px width are kept as-is; there is a single static skin (no
-theme switching); the footer has no privacy-policy / terms links (no such routes exist); the
-`#SmtSwitch` smartphone-view toggle is not ported (OpenPNE 4 has no separate smartphone frontend
+theme switching); the `#SmtSwitch` smartphone-view toggle is not ported (OpenPNE 4 has no separate smartphone frontend
 to switch to); the notification center's badges count unread notification rows rather than OpenPNE
 3's `member_config` event store, so they are clamped at `99+` with the number kept in the title, and
 its panel answers a decision by replacing the buttons with the outcome rather than OpenPNE 3's
