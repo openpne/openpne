@@ -3,9 +3,9 @@
 namespace App\Filament\Resources\Members\Pages;
 
 use App\Filament\Resources\Members\MemberResource;
-use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\Pages\ListPage;
 
-class ListMembers extends ListRecords
+class ListMembers extends ListPage
 {
     protected static string $resource = MemberResource::class;
 }

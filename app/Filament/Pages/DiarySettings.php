@@ -128,7 +128,7 @@ class DiarySettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('%Diary% settings'))
+        return Section::make()
             ->schema([
                 Toggle::make(SnsSettingKey::DiaryAllowWebPublic->value)
                     ->label(SnsSettingKey::DiaryAllowWebPublic->label())

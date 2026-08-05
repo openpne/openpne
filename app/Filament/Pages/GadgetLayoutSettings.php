@@ -137,6 +137,6 @@ class GadgetLayoutSettings extends Page
                 ->rules(['in:'.implode(',', GadgetLayoutPicker::SELECTABLE)]);
         }
 
-        return Section::make(__('Gadget layout'))->schema($fields);
+        return Section::make()->schema($fields);
     }
 }
