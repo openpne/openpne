@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState, type ComponentType, type ReactNode 
 import { createPortal } from 'react-dom';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
-import { Placeholder } from '@tiptap/extensions';
 import {
     Bold,
     Code,
@@ -46,8 +45,6 @@ type RichTextEditorProps = {
     id?: string;
     /** Opening height in line boxes, read the same way `<textarea rows>` reads it. */
     rows?: number;
-    /** Compose sheet: below lg the editable drops its box, like the plain-textarea branch. */
-    sheet?: boolean;
     // Hyphen-named DOM attributes exactly as components/ui/field.tsx clone-injects them.
     'aria-required'?: 'true';
     'aria-invalid'?: 'true';
@@ -587,11 +584,11 @@ function TableMenu({ editor }: { editor: Editor }) {
  * The formatting row, sticky at the top of the form column at every width (below the persistent TopNav
  * via --modern-top-offset, which is 0 at lg) with an opaque background so the body scrolls under it.
  * The host Panel opts out of overflow clipping (Panel overflow="visible") so the sticky resolves
- * against the page scroll, and the negative margins bleed the band out of the panel body's padding.
- * They are keyed to that padding (surface.tsx): at lg they match it exactly (20px) and the band ends
- * at the card edge; below lg the sheet's body padding is 4 and the frame's is 12 (16 from sm), so the
- * same -16/-20 clears both and the band runs to the screen edge, which is what a full-width bar over a
- * boxless writing surface has to do. Change either padding and these move with it.
+ * against the page scroll. The band's horizontal geometry is keyed to that Panel's body padding
+ * (surface.tsx): at lg the negative margin matches it exactly (20px), so the band ends at the card's
+ * padding edge; below lg it takes no negative margin at all and spans the body's content width, which
+ * is where the field boxes start — a band that ran wider than the fields it formats would read as
+ * belonging to the screen rather than to the body. Change that padding and the lg pair moves with it.
  *
  * Placement is deliberately breakpoint-independent: only the button set narrows, with the rest demoted
  * into "More". A bar anchored to the visual viewport to ride the soft keyboard was tried and removed —
@@ -610,9 +607,11 @@ function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boole
             // Tinted, not the card's own color: the buttons' touch targets are mostly whitespace, so
             // an untinted row has no visible top edge and the eye reads all of it as the gap below the
             // label. A band the member can see starts where the field starts.
-            // No vertical padding either: the buttons carry 44px touch targets of their own, and
-            // padding on top of them pushes the row further from the label still.
-            className="sticky top-[var(--modern-top-offset)] z-10 -mx-4 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-4 pointer-coarse:gap-1 sm:-mx-5 sm:px-5"
+            // px-1: enough that the outermost touch target does not sit on the band's own edge, and it
+            // puts the first glyph on roughly the same line as the text inside the field boxes.
+            // No vertical padding: the buttons carry 44px touch targets of their own, and padding on
+            // top of them pushes the row further from the label still.
+            className="sticky top-[var(--modern-top-offset)] z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-1 pointer-coarse:gap-1 lg:-mx-5 lg:px-5"
         >
             {compact ? (
                 <>
@@ -655,7 +654,6 @@ export default function RichTextEditor({
     label,
     id,
     rows,
-    sheet,
     'aria-required': ariaRequired,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedby,
@@ -663,9 +661,6 @@ export default function RichTextEditor({
     // Keep onChange fresh without recreating the editor: the stable options below call the ref.
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
-    // Same reason: the extension list is built once, and the placeholder reads the label through it.
-    const labelRef = useRef(label);
-    labelRef.current = label;
 
     const attributes: Record<string, string> = { 'aria-label': label };
     if (id) {
@@ -684,19 +679,13 @@ export default function RichTextEditor({
         attributes['aria-describedby'] = ariaDescribedby;
     }
 
-    const [baseOptions] = useState(() => {
-        const options = createComposeEditorOptions({
+    const [baseOptions] = useState(() =>
+        createComposeEditorOptions({
             initialMarkdown,
             onChange: (md) => onChangeRef.current(md),
             attributes,
-        });
-
-        // Appended here, not in the schema SSoT: the placeholder is a node decoration carrying a
-        // class and a data attribute, so it adds no node, no mark and no step — the document the
-        // sanitizer sees, and the dirty signal the host form reads, are both untouched. The label
-        // is the placeholder text: below lg it is the only place the field's word appears.
-        return { ...options, extensions: [...(options.extensions ?? []), Placeholder.configure({ placeholder: () => labelRef.current })] };
-    });
+        }),
+    );
 
     const editor = useEditor({ ...baseOptions, immediatelyRender: false, shouldRerenderOnTransaction: true });
 
@@ -710,16 +699,7 @@ export default function RichTextEditor({
     const isCompact = useIsCompact();
 
     return (
-        <div
-            className={cn(
-                'space-y-2',
-                // The editable's own chrome class belongs to the schema SSoT (composeEditorAttributes),
-                // which stays as it is; the sheet undoes the box from here, matching the plain
-                // textarea's `sheet` branch class for class.
-                sheet &&
-                    'max-lg:[&_.ProseMirror]:rounded-none max-lg:[&_.ProseMirror]:border-0 max-lg:[&_.ProseMirror]:bg-transparent max-lg:[&_.ProseMirror]:px-0 max-lg:[&_.ProseMirror]:shadow-none',
-            )}
-        >
+        <div className="space-y-2">
             {editor && <FormattingToolbar editor={editor} compact={isCompact} />}
             {editor && <EditorContent editor={editor} />}
         </div>

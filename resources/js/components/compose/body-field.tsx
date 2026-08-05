@@ -5,7 +5,6 @@ import { Field } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 import { composeEditorRowsMinHeight } from './editor-rows';
 import {
     applyInputMethod,
@@ -48,8 +47,6 @@ interface BodyFieldProps {
     editorPreference: ComposeEditorPreference;
     /** The stored record format (undefined = create); read once to pick the initial state. */
     recordFormat?: RecordFormat;
-    /** Compose sheet: below lg the body loses its box and its label, and writes into the page. */
-    sheet?: boolean;
 }
 
 /**
@@ -72,7 +69,6 @@ export function BodyField({
     onFormatChange,
     editorPreference,
     recordFormat,
-    sheet,
 }: BodyFieldProps) {
     const t = useT();
     const confirm = useConfirm();
@@ -90,16 +86,8 @@ export function BodyField({
     if (format === undefined) {
         return (
             <>
-                <Field label={label} htmlFor={id} error={error} foldLabel={sheet}>
-                    <Textarea
-                        id={id}
-                        required={required}
-                        rows={rows}
-                        placeholder={label}
-                        sheet={sheet}
-                        value={value}
-                        onChange={(e) => onChange(e.target.value)}
-                    />
+                <Field label={label} htmlFor={id} error={error}>
+                    <Textarea id={id} required={required} rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
                 </Field>
                 <p className="text-sm text-muted-foreground">{t('This entry keeps its OpenPNE 3 formatting.')}</p>
             </>
@@ -148,11 +136,7 @@ export function BodyField({
         // The control sits next to the label rather than across the row: at the far edge, with a
         // field above and a field below, proximity said nothing about which one it belonged to.
         <div className="flex h-5 items-center gap-1">
-            {/* The sheet folds the word into the placeholder, but the row itself stays: the
-                input-method control is the one thing on it that no placeholder can carry. */}
-            <Label htmlFor={id} className={sheet ? 'max-lg:sr-only' : undefined}>
-                {label}
-            </Label>
+            <Label htmlFor={id}>{label}</Label>
             <InputMethodMenu value={method} onSelect={selectMethod} />
             <InputMethodBadge method={method} />
         </div>
@@ -174,12 +158,7 @@ export function BodyField({
                         // chunk lands without the field jumping.
                         <div
                             style={rows ? { minHeight: composeEditorRowsMinHeight(rows) } : undefined}
-                            className={cn(
-                                'flex min-h-24 w-full items-center rounded-field border border-field-border bg-field px-3 py-2 text-base text-muted-foreground md:text-sm',
-                                // Tracks the editable it stands in for, or the box would flash where
-                                // the sheet has none.
-                                sheet && 'max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent max-lg:px-0',
-                            )}
+                            className="flex min-h-24 w-full items-center rounded-field border border-field-border bg-field px-3 py-2 text-base text-muted-foreground md:text-sm"
                         >
                             {t('Loading editor…')}
                         </div>
@@ -192,7 +171,6 @@ export function BodyField({
                         label={label}
                         id={id}
                         rows={rows}
-                        sheet={sheet}
                         aria-required={required ? 'true' : undefined}
                         aria-invalid={error ? 'true' : undefined}
                         aria-describedby={errorId}
@@ -210,8 +188,6 @@ export function BodyField({
                 id={id}
                 required={required}
                 rows={rows}
-                placeholder={label}
-                sheet={sheet}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 aria-invalid={error ? true : undefined}

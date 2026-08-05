@@ -14,9 +14,6 @@ type FieldProps = {
     className?: string;
     /** Trailing content on the label row (e.g. a compact per-field visibility control). */
     labelRight?: ReactNode;
-    /** Below lg the label folds to sr-only and the control's placeholder carries the word — for a
-     *  compose sheet's naked writing surfaces only. Help and error stay visible and associated. */
-    foldLabel?: boolean;
     /** The single control element. Field injects id / aria-invalid / aria-describedby onto it. */
     children: ReactNode;
 };
@@ -27,7 +24,7 @@ type FieldProps = {
  * every use site is programmatically associated without repeating the plumbing. Form state stays in
  * the caller's Inertia useForm; just pass `error`.
  */
-export function Field({ label, htmlFor, help, error, required, className, labelRight, foldLabel, children }: FieldProps) {
+export function Field({ label, htmlFor, help, error, required, className, labelRight, children }: FieldProps) {
     const generatedId = useId();
     // Canonical id: prefer the caller's htmlFor, else the child's own id, else a generated one — then
     // stamp that same id on both the label and the control so they can never desynchronize.
@@ -50,7 +47,7 @@ export function Field({ label, htmlFor, help, error, required, className, labelR
         : children;
 
     const labelNode = label && (
-        <Label htmlFor={id} className={foldLabel ? 'max-lg:sr-only' : undefined}>
+        <Label htmlFor={id}>
             {label}
             {required && <span className="text-destructive"> *</span>}
         </Label>

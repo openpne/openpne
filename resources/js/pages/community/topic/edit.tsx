@@ -67,16 +67,8 @@ export default function CommunityTopicEdit() {
 
             <Panel overflow="visible" sheet>
                 <form id={COMPOSE_FORM_ID} onSubmit={submit} className="space-y-4">
-                    <Field label={t('Title')} htmlFor="name" error={form.errors.name} foldLabel>
-                        <Input
-                            id="name"
-                            type="text"
-                            required
-                            sheet
-                            placeholder={t('Title')}
-                            value={form.data.name}
-                            onChange={(e) => form.setData('name', e.target.value)}
-                        />
+                    <Field label={t('Title')} htmlFor="name" error={form.errors.name}>
+                        <Input id="name" type="text" required value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} />
                     </Field>
 
                     <BodyField
@@ -91,7 +83,6 @@ export default function CommunityTopicEdit() {
                         onFormatChange={(format) => form.setData('format', format)}
                         editorPreference={composeEditor}
                         recordFormat={recordFormat}
-                        sheet
                     />
 
                     <CurrentImagesField images={topic?.images ?? []} removedIds={form.data.remove_images} onToggle={toggleRemove} />

@@ -64,16 +64,8 @@ export default function DiaryEdit() {
                     }}
                     className="space-y-4"
                 >
-                    <Field label={t('Title')} htmlFor="diary_title" error={errors.title} foldLabel>
-                        <Input
-                            id="diary_title"
-                            type="text"
-                            required
-                            sheet
-                            placeholder={t('Title')}
-                            value={data.title}
-                            onChange={(e) => setData('title', e.target.value)}
-                        />
+                    <Field label={t('Title')} htmlFor="diary_title" error={errors.title}>
+                        <Input id="diary_title" type="text" required value={data.title} onChange={(e) => setData('title', e.target.value)} />
                     </Field>
 
                     <BodyField
@@ -88,7 +80,6 @@ export default function DiaryEdit() {
                         onFormatChange={(format) => setData('format', format)}
                         editorPreference={composeEditor}
                         recordFormat={recordFormat}
-                        sheet
                     />
 
                     <Field label={t('Visibility')} htmlFor="diary_visibility" error={errors.visibility}>

@@ -81,25 +81,21 @@ export default function MessageEdit() {
                         </div>
                     )}
 
-                    <Field label={t('Subject')} htmlFor="message_subject" error={form.errors.subject} foldLabel>
+                    <Field label={t('Subject')} htmlFor="message_subject" error={form.errors.subject}>
                         <Input
                             id="message_subject"
                             type="text"
                             required
-                            sheet
-                            placeholder={t('Subject')}
                             value={form.data.subject}
                             onChange={(e) => form.setData('subject', e.target.value)}
                         />
                     </Field>
 
-                    <Field label={t('Body')} htmlFor="message_body" error={form.errors.body} foldLabel>
+                    <Field label={t('Body')} htmlFor="message_body" error={form.errors.body}>
                         <Textarea
                             id="message_body"
                             required
                             rows={8}
-                            sheet
-                            placeholder={t('Body')}
                             value={form.data.body}
                             onChange={(e) => form.setData('body', e.target.value)}
                         />

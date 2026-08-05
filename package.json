@@ -35,7 +35,6 @@
         "@inertiajs/react": "^3.6.1",
         "@tiptap/core": "3.29.2",
         "@tiptap/extension-table": "3.29.2",
-        "@tiptap/extensions": "3.29.2",
         "@tiptap/markdown": "3.29.2",
         "@tiptap/pm": "3.29.2",
         "@tiptap/react": "3.29.2",
