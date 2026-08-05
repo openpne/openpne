@@ -8,9 +8,12 @@ import { createPortal } from 'react-dom';
  */
 
 /**
- * The id every compose form carries, so an action outside it stays a real submitter
- * (`type="submit" form={COMPOSE_FORM_ID}`): the browser runs the form's constraint validation and
- * fires its submit event, where calling the page's handler from the header would skip both.
+ * The id every compose form carries. A form that submits natively pairs it with
+ * `type="submit" form={COMPOSE_FORM_ID}` on its header action, keeping it a real submitter: the
+ * browser runs the form's constraint validation and fires its submit event, where calling the
+ * page's handler from the header would skip both. The message forms post from their buttons'
+ * own click handlers instead (they never had a native submit path), so there the id is only the
+ * seam for switching later.
  */
 export const COMPOSE_FORM_ID = 'compose-form';
 

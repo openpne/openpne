@@ -163,9 +163,11 @@ job is writing one thing — creating and editing a diary, a topic, an event, a
 message, and posting to the timeline. Below lg those become a full-page sheet: the
 top bar carries a close control with the back control's semantics plus the page's
 own action(s), portalled in by
-[`ComposeSheetAction`](../../resources/js/components/compose/compose-sheet-action.tsx)
-as external submitters of the form (`form={COMPOSE_FORM_ID}`, so the browser runs
-its constraint validation); the bottom bar is not rendered; and the surface enters
+[`ComposeSheetAction`](../../resources/js/components/compose/compose-sheet-action.tsx).
+A form that submits natively wires them as external submitters
+(`form={COMPOSE_FORM_ID}`, so the browser runs its constraint validation); the
+message pair keeps its explicit send/draft click paths, which its forms never routed
+through native submit. The bottom bar is not rendered, and the surface enters
 bottom-to-top, with no animation under `prefers-reduced-motion`. Desktop (lg+) is
 unchanged, and every other form keeps the static-trail form bar.
 **A page renders only its content** (no own `<main>`, heading only outside the
