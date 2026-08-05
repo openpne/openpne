@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import { COMPOSE_FORM_ID, ComposeSheetAction } from '@/components/compose/compose-sheet-action';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
@@ -25,10 +26,16 @@ export default function TimelineNew({
     return (
         <>
             <Head title={t('%Post_activity%')} />
-            <h1 className="break-words text-xl font-semibold text-foreground">{t('%Post_activity%')}</h1>
+            <ComposeSheetAction>
+                <Button type="submit" form={COMPOSE_FORM_ID} size="sm" loading={processing}>
+                    {t('%Post_activity%')}
+                </Button>
+            </ComposeSheetAction>
+            <h1 className="break-words text-lg font-semibold text-foreground lg:text-xl">{t('%Post_activity%')}</h1>
 
-            <Panel>
+            <Panel sheet>
                 <form
+                    id={COMPOSE_FORM_ID}
                     onSubmit={(e) => {
                         e.preventDefault();
                         // forceFormData: the upload needs a multipart body, which Inertia uses
@@ -61,7 +68,8 @@ export default function TimelineNew({
                         />
                     </Field>
 
-                    <Button type="submit" loading={processing}>
+                    {/* The sheet header carries this action below lg (ComposeSheetAction above). */}
+                    <Button type="submit" className="max-lg:hidden" loading={processing}>
                         {t('%Post_activity%')}
                     </Button>
                 </form>

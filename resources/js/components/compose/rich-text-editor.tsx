@@ -584,8 +584,11 @@ function TableMenu({ editor }: { editor: Editor }) {
  * The formatting row, sticky at the top of the form column at every width (below the persistent TopNav
  * via --modern-top-offset, which is 0 at lg) with an opaque background so the body scrolls under it.
  * The host Panel opts out of overflow clipping (Panel overflow="visible") so the sticky resolves
- * against the page scroll, and the negative margins bleed the band to the card edges — they must track
- * the panel body's own `px-4 sm:px-5`.
+ * against the page scroll. The band's horizontal geometry is keyed to that Panel's body padding
+ * (surface.tsx): at lg the negative margin matches it exactly (20px), so the band ends at the card's
+ * padding edge; below lg it takes no negative margin at all and spans the body's content width, which
+ * is where the field boxes start — a band that ran wider than the fields it formats would read as
+ * belonging to the screen rather than to the body. Change that padding and the lg pair moves with it.
  *
  * Placement is deliberately breakpoint-independent: only the button set narrows, with the rest demoted
  * into "More". A bar anchored to the visual viewport to ride the soft keyboard was tried and removed —
@@ -604,9 +607,11 @@ function FormattingToolbar({ editor, compact }: { editor: Editor; compact: boole
             // Tinted, not the card's own color: the buttons' touch targets are mostly whitespace, so
             // an untinted row has no visible top edge and the eye reads all of it as the gap below the
             // label. A band the member can see starts where the field starts.
-            // No vertical padding either: the buttons carry 44px touch targets of their own, and
-            // padding on top of them pushes the row further from the label still.
-            className="sticky top-[var(--modern-top-offset)] z-10 -mx-4 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-4 pointer-coarse:gap-1 sm:-mx-5 sm:px-5"
+            // px-1: enough that the outermost touch target does not sit on the band's own edge, and it
+            // puts the first glyph on roughly the same line as the text inside the field boxes.
+            // No vertical padding: the buttons carry 44px touch targets of their own, and padding on
+            // top of them pushes the row further from the label still.
+            className="sticky top-[var(--modern-top-offset)] z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-muted px-1 pointer-coarse:gap-1 lg:-mx-5 lg:px-5"
         >
             {compact ? (
                 <>

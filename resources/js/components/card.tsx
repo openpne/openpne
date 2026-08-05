@@ -15,13 +15,24 @@ type Props = {
  * but it also takes away the strip of page background either side — which is what makes a card read as
  * a surface lying on the page rather than as the page itself. Tested on device, that flattened every
  * screen into one field of card color divided by lines. The width comes from tighter padding instead.
+ * That judgment is about screens the reader browses, which is why `sheet` is a scoped exception: the
+ * compose sheet below lg is a single screen with a single job, and there the frame is the divider.
  */
-export function Card({ children, className, overflow = 'hidden' }: Props & { overflow?: 'hidden' | 'visible' }) {
+export function Card({
+    children,
+    className,
+    overflow = 'hidden',
+    sheet = false,
+}: Props & { overflow?: 'hidden' | 'visible'; sheet?: boolean }) {
     return (
         <div
             className={cn(
                 overflow === 'hidden' ? 'overflow-hidden' : 'overflow-visible',
-                'rounded-card border border-border bg-card text-card-foreground shadow-card',
+                // Swapped rather than overridden: `rounded-card` is a custom token, which twMerge does
+                // not treat as the same utility as the class that would undo it.
+                sheet
+                    ? 'text-card-foreground lg:rounded-card lg:border lg:border-border lg:bg-card lg:shadow-card'
+                    : 'rounded-card border border-border bg-card text-card-foreground shadow-card',
                 className,
             )}
         >

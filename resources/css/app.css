@@ -61,6 +61,37 @@
     --shadow-elevated: var(--elevated-shadow);
 }
 
+/* The compose sheet's entry and exit (AppShell, below lg). Travel is one viewport rather than 100% so
+   a short form and a long one move the same distance. The entry has no fill mode on purpose: the
+   transform is gone once it ends, so the column is a containing block for fixed descendants only
+   while it slides. */
+@theme {
+    --animate-modern-sheet: modern-sheet-in 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+    /* Deliberately quicker than the entry: arriving is a change of context worth feeling settle,
+       leaving is one the reader has already decided on. `forwards` holds the column off the bottom
+       until the navigation it is waiting for lands — the transform outliving the animation is fine
+       here because every fixed overlay portals to the body, not into this column. */
+    --animate-modern-sheet-out: modern-sheet-out 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+
+    @keyframes modern-sheet-in {
+        from {
+            transform: translateY(100dvh);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes modern-sheet-out {
+        from {
+            transform: translateY(0);
+        }
+        to {
+            transform: translateY(100dvh);
+        }
+    }
+}
+
 :root {
     /* Neutral ramp with a faint warm tint (hue 83, tiny chroma) instead of pure gray, and a page
        background a touch below pure white so white cards lift — reads as "designed", not stark. */

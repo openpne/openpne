@@ -169,6 +169,44 @@ const FORM_SCREENS: Record<string, Record<string, unknown>> = {
     'member/invite': {},
 };
 
+/**
+ * Every screen the registry classifies as a compose sheet — the forms whose whole job is writing one
+ * thing. Enumerated for the same reason FORM_SCREENS is: below lg these lose the bar and the bottom
+ * nav for a full-page sheet, so joining or leaving the set is a UX decision, not an implementation
+ * detail. Every entry is also a FORM_SCREEN (compose implies form).
+ */
+const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
+    'diary/new': {},
+    'diary/edit': { diary: { id: 3, title: 'Draft' } },
+    'timeline/new': {},
+    'community/topic/edit': { community: cyclists, topic: null },
+    'community/event/edit': { community: cyclists, event: null },
+    'message/compose': { parentId: null, parentSubject: null },
+    'message/edit': {},
+};
+
+test('a compose screen is a form with no floating action', () => {
+    for (const [component, props] of Object.entries(COMPOSE_SCREENS)) {
+        const sheet = chrome(component, props);
+
+        assert.equal(sheet.compose, true, component);
+        assert.equal(sheet.form, true, component);
+        // The sheet has no bottom bar to float above, and its actions live in the sheet header.
+        assert.equal(sheet.action, undefined, component);
+    }
+});
+
+test('a form outside the compose set keeps the ordinary bar', () => {
+    // community/edit is the near miss: the create/edit form shares its component with community
+    // settings, which is a settings screen and stays on the static-trail bar.
+    for (const [component, props] of Object.entries(FORM_SCREENS)) {
+        if (component in COMPOSE_SCREENS) {
+            continue;
+        }
+        assert.ok(!chrome(component, props).compose, component);
+    }
+});
+
 test('a form keeps its context but takes no scope', () => {
     // The bar's contract: a form has nothing to be inside, so its trail stays static text.
     for (const [component, props] of Object.entries(FORM_SCREENS)) {
