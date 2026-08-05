@@ -53,6 +53,12 @@ class AdminPageChromeTest extends TestCase
                     "{$page} must extend ".ListPage::class.', which drops the depth-1 self-referential breadcrumb.',
                 );
 
+                $this->assertSame(
+                    ListPage::class,
+                    (new \ReflectionMethod($page, 'getBreadcrumbs'))->getDeclaringClass()->getName(),
+                    "{$page} must not override getBreadcrumbs() — that would reintroduce the trail the base removes.",
+                );
+
                 $checked++;
             }
         }
