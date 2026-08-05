@@ -27,6 +27,8 @@ type PanelProps = {
     flush?: boolean;
     /** Forwarded to {@link Card}: `visible` lets a sticky descendant resolve against the page scroll. */
     overflow?: 'hidden' | 'visible';
+    /** Forwarded to {@link Card}: drops the card chrome below lg, for the compose sheet's one surface. */
+    sheet?: boolean;
 };
 
 /**
@@ -34,13 +36,19 @@ type PanelProps = {
  * page background: a Card + optional {@link SectionHeader} band + padded body. Use `flush` when the
  * body is a {@link List} (rows carry their own padding).
  */
-export function Panel({ title, right, children, className, bodyClassName, flush, overflow }: PanelProps) {
+export function Panel({ title, right, children, className, bodyClassName, flush, overflow, sheet }: PanelProps) {
     return (
-        <Card className={className} overflow={overflow}>
+        <Card className={className} overflow={overflow} sheet={sheet}>
             {title && <SectionHeader title={title} right={right} />}
             {/* Tighter below sm, where the width is scarce: the frame, this padding and a field box each
-                take a bite out of the same line, and 20px here was the widest of the three. */}
-            <div className={cn(flush ? undefined : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
+                take a bite out of the same line, and 20px here was the widest of the three.
+                A sheet trims it to 4 below lg: its fields keep their boxes, so what this buys is a
+                tighter inset for them — the frame (12, 16 from sm) plus this 4 puts the field-box edge
+                16px from the screen edge below sm, and 4 inside the frame at every width up to lg.
+                Swapped, not appended — twMerge
+                cannot resolve `px-1 lg:px-5` against `px-4 sm:px-5`. The formatting toolbar's band is
+                keyed to this value (rich-text-editor.tsx). */}
+            <div className={cn(flush ? undefined : sheet ? 'px-1 py-4 lg:px-5' : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
         </Card>
     );
 }

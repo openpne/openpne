@@ -1,5 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { BodyField } from '@/components/compose/body-field';
+import { COMPOSE_FORM_ID, ComposeSheetAction } from '@/components/compose/compose-sheet-action';
 import { initialComposeFormat, type ComposeEditorPreference } from '@/components/compose/editor-mode';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
@@ -32,10 +33,16 @@ export default function DiaryNew({
     return (
         <>
             <Head title={t('Write a %diary%')} />
-            <h1 className="break-words text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
+            <ComposeSheetAction>
+                <Button type="submit" form={COMPOSE_FORM_ID} size="sm" loading={processing} disabled={data.body.trim() === ''}>
+                    {t('Post')}
+                </Button>
+            </ComposeSheetAction>
+            <h1 className="break-words text-lg font-semibold text-foreground lg:text-xl">{t('Write a %diary%')}</h1>
 
-            <Panel overflow="visible">
+            <Panel overflow="visible" sheet>
                 <form
+                    id={COMPOSE_FORM_ID}
                     onSubmit={(e) => {
                         e.preventDefault();
                         // No forceFormData: Inertia switches to multipart only when a File is
@@ -74,7 +81,8 @@ export default function DiaryNew({
 
                     <ImagesField id="diary_images" label={t('Images')} files={data.images} onChange={(files) => setData('images', files)} errors={errors} />
 
-                    <Button type="submit" loading={processing} disabled={data.body.trim() === ''}>
+                    {/* The sheet header carries this action below lg (ComposeSheetAction above). */}
+                    <Button type="submit" className="max-lg:hidden" loading={processing} disabled={data.body.trim() === ''}>
                         {t('Post')}
                     </Button>
                 </form>

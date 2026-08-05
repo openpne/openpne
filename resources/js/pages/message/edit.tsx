@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { COMPOSE_FORM_ID, ComposeSheetAction } from '@/components/compose/compose-sheet-action';
 import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
@@ -46,10 +47,30 @@ export default function MessageEdit() {
         <>
             <Head title={t('Edit draft')} />
 
-            <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit draft')}</h1>
+            {/* Both actions ride the sheet header below lg — a draft button left behind at the foot of
+                the form would read as belonging to something else. They are the same buttons as the
+                pair below, deliberately not external submitters: this form has no native submit path
+                (the pair posts from onClick), and a submit button before the form in tree order would
+                become its default button and make Enter in the subject field send or save. */}
+            <ComposeSheetAction>
+                <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => submit('draft')}
+                    loading={active === 'draft'}
+                    disabled={form.processing || incomplete}
+                >
+                    {t('Save as draft')}
+                </Button>
+                <Button size="sm" onClick={() => submit('send')} loading={active === 'send'} disabled={form.processing || incomplete}>
+                    {t('Send')}
+                </Button>
+            </ComposeSheetAction>
 
-            <Panel>
-                <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+            <h1 className="break-words text-lg font-semibold text-foreground lg:text-xl">{t('Edit draft')}</h1>
+
+            <Panel sheet>
+                <form id={COMPOSE_FORM_ID} onSubmit={(e) => e.preventDefault()} className="space-y-4">
                     {draft.recipient && (
                         <div className="flex items-center gap-2 text-sm">
                             <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
@@ -84,7 +105,7 @@ export default function MessageEdit() {
 
                     <ImagesField id="message_images" label={t('Add images')} files={form.data.images} onChange={(files) => form.setData('images', files)} errors={form.errors} />
 
-                    <FormActions>
+                    <FormActions className="max-lg:hidden">
                         <Button onClick={() => submit('send')} loading={active === 'send'} disabled={form.processing || incomplete}>
                             {t('Send')}
                         </Button>

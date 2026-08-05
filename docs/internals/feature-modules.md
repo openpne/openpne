@@ -146,7 +146,8 @@ title is announced once; a guest keeps the brand bar and the visible h1), and on
 detail page back plus the registry's `scope` — the
 community or member the page belongs to, as one tappable identity block in the
 brand block's grammar. A form (and any page with no single scope) shows its context
-as static centered text instead. The in-page breadcrumb row is therefore
+as static centered text instead (a compose screen shows only its close control and
+its actions — see below). The in-page breadcrumb row is therefore
 desktop-only, and so is the heading row's action button: on mobile the registry's
 `action` is the extended FAB
 ([`ActionFab`](../../resources/js/components/action-fab.tsx)) floating above the
@@ -157,6 +158,26 @@ scroll up brings all of it back. A page the registry marks `form` keeps its chro
 throughout, which makes that flag a behavior contract — a full-page edit / create /
 settings / confirmation screen is a form; an inline comment box, a search row or a
 hub's instant-save controls are not.
+The registry's `compose` flag (which implies `form`) marks the seven screens whose
+job is writing one thing — creating and editing a diary, a topic, an event, a
+message, and posting to the timeline. Below lg those become a full-page sheet: the
+top bar carries a close control with the back control's semantics plus the page's
+own action(s), portalled in by
+[`ComposeSheetAction`](../../resources/js/components/compose/compose-sheet-action.tsx).
+A form that submits natively wires them as external submitters
+(`form={COMPOSE_FORM_ID}`, so the browser runs its constraint validation); the
+message pair keeps its explicit send/draft click paths, which its forms never routed
+through native submit. The bottom bar is not rendered, and the sheet is one surface:
+the bar draws its bottom hairline only once content has scrolled under it
+([`useScrolled`](../../resources/js/lib/use-scrolled.ts)), the in-page h1 folds to
+`sr-only`, and the panel drops its card chrome — all three back at lg, where the
+page is a page again. Its fields keep the standard boxed controls and visible
+labels; the sheet only tightens their inset (box edge 16px below sm). The surface
+enters bottom-to-top and slides back down when the
+close control is used, which is the one exit that animates: a system back and the
+navigation after a submit are immediate. No animation runs under
+`prefers-reduced-motion`. Desktop (lg+) is unchanged, and every other form keeps the
+static-trail form bar.
 **A page renders only its content** (no own `<main>`, heading only outside the
 registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
 deviations are registry entries, or
