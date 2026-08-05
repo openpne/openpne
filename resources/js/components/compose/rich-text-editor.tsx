@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ComponentType, type ReactNode 
 import { createPortal } from 'react-dom';
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
+import { Placeholder } from '@tiptap/extensions';
 import {
     Bold,
     Code,
@@ -45,6 +46,8 @@ type RichTextEditorProps = {
     id?: string;
     /** Opening height in line boxes, read the same way `<textarea rows>` reads it. */
     rows?: number;
+    /** Compose sheet: below lg the editable drops its box, like the plain-textarea branch. */
+    sheet?: boolean;
     // Hyphen-named DOM attributes exactly as components/ui/field.tsx clone-injects them.
     'aria-required'?: 'true';
     'aria-invalid'?: 'true';
@@ -584,8 +587,11 @@ function TableMenu({ editor }: { editor: Editor }) {
  * The formatting row, sticky at the top of the form column at every width (below the persistent TopNav
  * via --modern-top-offset, which is 0 at lg) with an opaque background so the body scrolls under it.
  * The host Panel opts out of overflow clipping (Panel overflow="visible") so the sticky resolves
- * against the page scroll, and the negative margins bleed the band to the card edges — they must track
- * the panel body's own `px-4 sm:px-5`.
+ * against the page scroll, and the negative margins bleed the band out of the panel body's padding.
+ * They are keyed to that padding (surface.tsx): at lg they match it exactly (20px) and the band ends
+ * at the card edge; below lg the sheet's body padding is 4 and the frame's is 12 (16 from sm), so the
+ * same -16/-20 clears both and the band runs to the screen edge, which is what a full-width bar over a
+ * boxless writing surface has to do. Change either padding and these move with it.
  *
  * Placement is deliberately breakpoint-independent: only the button set narrows, with the rest demoted
  * into "More". A bar anchored to the visual viewport to ride the soft keyboard was tried and removed —
@@ -649,6 +655,7 @@ export default function RichTextEditor({
     label,
     id,
     rows,
+    sheet,
     'aria-required': ariaRequired,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedby,
@@ -656,6 +663,9 @@ export default function RichTextEditor({
     // Keep onChange fresh without recreating the editor: the stable options below call the ref.
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
+    // Same reason: the extension list is built once, and the placeholder reads the label through it.
+    const labelRef = useRef(label);
+    labelRef.current = label;
 
     const attributes: Record<string, string> = { 'aria-label': label };
     if (id) {
@@ -674,13 +684,19 @@ export default function RichTextEditor({
         attributes['aria-describedby'] = ariaDescribedby;
     }
 
-    const [baseOptions] = useState(() =>
-        createComposeEditorOptions({
+    const [baseOptions] = useState(() => {
+        const options = createComposeEditorOptions({
             initialMarkdown,
             onChange: (md) => onChangeRef.current(md),
             attributes,
-        }),
-    );
+        });
+
+        // Appended here, not in the schema SSoT: the placeholder is a node decoration carrying a
+        // class and a data attribute, so it adds no node, no mark and no step — the document the
+        // sanitizer sees, and the dirty signal the host form reads, are both untouched. The label
+        // is the placeholder text: below lg it is the only place the field's word appears.
+        return { ...options, extensions: [...(options.extensions ?? []), Placeholder.configure({ placeholder: () => labelRef.current })] };
+    });
 
     const editor = useEditor({ ...baseOptions, immediatelyRender: false, shouldRerenderOnTransaction: true });
 
@@ -694,7 +710,16 @@ export default function RichTextEditor({
     const isCompact = useIsCompact();
 
     return (
-        <div className="space-y-2">
+        <div
+            className={cn(
+                'space-y-2',
+                // The editable's own chrome class belongs to the schema SSoT (composeEditorAttributes),
+                // which stays as it is; the sheet undoes the box from here, matching the plain
+                // textarea's `sheet` branch class for class.
+                sheet &&
+                    'max-lg:[&_.ProseMirror]:rounded-none max-lg:[&_.ProseMirror]:border-0 max-lg:[&_.ProseMirror]:bg-transparent max-lg:[&_.ProseMirror]:px-0 max-lg:[&_.ProseMirror]:shadow-none',
+            )}
+        >
             {editor && <FormattingToolbar editor={editor} compact={isCompact} />}
             {editor && <EditorContent editor={editor} />}
         </div>

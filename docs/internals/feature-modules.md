@@ -171,7 +171,10 @@ through native submit. The bottom bar is not rendered, and the sheet is one surf
 the bar draws its bottom hairline only once content has scrolled under it
 ([`useScrolled`](../../resources/js/lib/use-scrolled.ts)), the in-page h1 folds to
 `sr-only`, and the panel drops its card chrome — all three back at lg, where the
-page is a page again. The surface enters bottom-to-top and slides back down when the
+page is a page again. Its writing surfaces lose their box on the same terms — the
+title keeps one hairline under the text, the body nothing at all — and their labels
+fold into placeholders, while the pickers beside them stay boxed controls under
+visible labels. The surface enters bottom-to-top and slides back down when the
 close control is used, which is the one exit that animates: a system back and the
 navigation after a submit are immediate. No animation runs under
 `prefers-reduced-motion`. Desktop (lg+) is unchanged, and every other form keeps the

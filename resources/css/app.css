@@ -336,6 +336,17 @@ html body[data-scroll-locked] {
     color: var(--color-muted-foreground);
     font-size: 0.9em;
 }
+/* The field's word while the editor is empty (Placeholder extension, which decorates the paragraph
+   with the class and the text). Scoped to the empty DOCUMENT's first paragraph: an empty line further
+   down is where someone is already writing, not a field waiting to be named. `float` + `height: 0`
+   keeps it out of the line box, so the caret sits where the first character will. */
+.ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: var(--color-muted-foreground);
+}
 /* Stands in for the native selection while a UI that acts on it holds the editor (heldSelection
    plugin): the "More" sheet blurs on purpose to drop the keyboard, and blurring clears the range.
    Translucent so the text keeps its own contrast, from --color-selected — the chosen-state accent,

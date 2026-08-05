@@ -41,8 +41,13 @@ export function Panel({ title, right, children, className, bodyClassName, flush,
         <Card className={className} overflow={overflow} sheet={sheet}>
             {title && <SectionHeader title={title} right={right} />}
             {/* Tighter below sm, where the width is scarce: the frame, this padding and a field box each
-                take a bite out of the same line, and 20px here was the widest of the three. */}
-            <div className={cn(flush ? undefined : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
+                take a bite out of the same line, and 20px here was the widest of the three.
+                A sheet keeps almost none of it below lg: its writing surfaces have no box of their own,
+                so the frame alone (12, 16 from sm) sets the inset and this 4 tops it up to the 16px a
+                phone screen reads as its margin. Swapped, not appended — twMerge cannot resolve
+                `px-1 lg:px-5` against `px-4 sm:px-5`. The formatting toolbar's negative margins are
+                keyed to this value (rich-text-editor.tsx). */}
+            <div className={cn(flush ? undefined : sheet ? 'px-1 py-4 lg:px-5' : 'px-4 py-4 sm:px-5', bodyClassName)}>{children}</div>
         </Card>
     );
 }

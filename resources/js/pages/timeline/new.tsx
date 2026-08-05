@@ -44,8 +44,17 @@ export default function TimelineNew({
                     }}
                     className="space-y-4"
                 >
-                    <Field label={t('Body')} htmlFor="timeline_body" error={errors.body}>
-                        <Textarea id="timeline_body" required maxLength={140} rows={4} value={data.body} onChange={(e) => setData('body', e.target.value)} />
+                    <Field label={t('Body')} htmlFor="timeline_body" error={errors.body} foldLabel>
+                        <Textarea
+                            id="timeline_body"
+                            required
+                            maxLength={140}
+                            rows={4}
+                            sheet
+                            placeholder={t('Body')}
+                            value={data.body}
+                            onChange={(e) => setData('body', e.target.value)}
+                        />
                     </Field>
 
                     <Field label={t('Visibility')} htmlFor="timeline_visibility" error={errors.visibility}>
