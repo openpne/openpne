@@ -68,9 +68,9 @@ export default function MessageCompose() {
                 </Button>
             </ComposeSheetAction>
 
-            <h1 className="break-words text-xl font-semibold text-foreground">{t('Compose Message')}</h1>
+            <h1 className="max-lg:sr-only break-words text-xl font-semibold text-foreground">{t('Compose Message')}</h1>
 
-            <Panel>
+            <Panel sheet>
                 <form id={COMPOSE_FORM_ID} onSubmit={(e) => e.preventDefault()} className="space-y-4">
                     <div className="flex items-center gap-2 text-sm">
                         <span className="font-medium text-muted-foreground">{t('Recipient')}</span>

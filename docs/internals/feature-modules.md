@@ -167,9 +167,15 @@ own action(s), portalled in by
 A form that submits natively wires them as external submitters
 (`form={COMPOSE_FORM_ID}`, so the browser runs its constraint validation); the
 message pair keeps its explicit send/draft click paths, which its forms never routed
-through native submit. The bottom bar is not rendered, and the surface enters
-bottom-to-top, with no animation under `prefers-reduced-motion`. Desktop (lg+) is
-unchanged, and every other form keeps the static-trail form bar.
+through native submit. The bottom bar is not rendered, and the sheet is one surface:
+the bar draws its bottom hairline only once content has scrolled under it
+([`useScrolled`](../../resources/js/lib/use-scrolled.ts)), the in-page h1 folds to
+`sr-only`, and the panel drops its card chrome — all three back at lg, where the
+page is a page again. The surface enters bottom-to-top and slides back down when the
+close control is used, which is the one exit that animates: a system back and the
+navigation after a submit are immediate. No animation runs under
+`prefers-reduced-motion`. Desktop (lg+) is unchanged, and every other form keeps the
+static-trail form bar.
 **A page renders only its content** (no own `<main>`, heading only outside the
 registry's hub modes, no FlashMessage — `MemberFrameGuardTest` enforces this);
 deviations are registry entries, or

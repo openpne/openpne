@@ -2,7 +2,7 @@ import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { ActionFab } from '@/components/action-fab';
 import { BottomNav } from '@/components/bottom-nav';
-import { ComposeSlotProvider } from '@/components/compose/compose-sheet-action';
+import { ComposeSheetProvider, useComposeExitState } from '@/components/compose/compose-sheet-action';
 import { ConfirmDialogHost } from '@/components/confirm-dialog';
 import { LeftNav } from '@/components/left-nav';
 import { RightRail } from '@/components/right-rail';
@@ -24,7 +24,8 @@ import type { PageProps } from '@/types';
  * the mobile primary action floats above the bottom bar. Reading a long page takes the mobile chrome
  * away — the bars slide off and the action collapses to its icon while the reader scrolls down, and
  * one scroll up brings all of it back. A compose screen is the exception: below lg it becomes a
- * full-page sheet — no bottom bar, a close-plus-actions header, and a bottom-to-top entry.
+ * full-page sheet — no bottom bar, a close-plus-actions header, and a bottom-to-top entry it plays in
+ * reverse when the close control leaves.
  */
 export function AppShell({ chrome, children }: { chrome: Chrome; children: ReactNode }) {
     const { props, url } = usePage<PageProps>();
@@ -36,9 +37,10 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
     // keeps its chrome (a screen the reader is filling in must not move under them), and a guest's
     // bar carries their way in, not nav they can bring back.
     const hidden = useScrollDirection({ enabled: member && !chrome.form }) === 'down';
+    const { exiting, exit, onAnimationEnd } = useComposeExitState(compose);
 
     return (
-        <ComposeSlotProvider>
+        <ComposeSheetProvider exit={exit}>
             <div
                 className={cn(
                     'mx-auto flex min-h-dvh max-w-6xl [--modern-top-offset:calc(3.5rem+env(safe-area-inset-top))] lg:[--modern-top-offset:0px] xl:max-w-7xl',
@@ -54,7 +56,14 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     inside compose would break that. */}
                 <div
                     key={compose ? url : 'chrome'}
-                    className={cn('min-w-0 flex-1 pb-[var(--modern-bottom-offset)]', compose && 'max-lg:motion-safe:animate-modern-sheet')}
+                    // Closed: the column is on its way off the screen, so it stops taking input while
+                    // the navigation it is waiting for is still in flight.
+                    inert={exiting || undefined}
+                    onAnimationEnd={onAnimationEnd}
+                    className={cn(
+                        'min-w-0 flex-1 pb-[var(--modern-bottom-offset)]',
+                        compose && (exiting ? 'max-lg:motion-safe:animate-modern-sheet-out' : 'max-lg:motion-safe:animate-modern-sheet'),
+                    )}
                 >
                     <TopNav chrome={chrome} hidden={hidden} />
                     {children}
@@ -71,6 +80,6 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
                     className="pointer-events-none fixed inset-x-0 top-0 z-30 h-[env(safe-area-inset-top)] bg-background/90 backdrop-blur lg:hidden"
                 />
             </div>
-        </ComposeSlotProvider>
+        </ComposeSheetProvider>
     );
 }

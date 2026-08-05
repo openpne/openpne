@@ -38,9 +38,9 @@ export default function DiaryNew({
                     {t('Post')}
                 </Button>
             </ComposeSheetAction>
-            <h1 className="break-words text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
+            <h1 className="max-lg:sr-only break-words text-xl font-semibold text-foreground">{t('Write a %diary%')}</h1>
 
-            <Panel overflow="visible">
+            <Panel overflow="visible" sheet>
                 <form
                     id={COMPOSE_FORM_ID}
                     onSubmit={(e) => {

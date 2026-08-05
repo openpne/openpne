@@ -27,6 +27,8 @@ type PanelProps = {
     flush?: boolean;
     /** Forwarded to {@link Card}: `visible` lets a sticky descendant resolve against the page scroll. */
     overflow?: 'hidden' | 'visible';
+    /** Forwarded to {@link Card}: drops the card chrome below lg, for the compose sheet's one surface. */
+    sheet?: boolean;
 };
 
 /**
@@ -34,9 +36,9 @@ type PanelProps = {
  * page background: a Card + optional {@link SectionHeader} band + padded body. Use `flush` when the
  * body is a {@link List} (rows carry their own padding).
  */
-export function Panel({ title, right, children, className, bodyClassName, flush, overflow }: PanelProps) {
+export function Panel({ title, right, children, className, bodyClassName, flush, overflow, sheet }: PanelProps) {
     return (
-        <Card className={className} overflow={overflow}>
+        <Card className={className} overflow={overflow} sheet={sheet}>
             {title && <SectionHeader title={title} right={right} />}
             {/* Tighter below sm, where the width is scarce: the frame, this padding and a field box each
                 take a bite out of the same line, and 20px here was the widest of the three. */}

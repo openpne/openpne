@@ -63,9 +63,9 @@ export default function CommunityTopicEdit() {
                     {isEdit ? t('Save') : t('Post')}
                 </Button>
             </ComposeSheetAction>
-            <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
+            <h1 className="max-lg:sr-only break-words text-xl font-semibold text-foreground">{title}</h1>
 
-            <Panel overflow="visible">
+            <Panel overflow="visible" sheet>
                 <form id={COMPOSE_FORM_ID} onSubmit={submit} className="space-y-4">
                     <Field label={t('Title')} htmlFor="name" error={form.errors.name}>
                         <Input id="name" type="text" required value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} />

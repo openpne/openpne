@@ -1,23 +1,26 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ChevronRight, X } from 'lucide-react';
 import { type ComponentType, type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { Avatar } from '@/components/avatar';
 import { AvatarMenu } from '@/components/avatar-menu';
 import { BrandMark } from '@/components/brand-mark';
-import { useComposeSlotRef } from '@/components/compose/compose-sheet-action';
+import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-sheet-action';
 import { CommunityImage } from '@/components/community-image';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
 import type { Chrome, ChromeLabel, ChromeScope } from '@/lib/member-chrome';
+import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 /** The shell every bar variant shares — one element, one height. Height is read from
  *  `--modern-top-offset` rather than restated: the var *is* this bar's height (the top inset, which a
  *  standalone PWA draws under, is part of it), and a page's sticky header offsets by it. `hidden`
- *  slides it away while the reader scrolls down (AppShell owns the signal). */
-function TopBar({ hidden, children }: { hidden?: boolean; children: ReactNode }) {
+ *  slides it away while the reader scrolls down (AppShell owns the signal). `seam` is the bottom
+ *  hairline: it divides the bar from the page it floats over, so a surface that is meant to read as
+ *  one piece (the compose sheet) keeps it off until content actually scrolls under the bar. */
+function TopBar({ hidden, seam = true, children }: { hidden?: boolean; seam?: boolean; children: ReactNode }) {
     const ref = useRef<HTMLElement>(null);
 
     // `inert` closes the bar to new focus, but whatever already held it keeps it (and its key
@@ -34,7 +37,8 @@ function TopBar({ hidden, children }: { hidden?: boolean; children: ReactNode })
             ref={ref}
             inert={hidden || undefined}
             className={cn(
-                'sticky top-0 z-20 flex h-[var(--modern-top-offset)] items-center gap-2 border-b border-border bg-background/90 pt-[env(safe-area-inset-top)] pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] backdrop-blur transition-transform duration-200 motion-reduce:transition-none lg:hidden',
+                'sticky top-0 z-20 flex h-[var(--modern-top-offset)] items-center gap-2 border-b bg-background/90 pt-[env(safe-area-inset-top)] pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] backdrop-blur transition-transform duration-200 motion-reduce:transition-none lg:hidden',
+                seam ? 'border-border' : 'border-transparent',
                 hidden && '-translate-y-full',
             )}
         >
@@ -45,23 +49,50 @@ function TopBar({ hidden, children }: { hidden?: boolean; children: ReactNode })
 
 /**
  * The bar's leading control. One target, two faces: back on a detail or form page, close on a compose
- * sheet — where it leaves the same way, so the glyph and the label are all that differ.
+ * sheet — where it goes to the same place, so the glyph, the label and the way it leaves are all that
+ * differ. `sheet` is that way out: the surface slides back down before the navigation runs.
  */
 function LeadingControl({
     target,
     label,
     icon: Icon,
+    sheet,
 }: {
     target: BackTarget;
     label: string;
     icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
+    sheet?: boolean;
 }) {
+    const exit = useComposeExit();
     const glyph = <Icon className="size-6" aria-hidden />;
+    const leave = (navigate: () => void) => (sheet ? exit(navigate) : navigate());
 
-    return target.type === 'history' ? (
-        <button type="button" onClick={() => window.history.back()} aria-label={label} className={BAR_CONTROL}>
+    if (target.type === 'history') {
+        return (
+            <button type="button" onClick={() => leave(() => window.history.back())} aria-label={label} className={BAR_CONTROL}>
+                {glyph}
+            </button>
+        );
+    }
+
+    // The sheet's link stays a link — a real href, so it reads and behaves as one (status bar, open in
+    // a new tab) — and only the plain click is taken over, to play the exit before visiting. A
+    // modified click is the browser's to answer, and the sheet has nothing to animate for it.
+    return sheet ? (
+        <a
+            href={target.href}
+            aria-label={label}
+            className={BAR_CONTROL}
+            onClick={(event) => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+                    return;
+                }
+                event.preventDefault();
+                exit(() => router.visit(target.href));
+            }}
+        >
             {glyph}
-        </button>
+        </a>
     ) : (
         <Link href={target.href} aria-label={label} className={BAR_CONTROL}>
             {glyph}
@@ -107,6 +138,9 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     const { name, auth } = props;
     const tracker = backTracker();
     const slotRef = useComposeSlotRef();
+    // Only the sheet needs this: everywhere else the bar's hairline is unconditional, and a listener
+    // for a border that never changes is a listener nobody asked for.
+    const scrolled = useScrolled({ enabled: Boolean(chrome.compose) });
     // Subscribed rather than read at render: Inertia fires `navigate` after React has swapped the
     // page, so a plain read would size the new page's bar against the previous page's depth.
     const inAppHistory = useSyncExternalStore(tracker.subscribe, tracker.getSnapshot) > 0;
@@ -143,11 +177,13 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         const target = backTarget(inAppHistory, chrome.context);
 
         // A compose sheet spends the bar on leaving and finishing: close, then the page's own
-        // action(s). No trail, no scope, no nav — the sheet is one screen with one job.
+        // action(s). No trail, no scope, no nav — the sheet is one screen with one job, and until
+        // something scrolls under the bar there is no seam either: the header and the form it belongs
+        // to are one surface.
         if (chrome.compose) {
             return (
-                <TopBar hidden={hidden}>
-                    <LeadingControl target={target} label={t('Close')} icon={X} />
+                <TopBar hidden={hidden} seam={scrolled}>
+                    <LeadingControl target={target} label={t('Close')} icon={X} sheet />
                     {/* The page's action(s) land here (ComposeSheetAction), pushed to the far end. */}
                     <div ref={slotRef} className="ml-auto flex items-center gap-2" />
                 </TopBar>

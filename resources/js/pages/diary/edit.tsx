@@ -51,9 +51,9 @@ export default function DiaryEdit() {
                     {t('Save')}
                 </Button>
             </ComposeSheetAction>
-            <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit %diary%')}</h1>
+            <h1 className="max-lg:sr-only break-words text-xl font-semibold text-foreground">{t('Edit %diary%')}</h1>
 
-            <Panel overflow="visible">
+            <Panel overflow="visible" sheet>
                 <form
                     id={COMPOSE_FORM_ID}
                     onSubmit={(e) => {
