@@ -1,4 +1,4 @@
-import { router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { useT } from '@/lib/i18n';
@@ -10,6 +10,11 @@ import type { PageProps } from '@/types';
 const LOCALE_OPTIONS: { value: string; label: string }[] = [
     { value: 'ja', label: '日本語' },
     { value: 'en', label: 'English' },
+];
+
+const POLICY_LINKS: { href: string; label: string }[] = [
+    { href: '/terms', label: 'Terms of service' },
+    { href: '/privacy', label: 'Privacy policy' },
 ];
 
 // 'wide' is the member frame's standard column, so a profile form fills the same width before the
@@ -53,7 +58,27 @@ export function AuthLayout({ title, intro, width = 'standard', children }: AuthL
                 <h1 className="text-center text-xl font-semibold text-foreground">{title}</h1>
                 {children}
             </main>
-            <nav aria-label={t('Language')} className="mt-6">
+            {/* The policy pages a visitor has to be able to read before they decide to join. */}
+            <nav aria-label={t('About this site')} className="mt-6">
+                <ul className="flex items-center text-sm">
+                    {POLICY_LINKS.map(({ href, label }, i) => (
+                        <li key={href} className="flex items-center">
+                            {i > 0 && (
+                                <span aria-hidden="true" className="px-1 text-muted-foreground">
+                                    ·
+                                </span>
+                            )}
+                            <Link
+                                href={href}
+                                className="rounded px-2 py-1 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+                            >
+                                {t(label)}
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            </nav>
+            <nav aria-label={t('Language')} className="mt-3">
                 <ul className="flex items-center text-sm">
                     {LOCALE_OPTIONS.map((opt, i) => (
                         <li key={opt.value} className="flex items-center">

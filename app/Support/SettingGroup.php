@@ -43,4 +43,7 @@ enum SettingGroup
 
     /** The administrator-authored message shown on the login screen, edited on the login screen page. */
     case LoginScreen;
+
+    /** The terms of service / privacy policy bodies, edited on the site policy page. */
+    case SitePolicy;
 }
