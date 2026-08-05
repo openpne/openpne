@@ -34,6 +34,8 @@ use Illuminate\Support\Facades\DB;
  */
 class LoginScreenSettings extends Page
 {
+    protected static ?int $navigationSort = 7;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -51,12 +53,12 @@ class LoginScreenSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Login page');
+        return __('Login page settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Login page');
+        return __('Login page settings');
     }
 
     public function mount(): void

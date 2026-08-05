@@ -32,6 +32,8 @@ use Illuminate\Support\Facades\DB;
  */
 class RegistrationAuthSettings extends Page
 {
+    protected static ?int $navigationSort = 2;
+
     /**
      * @var array<string, mixed>|null
      */
@@ -49,12 +51,12 @@ class RegistrationAuthSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Registration & authentication');
+        return __('Registration & authentication settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Registration & authentication');
+        return __('Registration & authentication settings');
     }
 
     public function mount(): void
@@ -127,7 +129,7 @@ class RegistrationAuthSettings extends Page
 
     private function buildSection(): Section
     {
-        return Section::make(__('Registration & authentication'))
+        return Section::make(__('Registration & authentication settings'))
             ->schema([
                 Radio::make(SnsSettingKey::RegistrationMode->value)
                     ->label(SnsSettingKey::RegistrationMode->label())
