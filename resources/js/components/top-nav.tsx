@@ -184,8 +184,10 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
             return (
                 <TopBar hidden={hidden} seam={scrolled}>
                     <LeadingControl target={target} label={t('Close')} icon={X} sheet />
-                    {/* The page's action(s) land here (ComposeSheetAction), pushed to the far end. */}
-                    <div ref={slotRef} className="ml-auto flex items-center gap-2" />
+                    {/* The page's action(s) land here (ComposeSheetAction), pushed to the far end.
+                        The bar's controls share one height: the close circle is 40px, so the slot
+                        holds every portalled action to it rather than each page remembering to. */}
+                    <div ref={slotRef} className="ml-auto flex items-center gap-2 [&_button]:min-h-10" />
                 </TopBar>
             );
         }

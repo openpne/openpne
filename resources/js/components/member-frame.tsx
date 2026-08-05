@@ -42,10 +42,10 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 'mx-auto px-3 py-8 sm:px-4',
                 chrome.width === 'narrow' ? 'max-w-md' : 'max-w-2xl',
                 GAP[chrome.gap],
-                // The sheet starts right under its header: a reading page's air (py-8) plus the
-                // margin slot the folded h1 leaves to space-y would hang 60px of nothing between
-                // the bar and the first field. Desktop keeps the reading rhythm.
-                chrome.compose && 'max-lg:space-y-0 max-lg:pt-3',
+                // The sheet starts right under its header: a reading page's py-8 would hang 32px of
+                // nothing above the title. The space-y rhythm stays — the page heading is visible
+                // again (smaller below lg), and it needs its gap to the panel.
+                chrome.compose && 'max-lg:pt-3',
                 chrome.foreground && 'text-foreground',
                 // Clearance for the FAB the shell floats over this content: 56px of circle, 20px off
                 // the bottom bar, so the last row stays readable under it.

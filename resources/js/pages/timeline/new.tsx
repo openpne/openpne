@@ -31,7 +31,7 @@ export default function TimelineNew({
                     {t('%Post_activity%')}
                 </Button>
             </ComposeSheetAction>
-            <h1 className="max-lg:sr-only break-words text-xl font-semibold text-foreground">{t('%Post_activity%')}</h1>
+            <h1 className="break-words text-lg font-semibold text-foreground lg:text-xl">{t('%Post_activity%')}</h1>
 
             <Panel sheet>
                 <form
