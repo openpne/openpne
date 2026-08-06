@@ -135,6 +135,33 @@ class MemberProfileUpgradeSqlTest extends TestCase
         $this->assertSame(1, MemberProfile::where('profile_id', 5)->count());
     }
 
+    public function test_custom_date_without_children_keeps_the_root_value(): void
+    {
+        // The shape OpenPNE 3.10 actually writes: the root holds the date and there are no
+        // year/month/day rows to compose from. Composing regardless discarded the date.
+        $this->seedProfile(11, 'joined_on', 'date');
+        $this->seedMemberProfile(1100, 11, ['value' => '2019-04-01', 'public_flag' => 1, 'tree_key' => 1100, 'lft' => 1]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1100, 'value' => '2019-04-01']);
+    }
+
+    public function test_custom_date_children_win_over_a_value_left_on_the_root(): void
+    {
+        // A composed root can still carry an older value of its own; OpenPNE 3 reads the children
+        // whenever there are any, so the two shapes cannot be told apart by the root alone.
+        $this->seedProfile(12, 'custom_date3', 'date');
+        $this->seedMemberProfile(1200, 12, ['value' => '1999-12-31', 'public_flag' => 1, 'tree_key' => 1200, 'lft' => 1]);
+        $this->seedMemberProfile(1201, 12, ['value' => '2020', 'tree_key' => 1200, 'lft' => 2]);
+        $this->seedMemberProfile(1202, 12, ['value' => '3', 'tree_key' => 1200, 'lft' => 3]);
+        $this->seedMemberProfile(1203, 12, ['value' => '5', 'tree_key' => 1200, 'lft' => 4]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1200, 'value' => '2020-03-05']);
+    }
+
     public function test_custom_date_with_incomplete_children_is_null(): void
     {
         // Only year + month present (no day): OpenPNE 3 returns null, so we must not store a
