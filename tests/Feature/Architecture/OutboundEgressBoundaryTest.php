@@ -139,14 +139,25 @@ class OutboundEgressBoundaryTest extends TestCase
     }
 
     /**
-     * The stream-wrapper functions $source calls, found by tokenising rather than by regex.
+     * The stream-wrapper functions $source reaches, found by tokenising rather than by regex.
      *
      * A regex cannot do this job. Requiring a literal `'https://…'` argument misses the form real
      * code takes; matching the bare name instead hits `$request->file(...)` and even English prose in
      * comments ("an unlinked file (no related entity)"), and dropping `file` to silence that leaves a
      * URL-aware function unguarded — which is exactly how the one real caller in this repository went
      * unnoticed. The tokeniser has already separated comments and strings from code, so the rule can
-     * be stated on what it actually means: a call to this name, not a method or a declaration of one.
+     * be stated on what it actually means.
+     *
+     * Two spellings both count as reaching the function:
+     *
+     *  - a call, `file_get_contents(…)` or `\file_get_contents(…)`. The leading backslash matters:
+     *    PHP 8 lexes that as one T_NAME_FULLY_QUALIFIED token, so a scan that only looks at T_STRING
+     *    silently passes every fully-qualified call.
+     *  - an import, `use function file_get_contents as fetch;`. Renaming defeats any name-based check
+     *    at the call site, so the import is what gets flagged.
+     *
+     * Known limit: a dynamic callable (`$fn = 'file_get_contents'; $fn($url);`) is invisible to this,
+     * as it is to any check of this kind. The guard is a guard rail, not a proof.
      *
      * @return list<string>
      */
@@ -160,30 +171,62 @@ class OutboundEgressBoundaryTest extends TestCase
         $found = [];
 
         foreach ($tokens as $i => $token) {
-            if (! is_array($token) || $token[0] !== T_STRING) {
+            $name = $this->bannedNameAt($token);
+
+            if ($name === null) {
                 continue;
             }
 
-            if (! in_array(strtolower($token[1]), self::STREAM_WRAPPER_FUNCTIONS, true)) {
-                continue;
+            if ($this->isImport($tokens, $i) || $this->isCall($tokens, $i)) {
+                $found[$name] = true;
             }
-
-            if (($tokens[$i + 1] ?? null) !== '(') {
-                continue;
-            }
-
-            $previous = $tokens[$i - 1] ?? null;
-            $previousType = is_array($previous) ? $previous[0] : null;
-
-            // `$x->file(` / `X::file(` are calls on something else; `function file(` declares one.
-            if (in_array($previousType, [T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION, T_NEW], true)) {
-                continue;
-            }
-
-            $found[strtolower($token[1])] = true;
         }
 
+        ksort($found);
+
         return array_keys($found);
+    }
+
+    /**
+     * The banned function this token names, or null.
+     *
+     * T_NAME_RELATIVE (`namespace\file`) is included because in the global namespace it means the
+     * global function; T_NAME_QUALIFIED (`Foo\file`) is not, because a qualified name resolves inside
+     * its namespace with no fallback to the global function.
+     */
+    private function bannedNameAt(mixed $token): ?string
+    {
+        if (! is_array($token) || ! in_array($token[0], [T_STRING, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE], true)) {
+            return null;
+        }
+
+        $name = strtolower($token[1]);
+        $name = str_starts_with($name, 'namespace\\') ? substr($name, strlen('namespace\\')) : ltrim($name, '\\');
+
+        return in_array($name, self::STREAM_WRAPPER_FUNCTIONS, true) ? $name : null;
+    }
+
+    /** Whether the name at $i is `use function <name>` — an import that any alias would then hide. */
+    private function isImport(array $tokens, int $i): bool
+    {
+        $two = is_array($tokens[$i - 2] ?? null) ? $tokens[$i - 2][0] : null;
+        $one = is_array($tokens[$i - 1] ?? null) ? $tokens[$i - 1][0] : null;
+
+        return $two === T_USE && $one === T_FUNCTION;
+    }
+
+    /** Whether the name at $i is being called, rather than being a method, a property or a declaration. */
+    private function isCall(array $tokens, int $i): bool
+    {
+        if (($tokens[$i + 1] ?? null) !== '(') {
+            return false;
+        }
+
+        $previous = $tokens[$i - 1] ?? null;
+        $previousType = is_array($previous) ? $previous[0] : null;
+
+        // `$x->file(` / `X::file(` are calls on something else; `function file(` declares one.
+        return ! in_array($previousType, [T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION, T_NEW], true);
     }
 
     public function test_the_allowlisted_directories_exist(): void
@@ -250,6 +293,24 @@ class OutboundEgressBoundaryTest extends TestCase
         $this->assertSame([], $this->streamWrapperCalls('<?php // an unlinked file (no related entity)'));
         $this->assertSame([], $this->streamWrapperCalls('<?php /** photo upload, a file (with delete) */'));
         $this->assertSame([], $this->streamWrapperCalls('<?php $sql = "SELECT file (x)";'));
+    }
+
+    public function test_the_stream_wrapper_guard_sees_qualified_and_renamed_spellings(): void
+    {
+        // PHP 8 lexes a leading backslash into the name, so `\file_get_contents(…)` is one
+        // T_NAME_FULLY_QUALIFIED token rather than a T_STRING — a scan looking only at T_STRING lets
+        // every fully-qualified call through, and writing the backslash is entirely ordinary style.
+        $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php $b = \file_get_contents($url);'));
+        $this->assertSame(['fopen'], $this->streamWrapperCalls('<?php $h = \fopen($url, "rb");'));
+        $this->assertSame(['file'], $this->streamWrapperCalls('<?php namespace\file($url);'));
+
+        // Renaming on import defeats any check made at the call site, so the import is what counts.
+        $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php use function file_get_contents as fetch;'));
+        $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php use function \file_get_contents;'));
+
+        // A qualified name resolves inside its namespace and does not fall back to the global
+        // function, so it is not a way to reach this one.
+        $this->assertSame([], $this->streamWrapperCalls('<?php Foo\file($url);'));
     }
 
     /** @return list<string> */

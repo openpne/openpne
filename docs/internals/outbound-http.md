@@ -93,8 +93,11 @@ resolver's own timeout, outside the budget.
   URL-aware path functions (`file_get_contents`, `file`, `fopen`, `readfile`, `get_headers`, `copy`)
   are banned outright everywhere else, with the existing local-path readers named in an exact
   allowlist. The check tokenises rather than greps: requiring a literal `'https://…'` argument would
-  miss `file_get_contents($url)`, and matching the bare name hits `$request->file(...)` and comment
-  prose alike.
+  miss `file_get_contents($url)`, matching the bare name hits `$request->file(...)` and comment prose
+  alike, and a leading backslash makes the name one `T_NAME_FULLY_QUALIFIED` token rather than a
+  `T_STRING`. Renaming on import is caught at the `use function` line, since no call-site name check
+  can survive an alias. A dynamic callable is not caught, and no check of this kind would — the test
+  is a guard rail, not a proof.
 - No URL is dialled without having passed `SafeHttpFetcher::validate()` — including redirect targets.
 - The address validated is the address connected to, verified after the fact rather than assumed.
 - `PublicIpGuard` is derived from IANA's special-purpose registries and re-judges any embedded IPv4
