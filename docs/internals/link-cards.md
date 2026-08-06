@@ -62,6 +62,10 @@ because the obvious alternative is wrong in a specific way:
 1. **ISO-2022-JP first, when declared.** It encodes Japanese entirely within the ASCII byte range
    using escape sequences, so it *passes* a UTF-8 validity check — returning early there leaves a
    title full of raw `ESC $ B`. It is the one legacy encoding UTF-8 validity cannot rule out.
+   The condition is that it was *declared* ISO-2022-JP and actually contains a designation
+   sequence — not that it is valid. A body cut mid-sequence is invalid yet still ISO-2022-JP, and
+   every byte remains ASCII, so a validity test would fall through and return the escapes raw. A
+   declaration with no escapes anywhere is a mislabel, and treated as the UTF-8 it validates as.
 2. **Then strict UTF-8.** Asking instead whether the *declared* charset fits does not work: almost
    any UTF-8 Japanese text is also a valid CP932 sequence, so a page mislabelled Shift_JIS by a CMS
    template answers yes and is converted into mojibake. UTF-8's structure is strict and Shift_JIS
@@ -101,7 +105,14 @@ the size must be known bounded from data that is cheap to read:
   decoded, enough to end a 128 MB worker by itself.
 - **No animation.** Frame count is bounded by neither the wire size nor the dimensions, and
   Intervention decodes animations by default, so a few-kilobyte GIF can hold hundreds of full-size
-  allocations. A card shows one still picture, so these are refused from their container markers.
+  allocations. A card shows one still picture, so these are refused outright.
+
+  [`ImageContainer`](../../app/LinkCard/ImageContainer.php) answers that by **walking the container's
+  own block lengths**, not by searching for a marker. A marker search is wrong in both directions: it
+  misses real animations — a two-frame GIF needs no NETSCAPE loop extension, and an animated WebP can
+  carry a padding chunk that pushes its `ANIM` header past any fixed window — and it invents them,
+  since a still image's compressed data or metadata may contain the same bytes by chance. The walk
+  touches only headers, and is bounded by both the buffer length and a block count.
 
 `LinkCardImageTest` asserts the decoder is called zero times for an oversized header, for an
 over-budget pixel count and for an animated image — and that it *is* called for an acceptable one, so
@@ -130,8 +141,10 @@ the hole the suite exists to catch.
 - Nothing in `LinkMetadata` is HTML, and `MetadataExtractor` performs no I/O.
 - Cleaning and column-width limits live in `LinkMetadata`'s constructor, not in its callers — there
   is more than one source of these fields, and a new one must not be able to arrive without them.
-- Open Graph image groups are read in document order: a structured property belongs to the preceding
-  root `og:image`, and the first object listed is the page's preferred one.
+- Open Graph image groups are read in document order: `og:image` and `og:image:url` each open an
+  object, a structured property belongs to the root preceding it, and the first object listed is the
+  page's preferred one.
+- Animation is determined by parsing the container, never by searching for a marker or by decoding.
 - Card images have no explicit visibility, so they are undeliverable until delivery is designed
   against the referencing body.
 - `link_cards.image_file_id` is a signed `INT` to match `files.id` — `foreignId()` emits

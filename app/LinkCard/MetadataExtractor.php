@@ -81,6 +81,7 @@ final class MetadataExtractor
     private function imageReference(DOMDocument $document, array $meta): ?string
     {
         $group = [];
+        $inGroup = false;
 
         foreach ($document->getElementsByTagName('meta') as $element) {
             $key = strtolower(trim($element->getAttribute('property')));
@@ -90,21 +91,29 @@ final class MetadataExtractor
                 continue;
             }
 
-            // A second root tag opens the next image object, so the first group is complete.
-            if ($key === 'og:image' && $group !== []) {
-                break;
+            // og:image:url is defined as identical to og:image, so it opens an image object just as
+            // og:image does. A second root means the first group is complete.
+            if ($key === 'og:image' || $key === 'og:image:url') {
+                if ($inGroup) {
+                    break;
+                }
+
+                $inGroup = true;
+                $group[$key] = $content;
+
+                continue;
             }
 
-            // og:image:url is defined as identical to og:image; secure_url is the https variant of
-            // the same picture, so preferring it stays inside this one group.
-            if (in_array($key, ['og:image', 'og:image:url', 'og:image:secure_url'], true)) {
+            // A structured property belongs to the root that precedes it; one appearing before any
+            // root belongs to nothing and is ignored rather than adopted.
+            if ($key === 'og:image:secure_url' && $inGroup) {
                 $group[$key] ??= $content;
             }
         }
 
         return $group['og:image:secure_url']
-            ?? $group['og:image:url']
             ?? $group['og:image']
+            ?? $group['og:image:url']
             ?? $meta['twitter:image']
             ?? null;
     }
@@ -140,13 +149,23 @@ final class MetadataExtractor
         return $titles->length > 0 ? $titles->item(0)?->textContent : null;
     }
 
-    /** The document's declared base for relative references, if it sets a usable one. */
+    /**
+     * The document's declared base for relative references, if it sets a usable one.
+     *
+     * The document base is the first `<base>` that carries an href — not the first `<base>` element,
+     * which may set only `target` and leave the href to a later one.
+     */
     private function baseHref(DOMDocument $document, string $url): ?string
     {
-        $bases = $document->getElementsByTagName('base');
-        $href = $bases->length > 0 ? trim((string) $bases->item(0)?->getAttribute('href')) : '';
+        foreach ($document->getElementsByTagName('base') as $element) {
+            $href = trim($element->getAttribute('href'));
 
-        return $href === '' ? null : LinkUrl::resolve($href, $url);
+            if ($href !== '') {
+                return LinkUrl::resolve($href, $url);
+            }
+        }
+
+        return null;
     }
 
     /**

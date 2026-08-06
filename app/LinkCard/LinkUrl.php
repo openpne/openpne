@@ -25,13 +25,18 @@ use GuzzleHttp\Psr7\UriResolver;
  * http and https are deliberately *not* unified: they are different origins, and the fetcher treats
  * them as such.
  *
- * Ports are restricted to 80 and 443, matching SafeHttpFetcher. Accepting more here would only mint
- * cards for URLs the fetcher then refuses, leaving permanently failed rows behind.
+ * Ports are restricted to the same scheme-independent set SafeHttpFetcher will dial, 80 and 443.
+ * Accepting more here would only mint cards for URLs the fetcher then refuses, leaving permanently
+ * failed rows behind. A legal non-default combination (https on 80) keeps its port, since that is
+ * part of the address.
  */
 final class LinkUrl
 {
     /** Longer than this is refused outright rather than hashed — see SafeHttpFetcher's own cap. */
     private const MAX_LENGTH = 2048;
+
+    /** Mirrors SafeHttpFetcher::ALLOWED_PORTS, which is scheme-independent. */
+    private const ALLOWED_PORTS = [80, 443];
 
     /** The normalised form of $url, or null when it is not a URL this app would ever fetch. */
     public static function normalize(string $url): ?string
@@ -65,15 +70,24 @@ final class LinkUrl
             return null;
         }
 
-        // Only the ports SafeHttpFetcher will dial; anything else would become a card that can never
-        // be fetched.
-        $port = $parts['port'] ?? ($scheme === 'https' ? 443 : 80);
+        // The same set SafeHttpFetcher will dial, scheme-independently: http on 443 and https on 80
+        // are unusual but legal, and accepting a port the fetcher then refuses would only mint cards
+        // that can never be filled in.
+        $port = $parts['port'] ?? null;
 
-        if ($port !== ($scheme === 'https' ? 443 : 80)) {
+        if ($port !== null && ! in_array($port, self::ALLOWED_PORTS, true)) {
             return null;
         }
 
-        $normalized = $scheme.'://'.$host.($parts['path'] ?? '');
+        $normalized = $scheme.'://'.$host;
+
+        // The default for the scheme is dropped as redundant; a legal non-default one is part of the
+        // address and stays.
+        if ($port !== null && $port !== ($scheme === 'https' ? 443 : 80)) {
+            $normalized .= ':'.$port;
+        }
+
+        $normalized .= $parts['path'] ?? '';
 
         // array_key_exists, not isset: `/a?` carries an empty query and is not the same request as
         // `/a`, so the two must not share a card.

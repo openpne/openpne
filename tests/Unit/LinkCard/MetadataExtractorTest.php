@@ -135,6 +135,34 @@ class MetadataExtractorTest extends TestCase
         $this->assertStringStartsWith('日本語', (string) $this->extract($truncated, 'shift_jis')->title);
     }
 
+    public function test_an_iso_2022_jp_page_cut_mid_sequence_still_converts(): void
+    {
+        // Worse than the other legacy encodings: a truncated ISO-2022-JP body fails its own validity
+        // check but every byte is still ASCII, so a UTF-8 test passes and the title comes back full
+        // of raw ESC sequences. The condition has to be "declared, and carrying escapes", not "valid".
+        $html = mb_convert_encoding(
+            '<html><head><title>日本語のタイトル</title></head></html>',
+            'ISO-2022-JP',
+            'UTF-8',
+        );
+        $truncated = substr($html, 0, 30);
+
+        $this->assertFalse(mb_check_encoding($truncated, 'ISO-2022-JP'), 'Precondition: the cut leaves invalid bytes.');
+        $this->assertTrue(mb_check_encoding($truncated, 'UTF-8'), 'Precondition: the bytes still pass a UTF-8 check.');
+
+        $title = (string) $this->extract($truncated, 'iso-2022-jp')->title;
+
+        $this->assertStringStartsWith('日本語', $title);
+        $this->assertStringNotContainsString("\x1B", $title, 'A raw escape sequence survived into the title.');
+    }
+
+    public function test_a_page_declared_iso_2022_jp_with_no_escapes_is_treated_as_utf8(): void
+    {
+        // A declaration with no designation sequence anywhere is a mislabel, and the bytes are
+        // almost certainly the UTF-8 they validate as.
+        $this->assertSame('実はUTF-8', $this->extract('<html><head><title>実はUTF-8</title></head></html>', 'iso-2022-jp')->title);
+    }
+
     public function test_it_reads_a_charset_declared_the_old_way(): void
     {
         // The spelling the pages this exists for actually carry.
@@ -288,6 +316,49 @@ class MetadataExtractorTest extends TestCase
             HTML);
 
         $this->assertSame('https://cdn.example.com/first-secure.jpg', $metadata->imageUrl);
+    }
+
+    public function test_og_image_url_opens_an_image_group_of_its_own(): void
+    {
+        // og:image:url is defined as identical to og:image, so it is a root tag, not a structured
+        // property of one. Treating it as the latter lets the second image's secure_url win over the
+        // first image the page ranked highest.
+        $metadata = $this->extract(<<<'HTML'
+            <html><head>
+            <meta property="og:image:url" content="https://cdn.example.com/first.jpg">
+            <meta property="og:image:url" content="https://cdn.example.com/second.jpg">
+            <meta property="og:image:secure_url" content="https://cdn.example.com/second-secure.jpg">
+            </head></html>
+            HTML);
+
+        $this->assertSame('https://cdn.example.com/first.jpg', $metadata->imageUrl);
+    }
+
+    public function test_a_structured_property_before_any_image_belongs_to_nothing(): void
+    {
+        $metadata = $this->extract(<<<'HTML'
+            <html><head>
+            <meta property="og:image:secure_url" content="https://cdn.example.com/orphan.jpg">
+            <meta property="og:image" content="https://cdn.example.com/actual.jpg">
+            </head></html>
+            HTML);
+
+        $this->assertSame('https://cdn.example.com/actual.jpg', $metadata->imageUrl);
+    }
+
+    public function test_the_document_base_is_the_first_base_carrying_an_href(): void
+    {
+        // A <base> may set only target, leaving the href to a later one; the document base is the
+        // first element that actually declares one.
+        $metadata = $this->extract(<<<'HTML'
+            <html><head>
+            <base target="_blank">
+            <base href="https://cdn.example.net/assets/">
+            <meta property="og:image" content="hero.png">
+            </head></html>
+            HTML);
+
+        $this->assertSame('https://cdn.example.net/assets/hero.png', $metadata->imageUrl);
     }
 
     public function test_relative_references_resolve_against_a_declared_base(): void

@@ -38,7 +38,8 @@ use Throwable;
  *  - **No animation.** Frame count is bounded by neither the wire size nor the dimensions, and
  *    Intervention decodes animations by default — a few-kilobyte GIF can hold hundreds of frames,
  *    each one a full allocation. A card shows one still picture, so there is nothing to lose by
- *    refusing them outright, and the check is a header read rather than a decode.
+ *    refusing them outright, and ImageContainer answers by walking the container's own block
+ *    lengths rather than by decoding.
  *
  * Metadata stripping happens exactly once, inside FileUploader — the bytes are handed over as an
  * UploadedFile so there is one strip in the pipeline rather than one here and another there.
@@ -84,7 +85,7 @@ final class LinkCardImage
 
         $mime = $this->mediaTypeOf($response->body);
 
-        if ($mime === null || $this->isAnimated($response->body, $mime)) {
+        if ($mime === null || ImageContainer::isAnimated($response->body, $mime)) {
             return null;
         }
 
@@ -153,26 +154,6 @@ final class LinkCardImage
         }
 
         return [(int) $info[0], (int) $info[1]];
-    }
-
-    /**
-     * Whether an image in this format holds more than one frame.
-     *
-     * Read from the container structure rather than by decoding, because decoding is the thing being
-     * protected against. Each check is the presence of the marker the format uses to declare
-     * animation, so a still image in the same format is unaffected.
-     */
-    private function isAnimated(string $bytes, string $mime): bool
-    {
-        return match ($mime) {
-            // Each frame opens with an Image Descriptor (0x2C); a still GIF has exactly one.
-            'image/gif' => substr_count($bytes, "\x00\x21\xF9") > 1 || substr_count($bytes, "\x2C") > 1 && str_contains($bytes, 'NETSCAPE2.0'),
-            // APNG declares its frame count in an acTL chunk, which a plain PNG does not carry.
-            'image/png' => str_contains(substr($bytes, 0, 4096), 'acTL'),
-            // An animated WebP is a RIFF container holding ANIM/ANMF chunks.
-            'image/webp' => str_contains(substr($bytes, 0, 4096), 'ANIM') || str_contains(substr($bytes, 0, 4096), 'ANMF'),
-            default => false,
-        };
     }
 
     /**

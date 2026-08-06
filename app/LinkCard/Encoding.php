@@ -64,7 +64,13 @@ final class Encoding
 
         // Escape-sequence encodings hide inside ASCII, so they have to be handled before any UTF-8
         // test can be trusted. See the class docblock.
-        if ($charset === 'ISO-2022-JP' && mb_check_encoding($html, 'ISO-2022-JP')) {
+        //
+        // Validity is not the condition — a body the read cap cut mid-sequence is invalid but still
+        // ISO-2022-JP, and falling through would return it with raw escapes in the title. The
+        // condition is that it was declared ISO-2022-JP *and* actually contains a designation
+        // sequence; a declaration with no escapes anywhere is a mislabel, and better treated as the
+        // UTF-8 it almost certainly is.
+        if ($charset === 'ISO-2022-JP' && self::hasIso2022Escape($html)) {
             return mb_convert_encoding($html, 'UTF-8', 'ISO-2022-JP');
         }
 
@@ -86,6 +92,22 @@ final class Encoding
         // declared charset substitutes just the broken tail; falling back to UTF-8-from-UTF-8 here
         // would mangle every multi-byte character before it too.
         return mb_convert_encoding($html, 'UTF-8', $charset ?? 'UTF-8');
+    }
+
+    /**
+     * Whether the body carries an ISO-2022-JP character-set designation.
+     *
+     * `ESC $ B` / `ESC $ @` (JIS X 0208) and `ESC ( J` (JIS X 0201 Roman) are the sequences that
+     * switch into a non-ASCII set — their presence is what makes the bytes something other than the
+     * plain ASCII they otherwise look like.
+     */
+    private static function hasIso2022Escape(string $html): bool
+    {
+        // Single-quoted after the escape byte: in a double-quoted string `$B` would interpolate as a
+        // variable, leaving a bare ESC as the needle — which matches any escape sequence at all.
+        return str_contains($html, "\x1B".'$B')
+            || str_contains($html, "\x1B".'$@')
+            || str_contains($html, "\x1B".'(J');
     }
 
     /** The mbstring name for a charset label, or null when mbstring does not know it. */

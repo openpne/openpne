@@ -131,6 +131,33 @@ class LinkCardImageTest extends TestCase
         $this->assertSame(0, File::count());
     }
 
+    public function test_an_animation_without_a_loop_extension_never_reaches_the_decoder(): void
+    {
+        // The shape a marker search misses: two frames, no NETSCAPE extension, and a colour-table
+        // byte that shifts the pattern a naive scan keys on. A decoder expands both frames.
+        $card = $this->card();
+        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
+        $this->queueBinary($this->animatedGif(loopExtension: false), 'image/gif');
+
+        $decoder = $this->spyDecoder();
+
+        $this->assertNull($this->importer($decoder)->import('https://cdn.example.com/anim.gif', $card->id));
+        $this->assertSame(0, $decoder->calls, 'A loop-extension-free animation reached the decoder.');
+    }
+
+    public function test_an_animated_webp_behind_padding_never_reaches_the_decoder(): void
+    {
+        // A RIFF file may legally carry a JUNK chunk before ANIM, pushing it past any fixed window.
+        $card = $this->card();
+        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
+        $this->queueBinary($this->paddedAnimatedWebp(), 'image/webp');
+
+        $decoder = $this->spyDecoder();
+
+        $this->assertNull($this->importer($decoder)->import('https://cdn.example.com/anim.webp', $card->id));
+        $this->assertSame(0, $decoder->calls, 'An animated WebP behind padding reached the decoder.');
+    }
+
     public function test_a_still_gif_is_still_accepted(): void
     {
         // The animation check must not cost the format entirely.
@@ -295,17 +322,30 @@ class LinkCardImageTest extends TestCase
         return (string) ob_get_clean();
     }
 
-    /**
-     * A minimal multi-frame GIF: the NETSCAPE looping extension plus two graphic-control blocks,
-     * which is what a real animation carries and what the header check looks for.
-     */
-    private function animatedGif(): string
+    /** A structurally valid two-frame GIF, optionally without the (purely decorative) loop extension. */
+    private function animatedGif(bool $loopExtension = true): string
     {
-        $frame = "\x00\x21\xF9\x04\x00\x00\x00\x00\x2C\x00\x00\x00\x00\x0A\x00\x0A\x00\x00\x02\x02\x44\x01\x00";
+        // Non-zero final colour-table byte, which shifts the byte pattern a naive scan keys on.
+        $gif = "GIF89a\x08\x00\x08\x00\x80\x00\x00".pack('C*', 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x01);
 
-        return "GIF89a\x0A\x00\x0A\x00\x80\x00\x00\xFF\xFF\xFF\x00\x00\x00"
-            ."\x21\xFF\x0BNETSCAPE2.0\x03\x01\x00\x00\x00"
-            .$frame.$frame."\x3B";
+        if ($loopExtension) {
+            $gif .= "\x21\xFF\x0BNETSCAPE2.0\x03\x01\x00\x00\x00";
+        }
+
+        $frame = "\x21\xF9\x04\x00\x00\x00\x00\x00\x2C\x00\x00\x00\x00\x08\x00\x08\x00\x00\x02\x02\x44\x01\x00";
+
+        return $gif.$frame.$frame."\x3B";
+    }
+
+    /** An animated WebP whose ANIM chunk sits past any fixed-size prefix scan. */
+    private function paddedAnimatedWebp(): string
+    {
+        $chunk = fn (string $fourcc, string $data): string => $fourcc.pack('V', strlen($data)).$data
+            .(strlen($data) % 2 === 1 ? "\x00" : '');
+
+        $chunks = $chunk('JUNK', str_repeat("\x00", 5000)).$chunk('ANIM', str_repeat("\x00", 6));
+
+        return 'RIFF'.pack('V', 4 + strlen($chunks)).'WEBP'.$chunks;
     }
 
     /**

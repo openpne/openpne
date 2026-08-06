@@ -39,6 +39,9 @@ class LinkUrlTest extends TestCase
             'empty path' => ['https://example.com', 'https://example.com'],
             // A server can tell `/a` from `/a?`, so the trailing marker is part of the identity.
             'empty query is kept' => ['https://example.com/a?', 'https://example.com/a?'],
+            // Unusual but legal, and SafeHttpFetcher dials it, so the port is part of the address.
+            'http on 443' => ['http://example.com:443/a', 'http://example.com:443/a'],
+            'https on 80' => ['https://example.com:80/a', 'https://example.com:80/a'],
         ];
     }
 
@@ -68,7 +71,7 @@ class LinkUrlTest extends TestCase
             'over long' => ['https://example.com/'.str_repeat('a', 4096)],
             // Ports SafeHttpFetcher will not dial, so a card here could never be fetched.
             'non-default port' => ['https://example.com:8443/a'],
-            'http on 443' => ['http://example.com:443/a'],
+            'plain wrong port' => ['http://example.com:8080/a'],
         ];
     }
 
