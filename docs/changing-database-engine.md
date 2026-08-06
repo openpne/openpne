@@ -26,8 +26,9 @@ off. `DB_JOURNAL_MODE=WAL` is the answer, and set it before traffic arrives: swi
 journal mode needs that same exclusive lock, so doing it while another connection holds a transaction
 fails with `database is locked`.
 
-WAL then stays in the database file itself, so it survives the setting being changed later — and an
-unrecognised value is ignored in silence rather than refused, so confirm it took:
+The WAL journal mode is persistent — it is recorded in the database file, so it holds even if the
+variable is later unset. A typo does not announce itself the same way: depending on its shape it
+either leaves the previous mode in place or fails every connection outright. Confirm it took.
 
 ```console
 $ php artisan tinker --execute="echo DB::selectOne('pragma journal_mode')->journal_mode;"
