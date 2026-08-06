@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Database\Connection;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use PDO;
@@ -155,10 +156,22 @@ class CopyDatabaseCommand extends Command
         return false;
     }
 
+    /**
+     * Every read this command makes is a decision about the copy — what to copy, whether the target
+     * is safe to write into, whether the result matches the source. A read/write split would answer
+     * them from a replica that lags the database actually being copied, so all of them are pinned to
+     * the write connection. (Laravel's schema listings already read from it.)
+     */
+    private function authoritative(Connection $connection, string $table): QueryBuilder
+    {
+        return $connection->table($table)->useWritePdo();
+    }
+
     /** @return list<string> */
     private function migrationNames(string $connection): array
     {
-        return DB::connection($connection)->table('migrations')->orderBy('migration')->pluck('migration')->all();
+        return $this->authoritative(DB::connection($connection), 'migrations')
+            ->orderBy('migration')->pluck('migration')->all();
     }
 
     /**
@@ -219,7 +232,7 @@ class CopyDatabaseCommand extends Command
     {
         $occupied = array_values(array_filter(
             array_diff($this->tableNames($to), ['migrations']),
-            fn (string $table) => DB::connection($to)->table($table)->exists(),
+            fn (string $table) => $this->authoritative(DB::connection($to), $table)->exists(),
         ));
 
         if ($occupied === []) {
@@ -362,9 +375,9 @@ class CopyDatabaseCommand extends Command
         $written = 0;
         $batch = [];
 
-        // useWritePdo pins the read to the PDO streamSource unbuffered, and to the authoritative copy
-        // of the data rather than a replica that may lag behind it.
-        foreach ($source->table($table)->useWritePdo()->cursor() as $record) {
+        // Pinned to the write connection like every other read here (authoritative), which is also the
+        // PDO streamSource unbuffered.
+        foreach ($this->authoritative($source, $table)->cursor() as $record) {
             $batch[] = (array) $record;
 
             if (count($batch) >= $plan['batch']) {
@@ -413,8 +426,8 @@ class CopyDatabaseCommand extends Command
         $mismatched = [];
 
         foreach ($tables as $table) {
-            $expected = DB::connection($from)->table($table)->count();
-            $actual = DB::connection($to)->table($table)->count();
+            $expected = $this->authoritative(DB::connection($from), $table)->count();
+            $actual = $this->authoritative(DB::connection($to), $table)->count();
 
             if ($expected !== $actual) {
                 $mismatched[] = "  {$table}: {$from} has {$expected}, {$to} has {$actual}";
