@@ -15,6 +15,7 @@ use App\Upgrade\Steps\DiaryImageUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
+use App\Upgrade\Steps\MailTemplateUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
@@ -33,7 +34,7 @@ class SourcePreflightTest extends TestCase
     use DatabaseMigrations;
 
     private const SOURCE_TABLES = ['diary', 'diary_image', 'community_member', 'community_member_position', 'member_relationship',
-        'member_config', 'community', 'community_config', 'community_category', 'member', 'sns_config'];
+        'member_config', 'community', 'community_config', 'community_category', 'member', 'sns_config', 'notification_mail'];
 
     protected function setUp(): void
     {
@@ -179,11 +180,11 @@ class SourcePreflightTest extends TestCase
 
         $this->assertTrue($ok, 'an unrecognised name is a warning, not an abort');
         $this->assertStringContainsString(
-            SourcePreflight::unknownConfigNameMessage('member_config', 'op_custom_plugin_flag', 2),
+            SourcePreflight::unknownSourceNameMessage('member_config', 'op_custom_plugin_flag', 2),
             $output,
         );
         $this->assertStringContainsString(
-            SourcePreflight::unknownConfigNameMessage('member_config', 'op_another_custom', 1),
+            SourcePreflight::unknownSourceNameMessage('member_config', 'op_another_custom', 1),
             $output,
         );
         // A migrated preference, a registry-derived notification key, and a deliberately-dropped
@@ -255,10 +256,38 @@ class SourcePreflightTest extends TestCase
 
         $this->assertTrue($ok);
         $this->assertStringContainsString(
-            SourcePreflight::unknownConfigNameMessage('community_config', 'op_custom_community_flag', 1),
+            SourcePreflight::unknownSourceNameMessage('community_config', 'op_custom_community_flag', 1),
             $output,
         );
         $this->assertStringNotContainsString('named `register_policy`', $output);
+    }
+
+    public function test_unrecognised_notification_mail_names_are_reported(): void
+    {
+        $this->createSource('notification_mail');
+        DB::table('notification_mail')->insert([
+            ['name' => 'pc_notifyNewMessage', 'renderer' => 'twig', 'is_enabled' => 1],   // migrated
+            ['name' => 'pc_dailyNews', 'renderer' => 'twig', 'is_enabled' => 1],          // deliberately dropped
+            ['name' => 'mobile_login', 'renderer' => 'twig', 'is_enabled' => 1],          // the mobile family
+            ['name' => 'mobilex_foo', 'renderer' => 'twig', 'is_enabled' => 1],           // NOT the mobile family
+            ['name' => 'op_thirdparty_mail', 'renderer' => 'twig', 'is_enabled' => 1],
+        ]);
+
+        [$ok, $output] = $this->runSteps([new MailTemplateUpgrade], new RunOptions(dryRun: true));
+
+        $this->assertTrue($ok);
+        $this->assertStringContainsString(
+            SourcePreflight::unknownSourceNameMessage('notification_mail', 'op_thirdparty_mail', 1),
+            $output,
+        );
+        // `mobile_` is a prefix, not a LIKE pattern: its `_` must not swallow the x.
+        $this->assertStringContainsString(
+            SourcePreflight::unknownSourceNameMessage('notification_mail', 'mobilex_foo', 1),
+            $output,
+        );
+        $this->assertStringNotContainsString('named `pc_notifyNewMessage`', $output);
+        $this->assertStringNotContainsString('named `pc_dailyNews`', $output);
+        $this->assertStringNotContainsString('named `mobile_login`', $output);
     }
 
     public function test_a_source_holding_only_recognised_names_reports_nothing(): void

@@ -25,7 +25,7 @@ class MailTemplateUpgrade extends UpgradeStep
     {
         return [
             'id' => Column::source('id'),
-            'key' => Column::expr($this->keyCase(), uses: ['name']),
+            'key' => Column::expr(self::keyCase(), uses: ['name']),
             'is_enabled' => Column::expr($this->isEnabledExpr(), uses: ['name', 'is_enabled']),
         ];
     }
@@ -53,8 +53,14 @@ class MailTemplateUpgrade extends UpgradeStep
         ];
     }
 
-    /** `notification_mail.name` → the MailTemplate case value (the stored `key`), built from the registry. */
-    private function keyCase(): string
+    /**
+     * `notification_mail.name` → the MailTemplate case value (the stored `key`), built from the registry.
+     *
+     * Public and static because MailTemplatePreflight resolves the same rows through it: comparing names
+     * in PHP instead would answer a different question than the SQL does — the source collation is
+     * case-insensitive and PAD SPACE, so `pc_signature  ` is this template here and not there.
+     */
+    public static function keyCase(): string
     {
         $whens = array_map(
             static fn (MailTemplate $t): string => sprintf("WHEN '%s' THEN '%s'", $t->op3SourceName(), $t->value),

@@ -26,14 +26,20 @@ final class MailUrlMapper
             // canonical (surface-agnostic) URL so the mailed link works from any client.
             '@community_home' => route('community.show', ['community' => self::id($params)]),
             '@member_profile' => route('member.profile.show', ['member' => self::id($params)]),
-            default => throw new UnsupportedMailTemplateSyntaxException("app_url_for has no OpenPNE 4 mapping for '{$path}'"),
+            default => throw new UnsupportedMailTemplateSyntaxException(
+                "app_url_for has no OpenPNE 4 mapping for '{$path}'",
+                MailTemplateFault::RouteMapFailure,
+            ),
         };
     }
 
     private static function tokenUrl(string $base, string $token): string
     {
         if ($token === '') {
-            throw new UnsupportedMailTemplateSyntaxException('app_url_for requires a non-empty `token`');
+            throw new UnsupportedMailTemplateSyntaxException(
+                'app_url_for requires a non-empty `token`',
+                MailTemplateFault::RouteMapFailure,
+            );
         }
 
         return url($base.$token);
@@ -44,7 +50,10 @@ final class MailUrlMapper
     {
         $id = (string) ($params['id'] ?? '');
         if (! ctype_digit($id)) {
-            throw new UnsupportedMailTemplateSyntaxException('app_url_for requires a numeric `id`');
+            throw new UnsupportedMailTemplateSyntaxException(
+                'app_url_for requires a numeric `id`',
+                MailTemplateFault::RouteMapFailure,
+            );
         }
 
         return (int) $id;

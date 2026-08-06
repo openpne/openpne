@@ -24,7 +24,7 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
     {
         return [
             'mail_template_id' => Column::source('id'),
-            'locale' => Column::expr($this->localeExpr(), uses: ['lang']),
+            'locale' => Column::expr(self::localeExpr(), uses: ['lang']),
             'subject' => Column::source('title'),
             'body' => Column::source('template'),
         ];
@@ -55,8 +55,12 @@ class MailTemplateTranslationUpgrade extends UpgradeStep
      * OpenPNE 3 `lang` (ja_JP, en_US, …) folded to the OpenPNE 4 locale slug, matching MemberUpgrade. An
      * unrecognised lang is kept verbatim, not mis-folded into ja/en: it satisfies the NOT NULL column and
      * stays inert (MailTemplateService only ever looks up ja/en), rather than silently mislabelling a row.
+     *
+     * Public and static because MailTemplatePreflight has to fold by the SAME expression to predict what
+     * this step will write: LIKE runs under the source collation (usually case-insensitive), so folding
+     * again in PHP would disagree with the INSERT on inputs like `JA_JP`.
      */
-    private function localeExpr(): string
+    public static function localeExpr(): string
     {
         return "CASE WHEN `lang` LIKE 'ja%' THEN 'ja' WHEN `lang` LIKE 'en%' THEN 'en' ELSE `lang` END";
     }

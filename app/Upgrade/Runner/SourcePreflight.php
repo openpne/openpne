@@ -36,6 +36,18 @@ final class SourcePreflight
      */
     private const CONFIG_NAME_TABLES = ['member_config', 'community_config'];
 
+    /**
+     * The source tables scanned for names the upgrade does not recognise, each with the one name prefix
+     * it recognises without enumerating (or null). notification_mail is not a KV table, but its step
+     * carries only the names in a `name IN (…)` filter — so a name outside the recognised set is just as
+     * invisible per-step as an unrecognised config key, and gets the same warning.
+     */
+    private const NAME_SCAN_TABLES = [
+        'member_config' => null,
+        'community_config' => null,
+        'notification_mail' => StepRegistry::NOTIFICATION_MAIL_MOBILE_PREFIX,
+    ];
+
     /** @param  list<UpgradeStep>  $steps */
     public function __construct(
         private readonly array $steps,
@@ -139,17 +151,18 @@ final class SourcePreflight
         return "source table `{$table}` absent — the plugin is not installed; created empty so its step is a no-op (not migrated).";
     }
 
-    public static function unknownConfigNameMessage(string $table, string $name, int $rows): string
+    public static function unknownSourceNameMessage(string $table, string $name, int $rows): string
     {
         return "source `{$table}` holds {$rows} row(s) named `{$name}`, which the upgrade does not recognise — a third-party plugin or a source customisation. Not migrated; `openpne:upgrade-matrix` lists the names that are.";
     }
 
-    /** @return list<string> the names the upgrade recognises in one CONFIG_NAME_TABLES table */
+    /** @return list<string> the names the upgrade recognises in one NAME_SCAN_TABLES table */
     private static function knownNames(string $table): array
     {
         return match ($table) {
             'member_config' => StepRegistry::knownMemberConfigNames(),
             'community_config' => StepRegistry::knownCommunityConfigNames(),
+            'notification_mail' => StepRegistry::knownNotificationMailNames(),
         };
     }
 
@@ -208,9 +221,9 @@ final class SourcePreflight
     }
 
     /**
-     * Row counts per unrecognised `name`, for the KV config tables this run reads. Enumerating the
-     * recognised names is only possible for these two: the KV shape means a name outside the set is
-     * invisible to the per-step column audit, which is what this replaces at run time.
+     * Row counts per unrecognised `name`, for the scanned tables this run reads. A name outside the
+     * recognised set is invisible to the per-step column audit — the KV tables have no per-name column
+     * and notification_mail's step filters by name — which is what this replaces at run time.
      *
      * Deliberately not part of inspect(): the scan itself reads `name`, so a source missing that
      * column has to reach inspect()'s structural verdict — call this only once that comes back
@@ -218,22 +231,33 @@ final class SourcePreflight
      *
      * @return array<string, array<string, int>> table => name => rows, busiest name first
      */
-    public function unknownConfigNames(string $prefix, ?string $database): array
+    public function unknownSourceNames(string $prefix, ?string $database): array
     {
         $readTables = $this->readTables();
 
         $unknown = [];
-        foreach (self::CONFIG_NAME_TABLES as $table) {
+        foreach (self::NAME_SCAN_TABLES as $table => $knownPrefix) {
             if (! in_array($table, $readTables, true) || ! $this->tableExists($table, $prefix, $database)) {
                 continue; // not read by this run, or absent — the table checks in inspect() own that case
             }
 
             $known = self::knownNames($table);
+            $bindings = $known;
+
+            // LEFT(), not LIKE: the prefix ends in `_`, which LIKE would read as a single-character
+            // wildcard and let `mobilex_foo` pass as recognised.
+            $prefixCondition = '';
+            if ($knownPrefix !== null) {
+                $prefixCondition = ' and left(`name`, ?) <> ?';
+                $bindings[] = strlen($knownPrefix);
+                $bindings[] = $knownPrefix;
+            }
+
             $rows = DB::select(
                 'select `name`, count(*) as `rows` from '.InsertSelectCompiler::qualify($database, $prefix, $table)
-                .' where `name` not in ('.implode(', ', array_fill(0, count($known), '?')).')'
+                .' where `name` not in ('.implode(', ', array_fill(0, count($known), '?')).')'.$prefixCondition
                 .' group by `name` order by `rows` desc, `name` asc',
-                $known,
+                $bindings,
             );
 
             if ($rows !== []) {
