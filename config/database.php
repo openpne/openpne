@@ -45,7 +45,23 @@ return [
             // Declared but blank reads as unset: the empty pragma it would otherwise build fails every
             // connection to the database.
             'journal_mode' => env('DB_JOURNAL_MODE') ?: null,
-            'synchronous' => null,
+            // Unset leaves SQLite's own FULL, which fsyncs every commit. NORMAL under WAL trades that
+            // for losing the most recent commits to a power cut, and is the usual pairing; see
+            // docs/changing-database-engine.md. Unlike a journal mode this is per connection, not
+            // recorded in the database, so it has to be set wherever the site runs.
+            //
+            // Only the four levels pass, blank and anything else reading as unset: SQLite resolves an
+            // unrecognised word to NORMAL and an out-of-range number to OFF, so a typo passed straight
+            // through would quietly make the database *less* durable than the default it replaced.
+            // Non-strings are no levels either — env() reads an unquoted `true` as a boolean, which
+            // would otherwise cast to '1' and land on NORMAL.
+            'synchronous' => match (is_string($level = env('DB_SYNCHRONOUS')) ? strtoupper($level) : '') {
+                'OFF', '0' => 'OFF',
+                'NORMAL', '1' => 'NORMAL',
+                'FULL', '2' => 'FULL',
+                'EXTRA', '3' => 'EXTRA',
+                default => null,
+            },
             'transaction_mode' => 'DEFERRED',
         ],
 
