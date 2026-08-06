@@ -59,10 +59,35 @@ final class PublicIpGuard
 
     /**
      * @param  list<string>  $extraDenied  CIDRs to reject on top of the built-in list.
+     *
+     * @throws OutboundException when a range is malformed. A typo in a security setting must not
+     *                           read as "no extra ranges configured" — that is a hole that looks
+     *                           exactly like a working configuration.
      */
     public function __construct(array $extraDenied = [])
     {
-        $this->extraDenied = array_values(array_filter(array_map('trim', $extraDenied)));
+        $ranges = array_values(array_filter(array_map('trim', $extraDenied), fn (string $range): bool => $range !== ''));
+
+        foreach ($ranges as $range) {
+            if (! $this->isWellFormedCidr($range)) {
+                throw OutboundException::blocked("[{$range}] in the outbound denied_cidrs list is not a valid CIDR range.");
+            }
+        }
+
+        $this->extraDenied = $ranges;
+    }
+
+    private function isWellFormedCidr(string $cidr): bool
+    {
+        $parts = explode('/', $cidr);
+
+        if (count($parts) !== 2 || ! ctype_digit($parts[1])) {
+            return false;
+        }
+
+        $packed = @inet_pton($parts[0]);
+
+        return $packed !== false && (int) $parts[1] <= strlen($packed) * 8;
     }
 
     /** Whether $ip (a textual IPv4 or IPv6 address) is a globally-routable unicast destination. */

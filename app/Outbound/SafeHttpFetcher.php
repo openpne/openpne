@@ -6,7 +6,8 @@ namespace App\Outbound;
 
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Psr7\Exception\MalformedUriException;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
 use GuzzleHttp\Psr7\Utils;
@@ -77,18 +78,41 @@ final class SafeHttpFetcher
 
         for ($hop = 0; $hop <= $this->maxRedirects; $hop++) {
             $target = $this->validate($current);
-            $response = $this->send($target, $maxBytes, $deadline);
+            [$response, $capped] = $this->send($target, $maxBytes, $deadline);
 
             $location = $this->redirectTarget($response, $target);
 
             if ($location === null) {
-                return $this->toFetchedResponse($target, $response, $maxBytes);
+                return new FetchedResponse(
+                    url: $target->url,
+                    status: $response->getStatusCode(),
+                    contentType: $response->getHeaderLine('Content-Type'),
+                    body: (string) $response->getBody(),
+                    truncated: $capped,
+                );
             }
 
             $current = $location;
         }
 
-        throw OutboundException::blocked("More than {$this->maxRedirects} redirects from [{$url}].");
+        throw OutboundException::blocked(sprintf('More than %d redirects from [%s].', $this->maxRedirects, self::describe($url)));
+    }
+
+    /**
+     * A URL reduced to what is safe to put in an exception message or a log line.
+     *
+     * The query string is where a member-pasted URL carries its secrets — a signed download link, a
+     * one-time token — and an exception from a queued job ends up in the log verbatim.
+     */
+    private static function describe(string $url): string
+    {
+        $parts = parse_url($url);
+
+        if ($parts === false || ! isset($parts['host'])) {
+            return '(unparseable URL)';
+        }
+
+        return sprintf('%s://%s%s', $parts['scheme'] ?? 'http', $parts['host'], $parts['path'] ?? '');
     }
 
     /**
@@ -105,7 +129,7 @@ final class SafeHttpFetcher
         $parts = parse_url($url);
 
         if ($parts === false || ! isset($parts['scheme'])) {
-            throw OutboundException::blocked("Not an absolute URL: [{$url}].");
+            throw OutboundException::blocked('Not an absolute URL: ['.self::describe($url).'].');
         }
 
         // Checked before the host, so `file:///etc/passwd` — which parses with no host at all — is
@@ -117,7 +141,7 @@ final class SafeHttpFetcher
         }
 
         if (! isset($parts['host'])) {
-            throw OutboundException::blocked("Not an absolute URL: [{$url}].");
+            throw OutboundException::blocked('Not an absolute URL: ['.self::describe($url).'].');
         }
 
         // A credential in the URL is never something we should replay outbound, and `user@host` is a
@@ -215,9 +239,11 @@ final class SafeHttpFetcher
     }
 
     /**
+     * @return array{ResponseInterface, bool} the response and whether the body hit the read cap
+     *
      * @throws OutboundException
      */
-    private function send(ValidatedUrl $target, int $maxBytes, float $deadline): ResponseInterface
+    private function send(ValidatedUrl $target, int $maxBytes, float $deadline): array
     {
         $remaining = $deadline - microtime(true);
 
@@ -256,21 +282,26 @@ final class SafeHttpFetcher
                     CURLOPT_UNRESTRICTED_AUTH => false,
                 ],
             ]);
-        } catch (GuzzleException $e) {
+        } catch (RequestException $e) {
             // A capped body aborts the transfer (CappedStream), which surfaces here as a write error.
-            // The bytes already collected are the ones worth having, so that is not a failure.
-            if ($sink->wasCapped()) {
+            // The bytes already collected are the ones worth having, so that is not a failure — and
+            // Guzzle attaches the response it had already built, so the real status and Content-Type
+            // survive rather than being replaced by a synthetic 200 the caller would misread.
+            if ($sink->wasCapped() && $e->getResponse() !== null) {
                 $this->assertConnectedAsPinned($target, $connected);
+                $sink->rewind();
 
-                return $this->cappedResponse($sink);
+                return [$e->getResponse()->withBody($sink), true];
             }
 
-            throw OutboundException::failed("Request to [{$target->url}] failed: {$e->getMessage()}");
+            throw OutboundException::failed(sprintf('Request to [%s] failed: %s', self::describe($target->url), $e->getMessage()));
+        } catch (GuzzleException $e) {
+            throw OutboundException::failed(sprintf('Request to [%s] failed: %s', self::describe($target->url), $e->getMessage()));
         }
 
         $this->assertConnectedAsPinned($target, $connected);
 
-        return $response;
+        return [$response, $sink->wasCapped()];
     }
 
     /**
@@ -281,11 +312,19 @@ final class SafeHttpFetcher
      * altogether, leaves the request working perfectly while going wherever DNS says. Reading back
      * the peer address turns that from an invisible hole into a failed fetch.
      *
+     * An unknown peer address is refused rather than waved through. "The transport did not tell us
+     * where it connected" is the same evidential position as a bad address — a handler that reports
+     * nothing is precisely one that may not have honoured the pin either.
+     *
      * @throws OutboundException
      */
     private function assertConnectedAsPinned(ValidatedUrl $target, ?string $connected): void
     {
-        if ($connected !== null && ! $target->permits($connected)) {
+        if ($connected === null) {
+            throw OutboundException::blocked("The transport did not report which address [{$target->host}] was reached at, so the connection cannot be confirmed as pinned.");
+        }
+
+        if (! $target->permits($connected)) {
             throw OutboundException::blocked("Connected to [{$connected}], which is not an address [{$target->host}] was validated against.");
         }
     }
@@ -309,34 +348,12 @@ final class SafeHttpFetcher
             return null;
         }
 
-        return (string) UriResolver::resolve(new Uri($from->url), new Uri($location));
-    }
-
-    private function toFetchedResponse(ValidatedUrl $target, ResponseInterface $response, int $maxBytes): FetchedResponse
-    {
-        $body = (string) $response->getBody();
-
-        return new FetchedResponse(
-            url: $target->url,
-            status: $response->getStatusCode(),
-            contentType: $response->getHeaderLine('Content-Type'),
-            body: $body,
-            truncated: strlen($body) >= $maxBytes,
-        );
-    }
-
-    /**
-     * Rebuild a response from a transfer the sink cut short.
-     *
-     * Guzzle raises before it can hand back a response object, so the collected prefix is recovered
-     * from the sink. The status and headers are lost with it; the caller sees a 200 with no
-     * Content-Type, which the HTML path handles (it sniffs the charset from the markup) and the
-     * image path rejects (a truncated image is not decodable anyway).
-     */
-    private function cappedResponse(CappedStream $sink): ResponseInterface
-    {
-        $sink->rewind();
-
-        return new Response(200, [], $sink->getContents());
+        try {
+            return (string) UriResolver::resolve(new Uri($from->url), new Uri($location));
+        } catch (MalformedUriException) {
+            // A Location this app cannot parse is not followed. Reported as blocked rather than
+            // escaping as a Guzzle type, so OutboundException stays this class's whole contract.
+            throw OutboundException::blocked('Redirect from ['.self::describe($from->url).'] carries a malformed Location.');
+        }
     }
 }

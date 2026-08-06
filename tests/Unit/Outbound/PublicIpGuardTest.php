@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Outbound;
 
+use App\Outbound\OutboundException;
 use App\Outbound\PublicIpGuard;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -124,12 +125,38 @@ class PublicIpGuardTest extends TestCase
         $this->assertFalse($guard->isGlobal('93.184.216.34'));
     }
 
-    public function test_a_malformed_operator_range_is_inert_rather_than_permissive(): void
+    #[DataProvider('malformedRanges')]
+    public function test_a_malformed_operator_range_is_refused_loudly(string $range): void
     {
-        $guard = new PublicIpGuard(['not-a-cidr', '10.0.0.0/nope', '']);
+        // Silently dropping it would read as "no extra ranges configured", which is indistinguishable
+        // from a working configuration — a typo in a security setting must not be a quiet hole.
+        $this->expectException(OutboundException::class);
+        $this->expectExceptionMessage('is not a valid CIDR range');
+
+        new PublicIpGuard([$range]);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function malformedRanges(): array
+    {
+        return [
+            'no prefix length' => ['10.0.0.0'],
+            'not an address' => ['not-a-cidr'],
+            'non-numeric prefix' => ['10.0.0.0/nope'],
+            'prefix wider than the family' => ['10.0.0.0/33'],
+            'IPv6 prefix wider than the family' => ['fc00::/129'],
+            'two slashes' => ['10.0.0.0/8/8'],
+        ];
+    }
+
+    public function test_blank_entries_are_ignored_so_an_empty_setting_is_not_an_error(): void
+    {
+        // The env value is comma-split, so an unset or trailing-comma setting yields empty strings.
+        $guard = new PublicIpGuard(['', '  ']);
 
         $this->assertTrue($guard->isGlobal('93.184.216.34'));
-        $this->assertFalse($guard->isGlobal('10.0.0.1'));
     }
 
     public function test_an_ipv4_address_is_never_inside_an_ipv6_range(): void

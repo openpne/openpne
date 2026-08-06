@@ -31,9 +31,10 @@ call is unavailable.
    against the URL that issued it and goes through steps 1–3 from the top, so hop two is guarded
    exactly as hop one.
 5. **Verify where it landed.** The peer address is read back from the transfer and must be one of
-   the validated ones. The pin is a libcurl feature reached through two layers of configuration and
-   its failure mode is silence — the request just succeeds, aimed wherever DNS pointed. This turns
-   that into a failed fetch.
+   the validated ones — an address that does not match, *or no address at all*, fails the fetch. The
+   pin is a libcurl feature reached through two layers of configuration and its failure mode is
+   silence: the request just succeeds, aimed wherever DNS pointed. A transport that reports no peer
+   is in the same evidential position as a wrong one, so it is refused rather than waved through.
 
 Requests carry no cookies, no credentials (`CURLOPT_NETRC` ignored) and no `Referer`, and TLS
 verification is not configurable off.
@@ -72,18 +73,32 @@ Read caps are on **decoded** bytes ([`CappedStream`](../../app/Outbound/CappedSt
 inflates a gzip response before the write callback sees it, so a `Content-Length` check would let a
 small compressed body expand without bound. Past the cap the sink returns a short write, which is
 libcurl's signal to abort the transfer rather than download the rest. The bytes already collected
-are kept — for HTML they are the useful ones, since `<head>` comes first.
+are kept — for HTML they are the useful ones, since `<head>` comes first — along with the real
+status and `Content-Type`, which Guzzle attaches to the write-error exception. `FetchedResponse`
+carries `truncated` from the sink rather than from the body length, because a complete response that
+happens to be exactly cap-sized is not a truncated one.
 
 Three deadlines nest, all in `config/openpne.php` under `outbound`: one request, one fetch
 (a request plus its redirects), and a whole job. Without the outer two a chain of individually-legal
-slow hops adds up to an unbounded job.
+slow hops adds up to an unbounded job. They are enforced by handing the remaining budget to the
+per-request timeout, so a configured `0` — which means "no limit" to both Guzzle and libcurl — would
+remove the bound rather than tighten it; the provider floors each at one second for that reason.
+
+The bound is not total: name resolution happens before the request and blocks on the system
+resolver's own timeout, outside the budget.
 
 ## Key invariants
 
-- `App\Outbound` is the only directory in `app/` that opens a connection, enforced by test.
+- `App\Outbound` is the only directory in `app/` that opens a connection, enforced by test. The
+  stream-wrapper functions are banned outright everywhere else, with the handful of existing
+  local-path readers named in an exact allowlist — matching only a literal `'https://…'` argument
+  would miss `file_get_contents($url)`, which is what the offending code would actually say.
 - No URL is dialled without having passed `SafeHttpFetcher::validate()` — including redirect targets.
 - The address validated is the address connected to, verified after the fact rather than assumed.
 - `PublicIpGuard` is derived from IANA's special-purpose registries and re-judges any embedded IPv4
   (IPv4-mapped, 6to4, NAT64) on the address the packet actually reaches. `denied_cidrs` can only
-  subtract from what is reachable; nothing in config can re-permit a rejected address.
+  subtract from what is reachable; nothing in config can re-permit a rejected address, and a
+  malformed range is an error rather than a skipped entry.
 - Byte caps count decoded bytes, not `Content-Length`.
+- Failures name the URL without its query. A pasted URL carries its secrets there, and an exception
+  from a queued job reaches the log verbatim.

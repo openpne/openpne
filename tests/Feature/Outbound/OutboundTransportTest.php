@@ -82,7 +82,7 @@ class OutboundTransportTest extends TestCase
         $inner = (new ReflectionProperty(HandlerStack::class, 'handler'))->getValue($client->getConfig('handler'));
 
         $this->assertNotInstanceOf(CurlMultiHandler::class, $inner);
-        $this->assertFalse(is_callable($inner) && $inner instanceof StreamHandler);
+        $this->assertNotInstanceOf(StreamHandler::class, $inner);
     }
 
     private function clientOf(SafeHttpFetcher $fetcher): Client

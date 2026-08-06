@@ -9,8 +9,12 @@ use App\Outbound\OutboundException;
 use App\Outbound\PublicIpGuard;
 use App\Outbound\SafeHttpFetcher;
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\TransferStats;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +22,9 @@ use Psr\Http\Message\RequestInterface;
 
 class SafeHttpFetcherTest extends TestCase
 {
+    /** Marker for respondsWith(): model a transport that does not say which address it reached. */
+    private const NO_PEER_REPORTED = '(none)';
+
     /** @var list<array{request: RequestInterface, options: array<mixed>}> */
     private array $sent = [];
 
@@ -278,12 +285,71 @@ class SafeHttpFetcherTest extends TestCase
         $this->fetcher()->get('https://example.com/page', 1024);
     }
 
+    public function test_it_refuses_a_response_when_the_transport_reports_no_peer_address(): void
+    {
+        // "The transport did not say where it connected" is the same evidential position as a bad
+        // address: a handler that reports nothing is precisely one that may not have honoured the
+        // pin. Accepting it would make the verification vanish exactly where it is needed.
+        $this->resolves('example.com', ['93.184.216.34']);
+        $this->respondsWith(new Response(200, [], 'ok'), connectedTo: self::NO_PEER_REPORTED);
+
+        $this->expectException(OutboundException::class);
+        $this->expectExceptionMessage('did not report which address');
+
+        $this->fetcher()->get('https://example.com/page', 1024);
+    }
+
     public function test_it_accepts_a_response_from_a_validated_address_written_differently(): void
     {
         $this->resolves('example.com', ['2606:2800:0220:0001:0248:1893:25c8:1946']);
         $this->respondsWith(new Response(200, [], 'ok'), connectedTo: '2606:2800:220:1:248:1893:25c8:1946');
 
         $this->assertSame('ok', $this->fetcher()->get('https://example.com/page', 1024)->body);
+    }
+
+    public function test_a_capped_body_keeps_the_real_status_and_content_type(): void
+    {
+        // The transfer aborts before Guzzle returns a response, but the response it had already
+        // built rides along on the exception. Synthesising a 200 instead would tell the caller a
+        // truncated 404 error page was the resource they asked for.
+        $this->resolves('example.com', ['93.184.216.34']);
+        $this->queueWriteAbort(new Response(404, ['Content-Type' => 'image/png'], 'PNGDATA-and-more'));
+
+        $response = $this->fetcher()->get('https://example.com/missing.png', 6);
+
+        $this->assertSame(404, $response->status);
+        $this->assertSame('image/png', $response->mediaType());
+        $this->assertSame('PNGDAT', $response->body);
+        $this->assertTrue($response->truncated);
+    }
+
+    public function test_a_body_exactly_at_the_cap_is_not_reported_as_truncated(): void
+    {
+        // Length alone cannot tell a complete response that happens to be cap-sized from one that
+        // was cut short, so the flag comes from the sink rather than from strlen().
+        $this->resolves('example.com', ['93.184.216.34']);
+        $this->respondsWith(new Response(200, ['Content-Type' => 'text/plain'], 'exact'));
+
+        $response = $this->fetcher()->get('https://example.com/page', 5);
+
+        $this->assertSame('exact', $response->body);
+        $this->assertFalse($response->truncated);
+    }
+
+    public function test_a_failed_request_reports_the_url_without_its_query(): void
+    {
+        // A pasted URL carries its secrets in the query — a signed link, a one-time token — and an
+        // exception from a queued job reaches the log verbatim.
+        $this->resolves('example.com', ['93.184.216.34']);
+        $this->queue[] = [new ConnectException('boom', new Request('GET', 'https://example.com')), null];
+
+        try {
+            $this->fetcher()->get('https://example.com/doc?token=s3cr3t-value', 1024);
+            $this->fail('Expected an OutboundException.');
+        } catch (OutboundException $e) {
+            $this->assertStringNotContainsString('s3cr3t-value', $e->getMessage());
+            $this->assertStringContainsString('https://example.com/doc', $e->getMessage());
+        }
     }
 
     public function test_it_gives_up_when_the_caller_deadline_has_passed(): void
@@ -303,9 +369,26 @@ class SafeHttpFetcherTest extends TestCase
         $this->dns[$host] = $addresses;
     }
 
+    /**
+     * @param  string|null  $connectedTo  The peer address the transport will report. Null keeps the
+     *                                    default, which is the address the pin named — i.e. the pin
+     *                                    worked. Pass NO_PEER_REPORTED to model a transport that
+     *                                    says nothing.
+     */
     private function respondsWith(Response $response, ?string $connectedTo = null): void
     {
         $this->queue[] = [$response, $connectedTo];
+    }
+
+    /**
+     * Queue a response whose body overruns the sink, as libcurl aborting on a short write does.
+     *
+     * Guzzle's curl handler raises a RequestException with the response it had already built
+     * attached (CurlFactory::createRejection), which is what lets the real status survive.
+     */
+    private function queueWriteAbort(Response $response): void
+    {
+        $this->queue[] = [$response, null, true];
     }
 
     private function fetcher(): SafeHttpFetcher
@@ -313,7 +396,14 @@ class SafeHttpFetcherTest extends TestCase
         $handler = function (RequestInterface $request, array $options) {
             $this->sent[] = ['request' => $request, 'options' => $options];
 
-            [$response, $connectedTo] = array_shift($this->queue) ?? [new Response(200, [], ''), null];
+            $queued = array_shift($this->queue) ?? [new Response(200, [], ''), null];
+
+            if ($queued[0] instanceof GuzzleException) {
+                return Create::rejectionFor($queued[0]);
+            }
+
+            [$response, $connectedTo] = $queued;
+            $abortOnCap = $queued[2] ?? false;
 
             if (isset($options['sink'])) {
                 $options['sink']->write((string) $response->getBody());
@@ -321,12 +411,23 @@ class SafeHttpFetcherTest extends TestCase
             }
 
             if (isset($options['on_stats'])) {
-                $options['on_stats'](new TransferStats(
+                // Stand in for what libcurl reports. The default models the pin working: the peer is
+                // the address CURLOPT_CONNECT_TO named. Defaulting to "no address reported" instead
+                // would quietly make every success case exercise the unverified path.
+                $stats = match ($connectedTo) {
+                    null => ['primary_ip' => $this->pinnedAddress($options)],
+                    self::NO_PEER_REPORTED => [],
+                    default => ['primary_ip' => $connectedTo],
+                };
+
+                $options['on_stats'](new TransferStats($request, $response, 0.0, null, $stats));
+            }
+
+            if ($abortOnCap && $options['sink']->wasCapped()) {
+                return Create::rejectionFor(new RequestException(
+                    'cURL error 23: Failed writing body',
                     $request,
                     $response,
-                    0.0,
-                    null,
-                    $connectedTo === null ? [] : ['primary_ip' => $connectedTo],
                 ));
             }
 
@@ -351,5 +452,18 @@ class SafeHttpFetcherTest extends TestCase
             fetchTimeout: 10,
             maxRedirects: 3,
         );
+    }
+
+    /** The address CURLOPT_CONNECT_TO named, read back out of the option the fetcher set. */
+    private function pinnedAddress(array $options): string
+    {
+        // HOST:PORT:ADDRESS:PORT, where either host may be a bracketed IPv6 literal full of colons.
+        $entry = $options['curl'][CURLOPT_CONNECT_TO][0] ?? '';
+
+        if (preg_match('/^(?:\[[^\]]+\]|[^:]+):\d+:(\[[^\]]+\]|[^:]+):\d+$/', $entry, $matches) !== 1) {
+            $this->fail("CURLOPT_CONNECT_TO entry [{$entry}] is not in HOST:PORT:ADDRESS:PORT form.");
+        }
+
+        return trim($matches[1], '[]');
     }
 }

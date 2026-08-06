@@ -30,12 +30,27 @@ class OutboundServiceProvider extends ServiceProvider
                 resolver: $this->app->make(HostResolver::class),
                 guard: $this->app->make(PublicIpGuard::class),
                 userAgent: $this->userAgent(),
-                connectTimeout: (int) config('openpne.outbound.connect_timeout'),
-                requestTimeout: (int) config('openpne.outbound.request_timeout'),
-                fetchTimeout: (int) config('openpne.outbound.fetch_timeout'),
-                maxRedirects: (int) config('openpne.outbound.max_redirects'),
+                connectTimeout: $this->positive('connect_timeout', 3),
+                requestTimeout: $this->positive('request_timeout', 8),
+                fetchTimeout: $this->positive('fetch_timeout', 10),
+                maxRedirects: max(0, (int) config('openpne.outbound.max_redirects')),
             );
         });
+    }
+
+    /**
+     * A timeout from config, floored at one second.
+     *
+     * Zero means "no limit" to both Guzzle and libcurl, so an operator setting one of these to 0 —
+     * or leaving an empty env value that casts to 0 — would remove the bound entirely, and the outer
+     * deadline could not restore it because it is enforced by handing the remainder to these same
+     * options.
+     */
+    private function positive(string $key, int $fallback): int
+    {
+        $value = (int) config("openpne.outbound.{$key}");
+
+        return $value > 0 ? $value : $fallback;
     }
 
     /**
