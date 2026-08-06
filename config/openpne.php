@@ -220,4 +220,44 @@ return [
         'force_https' => (bool) env('OPENPNE_FORCE_HTTPS', env('APP_ENV') === 'production'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Outbound HTTP
+    |--------------------------------------------------------------------------
+    |
+    | Tuning for App\Outbound\SafeHttpFetcher, the single seam through which this
+    | app fetches a member-supplied URL. These are limits, not a feature switch:
+    | whether anything fetches at all is an admin setting, and nothing here can
+    | relax the SSRF guard. See docs/internals/outbound-http.md.
+    |
+    | The three deadlines nest. A single request may take 'request_timeout'; one
+    | fetch (a request plus its redirects) may take 'fetch_timeout'; a whole job
+    | (page + oEmbed + image) budgets 'job_timeout'. Without the outer two, a
+    | chain of individually-legal slow hops adds up to an unbounded job.
+    |
+    | 'denied_cidrs' only ever adds to the built-in non-global list — an operator
+    | can exclude, say, an internal range that resolves publicly, but cannot
+    | re-permit anything the guard rejects.
+    |
+    | There is deliberately no proxy setting. An HTTP/SOCKS proxy resolves the
+    | destination host itself, which bypasses the address the guard validated and
+    | pinned; supporting one means making the proxy the enforcement point, which
+    | is a different contract than a config value. The fetcher also disables the
+    | proxy environment variables libcurl would otherwise honour.
+    |
+    */
+
+    'outbound' => [
+        'request_timeout' => (int) env('OPENPNE_OUTBOUND_REQUEST_TIMEOUT', 8),
+        'connect_timeout' => (int) env('OPENPNE_OUTBOUND_CONNECT_TIMEOUT', 3),
+        'fetch_timeout' => (int) env('OPENPNE_OUTBOUND_FETCH_TIMEOUT', 10),
+        'job_timeout' => (int) env('OPENPNE_OUTBOUND_JOB_TIMEOUT', 20),
+        'max_redirects' => (int) env('OPENPNE_OUTBOUND_MAX_REDIRECTS', 3),
+        // Read caps, applied to the DECODED byte count: a Content-Length check alone
+        // lets a small gzip response expand without bound.
+        'max_html_bytes' => (int) env('OPENPNE_OUTBOUND_MAX_HTML_BYTES', 512 * 1024),
+        'max_image_bytes' => (int) env('OPENPNE_OUTBOUND_MAX_IMAGE_BYTES', 5 * 1024 * 1024),
+        'denied_cidrs' => array_filter(explode(',', (string) env('OPENPNE_OUTBOUND_DENIED_CIDRS', ''))),
+    ],
+
 ];

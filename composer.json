@@ -7,8 +7,10 @@
     "license": "Apache-2.0",
     "require": {
         "php": "^8.3",
+        "ext-curl": "*",
         "altcha-org/altcha": "^2.0",
         "filament/filament": "^5.6.3",
+        "guzzlehttp/guzzle": "^7.15",
         "inertiajs/inertia-laravel": "^3.1",
         "intervention/image": "^4",
         "laravel/fortify": "^1.37",
