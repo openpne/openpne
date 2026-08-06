@@ -82,7 +82,7 @@ Three deadlines nest, all in `config/openpne.php` under `outbound`: one request,
 (a request plus its redirects), and a whole job. Without the outer two a chain of individually-legal
 slow hops adds up to an unbounded job. They are enforced by handing the remaining budget to the
 per-request timeout, so a configured `0` — which means "no limit" to both Guzzle and libcurl — would
-remove the bound rather than tighten it; the provider floors each at one second for that reason.
+remove the bound rather than tighten it; a non-positive value therefore falls back to the default.
 
 The bound is not total: name resolution happens before the request and blocks on the system
 resolver's own timeout, outside the budget.
@@ -90,9 +90,11 @@ resolver's own timeout, outside the budget.
 ## Key invariants
 
 - `App\Outbound` is the only directory in `app/` that opens a connection, enforced by test. The
-  stream-wrapper functions are banned outright everywhere else, with the handful of existing
-  local-path readers named in an exact allowlist — matching only a literal `'https://…'` argument
-  would miss `file_get_contents($url)`, which is what the offending code would actually say.
+  URL-aware path functions (`file_get_contents`, `file`, `fopen`, `readfile`, `get_headers`, `copy`)
+  are banned outright everywhere else, with the existing local-path readers named in an exact
+  allowlist. The check tokenises rather than greps: requiring a literal `'https://…'` argument would
+  miss `file_get_contents($url)`, and matching the bare name hits `$request->file(...)` and comment
+  prose alike.
 - No URL is dialled without having passed `SafeHttpFetcher::validate()` — including redirect targets.
 - The address validated is the address connected to, verified after the fact rather than assumed.
 - `PublicIpGuard` is derived from IANA's special-purpose registries and re-judges any embedded IPv4
@@ -100,5 +102,7 @@ resolver's own timeout, outside the budget.
   subtract from what is reachable; nothing in config can re-permit a rejected address, and a
   malformed range is an error rather than a skipped entry.
 - Byte caps count decoded bytes, not `Content-Length`.
-- Failures name the URL without its query. A pasted URL carries its secrets there, and an exception
-  from a queued job reaches the log verbatim.
+- Failures name the URL without its query, and never quote the underlying Guzzle message or keep it
+  as a previous exception — its curl handler appends the full request URI to the error text, so
+  repeating it would undo the sanitising. A pasted URL carries its secrets in the query, and an
+  exception from a queued job reaches the log verbatim.

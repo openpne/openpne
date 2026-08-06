@@ -39,12 +39,13 @@ class OutboundServiceProvider extends ServiceProvider
     }
 
     /**
-     * A timeout from config, floored at one second.
+     * A timeout from config, falling back to the documented default when it is not positive.
      *
      * Zero means "no limit" to both Guzzle and libcurl, so an operator setting one of these to 0 —
      * or leaving an empty env value that casts to 0 — would remove the bound entirely, and the outer
      * deadline could not restore it because it is enforced by handing the remainder to these same
-     * options.
+     * options. The default is used rather than a bare 1 second so a mistyped value behaves like an
+     * unset one instead of silently making every fetch time out.
      */
     private function positive(string $key, int $fallback): int
     {

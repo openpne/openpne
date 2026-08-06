@@ -35,21 +35,29 @@ class OutboundEgressBoundaryTest extends TestCase
     ];
 
     /**
-     * Files allowed to call file_get_contents / fopen.
+     * PHP functions that take a path and will just as happily take a URL.
      *
-     * PHP's stream wrappers make those two the shortest path from a member-supplied URL to an
-     * outbound request, and matching only a literal `'https://…'` first argument catches none of it:
-     * `file_get_contents($url)` is what the code would actually say. So the functions are banned
-     * outright and the handful of existing local reads are named here instead. Adding a file to this
-     * list means asserting it only ever reads a local path.
+     * These are the shortest route from a member-supplied URL to an outbound request, and matching
+     * only a literal `'https://…'` first argument catches none of it — `file_get_contents($url)` is
+     * what the offending code would actually say. So they are banned outright and the existing
+     * local-path readers are named below instead.
      *
-     * The lookbehind keeps `$request->file(...)` and similar method calls out; PHP's own `file()` is
-     * left out of the alternation entirely because `\bfile\s*\(` also matches English prose in
-     * comments ("an unlinked file (no related entity)"), which would make the rule noise.
+     * @var list<string>
      */
-    private const STREAM_WRAPPER = '/(?<![\w>:$])(?:file_get_contents|readfile|fopen)\s*\(/';
+    private const STREAM_WRAPPER_FUNCTIONS = [
+        'file',
+        'file_get_contents',
+        'readfile',
+        'fopen',
+        'get_headers',
+        'copy',
+    ];
 
     /**
+     * Files allowed to call one of the above.
+     *
+     * Adding a file here means asserting it only ever receives a local path.
+     *
      * @var list<string>
      */
     private const LOCAL_FILE_READERS = [
@@ -58,6 +66,7 @@ class OutboundEgressBoundaryTest extends TestCase
         'Files/DbBlobFileStorage.php',
         'Files/FileUploader.php',
         'Mail/Template/MailTemplateDefaults.php',
+        'Support/CommonPasswordList.php',
         'Upgrade/SourceSchema.php',
     ];
 
@@ -116,8 +125,10 @@ class OutboundEgressBoundaryTest extends TestCase
                 continue;
             }
 
-            if (preg_match(self::STREAM_WRAPPER, (string) file_get_contents($file)) === 1) {
-                $offenders[] = 'app/'.$relative;
+            $called = $this->streamWrapperCalls((string) file_get_contents($file));
+
+            if ($called !== []) {
+                $offenders[] = 'app/'.$relative.' ('.implode(', ', $called).')';
             }
         }
 
@@ -125,6 +136,54 @@ class OutboundEgressBoundaryTest extends TestCase
             "These files call a stream-wrapper function without being listed as local-path readers.\nEither read the path through an existing helper, or add the file to LOCAL_FILE_READERS having checked it can never receive a URL.\n%s",
             implode("\n", $offenders),
         ));
+    }
+
+    /**
+     * The stream-wrapper functions $source calls, found by tokenising rather than by regex.
+     *
+     * A regex cannot do this job. Requiring a literal `'https://…'` argument misses the form real
+     * code takes; matching the bare name instead hits `$request->file(...)` and even English prose in
+     * comments ("an unlinked file (no related entity)"), and dropping `file` to silence that leaves a
+     * URL-aware function unguarded — which is exactly how the one real caller in this repository went
+     * unnoticed. The tokeniser has already separated comments and strings from code, so the rule can
+     * be stated on what it actually means: a call to this name, not a method or a declaration of one.
+     *
+     * @return list<string>
+     */
+    private function streamWrapperCalls(string $source): array
+    {
+        $tokens = array_values(array_filter(
+            token_get_all($source),
+            fn ($token): bool => ! is_array($token) || ! in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true),
+        ));
+
+        $found = [];
+
+        foreach ($tokens as $i => $token) {
+            if (! is_array($token) || $token[0] !== T_STRING) {
+                continue;
+            }
+
+            if (! in_array(strtolower($token[1]), self::STREAM_WRAPPER_FUNCTIONS, true)) {
+                continue;
+            }
+
+            if (($tokens[$i + 1] ?? null) !== '(') {
+                continue;
+            }
+
+            $previous = $tokens[$i - 1] ?? null;
+            $previousType = is_array($previous) ? $previous[0] : null;
+
+            // `$x->file(` / `X::file(` are calls on something else; `function file(` declares one.
+            if (in_array($previousType, [T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION, T_NEW], true)) {
+                continue;
+            }
+
+            $found[strtolower($token[1])] = true;
+        }
+
+        return array_keys($found);
     }
 
     public function test_the_allowlisted_directories_exist(): void
@@ -141,9 +200,9 @@ class OutboundEgressBoundaryTest extends TestCase
         // exemption for whatever takes that path next.
         foreach (self::LOCAL_FILE_READERS as $relative) {
             $this->assertFileExists(app_path($relative));
-            $this->assertMatchesRegularExpression(
-                self::STREAM_WRAPPER,
-                (string) file_get_contents(app_path($relative)),
+            $this->assertNotSame(
+                [],
+                $this->streamWrapperCalls((string) file_get_contents(app_path($relative))),
                 "app/{$relative} no longer reads files; remove it from LOCAL_FILE_READERS.",
             );
         }
@@ -175,12 +234,22 @@ class OutboundEgressBoundaryTest extends TestCase
         );
     }
 
-    public function test_the_stream_wrapper_guard_catches_a_variable_url(): void
+    public function test_the_stream_wrapper_guard_sees_calls_and_only_calls(): void
     {
-        // The case the earlier literal-only patterns missed, and the one real code would contain.
-        $this->assertMatchesRegularExpression(self::STREAM_WRAPPER, '<?php $body = file_get_contents($url);');
-        $this->assertMatchesRegularExpression(self::STREAM_WRAPPER, '<?php $handle = fopen($url, "rb");');
-        $this->assertDoesNotMatchRegularExpression(self::STREAM_WRAPPER, '<?php $upload = $request->file("images");');
+        // Each line here is a form that a regex-based version of this guard got wrong at some point.
+        $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php $body = file_get_contents($url);'));
+        $this->assertSame(['fopen'], $this->streamWrapperCalls('<?php $h = fopen($url, "rb");'));
+        $this->assertSame(['file'], $this->streamWrapperCalls('<?php $lines = @file($url, FILE_IGNORE_NEW_LINES);'));
+        $this->assertSame(['get_headers'], $this->streamWrapperCalls('<?php $headers = get_headers($url);'));
+        $this->assertSame(['copy'], $this->streamWrapperCalls('<?php copy($url, $local);'));
+
+        $this->assertSame([], $this->streamWrapperCalls('<?php $upload = $request->file("images");'));
+        $this->assertSame([], $this->streamWrapperCalls('<?php $upload = Request::file("images");'));
+        $this->assertSame([], $this->streamWrapperCalls('<?php $upload = $request?->file("images");'));
+        $this->assertSame([], $this->streamWrapperCalls('<?php private function copy(string $from): void {}'));
+        $this->assertSame([], $this->streamWrapperCalls('<?php // an unlinked file (no related entity)'));
+        $this->assertSame([], $this->streamWrapperCalls('<?php /** photo upload, a file (with delete) */'));
+        $this->assertSame([], $this->streamWrapperCalls('<?php $sql = "SELECT file (x)";'));
     }
 
     /** @return list<string> */

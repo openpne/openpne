@@ -340,15 +340,46 @@ class SafeHttpFetcherTest extends TestCase
     {
         // A pasted URL carries its secrets in the query — a signed link, a one-time token — and an
         // exception from a queued job reaches the log verbatim.
+        //
+        // The Guzzle message below is shaped like a real one: its curl handler appends the request
+        // URI, query and all, to the cURL error text. Sanitising only the URL this class supplies
+        // would leak the secret straight back in through the concatenated half, so the underlying
+        // message is not repeated at all.
+        $url = 'https://example.com/doc?token=s3cr3t-value';
         $this->resolves('example.com', ['93.184.216.34']);
-        $this->queue[] = [new ConnectException('boom', new Request('GET', 'https://example.com')), null];
+        $this->queue[] = [new ConnectException(
+            "cURL error 6: Could not resolve host (see https://curl.se/libcurl/c/libcurl-errors.html) for {$url}",
+            new Request('GET', $url),
+            null,
+            ['errno' => 6],
+        ), null];
 
         try {
-            $this->fetcher()->get('https://example.com/doc?token=s3cr3t-value', 1024);
+            $this->fetcher()->get($url, 1024);
             $this->fail('Expected an OutboundException.');
         } catch (OutboundException $e) {
             $this->assertStringNotContainsString('s3cr3t-value', $e->getMessage());
+            $this->assertStringNotContainsString('token=', $e->getMessage());
             $this->assertStringContainsString('https://example.com/doc', $e->getMessage());
+            // Still diagnostic enough to tell a DNS failure from a TLS one.
+            $this->assertStringContainsString('curl errno 6', $e->getMessage());
+            $this->assertNull($e->getPrevious(), 'A retained previous exception would print the full URL when logged.');
+        }
+    }
+
+    public function test_a_redirect_limit_failure_reports_the_url_without_its_query(): void
+    {
+        $this->resolves('example.com', ['93.184.216.34']);
+
+        foreach (range(1, 10) as $i) {
+            $this->respondsWith(new Response(302, ['Location' => "https://example.com/{$i}?token=s3cr3t-value"]));
+        }
+
+        try {
+            $this->fetcher()->get('https://example.com/start?token=s3cr3t-value', 1024);
+            $this->fail('Expected an OutboundException.');
+        } catch (OutboundException $e) {
+            $this->assertStringNotContainsString('s3cr3t-value', $e->getMessage());
         }
     }
 

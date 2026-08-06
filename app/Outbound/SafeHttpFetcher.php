@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Outbound;
 
 use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Exception\MalformedUriException;
@@ -14,6 +15,7 @@ use GuzzleHttp\Psr7\Utils;
 use GuzzleHttp\RequestOptions;
 use GuzzleHttp\TransferStats;
 use Psr\Http\Message\ResponseInterface;
+use ReflectionClass;
 
 /**
  * The one place this app fetches a URL a member supplied. Everything outbound goes through here.
@@ -96,6 +98,32 @@ final class SafeHttpFetcher
         }
 
         throw OutboundException::blocked(sprintf('More than %d redirects from [%s].', $this->maxRedirects, self::describe($url)));
+    }
+
+    /**
+     * Describe a transport failure without quoting the underlying exception.
+     *
+     * Guzzle's own message is not safe to repeat: its curl handler appends the request URI — query
+     * string and all — to the cURL error text, so sanitising only the URL this class supplies leaks
+     * the secret straight back in through the concatenated half. The previous exception is dropped
+     * for the same reason, since a logged exception prints its whole chain.
+     *
+     * What survives is the part that is diagnostic without being sensitive: the exception class and,
+     * where Guzzle exposes it, the curl errno — enough to tell a DNS failure from a TLS one.
+     */
+    private static function transportFailure(ValidatedUrl $target, GuzzleException $e): OutboundException
+    {
+        $reason = (new ReflectionClass($e))->getShortName();
+
+        if ($e instanceof RequestException || $e instanceof ConnectException) {
+            $errno = $e->getHandlerContext()['errno'] ?? null;
+
+            if (is_int($errno) && $errno !== 0) {
+                $reason .= ", curl errno {$errno}";
+            }
+        }
+
+        return OutboundException::failed(sprintf('Request to [%s] failed (%s).', self::describe($target->url), $reason));
     }
 
     /**
@@ -294,9 +322,9 @@ final class SafeHttpFetcher
                 return [$e->getResponse()->withBody($sink), true];
             }
 
-            throw OutboundException::failed(sprintf('Request to [%s] failed: %s', self::describe($target->url), $e->getMessage()));
+            throw self::transportFailure($target, $e);
         } catch (GuzzleException $e) {
-            throw OutboundException::failed(sprintf('Request to [%s] failed: %s', self::describe($target->url), $e->getMessage()));
+            throw self::transportFailure($target, $e);
         }
 
         $this->assertConnectedAsPinned($target, $connected);
