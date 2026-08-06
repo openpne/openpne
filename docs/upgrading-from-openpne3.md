@@ -16,8 +16,8 @@ Two words this document uses in a specific way:
   commands name them in their output (`FileUpgrade`, `MemberUpgrade`, …). The numbered *stages*
   below are this document's own; they are not the same thing.
 
-Read [Requirements](#requirements) before dumping anything — two of them decide whether the upgrade
-can run at all.
+Read [Requirements](#requirements) before dumping anything — some of them decide whether the upgrade
+can run at all, and one decides how to take the dump.
 
 ## Requirements
 
@@ -41,7 +41,8 @@ can run at all.
 
 Install it the ordinary way — [with Docker](../README.md#getting-started) or
 [without](../README.md#without-docker) — with one thing set before you start it: `.env` must point at
-a **fresh, empty MySQL database**, not the SQLite default. These are the settings the rest of this document refers to as `DB_*`:
+a **fresh, empty MySQL database**, not the SQLite default. These are the settings the rest of this
+document refers to as `DB_*`:
 
 ```dotenv
 DB_CONNECTION=mysql
@@ -74,10 +75,11 @@ one is exactly what should happen. That table holds the uploaded files' bytes �
 and the upgrade never copies them: it re-points them at the new `files` table, which is a bookkeeping
 change no matter how large the table is. What arrives with the dump stays where it lands.
 
-That works because `mysqldump` drops each table before recreating it. A dump taken with
-`--skip-add-drop-table` will collide on `file_bin` instead: drop OpenPNE 4's empty one first, or
-restore before creating the schema in stage 1 — OpenPNE 4 leaves a `file_bin` alone when it is
-already there.
+That works because `mysqldump` drops each table before recreating it. Restoring into the same
+database from a dump taken with `--skip-add-drop-table` will collide on `file_bin` instead: drop
+OpenPNE 4's empty one first, or restore before creating the schema in stage 1 — OpenPNE 4 leaves a
+`file_bin` alone when it is already there. The layouts below sidestep this by keeping the source's
+tables under their own names.
 
 Where you restore it decides an option you will pass to the commands in stages 3 to 5:
 
