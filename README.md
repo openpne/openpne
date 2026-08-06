@@ -62,7 +62,8 @@ npm run dev               # Vite dev server on :5173 (HMR)
 ## Upgrading from OpenPNE 3
 
 Running an OpenPNE 3 site? [docs/upgrading-from-openpne3.md](docs/upgrading-from-openpne3.md)
-migrates its data into a fresh OpenPNE 4 install, with the old site serving throughout.
+migrates its data into a fresh OpenPNE 4 install — rehearsed against a dump while the old site keeps
+serving, then repeated as the cutover.
 
 ## License
 
