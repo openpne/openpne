@@ -36,33 +36,41 @@ can run at all.
 
 ## Before you start
 
-The upgrade writes into an OpenPNE 4 install that is **configured but not yet migrated** — set up and
-pointed at its database, with none of its tables created yet.
+The upgrade needs an OpenPNE 4 install that is set up and pointed at its database, but whose **tables
+do not exist yet** — the dump has to be restored before they are created, and stage 1 explains why.
 
-Follow the README's [install instructions](../README.md#without-docker), but **stop before
-`php artisan migrate`**:
+Either way, `.env` is where you tell OpenPNE 4 which database to use. Create it
+(`cp .env.example .env`) and set the values this document refers to as `DB_*`, pointing at a fresh,
+empty MySQL database:
 
-- install dependencies, create `.env` (`cp .env.example .env`), and run `php artisan key:generate`
-- edit `.env` so OpenPNE 4 talks to a fresh, empty MySQL database. These are the settings the rest of
-  this document means by `DB_*`:
+```dotenv
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=openpne4
+DB_USERNAME=openpne
+DB_PASSWORD=your-password
+```
 
-  ```dotenv
-  DB_CONNECTION=mysql
-  DB_HOST=127.0.0.1
-  DB_PORT=3306
-  DB_DATABASE=openpne4
-  DB_USERNAME=openpne
-  DB_PASSWORD=your-password
-  ```
+`.env.example` ships with `DB_CONNECTION=sqlite`, which the upgrade cannot use.
 
-  `.env.example` ships with `DB_CONNECTION=sqlite`, which the upgrade cannot use.
-- do not create the schema yet — stage 2 does that, after the restore, and the order matters
+Getting to "not migrated yet" then depends on how you run OpenPNE 4:
 
-That last point is easy to trip over with the repo's Docker setup: its entrypoint runs
-`php artisan migrate --force` every time the `app` container starts. Start it only after the restore.
+**On the host.** Follow the README's [install instructions](../README.md#without-docker) — install
+dependencies, prepare `.env` as above, `php artisan key:generate` — but **stop before
+`php artisan migrate`**. Stage 2 runs it, after the restore.
+
+**With the repo's Docker setup.** Do not start the containers yet. The `app` container installs
+dependencies, generates `APP_KEY` and runs the migrations in one first start, so you cannot arrive at
+this state by starting it — but you do not need to. Prepare `.env` on the host now, and let stage 2
+be that first start: by then the dump is in place, and the same run does all three in the right
+order. Two things to get right in `.env` first, because Compose ships no database of its own:
+`DB_HOST` must name a MySQL server the *container* can reach — `127.0.0.1` there means the container
+itself, not your machine.
 
 **Where to run the commands.** Every `php artisan …` below runs from the application root, on the
-machine holding that `.env`. With the Docker setup, prefix them: `docker compose exec app php artisan …`.
+machine holding that `.env`. With the Docker setup, prefix them:
+`docker compose exec app php artisan …`.
 
 ## What migrates
 
@@ -112,6 +120,9 @@ OpenPNE 4's rather than copied, so the bytes leave the source entirely.
 ```console
 $ php artisan migrate --force
 ```
+
+With the repo's Docker setup this is `bin/dev-up` instead — its first start installs dependencies,
+generates `APP_KEY` and migrates, which now happens with the dump already restored.
 
 ## 3. Dry-run, and read the report
 
