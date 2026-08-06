@@ -28,6 +28,9 @@ can run at all.
 - **Database file storage** (OpenPNE 3's default), where every uploaded file has its bytes in a
   `file_bin` row. A site converted to filesystem storage is not supported: the upgrade rejects a
   `file` / `file_bin` count mismatch instead of migrating file metadata without the bytes.
+- **A schema-and-data dump** — `mysqldump` of the OpenPNE 3 database as it writes one by default,
+  `DROP TABLE` statements included. A data-only dump (`--no-create-info`) carries nothing to create
+  the source tables from, and the target has no OpenPNE 3 tables of its own to receive the rows.
 - The OpenPNE 3 tables must be readable from OpenPNE 4's own database connection — restored into the
   same database, or into another database on the same MySQL instance.
 - For the prefixed and separate-database layouts in stage 2, the database user additionally needs to
@@ -36,9 +39,9 @@ can run at all.
 
 ## 1. Install OpenPNE 4 on a fresh database
 
-Install it the ordinary way — [with Docker or without](../README.md#getting-started) — with one
-thing set before you start it: `.env` must point at a **fresh, empty MySQL database**, not the SQLite
-default. These are the settings the rest of this document refers to as `DB_*`:
+Install it the ordinary way — [with Docker](../README.md#getting-started) or
+[without](../README.md#without-docker) — with one thing set before you start it: `.env` must point at
+a **fresh, empty MySQL database**, not the SQLite default. These are the settings the rest of this document refers to as `DB_*`:
 
 ```dotenv
 DB_CONNECTION=mysql
@@ -71,10 +74,10 @@ one is exactly what should happen. That table holds the uploaded files' bytes �
 and the upgrade never copies them: it re-points them at the new `files` table, which is a bookkeeping
 change no matter how large the table is. What arrives with the dump stays where it lands.
 
-That works because `mysqldump` drops each table before recreating it. If your dump was taken without
-that (`--skip-add-drop-table`, or data-only), the restore will fail on `file_bin` instead: drop
-OpenPNE 4's empty one first, or restore into the database before creating the schema in stage 1 —
-OpenPNE 4 leaves a `file_bin` alone when it is already there.
+That works because `mysqldump` drops each table before recreating it. A dump taken with
+`--skip-add-drop-table` will collide on `file_bin` instead: drop OpenPNE 4's empty one first, or
+restore before creating the schema in stage 1 — OpenPNE 4 leaves a `file_bin` alone when it is
+already there.
 
 Where you restore it decides an option you will pass to the commands in stages 3 to 5:
 
