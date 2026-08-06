@@ -163,10 +163,25 @@ class MemberProfileUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('member_profiles', ['id' => 1200, 'value' => '2020-03-05']);
     }
 
+    public function test_custom_date_keeps_a_year_below_100_as_written(): void
+    {
+        // OpenPNE 3 accepts a year of 20 and renders it as 0020. Composing through MySQL's
+        // MAKEDATE() would read it as a two-digit year and move the date to 2020.
+        $this->seedProfile(14, 'custom_date5', 'date');
+        $this->seedMemberProfile(1400, 14, ['value' => '', 'public_flag' => 1, 'tree_key' => 1400, 'lft' => 1]);
+        $this->seedMemberProfile(1401, 14, ['value' => '20', 'tree_key' => 1400, 'lft' => 2]);
+        $this->seedMemberProfile(1402, 14, ['value' => '1', 'tree_key' => 1400, 'lft' => 3]);
+        $this->seedMemberProfile(1403, 14, ['value' => '1', 'tree_key' => 1400, 'lft' => 4]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1400, 'value' => '0020-01-01']);
+    }
+
     public function test_custom_date_children_overflow_the_way_openpne3_composes_them(): void
     {
-        // OpenPNE 3's day selector offers 31 for every month and composes with DateTime::setDate(),
-        // so a stored 2020-02-31 is a date it displayed as 2020-03-02.
+        // DateTime::setDate() rolls an impossible date forward, so a stored 2020-02-31 is one
+        // OpenPNE 3 rendered as 2020-03-02.
         $this->seedProfile(13, 'custom_date4', 'date');
         $this->seedMemberProfile(1300, 13, ['value' => '', 'public_flag' => 1, 'tree_key' => 1300, 'lft' => 1]);
         $this->seedMemberProfile(1301, 13, ['value' => '2020', 'tree_key' => 1300, 'lft' => 2]);

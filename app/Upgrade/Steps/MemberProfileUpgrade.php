@@ -134,8 +134,8 @@ class MemberProfileUpgrade extends UpgradeStep
 
     /**
      * A custom date field's value, following OpenPNE 3's own precedence (MemberProfile::getValue()):
-     * childless roots hold the date themselves — which is what OpenPNE 3.10 writes — and a root with
-     * children holds nothing, its Y-m-d being composed from the year/month/day rows (ordered by lft).
+     * a childless root is read from its own value, and a root with children is composed from the
+     * year/month/day rows (ordered by lft) instead.
      *
      * OpenPNE 3 writes the date onto the root either way (MemberProfileForm) and adds children only
      * for the year/month/day options the field defines — a date field with no options has none — so
@@ -158,14 +158,25 @@ class MemberProfileUpgrade extends UpgradeStep
 
     /**
      * The date OpenPNE 3 shows for a year/month/day triple, overflow included: it composes with
-     * DateTime::setDate(), where an impossible 2020-02-31 — which its day selector offers for every
-     * month — rolls forward to 2020-03-02 rather than being rejected. Adding the month and day
-     * offsets to January 1st reproduces that, because MySQL clamps a month addition to the end of
-     * the target month (2020-01-31 + 1 MONTH = 2020-02-29) but has nothing to clamp on the 1st.
+     * DateTime::setDate(), so an impossible 2020-02-31 rolls forward to 2020-03-02 rather than being
+     * stored as written. Its own form rejects that via checkdate(), so such a triple came from
+     * somewhere else — but it is still a date OpenPNE 3 renders, and concatenating the parts would
+     * migrate one that does not exist.
+     *
+     * Offsetting from January 1st is what makes it exact: MySQL clamps a month addition to the end of
+     * the target month (2020-01-31 + 1 MONTH = 2020-02-29) and the 1st gives it nothing to clamp.
+     * The year is zero-padded into a date literal rather than passed to MAKEDATE, which reads any
+     * year below 100 as a two-digit one — 20 would become 2020, while OpenPNE 3 accepts a year of 20
+     * (checkdate does) and renders it as 0020.
      */
     private function composedDate(string $y, string $m, string $d): string
     {
-        return sprintf('DATE_ADD(DATE_ADD(MAKEDATE(%s, 1), INTERVAL %s - 1 MONTH), INTERVAL %s - 1 DAY)', $y, $m, $d);
+        return sprintf(
+            "DATE_ADD(DATE_ADD(CONCAT(LPAD(%s, 4, '0'), '-01-01'), INTERVAL %s - 1 MONTH), INTERVAL %s - 1 DAY)",
+            $y,
+            $m,
+            $d,
+        );
     }
 
     private function dateChildCount(): string
