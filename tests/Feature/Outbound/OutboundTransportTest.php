@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Outbound;
 
+use App\Outbound\CurlClientFactory;
+use App\Outbound\OutboundException;
 use App\Outbound\SafeHttpFetcher;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\CurlHandler;
@@ -38,6 +40,24 @@ class OutboundTransportTest extends TestCase
             curl_version()['version_number'],
             'libcurl is too old for CURLOPT_CONNECT_TO, so the connection pin would not apply.',
         );
+    }
+
+    public function test_it_refuses_to_build_a_client_on_a_libcurl_that_cannot_pin(): void
+    {
+        // A self-hoster compiles their own PHP, where ext-curl can be present but linked against a
+        // libcurl older than CURLOPT_CONNECT_TO — the option is then accepted and ignored. The
+        // after-the-fact peer check does not catch that, because the system resolver normally hands
+        // back the same addresses the guard validated; the gap opens only when someone controls the
+        // answer, which is the case being defended against. So the factory refuses instead.
+        $this->expectException(OutboundException::class);
+        $this->expectExceptionMessage('libcurl 7.49.0 or newer');
+
+        (new CurlClientFactory(minLibcurl: PHP_INT_MAX))->make();
+    }
+
+    public function test_it_builds_a_client_on_this_build(): void
+    {
+        $this->assertInstanceOf(Client::class, (new CurlClientFactory)->make());
     }
 
     public function test_the_fetcher_is_wired_to_the_curl_handler(): void

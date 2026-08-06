@@ -38,6 +38,16 @@ call is unavailable.
 Requests carry no cookies, no credentials (`CURLOPT_NETRC` ignored) and no `Referer`, and TLS
 verification is not configurable off.
 
+### IPv6 addresses that embed an IPv4 one
+
+IPv4-mapped, IPv4-compatible, 6to4 and the NAT64 **well-known** prefix (`64:ff9b::/96`) are not
+judged on their wrapper — the embedded address is extracted and re-checked, because that is where
+the packet ends up. `64:ff9b:1::/48` is refused outright: RFC 6052 allows the embedded address at
+several offsets there, so there is no single position to read.
+
+A NAT64 **network-specific** prefix is any global prefix the operator chose, so it cannot be
+recognised from the address alone. An install behind one must list it in `outbound.denied_cidrs`.
+
 ## Why there is no proxy setting
 
 An HTTP or SOCKS proxy resolves the destination host itself, which is the exact step the pin exists
