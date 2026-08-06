@@ -152,8 +152,20 @@ class MemberProfileUpgrade extends UpgradeStep
 
         return "CASE WHEN {$this->dateChildCount()} = 0 THEN `value`"
             ." WHEN {$this->dateChildCount()} = 3 AND {$y} > 0 AND {$m} > 0 AND {$d} > 0"
-            ." THEN CONCAT_WS('-', {$y}, LPAD({$m}, 2, '0'), LPAD({$d}, 2, '0'))"
+            .' THEN '.$this->composedDate($y, $m, $d)
             .' ELSE NULL END';
+    }
+
+    /**
+     * The date OpenPNE 3 shows for a year/month/day triple, overflow included: it composes with
+     * DateTime::setDate(), where an impossible 2020-02-31 — which its day selector offers for every
+     * month — rolls forward to 2020-03-02 rather than being rejected. Adding the month and day
+     * offsets to January 1st reproduces that, because MySQL clamps a month addition to the end of
+     * the target month (2020-01-31 + 1 MONTH = 2020-02-29) but has nothing to clamp on the 1st.
+     */
+    private function composedDate(string $y, string $m, string $d): string
+    {
+        return sprintf('DATE_ADD(DATE_ADD(MAKEDATE(%s, 1), INTERVAL %s - 1 MONTH), INTERVAL %s - 1 DAY)', $y, $m, $d);
     }
 
     private function dateChildCount(): string

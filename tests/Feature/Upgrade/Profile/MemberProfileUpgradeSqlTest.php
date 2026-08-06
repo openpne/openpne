@@ -163,6 +163,21 @@ class MemberProfileUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('member_profiles', ['id' => 1200, 'value' => '2020-03-05']);
     }
 
+    public function test_custom_date_children_overflow_the_way_openpne3_composes_them(): void
+    {
+        // OpenPNE 3's day selector offers 31 for every month and composes with DateTime::setDate(),
+        // so a stored 2020-02-31 is a date it displayed as 2020-03-02.
+        $this->seedProfile(13, 'custom_date4', 'date');
+        $this->seedMemberProfile(1300, 13, ['value' => '', 'public_flag' => 1, 'tree_key' => 1300, 'lft' => 1]);
+        $this->seedMemberProfile(1301, 13, ['value' => '2020', 'tree_key' => 1300, 'lft' => 2]);
+        $this->seedMemberProfile(1302, 13, ['value' => '2', 'tree_key' => 1300, 'lft' => 3]);
+        $this->seedMemberProfile(1303, 13, ['value' => '31', 'tree_key' => 1300, 'lft' => 4]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1300, 'value' => '2020-03-02']);
+    }
+
     public function test_custom_date_with_incomplete_children_is_null(): void
     {
         // Only year + month present (no day): OpenPNE 3 returns null, so we must not store a
