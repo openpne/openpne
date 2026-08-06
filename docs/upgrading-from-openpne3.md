@@ -22,7 +22,8 @@ can run at all, and one decides how to take the dump.
 ## Requirements
 
 - **MySQL**, for both the source and the target. The upgrade is a set-based `INSERT...SELECT` over
-  the OpenPNE 3 DDL; it does not run on SQLite.
+  the OpenPNE 3 DDL; it does not run on SQLite. The site itself can move to SQLite once the upgrade
+  is done — see [Moving to SQLite afterwards](#moving-to-sqlite-afterwards).
 - **OpenPNE 3 core 3.6.x or newer.** An older source is missing tables and columns the upgrade
   reads. It refuses to start and names each one rather than failing partway through.
 - **Database file storage** (OpenPNE 3's default), where every uploaded file has its bytes in a
@@ -233,3 +234,50 @@ its own database. Drop it and start again.
 After the cutover, rolling back means going back to a site frozen at the moment you stopped its
 writes — so the decision point is stage 6's traffic switch, not the migration. Anything written to
 OpenPNE 4 after that is only in OpenPNE 4.
+
+## Moving to SQLite afterwards
+
+The upgrade needs MySQL. The site it leaves behind does not, and a small one is easier to run on a
+single SQLite file — backing it up is copying that file.
+
+Do not attempt this with a dump. mysqldump writes MySQL's own backslash string escapes, which SQLite
+reads as literal characters, and `--hex-blob` writes `0x…` blob literals, which SQLite parses as
+*integers* without complaining — every uploaded file's bytes would silently become a number.
+`openpne:copy-database` instead builds the target schema with `migrate`, so no DDL is translated, and
+moves rows through PDO, which leaves escaping and BLOB binding to the driver.
+
+With nothing writing to the site — the copy is one snapshot per table, not a single instant across
+all of them:
+
+```console
+$ touch /path/to/database.sqlite
+$ php artisan openpne:copy-database --to=sqlite --to-database=/path/to/database.sqlite
+```
+
+It creates the schema, copies every table, and reports failure unless the row counts match on both
+sides afterwards. Nothing is written to the source. The OpenPNE 3 tables the upgrade restored are no
+part of the OpenPNE 4 schema and are not copied; the command names each one it leaves behind. Then
+point the site at the file it produced:
+
+```dotenv
+DB_CONNECTION=sqlite
+DB_DATABASE=/path/to/database.sqlite
+```
+
+Swapping the options runs it the other way (`--from=sqlite --from-database=… --to=mysql`), which is
+how a site that outgrows SQLite goes back.
+
+### What changes about the site
+
+**Searching and sorting.** This is the engine's behaviour, not the copy's. MySQL compares text
+through `utf8mb4_unicode_ci`, which folds a great deal together before matching: searching members
+for `タナカ` there also finds `たなか` and `ﾀﾅｶ`, and `ハンダ` too, since that collation ignores the
+voiced mark. SQLite's `LIKE` folds the case of ASCII letters and nothing else, so the same search
+finds `タナカ` alone. Ordering follows: SQLite sorts by code point, so uppercase precedes lowercase
+and the kana sort apart. Run the searches your members actually run against the copy before you
+switch traffic to it.
+
+**One file for everything.** Sessions, the cache and the queue are all database-backed by default, so
+on SQLite they share the site's single file with its content. SQLite's default journal makes a writer
+block readers for the length of its write, which a busy site will feel — set `journal_mode` on the
+`sqlite` connection in `config/database.php` to `WAL` before serving traffic from it.
