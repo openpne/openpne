@@ -39,6 +39,9 @@ enum SettingGroup
     case Features;
 
     /** Per-site branding (brand color, logo mark, favicon), edited on the branding page. */
+    /** Whether bodies show link preview cards, and therefore whether this site fetches URLs at all. */
+    case LinkCard;
+
     case Branding;
 
     /** The administrator-authored message shown on the login screen, edited on the login screen page. */

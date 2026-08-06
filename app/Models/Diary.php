@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLinkCard;
 use App\Support\BodyFormat;
 use App\Support\Visibility;
 use Database\Factories\DiaryFactory;
@@ -16,6 +17,8 @@ class Diary extends Model
 {
     /** @use HasFactory<DiaryFactory> */
     use HasFactory;
+
+    use HasLinkCard;
 
     protected function casts(): array
     {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLinkCard;
 use App\Support\BodyFormat;
 use Database\Factories\CommunityEventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +17,8 @@ class CommunityEvent extends Model
 {
     /** @use HasFactory<CommunityEventFactory> */
     use HasFactory;
+
+    use HasLinkCard;
 
     protected function casts(): array
     {
