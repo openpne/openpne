@@ -129,14 +129,15 @@ A missing variable is milder: the mail sends with that piece of text empty.
 **Where you fix them decides whether the fix survives.** Editing the template in **OpenPNE 3**, in
 its own notification mail editor, puts the fix in the final dump — so it arrives already working at
 the cutover. Editing it in the **OpenPNE 4** admin (*Settings → Mail template settings*) only changes
-the database in front of you: during a rehearsal that database is thrown away, because the cutover
-restores a fresh dump into a fresh one. Use the OpenPNE 4 editor to confirm a template renders, then
-either port the fix back to OpenPNE 3 or plan to redo it right after the cutover — that mail does not
-send in between.
+the database in front of you, and a rehearsal database is thrown away: the cutover restores a fresh
+dump into a fresh one. So either port the fix back to OpenPNE 3, or write down the exact edit and
+reapply it to the real target once its upgrade finishes and **before traffic is switched** — that is
+the point where the site starts sending registration and email-change mails for real.
 
-Each template is reported by its first fault, because that is where rendering stopped. Fixing it can
-reveal the next one, so re-run the dry run after editing a template rather than assuming one pass
-cleared it.
+Each template is reported by its first fault, because that is where rendering stopped, and fixing one
+can reveal the next. After editing in OpenPNE 3, re-run the dry run to see what is left. The
+OpenPNE 4 editor answers that itself: it renders what you typed when you save and refuses the change
+if it still fails — the dry run would not show it, since that reads your OpenPNE 3 source.
 
 ## 4. Run the upgrade
 
@@ -193,8 +194,8 @@ change from a problem when you go through it.
   equivalent and stay as literal text like `[i:108]`.
 - **Site policy** — the imported terms and privacy pages are reformatted as Markdown, which is how
   OpenPNE 4 renders them. Worth reading once to see how they came out.
-- **Mail templates** — anything the dry run flagged is still broken here; stage 3 covers where to fix
-  it so the fix is still there after the cutover.
+- **Mail templates** — any warning you have not resolved yet is still unresolved here; stage 3 covers
+  where to fix it so the fix is still there after the cutover.
 
 ## 6. Cutover
 
@@ -211,11 +212,15 @@ will actually keep using:
    that means a fresh database for the source too — the rehearsal moved the last one's `file_bin`
    away.
 5. Repeat stages 3 through 5 against it, with the same option you rehearsed with.
-6. Point traffic at OpenPNE 4.
+6. Reapply anything you had fixed only inside OpenPNE 4 during the rehearsal. This site is built from
+   a different dump into a different database, so none of it is here. Mail templates are the usual
+   case — the editor re-renders each one as you save it, so a fix that no longer works is refused
+   rather than carried into a live site.
+7. Point traffic at OpenPNE 4.
 
-Nothing you changed inside OpenPNE 4 during the rehearsal is here — this site is built from a
-different dump into a different database. Mail templates are the usual case; stage 3 explains how to
-avoid having to redo them.
+Step 6 is before step 7 on purpose: once traffic is on OpenPNE 4, a mail template that still fails is
+a registration or password reset that does not arrive. Stage 3 covers how to avoid the redo entirely
+by fixing such templates in OpenPNE 3 instead.
 
 Keep the rehearsal databases until you are satisfied with the new site. They cost nothing and answer
 "was it already like that before?" without touching production.
