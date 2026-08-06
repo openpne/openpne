@@ -114,13 +114,35 @@ class CopyDatabaseTest extends TestCase
         $this->assertSame('kept', $target->table('things')->where('id', 1)->value('label'));
     }
 
-    public function test_it_refuses_a_source_column_the_target_schema_has_no_home_for(): void
+    public function test_it_refuses_a_target_table_the_source_does_not_have(): void
+    {
+        $this->handBuiltSchema('copy_source');
+        $target = $this->handBuiltSchema('copy_target', ['custom_audit' => 'id integer primary key, note text']);
+        $target->table('custom_audit')->insert(['id' => 1, 'note' => 'not from the source']);
+
+        // The copy would never write this table, so its rows would survive into a result meant to be
+        // the source and nothing else.
+        $this->artisan('openpne:copy-database', ['--from' => 'copy_source', '--to' => 'copy_target'])
+            ->expectsOutputToContain('does not have: custom_audit')
+            ->assertFailed();
+
+        $this->assertSame(1, $target->table('custom_audit')->count(), 'It must refuse before touching the target.');
+    }
+
+    public function test_it_refuses_a_column_only_one_side_has(): void
     {
         $this->handBuiltSchema('copy_source', ['things' => 'id integer primary key, label text, custom text']);
         $this->handBuiltSchema('copy_target');
 
         $this->artisan('openpne:copy-database', ['--from' => 'copy_source', '--to' => 'copy_target'])
-            ->expectsOutputToContain('does not define: custom')
+            ->expectsOutputToContain('only on copy_source: custom')
+            ->assertFailed();
+
+        $this->handBuiltSchema('copy_source2');
+        $this->handBuiltSchema('copy_target2', ['things' => 'id integer primary key, label text, extra text']);
+
+        $this->artisan('openpne:copy-database', ['--from' => 'copy_source2', '--to' => 'copy_target2'])
+            ->expectsOutputToContain('only on copy_target2: extra')
             ->assertFailed();
     }
 

@@ -87,13 +87,11 @@ class CopyDatabaseCommand extends Command
             return self::FAILURE;
         }
 
-        $tables = $this->tablesToCopy($from, $to);
-
-        if (! $this->reportSourceOnlyTables($from, $to) || ! $this->requireEmptyTarget($to, $tables)) {
+        if (! $this->requireMatchingTables($from, $to) || ! $this->requireEmptyTarget($to)) {
             return self::FAILURE;
         }
 
-        $plans = $this->plan($from, $to, $tables);
+        $plans = $this->plan($from, $to, $this->tablesToCopy($from, $to));
 
         if ($plans === null) {
             return self::FAILURE;
@@ -186,31 +184,41 @@ class CopyDatabaseCommand extends Command
     }
 
     /**
-     * Name what is being left behind. After an OpenPNE 3 upgrade the source still holds the restored
-     * OpenPNE 3 tables, which have no place in the OpenPNE 4 schema — expected, but never silent.
+     * Once both sides agree on their migrations the schemas must match, with one allowance: the source
+     * may hold extra tables, which after an OpenPNE 3 upgrade are the restored OpenPNE 3 ones. Those
+     * are named rather than silently left out. A table only the target has is drift — the source has
+     * been altered by hand — and copying would leave it holding something the source never had.
      */
-    private function reportSourceOnlyTables(string $from, string $to): bool
+    private function requireMatchingTables(string $from, string $to): bool
     {
         $sourceOnly = array_diff($this->tableNames($from), $this->tableNames($to));
+        $targetOnly = array_diff($this->tableNames($to), $this->tableNames($from));
 
-        if ($sourceOnly === []) {
+        if ($sourceOnly !== []) {
+            $this->warn(count($sourceOnly).' table(s) exist only on ['.$from.'] and are no part of the OpenPNE 4 schema — not copied:');
+
+            foreach ($sourceOnly as $table) {
+                $this->line("  {$table}");
+            }
+        }
+
+        if ($targetOnly === []) {
             return true;
         }
 
-        $this->warn(count($sourceOnly).' table(s) exist only on ['.$from.'] and are not part of the OpenPNE 4 schema — not copied:');
+        $this->error("[{$to}] defines table(s) [{$from}] does not have: ".implode(', ', $targetOnly));
 
-        foreach ($sourceOnly as $table) {
-            $this->line("  {$table}");
-        }
-
-        return true;
+        return false;
     }
 
-    /** @param  list<string>  $tables */
-    private function requireEmptyTarget(string $to, array $tables): bool
+    /**
+     * Every target table, not only the ones about to be written: a table the copy never touches still
+     * ends up in the result, and the result is meant to be the source and nothing else.
+     */
+    private function requireEmptyTarget(string $to): bool
     {
         $occupied = array_values(array_filter(
-            $tables,
+            array_diff($this->tableNames($to), ['migrations']),
             fn (string $table) => DB::connection($to)->table($table)->exists(),
         ));
 
@@ -242,13 +250,22 @@ class CopyDatabaseCommand extends Command
         foreach ($tables as $table) {
             $columns = Schema::connection($from)->getColumns($table);
             $names = array_column($columns, 'name');
-            $unrepresented = array_diff($names, array_column(Schema::connection($to)->getColumns($table), 'name'));
+            $targetNames = array_column(Schema::connection($to)->getColumns($table), 'name');
 
-            // Only reachable on a hand-altered source (a customised site). Dropping the column silently
-            // would lose exactly the data nobody else has a copy of.
-            if ($unrepresented !== []) {
-                $this->error("[{$from}].{$table} has column(s) the OpenPNE 4 schema does not define: ".implode(', ', $unrepresented));
-                $this->line('  Drop them on a copy of the source, or extend the schema on both sides, then run this again.');
+            // Only reachable on a hand-altered site. A column the target has no home for would be
+            // dropped, losing exactly the data nobody else has a copy of; one only the target defines
+            // would be filled with a default the source never held. Both are drift, neither is silent.
+            $sourceOnly = array_diff($names, $targetNames);
+            $targetOnly = array_diff($targetNames, $names);
+
+            if ($sourceOnly !== [] || $targetOnly !== []) {
+                $this->error("{$table} does not have the same columns on both sides.");
+
+                foreach (['only on '.$from => $sourceOnly, 'only on '.$to => $targetOnly] as $side => $missing) {
+                    $missing === [] || $this->line("  {$side}: ".implode(', ', $missing));
+                }
+
+                $this->line('  Reconcile them on a copy of the source, or extend the schema on both sides, then run this again.');
 
                 return null;
             }
@@ -309,7 +326,11 @@ class CopyDatabaseCommand extends Command
      * A buffered MySQL result holds the whole table in PHP memory before the first row is read, which
      * file_bin alone can outgrow. SQLite streams already.
      *
-     * @return callable(): void restores buffering — PDO's default, which nothing in the app overrides
+     * This unbuffers the write PDO, which is the one the reads are pinned to (copyTable), rather than
+     * whichever getReadPdo() would hand back: a read/write split would otherwise leave the reads
+     * buffered — and sourcing a whole site from a replica is not what this copies anyway.
+     *
+     * @return callable(): void puts the attribute back the way it was found
      */
     private function streamSource(Connection $source): callable
     {
@@ -317,10 +338,17 @@ class CopyDatabaseCommand extends Command
             return static fn () => null;
         }
 
-        $pdo = $source->getPdo();
-        $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+        // PDO::MYSQL_ATTR_USE_BUFFERED_QUERY is deprecated from PHP 8.5; Pdo\Mysql arrived in 8.4 and
+        // the package supports 8.3, so take whichever this runtime has.
+        $attribute = defined('Pdo\Mysql::ATTR_USE_BUFFERED_QUERY')
+            ? constant('Pdo\Mysql::ATTR_USE_BUFFERED_QUERY')
+            : PDO::MYSQL_ATTR_USE_BUFFERED_QUERY;
 
-        return static fn () => $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+        $pdo = $source->getPdo();
+        $buffered = $pdo->getAttribute($attribute);
+        $pdo->setAttribute($attribute, false);
+
+        return static fn () => $pdo->setAttribute($attribute, $buffered);
     }
 
     /** @param  array{columns: list<string>, binary: array<string, true>, batch: int}  $plan */
@@ -334,7 +362,9 @@ class CopyDatabaseCommand extends Command
         $written = 0;
         $batch = [];
 
-        foreach ($source->table($table)->cursor() as $record) {
+        // useWritePdo pins the read to the PDO streamSource unbuffered, and to the authoritative copy
+        // of the data rather than a replica that may lag behind it.
+        foreach ($source->table($table)->useWritePdo()->cursor() as $record) {
             $batch[] = (array) $record;
 
             if (count($batch) >= $plan['batch']) {

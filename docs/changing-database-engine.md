@@ -12,23 +12,25 @@ engine — so start from that, and leave a site that works where it is.
 
 **Searching and sorting.** This is the engine's behaviour, not the copy's. MySQL compares text
 through `utf8mb4_unicode_ci`, which folds a great deal together before matching: searching members
-for `タナカ` there also finds `たなか` and `ﾀﾅｶ`, and `ハンダ` too, since that collation ignores the
-voiced mark. SQLite's `LIKE` folds the case of ASCII letters and nothing else, so the same search
-finds `タナカ` alone. Ordering follows: SQLite sorts by code point, so uppercase precedes lowercase
-and the kana sort apart. Run the searches your members actually run against the copy before you let
-anyone else near it.
+for `タナカ` there also finds `たなか` and `ﾀﾅｶ`, and a search for `ハンタ` finds `ハンダ`, since that
+collation ignores the voiced mark as well. SQLite's `LIKE` folds the case of ASCII letters and
+nothing else, so each of those searches finds only what was typed. Ordering follows: SQLite sorts by
+code point, so uppercase precedes lowercase and the kana sort apart. Run the searches your members
+actually run against the copy before you let anyone else near it.
 
 **What one file costs and buys.** Sessions, the cache and the queue are all database-backed by
-default, so on SQLite they share the site's single file with its content. SQLite's default journal
-makes a writer block readers for the length of its write, which a site with any concurrency will
-feel — set `journal_mode` on the `sqlite` connection in `config/database.php` to `WAL`, and set it
-before traffic arrives: changing a database's journal mode takes an exclusive lock, so doing it while
-connections are open fails with `database is locked`.
+default, so on SQLite they share the site's single file with its content. Under SQLite's default
+journal a write and concurrent reads coexist right up to the commit, which needs a lock no reader can
+hold at the same time — so on a site with real concurrency, writes and reads start failing each other
+off. `journal_mode` on the `sqlite` connection in `config/database.php` set to `WAL` is the answer,
+and set it before traffic arrives: switching a database's journal mode needs that same exclusive
+lock, so doing it while another connection holds a transaction fails with `database is locked`.
 
 Backing the site up is then one command, not one file copy. Under WAL a committed row can still be
 in the `-wal` file beside the database, so copying the database on its own quietly produces a backup
-missing the newest writes. `sqlite3 database.sqlite ".backup out.sqlite"` and `VACUUM INTO` each take
-the whole of it.
+missing the newest writes. `sqlite3 database.sqlite ".backup out.sqlite"` takes the whole of it and
+keeps WAL mode; `VACUUM INTO` also takes the whole of it but produces a file in the default journal
+mode, so a database restored from one needs setting again.
 
 ## Copying the database
 
@@ -59,22 +61,33 @@ DB_CONNECTION=sqlite
 DB_DATABASE=/path/to/database.sqlite
 ```
 
-Swapping the options runs it the other way (`--from=sqlite --from-database=… --to=mysql`), which is
-how a site that outgrows SQLite goes back.
+Swapping the options runs it the other way, which is how a site that outgrows SQLite goes back. Both
+overrides are needed there, for the same reason: on a site serving from SQLite, `DB_DATABASE` holds
+the SQLite path, and without `--to-database` the MySQL connection would take that path for a database
+name. Create the empty MySQL database first — the command creates the schema in it, not the database
+itself.
+
+```console
+$ php artisan openpne:copy-database \
+    --from=sqlite --from-database=/path/to/database.sqlite \
+    --to=mysql --to-database=openpne4
+```
 
 ## When it refuses
 
-Three of these mean the target is not what the command can safely write into, and it stops before
-writing anything:
+Each of these means the target is not something the command can safely write into, and it stops
+before writing anything:
 
 - **The two sides are at different schema versions.** It names the migrations only one side has. Both
   databases have to describe the same schema for rows to mean the same thing in each.
 - **The target already holds rows.** Copy into an empty database, so the result is the source and
   nothing else.
-- **The source has a column the schema does not define.** Only a hand-altered site reaches this.
-  Dropping the column quietly would lose exactly the data nobody else has a copy of, so remove it on
-  a copy of the source first, or add it to the schema on both sides.
+- **A table or column exists on only one side.** Only a hand-altered site reaches this. Either
+  direction is refused: what the target has no home for would be dropped, losing exactly the data
+  nobody else has a copy of, and what only the target defines would end up in the result holding
+  something the source never had. Reconcile the two on a copy of the source, or extend the schema on
+  both sides.
 
-Extra *tables* on the source are not an error — after an OpenPNE 3 upgrade the OpenPNE 3 tables are
-still there, and they are no part of the OpenPNE 4 schema. The command names each one it leaves
-behind rather than copying or silently ignoring it.
+Extra *tables on the source* are the one exception — after an OpenPNE 3 upgrade the OpenPNE 3 tables
+are still there, and they are no part of the OpenPNE 4 schema. The command names each one it leaves
+behind rather than copying it or passing over it in silence.
