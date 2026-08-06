@@ -22,9 +22,17 @@ actually run against the copy before you let anyone else near it.
 default, so on SQLite they share the site's single file with its content. Under SQLite's default
 journal a write and concurrent reads coexist right up to the commit, which needs a lock no reader can
 hold at the same time — so on a site with real concurrency, writes and reads start failing each other
-off. `journal_mode` on the `sqlite` connection in `config/database.php` set to `WAL` is the answer,
-and set it before traffic arrives: switching a database's journal mode needs that same exclusive
-lock, so doing it while another connection holds a transaction fails with `database is locked`.
+off. `DB_JOURNAL_MODE=WAL` is the answer, and set it before traffic arrives: switching a database's
+journal mode needs that same exclusive lock, so doing it while another connection holds a transaction
+fails with `database is locked`.
+
+WAL then stays in the database file itself, so it survives the setting being changed later — and an
+unrecognised value is ignored in silence rather than refused, so confirm it took:
+
+```console
+$ php artisan tinker --execute="echo DB::selectOne('pragma journal_mode')->journal_mode;"
+wal
+```
 
 Backing the site up is then one command, not one file copy. Under WAL a committed row can still be
 in the `-wal` file beside the database, so copying the database on its own quietly produces a backup
