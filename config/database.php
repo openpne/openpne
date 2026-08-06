@@ -39,7 +39,12 @@ return [
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,
-            'journal_mode' => null,
+            // Unset leaves SQLite's own default, a rollback journal, under which a commit needs a lock
+            // no reader can hold at the same time. A site serving real traffic from SQLite wants WAL;
+            // see docs/changing-database-engine.md, which also covers what WAL changes about backups.
+            // Declared but blank reads as unset: the empty pragma it would otherwise build fails every
+            // connection to the database.
+            'journal_mode' => env('DB_JOURNAL_MODE') ?: null,
             'synchronous' => null,
             'transaction_mode' => 'DEFERRED',
         ],
