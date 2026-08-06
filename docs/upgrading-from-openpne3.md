@@ -30,18 +30,15 @@ can run at all.
   `file` / `file_bin` count mismatch instead of migrating file metadata without the bytes.
 - The OpenPNE 3 tables must be readable from OpenPNE 4's own database connection — restored into the
   same database, or into another database on the same MySQL instance.
-- For the prefixed and separate-database layouts in stage 1, the database user additionally needs to
+- For the prefixed and separate-database layouts in stage 2, the database user additionally needs to
   drop a foreign key on the source's `file_bin` and rename that table. Check this during the
   rehearsal; a privilege error is a bad thing to meet mid-cutover.
 
-## Before you start
+## 1. Install OpenPNE 4 on a fresh database
 
-The upgrade needs an OpenPNE 4 install that is set up and pointed at its database, but whose **tables
-do not exist yet** — the dump has to be restored before they are created, and stage 1 explains why.
-
-Either way, `.env` is where you tell OpenPNE 4 which database to use. Create it
-(`cp .env.example .env`) and set the values this document refers to as `DB_*`, pointing at a fresh,
-empty MySQL database:
+Install it the ordinary way — [with Docker or without](../README.md#getting-started) — with one
+thing set before you start it: `.env` must point at a **fresh, empty MySQL database**, not the SQLite
+default. These are the settings the rest of this document refers to as `DB_*`:
 
 ```dotenv
 DB_CONNECTION=mysql
@@ -52,56 +49,38 @@ DB_USERNAME=openpne
 DB_PASSWORD=your-password
 ```
 
-`.env.example` ships with `DB_CONNECTION=sqlite`, which the upgrade cannot use.
+Create the file first (`cp .env.example .env`) and edit it, then install. Both paths create the
+schema as part of that — `php artisan migrate` on the host, or the first container start with the
+Docker setup, which also installs dependencies and generates `APP_KEY`.
 
-Getting to "not migrated yet" then depends on how you run OpenPNE 4:
-
-**On the host.** Follow the README's [install instructions](../README.md#without-docker) — install
-dependencies, prepare `.env` as above, `php artisan key:generate` — but **stop before
-`php artisan migrate`**. Stage 2 runs it, after the restore.
-
-**With the repo's Docker setup.** Do not start the containers yet. The `app` container installs
-dependencies, generates `APP_KEY` and runs the migrations in one first start, so you cannot arrive at
-this state by starting it — but you do not need to. Prepare `.env` on the host now, and let stage 2
-be that first start: by then the dump is in place, and the same run does all three in the right
-order. Two things to get right in `.env` first, because Compose ships no database of its own:
-`DB_HOST` must name a MySQL server the *container* can reach — `127.0.0.1` there means the container
-itself, not your machine.
+Compose ships no database of its own, so with Docker `DB_HOST` has to name a MySQL server the
+*container* can reach: `127.0.0.1` there means the container itself, not your machine.
 
 **Where to run the commands.** Every `php artisan …` below runs from the application root, on the
 machine holding that `.env`. With the Docker setup, prefix them:
 `docker compose exec app php artisan …`.
 
-## What migrates
-
-`php artisan openpne:upgrade-matrix` lists every step and what it carries, column by column,
-including the filters that split one OpenPNE 3 table across several OpenPNE 4 ones. That is the
-mapping for a stock OpenPNE 3 schema.
-
-While you upgrade, the tool reports the differences from that schema it can actually see: a required
-table or column missing, and — for the tables whose expected contents it can list exhaustively —
-values it does not recognise. It cannot notice every local customisation, such as a column some
-plugin added to a table it copies.
-
-## 1. Restore the OpenPNE 3 dump
-
-Restore the dump **before** running `php artisan migrate`.
-
-Uploaded files are the reason. A site's `file_bin` table is commonly gigabytes, and the upgrade never
-copies those bytes — it re-points them at the new `files` table, which is a bookkeeping change no
-matter how large the table is. That only works if the restored `file_bin` is already there when
-OpenPNE 4's tables are created, because OpenPNE 4 skips creating that one when it already exists.
-Create the schema first and you get an empty `file_bin` that the restore then collides with.
+## 2. Restore the OpenPNE 3 dump
 
 ```console
 $ mysql -u openpne -p openpne4 < openpne3-dump.sql
 ```
 
+`file_bin` is the one table OpenPNE 3 and OpenPNE 4 both have, and restoring over OpenPNE 4's empty
+one is exactly what should happen. That table holds the uploaded files' bytes — commonly gigabytes —
+and the upgrade never copies them: it re-points them at the new `files` table, which is a bookkeeping
+change no matter how large the table is. What arrives with the dump stays where it lands.
+
+That works because `mysqldump` drops each table before recreating it. If your dump was taken without
+that (`--skip-add-drop-table`, or data-only), the restore will fail on `file_bin` instead: drop
+OpenPNE 4's empty one first, or restore into the database before creating the schema in stage 1 —
+OpenPNE 4 leaves a `file_bin` alone when it is already there.
+
 Where you restore it decides an option you will pass to the commands in stages 3 to 5:
 
 | Source layout | Option | |
 |---|---|---|
-| Same database as OpenPNE 4 | *(none needed)* | The default. OpenPNE 3 and OpenPNE 4 table names do not overlap. |
+| Same database as OpenPNE 4 | *(none needed)* | The default. Nothing else collides — `file_bin` is the only shared name. |
 | Same database, prefixed tables | `--source-prefix=op3_` | Use the prefix your dump actually has. |
 | Another database, same MySQL server | `--source-database=openpne3` | For a customised source whose table names would clash. |
 
@@ -114,15 +93,6 @@ $ php artisan openpne:upgrade-from-3 --dry-run --source-database=openpne3
 
 The two non-default layouts also **consume the source's `file_bin`**: that table is moved onto
 OpenPNE 4's rather than copied, so the bytes leave the source entirely.
-
-## 2. Create the OpenPNE 4 schema
-
-```console
-$ php artisan migrate --force
-```
-
-With the repo's Docker setup this is `bin/dev-up` instead — its first start installs dependencies,
-generates `APP_KEY` and migrates, which now happens with the dump already restored.
 
 ## 3. Dry-run, and read the report
 
@@ -217,13 +187,14 @@ will actually keep using:
 1. Stop writes to OpenPNE 3 — maintenance mode, or however that site takes traffic. From here on,
    nothing new is being written that the dump could miss.
 2. Take the final dump.
-3. Create a fresh, empty MySQL database for OpenPNE 4 and point `DB_*` at it. Then restore the final
-   dump in the same layout you rehearsed with (stage 1): with `--source-database`, into a separate
-   fresh database; otherwise into the fresh OpenPNE 4 database itself, keeping the table prefix if
-   you rehearsed with one. Reuse neither rehearsal database — the OpenPNE 4 one still holds the
-   rehearsal's rows, and a rehearsed `--source-database` has had its `file_bin` moved away.
-4. Repeat stages 2 through 5 against it, with the same option you rehearsed with.
-5. Point traffic at OpenPNE 4.
+3. Create another fresh, empty MySQL database, point `DB_*` at it, and create the schema there
+   (`php artisan migrate --force`). Do not reuse the rehearsal's database: it still holds the
+   rehearsal's rows and the upgrade's record of what already ran.
+4. Restore the final dump in the same layout you rehearsed with (stage 2). With `--source-database`,
+   that means a fresh database for the source too — the rehearsal moved the last one's `file_bin`
+   away.
+5. Repeat stages 3 through 5 against it, with the same option you rehearsed with.
+6. Point traffic at OpenPNE 4.
 
 Keep the rehearsal databases until you are satisfied with the new site. They cost nothing and answer
 "was it already like that before?" without touching production.
