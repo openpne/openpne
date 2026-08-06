@@ -169,15 +169,32 @@ class OutboundEgressBoundaryTest extends TestCase
         ));
 
         $found = [];
+        $importing = false;
 
         foreach ($tokens as $i => $token) {
+            // `use function a, b as c;` imports every name up to the semicolon, so this is tracked as
+            // a statement rather than by looking a fixed distance behind each name — otherwise only
+            // the first of a comma-separated list is seen. A closure's `use (` and a trait's
+            // `use Foo;` do not match, since neither is followed by T_FUNCTION.
+            if (is_array($token) && $token[0] === T_USE) {
+                $importing = is_array($tokens[$i + 1] ?? null) && $tokens[$i + 1][0] === T_FUNCTION;
+
+                continue;
+            }
+
+            if ($token === ';') {
+                $importing = false;
+
+                continue;
+            }
+
             $name = $this->bannedNameAt($token);
 
             if ($name === null) {
                 continue;
             }
 
-            if ($this->isImport($tokens, $i) || $this->isCall($tokens, $i)) {
+            if ($importing || $this->isCall($tokens, $i)) {
                 $found[$name] = true;
             }
         }
@@ -204,15 +221,6 @@ class OutboundEgressBoundaryTest extends TestCase
         $name = str_starts_with($name, 'namespace\\') ? substr($name, strlen('namespace\\')) : ltrim($name, '\\');
 
         return in_array($name, self::STREAM_WRAPPER_FUNCTIONS, true) ? $name : null;
-    }
-
-    /** Whether the name at $i is `use function <name>` — an import that any alias would then hide. */
-    private function isImport(array $tokens, int $i): bool
-    {
-        $two = is_array($tokens[$i - 2] ?? null) ? $tokens[$i - 2][0] : null;
-        $one = is_array($tokens[$i - 1] ?? null) ? $tokens[$i - 1][0] : null;
-
-        return $two === T_USE && $one === T_FUNCTION;
     }
 
     /** Whether the name at $i is being called, rather than being a method, a property or a declaration. */
@@ -307,6 +315,19 @@ class OutboundEgressBoundaryTest extends TestCase
         // Renaming on import defeats any check made at the call site, so the import is what counts.
         $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php use function file_get_contents as fetch;'));
         $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php use function \file_get_contents;'));
+
+        // One `use function` imports a comma-separated list, so a harmless first name must not hide
+        // the rest. Only tracking the statement catches this; a fixed lookbehind sees the comma.
+        $this->assertSame(['file_get_contents'], $this->streamWrapperCalls('<?php use function strlen, file_get_contents as fetch;'));
+        $this->assertSame(['copy', 'fopen'], $this->streamWrapperCalls('<?php use function strlen, fopen as open, copy;'));
+
+        // The statement ends at the semicolon: a later mention must be judged as a call, not carried
+        // along by the import.
+        $this->assertSame([], $this->streamWrapperCalls('<?php use function strlen; $x->copy();'));
+
+        // A closure's `use (` and a trait's `use Foo;` are a different `use` and must not arm it.
+        $this->assertSame([], $this->streamWrapperCalls('<?php $f = function () use ($copy) { return $copy; };'));
+        $this->assertSame([], $this->streamWrapperCalls('<?php class A { use CopyTrait; }'));
 
         // A qualified name resolves inside its namespace and does not fall back to the global
         // function, so it is not a way to reach this one.
