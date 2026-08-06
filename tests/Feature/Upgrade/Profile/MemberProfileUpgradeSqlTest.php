@@ -147,10 +147,11 @@ class MemberProfileUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('member_profiles', ['id' => 1100, 'value' => '2019-04-01']);
     }
 
-    public function test_custom_date_children_win_over_a_value_left_on_the_root(): void
+    public function test_custom_date_children_win_over_the_value_on_the_root(): void
     {
-        // A composed root can still carry an older value of its own; OpenPNE 3 reads the children
-        // whenever there are any, so the two shapes cannot be told apart by the root alone.
+        // OpenPNE 3 writes the date onto the root as well as into the children, and reads the
+        // children whenever there are any — so where the two disagree, the composed value is the
+        // one it displayed.
         $this->seedProfile(12, 'custom_date3', 'date');
         $this->seedMemberProfile(1200, 12, ['value' => '1999-12-31', 'public_flag' => 1, 'tree_key' => 1200, 'lft' => 1]);
         $this->seedMemberProfile(1201, 12, ['value' => '2020', 'tree_key' => 1200, 'lft' => 2]);

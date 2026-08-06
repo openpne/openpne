@@ -137,11 +137,12 @@ class MemberProfileUpgrade extends UpgradeStep
      * childless roots hold the date themselves — which is what OpenPNE 3.10 writes — and a root with
      * children holds nothing, its Y-m-d being composed from the year/month/day rows (ordered by lft).
      *
-     * Both shapes exist in the wild, and only the child count tells them apart: reading the root's
-     * value unconditionally would resurrect the stale value a composed root may still carry, and
-     * composing unconditionally drops every childless root's date. Children present but not the
-     * three complete, non-zero parts is malformed either way, and becomes NULL rather than a
-     * half-date like `2020-03` — again as OpenPNE 3 resolves it.
+     * OpenPNE 3 writes the date onto the root either way (MemberProfileForm) and adds children only
+     * for the year/month/day options the field defines — a date field with no options has none — so
+     * the child count is what says which shape a row is. Reading the root regardless would still be
+     * wrong where the two disagree, because the composed value is the one OpenPNE 3 displayed.
+     * Children present but not the three complete, non-zero parts is malformed, and becomes NULL
+     * rather than a half-date like `2020-03` — again as OpenPNE 3 resolves it.
      */
     private function customDateValue(): string
     {
