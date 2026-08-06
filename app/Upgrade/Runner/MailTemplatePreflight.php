@@ -9,6 +9,7 @@ use App\Mail\Template\MailTemplateService;
 use App\Mail\Template\UnsupportedMailTemplateSyntaxException;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Steps\MailTemplateTranslationUpgrade;
+use App\Upgrade\Steps\MailTemplateUpgrade;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -128,32 +129,30 @@ final class MailTemplatePreflight
     }
 
     /**
-     * The source rows the import carries, id => the template they become. Same registry-derived filter as
-     * MailTemplateUpgrade, so a name the step drops is not render-tested here either.
+     * The source rows the import carries, id => the template they become.
+     *
+     * Both the filter and the name→template mapping are the step's own SQL, so this covers exactly the
+     * rows the step will insert. Resolving names in PHP instead would only approximate it: the source
+     * collation is case-insensitive and PAD SPACE, so a name the step's `IN` and `CASE` both match can
+     * be one a PHP comparison does not — and that row would migrate untested.
      *
      * @return array<int, MailTemplate>
      */
     private function importableTemplates(string $prefix, ?string $database): array
     {
-        $byName = [];
-        foreach (MailTemplate::importable() as $template) {
-            $byName[(string) $template->op3SourceName()] = $template;
-        }
+        $step = new MailTemplateUpgrade;
 
         $rows = DB::select(
-            'select `id`, `name` from '.InsertSelectCompiler::qualify($database, $prefix, 'notification_mail')
-            .' where `name` in ('.implode(', ', array_fill(0, count($byName), '?')).')',
-            array_keys($byName),
+            'select `id`, '.MailTemplateUpgrade::keyCase().' as `template_key` from '
+            .InsertSelectCompiler::qualify($database, $prefix, 'notification_mail')
+            .' where '.$step->filter(),
         );
 
         $templates = [];
         foreach ($rows as $row) {
-            // The IN comparison runs under the source collation, so a differently-cased name can come
-            // back; resolve it the same way (the step's own filter carries that row too).
-            foreach ($byName as $name => $template) {
-                if (strcasecmp($name, (string) $row->name) === 0) {
-                    $templates[(int) $row->id] = $template;
-                }
+            $template = MailTemplate::tryFrom((string) $row->template_key);
+            if ($template !== null) {
+                $templates[(int) $row->id] = $template;
             }
         }
 

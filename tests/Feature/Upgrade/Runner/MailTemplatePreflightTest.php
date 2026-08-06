@@ -141,6 +141,32 @@ class MailTemplatePreflightTest extends TestCase
         $this->assertDatabaseCount('mail_template_translations', 0);
     }
 
+    public function test_an_abort_still_reports_the_templates_that_will_not_render(): void
+    {
+        // One dry run has to show everything the source needs fixed, not just what stopped it.
+        $this->insertTemplate(lang: 'ja_JP', body: 'fine');
+        $this->insertTranslation(1, 'ja', 'fine');
+        $this->insertTemplate(name: 'pc_friendLinkRequest', body: '{{ "shout"|upper }}');
+
+        [$ok, $output] = $this->preflight(dryRun: false);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString('all migrate as locale `ja`', $output);
+        $this->assertStringContainsString('sandbox violation', $output);
+    }
+
+    public function test_a_name_the_source_collation_equates_is_covered_like_the_step_covers_it(): void
+    {
+        // utf8mb3_unicode_ci is PAD SPACE, so the step's `name IN (…)` and its key CASE both carry this
+        // row. Resolving the name in PHP would not, and the row would migrate untested.
+        $this->insertTemplate(name: self::SOURCE_NAME.'  ', body: '{{ "shout"|upper }}');
+
+        [$ok, $output] = $this->preflight();
+
+        $this->assertTrue($ok);
+        $this->assertStringContainsString('sandbox violation', $output);
+    }
+
     public function test_a_locale_the_application_never_reads_is_inert_and_not_render_tested(): void
     {
         // The body would fail the render check; reaching the inert verdict first is what proves it is skipped.

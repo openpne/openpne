@@ -66,6 +66,12 @@ final class UpgradeRunner
             $out("ERROR {$error}");
         }
 
+        // Before the abort, not after: these are already known, and an operator preparing a cutover
+        // should see everything the source needs fixed in one run rather than one abort at a time.
+        foreach ($mailReport->warnings as $warning) {
+            $out("WARN {$warning}");
+        }
+
         if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors()) {
             $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
@@ -79,12 +85,6 @@ final class UpgradeRunner
             foreach ($counts as $name => $rows) {
                 $out('WARN '.SourcePreflight::unknownSourceNameMessage($table, $name, $rows));
             }
-        }
-
-        // Same reason: a template that will not render is a property of the source, and the dry run is
-        // where an operator can still fix it before the cutover.
-        foreach ($mailReport->warnings as $warning) {
-            $out("WARN {$warning}");
         }
 
         if ($options->dryRun) {
