@@ -22,7 +22,9 @@ can run at all, and one decides how to take the dump.
 ## Requirements
 
 - **MySQL**, for both the source and the target. The upgrade is a set-based `INSERT...SELECT` over
-  the OpenPNE 3 DDL; it does not run on SQLite.
+  the OpenPNE 3 DDL; it does not run on SQLite. (An upgraded site is not obliged to stay on MySQL,
+  but [changing engine](changing-database-engine.md) is a separate operation and no part of this
+  one.)
 - **OpenPNE 3 core 3.6.x or newer.** An older source is missing tables and columns the upgrade
   reads. It refuses to start and names each one rather than failing partway through.
 - **Database file storage** (OpenPNE 3's default), where every uploaded file has its bytes in a
