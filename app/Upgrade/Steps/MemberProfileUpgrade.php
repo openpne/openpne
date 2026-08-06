@@ -17,8 +17,9 @@ use App\Upgrade\UpgradeStep;
  *  - single-value (input/textarea/select/radio/country/region, and preset date): copy the
  *    root row as-is.
  *  - checkbox: copy each child row (it carries profile_option_id); drop the empty root.
- *  - custom (non-preset) date: keep one row (the root) and compose its value from the
- *    year/month/day child rows (ordered by lft); drop the children.
+ *  - custom (non-preset) date: keep one row (the root) and drop the children. Its value comes
+ *    from the year/month/day child rows when it has them, and from the root's own `value`
+ *    when it has none — OpenPNE 3 writes the date either way (MemberProfile::getValue()).
  *
  * visibility maps OpenPNE 3's public_flag onto App\Support\Visibility (web=4→Open,
  * SNS=1→Members, friend=2→Friends, private=3→Private); an invalid 0 / NULL becomes NULL
@@ -48,7 +49,7 @@ class MemberProfileUpgrade extends UpgradeStep
             'profile_id' => Column::source('profile_id'),
             'profile_option_id' => Column::source('profile_option_id'),
             'value' => Column::expr(
-                sprintf('CASE WHEN %s THEN %s ELSE `value` END', $this->isCustomDateRoot(), $this->composedDate()),
+                sprintf('CASE WHEN %s THEN %s ELSE `value` END', $this->isCustomDateRoot(), $this->customDateValue()),
                 uses: ['value', 'tree_key', 'lft', 'id', 'profile_id'],
             ),
             'value_datetime' => Column::expr($this->normalizedDatetime(), uses: ['value_datetime']),
@@ -132,19 +133,56 @@ class MemberProfileUpgrade extends UpgradeStep
     }
 
     /**
-     * Y-m-d composed from the date field's year/month/day child rows (ordered by lft).
-     * Like OpenPNE 3's getValue(), only a complete date (all three parts present and
-     * non-zero) is emitted; anything else is NULL rather than a malformed `2020-03` / `0`.
+     * A custom date field's value, following OpenPNE 3's own precedence (MemberProfile::getValue()):
+     * a childless root is read from its own value, and a root with children is composed from the
+     * year/month/day rows (ordered by lft) instead.
+     *
+     * OpenPNE 3 writes the date onto the root either way (MemberProfileForm) and adds children only
+     * for the year/month/day options the field defines — a date field with no options has none — so
+     * the child count is what says which shape a row is. Reading the root regardless would still be
+     * wrong where the two disagree, because the composed value is the one OpenPNE 3 displayed.
+     * Children present but not the three complete, non-zero parts is malformed, and becomes NULL
+     * rather than a half-date like `2020-03` — again as OpenPNE 3 resolves it.
      */
-    private function composedDate(): string
+    private function customDateValue(): string
     {
         $y = $this->dateChild(0);
         $m = $this->dateChild(1);
         $d = $this->dateChild(2);
 
-        return "CASE WHEN {$y} > 0 AND {$m} > 0 AND {$d} > 0"
-            ." THEN CONCAT_WS('-', {$y}, LPAD({$m}, 2, '0'), LPAD({$d}, 2, '0'))"
+        return "CASE WHEN {$this->dateChildCount()} = 0 THEN `value`"
+            ." WHEN {$this->dateChildCount()} = 3 AND {$y} > 0 AND {$m} > 0 AND {$d} > 0"
+            .' THEN '.$this->composedDate($y, $m, $d)
             .' ELSE NULL END';
+    }
+
+    /**
+     * The date OpenPNE 3 shows for a year/month/day triple, overflow included: it composes with
+     * DateTime::setDate(), so an impossible 2020-02-31 rolls forward to 2020-03-02 rather than being
+     * stored as written. Its own form rejects that via checkdate(), so such a triple came from
+     * somewhere else — but it is still a date OpenPNE 3 renders, and concatenating the parts would
+     * migrate one that does not exist.
+     *
+     * Offsetting from January 1st is what makes it exact: MySQL clamps a month addition to the end of
+     * the target month (2020-01-31 + 1 MONTH = 2020-02-29) and the 1st gives it nothing to clamp.
+     * The year is zero-padded into a date literal rather than passed to MAKEDATE, which reads any
+     * year below 100 as a two-digit one — 20 would become 2020, while OpenPNE 3 accepts a year of 20
+     * (checkdate does) and renders it as 0020.
+     */
+    private function composedDate(string $y, string $m, string $d): string
+    {
+        return sprintf(
+            "DATE_ADD(DATE_ADD(CONCAT(LPAD(%s, 4, '0'), '-01-01'), INTERVAL %s - 1 MONTH), INTERVAL %s - 1 DAY)",
+            $y,
+            $m,
+            $d,
+        );
+    }
+
+    private function dateChildCount(): string
+    {
+        return '(SELECT COUNT(*) FROM '.SourceRef::table('member_profile').' `n`'
+            .' WHERE `n`.`tree_key` = `member_profile`.`id` AND `n`.`id` <> `member_profile`.`id`)';
     }
 
     /**

@@ -135,6 +135,64 @@ class MemberProfileUpgradeSqlTest extends TestCase
         $this->assertSame(1, MemberProfile::where('profile_id', 5)->count());
     }
 
+    public function test_custom_date_without_children_keeps_the_root_value(): void
+    {
+        // The shape OpenPNE 3.10 actually writes: the root holds the date and there are no
+        // year/month/day rows to compose from. Composing regardless discarded the date.
+        $this->seedProfile(11, 'joined_on', 'date');
+        $this->seedMemberProfile(1100, 11, ['value' => '2019-04-01', 'public_flag' => 1, 'tree_key' => 1100, 'lft' => 1]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1100, 'value' => '2019-04-01']);
+    }
+
+    public function test_custom_date_children_win_over_the_value_on_the_root(): void
+    {
+        // OpenPNE 3 writes the date onto the root as well as into the children, and reads the
+        // children whenever there are any — so where the two disagree, the composed value is the
+        // one it displayed.
+        $this->seedProfile(12, 'custom_date3', 'date');
+        $this->seedMemberProfile(1200, 12, ['value' => '1999-12-31', 'public_flag' => 1, 'tree_key' => 1200, 'lft' => 1]);
+        $this->seedMemberProfile(1201, 12, ['value' => '2020', 'tree_key' => 1200, 'lft' => 2]);
+        $this->seedMemberProfile(1202, 12, ['value' => '3', 'tree_key' => 1200, 'lft' => 3]);
+        $this->seedMemberProfile(1203, 12, ['value' => '5', 'tree_key' => 1200, 'lft' => 4]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1200, 'value' => '2020-03-05']);
+    }
+
+    public function test_custom_date_keeps_a_year_below_100_as_written(): void
+    {
+        // OpenPNE 3 accepts a year of 20 and renders it as 0020. Composing through MySQL's
+        // MAKEDATE() would read it as a two-digit year and move the date to 2020.
+        $this->seedProfile(14, 'custom_date5', 'date');
+        $this->seedMemberProfile(1400, 14, ['value' => '', 'public_flag' => 1, 'tree_key' => 1400, 'lft' => 1]);
+        $this->seedMemberProfile(1401, 14, ['value' => '20', 'tree_key' => 1400, 'lft' => 2]);
+        $this->seedMemberProfile(1402, 14, ['value' => '1', 'tree_key' => 1400, 'lft' => 3]);
+        $this->seedMemberProfile(1403, 14, ['value' => '1', 'tree_key' => 1400, 'lft' => 4]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1400, 'value' => '0020-01-01']);
+    }
+
+    public function test_custom_date_children_overflow_the_way_openpne3_composes_them(): void
+    {
+        // DateTime::setDate() rolls an impossible date forward, so a stored 2020-02-31 is one
+        // OpenPNE 3 rendered as 2020-03-02.
+        $this->seedProfile(13, 'custom_date4', 'date');
+        $this->seedMemberProfile(1300, 13, ['value' => '', 'public_flag' => 1, 'tree_key' => 1300, 'lft' => 1]);
+        $this->seedMemberProfile(1301, 13, ['value' => '2020', 'tree_key' => 1300, 'lft' => 2]);
+        $this->seedMemberProfile(1302, 13, ['value' => '2', 'tree_key' => 1300, 'lft' => 3]);
+        $this->seedMemberProfile(1303, 13, ['value' => '31', 'tree_key' => 1300, 'lft' => 4]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('member_profiles', ['id' => 1300, 'value' => '2020-03-02']);
+    }
+
     public function test_custom_date_with_incomplete_children_is_null(): void
     {
         // Only year + month present (no day): OpenPNE 3 returns null, so we must not store a
