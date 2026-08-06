@@ -41,6 +41,24 @@ missing the newest writes. `sqlite3 database.sqlite ".backup out.sqlite"` takes 
 keeps WAL mode; `VACUUM INTO` also takes the whole of it but produces a file in the default journal
 mode, so a database restored from one needs setting again.
 
+**How much fsync to pay for that.** `DB_SYNCHRONOUS` is the other half of the WAL decision, and takes
+`OFF`, `NORMAL`, `FULL` or `EXTRA`. Unset leaves SQLite's own `FULL`, which flushes to disk on every
+commit. `NORMAL` is the usual companion to WAL: it stops paying for that on each commit, at the price
+of a power cut being able to take the most recent ones with it. This one is a property of the
+connection rather than of the database, so unlike a journal mode it has to be set wherever the site
+runs, and there is nothing in the file to inherit it from.
+
+Anything the four names do not cover — a typo, a number outside `0`–`3`, a blank — reads as unset and
+leaves you on `FULL`. That is deliberate: passed through verbatim, SQLite would resolve an
+unrecognised word to `NORMAL` and an out-of-range number to `OFF`, so a typo would buy a quieter disk
+by making the database less durable than the default it replaced. It still means a typo gets you the
+default rather than what you asked for, so confirm this one too:
+
+```console
+$ php artisan tinker --execute="echo DB::selectOne('pragma synchronous')->synchronous;"
+1
+```
+
 ## Copying the database
 
 Do not attempt this with a dump. mysqldump writes MySQL's own backslash string escapes, which SQLite
