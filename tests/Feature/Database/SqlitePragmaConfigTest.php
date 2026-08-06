@@ -33,14 +33,25 @@ class SqlitePragmaConfigTest extends TestCase
         return [
             'unset leaves SQLite its own FULL' => [null, null],
             'blank reads as unset' => ['', null],
-            'a level passes through' => ['NORMAL', 'NORMAL'],
+
+            // The published contract: four names and SQLite's own numbering for them. 0 is a level,
+            // so it has to survive being falsy.
+            'OFF' => ['OFF', 'OFF'],
+            'NORMAL' => ['NORMAL', 'NORMAL'],
+            'FULL' => ['FULL', 'FULL'],
+            'EXTRA' => ['EXTRA', 'EXTRA'],
+            '0 is OFF' => ['0', 'OFF'],
+            '1 is NORMAL' => ['1', 'NORMAL'],
+            '2 is FULL' => ['2', 'FULL'],
+            '3 is EXTRA' => ['3', 'EXTRA'],
             'case does not matter' => ['normal', 'NORMAL'],
-            // SQLite's own numbering. OFF is 0, so it must survive being falsy.
-            'a number names its level' => ['0', 'OFF'],
+
             // Passed through, SQLite would read these as NORMAL and OFF — quieter and less durable
             // than the FULL they replaced, with nothing said about it.
             'a typo reads as unset, not as the level SQLite would guess' => ['NORAML', null],
             'a number out of range reads as unset' => ['7', null],
+            // env() hands back a boolean for this one, which casts to '1' — NORMAL, by accident.
+            'an unquoted true is no level' => ['true', null],
         ];
     }
 

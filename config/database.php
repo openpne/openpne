@@ -53,7 +53,9 @@ return [
             // Only the four levels pass, blank and anything else reading as unset: SQLite resolves an
             // unrecognised word to NORMAL and an out-of-range number to OFF, so a typo passed straight
             // through would quietly make the database *less* durable than the default it replaced.
-            'synchronous' => match (strtoupper((string) env('DB_SYNCHRONOUS'))) {
+            // Non-strings are no levels either — env() reads an unquoted `true` as a boolean, which
+            // would otherwise cast to '1' and land on NORMAL.
+            'synchronous' => match (is_string($level = env('DB_SYNCHRONOUS')) ? strtoupper($level) : '') {
                 'OFF', '0' => 'OFF',
                 'NORMAL', '1' => 'NORMAL',
                 'FULL', '2' => 'FULL',
