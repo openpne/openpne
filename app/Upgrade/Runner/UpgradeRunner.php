@@ -56,23 +56,35 @@ final class UpgradeRunner
             ? $fileBin->preflight($options->sourcePrefix, $options->sourceDatabase)
             : null;
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : []) as $error) {
+        // Same shape for the mail templates: it reads the source rows the structural check guards, and
+        // its errors are source states the translation step cannot survive, so they join this abort.
+        $mailReport = ! $report->hasErrors() && in_array('mail_template_translations', $this->targetTables(), true)
+            ? (new MailTemplatePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
+            : new MailTemplatePreflightReport([], []);
+
+        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors) as $error) {
             $out("ERROR {$error}");
         }
 
-        if ($report->hasErrors() || $fileBinError !== null) {
+        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors()) {
             $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;
         }
 
         // Only now that the structure is verified: the scan reads columns the checks above guard.
-        // Before the plan/run split, because an unrecognised config name is a read-only observation
-        // about the source and a dry run is the cheapest place to see it.
-        foreach ($preflight->unknownConfigNames($options->sourcePrefix, $options->sourceDatabase) as $table => $counts) {
+        // Before the plan/run split, because an unrecognised name is a read-only observation about the
+        // source and a dry run is the cheapest place to see it.
+        foreach ($preflight->unknownSourceNames($options->sourcePrefix, $options->sourceDatabase) as $table => $counts) {
             foreach ($counts as $name => $rows) {
-                $out('WARN '.SourcePreflight::unknownConfigNameMessage($table, $name, $rows));
+                $out('WARN '.SourcePreflight::unknownSourceNameMessage($table, $name, $rows));
             }
+        }
+
+        // Same reason: a template that will not render is a property of the source, and the dry run is
+        // where an operator can still fix it before the cutover.
+        foreach ($mailReport->warnings as $warning) {
+            $out("WARN {$warning}");
         }
 
         if ($options->dryRun) {

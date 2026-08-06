@@ -66,8 +66,9 @@ class MailTemplateRenderer
             return $this->twig->createTemplate($template)->render($normalized);
         } catch (TwigError $e) {
             // Parse error, sandbox violation (disallowed tag/filter/function, e.g. range/`..`), or an
-            // unmapped app_url_for route — all surfaced uniformly so the import preflight can list them.
-            throw new UnsupportedMailTemplateSyntaxException($e->getMessage(), previous: $e);
+            // unmapped app_url_for route — surfaced with the fault that tells them apart, so the import
+            // preflight can group them without matching on message text.
+            throw UnsupportedMailTemplateSyntaxException::fromTwig($e);
         }
     }
 
