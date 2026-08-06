@@ -63,23 +63,57 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        $body = (string) $record->getAttribute('body');
         $format = $record->getAttribute('format') ?? BodyFormat::Plain;
-        $url = $this->firstFetchableUrl((string) $record->getAttribute('body'), $format);
+        $url = $this->firstFetchableUrl($body, $format);
 
         if ($url === null) {
             // Marked as looked at, so the read path stops asking. The body genuinely has no card.
-            $record->forceFill(['link_card_id' => null, 'link_card_synced_at' => CarbonImmutable::now()])->saveQuietly();
+            $this->attach($record, $body, $format, null);
 
             return;
         }
 
         $card = $this->cardFor($url);
 
-        $record->forceFill(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()])->saveQuietly();
+        if (! $this->attach($record, $body, $format, $card->id)) {
+            // The body changed under us; the card belongs to text that is no longer there.
+            return;
+        }
 
-        if ($card->status === LinkCardStatus::Pending || $card->isStale()) {
+        if ($card->isDueForFetch()) {
             FetchLinkCard::dispatch($card->id);
         }
+    }
+
+    /**
+     * Point $record at $cardId, but only if its body is still the one this job read.
+     *
+     * Two reasons this is a conditional query rather than a save:
+     *
+     *  - **It must not win a race with an edit.** The body is read at the start of the job and the
+     *    result written at the end; in between someone can save new text, which clears the marker so
+     *    the new body gets examined. An unconditional write would then attach the *old* body's card
+     *    to the new text and mark it synced — and because ShouldBeUnique may still be holding the
+     *    lock, the edit's own job can be dropped, leaving it that way.
+     *  - **It must not touch `updated_at`.** Even saveQuietly, which only suppresses events, goes
+     *    through performUpdate and bumps the timestamp. Community topic and event lists are ordered
+     *    by `updated_at`, so a card synced from someone viewing an old post would float it back to
+     *    the top of the board.
+     */
+    private function attach(Model $record, string $body, BodyFormat $format, ?int $cardId): bool
+    {
+        $query = $record->newQuery()->whereKey($record->getKey())->where('body', $body);
+
+        // timeline_posts has no format column; there is nothing to pin for it.
+        if ($record->getAttribute('format') !== null) {
+            $query->where('format', $format->value);
+        }
+
+        return $query->toBase()->update([
+            'link_card_id' => $cardId,
+            'link_card_synced_at' => CarbonImmutable::now(),
+        ]) === 1;
     }
 
     /**

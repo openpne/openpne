@@ -145,6 +145,68 @@ class SyncLinkCardTest extends TestCase
         $this->assertSame('https://example.com/real', $diary->fresh()?->linkCard?->url);
     }
 
+    public function test_it_does_not_attach_a_card_to_a_body_that_changed_underneath_it(): void
+    {
+        // The job reads the body at the start and writes the result at the end. An edit in between
+        // clears the marker so the new text gets examined — but an unconditional write would attach
+        // the OLD body's card to the NEW text and mark it synced. Worse, ShouldBeUnique can still be
+        // holding the lock, so the edit's own job is dropped and it stays that way.
+        Queue::fake();
+        $diary = $this->diary('Original https://example.com/original');
+
+        // The edit has to land *between* the job's read and its write, so it is triggered from the
+        // retrieved event — the moment the job has the old body in hand and has not written yet.
+        $edited = false;
+        Diary::retrieved(function (Diary $model) use (&$edited): void {
+            if ($edited) {
+                return;
+            }
+            $edited = true;
+            Diary::whereKey($model->getKey())->update([
+                'body' => 'Rewritten, no link at all',
+                'link_card_synced_at' => null,
+            ]);
+        });
+
+        (new SyncLinkCard(Diary::class, $diary->id))->handle($this->settings());
+
+        $this->assertTrue($edited, 'The edit must have interleaved for this test to mean anything.');
+
+        $diary->refresh();
+        $this->assertNull($diary->link_card_id, 'A card from the previous body was attached to the new one.');
+        $this->assertNull($diary->link_card_synced_at, 'The new body must stay unsynced so it is examined.');
+    }
+
+    public function test_syncing_does_not_bump_the_record_timestamp(): void
+    {
+        // Community topic and event lists order by updated_at, so a card synced from someone opening
+        // an old post would float it back to the top of the board. saveQuietly does not help: it
+        // suppresses events but still goes through performUpdate, which touches the timestamp.
+        Queue::fake();
+        $diary = $this->diary('https://example.com/a');
+        $before = $diary->updated_at;
+
+        $this->travelTo(now()->addHour());
+        (new SyncLinkCard(Diary::class, $diary->id))->handle($this->settings());
+
+        $this->assertEquals($before, $diary->fresh()?->updated_at);
+    }
+
+    public function test_it_does_not_queue_a_fetch_for_a_failed_card_still_in_backoff(): void
+    {
+        // isStale() alone reads a failed card as stale forever, since it has no expiry — so every new
+        // record mentioning the same dead URL would queue a fetch straight through the backoff.
+        Queue::fake();
+        $url = (string) LinkUrl::normalize('https://example.com/dead');
+        LinkCard::factory()->failed(failureCount: 3)->create(['url' => $url, 'url_hash' => LinkUrl::hash($url)]);
+        $diary = $this->diary("Another mention of {$url}");
+
+        (new SyncLinkCard(Diary::class, $diary->id))->handle($this->settings());
+
+        $this->assertNotNull($diary->fresh()?->link_card_id, 'The card is still attached; only the fetch is withheld.');
+        Queue::assertNotPushed(FetchLinkCard::class);
+    }
+
     public function test_a_deleted_record_is_not_an_error(): void
     {
         Queue::fake();

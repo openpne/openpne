@@ -11,6 +11,7 @@ use App\LinkCard\LinkCardSettings;
 use App\LinkCard\LinkUrl;
 use App\LinkCard\MetadataExtractor;
 use App\LinkCard\OembedClient;
+use App\Models\File;
 use App\Models\LinkCard;
 use App\Outbound\SafeHttpFetcher;
 use App\Support\LinkCardStatus;
@@ -168,6 +169,69 @@ class FetchLinkCardTest extends TestCase
         $this->runJob($card);
 
         $this->assertSame('From oEmbed', $card->fresh()?->title);
+    }
+
+    public function test_a_delayed_duplicate_does_not_refetch_a_card_that_is_already_fresh(): void
+    {
+        // ShouldBeUnique has a time window, so a duplicate delayed past it arrives after the first
+        // job has already succeeded — with the lease released and the card fresh. Nothing in the
+        // claim's timing conditions stops that; the state has to be part of the claim itself.
+        $card = $this->card('https://example.com/article');
+        $this->queueHtml('<html><head><meta property="og:title" content="Fetched once"></head></html>');
+        $this->runJob($card);
+
+        $this->assertSame(LinkCardStatus::Ok, $card->fresh()?->status);
+        $before = count($this->outboundRequests);
+
+        $this->queueHtml('<html><head><meta property="og:title" content="Should never be fetched"></head></html>');
+        $this->runJob($card->fresh());
+
+        $this->assertCount($before, $this->outboundRequests, 'A fresh card was fetched a second time.');
+        $this->assertSame('Fetched once', $card->fresh()?->title);
+    }
+
+    public function test_an_expired_card_can_still_be_claimed(): void
+    {
+        // The other half: the state condition must not wedge a card that genuinely needs refreshing.
+        $card = $this->card('https://example.com/expired');
+        $card->update([
+            'status' => LinkCardStatus::Ok,
+            'title' => 'Old title',
+            'expires_at' => CarbonImmutable::now()->subDay(),
+        ]);
+        $this->queueHtml('<html><head><meta property="og:title" content="New title"></head></html>');
+
+        $this->runJob($card->fresh());
+
+        $this->assertSame('New title', $card->fresh()?->title);
+    }
+
+    public function test_an_image_stored_by_a_worker_that_lost_its_lease_is_not_left_behind(): void
+    {
+        // The row write is fenced, so the losing worker's result is dropped — but the image it
+        // downloaded is then referenced by nothing, and would accumulate on every overrun.
+        $card = $this->card('https://example.com/with-image');
+        $this->queueHtml('<html><head><meta property="og:title" content="T"><meta property="og:image" content="https://example.com/i.png"></head></html>');
+        $this->queueBinary($this->png(), 'image/png');
+
+        // The lease has to move *while this worker is running*, not before — set beforehand it would
+        // simply fail to claim and never fetch at all, and the test would pass having proved nothing.
+        // Storing the image is the moment to do it.
+        $stolen = false;
+        File::created(function () use ($card, &$stolen): void {
+            if ($stolen) {
+                return;
+            }
+            $stolen = true;
+            LinkCard::whereKey($card->id)->update(['next_attempt_at' => CarbonImmutable::now()->addMinutes(30)]);
+        });
+
+        $filesBefore = File::count();
+        $this->runJob($card->fresh());
+
+        $this->assertTrue($stolen, 'The lease must have been taken mid-fetch for this test to mean anything.');
+
+        $this->assertSame($filesBefore, File::count(), 'An orphaned image survived a lost lease.');
     }
 
     public function test_a_missing_card_is_not_an_error(): void

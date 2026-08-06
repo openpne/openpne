@@ -8,6 +8,7 @@ use App\LinkCard\LinkCardImage;
 use App\LinkCard\LinkCardSettings;
 use App\LinkCard\MetadataExtractor;
 use App\LinkCard\OembedClient;
+use App\Models\File;
 use App\Models\LinkCard;
 use App\Outbound\OutboundException;
 use App\Outbound\SafeHttpFetcher;
@@ -87,17 +88,28 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
         }
 
         $deadline = microtime(true) + (float) config('openpne.outbound.job_timeout');
+        $imported = null;
 
         try {
-            $card->completeFetch($lease, $this->fetched($card, $fetcher, $extractor, $oembed, $images, $deadline));
+            $attributes = $this->fetched($card, $fetcher, $extractor, $oembed, $images, $deadline, $imported);
         } catch (OutboundException) {
-            $card->completeFetch($lease, $this->failed($card));
+            $attributes = $this->failed($card);
+        }
+
+        if (! $card->completeFetch($lease, $attributes) && $imported !== null) {
+            // The lease moved on while this was fetching, so the row keeps whatever the newer worker
+            // wrote — and the image downloaded here is referenced by nothing. Deleting the File takes
+            // its bytes and cached thumbnails with it (FileObserver); leaving it would accumulate
+            // unreachable blobs every time a fetch overran.
+            $imported->delete();
         }
     }
 
     /**
      * The attributes describing a successful fetch.
      *
+     * @param  File|null  $imported  Set to the stored image, so the caller can remove it if the
+     *                               result turns out to be unwritable.
      * @return array<string, mixed>
      *
      * @throws OutboundException
@@ -109,6 +121,7 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
         OembedClient $oembed,
         LinkCardImage $images,
         float $deadline,
+        ?File &$imported,
     ): array {
         $response = $fetcher->get($card->url, (int) config('openpne.outbound.max_html_bytes'), $deadline);
 
@@ -125,12 +138,16 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
         }
 
         if (! $metadata->isUsable()) {
-            // Reached, read, and had nothing to show. That is an answer, so it is cached like any
-            // other rather than retried.
+            // Reached, read, and had nothing to show — recorded as a failure like any other, and so
+            // subject to the same backoff. Pages do gain metadata over time, so this is deliberately
+            // not a permanent negative; the backoff is what keeps re-asking cheap. Distinguishing a
+            // transient failure from a deterministic one would let each have its own schedule, and
+            // is left for when the logs say it matters.
             return $this->failed($card);
         }
 
         $image = $metadata->imageUrl === null ? null : $images->import($metadata->imageUrl, $card->id, $deadline);
+        $imported = $image['file'] ?? null;
 
         return [
             'status' => LinkCardStatus::Ok,

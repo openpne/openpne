@@ -84,6 +84,29 @@ class LinkCard extends Model
     }
 
     /**
+     * Whether this card is worth fetching right now.
+     *
+     * The single state machine, deliberately: the queueing side, the read path and the claim all have
+     * to agree, and when they were each written separately they did not. `isStale()` alone is not it
+     * — a failed card has no expiry, so it reads as stale forever and would be queued again every
+     * time another record mentions the same URL, right through the backoff that exists to stop that.
+     *
+     * `next_attempt_at` in the future means one of two things, and both mean "not now": a worker is
+     * holding the lease, or a failure is serving out its backoff.
+     */
+    public function isDueForFetch(): bool
+    {
+        if ($this->next_attempt_at !== null && $this->next_attempt_at->isFuture()) {
+            return false;
+        }
+
+        return match ($this->status) {
+            LinkCardStatus::Pending, LinkCardStatus::Failed => true,
+            LinkCardStatus::Ok => $this->isStale(),
+        };
+    }
+
+    /**
      * Take the fetch lease for this card, or return null if someone else holds it.
      *
      * A conditional UPDATE is the whole mechanism: whichever worker's write matches the current
@@ -101,7 +124,16 @@ class LinkCard extends Model
 
         $taken = static::query()
             ->whereKey($this->getKey())
+            // Nobody is holding it and no backoff is running.
             ->where(fn ($query) => $query->whereNull('next_attempt_at')->orWhere('next_attempt_at', '<=', $now))
+            // And it is actually due. This condition belongs in the UPDATE, not only in the caller:
+            // ShouldBeUnique is an optimisation with a time window, so a duplicate job delayed past
+            // it arrives after the first has already succeeded — with a released lease and a fresh
+            // card — and would otherwise claim it and fetch the URL a second time for nothing.
+            ->where(fn ($query) => $query
+                ->where('status', '!=', LinkCardStatus::Ok->value)
+                ->orWhereNull('expires_at')
+                ->orWhere('expires_at', '<=', $now))
             ->update(['next_attempt_at' => $lease, 'updated_at' => $now]);
 
         return $taken === 1 ? $lease : null;

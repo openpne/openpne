@@ -23,6 +23,7 @@ class CommunityEvent extends Model
     protected function casts(): array
     {
         return [
+            'link_card_synced_at' => 'datetime',
             'event_updated_at' => 'datetime',
             'open_date' => 'datetime',
             'application_deadline' => 'datetime',

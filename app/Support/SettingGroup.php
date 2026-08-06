@@ -38,10 +38,10 @@ enum SettingGroup
     /** Per-feature availability toggles (App\Support\Feature), edited on the features page. */
     case Features;
 
-    /** Per-site branding (brand color, logo mark, favicon), edited on the branding page. */
     /** Whether bodies show link preview cards, and therefore whether this site fetches URLs at all. */
     case LinkCard;
 
+    /** Per-site branding (brand color, logo mark, favicon), edited on the branding page. */
     case Branding;
 
     /** The administrator-authored message shown on the login screen, edited on the login screen page. */

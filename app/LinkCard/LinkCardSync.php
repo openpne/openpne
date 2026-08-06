@@ -7,7 +7,6 @@ namespace App\LinkCard;
 use App\Jobs\FetchLinkCard;
 use App\Jobs\SyncLinkCard;
 use App\Models\LinkCard;
-use App\Support\LinkCardStatus;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -55,30 +54,9 @@ final class LinkCardSync
             ? null
             : ($record->relationLoaded('linkCard') ? $record->getRelation('linkCard') : LinkCard::find($record->getAttribute('link_card_id')));
 
-        if ($card instanceof LinkCard && $this->needsRefetch($card)) {
+        // The same predicate the queueing side and the claim use — see LinkCard::isDueForFetch.
+        if ($card instanceof LinkCard && $card->isDueForFetch()) {
             FetchLinkCard::dispatch($card->id);
         }
-    }
-
-    /**
-     * Whether this card is due for another attempt.
-     *
-     * A failed card is governed by its backoff rather than by staleness: it has no expiry, and
-     * `next_attempt_at` is the answer to "when is it worth asking again". A card still under lease —
-     * a worker is on it right now — is due for nothing.
-     */
-    private function needsRefetch(LinkCard $card): bool
-    {
-        $due = $card->next_attempt_at === null || $card->next_attempt_at->isPast();
-
-        if (! $due) {
-            return false;
-        }
-
-        return match ($card->status) {
-            LinkCardStatus::Pending => true,
-            LinkCardStatus::Failed => true,
-            LinkCardStatus::Ok => $card->isStale(),
-        };
     }
 }

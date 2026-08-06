@@ -24,6 +24,7 @@ class TimelinePost extends Model
     protected function casts(): array
     {
         return [
+            'link_card_synced_at' => 'datetime',
             'visibility' => Visibility::class,
         ];
     }

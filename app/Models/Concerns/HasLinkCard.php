@@ -34,6 +34,9 @@ trait HasLinkCard
     {
         $this->link_card_id = null;
         $this->link_card_synced_at = null;
+        // Otherwise an already-loaded relation keeps serving the old card to anything that renders
+        // this same instance after the change.
+        $this->unsetRelation('linkCard');
     }
 
     /** Whether a card has been resolved for the body as it stands now. */

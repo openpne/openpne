@@ -107,7 +107,6 @@ enum SnsSettingKey: string
      */
     case FeatureFriendEnabled = 'feature_friend_enabled';
 
-    /** Per-site brand color as `#rrggbb`, or '' for none (App\Support\BrandColor). */
     /**
      * Whether a URL in a member's body is fetched and shown as a preview card.
      *
@@ -118,6 +117,7 @@ enum SnsSettingKey: string
      */
     case LinkCardEnabled = 'link_card_enabled';
 
+    /** Per-site brand color as `#rrggbb`, or '' for none (App\Support\BrandColor). */
     case BrandColor = 'brand_color';
 
     /**

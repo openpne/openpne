@@ -22,6 +22,7 @@ class CommunityTopic extends Model
     protected function casts(): array
     {
         return [
+            'link_card_synced_at' => 'datetime',
             'topic_updated_at' => 'datetime',
             'format' => BodyFormat::class,
         ];

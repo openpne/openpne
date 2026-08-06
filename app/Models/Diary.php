@@ -23,6 +23,7 @@ class Diary extends Model
     protected function casts(): array
     {
         return [
+            'link_card_synced_at' => 'datetime',
             'visibility' => Visibility::class,
             'format' => BodyFormat::class,
         ];
