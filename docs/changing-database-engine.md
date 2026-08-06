@@ -21,8 +21,14 @@ anyone else near it.
 **What one file costs and buys.** Sessions, the cache and the queue are all database-backed by
 default, so on SQLite they share the site's single file with its content. SQLite's default journal
 makes a writer block readers for the length of its write, which a site with any concurrency will
-feel — set `journal_mode` on the `sqlite` connection in `config/database.php` to `WAL` before serving
-traffic from it. What you get in return is a site whose backup is a file copy.
+feel — set `journal_mode` on the `sqlite` connection in `config/database.php` to `WAL`, and set it
+before traffic arrives: changing a database's journal mode takes an exclusive lock, so doing it while
+connections are open fails with `database is locked`.
+
+Backing the site up is then one command, not one file copy. Under WAL a committed row can still be
+in the `-wal` file beside the database, so copying the database on its own quietly produces a backup
+missing the newest writes. `sqlite3 database.sqlite ".backup out.sqlite"` and `VACUUM INTO` each take
+the whole of it.
 
 ## Copying the database
 
