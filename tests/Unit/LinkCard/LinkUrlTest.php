@@ -32,12 +32,13 @@ class LinkUrlTest extends TestCase
             'idn host' => ['https://例え.テスト/a', 'https://xn--r8jz45g.xn--zckzah/a'],
 
             // Kept: these do change it.
-            'non-default port' => ['https://example.com:8443/a', 'https://example.com:8443/a'],
             'path case' => ['https://example.com/Article/One', 'https://example.com/Article/One'],
             'query' => ['https://example.com/?id=42', 'https://example.com/?id=42'],
             'query order' => ['https://example.com/?b=2&a=1', 'https://example.com/?b=2&a=1'],
             'tracking parameters' => ['https://example.com/a?utm_source=x', 'https://example.com/a?utm_source=x'],
             'empty path' => ['https://example.com', 'https://example.com'],
+            // A server can tell `/a` from `/a?`, so the trailing marker is part of the identity.
+            'empty query is kept' => ['https://example.com/a?', 'https://example.com/a?'],
         ];
     }
 
@@ -65,6 +66,9 @@ class LinkUrlTest extends TestCase
             'userinfo' => ['https://user:secret@example.com/a'],
             'user only' => ['https://user@example.com/a'],
             'over long' => ['https://example.com/'.str_repeat('a', 4096)],
+            // Ports SafeHttpFetcher will not dial, so a card here could never be fetched.
+            'non-default port' => ['https://example.com:8443/a'],
+            'http on 443' => ['http://example.com:443/a'],
         ];
     }
 
@@ -86,6 +90,14 @@ class LinkUrlTest extends TestCase
         $this->assertSame(LinkUrl::hash($one), LinkUrl::hash($two));
         $this->assertNotSame(LinkUrl::hash($one), LinkUrl::hash((string) LinkUrl::normalize('https://example.com/b')));
         $this->assertSame(64, strlen(LinkUrl::hash($one)));
+    }
+
+    public function test_an_empty_query_is_a_different_page_from_none(): void
+    {
+        $this->assertNotSame(
+            LinkUrl::normalize('https://example.com/a'),
+            LinkUrl::normalize('https://example.com/a?'),
+        );
     }
 
     public function test_a_query_bearing_id_keeps_pages_apart(): void

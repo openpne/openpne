@@ -104,6 +104,49 @@ class MetadataExtractorTest extends TestCase
         $this->assertSame('日本語', $this->extract($html, 'euc-jp')->title);
     }
 
+    public function test_it_reads_an_iso_2022_jp_page(): void
+    {
+        // The one legacy encoding a UTF-8 check cannot rule out: it encodes Japanese entirely within
+        // the ASCII byte range using escape sequences, so testing UTF-8 first and returning early
+        // leaves the title full of raw ESC $ B sequences.
+        $html = mb_convert_encoding(
+            '<html><head><title>日本語</title></head></html>',
+            'ISO-2022-JP',
+            'UTF-8',
+        );
+
+        $this->assertTrue(mb_check_encoding($html, 'UTF-8'), 'Precondition: the bytes pass a UTF-8 check.');
+        $this->assertSame('日本語', $this->extract($html, 'iso-2022-jp')->title);
+    }
+
+    public function test_a_legacy_page_cut_mid_character_keeps_the_readable_prefix(): void
+    {
+        // The read cap can land mid-character, leaving bytes valid in nothing. Converting from UTF-8
+        // to UTF-8 at that point replaces every multi-byte character in the whole prefix (日本語
+        // becomes ???{??); converting from the declared charset replaces only the broken tail.
+        $html = mb_convert_encoding(
+            '<html><head><title>日本語のタイトル</title></head></html>',
+            'SJIS-win',
+            'UTF-8',
+        );
+        $truncated = substr($html, 0, 26);
+
+        $this->assertFalse(mb_check_encoding($truncated, 'SJIS-win'), 'Precondition: the cut leaves invalid bytes.');
+        $this->assertStringStartsWith('日本語', (string) $this->extract($truncated, 'shift_jis')->title);
+    }
+
+    public function test_it_reads_a_charset_declared_the_old_way(): void
+    {
+        // The spelling the pages this exists for actually carry.
+        $html = mb_convert_encoding(
+            '<html><head><meta http-equiv="Content-Type" content="text/html; charset=Shift_JIS"><title>古いページ</title></head></html>',
+            'SJIS-win',
+            'UTF-8',
+        );
+
+        $this->assertSame('古いページ', $this->extract($html, null)->title);
+    }
+
     public function test_a_charset_that_does_not_fit_the_bytes_falls_through_to_detection(): void
     {
         // A CMS template left declaring Shift_JIS while the page is really UTF-8 is common enough
@@ -215,6 +258,61 @@ class MetadataExtractorTest extends TestCase
             HTML);
 
         $this->assertSame('https://cdn.example.com/secure.jpg', $metadata->imageUrl);
+    }
+
+    public function test_a_structured_image_property_belongs_to_its_own_image(): void
+    {
+        // Per ogp.me a structured property attaches to the most recent root og:image, and the first
+        // object listed is the page's preferred one. Flattening the tags by name and then preferring
+        // secure_url picks second-secure.jpg — the *second* image, which the page ranked lower.
+        $metadata = $this->extract(<<<'HTML'
+            <html><head>
+            <meta property="og:image" content="https://cdn.example.com/first.jpg">
+            <meta property="og:image" content="https://cdn.example.com/second.jpg">
+            <meta property="og:image:secure_url" content="https://cdn.example.com/second-secure.jpg">
+            </head></html>
+            HTML);
+
+        $this->assertSame('https://cdn.example.com/first.jpg', $metadata->imageUrl);
+    }
+
+    public function test_the_secure_variant_of_the_first_image_still_wins(): void
+    {
+        // The other half: preferring secure_url is right *within* a group.
+        $metadata = $this->extract(<<<'HTML'
+            <html><head>
+            <meta property="og:image" content="http://cdn.example.com/first.jpg">
+            <meta property="og:image:secure_url" content="https://cdn.example.com/first-secure.jpg">
+            <meta property="og:image" content="https://cdn.example.com/second.jpg">
+            </head></html>
+            HTML);
+
+        $this->assertSame('https://cdn.example.com/first-secure.jpg', $metadata->imageUrl);
+    }
+
+    public function test_relative_references_resolve_against_a_declared_base(): void
+    {
+        // A <base href> is what the document says its relative references mean, and browsers honour
+        // it. The fetcher guards the result either way, so respecting it costs no safety.
+        $metadata = $this->extract(
+            '<html><head><base href="https://cdn.example.net/assets/"><meta property="og:image" content="hero.png"></head></html>',
+        );
+
+        $this->assertSame('https://cdn.example.net/assets/hero.png', $metadata->imageUrl);
+    }
+
+    public function test_rel_is_matched_as_a_token_not_a_substring(): void
+    {
+        $metadata = $this->extract('<html><head><link rel="notalternate" type="application/json+oembed" href="/oembed"></head></html>');
+
+        $this->assertNull($metadata->oembedUrl);
+    }
+
+    public function test_a_multi_token_rel_is_still_recognised(): void
+    {
+        $metadata = $this->extract('<html><head><link rel="alternate stylesheet" type="application/json+oembed" href="/oembed"></head></html>');
+
+        $this->assertSame('https://example.com/oembed', $metadata->oembedUrl);
     }
 
     private function extract(string $html, ?string $charset = null, string $url = self::URL): LinkMetadata

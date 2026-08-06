@@ -124,6 +124,26 @@ class OembedClientTest extends TestCase
         $this->assertNull($metadata->authorName);
     }
 
+    public function test_long_fields_are_cut_to_the_column_widths(): void
+    {
+        // oEmbed values reach the same sized columns as the page's own, via completedWith(). The cap
+        // lives in LinkMetadata rather than in each source, so a new source cannot arrive without it
+        // and blow up the insert under MySQL strict mode.
+        $this->resolvesTo('example.com', ['93.184.216.34']);
+        $this->queueJson([
+            'version' => '1.0',
+            'title' => str_repeat('あ', 400),
+            'provider_name' => str_repeat('い', 200),
+            'author_name' => str_repeat('う', 200),
+        ]);
+
+        $metadata = $this->client()->fetch('https://example.com/oembed');
+
+        $this->assertSame(300, mb_strlen((string) $metadata->title));
+        $this->assertSame(100, mb_strlen((string) $metadata->siteName));
+        $this->assertSame(100, mb_strlen((string) $metadata->authorName));
+    }
+
     public function test_control_characters_are_stripped_from_the_fields(): void
     {
         $this->resolvesTo('example.com', ['93.184.216.34']);

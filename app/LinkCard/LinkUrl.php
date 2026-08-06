@@ -17,12 +17,16 @@ use GuzzleHttp\Psr7\UriResolver;
  *  - scheme and host lowercase, default port dropped, trailing dot removed, IDN to Punycode —
  *    these cannot change which resource is addressed;
  *  - the fragment is dropped, since it never reaches the server;
- *  - **the query is kept in full.** Plenty of sites put the article id there, so stripping or
- *    reordering it would merge unrelated pages into one card. Tracking parameters therefore split
- *    the cache, which is the safe direction to be wrong in.
+ *  - **the query is kept in full, including an empty one.** Plenty of sites put the article id
+ *    there, so stripping or reordering it would merge unrelated pages into one card; and a server
+ *    can distinguish `/a` from `/a?`, so the trailing `?` is kept as well. Tracking parameters
+ *    therefore split the cache, which is the safe direction to be wrong in.
  *
  * http and https are deliberately *not* unified: they are different origins, and the fetcher treats
  * them as such.
+ *
+ * Ports are restricted to 80 and 443, matching SafeHttpFetcher. Accepting more here would only mint
+ * cards for URLs the fetcher then refuses, leaving permanently failed rows behind.
  */
 final class LinkUrl
 {
@@ -61,18 +65,19 @@ final class LinkUrl
             return null;
         }
 
-        $port = $parts['port'] ?? null;
-        $isDefaultPort = $port === null || ($scheme === 'https' ? $port === 443 : $port === 80);
+        // Only the ports SafeHttpFetcher will dial; anything else would become a card that can never
+        // be fetched.
+        $port = $parts['port'] ?? ($scheme === 'https' ? 443 : 80);
 
-        $normalized = $scheme.'://'.$host;
-
-        if (! $isDefaultPort) {
-            $normalized .= ':'.$port;
+        if ($port !== ($scheme === 'https' ? 443 : 80)) {
+            return null;
         }
 
-        $normalized .= $parts['path'] ?? '';
+        $normalized = $scheme.'://'.$host.($parts['path'] ?? '');
 
-        if (isset($parts['query']) && $parts['query'] !== '') {
+        // array_key_exists, not isset: `/a?` carries an empty query and is not the same request as
+        // `/a`, so the two must not share a card.
+        if (array_key_exists('query', $parts)) {
             $normalized .= '?'.$parts['query'];
         }
 

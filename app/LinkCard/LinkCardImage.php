@@ -24,12 +24,21 @@ use Throwable;
  *
  *   1. read at most the byte cap, through the guarded fetcher;
  *   2. identify the real media type from the bytes (finfo), not from Content-Type;
- *   3. read the dimensions **from the header** and reject an oversized image;
- *   4. only then decode.
+ *   3. refuse anything animated;
+ *   4. read the dimensions **from the header** and reject an oversized image, by total pixels as well
+ *      as by side;
+ *   5. only then decode.
  *
- * Step 3 before step 4 is what makes this safe against a decompression bomb: a decoder allocates
- * width × height × 4 bytes before anything can look at the result, so a 40000×40000 PNG that is a few
- * kilobytes on the wire exhausts memory during a "validate the image" step that runs too late.
+ * Everything before step 5 exists because a decoder allocates roughly width × height × 4 bytes per
+ * frame before anything can inspect the result, and an out-of-memory kill is not catchable. So the
+ * size has to be known to be bounded from data that is cheap to read:
+ *
+ *  - **Total pixels, not just each side.** The per-side limit alone permits 5000 × 5000 = 100 MB
+ *    decoded, which is enough to end a 128 MB worker on its own.
+ *  - **No animation.** Frame count is bounded by neither the wire size nor the dimensions, and
+ *    Intervention decodes animations by default — a few-kilobyte GIF can hold hundreds of frames,
+ *    each one a full allocation. A card shows one still picture, so there is nothing to lose by
+ *    refusing them outright, and the check is a header read rather than a decode.
  *
  * Metadata stripping happens exactly once, inside FileUploader — the bytes are handed over as an
  * UploadedFile so there is one strip in the pipeline rather than one here and another there.
@@ -75,7 +84,7 @@ final class LinkCardImage
 
         $mime = $this->mediaTypeOf($response->body);
 
-        if ($mime === null) {
+        if ($mime === null || $this->isAnimated($response->body, $mime)) {
             return null;
         }
 
@@ -146,12 +155,40 @@ final class LinkCardImage
         return [(int) $info[0], (int) $info[1]];
     }
 
-    /** @param  array{int, int}  $dimensions */
+    /**
+     * Whether an image in this format holds more than one frame.
+     *
+     * Read from the container structure rather than by decoding, because decoding is the thing being
+     * protected against. Each check is the presence of the marker the format uses to declare
+     * animation, so a still image in the same format is unaffected.
+     */
+    private function isAnimated(string $bytes, string $mime): bool
+    {
+        return match ($mime) {
+            // Each frame opens with an Image Descriptor (0x2C); a still GIF has exactly one.
+            'image/gif' => substr_count($bytes, "\x00\x21\xF9") > 1 || substr_count($bytes, "\x2C") > 1 && str_contains($bytes, 'NETSCAPE2.0'),
+            // APNG declares its frame count in an acTL chunk, which a plain PNG does not carry.
+            'image/png' => str_contains(substr($bytes, 0, 4096), 'acTL'),
+            // An animated WebP is a RIFF container holding ANIM/ANMF chunks.
+            'image/webp' => str_contains(substr($bytes, 0, 4096), 'ANIM') || str_contains(substr($bytes, 0, 4096), 'ANMF'),
+            default => false,
+        };
+    }
+
+    /**
+     * @param  array{int, int}  $dimensions
+     */
     private function withinLimit(array $dimensions): bool
     {
-        $limit = (int) config('openpne.images.max_upload_dimension');
+        $side = (int) config('openpne.images.max_upload_dimension');
+        $pixels = (int) config('openpne.outbound.max_image_pixels');
 
-        return $dimensions[0] <= $limit && $dimensions[1] <= $limit;
+        // Both, because either alone leaves a hole: a 1 x 50000000 strip passes a pixel-count check
+        // on neither side, and a 5000 x 5000 square passes the per-side check while decoding to
+        // 100 MB.
+        return $dimensions[0] <= $side
+            && $dimensions[1] <= $side
+            && $pixels >= $dimensions[0] * $dimensions[1];
     }
 
     /**
@@ -176,14 +213,16 @@ final class LinkCardImage
             // including the single metadata strip — is the same path a member upload takes.
             $upload = new UploadedFile($path, 'link-card.'.self::ACCEPTED[$mime], $mime, null, true);
 
-            $file = $this->uploader->store(
-                $upload,
-                relatedType: 'link_card',
-                relatedId: $linkCardId,
-                // The source is a public web image and the card appears on pages a logged-out visitor
-                // may see (a web-public diary), so inheriting visibility from an owner would hide it.
-                explicitVisibility: File::VISIBILITY_PUBLIC,
-            );
+            // Deliberately NO explicit visibility. Marking these public would serve them from the
+            // login-free route to anyone with the token, and a link card attaches to friends-only
+            // diaries and private messages as readily as to open ones. The source URL is not
+            // evidence of that: normalisation keeps the query, so the image behind a signed or
+            // expiring link gets copied too — and a permanent public copy outlives both that URL's
+            // expiry and the body's own visibility rule.
+            //
+            // So the row is stored fail-closed (FilePolicy denies an unrecognised related entity) and
+            // stays undeliverable until delivery is designed against the body that references it.
+            $file = $this->uploader->store($upload, relatedType: 'link_card', relatedId: $linkCardId);
 
             return ['file' => $file, 'width' => $dimensions[0], 'height' => $dimensions[1]];
         } catch (Throwable) {

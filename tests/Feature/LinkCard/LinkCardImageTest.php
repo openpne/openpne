@@ -29,7 +29,7 @@ class LinkCardImageTest extends TestCase
     use FakesOutboundTransport;
     use RefreshDatabase;
 
-    public function test_it_stores_a_fetched_image_as_a_public_file(): void
+    public function test_it_stores_a_fetched_image_as_a_local_file(): void
     {
         $card = $this->card();
         $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
@@ -41,11 +41,29 @@ class LinkCardImageTest extends TestCase
         $this->assertSame(40, $result['width']);
         $this->assertSame(30, $result['height']);
         $this->assertSame('image/png', $result['file']->type);
-        // The card appears on pages a logged-out visitor may see, and the source was a public web
-        // image, so visibility cannot be inherited from an owner that does not exist.
-        $this->assertSame(File::VISIBILITY_PUBLIC, $result['file']->explicit_visibility);
         $this->assertSame('link_card', $result['file']->related_entity_type);
         $this->assertSame($card->id, $result['file']->related_entity_id);
+    }
+
+    public function test_a_card_image_is_not_stored_as_a_public_asset(): void
+    {
+        // Marking these public would serve them from the login-free route to anyone holding the
+        // token, and a link card attaches to friends-only diaries and private messages as readily as
+        // to open ones. The source URL is no evidence to the contrary: normalisation keeps the query,
+        // so the image behind a signed or expiring link is copied too, and a permanent public copy
+        // outlives both that expiry and the body's own visibility rule.
+        $card = $this->card();
+        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
+        $this->queueBinary($this->png(10, 10), 'image/png');
+
+        $result = $this->importer()->import('https://cdn.example.com/hero.png', $card->id);
+
+        $this->assertNotNull($result);
+        $this->assertNull(
+            $result['file']->explicit_visibility,
+            'Card images must stay fail-closed until delivery is designed against the referencing body.',
+        );
+        $this->assertNotSame(File::VISIBILITY_PUBLIC, $result['file']->explicit_visibility);
     }
 
     public function test_an_oversized_image_is_refused_before_it_is_decoded(): void
@@ -78,6 +96,49 @@ class LinkCardImageTest extends TestCase
 
         $this->assertNotNull($this->importer($decoder)->import('https://cdn.example.com/ok.png', $card->id));
         $this->assertSame(1, $decoder->calls);
+    }
+
+    public function test_an_image_within_each_side_but_over_the_pixel_budget_is_refused(): void
+    {
+        // The per-side limit alone is not a memory bound: at the 5000 default, 5000 x 5000 x 4 is
+        // 100 MB decoded — enough to end a 128 MB worker on its own.
+        config()->set('openpne.images.max_upload_dimension', 5000);
+        config()->set('openpne.outbound.max_image_pixels', 4_000_000);
+
+        $card = $this->card();
+        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
+        $this->queueBinary($this->pngHeaderClaiming(4000, 4000), 'image/png');
+
+        $decoder = $this->spyDecoder();
+
+        $this->assertNull($this->importer($decoder)->import('https://cdn.example.com/wide.png', $card->id));
+        $this->assertSame(0, $decoder->calls, '16 MP was decoded despite the pixel budget.');
+    }
+
+    public function test_an_animated_image_never_reaches_the_decoder(): void
+    {
+        // Frame count is bounded by neither the wire size nor the dimensions, and Intervention
+        // decodes animations by default — so a few-kilobyte GIF can hold hundreds of full-size
+        // allocations. A card shows one still picture, so these are refused from the header.
+        $card = $this->card();
+        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
+        $this->queueBinary($this->animatedGif(), 'image/gif');
+
+        $decoder = $this->spyDecoder();
+
+        $this->assertNull($this->importer($decoder)->import('https://cdn.example.com/anim.gif', $card->id));
+        $this->assertSame(0, $decoder->calls, 'An animated image reached the decoder.');
+        $this->assertSame(0, File::count());
+    }
+
+    public function test_a_still_gif_is_still_accepted(): void
+    {
+        // The animation check must not cost the format entirely.
+        $card = $this->card();
+        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
+        $this->queueBinary($this->stillGif(), 'image/gif');
+
+        $this->assertNotNull($this->importer()->import('https://cdn.example.com/still.gif', $card->id));
     }
 
     public function test_a_header_only_forgery_is_refused(): void
@@ -223,6 +284,28 @@ class LinkCardImageTest extends TestCase
         imagejpeg($image);
 
         return (string) ob_get_clean();
+    }
+
+    private function stillGif(): string
+    {
+        $image = imagecreatetruecolor(10, 10);
+        ob_start();
+        imagegif($image);
+
+        return (string) ob_get_clean();
+    }
+
+    /**
+     * A minimal multi-frame GIF: the NETSCAPE looping extension plus two graphic-control blocks,
+     * which is what a real animation carries and what the header check looks for.
+     */
+    private function animatedGif(): string
+    {
+        $frame = "\x00\x21\xF9\x04\x00\x00\x00\x00\x2C\x00\x00\x00\x00\x0A\x00\x0A\x00\x00\x02\x02\x44\x01\x00";
+
+        return "GIF89a\x0A\x00\x0A\x00\x80\x00\x00\xFF\xFF\xFF\x00\x00\x00"
+            ."\x21\xFF\x0BNETSCAPE2.0\x03\x01\x00\x00\x00"
+            .$frame.$frame."\x3B";
     }
 
     /**

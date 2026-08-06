@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\LinkCard;
 
+use DOMDocument;
+use DOMElement;
 use Masterminds\HTML5;
 use Throwable;
 
@@ -22,9 +24,6 @@ use Throwable;
  */
 final class MetadataExtractor
 {
-    /** Stored lengths. Beyond these a card is not showing the text anyway, and the columns are sized to match. */
-    private const LIMITS = ['title' => 300, 'description' => 500, 'siteName' => 100, 'authorName' => 100];
-
     /**
      * @param  string  $html  The response body, in whatever encoding it arrived in.
      * @param  string|null  $charset  The Content-Type charset, if the response declared one.
@@ -32,29 +31,27 @@ final class MetadataExtractor
      */
     public function extract(string $html, ?string $charset, string $url): LinkMetadata
     {
-        $html = Encoding::toUtf8($html, $charset);
-
-        $document = $this->parse($html);
+        $document = $this->parse(Encoding::toUtf8($html, $charset));
 
         if ($document === null) {
             return new LinkMetadata;
         }
 
         $meta = $this->metaContent($document);
-
-        $title = $meta['og:title'] ?? $meta['twitter:title'] ?? $this->titleElement($document);
-        $description = $meta['og:description'] ?? $meta['twitter:description'] ?? $meta['description'] ?? null;
-        $image = $meta['og:image:secure_url'] ?? $meta['og:image:url'] ?? $meta['og:image'] ?? $meta['twitter:image'] ?? null;
+        // A <base href> is what the document itself says relative references resolve against, and
+        // browsers honour it. The fetcher guards the result either way, so respecting it costs no
+        // safety and gets the right file from pages that set one.
+        $base = $this->baseHref($document, $url) ?? $url;
 
         return new LinkMetadata(
-            title: $this->clean($title, self::LIMITS['title']),
-            description: $this->clean($description, self::LIMITS['description']),
+            title: $meta['og:title'] ?? $meta['twitter:title'] ?? $this->titleElement($document),
+            description: $meta['og:description'] ?? $meta['twitter:description'] ?? $meta['description'] ?? null,
             // Falling back to the host gives every card a provenance line, which is the part a reader
             // uses to decide whether to follow the link at all.
-            siteName: $this->clean($meta['og:site_name'] ?? $this->hostOf($url), self::LIMITS['siteName']),
-            authorName: $this->clean($meta['article:author'] ?? $meta['twitter:creator'] ?? null, self::LIMITS['authorName']),
-            imageUrl: LinkUrl::resolve($image, $url),
-            oembedUrl: LinkUrl::resolve($this->oembedHref($document), $url),
+            siteName: $meta['og:site_name'] ?? $this->hostOf($url),
+            authorName: $meta['article:author'] ?? $meta['twitter:creator'] ?? null,
+            imageUrl: LinkUrl::resolve($this->imageReference($document, $meta), $base),
+            oembedUrl: LinkUrl::resolve($this->oembedHref($document), $base),
         );
     }
 
@@ -62,7 +59,7 @@ final class MetadataExtractor
      * A hostile or merely broken page must not take the fetch down with it, so a parse failure is
      * "this page said nothing" rather than an exception.
      */
-    private function parse(string $html): ?\DOMDocument
+    private function parse(string $html): ?DOMDocument
     {
         try {
             return (new HTML5(['disable_html_ns' => true]))->loadHTML($html);
@@ -72,14 +69,55 @@ final class MetadataExtractor
     }
 
     /**
+     * The image to use, honouring Open Graph's grouping rules.
+     *
+     * Per ogp.me, a structured property (`og:image:url`, `og:image:secure_url`) belongs to the most
+     * recent root `og:image` tag, and the first object listed is the page's preferred one. Flattening
+     * the tags by name and then preferring `secure_url` mixes the groups: given first.jpg, then
+     * second.jpg with second-secure.jpg after it, that picks the *second* image's secure URL, which
+     * the page ranked below the first. So the tags are walked in document order and only the first
+     * group is considered.
+     */
+    private function imageReference(DOMDocument $document, array $meta): ?string
+    {
+        $group = [];
+
+        foreach ($document->getElementsByTagName('meta') as $element) {
+            $key = strtolower(trim($element->getAttribute('property')));
+            $content = trim($element->getAttribute('content'));
+
+            if ($content === '') {
+                continue;
+            }
+
+            // A second root tag opens the next image object, so the first group is complete.
+            if ($key === 'og:image' && $group !== []) {
+                break;
+            }
+
+            // og:image:url is defined as identical to og:image; secure_url is the https variant of
+            // the same picture, so preferring it stays inside this one group.
+            if (in_array($key, ['og:image', 'og:image:url', 'og:image:secure_url'], true)) {
+                $group[$key] ??= $content;
+            }
+        }
+
+        return $group['og:image:secure_url']
+            ?? $group['og:image:url']
+            ?? $group['og:image']
+            ?? $meta['twitter:image']
+            ?? null;
+    }
+
+    /**
      * Every <meta> keyed by its `property` or `name`, lowercased.
      *
-     * The first occurrence wins: a page repeating og:image lists its preferred one first, and taking
-     * the last would quietly pick the least representative.
+     * The first occurrence wins: a page repeating a property lists its preferred value first, and
+     * taking the last would quietly pick the least representative.
      *
      * @return array<string, string>
      */
-    private function metaContent(\DOMDocument $document): array
+    private function metaContent(DOMDocument $document): array
     {
         $found = [];
 
@@ -95,11 +133,20 @@ final class MetadataExtractor
         return $found;
     }
 
-    private function titleElement(\DOMDocument $document): ?string
+    private function titleElement(DOMDocument $document): ?string
     {
         $titles = $document->getElementsByTagName('title');
 
         return $titles->length > 0 ? $titles->item(0)?->textContent : null;
+    }
+
+    /** The document's declared base for relative references, if it sets a usable one. */
+    private function baseHref(DOMDocument $document, string $url): ?string
+    {
+        $bases = $document->getElementsByTagName('base');
+        $href = $bases->length > 0 ? trim((string) $bases->item(0)?->getAttribute('href')) : '';
+
+        return $href === '' ? null : LinkUrl::resolve($href, $url);
     }
 
     /**
@@ -108,10 +155,10 @@ final class MetadataExtractor
      * The spec also defines an XML flavour, which this app has no reader for; a page offering only
      * that is treated as offering none rather than being fetched and discarded.
      */
-    private function oembedHref(\DOMDocument $document): ?string
+    private function oembedHref(DOMDocument $document): ?string
     {
         foreach ($document->getElementsByTagName('link') as $element) {
-            if (! str_contains(strtolower($element->getAttribute('rel')), 'alternate')) {
+            if (! $this->hasRel($element, 'alternate')) {
                 continue;
             }
 
@@ -126,28 +173,23 @@ final class MetadataExtractor
         return null;
     }
 
+    /**
+     * Whether $element's rel contains $token.
+     *
+     * rel is a space-separated token list, so this is an exact match against the tokens rather than a
+     * substring test — `rel="notalternate"` contains "alternate" but is not it.
+     */
+    private function hasRel(DOMElement $element, string $token): bool
+    {
+        $tokens = preg_split('/\s+/', strtolower(trim($element->getAttribute('rel')))) ?: [];
+
+        return in_array($token, $tokens, true);
+    }
+
     private function hostOf(string $url): ?string
     {
         $host = parse_url($url, PHP_URL_HOST);
 
         return is_string($host) && $host !== '' ? $host : null;
-    }
-
-    /**
-     * Collapse whitespace, drop control characters, and cut to the stored length.
-     *
-     * The control-character strip is not cosmetic: these values reach mail subjects and log lines as
-     * well as the page, where a stray newline is a header-injection shape.
-     */
-    private function clean(?string $value, int $limit): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $value = (string) preg_replace('/[\p{Cc}\p{Cf}]/u', ' ', $value);
-        $value = trim((string) preg_replace('/\s+/u', ' ', $value));
-
-        return $value === '' ? null : mb_substr($value, 0, $limit);
     }
 }
