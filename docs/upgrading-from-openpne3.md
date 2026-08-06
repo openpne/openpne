@@ -5,7 +5,7 @@ diaries, communities, messages, files, and the site's own settings.
 
 You will do this twice. First as a **rehearsal** against a dump, while OpenPNE 3 keeps serving — that
 is where you find out what your source needs fixed, and it costs nothing to repeat. Then as the
-**cutover** (stage 7), against a source no one is writing to any more. The rehearsal is not the
+**cutover** (stage 6), against a source no one is writing to any more. The rehearsal is not the
 migration: anything members write to OpenPNE 3 after you take its dump is not in that dump.
 
 Two words this document uses in a specific way:
@@ -123,10 +123,16 @@ same template and locale. Fix the source and dry-run again.
 
 The mail-template warnings say which kind each one is, because it changes what happens after the
 cutover. A template OpenPNE 4 cannot parse, one using something it does not allow, or one linking to
-an address that cannot be mapped means the mail **fails instead of sending** until someone fixes it —
-worth resolving before you switch over, either in the OpenPNE 3 source or, once the data is in, in
-the OpenPNE 4 admin under *Settings → Mail template settings*. A missing variable is milder: the mail
-sends with that piece of text empty.
+an address that cannot be mapped means the mail **fails instead of sending** until someone fixes it.
+A missing variable is milder: the mail sends with that piece of text empty.
+
+**Where you fix them decides whether the fix survives.** Editing the template in **OpenPNE 3**, in
+its own notification mail editor, puts the fix in the final dump — so it arrives already working at
+the cutover. Editing it in the **OpenPNE 4** admin (*Settings → Mail template settings*) only changes
+the database in front of you: during a rehearsal that database is thrown away, because the cutover
+restores a fresh dump into a fresh one. Use the OpenPNE 4 editor to confirm a template renders, then
+either port the fix back to OpenPNE 3 or plan to redo it right after the cutover — that mail does not
+send in between.
 
 Each template is reported by its first fault, because that is where rendering stopped. Fixing it can
 reveal the next one, so re-run the dry run after editing a template rather than assuming one pass
@@ -161,30 +167,36 @@ password hash is left behind.
 
 **Row counts agree trivially when both sides are empty.** A step that migrated nothing — because a
 source table was not what you assumed, or because it matched no rows — reports the same pass as one
-that migrated correctly. List those steps and account for each (this uses
-[jq](https://jqlang.github.io/jq/) to pick them out of the JSON report):
+that migrated correctly. List those steps and account for each:
 
 ```console
-$ php artisan openpne:verify-upgrade --json | jq -r '.checks[] | select(.detail == "0 rows") | .name'
+$ php artisan openpne:verify-upgrade | grep ': 0 rows'
 ```
+
+(`--json` emits the same report as JSON if you would rather consume it from a script.)
 
 Some are expected: a step carries an OpenPNE 3 plugin your site never installed, or a setting whose
 absence already means what you want. The rest are the ones to look into. That judgement is yours —
 the command cannot know which features your site had.
 
-## 6. After the upgrade
+## What the upgrade changed
+
+Nothing to perform here — this is what the migrated site looks like, so you can tell an intended
+change from a problem when you go through it.
 
 - **Passwords** — OpenPNE 3 passwords keep working, and each one is quietly re-secured on its owner's
   first sign-in. Nobody has to reset anything.
 - **Surface** — the site looks like OpenPNE 3 (the "Classic" surface), matching what its members
-  knew. Switch to the new one when ready: `php artisan openpne:surface-mode modern_only`.
+  knew. Moving to the new one is a separate decision you can take whenever you like, before or long
+  after the cutover: `php artisan openpne:surface-mode modern_only`.
 - **Emoji** — old carrier emoji codes become real emoji. Sixteen carrier logos have no modern
   equivalent and stay as literal text like `[i:108]`.
 - **Site policy** — the imported terms and privacy pages are reformatted as Markdown, which is how
-  OpenPNE 4 renders them. Read them over once.
-- **Mail templates** — fix whatever the dry run flagged, under *Settings → Mail template settings*.
+  OpenPNE 4 renders them. Worth reading once to see how they came out.
+- **Mail templates** — anything the dry run flagged is still broken here; stage 3 covers where to fix
+  it so the fix is still there after the cutover.
 
-## 7. Cutover
+## 6. Cutover
 
 Rehearse until the dry run holds no surprises and verification passes. Then migrate the data people
 will actually keep using:
@@ -201,6 +213,10 @@ will actually keep using:
 5. Repeat stages 3 through 5 against it, with the same option you rehearsed with.
 6. Point traffic at OpenPNE 4.
 
+Nothing you changed inside OpenPNE 4 during the rehearsal is here — this site is built from a
+different dump into a different database. Mail templates are the usual case; stage 3 explains how to
+avoid having to redo them.
+
 Keep the rehearsal databases until you are satisfied with the new site. They cost nothing and answer
 "was it already like that before?" without touching production.
 
@@ -210,5 +226,5 @@ Before the cutover there is nothing to undo: OpenPNE 3 never stopped serving, an
 its own database. Drop it and start again.
 
 After the cutover, rolling back means going back to a site frozen at the moment you stopped its
-writes — so the decision point is stage 7's traffic switch, not the migration. Anything written to
+writes — so the decision point is stage 6's traffic switch, not the migration. Anything written to
 OpenPNE 4 after that is only in OpenPNE 4.
