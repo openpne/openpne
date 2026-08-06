@@ -5,104 +5,155 @@ declare(strict_types=1);
 namespace Tests\Unit\LinkCard;
 
 use App\LinkCard\ImageContainer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Every case here is one a marker search gets wrong in one direction or the other, which is why this
- * walks the container structure instead.
+ * The question is "is this provably one still frame?", so every case that is not a completed walk
+ * proving that must answer false. Several of these are shapes an earlier version got wrong — by
+ * searching for markers, and then by treating its own block limit as an all-clear.
  */
 class ImageContainerTest extends TestCase
 {
-    public function test_a_two_frame_gif_without_a_loop_extension_is_animated(): void
+    public function test_a_single_frame_gif_is_a_safe_still(): void
+    {
+        $this->assertTrue(ImageContainer::isSafeStill($this->gif(frames: 1, loopExtension: false), 'image/gif'));
+    }
+
+    public function test_a_real_still_gif_is_a_safe_still(): void
+    {
+        $this->assertTrue(ImageContainer::isSafeStill($this->encoded('gif'), 'image/gif'));
+    }
+
+    public function test_a_two_frame_gif_without_a_loop_extension_is_refused(): void
     {
         // The NETSCAPE looping extension controls repetition; it is not what makes a GIF animated,
-        // and a two-frame file needs none. Requiring it — or counting a byte pattern that a
-        // non-zero colour-table byte shifts — reports this as a still image while a decoder
-        // faithfully expands both frames.
-        $this->assertTrue(ImageContainer::isAnimated($this->gif(frames: 2, loopExtension: false), 'image/gif'));
+        // and a two-frame file needs none. Requiring it — or counting a byte pattern that a non-zero
+        // colour-table byte shifts — calls this a still image while a decoder expands both frames.
+        $this->assertFalse(ImageContainer::isSafeStill($this->gif(frames: 2, loopExtension: false), 'image/gif'));
     }
 
-    public function test_a_two_frame_gif_with_a_loop_extension_is_animated(): void
+    public function test_a_two_frame_gif_with_a_loop_extension_is_refused(): void
     {
-        $this->assertTrue(ImageContainer::isAnimated($this->gif(frames: 2, loopExtension: true), 'image/gif'));
+        $this->assertFalse(ImageContainer::isSafeStill($this->gif(frames: 2, loopExtension: true), 'image/gif'));
     }
 
-    public function test_a_single_frame_gif_is_not_animated(): void
+    public function test_an_animation_hidden_behind_the_block_limit_is_refused(): void
     {
-        $this->assertFalse(ImageContainer::isAnimated($this->gif(frames: 1, loopExtension: false), 'image/gif'));
+        // The block limit is a CPU bound, not a window: padding the file with legal comment blocks
+        // until the walk runs out of budget must not report a still image. Treating the limit as an
+        // all-clear turns the bound itself into the fixed window this parser exists to avoid — a
+        // ~20 KB file, well inside the read cap, that a decoder expands to two frames.
+        $comment = "\x21\xFE\x01\x41\x00";
+
+        $this->assertFalse(ImageContainer::isSafeStill(
+            $this->gif(frames: 2, loopExtension: false, betweenFrames: str_repeat($comment, 4095)),
+            'image/gif',
+        ));
     }
 
-    public function test_a_real_still_gif_is_not_animated(): void
+    public function test_a_still_gif_padded_past_the_block_limit_is_also_refused(): void
     {
-        $image = imagecreatetruecolor(8, 8);
-        ob_start();
-        imagegif($image);
+        // The honest counterpart of the case above. It cannot be told apart from the attack without
+        // parsing further than the budget allows, so it is refused too — the cost is one card's
+        // image, where the other direction costs the worker.
+        $comment = "\x21\xFE\x01\x41\x00";
 
-        $this->assertFalse(ImageContainer::isAnimated((string) ob_get_clean(), 'image/gif'));
+        $this->assertFalse(ImageContainer::isSafeStill(
+            $this->gif(frames: 1, loopExtension: false, betweenFrames: str_repeat($comment, 4095)),
+            'image/gif',
+        ));
     }
 
-    public function test_an_apng_is_animated_however_far_in_its_actl_sits(): void
+    public function test_a_still_png_is_a_safe_still(): void
+    {
+        $this->assertTrue(ImageContainer::isSafeStill($this->encoded('png'), 'image/png'));
+    }
+
+    public function test_an_apng_is_refused_however_far_in_its_actl_sits(): void
     {
         // acTL is only required to precede IDAT; nothing bounds how much metadata may come first, so
         // a fixed-size prefix scan misses it.
         $padding = $this->pngChunk('tEXt', str_repeat('x', 8192));
 
-        $this->assertTrue(ImageContainer::isAnimated($this->png($padding.$this->pngChunk('acTL', str_repeat("\x00", 8))), 'image/png'));
+        $this->assertFalse(ImageContainer::isSafeStill(
+            $this->png($padding.$this->pngChunk('acTL', str_repeat("\x00", 8))),
+            'image/png',
+        ));
     }
 
-    public function test_a_still_png_is_not_animated(): void
-    {
-        $image = imagecreatetruecolor(8, 8);
-        ob_start();
-        imagepng($image);
-
-        $this->assertFalse(ImageContainer::isAnimated((string) ob_get_clean(), 'image/png'));
-    }
-
-    public function test_a_png_whose_text_mentions_actl_is_not_animated(): void
+    public function test_a_png_whose_text_mentions_actl_is_a_safe_still(): void
     {
         // The other direction: a marker search invents animations out of ordinary content.
-        $this->assertFalse(ImageContainer::isAnimated($this->png($this->pngChunk('tEXt', 'Comment: acTL is a chunk name')), 'image/png'));
+        $this->assertTrue(ImageContainer::isSafeStill(
+            $this->png($this->pngChunk('tEXt', 'Comment: acTL is a chunk name')),
+            'image/png',
+        ));
     }
 
-    public function test_an_animated_webp_is_animated_behind_padding(): void
+    public function test_a_png_padded_past_the_block_limit_is_refused(): void
+    {
+        $chunks = str_repeat($this->pngChunk('tEXt', 'x'), 4096);
+
+        $this->assertFalse(ImageContainer::isSafeStill($this->png($chunks), 'image/png'));
+    }
+
+    public function test_a_still_webp_is_a_safe_still(): void
+    {
+        $this->assertTrue(ImageContainer::isSafeStill($this->webp($this->riffChunk('VP8 ', str_repeat("\x00", 16))), 'image/webp'));
+    }
+
+    public function test_an_animated_webp_behind_padding_is_refused(): void
     {
         // A RIFF file may legally carry a JUNK chunk before ANIM, pushing it past any window.
-        $this->assertTrue(ImageContainer::isAnimated(
+        $this->assertFalse(ImageContainer::isSafeStill(
             $this->webp($this->riffChunk('JUNK', str_repeat("\x00", 5000)).$this->riffChunk('ANIM', str_repeat("\x00", 6))),
             'image/webp',
         ));
     }
 
-    public function test_a_webp_flagged_animated_in_its_extended_header_is_animated(): void
+    public function test_a_webp_flagged_animated_in_its_extended_header_is_refused(): void
     {
-        $this->assertTrue(ImageContainer::isAnimated($this->webp($this->riffChunk('VP8X', "\x02".str_repeat("\x00", 9))), 'image/webp'));
+        $this->assertFalse(ImageContainer::isSafeStill($this->webp($this->riffChunk('VP8X', "\x02".str_repeat("\x00", 9))), 'image/webp'));
     }
 
-    public function test_a_still_webp_is_not_animated(): void
+    public function test_a_jpeg_needs_no_proof(): void
     {
-        $this->assertFalse(ImageContainer::isAnimated($this->webp($this->riffChunk('VP8 ', str_repeat("\x00", 16))), 'image/webp'));
+        // The format has no animation container, so there is nothing to walk.
+        $this->assertTrue(ImageContainer::isSafeStill($this->encoded('jpeg'), 'image/jpeg'));
     }
 
-    public function test_truncated_and_malformed_input_terminates(): void
+    /**
+     * @param  string  $bytes  A container the parser cannot walk to a conclusion
+     */
+    #[DataProvider('unprovable')]
+    public function test_anything_the_parser_cannot_finish_is_refused(string $bytes, string $mime): void
     {
-        // A malformed file must not be able to spin the walk; these only need to return.
-        $this->assertFalse(ImageContainer::isAnimated('', 'image/gif'));
-        $this->assertFalse(ImageContainer::isAnimated('GIF89a', 'image/gif'));
-        $this->assertFalse(ImageContainer::isAnimated(substr($this->gif(frames: 2, loopExtension: true), 0, 20), 'image/gif'));
-        $this->assertFalse(ImageContainer::isAnimated("\x89PNG\r\n\x1a\n", 'image/png'));
-        $this->assertFalse(ImageContainer::isAnimated('RIFF', 'image/webp'));
-        // A chunk claiming a huge length must end the walk rather than loop on it.
-        $this->assertFalse(ImageContainer::isAnimated($this->png($this->pngChunk('tEXt', 'x').str_repeat("\xFF", 8)), 'image/png'));
+        // "The parser gave up" and "this is a still image" must never be the same answer: the first
+        // is what an attacker can arrange, and treating it as safe is how the guard is bypassed.
+        $this->assertFalse(ImageContainer::isSafeStill($bytes, $mime));
     }
 
-    public function test_an_unknown_type_is_never_animated(): void
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function unprovable(): array
     {
-        $this->assertFalse(ImageContainer::isAnimated('anything', 'image/jpeg'));
+        return [
+            'empty gif' => ['', 'image/gif'],
+            'gif header only' => ['GIF89a', 'image/gif'],
+            'gif with no trailer' => ["GIF89a\x08\x00\x08\x00\x00\x00\x00", 'image/gif'],
+            'gif with an unknown block' => ["GIF89a\x08\x00\x08\x00\x00\x00\x00\x99\x3B", 'image/gif'],
+            'png signature only' => ["\x89PNG\r\n\x1a\n", 'image/png'],
+            'png with no image data' => ["\x89PNG\r\n\x1a\n", 'image/png'],
+            'webp header only' => ['RIFF', 'image/webp'],
+            'webp with a chunk running past the end' => ["RIFF\x10\x00\x00\x00WEBPVP8 \xFF\xFF\xFF\x7F", 'image/webp'],
+            'unknown media type' => ['whatever', 'image/tiff'],
+        ];
     }
 
     /** A structurally valid GIF with $frames image descriptors. */
-    private function gif(int $frames, bool $loopExtension): string
+    private function gif(int $frames, bool $loopExtension, string $betweenFrames = ''): string
     {
         // Global colour table with a deliberately non-zero final byte, which shifts the byte pattern
         // a naive scan keys on.
@@ -112,13 +163,32 @@ class ImageContainerTest extends TestCase
             $gif .= "\x21\xFF\x0BNETSCAPE2.0\x03\x01\x00\x00\x00";
         }
 
+        $frame = "\x21\xF9\x04\x00\x00\x00\x00\x00"           // Graphic Control Extension
+            ."\x2C\x00\x00\x00\x00\x08\x00\x08\x00\x00"       // Image Descriptor, no local table
+            ."\x02\x02\x44\x01\x00";                          // LZW code size + one sub-block
+
         for ($i = 0; $i < $frames; $i++) {
-            $gif .= "\x21\xF9\x04\x00\x00\x00\x00\x00";           // Graphic Control Extension
-            $gif .= "\x2C\x00\x00\x00\x00\x08\x00\x08\x00\x00";   // Image Descriptor, no local table
-            $gif .= "\x02\x02\x44\x01\x00";                       // LZW code size + one sub-block
+            $gif .= $frame;
+
+            if ($i === 0) {
+                $gif .= $betweenFrames;
+            }
         }
 
         return $gif."\x3B";
+    }
+
+    private function encoded(string $format): string
+    {
+        $image = imagecreatetruecolor(8, 8);
+        ob_start();
+        match ($format) {
+            'gif' => imagegif($image),
+            'png' => imagepng($image),
+            'jpeg' => imagejpeg($image),
+        };
+
+        return (string) ob_get_clean();
     }
 
     private function png(string $chunks): string

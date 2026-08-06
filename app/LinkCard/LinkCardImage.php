@@ -35,11 +35,11 @@ use Throwable;
  *
  *  - **Total pixels, not just each side.** The per-side limit alone permits 5000 × 5000 = 100 MB
  *    decoded, which is enough to end a 128 MB worker on its own.
- *  - **No animation.** Frame count is bounded by neither the wire size nor the dimensions, and
- *    Intervention decodes animations by default — a few-kilobyte GIF can hold hundreds of frames,
- *    each one a full allocation. A card shows one still picture, so there is nothing to lose by
- *    refusing them outright, and ImageContainer answers by walking the container's own block
- *    lengths rather than by decoding.
+ *  - **A single frame, proven.** Frame count is bounded by neither the wire size nor the dimensions,
+ *    and Intervention decodes animations by default — a few-kilobyte GIF can hold hundreds of
+ *    frames, each one a full allocation. A card shows one still picture, so ImageContainer walks the
+ *    container's own block lengths and the image proceeds only if that walk *proves* one frame; a
+ *    parse that gives up is a refusal, not an all-clear.
  *
  * Metadata stripping happens exactly once, inside FileUploader — the bytes are handed over as an
  * UploadedFile so there is one strip in the pipeline rather than one here and another there.
@@ -85,7 +85,9 @@ final class LinkCardImage
 
         $mime = $this->mediaTypeOf($response->body);
 
-        if ($mime === null || ImageContainer::isAnimated($response->body, $mime)) {
+        // Asked as "prove this is one still frame", not "does this look animated" — a parser that
+        // gave up must not read as an all-clear. See ImageContainer.
+        if ($mime === null || ! ImageContainer::isSafeStill($response->body, $mime)) {
             return null;
         }
 

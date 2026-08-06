@@ -111,8 +111,15 @@ the size must be known bounded from data that is cheap to read:
   own block lengths**, not by searching for a marker. A marker search is wrong in both directions: it
   misses real animations — a two-frame GIF needs no NETSCAPE loop extension, and an animated WebP can
   carry a padding chunk that pushes its `ANIM` header past any fixed window — and it invents them,
-  since a still image's compressed data or metadata may contain the same bytes by chance. The walk
-  touches only headers, and is bounded by both the buffer length and a block count.
+  since a still image's compressed data or metadata may contain the same bytes by chance.
+
+  The question it answers is **"is this provably one still frame?"**, not "does this look animated?".
+  Those are not complements: the second answers "no" both for a still image and for a parse that gave
+  up, and the second case is the one an attacker constructs — pad a two-frame GIF with legal comment
+  blocks until the walk runs out of budget and it reports a still image. So the block limit is a CPU
+  bound only; reaching it, meeting an unknown block, or reading past the end all refuse the image.
+  The cost is that an unusual but honest file is refused too, which loses a card its picture where
+  the other direction loses the worker.
 
 `LinkCardImageTest` asserts the decoder is called zero times for an oversized header, for an
 over-budget pixel count and for an animated image — and that it *is* called for an acceptable one, so

@@ -158,6 +158,22 @@ class LinkCardImageTest extends TestCase
         $this->assertSame(0, $decoder->calls, 'An animated WebP behind padding reached the decoder.');
     }
 
+    public function test_an_animation_hidden_behind_the_parser_budget_never_reaches_the_decoder(): void
+    {
+        // ~20 KB, well inside the read cap, and structurally valid: two frames separated by enough
+        // legal comment blocks to exhaust the container walk's budget. If running out of budget were
+        // treated as "still", the walk's own limit would become the fixed window it exists to avoid.
+        $card = $this->card();
+        $this->resolvesTo('cdn.example.com', ['93.184.216.34']);
+        $this->queueBinary($this->paddedAnimatedGif(), 'image/gif');
+
+        $decoder = $this->spyDecoder();
+
+        $this->assertNull($this->importer($decoder)->import('https://cdn.example.com/padded.gif', $card->id));
+        $this->assertSame(0, $decoder->calls, 'An animation padded past the parser budget reached the decoder.');
+        $this->assertSame(0, File::count());
+    }
+
     public function test_a_still_gif_is_still_accepted(): void
     {
         // The animation check must not cost the format entirely.
@@ -335,6 +351,15 @@ class LinkCardImageTest extends TestCase
         $frame = "\x21\xF9\x04\x00\x00\x00\x00\x00\x2C\x00\x00\x00\x00\x08\x00\x08\x00\x00\x02\x02\x44\x01\x00";
 
         return $gif.$frame.$frame."\x3B";
+    }
+
+    /** Two frames separated by enough legal comment blocks to exhaust the container walk's budget. */
+    private function paddedAnimatedGif(): string
+    {
+        $gif = "GIF89a\x08\x00\x08\x00\x80\x00\x00".pack('C*', 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x01);
+        $frame = "\x21\xF9\x04\x00\x00\x00\x00\x00\x2C\x00\x00\x00\x00\x08\x00\x08\x00\x00\x02\x02\x44\x01\x00";
+
+        return $gif.$frame.str_repeat("\x21\xFE\x01\x41\x00", 4095).$frame."\x3B";
     }
 
     /** An animated WebP whose ANIM chunk sits past any fixed-size prefix scan. */
