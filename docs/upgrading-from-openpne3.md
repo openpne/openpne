@@ -175,10 +175,12 @@ will actually keep using:
 1. Stop writes to OpenPNE 3 — maintenance mode, or however that site takes traffic. From here on,
    nothing new is being written that the dump could miss.
 2. Take the final dump.
-3. Restore it into a **fresh** OpenPNE 4 database, not the one you rehearsed into. That database
-   holds the rehearsal's rows and checkpoints; re-running over them is a different operation than a
-   clean run, and not the one you tested.
-4. Repeat steps 2 through 5 against it.
+3. Restore it as in step 1, into a **fresh** OpenPNE 4 database — not the one you rehearsed into.
+   That one holds the rehearsal's rows and checkpoints; re-running over them is a different
+   operation than a clean run, and not the one you tested. Point `DB_*` at the new database. With
+   `--source-database`, the source needs a fresh database of its own as well: the rehearsal renamed
+   the last one's `file_bin` away.
+4. Repeat steps 2 through 5 against it, with the same flags you rehearsed with.
 5. Point traffic at OpenPNE 4.
 
 Keep the rehearsal database until you are satisfied with the new site. It costs nothing and answers
