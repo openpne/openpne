@@ -62,6 +62,13 @@ final class StepRegistry
      */
     public const MEMBER_CONFIG_NOTIFICATION_FAMILY = 'is_send_*_mail / is_send_*_web';
 
+    /**
+     * The notification_mail names the mobile (feature-phone) frontend owns. Unlike the member_config
+     * family they cannot be enumerated — the set is whatever the source installed — so the preflight
+     * recognises them by this prefix instead of by name.
+     */
+    public const NOTIFICATION_MAIL_MOBILE_PREFIX = 'mobile_';
+
     /** @return list<class-string<UpgradeStep>> */
     public static function classes(): array
     {
@@ -356,7 +363,22 @@ final class StepRegistry
             'pc_birthday' => 'Dropped: OpenPNE 4 has no birthday digest (its template needs loop/filter constructs the sandboxed renderer does not support).',
             'pc_dailyNews' => 'Dropped: the daily-news digest is not in scope.',
             // Dropped: the feature-phone frontend is out of scope; every mobile_ row is excluded by the name filter.
-            'mobile_*' => 'Dropped: the mobile (feature-phone) frontend is not in scope.',
+            self::NOTIFICATION_MAIL_MOBILE_PREFIX.'*' => 'Dropped: the mobile (feature-phone) frontend is not in scope.',
         ];
+    }
+
+    /**
+     * Every literal `notification_mail` name the upgrade recognises, for the preflight's unknown-name scan.
+     * The mobile family is excluded here and matched by NOTIFICATION_MAIL_MOBILE_PREFIX instead, so a name
+     * outside both is a third-party plugin's template the upgrade has no home for.
+     *
+     * @return list<string>
+     */
+    public static function knownNotificationMailNames(): array
+    {
+        return array_values(array_filter(
+            array_keys(self::notificationMailDispositions()),
+            static fn (string $name): bool => $name !== self::NOTIFICATION_MAIL_MOBILE_PREFIX.'*',
+        ));
     }
 }
