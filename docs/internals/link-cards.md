@@ -273,6 +273,10 @@ The body keeps its URL. Twitter and Slack remove the link text once a card repla
 is the author's text and is not rewritten to suit a preview that may not render — for a viewer whose
 card failed to fetch, or who is on a build where the feature is off, the link has to still be there.
 
+Whether a record may carry a card at all is `CardContext::carriesCard`, shared between the metadata
+and the picture. Enforced in one and not the other, a reply row from broken or migrated data would
+have surfaced its title and description while its image URL stayed unbuildable.
+
 Timeline posts carry their card into lists as well as the detail page, so the four feed queries
 eager-load it. A card read per row would multiply across the feed, the profile and three gadgets,
 which all share the same Classic row partial.
@@ -350,7 +354,9 @@ rather than something that hurts, so this is an operator's tool.
 - Card images have no explicit visibility. What may be seen is decided by the post named in the URL,
   on current data, on every request — never by the file, and never by the most permissive post that
   happens to share it.
-- A switched-off module serves no card images, and a timeline reply is never an addressable context.
+- A switched-off module serves no card images.
+- A timeline reply carries no card — not its picture, and not its metadata. `entry()` shapes replies
+  and roots alike, so gating only the image URL would leave a title and description in the payload.
 - `link_cards.image_file_id` is a signed `INT` to match `files.id` — `foreignId()` emits
   `BIGINT UNSIGNED` and MySQL refuses the constraint. SQLite accepts either, so the mismatch would
   only surface on a real deployment.

@@ -9,7 +9,9 @@
             /* A detail box rules off every div inside its dd; this is an addition within one. */
             .diaryDetailBox dd div.linkCard { border-top: none; }
             .linkCard { margin: 0.8em 0; border: 1px solid #DDDDDD; border-radius: 4px; overflow: hidden; background: #FFFFFF; }
-            .linkCard a { display: table; width: 100%; text-decoration: none; color: inherit; }
+            /* fixed, with a declared image column: a title with no break opportunity would otherwise
+               set the table's min-content width and push the card past its container. */
+            .linkCard a { display: table; table-layout: fixed; width: 100%; text-decoration: none; color: inherit; }
             .linkCard a:hover { background: #F7F7F7; }
             .linkCardImage { display: table-cell; width: 120px; vertical-align: top; }
             .linkCardImage img { display: block; width: 120px; height: 120px; object-fit: cover; }
@@ -18,7 +20,7 @@
                where only phrasing content is valid. */
             .linkCardTitle,
             .linkCardDescription,
-            .linkCardDomain { display: block; overflow: hidden; overflow-wrap: break-word; }
+            .linkCardDomain { display: block; overflow: hidden; overflow-wrap: anywhere; }
             /* Two lines each, so one verbose page cannot push the body below the fold. Titles and
                descriptions are capped at 300 / 500 characters on the way in, not to a line count. */
             .linkCardTitle,

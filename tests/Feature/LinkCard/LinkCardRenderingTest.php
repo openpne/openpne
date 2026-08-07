@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\LinkCard;
 
 use App\Files\FileStorage;
+use App\LinkCard\LinkCardSerializer;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityMember;
@@ -188,6 +189,26 @@ class LinkCardRenderingTest extends TestCase
             // The class name itself is in the stylesheet either way; what must be absent is the
             // element.
             ->assertDontSee('<span class="linkCardImage">', false);
+    }
+
+    public function test_a_reply_carries_no_card_even_if_its_row_names_one(): void
+    {
+        // Replies are never synced, so a row like this comes from broken or migrated data. It must
+        // not leak: the thread serializer shapes replies and roots alike, and the image URL being
+        // unbuildable would leave the title and description exposed on their own.
+        config(['openpne.surface_mode' => 'modern_default']);
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
+        $reply = TimelinePost::factory()->for($this->author)->create([
+            'visibility' => Visibility::Open,
+            'in_reply_to_id' => $root->id,
+            'link_card_id' => $this->card->id,
+            'link_card_synced_at' => now(),
+        ]);
+
+        $this->assertNull(LinkCardSerializer::card($reply->fresh()));
+
+        $this->actingAs($this->author)->get("/timeline/{$root->id}")
+            ->assertInertia(fn ($page) => $page->where('replies.0.linkCard', null)->etc());
     }
 
     public function test_a_timeline_list_costs_the_same_whatever_the_cards(): void

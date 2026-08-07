@@ -30,7 +30,12 @@ final class LinkCardSerializer
      */
     public static function card(Model $record): ?array
     {
+        $kind = CardContext::forRecord($record);
         $card = $record->getAttribute('link_card_id') === null ? null : $record->getRelationValue('linkCard');
+
+        if ($kind === null || ! $kind->carriesCard($record)) {
+            return null;
+        }
 
         if (! $card instanceof LinkCard || ! $card->isRenderable() || ! app(LinkCardSettings::class)->enabled()) {
             return null;
