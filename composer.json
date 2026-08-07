@@ -17,6 +17,7 @@
         "laravel/framework": "^13.8",
         "league/commonmark": "^2.8",
         "league/html-to-markdown": "^5.1",
+        "masterminds/html5": "^2.10",
         "symfony/html-sanitizer": "^7.4",
         "symfony/intl": "^7.4",
         "twig/twig": "^3.27"

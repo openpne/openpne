@@ -257,6 +257,11 @@ return [
         // lets a small gzip response expand without bound.
         'max_html_bytes' => (int) env('OPENPNE_OUTBOUND_MAX_HTML_BYTES', 512 * 1024),
         'max_image_bytes' => (int) env('OPENPNE_OUTBOUND_MAX_IMAGE_BYTES', 5 * 1024 * 1024),
+        // Total pixels a fetched image may decode to, which is what actually bounds memory: a
+        // decoder allocates roughly width * height * 4 bytes, so the per-side limit alone permits
+        // 5000 x 5000 = 100 MB and a worker falls over. 4 MP is ~16 MB decoded, comfortably more
+        // than any card needs.
+        'max_image_pixels' => (int) env('OPENPNE_OUTBOUND_MAX_IMAGE_PIXELS', 4_000_000),
         'denied_cidrs' => array_filter(explode(',', (string) env('OPENPNE_OUTBOUND_DENIED_CIDRS', ''))),
     ],
 
