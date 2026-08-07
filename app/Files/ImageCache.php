@@ -5,18 +5,21 @@ namespace App\Files;
 use App\Models\File;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManager;
 
 /**
  * Generates image thumbnails on demand and caches them on a filesystem disk, keyed by
  * the file's name token plus the transform. The original bytes are read through the
  * FileStorage seam, so the cache works the same on any storage backend.
+ *
+ * A thumbnail is always a still image, so an animated source is thumbnailed from its
+ * first frame (see StillImageDecoder). The original size is served untouched, which is
+ * where an uploaded animation still plays — as in OpenPNE 3.
  */
 class ImageCache
 {
     public function __construct(
         private readonly FileStorage $storage,
-        private readonly ImageManager $manager,
+        private readonly StillImageDecoder $decoder,
     ) {}
 
     /**
@@ -51,7 +54,7 @@ class ImageCache
 
     private function generate(File $file, ImageTransform $transform, string $format): string
     {
-        $image = $this->manager->decode($this->original($file));
+        $image = $this->decoder->decode($this->original($file));
 
         if ($transform->square) {
             // Center-crop to fill the target box exactly (OpenPNE 3 square behavior).

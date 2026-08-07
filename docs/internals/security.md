@@ -337,6 +337,32 @@ Toggle with `OPENPNE_STRIP_IMAGE_METADATA` (default on); turn it off to retain
 EXIF (e.g. a photography community). OpenPNE 3-imported files bypass this
 pipeline (a table-level move, not a re-upload) and are not stripped.
 
+## Decoding an upload
+
+Everything that decodes a stored image goes through
+[`StillImageDecoder`](../../app/Files/StillImageDecoder.php), which yields the
+first frame of an animated source. Each frame is held as a full-canvas buffer, so
+decoding an animation costs frames × width × height however small the encoded file
+is, and GD allocates those buffers outside PHP's `memory_limit`. The upload rules
+bound one frame (`dimensions`, `openpne.images.max_upload_dimension`) and the wire
+size; neither bounds the frame count, so a 31 KB 1000×1000 GIF of 150 frames costs
+~650 MB decoded (~1 GB under Imagick).
+
+Under the default GD driver the frames are skipped before allocation, via
+intervention/image's `decodeAnimation`, so **a decode allocates one frame, never
+the frame count**. Imagick cannot: in 4.2.0 that option empties the Imagick object
+the decoder then reads the media type from, failing every GIF decode. Under
+`OPENPNE_IMAGE_DRIVER=imagick` the decoder therefore pays the full decode and
+collapses the frames after it — the thumbnail is still still, but the allocation
+above is reachable. That is an accepted limitation of a non-default driver, not a
+property of the pipeline.
+
+Thumbnails are therefore always still, as in OpenPNE 3. Original-size delivery
+streams the stored bytes without decoding, so an uploaded animation still plays
+there. Remote images are held to a stricter rule — a link card refuses anything
+it cannot prove is a single frame, because the bytes are not a member's upload
+([link-cards](link-cards.md)).
+
 ## Cookies
 
 When `session.secure` is on (explicit `SESSION_SECURE_COOKIE`, or `force_https`),

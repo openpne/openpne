@@ -8,7 +8,8 @@ use App\Files\FileStorage;
 use App\Models\File;
 use App\Observers\FileObserver;
 use Illuminate\Support\ServiceProvider;
-use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
+use Intervention\Image\Drivers\Vips\Driver;
 use Intervention\Image\ImageManager;
 
 class FilesServiceProvider extends ServiceProvider
@@ -32,12 +33,17 @@ class FilesServiceProvider extends ServiceProvider
             // needs the intervention/image-driver-vips package + the libvips system
             // library, and resolves with a clear error here if that is missing.
             $driver = match (config('openpne.images.driver')) {
-                'imagick' => Driver::class,
-                'vips' => \Intervention\Image\Drivers\Vips\Driver::class,
+                'imagick' => ImagickDriver::class,
+                'vips' => Driver::class,
                 default => \Intervention\Image\Drivers\Gd\Driver::class,
             };
 
-            return ImageManager::usingDriver($driver);
+            // Nothing here renders animation (see StillImageDecoder), and skipping the
+            // frames keeps them from being allocated at all. Imagick is the exception:
+            // intervention/image 4.2.0 drops the animation by emptying the Imagick object
+            // the decoder then reads the media type from, so every GIF — animated or not —
+            // fails to decode. StillImageDecoder collapses that driver's frames instead.
+            return new ImageManager($driver, decodeAnimation: $driver === ImagickDriver::class);
         });
     }
 

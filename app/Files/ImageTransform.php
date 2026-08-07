@@ -49,11 +49,20 @@ final class ImageTransform
         return new self($width, $height, $square);
     }
 
-    /** Cache path for $file's bytes under this transform: `{name}/w{W}_h{H}[_sq].{format}`. */
+    /**
+     * Bump when a change alters the bytes a transform produces, so the new code does not
+     * go on serving what the old code cached. The cache disk outlives a release — hosting
+     * points it outside the release directory — and a variant is only ever regenerated on
+     * a miss, so without this a stale thumbnail is permanent. Superseded generations are
+     * dropped with the rest of the file's variants when the file is deleted.
+     */
+    private const GENERATION = 2;
+
+    /** Cache path for $file's bytes under this transform: `{name}/g{N}/w{W}_h{H}[_sq].{format}`. */
     public function cacheKey(string $name, string $format): string
     {
         $suffix = $this->square ? '_sq' : '';
 
-        return "{$name}/w{$this->width}_h{$this->height}{$suffix}.{$format}";
+        return "{$name}/g".self::GENERATION."/w{$this->width}_h{$this->height}{$suffix}.{$format}";
     }
 }

@@ -63,6 +63,8 @@ class ImageTransformTest extends TestCase
 
     public function test_cache_key_layout(): void
     {
-        $this->assertSame('abc/w120_h120_sq.png', ImageTransform::fromGeometry('w120_h120_sq')->cacheKey('abc', 'png'));
+        // The generation segment sits under the file's own directory so that purging the
+        // file still takes every variant it ever had with it.
+        $this->assertSame('abc/g2/w120_h120_sq.png', ImageTransform::fromGeometry('w120_h120_sq')->cacheKey('abc', 'png'));
     }
 }
