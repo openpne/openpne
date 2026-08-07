@@ -173,6 +173,21 @@ class ImageDeliveryTest extends TestCase
         $this->assertSame(1, $this->frameCount($response->getContent()));
     }
 
+    public function test_a_variant_cached_by_an_earlier_generation_is_not_served(): void
+    {
+        // The cache disk outlives a release, and a variant is only regenerated on a miss, so a
+        // thumbnail cached before a change to the pipeline would otherwise be served forever.
+        $owner = Member::factory()->create();
+        $file = $this->animatedGif($owner);
+        Storage::disk('image_cache')->put("{$file->name}/w120_h120.gif", 'stale bytes');
+
+        $response = $this->actingAs($owner)->get($file->thumbnailUrl(120, 120));
+
+        $response->assertOk();
+        $this->assertNotSame('stale bytes', $response->getContent());
+        $this->assertSame(1, $this->frameCount($response->getContent()));
+    }
+
     public function test_migrated_openpne3_names_with_underscores_or_dots_are_served(): void
     {
         // Migrated OpenPNE 3 files keep their original name verbatim. OpenPNE 3 allowed
