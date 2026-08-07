@@ -9,7 +9,6 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Encoders\PngEncoder;
-use Intervention\Image\ImageManager;
 
 /**
  * Home-screen icon bytes derived from the branding favicon: the web app manifest icons and the
@@ -34,7 +33,7 @@ class AppIcon
 
     public function __construct(
         private readonly FileStorage $storage,
-        private readonly ImageManager $manager,
+        private readonly StillImageDecoder $decoder,
         private readonly SnsSettingService $settings,
     ) {}
 
@@ -104,7 +103,7 @@ class AppIcon
 
     private function generate(string $original, int $size): string
     {
-        return $this->manager->decode($original)
+        return $this->decoder->decode($original)
             ->cover($size, $size)
             ->fillTransparentAreas('ffffff')
             ->encode(new PngEncoder)
