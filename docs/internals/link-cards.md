@@ -160,12 +160,12 @@ Card images are downloaded and stored as local `File` rows rather than hot-linke
 browser never contacts the linked site, the card survives the far end moving or blocking referrers,
 and the existing thumbnail pipeline serves it.
 
-**They carry no explicit visibility, and are therefore not yet deliverable.** Marking them public
-would serve them from the login-free route to anyone holding the token, and a link card attaches to
-friends-only diaries and private messages as readily as to open ones. The source URL is no evidence
-to the contrary: normalisation keeps the query, so the image behind a signed or expiring link is
-copied too, and a permanent public copy outlives both that expiry and the body's own visibility rule.
-So the row is stored fail-closed and delivery is designed against the body that references it.
+**They carry no explicit visibility**, so the generic file route refuses them. Marking them public
+would serve them to anyone holding the token, and a link card attaches to friends-only diaries as
+readily as to open ones. The source URL is no evidence to the contrary: normalisation keeps the
+query, so the image behind a signed or expiring link is copied too, and a permanent public copy
+outlives both that expiry and the body's own visibility rule. They are served instead through the
+route below, which asks the referencing body.
 
 ```
 byte cap → finfo (real media type) → animation check → header dimensions
@@ -205,6 +205,42 @@ scriptable document, and this one would be served from our own origin.
 
 Metadata stripping happens exactly once, inside `FileUploader`; the bytes are handed over as an
 `UploadedFile` so there is a single strip in the pipeline rather than one here and another there.
+
+## Serving the picture: the URL names the post
+
+One card is shared by every body that mentions the URL, so a card image can sit under a world-readable
+diary and a private one at the same moment. Nothing about the `File` can answer "may this person see
+it" — only the post being looked at can. So the address names that post:
+
+```
+/linkCard/{context}/{record}/img/{format}/{geometry}/{name}.{ext}
+```
+
+`context` is a [`CardContext`](../../app/LinkCard/CardContext.php) slug — a closed enum, not a class
+name or a morph type, because the URL may choose which post is consulted and never which model the
+app resolves. `canView` delegates to each kind's own access rule rather than restating it; a second
+implementation of "who may read this diary" would drift, and silently.
+
+[`LinkCardImageController`](../../app/Http/Controllers/LinkCardImageController.php) re-derives every
+condition from current data on every request — the viewer may read the post, the post still points at
+this card, the card still points at this file, the file belongs to that card, the feature is on and
+the card is renderable. Not because any is likely to have changed, but because each is something a
+URL can outlive. A signed URL replaces none of it: signing proves the link was issued, not that what
+it described is still true, so one issued before a post went private stays valid for its lifetime.
+
+Both directions of the file-to-card relation are checked. Card-to-file rules out a URL that outlived
+a refresh; file-to-card is unreachable through a well-formed database and exists for the case where
+the row itself is wrong — a card whose `image_file_id` has come to name an avatar serves nothing
+rather than serving the avatar.
+
+Responses are `private, no-store`: the answer depends on who asked, and a cached copy outliving a post
+going private is the failure this route exists to prevent. `Cross-Origin-Resource-Policy: same-origin`
+stops a cross-origin load from reporting, by succeeding or failing, whether the requester can see a
+post they were never shown. Everything refuses as 404 — a 403 would confirm a card exists on a post
+the asker cannot see.
+
+`CardContext::imageUrl` builds the address, so a caller cannot produce a context-free one by reaching
+for `File::url()` and getting a link that authorises the wrong thing.
 
 ## Testing against the real guard
 
@@ -276,8 +312,9 @@ rather than something that hurts, so this is an operator's tool.
   object, a structured property belongs to the root preceding it, and the first object listed is the
   page's preferred one.
 - Animation is determined by parsing the container, never by searching for a marker or by decoding.
-- Card images have no explicit visibility, so they are undeliverable until delivery is designed
-  against the referencing body.
+- Card images have no explicit visibility. What may be seen is decided by the post named in the URL,
+  on current data, on every request — never by the file, and never by the most permissive post that
+  happens to share it.
 - `link_cards.image_file_id` is a signed `INT` to match `files.id` — `foreignId()` emits
   `BIGINT UNSIGNED` and MySQL refuses the constraint. SQLite accepts either, so the mismatch would
   only surface on a real deployment.
