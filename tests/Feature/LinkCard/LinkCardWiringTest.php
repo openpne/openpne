@@ -1,0 +1,212 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\LinkCard;
+
+use App\Jobs\SyncLinkCard;
+use App\Models\Community;
+use App\Models\CommunityEvent;
+use App\Models\CommunityMember;
+use App\Models\CommunityTopic;
+use App\Models\Diary;
+use App\Models\LinkCard;
+use App\Models\Member;
+use App\Models\TimelinePost;
+use App\Support\SnsSettingKey;
+use App\Support\Visibility;
+use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
+use Tests\TestCase;
+
+/**
+ * That the pipeline is actually connected — the part no unit test can show, because every piece of
+ * it passed its own tests while nothing called any of them.
+ */
+class LinkCardWiringTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Member $member;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, true);
+        $this->member = Member::factory()->create();
+        Queue::fake();
+    }
+
+    public function test_posting_a_diary_queues_a_sync(): void
+    {
+        $this->actingAs($this->member)
+            ->post(route('diary.store'), ['title' => 'T', 'body' => 'See https://example.com/a', 'visibility' => Visibility::Open->value])
+            ->assertRedirect();
+
+        Queue::assertPushed(SyncLinkCard::class);
+    }
+
+    public function test_editing_a_diary_body_detaches_the_old_card_in_the_same_write(): void
+    {
+        // Between the write and the job there is a window in which the page renders. The card must
+        // already be gone by then, or the new text shows under the previous body's card.
+        $card = LinkCard::factory()->create();
+        $diary = Diary::factory()->for($this->member)->create([
+            'body' => 'Old https://example.com/old',
+            'link_card_id' => $card->id,
+            'link_card_synced_at' => CarbonImmutable::now(),
+        ]);
+
+        $this->actingAs($this->member)
+            ->post(route('diary.update', $diary), ['title' => $diary->title, 'body' => 'New https://example.com/new', 'visibility' => $diary->visibility->value])
+            ->assertRedirect();
+
+        $diary->refresh();
+        $this->assertNull($diary->link_card_id);
+        $this->assertNull($diary->link_card_synced_at);
+        Queue::assertPushed(SyncLinkCard::class);
+    }
+
+    public function test_editing_something_other_than_the_body_keeps_the_card(): void
+    {
+        // Clearing on every edit would re-fetch the same page because someone fixed a typo in the
+        // title or changed who can see it.
+        $card = LinkCard::factory()->create();
+        $diary = Diary::factory()->for($this->member)->create([
+            'title' => 'Before',
+            'body' => 'See https://example.com/a',
+            'link_card_id' => $card->id,
+            'link_card_synced_at' => CarbonImmutable::now(),
+        ]);
+
+        $this->actingAs($this->member)
+            ->post(route('diary.update', $diary), ['title' => 'After', 'body' => $diary->body, 'visibility' => $diary->visibility->value])
+            ->assertRedirect();
+
+        $diary->refresh();
+        $this->assertSame($card->id, $diary->link_card_id);
+        $this->assertNotNull($diary->link_card_synced_at);
+    }
+
+    public function test_viewing_a_diary_nobody_has_examined_queues_a_sync(): void
+    {
+        $diary = Diary::factory()->for($this->member)->create([
+            'body' => 'See https://example.com/a',
+            'link_card_synced_at' => null,
+        ]);
+
+        $this->actingAs($this->member)->get(route('diary.show', $diary))->assertOk();
+
+        Queue::assertPushed(SyncLinkCard::class);
+    }
+
+    public function test_a_diary_feed_queues_nothing(): void
+    {
+        // A list renders many entries; asking on each would queue a page's worth of jobs for someone
+        // scrolling past.
+        Diary::factory()->count(3)->for($this->member)->create([
+            'body' => 'See https://example.com/a',
+            'link_card_synced_at' => null,
+        ]);
+
+        $this->actingAs($this->member)->get(route('diary.list'))->assertOk();
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_viewing_a_topic_queues_a_sync(): void
+    {
+        $topic = $this->topic();
+
+        $this->actingAs($this->member)->get(route('communityTopic.show', $topic))->assertOk();
+
+        Queue::assertPushed(SyncLinkCard::class);
+    }
+
+    public function test_viewing_an_event_queues_a_sync(): void
+    {
+        $event = $this->event();
+
+        $this->actingAs($this->member)->get(route('communityEvent.show', $event))->assertOk();
+
+        Queue::assertPushed(SyncLinkCard::class);
+    }
+
+    public function test_viewing_a_timeline_post_queues_a_sync_for_the_root_only(): void
+    {
+        // Replies live in the same table and carry the column, but render as a thread underneath
+        // where a stack of cards would read as noise — and one job per reply is what the detail-page
+        // rule exists to avoid.
+        $post = TimelinePost::factory()->for($this->member)->create([
+            'body' => 'Root https://example.com/root',
+            'link_card_synced_at' => null,
+        ]);
+        TimelinePost::factory()->count(2)->for($this->member)->create([
+            'in_reply_to_id' => $post->id,
+            'body' => 'Reply https://example.com/reply',
+            'link_card_synced_at' => null,
+        ]);
+
+        $this->actingAs($this->member)->get(route('timeline.show', $post))->assertOk();
+
+        Queue::assertPushed(SyncLinkCard::class, 1);
+        Queue::assertPushed(SyncLinkCard::class, fn (SyncLinkCard $job): bool => $job->id === $post->id);
+    }
+
+    public function test_a_reply_permalink_redirects_without_queueing(): void
+    {
+        // The redirect never renders the thread, so there is nothing to prepare.
+        $post = TimelinePost::factory()->for($this->member)->create(['link_card_synced_at' => null]);
+        $reply = TimelinePost::factory()->for($this->member)->create([
+            'in_reply_to_id' => $post->id,
+            'link_card_synced_at' => null,
+        ]);
+
+        $this->actingAs($this->member)->get(route('timeline.show', $reply))->assertRedirect();
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_nothing_is_queued_while_the_setting_is_off(): void
+    {
+        $this->setSnsSetting(SnsSettingKey::LinkCardEnabled, false);
+        $diary = Diary::factory()->for($this->member)->create([
+            'body' => 'See https://example.com/a',
+            'link_card_synced_at' => null,
+        ]);
+
+        $this->actingAs($this->member)->get(route('diary.show', $diary))->assertOk();
+
+        Queue::assertNothingPushed();
+    }
+
+    private function joinedCommunity(): Community
+    {
+        $community = Community::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $this->member->getKey()]);
+
+        return $community;
+    }
+
+    private function topic(): CommunityTopic
+    {
+        $community = $this->joinedCommunity();
+
+        return CommunityTopic::factory()->for($community)->for($this->member, 'member')->create([
+            'body' => 'See https://example.com/a',
+            'link_card_synced_at' => null,
+        ]);
+    }
+
+    private function event(): CommunityEvent
+    {
+        $community = $this->joinedCommunity();
+
+        return CommunityEvent::factory()->for($community)->for($this->member, 'member')->create([
+            'body' => 'See https://example.com/a',
+            'link_card_synced_at' => null,
+        ]);
+    }
+}

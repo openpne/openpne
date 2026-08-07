@@ -8,6 +8,7 @@ use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionFailure;
 use App\Files\ImageEdit;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\CommunityTopic;
 use App\Models\Member;
 use App\Support\BodyFormat;
@@ -47,6 +48,9 @@ class UpdateTopic
             if ($contentChanged) {
                 $topic->topic_updated_at = now();
             }
+            // Detached in the same write as the body it was derived from, so a reader in between
+            // never sees the new text under the old card.
+            $topic->clearLinkCardIfBodyChanged();
             $topic->save();
 
             // Drop the selected images (this topic's only — an id from another topic is ignored).
@@ -74,6 +78,8 @@ class UpdateTopic
         foreach ($removedFiles as $file) {
             $file->delete(); // deleting the File purges its bytes
         }
+
+        SyncLinkCard::for($topic);
 
         return $topic;
     }

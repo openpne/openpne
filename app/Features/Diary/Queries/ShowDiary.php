@@ -10,7 +10,7 @@ class ShowDiary
 {
     public function __invoke(?Member $viewer, int $diaryId): ?Diary
     {
-        $diary = Diary::with(['member.avatar.file', 'images.file'])->find($diaryId);
+        $diary = Diary::with(['member.avatar.file', 'images.file', 'linkCard.image'])->find($diaryId);
 
         if ($diary === null) {
             return null;

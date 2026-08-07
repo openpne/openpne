@@ -16,6 +16,7 @@ use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommunityTopic\StoreTopicRequest;
 use App\Http\Requests\CommunityTopic\UpdateTopicRequest;
+use App\LinkCard\LinkCardSync;
 use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Support\SurfaceResolver;
@@ -63,12 +64,15 @@ class CommunityTopicController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $topic, ShowTopic $query): View|InertiaResponse
+    public function show(Request $request, int $topic, ShowTopic $query, LinkCardSync $linkCards): View|InertiaResponse
     {
         $found = $query($topic);
         abort_if($found === null, 404);
         $viewer = $this->viewer();
         abort_unless(CommunityTopicAccess::canViewTopic($found, $viewer), 404);
+        // After the authorization decision, and only on the detail page: a board index renders many
+        // topics, and asking on each would queue a page's worth of jobs for someone scrolling past.
+        $linkCards->ensure($found);
 
         return $this->respondWith($request, 'community', [
             SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer) {

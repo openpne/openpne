@@ -8,6 +8,7 @@ use App\Features\CommunityEvent\Events\EventPosted;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionFailure;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\Member;
@@ -50,6 +51,7 @@ class CreateEvent
         // Fires after the image-attach transaction commits (ShouldDispatchAfterCommit); the fan-out job
         // re-reads a durable event.
         EventPosted::dispatch($event, $author);
+        SyncLinkCard::for($event);
 
         return $event;
     }

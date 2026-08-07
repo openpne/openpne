@@ -7,6 +7,7 @@ use App\Features\Diary\Exceptions\DiaryActionException;
 use App\Features\Diary\Exceptions\DiaryActionFailure;
 use App\Files\ImageEdit;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\BodyFormat;
@@ -43,7 +44,12 @@ class UpdateDiary
             if ($data->format !== null && $diary->format !== BodyFormat::Op3) {
                 $attributes['format'] = $data->format;
             }
-            $diary->update($attributes);
+            // Filled and cleared before saving, so the card is detached in the same write as the
+            // body it was derived from — a reader in between would otherwise see the new text under
+            // the old card.
+            $diary->fill($attributes);
+            $diary->clearLinkCardIfBodyChanged();
+            $diary->save();
 
             // Drop the selected images (this diary's only — an id from another diary is ignored).
             // Keep their Files to purge after commit; here only the link row is removed.
@@ -65,6 +71,8 @@ class UpdateDiary
 
             return $removed->pluck('file')->filter()->values()->all();
         });
+
+        SyncLinkCard::for($diary);
 
         foreach ($removedFiles as $file) {
             $file->delete(); // deleting the File purges its bytes

@@ -15,6 +15,7 @@ use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Timeline\StoreReplyRequest;
 use App\Http\Requests\Timeline\StoreTimelinePostRequest;
+use App\LinkCard\LinkCardSync;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\SurfaceResolver;
@@ -71,7 +72,7 @@ class TimelineController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $timelinePost, ShowTimelinePost $query): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, int $timelinePost, ShowTimelinePost $query, LinkCardSync $linkCards): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewer();
         $post = $query($viewer, $timelinePost);
@@ -89,6 +90,10 @@ class TimelineController extends Controller
         // Eager-load the replies' images too: the serializer reads each post's images, so loading
         // only replies.member would lazy-load one (empty, by the no-image contract) query per reply.
         $post->load(['member.avatar.file', 'replies.member.avatar.file', 'replies.images.file']);
+        // The thread root only. Replies share this table but render as a thread underneath, where a
+        // stack of cards would read as noise — and asking per reply would queue a job each. Placed
+        // after the reply-permalink redirect above, so a request that never renders queues nothing.
+        $linkCards->ensure($post);
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [

@@ -4,6 +4,7 @@ namespace App\Features\Timeline\Actions;
 
 use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Illuminate\Http\UploadedFile;
@@ -18,7 +19,7 @@ class CreateTimelinePost
      */
     public function __invoke(Member $author, TimelinePostFormData $data, ?UploadedFile $image = null): TimelinePost
     {
-        return $this->images->attach(
+        $post = $this->images->attach(
             'timelinePost',
             $image !== null ? [$image] : [],
             persist: fn (): TimelinePost => TimelinePost::create([
@@ -28,5 +29,11 @@ class CreateTimelinePost
             ]),
             relation: fn (TimelinePost $post) => $post->images(),
         );
+
+        // Replies are deliberately not synced: they share this table but are rendered as a thread
+        // under the post, where a stack of cards would read as noise.
+        SyncLinkCard::for($post);
+
+        return $post;
     }
 }

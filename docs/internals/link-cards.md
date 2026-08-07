@@ -31,7 +31,13 @@ Posting is not the only moment one is needed: records written before the feature
 have never been examined, and a card fetched a week ago has expired. Neither is reachable from a
 write, so there are two triggers.
 
-**On write**, the action that saved the body queues `SyncLinkCard`. That job re-reads the record, so
+**On write**, the action that saved the body queues `SyncLinkCard` — after the transaction commits,
+because the job re-reads the record by id and would otherwise find it missing, or find the text as it
+was before the edit. An edit that touches the body or format also detaches the current card *in the
+same write* (`clearLinkCardIfBodyChanged`, driven by Eloquent's dirty tracking so no call site has to
+restate which fields the card depends on): between the write and the job there is a window in which
+the page renders, and the new text must not appear under the previous body's card. An edit to a
+title or a visibility leaves the card alone. That job re-reads the record, so
 its final write is conditional on the body still being the one it parsed: an edit landing in between
 clears the marker, and an unconditional write would attach the old body's card to the new text and
 mark it examined. It also writes through the query builder rather than saving the model — even
@@ -226,6 +232,22 @@ The admin page states what turning it on does, because "show link previews" does
 server reaches out to every linked page, from bodies only a few people can read as well as open
 ones, and each destination learns the link was shared here.
 
+## Cleaning up
+
+`openpne:prune-link-cards` deletes cards no body points at, and takes their images with them — while
+a card exists its image is referenced, so this is the only thing that makes those bytes collectable.
+
+It is a sweep rather than something the posting path does inline, because cards are shared by URL: no
+single record stopping its reference proves the card is unused without checking every other record.
+Doing that check inline would put a count-then-delete race on the posting path — two records dropping
+the same URL at once could both see zero references, and a record picking that URL up at the same
+moment could have its card deleted underneath it. The grace period (default 7 days) is what closes
+the remaining window: a card created a moment ago, whose owning record has not been written yet, is
+never considered.
+
+Not scheduled. A site under the fleet model runs no per-site cron, and an unreferenced card is cache
+rather than something that hurts, so this is an operator's tool.
+
 ## Key invariants
 
 - One row per normalised URL; a widely-shared link is fetched once.
@@ -249,7 +271,8 @@ ones, and each destination learns the link was shared here.
   `www.` host gets the same scheme the renderer gives it.
 - Only the first URL in a body becomes a card.
 - A fetch result is written only under the lease that claimed it.
-- The read trigger fires on detail pages only, and only ever queues work.
+- The read trigger fires on detail pages only, and only ever queues work. Timeline replies are not
+  synced: they share the table but render as a thread, where a stack of cards would read as noise.
 - Syncing a card never changes a record's `updated_at`, and never writes to a body it did not read.
 - One predicate decides whether a fetch is due, shared by the queueing side, the read path and the
   claim.
