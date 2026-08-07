@@ -17,6 +17,7 @@ use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommunityEvent\StoreEventRequest;
 use App\Http\Requests\CommunityEvent\UpdateEventRequest;
+use App\LinkCard\LinkCardSync;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Support\SurfaceResolver;
@@ -64,12 +65,13 @@ class CommunityEventController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $event, ShowEvent $query): View|InertiaResponse
+    public function show(Request $request, int $event, ShowEvent $query, LinkCardSync $linkCards): View|InertiaResponse
     {
         $found = $query($event);
         abort_if($found === null, 404);
         $viewer = $this->viewer();
         abort_unless(CommunityEventAccess::canViewEvent($found, $viewer), 404);
+        $linkCards->ensure($found);
 
         return $this->respondWith($request, 'community', [
             SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer) {

@@ -39,6 +39,23 @@ trait HasLinkCard
         $this->unsetRelation('linkCard');
     }
 
+    /**
+     * Detach the card if the pending changes touch the text it was derived from.
+     *
+     * Called between filling the model and saving it, so Eloquent's own dirty tracking answers the
+     * question — no call site has to restate which fields the card depends on, and adding one later
+     * cannot be forgotten in three of four places.
+     *
+     * Only body and format: an edit that changes a title, a visibility or an event's venue leaves
+     * the URL where it was, and clearing there would re-fetch the same page for nothing.
+     */
+    public function clearLinkCardIfBodyChanged(): void
+    {
+        if ($this->isDirty(['body', 'format'])) {
+            $this->clearLinkCard();
+        }
+    }
+
     /** Whether a card has been resolved for the body as it stands now. */
     public function hasSyncedLinkCard(): bool
     {

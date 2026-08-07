@@ -8,6 +8,7 @@ use App\Features\CommunityTopic\Events\TopicPosted;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionFailure;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\Member;
@@ -45,6 +46,7 @@ class CreateTopic
         // Fires after the image-attach transaction commits (ShouldDispatchAfterCommit); the fan-out job
         // re-reads a durable topic.
         TopicPosted::dispatch($topic, $author);
+        SyncLinkCard::for($topic);
 
         return $topic;
     }

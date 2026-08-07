@@ -68,6 +68,23 @@ class LinkCardsTableTest extends TestCase
         $this->assertDatabaseHas('link_cards', ['url_hash' => str_repeat('b', 64), 'image_file_id' => null]);
     }
 
+    public function test_the_link_card_key_is_indexed_on_every_body_table(): void
+    {
+        // The prune sweep asks "does any body still point at this card?" once per candidate. Without
+        // an index that is a full scan of all four tables each time, worst for exactly the
+        // unreferenced cards the command exists to find.
+        //
+        // InnoDB creates a backing index for every foreign key and SQLite creates none, so the two
+        // engines reach this by different routes — the migration adds one only on SQLite. Asserted
+        // on both lanes, because what matters is that the column is indexed, not how.
+        foreach (['diaries', 'community_topics', 'community_events', 'timeline_posts'] as $table) {
+            $this->assertTrue(
+                Schema::hasIndex($table, ['link_card_id']),
+                "{$table}.link_card_id is not indexed; the prune sweep degrades to a full scan.",
+            );
+        }
+    }
+
     public function test_the_tables_round_trip(): void
     {
         // Rolled back in reverse migration order, which is the only order that works and the one a
@@ -76,10 +93,15 @@ class LinkCardsTableTest extends TestCase
         // its own passes on SQLite and fails on MySQL, which is how this was originally written.
         $create = require database_path('migrations/2026_08_06_000001_create_link_cards_table.php');
         $attach = require database_path('migrations/2026_08_06_000002_add_link_card_to_body_tables.php');
+        $index = require database_path('migrations/2026_08_07_000001_index_link_card_id_on_sqlite.php');
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
 
+        // Every migration that touches these tables, newest first. SQLite refuses to drop a column
+        // an index still names, and MySQL refuses to drop a table another still references — so this
+        // order is not a preference, it is the only one that works, and the one a real rollback uses.
+        $index->down();
         $attach->down();
         $this->assertFalse(Schema::hasColumn('diaries', 'link_card_id'));
 
@@ -88,6 +110,7 @@ class LinkCardsTableTest extends TestCase
 
         $create->up();
         $attach->up();
+        $index->up();
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));

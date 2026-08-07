@@ -8,6 +8,7 @@ use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionFailure;
 use App\Files\ImageEdit;
 use App\Files\PostImages;
+use App\Jobs\SyncLinkCard;
 use App\Models\CommunityEvent;
 use App\Models\Member;
 use App\Support\BodyFormat;
@@ -55,6 +56,9 @@ class UpdateEvent
             if ($contentChanged) {
                 $event->event_updated_at = now();
             }
+            // Detached in the same write as the body it was derived from, so a reader in between
+            // never sees the new text under the old card.
+            $event->clearLinkCardIfBodyChanged();
             $event->save();
 
             // Drop the selected images (this event's only — an id from another event is ignored).
@@ -82,6 +86,8 @@ class UpdateEvent
         foreach ($removedFiles as $file) {
             $file->delete(); // deleting the File purges its bytes
         }
+
+        SyncLinkCard::for($event);
 
         return $event;
     }
