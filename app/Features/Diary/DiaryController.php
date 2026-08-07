@@ -22,6 +22,7 @@ use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Diary\StoreDiaryRequest;
 use App\Http\Requests\Diary\UpdateDiaryRequest;
+use App\LinkCard\LinkCardSync;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Support\GuestLoginRedirect;
@@ -192,7 +193,7 @@ class DiaryController extends Controller
         ], bodyIdRoute: $bodyIdRoute);
     }
 
-    public function show(Request $request, int $diary, ShowDiary $query, AdjacentDiaries $adjacent): View|InertiaResponse|RedirectResponse
+    public function show(Request $request, int $diary, ShowDiary $query, AdjacentDiaries $adjacent, LinkCardSync $linkCards): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewerOrGuest();
         $found = $query($viewer, $diary);
@@ -208,6 +209,9 @@ class DiaryController extends Controller
         // ShowDiary already gated the block (null → 404 above); record the author for the
         // Classic friend localNav when viewing someone else's diary.
         $this->markLocalNavSubject($found->member);
+        // After the access decision, and only here: the feeds render many entries, and asking on
+        // each would queue a page's worth of jobs for someone scrolling past.
+        $linkCards->ensure($found);
 
         // Same viewer-scoped adjacency for both surfaces; hoisted so Modern gets it too.
         ['older' => $older, 'newer' => $newer] = $adjacent($viewer, $found);

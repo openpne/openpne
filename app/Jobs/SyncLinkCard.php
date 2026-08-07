@@ -46,6 +46,19 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
      */
     public function __construct(public readonly string $model, public readonly int $id) {}
 
+    /**
+     * Queue this record for a card, once the write that produced it is committed.
+     *
+     * `afterCommit` is the point: the job re-reads the record by id, and the body writes it follows
+     * all happen inside a transaction. Dispatched plainly, a worker can pick the job up before that
+     * transaction commits and find nothing — or, worse, find the row as it was before the edit and
+     * conclude the old URL is still current.
+     */
+    public static function for(Model $record): void
+    {
+        self::dispatch($record::class, (int) $record->getKey())->afterCommit();
+    }
+
     public function uniqueId(): string
     {
         return $this->model.':'.$this->id;
