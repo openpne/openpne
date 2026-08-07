@@ -193,6 +193,26 @@ class InactiveMemberPreflightTest extends TestCase
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message_send_list.member_id', 1), $output);
     }
 
+    public function test_a_send_list_row_under_an_out_of_range_is_send_is_not_an_abort(): void
+    {
+        // is_send is a bare tinyint with no CHECK. MessageUpgrade folds a recipient only WHEN
+        // is_send = 0 and MessageRecipientUpgrade writes receipts only for = 1, so a third value puts
+        // no member id anywhere — the row migrates as a draft with no recipient, and refusing over its
+        // send-list member would be a refusal about data neither step reads.
+        $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        Member::factory()->create(['id' => 1]);
+        $this->seedMessageType(1, 'message');
+        $this->seedMessage(10, memberId: 1, typeId: 1, isSend: 2);
+        $this->seedSendListRow(1, messageId: 10, memberId: 2); // would be the selected row, inactive
+
+        [$ok, $output] = $this->runSteps([new MessageUpgrade]);
+
+        $this->assertTrue($ok, $output);
+        $this->assertDatabaseHas('messages', ['id' => 10, 'draft_recipient_id' => null]);
+    }
+
     public function test_a_superseded_admin_confirm_row_is_not_an_abort(): void
     {
         // (community_member_id, name) is the UNIQUE, so a community can hold several admin_confirm

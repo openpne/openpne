@@ -130,12 +130,17 @@ final class ActiveMember
      * The send-list rows of a migrated personal message whose member id reaches a target column: every
      * row of a sent one (MessageRecipientUpgrade writes a receipt per row), and only the selected row
      * of a draft (MessageUpgrade folds one onto draft_recipient_id and drops the rest).
+     *
+     * Both `is_send` values are tested, not one inferred from the other: the column is a bare
+     * tinyint(1) with no CHECK, and the two steps read `= 1` and `= 0`, so a third value reaches
+     * neither target column. This is a preflight, which exists to diagnose sources that are already
+     * strange — inferring the range here would refuse a migration over a row it then ignores.
      */
     private static function migratedSendListRow(): string
     {
         return 'EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `parent` '
             .'WHERE `parent`.`id` = `message_send_list`.`message_id` '
             .'AND '.MessageUpgrade::isPersonalMessage('parent')
-            .' AND (`parent`.`is_send` = 1 OR '.MessageUpgrade::draftRecipientRowSelector().'))';
+            .' AND (`parent`.`is_send` = 1 OR (`parent`.`is_send` = 0 AND '.MessageUpgrade::draftRecipientRowSelector().')))';
     }
 }
