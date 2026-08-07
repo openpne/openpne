@@ -11,6 +11,7 @@ use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -61,6 +62,32 @@ class PublicResponseCookiesTest extends TestCase
 
         $response->assertOk();
         $this->assertPublicAndCookieFree($response);
+    }
+
+    public function test_a_head_request_is_cookie_free_too(): void
+    {
+        $file = $this->publicAsset();
+
+        $response = $this->head(route('file.public', ['file' => $file->name]));
+
+        $response->assertOk();
+        $this->assertPublicAndCookieFree($response);
+    }
+
+    public function test_a_public_response_outside_the_delivery_routes_keeps_its_cookies(): void
+    {
+        // The route allowlist is the second condition: a new route does not become cookie-free by
+        // declaring itself public, it has to be listed. Synthetic rather than one of the app's own
+        // public routes so that making those cacheable later does not have to fight this test.
+        Route::middleware('web')->get('/__public-probe', fn () => response('ok', 200, [
+            'Cache-Control' => 'public, max-age=86400',
+        ]));
+
+        $response = $this->get('/__public-probe');
+
+        $response->assertOk();
+        $this->assertStringContainsString('public', (string) $response->headers->get('Cache-Control'));
+        $this->assertNotEmpty($response->headers->getCookies());
     }
 
     public function test_a_private_response_keeps_its_cookies(): void

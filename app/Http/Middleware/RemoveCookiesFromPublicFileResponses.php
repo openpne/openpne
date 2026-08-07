@@ -15,15 +15,15 @@ use Symfony\Component\HttpFoundation\Response;
  * session to identify the viewer, so the cookies are attached on the way out whether the file
  * turned out to be public or not.
  *
- * This has to be the outermost middleware of the group: the cookies are attached by
- * EncryptCookies and AddQueuedCookiesToResponse while the response unwinds, so anything inside
- * them sees a response they will still add to.
+ * This has to be the outermost middleware of the group: StartSession adds the session cookie and
+ * AddQueuedCookiesToResponse the queued ones while the response unwinds, so anything inside them
+ * sees a response they will still add to.
  *
  * Nothing is lost by dropping them here. The session lives server-side and every page response
- * refreshes the cookie; these routes only ever serve sub-resources of a page the viewer already
- * loaded.
+ * refreshes the cookie; these routes normally serve sub-resources of a page the viewer already
+ * loaded, and retrieving one directly does not need the session refreshed.
  */
-class RemoveCookiesFromPublicResponses
+class RemoveCookiesFromPublicFileResponses
 {
     /** The delivery routes. Named rather than sniffed so a new route is an explicit decision. */
     private const ROUTES = ['file.show', 'image.show', 'banner.image', 'file.public'];
