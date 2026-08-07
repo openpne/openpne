@@ -36,6 +36,7 @@ use App\Http\Controllers\BannerImageController;
 use App\Http\Controllers\CustomizingCssController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\LinkCardImageController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\PublicFileController;
 use App\Http\Middleware\AsBackgroundFetch;
@@ -315,6 +316,26 @@ Route::middleware('auth.session')->group(function () {
             'ext' => 'jpg|png|gif|webp',
         ])
         ->name('image.show');
+});
+
+// A link card's picture, authorised through the post it appears under rather than through the file.
+// The same card — and so the same image — can sit under a world-readable diary and a private one at
+// once, so the URL names the post and LinkCardImageController re-derives permission from it on every
+// request. Login-free for the same reason as the routes above: a web-public diary's card has to
+// render for the guest reading it, and the controller answers 404 to everyone else.
+Route::middleware('auth.session')->group(function () {
+    Route::get('/linkCard/{context}/{record}/img/{format}/{geometry}/{name}.{ext}', [LinkCardImageController::class, 'show'])
+        ->where([
+            // A closed list, not a class name: the URL may choose which post is consulted, never
+            // which model the app resolves.
+            'context' => 'diary|topic|event|timeline',
+            'record' => '[0-9]+',
+            'format' => 'jpg|png|gif|webp',
+            'geometry' => 'w[0-9]*_h[0-9]*(_sq)?',
+            'name' => '[A-Za-z0-9_.-]+',
+            'ext' => 'jpg|png|gif|webp',
+        ])
+        ->name('linkCard.image');
 });
 
 // The read half of the diary module, guest-reachable as in OpenPNE 3 (diary/config/security.yml

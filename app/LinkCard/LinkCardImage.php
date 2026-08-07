@@ -204,7 +204,7 @@ final class LinkCardImage
             // expiry and the body's own visibility rule.
             //
             // So the row is stored fail-closed (FilePolicy denies an unrecognised related entity) and
-            // stays undeliverable until delivery is designed against the body that references it.
+            // is served only through LinkCardImageController, which asks the referencing body.
             $file = $this->uploader->store($upload, relatedType: 'link_card', relatedId: $linkCardId);
 
             return ['file' => $file, 'width' => $dimensions[0], 'height' => $dimensions[1]];
