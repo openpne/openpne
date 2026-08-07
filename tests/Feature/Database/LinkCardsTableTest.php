@@ -68,20 +68,30 @@ class LinkCardsTableTest extends TestCase
         $this->assertDatabaseHas('link_cards', ['url_hash' => str_repeat('b', 64), 'image_file_id' => null]);
     }
 
-    public function test_the_table_round_trips(): void
+    public function test_the_tables_round_trip(): void
     {
-        // down() drops the foreign key before the table so InnoDB does not refuse the index it
-        // adopted for the constraint (errno 1553). SQLite cannot show that, but this pins that
-        // up/down/up does not error on either lane.
-        $migration = require database_path('migrations/2026_08_06_000001_create_link_cards_table.php');
+        // Rolled back in reverse migration order, which is the only order that works and the one a
+        // real rollback uses: the body tables hold foreign keys into link_cards, and MySQL refuses
+        // to drop a table another still references (errno 3730). Taking the create migration down on
+        // its own passes on SQLite and fails on MySQL, which is how this was originally written.
+        $create = require database_path('migrations/2026_08_06_000001_create_link_cards_table.php');
+        $attach = require database_path('migrations/2026_08_06_000002_add_link_card_to_body_tables.php');
 
         $this->assertTrue(Schema::hasTable('link_cards'));
+        $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
 
-        $migration->down();
+        $attach->down();
+        $this->assertFalse(Schema::hasColumn('diaries', 'link_card_id'));
+
+        $create->down();
         $this->assertFalse(Schema::hasTable('link_cards'));
 
-        $migration->up();
+        $create->up();
+        $attach->up();
+
         $this->assertTrue(Schema::hasTable('link_cards'));
+        $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
+        $this->assertTrue(Schema::hasColumn('timeline_posts', 'link_card_synced_at'));
     }
 
     private function column(string $table, string $name): ?array

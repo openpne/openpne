@@ -21,6 +21,24 @@ final class BodyRenderer
     }
 
     /**
+     * The URLs this body links to, in the order they appear.
+     *
+     * Dispatched here for the same reason rendering is: what a link card is fetched for must be
+     * exactly what the reader sees as a link, and that differs per format. An op3 body's decoration
+     * tags are stripped first so a colour attribute cannot read as a URL.
+     *
+     * @return list<string>
+     */
+    public static function urls(?string $text, BodyFormat $format): array
+    {
+        return match ($format) {
+            BodyFormat::Markdown => MarkdownText::urls($text),
+            BodyFormat::Plain => BodyText::urls($text),
+            BodyFormat::Op3 => BodyText::urls(BodyText::stripDecoration($text)),
+        };
+    }
+
+    /**
      * A feed excerpt. Markdown flattens its rendered HTML to plain text (MarkdownText::excerpt);
      * Plain and Op3 share BodyText::excerpt, which strips <op:*> tags and collapses newlines.
      */

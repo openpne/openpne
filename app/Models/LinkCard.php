@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Support\LinkCardStatus;
+use Carbon\CarbonImmutable;
 use Database\Factories\LinkCardFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -80,5 +81,89 @@ class LinkCard extends Model
     public function isStale(): bool
     {
         return $this->expires_at === null || $this->expires_at->isPast();
+    }
+
+    /**
+     * Whether this card is worth fetching right now.
+     *
+     * The single state machine, deliberately: the queueing side, the read path and the claim all have
+     * to agree, and when they were each written separately they did not. `isStale()` alone is not it
+     * — a failed card has no expiry, so it reads as stale forever and would be queued again every
+     * time another record mentions the same URL, right through the backoff that exists to stop that.
+     *
+     * `next_attempt_at` in the future means one of two things, and both mean "not now": a worker is
+     * holding the lease, or a failure is serving out its backoff.
+     */
+    public function isDueForFetch(): bool
+    {
+        if ($this->next_attempt_at !== null && $this->next_attempt_at->isFuture()) {
+            return false;
+        }
+
+        return match ($this->status) {
+            LinkCardStatus::Pending, LinkCardStatus::Failed => true,
+            LinkCardStatus::Ok => $this->isStale(),
+        };
+    }
+
+    /**
+     * Take the fetch lease for this card, or return null if someone else holds it.
+     *
+     * A conditional UPDATE is the whole mechanism: whichever worker's write matches the current
+     * `next_attempt_at` wins, and the others see zero affected rows and stop. That is what keeps a
+     * popular URL from being fetched by every worker that picks it up at once.
+     *
+     * The returned instant is a **fence token**, and it has to be carried into the write that
+     * finishes the work. Without one, a slow worker whose lease expired — letting a second worker
+     * claim and complete — would still overwrite that newer result when it eventually came back.
+     */
+    public function claimFetch(int $leaseSeconds): ?CarbonImmutable
+    {
+        $now = CarbonImmutable::now();
+        $lease = $now->addSeconds($leaseSeconds);
+
+        $taken = static::query()
+            ->whereKey($this->getKey())
+            // Nobody is holding it and no backoff is running.
+            ->where(fn ($query) => $query->whereNull('next_attempt_at')->orWhere('next_attempt_at', '<=', $now))
+            // And it is actually due. This condition belongs in the UPDATE, not only in the caller:
+            // ShouldBeUnique is an optimisation with a time window, so a duplicate job delayed past
+            // it arrives after the first has already succeeded — with a released lease and a fresh
+            // card — and would otherwise claim it and fetch the URL a second time for nothing.
+            ->where(fn ($query) => $query
+                ->where('status', '!=', LinkCardStatus::Ok->value)
+                ->orWhereNull('expires_at')
+                ->orWhere('expires_at', '<=', $now))
+            ->update(['next_attempt_at' => $lease, 'updated_at' => $now]);
+
+        return $taken === 1 ? $lease : null;
+    }
+
+    /**
+     * Apply $attributes only if this card is still held under $lease.
+     *
+     * Returns false when the lease has moved on, meaning another worker has since claimed and
+     * possibly finished; the caller's result is stale and must be dropped rather than written.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function completeFetch(CarbonImmutable $lease, array $attributes): bool
+    {
+        return static::query()
+            ->whereKey($this->getKey())
+            ->where('next_attempt_at', $lease)
+            ->update($attributes + ['updated_at' => CarbonImmutable::now()]) === 1;
+    }
+
+    /**
+     * How long to wait before retrying after $failures consecutive failures.
+     *
+     * Doubles up to a week. The exponent is clamped because failure_count is a TINYINT and the shift
+     * would otherwise run past any useful interval long before the column overflows — a URL that has
+     * failed ten times is not going to start working on a schedule.
+     */
+    public static function backoffAfter(int $failures): CarbonImmutable
+    {
+        return CarbonImmutable::now()->addMinutes(15 * (2 ** min(max($failures, 1), 9)));
     }
 }
