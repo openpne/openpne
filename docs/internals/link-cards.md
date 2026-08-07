@@ -83,6 +83,14 @@ A failed card is governed by `next_attempt_at` rather than by expiry, so a page 
 stops costing anything quickly. The backoff doubles and is clamped: a URL that has failed ten times
 is not going to start working on a schedule.
 
+**A card that already renders is never demoted by a failed refresh.** A refresh failing says nothing
+about whether the metadata already held is still good, and blanking it turns one bad request into a
+visibly broken post — the card disappears from a page it has been on for a week because the far end
+returned a 500 this morning. Only the schedule moves, and the stale card keeps showing until a later
+attempt replaces it. That also avoids a leak that the alternative created: demoting the card while
+leaving `image_file_id` in place kept the old image referenced by a card nobody renders, where no
+unreferenced-file sweep could collect it.
+
 ## Pieces
 
 | | |
@@ -245,3 +253,4 @@ ones, and each destination learns the link was shared here.
 - Syncing a card never changes a record's `updated_at`, and never writes to a body it did not read.
 - One predicate decides whether a fetch is due, shared by the queueing side, the read path and the
   claim.
+- A failed refresh never removes a card that was already rendering.

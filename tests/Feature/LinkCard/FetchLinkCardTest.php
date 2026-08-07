@@ -234,6 +234,60 @@ class FetchLinkCardTest extends TestCase
         $this->assertSame($filesBefore, File::count(), 'An orphaned image survived a lost lease.');
     }
 
+    public function test_a_failed_refresh_keeps_the_card_that_was_already_working(): void
+    {
+        // A refresh failing says nothing about whether the metadata already held is still good.
+        // Blanking it turns one bad request into a visibly broken post — the card disappears from a
+        // page it has been on for a week because the far end returned a 500 this morning.
+        $card = $this->card('https://example.com/flaky');
+        $file = File::factory()->create();
+        $card->update([
+            'status' => LinkCardStatus::Ok,
+            'title' => 'Still good',
+            'image_file_id' => $file->id,
+            'expires_at' => CarbonImmutable::now()->subDay(),
+        ]);
+        $this->queueResponse(new Response(503, ['Content-Type' => 'text/html'], ''));
+
+        $this->runJob($card->fresh());
+
+        $card->refresh();
+        $this->assertSame(LinkCardStatus::Ok, $card->status);
+        $this->assertSame('Still good', $card->title);
+        $this->assertTrue($card->isRenderable());
+        $this->assertSame($file->id, $card->image_file_id, 'The image must survive with the card that references it.');
+        $this->assertSame(1, $card->failure_count, 'The failure is still recorded, so the retry backs off.');
+    }
+
+    public function test_a_kept_card_is_retried_once_its_backoff_elapses(): void
+    {
+        // The other half: keeping it must not mean never trying again.
+        $card = $this->card('https://example.com/flaky');
+        $card->update([
+            'status' => LinkCardStatus::Ok,
+            'title' => 'Old',
+            'expires_at' => CarbonImmutable::now()->subDay(),
+        ]);
+        $this->queueResponse(new Response(503, ['Content-Type' => 'text/html'], ''));
+        $this->runJob($card->fresh());
+
+        $this->assertFalse($card->fresh()?->isDueForFetch(), 'Still inside the backoff.');
+
+        $this->travelTo(CarbonImmutable::now()->addDays(2));
+
+        $this->assertTrue($card->fresh()?->isDueForFetch(), 'Once the backoff elapses it is due again.');
+    }
+
+    public function test_a_card_that_never_rendered_is_still_marked_failed(): void
+    {
+        $card = $this->card('https://example.com/never');
+        $this->queueResponse(new Response(503, ['Content-Type' => 'text/html'], ''));
+
+        $this->runJob($card);
+
+        $this->assertSame(LinkCardStatus::Failed, $card->fresh()?->status);
+    }
+
     public function test_a_missing_card_is_not_an_error(): void
     {
         $job = new FetchLinkCard(9999);

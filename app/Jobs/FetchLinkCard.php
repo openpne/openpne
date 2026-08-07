@@ -170,18 +170,33 @@ class FetchLinkCard implements ShouldBeUnique, ShouldQueue
      * The attributes describing a failure, with the backoff that keeps it from being retried on
      * every view.
      *
+     * A card that already renders is **not** demoted. A refresh failing says nothing about whether
+     * the metadata already held is still good, and blanking it turns one bad request into a visibly
+     * broken post — the card vanishes from a page it has been on for a week because the far end
+     * returned a 500 this morning. Only the schedule moves; the stale card keeps showing until a
+     * later attempt replaces it.
+     *
+     * That also settles what would otherwise be a leak: demoting the card while leaving
+     * `image_file_id` in place kept the old File referenced by a card nobody renders, where no
+     * unreferenced-file sweep could ever collect it.
+     *
      * @return array<string, mixed>
      */
     private function failed(LinkCard $card): array
     {
         $failures = $card->failure_count + 1;
 
-        return [
-            'status' => LinkCardStatus::Failed,
+        $schedule = [
             'failure_count' => min($failures, 255),
             'fetched_at' => CarbonImmutable::now(),
-            'expires_at' => null,
             'next_attempt_at' => LinkCard::backoffAfter($failures),
         ];
+
+        if ($card->isRenderable()) {
+            // expires_at stays in the past, so once the backoff elapses this is due again.
+            return $schedule;
+        }
+
+        return $schedule + ['status' => LinkCardStatus::Failed, 'expires_at' => null];
     }
 }
