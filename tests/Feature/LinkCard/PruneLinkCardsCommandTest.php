@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\LinkCard;
 
 use App\Models\CommunityEvent;
+use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\File;
 use App\Models\LinkCard;
@@ -44,8 +45,10 @@ class PruneLinkCardsCommandTest extends TestCase
         $member = Member::factory()->create();
 
         $referenced = [
-            'timeline_posts' => TimelinePost::factory()->for($member)->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
+            'diaries' => Diary::factory()->for($member)->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
+            'community_topics' => CommunityTopic::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
             'community_events' => CommunityEvent::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
+            'timeline_posts' => TimelinePost::factory()->for($member)->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
         ];
 
         $this->artisan('openpne:prune-link-cards')->assertSuccessful();
@@ -56,6 +59,36 @@ class PruneLinkCardsCommandTest extends TestCase
                 "A card referenced from {$table} was pruned.",
             );
         }
+    }
+
+    public function test_a_card_adopted_after_it_was_selected_is_not_deleted(): void
+    {
+        // Cards are keyed by URL, so a new post of a URL nobody has used for weeks picks up the
+        // *existing* row rather than making one — and the window between selecting candidates and
+        // deleting them is exactly when that happens. cardFor does not touch updated_at, so the
+        // grace period does not cover it.
+        //
+        // Getting this wrong loses the card permanently, not temporarily: the attach writes
+        // link_card_id and link_card_synced_at together, so a delete landing between them leaves the
+        // body marked examined with no card, which the read path reads as "no link here" forever.
+        $card = $this->agedCard();
+
+        $adopted = false;
+        LinkCard::retrieved(function (LinkCard $model) use ($card, &$adopted): void {
+            if ($adopted || $model->getKey() !== $card->id) {
+                return;
+            }
+            $adopted = true;
+            Diary::factory()->for(Member::factory())->create([
+                'link_card_id' => $card->id,
+                'link_card_synced_at' => CarbonImmutable::now(),
+            ]);
+        });
+
+        $this->artisan('openpne:prune-link-cards')->assertSuccessful();
+
+        $this->assertTrue($adopted, 'The adoption must have interleaved for this test to mean anything.');
+        $this->assertNotNull(LinkCard::find($card->id), 'A card adopted mid-sweep was deleted.');
     }
 
     public function test_a_recently_touched_card_is_left_alone(): void

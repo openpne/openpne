@@ -57,16 +57,11 @@ class PruneLinkCardsCommand extends Command
             return self::SUCCESS;
         }
 
-        // Deleted through the model so each row's image File is deleted with it, taking its stored
-        // bytes and cached thumbnails (FileObserver). A mass query delete would leave those behind.
         $deleted = 0;
 
-        $query->chunkById(200, function ($cards) use (&$deleted): void {
+        $query->chunkById(200, function ($cards) use (&$deleted, $cutoff): void {
             foreach ($cards as $card) {
-                $image = $card->image;
-                $card->delete();
-                $image?->delete();
-                $deleted++;
+                $deleted += $this->deleteIfStillUnreferenced($card, $cutoff) ? 1 : 0;
             }
         });
 
@@ -76,11 +71,51 @@ class PruneLinkCardsCommand extends Command
     }
 
     /**
+     * Delete $card, but only if nothing has claimed it since it was selected as a candidate.
+     *
+     * The conditions are repeated inside the DELETE rather than trusted from the earlier SELECT,
+     * because a card can be adopted between the two: cards are keyed by URL, so a new post of a URL
+     * that has been unreferenced for weeks picks up the *existing* row rather than making one. The
+     * window between selecting candidates and deleting them is exactly when that can happen, and
+     * `cardFor` does not touch `updated_at`, so the grace period does not cover it.
+     *
+     * Leaving it to the database to order the two writes is what makes both outcomes safe:
+     *
+     *  - the attach commits first — `NOT EXISTS` sees the reference and this deletes nothing;
+     *  - the delete commits first — the attach's UPDATE names an id that no longer exists and fails
+     *    on the foreign key, so its marker is never written and the next view retries it.
+     *
+     * Getting this wrong is not a lost card but a *permanently* lost one: the attach writes
+     * `link_card_id` and `link_card_synced_at` together, so a delete landing between them leaves the
+     * body marked examined with no card, which the read path reads as "this body has no link" and
+     * never revisits.
+     */
+    private function deleteIfStillUnreferenced(LinkCard $card, CarbonImmutable $cutoff): bool
+    {
+        $image = $card->image;
+
+        $deleted = LinkCard::query()
+            ->whereKey($card->getKey())
+            ->where('updated_at', '<=', $cutoff)
+            ->whereNotExists(fn ($sub) => $this->anyReference($sub))
+            ->delete();
+
+        if ($deleted !== 1) {
+            return false;
+        }
+
+        // Only now, and only for a row that really went: deleting the card is what makes its image
+        // unreachable, and deleting the File takes its bytes and cached thumbnails (FileObserver).
+        $image?->delete();
+
+        return true;
+    }
+
+    /**
      * A subquery matching any body that still points at the card.
      *
-     * The grace period above is what makes this safe against the obvious race: a card created a
-     * moment ago, whose owning record has not been written yet, is younger than the cutoff and so
-     * never considered.
+     * `unionAll`, not `union`: this only ever asks whether a row exists, and de-duplicating the
+     * matches costs a temporary B-tree per card for an answer that cannot change.
      */
     private function anyReference($query): void
     {
@@ -89,7 +124,7 @@ class PruneLinkCardsCommand extends Command
         $query->select(DB::raw('1'))->from($tables[0])->whereColumn($tables[0].'.link_card_id', 'link_cards.id');
 
         foreach (array_slice($tables, 1) as $table) {
-            $query->union(
+            $query->unionAll(
                 DB::table($table)->select(DB::raw('1'))->whereColumn($table.'.link_card_id', 'link_cards.id'),
             );
         }

@@ -76,10 +76,15 @@ class LinkCardsTableTest extends TestCase
         // its own passes on SQLite and fails on MySQL, which is how this was originally written.
         $create = require database_path('migrations/2026_08_06_000001_create_link_cards_table.php');
         $attach = require database_path('migrations/2026_08_06_000002_add_link_card_to_body_tables.php');
+        $index = require database_path('migrations/2026_08_07_000001_index_link_card_id_on_sqlite.php');
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));
 
+        // Every migration that touches these tables, newest first. SQLite refuses to drop a column
+        // an index still names, and MySQL refuses to drop a table another still references — so this
+        // order is not a preference, it is the only one that works, and the one a real rollback uses.
+        $index->down();
         $attach->down();
         $this->assertFalse(Schema::hasColumn('diaries', 'link_card_id'));
 
@@ -88,6 +93,7 @@ class LinkCardsTableTest extends TestCase
 
         $create->up();
         $attach->up();
+        $index->up();
 
         $this->assertTrue(Schema::hasTable('link_cards'));
         $this->assertTrue(Schema::hasColumn('diaries', 'link_card_id'));

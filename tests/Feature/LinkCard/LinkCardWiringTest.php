@@ -4,6 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Feature\LinkCard;
 
+use App\Features\CommunityEvent\Actions\CreateEvent;
+use App\Features\CommunityEvent\Actions\UpdateEvent;
+use App\Features\CommunityEvent\Data\CommunityEventFormData;
+use App\Features\CommunityTopic\Actions\CreateTopic;
+use App\Features\CommunityTopic\Actions\UpdateTopic;
+use App\Features\CommunityTopic\Data\CommunityTopicFormData;
+use App\Features\Diary\Actions\CreateDiary;
+use App\Features\Diary\Actions\UpdateDiary;
+use App\Features\Diary\Data\DiaryFormData;
+use App\Features\Timeline\Actions\CreateTimelinePost;
+use App\Features\Timeline\Data\TimelinePostFormData;
+use App\Files\ImageEdit;
 use App\Jobs\SyncLinkCard;
 use App\Models\Community;
 use App\Models\CommunityEvent;
@@ -13,11 +25,14 @@ use App\Models\Diary;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\BodyFormat;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -88,6 +103,65 @@ class LinkCardWiringTest extends TestCase
         $diary->refresh();
         $this->assertSame($card->id, $diary->link_card_id);
         $this->assertNotNull($diary->link_card_synced_at);
+    }
+
+    #[DataProvider('bodyKinds')]
+    public function test_posting_any_body_kind_queues_a_sync(string $kind): void
+    {
+        // One assertion per call site. A single representative would go green with five of the six
+        // dispatches deleted, which is precisely the failure this PR exists to prevent.
+        $record = $this->{'create'.$kind}();
+
+        Queue::assertPushed(SyncLinkCard::class, fn (SyncLinkCard $job): bool => $job->model === $record::class && $job->id === $record->id);
+    }
+
+    #[DataProvider('editableKinds')]
+    public function test_editing_any_body_kind_detaches_its_card(string $kind): void
+    {
+        $record = $this->{'create'.$kind}();
+        $card = LinkCard::factory()->create();
+        $record->forceFill(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()])->saveQuietly();
+
+        $this->{'edit'.$kind.'Body'}($record);
+
+        $record->refresh();
+        $this->assertNull($record->link_card_id, "{$kind}: the previous body's card survived the edit.");
+        $this->assertNull($record->link_card_synced_at, "{$kind}: the new body was left marked as examined.");
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function bodyKinds(): array
+    {
+        // Diary and the community bodies carry a format column; a timeline post does not, and the
+        // sync has a branch for that.
+        return ['Diary' => ['Diary'], 'Topic' => ['Topic'], 'Event' => ['Event'], 'TimelinePost' => ['TimelinePost']];
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function editableKinds(): array
+    {
+        // A timeline post has no update action — it cannot be edited at all.
+        return ['Diary' => ['Diary'], 'Topic' => ['Topic'], 'Event' => ['Event']];
+    }
+
+    #[DataProvider('bodyKinds')]
+    public function test_every_sync_is_marked_to_wait_for_the_commit(string $kind): void
+    {
+        // The job re-reads the record by id, so queued before the commit a worker can find nothing —
+        // or, after an edit, find the text as it was before it and conclude the old URL is current.
+        //
+        // Asserted as the flag on the job rather than by opening a transaction and watching: the
+        // deferral lives in Illuminate\Queue\Queue::enqueueUsing, and QueueFake::push does not go
+        // through it, so a test that wrapped this in DB::transaction would see the job queued
+        // immediately whether or not the call site asked to wait — proving nothing either way. What
+        // is ours to get right is that every call site asks.
+        $this->{'create'.$kind}();
+
+        Queue::assertPushed(SyncLinkCard::class, fn (SyncLinkCard $job): bool => $job->afterCommit === true);
     }
 
     public function test_viewing_a_diary_nobody_has_examined_queues_a_sync(): void
@@ -180,6 +254,84 @@ class LinkCardWiringTest extends TestCase
         $this->actingAs($this->member)->get(route('diary.show', $diary))->assertOk();
 
         Queue::assertNothingPushed();
+    }
+
+    private function createDiary(): Diary
+    {
+        return $this->app->make(CreateDiary::class)(
+            $this->member,
+            new DiaryFormData(title: 'T', body: 'See https://example.com/a', visibility: Visibility::Open, format: BodyFormat::Plain),
+        );
+    }
+
+    private function createTopic(): CommunityTopic
+    {
+        return $this->app->make(CreateTopic::class)(
+            $this->member,
+            $this->joinedCommunity(),
+            new CommunityTopicFormData(name: 'T', body: 'See https://example.com/a', format: BodyFormat::Plain),
+        );
+    }
+
+    private function createEvent(): CommunityEvent
+    {
+        return $this->app->make(CreateEvent::class)(
+            $this->member,
+            $this->joinedCommunity(),
+            $this->eventForm(),
+        );
+    }
+
+    private function createTimelinePost(): TimelinePost
+    {
+        return $this->app->make(CreateTimelinePost::class)(
+            $this->member,
+            new TimelinePostFormData(body: 'See https://example.com/a', visibility: Visibility::Open),
+        );
+    }
+
+    private function editDiaryBody(Diary $diary): void
+    {
+        $this->app->make(UpdateDiary::class)(
+            $this->member,
+            $diary,
+            new DiaryFormData(title: $diary->title, body: 'Rewritten https://example.com/b', visibility: $diary->visibility, format: BodyFormat::Plain),
+            ImageEdit::none(),
+        );
+    }
+
+    private function editTopicBody(CommunityTopic $topic): void
+    {
+        $this->app->make(UpdateTopic::class)(
+            $this->member,
+            $topic,
+            new CommunityTopicFormData(name: $topic->name, body: 'Rewritten https://example.com/b', format: BodyFormat::Plain),
+            ImageEdit::none(),
+        );
+    }
+
+    private function editEventBody(CommunityEvent $event): void
+    {
+        $this->app->make(UpdateEvent::class)(
+            $this->member,
+            $event,
+            $this->eventForm('Rewritten https://example.com/b'),
+            ImageEdit::none(),
+        );
+    }
+
+    private function eventForm(string $body = 'See https://example.com/a'): CommunityEventFormData
+    {
+        return new CommunityEventFormData(
+            name: 'E',
+            body: $body,
+            open_date: '2027-01-01',
+            open_date_comment: '',
+            area: 'Somewhere',
+            application_deadline: null,
+            capacity: null,
+            format: BodyFormat::Plain,
+        );
     }
 
     private function joinedCommunity(): Community

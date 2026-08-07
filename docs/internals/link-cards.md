@@ -239,11 +239,27 @@ a card exists its image is referenced, so this is the only thing that makes thos
 
 It is a sweep rather than something the posting path does inline, because cards are shared by URL: no
 single record stopping its reference proves the card is unused without checking every other record.
-Doing that check inline would put a count-then-delete race on the posting path — two records dropping
-the same URL at once could both see zero references, and a record picking that URL up at the same
-moment could have its card deleted underneath it. The grace period (default 7 days) is what closes
-the remaining window: a card created a moment ago, whose owning record has not been written yet, is
-never considered.
+Doing that check inline would put a count-then-delete race on the posting path.
+
+The sweep has a race of its own, and the grace period does not cover it. A new post of a URL nobody
+has used for weeks picks up the *existing* row rather than making one, and `cardFor` does not touch
+`updated_at` — so a card can be adopted in the window between being selected as a candidate and being
+deleted. **The delete therefore repeats its conditions rather than trusting the earlier select**, and
+lets the database order the two writes: if the attach commits first the `NOT EXISTS` sees it and
+nothing is deleted; if the delete commits first the attach names a row that is gone and fails on the
+foreign key, so its marker is never written and the next view retries.
+
+That ordering matters more than it looks. The attach writes `link_card_id` and `link_card_synced_at`
+together, so a delete landing between them would leave the body marked examined with no card — which
+the read path reads as "this body has no link" and never revisits. The card would be lost
+permanently, not until the next sweep.
+
+The grace period (default 7 days) still covers the simpler case: a card created a moment ago whose
+owning record has not been written yet is never a candidate at all.
+
+`link_card_id` is indexed on SQLite by its own migration. InnoDB creates a backing index for every
+foreign key and SQLite creates none, so without it this sweep degrades into a full scan of all four
+body tables per candidate — worst exactly for the unreferenced cards it exists to find.
 
 Not scheduled. A site under the fleet model runs no per-site cron, and an unreferenced card is cache
 rather than something that hurts, so this is an operator's tool.
