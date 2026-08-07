@@ -14,6 +14,7 @@ use App\Models\Diary;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\Feature;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -60,6 +61,24 @@ enum CardContext: string
     }
 
     /**
+     * The unit this kind of post belongs to.
+     *
+     * A card image is fetched by URL, so no page mediates it — the same reason `FilePolicy` resolves
+     * an owning feature. Without this a known image URL keeps returning bytes after an operator
+     * switches the module off, while every screen around it is gone. `Feature::enabled()` resolves
+     * ancestors, so a topic's card stops when communities are switched off as well.
+     */
+    public function feature(): Feature
+    {
+        return match ($this) {
+            self::Diary => Feature::Diary,
+            self::Topic => Feature::CommunityTopic,
+            self::Event => Feature::CommunityEvent,
+            self::TimelinePost => Feature::Timeline,
+        };
+    }
+
+    /**
      * The URL of $record's card image at the given size, or null when there is no image to show.
      *
      * Built here rather than at each call site so the same File never gets a context-free URL by
@@ -72,7 +91,7 @@ enum CardContext: string
         $kind = self::forRecord($record);
         $card = $record->getAttribute('link_card_id') === null ? null : $record->linkCard;
 
-        if ($kind === null || ! $card instanceof LinkCard || ! $card->isRenderable()) {
+        if ($kind === null || ! $kind->carriesCard($record) || ! $card instanceof LinkCard || ! $card->isRenderable()) {
             return null;
         }
 
@@ -105,8 +124,25 @@ enum CardContext: string
             self::Diary => Diary::with(['member', 'linkCard'])->find($id),
             self::Topic => CommunityTopic::with(['community', 'linkCard'])->find($id),
             self::Event => CommunityEvent::with(['community', 'linkCard'])->find($id),
-            self::TimelinePost => TimelinePost::with(['member', 'linkCard'])->find($id),
+            // Replies are excluded in the query, not filtered after: a reply id must not resolve at
+            // all, so nothing downstream can authorize against it. See carriesCard.
+            self::TimelinePost => TimelinePost::with(['member', 'linkCard'])->whereNull('in_reply_to_id')->find($id),
         };
+    }
+
+    /**
+     * Whether $record is the kind of row that may carry a card at all.
+     *
+     * Timeline replies are deliberately never synced — they render as a thread, where a stack of
+     * cards reads as noise — so today no reply row has a `link_card_id` to serve. This does not rely
+     * on that: a permalink to a reply re-centers to its thread root and is authorised as the root
+     * (`ShowTimelinePost`), while `TimelineAccess::canView` given the reply would answer for the
+     * reply's own author and visibility. A card URL naming a reply would therefore ask a different
+     * audience than the page it appears on, so it is refused rather than answered.
+     */
+    private function carriesCard(Model $record): bool
+    {
+        return ! ($record instanceof TimelinePost) || $record->in_reply_to_id === null;
     }
 
     /**

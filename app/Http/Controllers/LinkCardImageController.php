@@ -26,7 +26,8 @@ use Illuminate\Http\Response;
  *  2. the post still points at this card — it may have been edited to a different link;
  *  3. the card still points at this file — a refresh may have replaced the picture;
  *  4. the file still belongs to that card — the id in the URL is not evidence of anything;
- *  5. the feature is on and the card is renderable — an operator can switch it off.
+ *  5. link cards are on, the owning module is on, and the card is renderable — an operator can
+ *     switch any of the three off.
  *
  * A signed URL would not replace any of this: signing proves the link was issued, not that what it
  * described is still true, and a link issued before a post went private stays valid for its lifetime.
@@ -52,6 +53,9 @@ class LinkCardImageController extends Controller
 
         $kind = CardContext::fromSlug($context);
         abort_if($kind === null, 404);
+        // Before the row is even looked up: an operator switching a module off has to stop its bytes,
+        // not only its screens. Same reason FilePolicy resolves an owning feature.
+        abort_unless($kind->feature()->enabled(), 404);
 
         $found = $kind->find($record);
         abort_if($found === null, 404);

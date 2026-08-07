@@ -314,6 +314,69 @@ class LinkCardImageDeliveryTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_switching_the_owning_module_off_stops_serving(): void
+    {
+        // The bytes are fetched by URL, so no page mediates them: turning a module off has to stop
+        // its card images too, or they stay readable while every screen around them is gone.
+        $community = Community::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $community->id, 'member_id' => $this->author->id]);
+
+        $urls = [
+            [SnsSettingKey::FeatureDiaryEnabled, $this->urlFor($this->diary(Visibility::Open))],
+            [SnsSettingKey::FeatureTimelineEnabled, $this->urlFor(
+                TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id])
+            )],
+            [SnsSettingKey::FeatureCommunityTopicEnabled, $this->urlFor(
+                CommunityTopic::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
+            )],
+            [SnsSettingKey::FeatureCommunityEventEnabled, $this->urlFor(
+                CommunityEvent::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
+            )],
+        ];
+
+        foreach ($urls as [$key, $url]) {
+            $this->actingAs($this->author)->get($url)->assertOk();
+            $this->setSnsSetting($key, false);
+            $this->actingAs($this->author)->get($url)->assertNotFound();
+            $this->setSnsSetting($key, true);
+        }
+    }
+
+    public function test_switching_communities_off_stops_serving_their_bodies_cards(): void
+    {
+        // The parent unit, not just the board's own flag: a topic is unreachable while communities
+        // are off whatever `communityTopic` says.
+        $community = Community::factory()->create();
+        CommunityMember::factory()->create(['community_id' => $community->id, 'member_id' => $this->author->id]);
+        $topic = CommunityTopic::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
+        $event = CommunityEvent::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
+
+        $this->setSnsSetting(SnsSettingKey::FeatureCommunityEnabled, false);
+
+        $this->actingAs($this->author)->get($this->urlFor($topic))->assertNotFound();
+        $this->actingAs($this->author)->get($this->urlFor($event))->assertNotFound();
+    }
+
+    public function test_a_timeline_reply_is_never_addressable(): void
+    {
+        // A permalink to a reply re-centers to its thread root and is authorised as the root, so a
+        // card URL naming the reply would ask a different audience than the page it appears on.
+        // Replies are never synced, so this is defence against that changing, not a live hole.
+        $root = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open]);
+        $reply = TimelinePost::factory()->for(Member::factory()->create())->create([
+            'visibility' => Visibility::Open,
+            'in_reply_to_id' => $root->id,
+            'link_card_id' => $this->card->id,
+        ]);
+
+        $this->assertNull($this->urlFor($reply));
+
+        // …and not merely absent from the page: the address cannot be constructed by hand either.
+        $this->actingAs($this->author)
+            ->get(route('linkCard.image', array_merge($this->urlParts($reply), ['record' => $reply->id])))
+            ->assertNotFound();
+    }
+
     private function diary(Visibility $visibility): Diary
     {
         return Diary::factory()->for($this->author)->create([

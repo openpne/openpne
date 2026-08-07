@@ -223,10 +223,21 @@ implementation of "who may read this diary" would drift, and silently.
 
 [`LinkCardImageController`](../../app/Http/Controllers/LinkCardImageController.php) re-derives every
 condition from current data on every request — the viewer may read the post, the post still points at
-this card, the card still points at this file, the file belongs to that card, the feature is on and
-the card is renderable. Not because any is likely to have changed, but because each is something a
-URL can outlive. A signed URL replaces none of it: signing proves the link was issued, not that what
-it described is still true, so one issued before a post went private stays valid for its lifetime.
+this card, the card still points at this file, the file belongs to that card, link cards and the
+owning module are both switched on, and the card is renderable. Not because any is likely to have
+changed, but because each is something a URL can outlive. A signed URL replaces none of it: signing
+proves the link was issued, not that what it described is still true, so one issued before a post
+went private stays valid for its lifetime.
+
+The module check is the same rule [`FilePolicy`](../../app/Policies/FilePolicy.php) applies for the
+same reason: bytes fetched by URL have no page to mediate them, so switching a unit off has to stop
+its images too, or they stay readable while every screen around them is gone.
+`Feature::enabled()` resolves ancestors, so a topic's card also stops when communities are off.
+
+A timeline reply is not addressable. Replies are never synced, but this does not lean on that: a
+permalink to a reply re-centers to its thread root and is authorised as the root, while
+`TimelineAccess::canView` given the reply answers for the reply's own author — a card URL naming one
+would ask a different audience than the page it appears on.
 
 Both directions of the file-to-card relation are checked. Card-to-file rules out a URL that outlived
 a refresh; file-to-card is unreachable through a well-formed database and exists for the case where
@@ -315,6 +326,7 @@ rather than something that hurts, so this is an operator's tool.
 - Card images have no explicit visibility. What may be seen is decided by the post named in the URL,
   on current data, on every request — never by the file, and never by the most permissive post that
   happens to share it.
+- A switched-off module serves no card images, and a timeline reply is never an addressable context.
 - `link_cards.image_file_id` is a signed `INT` to match `files.id` — `foreignId()` emits
   `BIGINT UNSIGNED` and MySQL refuses the constraint. SQLite accepts either, so the mismatch would
   only surface on a real deployment.
