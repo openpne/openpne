@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RemoveCookiesFromPublicResponses;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\UseAdminSessionStore;
@@ -62,6 +63,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // goes right after StartSession/ShareErrorsFromSession and ahead of the first middleware
         // that can abort. PreventRequestForgery has to join the priority list to be that anchor.
         $middleware->web(prepend: [
+            // Outermost, so it sees the response after EncryptCookies and
+            // AddQueuedCookiesToResponse have attached the session cookies.
+            RemoveCookiesFromPublicResponses::class,
             SecurityHeaders::class,
         ], append: [
             SetLocale::class,
