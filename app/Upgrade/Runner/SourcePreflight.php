@@ -227,13 +227,36 @@ final class SourcePreflight
             }
         }
 
-        // A guard reads `member` by correlated subquery too, so the same blind spot applies: a step
-        // subset without MemberUpgrade would otherwise reach the count with neither column checked.
+        // Everything the active-member machinery reads is invisible to the per-step check above: a
+        // guard reaches `member` by correlated subquery, and a REFUSE entry's table may be no step's
+        // FROM at all (community_member_position). Without these, a step subset without MemberUpgrade
+        // reaches inactiveMemberReferences() with nothing verified — and a missing column surfaces as
+        // a SQL exception, or as a check that silently counts nothing.
+        $readTables = $this->readTables();
+        $readsMember = false;
+
         foreach ($this->steps as $step) {
-            if ($step->memberRefs() !== [] && isset($present['member'])) {
-                $required['member']['id'] = true;
-                $required['member']['is_active'] = true;
+            $readsMember = $readsMember || $step->memberRefs() !== [];
+        }
+
+        foreach (ActiveMember::references() as $reference => $meta) {
+            [$table, $column] = explode('.', $reference);
+            if ($meta['treatment'] !== ActiveMember::REFUSE || ! in_array($table, $readTables, true)) {
+                continue;
             }
+
+            $readsMember = true;
+            if (isset($present[$table])) {
+                $required[$table][$column] = true;
+                foreach ($meta['scopeColumns'] ?? [] as $scopeColumn) {
+                    $required[$table][$scopeColumn] = true;
+                }
+            }
+        }
+
+        if ($readsMember && isset($present['member'])) {
+            $required['member']['id'] = true;
+            $required['member']['is_active'] = true;
         }
 
         $errors = [];
@@ -343,21 +366,33 @@ final class SourcePreflight
             }
         }
 
-        $dangling = [];
+        // One count per reference over the union of its steps' filters, not one per step: several
+        // steps can guard the same column with different filters (member_config feeds preferences and
+        // notification settings), and counting them separately would report the first step's slice as
+        // if it were the total. filter(), not effectiveFilter(): the guards are what this looks
+        // behind, and scoping by them would exclude exactly the rows a missing member produces.
+        $filtersByReference = [];
         foreach ($this->steps as $step) {
             foreach ($step->memberRefs() as $column) {
-                $table = $step->sourceTable();
-                $reference = "{$table}.{$column}";
-                if (isset($dangling[$reference]) || ! $this->readsColumn($readTables, $table, $column, $prefix, $database)) {
-                    continue;
-                }
+                $filtersByReference["{$step->sourceTable()}.{$column}"][] = $step->filter();
+            }
+        }
 
-                // filter(), not effectiveFilter(): the guards are what this is looking behind, and
-                // scoping by them would exclude exactly the rows a missing member produces.
-                $rows = $count($table, ActiveMember::danglingReference($table, $column), $step->filter());
-                if ($rows > 0) {
-                    $dangling[$reference] = $rows;
-                }
+        $dangling = [];
+        foreach ($filtersByReference as $reference => $filters) {
+            [$table, $column] = explode('.', $reference);
+            if (! $this->readsColumn($readTables, $table, $column, $prefix, $database)) {
+                continue;
+            }
+
+            // An unfiltered step takes every row, which subsumes any sibling's filter.
+            $scope = in_array(null, $filters, true)
+                ? null
+                : implode(' OR ', array_map(static fn (string $f): string => "({$f})", array_unique($filters)));
+
+            $rows = $count($table, ActiveMember::danglingReference($table, $column), $scope);
+            if ($rows > 0) {
+                $dangling[$reference] = $rows;
             }
         }
 

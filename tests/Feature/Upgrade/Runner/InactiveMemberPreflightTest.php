@@ -12,6 +12,8 @@ use App\Upgrade\Steps\CommunityCategoryUpgrade;
 use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
+use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
+use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MessageUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
@@ -34,7 +36,7 @@ class InactiveMemberPreflightTest extends TestCase
 
     private const SOURCE_TABLES = ['member', 'diary', 'diary_image', 'member_relationship', 'message', 'message_type',
         'message_send_list', 'deleted_message', 'community', 'community_config', 'community_category',
-        'community_member', 'community_member_position'];
+        'community_member', 'community_member_position', 'member_config'];
 
     protected function setUp(): void
     {
@@ -136,8 +138,7 @@ class InactiveMemberPreflightTest extends TestCase
     {
         // community_member_position feeds communities.pending_admin_member_id from its admin_confirm
         // row alone; the other names are read for the community role, which carries no member id.
-        $this->createSources('member', 'community', 'community_config', 'community_category',
-            'community_member', 'community_member_position');
+        $this->createCommunitySources();
         $this->seedMember(1, isActive: 0);
         $this->seedCommunity(100);
         $this->seedPosition(1, communityId: 100, memberId: 1, name: 'sub_admin_confirm');
@@ -153,6 +154,120 @@ class InactiveMemberPreflightTest extends TestCase
         $this->assertFalse($ok);
         $this->assertStringContainsString(
             SourcePreflight::inactiveMemberReferenceMessage('community_member_position.member_id', 1),
+            $output,
+        );
+    }
+
+    public function test_a_draft_send_list_row_the_step_discards_is_not_an_abort(): void
+    {
+        // MessageUpgrade folds the lowest-id send-list row onto draft_recipient_id and drops the rest,
+        // so only that row's member can reach a target column. Refusing over a discarded duplicate
+        // would contradict the step.
+        $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        $this->seedMessageType(1, 'message');
+        $this->seedMessage(10, memberId: 1, typeId: 1, isSend: 0);
+        $this->seedSendListRow(1, messageId: 10, memberId: 1); // selected (lowest id), activated
+        $this->seedSendListRow(2, messageId: 10, memberId: 2); // discarded duplicate, inactive
+        Member::factory()->create(['id' => 1]); // MemberUpgrade's output, which the message references
+
+        [$ok, $output] = $this->runSteps([new MessageUpgrade]);
+
+        $this->assertTrue($ok, $output);
+    }
+
+    public function test_the_draft_send_list_row_the_step_reads_is_an_abort(): void
+    {
+        $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        $this->seedMessageType(1, 'message');
+        $this->seedMessage(10, memberId: 1, typeId: 1, isSend: 0);
+        $this->seedSendListRow(1, messageId: 10, memberId: 2); // selected, inactive
+        $this->seedSendListRow(2, messageId: 10, memberId: 1);
+
+        [$ok, $output] = $this->runSteps([new MessageUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message_send_list.member_id', 1), $output);
+    }
+
+    public function test_a_superseded_admin_confirm_row_is_not_an_abort(): void
+    {
+        // (community_member_id, name) is the UNIQUE, so a community can hold several admin_confirm
+        // rows; CommunityUpgrade reads the latest. An older one is never looked at.
+        $this->createCommunitySources();
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        $this->seedCommunity(100);
+        $this->seedPosition(1, communityId: 100, memberId: 2, name: 'admin_confirm'); // superseded, inactive
+        $this->seedPosition(2, communityId: 100, memberId: 1, name: 'admin_confirm'); // latest, activated
+        Member::factory()->create(['id' => 1]); // MemberUpgrade's output, which pending_admin_member_id references
+
+        [$ok, $output] = $this->runSteps([new CommunityCategoryUpgrade, new CommunityUpgrade]);
+
+        $this->assertTrue($ok, $output);
+    }
+
+    public function test_the_latest_admin_confirm_row_is_an_abort(): void
+    {
+        $this->createCommunitySources();
+        $this->seedMember(1, isActive: 1);
+        $this->seedMember(2, isActive: 0);
+        $this->seedCommunity(100);
+        $this->seedPosition(1, communityId: 100, memberId: 1, name: 'admin_confirm');
+        $this->seedPosition(2, communityId: 100, memberId: 2, name: 'admin_confirm'); // latest, inactive
+
+        [$ok, $output] = $this->runSteps([new CommunityCategoryUpgrade, new CommunityUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(
+            SourcePreflight::inactiveMemberReferenceMessage('community_member_position.member_id', 1),
+            $output,
+        );
+    }
+
+    public function test_a_refuse_only_subset_still_verifies_the_columns_its_check_reads(): void
+    {
+        // No step in this subset selects FROM `member`, so the per-step column check never reaches
+        // is_active — but the refusal count does. It must abort with the column message rather than
+        // throw inside the count.
+        $this->createSources('member', 'diary', 'diary_image');
+        DB::statement('ALTER TABLE `member` DROP COLUMN `is_active`');
+
+        [$ok, $output] = $this->runSteps([new DiaryUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::missingColumnMessage('member', 'is_active'), $output);
+    }
+
+    public function test_a_subquery_only_refuse_table_verifies_the_columns_its_scope_reads(): void
+    {
+        // community_member_position is no step's FROM, so neither its member_id nor the `name` the
+        // scope narrows by is attributed to any step's consumed columns.
+        $this->createCommunitySources();
+        DB::statement('ALTER TABLE `community_member_position` DROP COLUMN `name`');
+
+        [$ok, $output] = $this->runSteps([new CommunityCategoryUpgrade, new CommunityUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(SourcePreflight::missingColumnMessage('community_member_position', 'name'), $output);
+    }
+
+    public function test_dangling_rows_are_counted_across_every_step_reading_the_column(): void
+    {
+        // member_config is guarded by both the preference and the notification-settings steps, each
+        // with its own name filter. Counting one step's slice would under-report the total.
+        $this->createSources('member', 'member_config');
+        $this->seedConfig(1, memberId: 999, name: 'diary_public_flag');              // MemberPreferenceUpgrade
+        $this->seedConfig(2, memberId: 999, name: 'is_send_pc_diaryReplyPost_mail'); // MemberNotificationSettingUpgrade
+
+        [$ok, $output] = $this->runSteps([new MemberPreferenceUpgrade, new MemberNotificationSettingUpgrade]);
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString(
+            SourcePreflight::danglingMemberReferenceMessage('member_config.member_id', 2),
             $output,
         );
     }
@@ -187,6 +302,24 @@ class InactiveMemberPreflightTest extends TestCase
             $output,
         );
         $this->assertDatabaseCount('friendships', 0);
+    }
+
+    private function createCommunitySources(): void
+    {
+        $this->createSources('member', 'community', 'community_config', 'community_category',
+            'community_member', 'community_member_position');
+    }
+
+    private function seedSendListRow(int $id, int $messageId, int $memberId): void
+    {
+        DB::table('message_send_list')->insert(['id' => $id, 'message_id' => $messageId, 'member_id' => $memberId,
+            'is_read' => 0, 'is_deleted' => 0, 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
+    }
+
+    private function seedConfig(int $id, int $memberId, string $name): void
+    {
+        DB::table('member_config')->insert(['id' => $id, 'member_id' => $memberId, 'name' => $name, 'value' => '1',
+            'name_value_hash' => md5($name.'1'), 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
     }
 
     private function createSources(string ...$tables): void

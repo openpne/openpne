@@ -2,6 +2,9 @@
 
 namespace App\Upgrade;
 
+use App\Upgrade\Steps\CommunityUpgrade;
+use App\Upgrade\Steps\MessageUpgrade;
+
 /**
  * OpenPNE 3's `member.is_active`, which the upgrade reads as "is this a member at all".
  *
@@ -73,11 +76,15 @@ final class ActiveMember
      * before the first write and names what it found instead.
      *
      * `scope` narrows the count to the rows that actually reach a target member column, and replaces
-     * (not extends) the FROM step's own filter. It is needed wherever the rows the upgrade reads are
-     * not simply "the FROM step's rows": a member reference resolved by correlated subquery has its
-     * own predicate, and counting the rest would abort on data the upgrade never looks at.
+     * (not extends) the FROM step's own filter — so it must describe the complete set. It is needed
+     * wherever the rows the upgrade reads are not simply "the FROM step's rows": a member reference
+     * resolved by correlated subquery has its own predicate, and counting the rest would abort on data
+     * the upgrade never looks at. Where that predicate picks one row out of several, the scope calls
+     * the step's own selector rather than restating it, so the two cannot disagree about which row
+     * counts. `scopeColumns` are the outer columns a scope reads beyond the reference itself, so the
+     * structural check can require them (nothing else attributes them to a table).
      *
-     * @return array<string, array{treatment: string, scope?: string, reason?: string}>
+     * @return array<string, array{treatment: string, scope?: string, scopeColumns?: list<string>, reason?: string}>
      */
     public static function references(): array
     {
@@ -92,13 +99,17 @@ final class ActiveMember
             'community_event_member.member_id' => ['treatment' => self::REFUSE],
             // MessageUpgrade's own filter scopes this to the personal-message type it migrates.
             'message.member_id' => ['treatment' => self::REFUSE],
-            // Both paths out of this table at once — the receipt (sent) and the folded-on draft
-            // recipient (draft) — since either can put the id in a target column. The FROM step's
-            // filter would see only the sent half.
-            'message_send_list.member_id' => ['treatment' => self::REFUSE, 'scope' => self::personalMessageParent()],
-            // Only the admin_confirm row becomes communities.pending_admin_member_id; the other
-            // position names are read for the community role, which carries no member id of its own.
-            'community_member_position.member_id' => ['treatment' => self::REFUSE, 'scope' => "`community_member_position`.`name` = 'admin_confirm'"],
+            // Both paths out of this table at once — every receipt of a sent message, and the one
+            // send-list row folded onto a draft's draft_recipient_id — since either can put the id in
+            // a target column. The FROM step's filter would see only the sent half; counting every
+            // row of a draft would refuse over the duplicates MessageUpgrade itself discards.
+            'message_send_list.member_id' => ['treatment' => self::REFUSE,
+                'scope' => self::migratedSendListRow(), 'scopeColumns' => ['id', 'message_id']],
+            // Only the latest admin_confirm row per community becomes pending_admin_member_id; the
+            // other position names are read for the community role, which carries no member id, and an
+            // older admin_confirm duplicate is never read at all.
+            'community_member_position.member_id' => ['treatment' => self::REFUSE,
+                'scope' => CommunityUpgrade::pendingAdminRowSelector(), 'scopeColumns' => ['id', 'name', 'community_id']],
 
             // --- UNUSED: no member id reaches a target row through these ---
             'member.invite_member_id' => ['treatment' => self::UNUSED,
@@ -115,11 +126,16 @@ final class ActiveMember
         ];
     }
 
-    /** The send-list rows of a migrated personal message, sent or draft. */
-    private static function personalMessageParent(): string
+    /**
+     * The send-list rows of a migrated personal message whose member id reaches a target column: every
+     * row of a sent one (MessageRecipientUpgrade writes a receipt per row), and only the selected row
+     * of a draft (MessageUpgrade folds one onto draft_recipient_id and drops the rest).
+     */
+    private static function migratedSendListRow(): string
     {
         return 'EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `parent` '
             .'WHERE `parent`.`id` = `message_send_list`.`message_id` '
-            .'AND `parent`.`message_type_id` IN (SELECT `id` FROM '.SourceRef::table('message_type')." WHERE `type_name` = 'message'))";
+            .'AND '.MessageUpgrade::isPersonalMessage('parent')
+            .' AND (`parent`.`is_send` = 1 OR '.MessageUpgrade::draftRecipientRowSelector().'))';
     }
 }
