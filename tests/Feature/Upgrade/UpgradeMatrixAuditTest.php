@@ -3,6 +3,7 @@
 namespace Tests\Feature\Upgrade;
 
 use App\Mail\Template\MailTemplate;
+use App\Upgrade\ActiveMember;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\FileUpgrade;
@@ -165,6 +166,85 @@ class UpgradeMatrixAuditTest extends TestCase
             $this->assertContains($reference, $references,
                 "{$reference} is declared as a file reference but is not a `file` foreign key in the source schema");
         }
+    }
+
+    public function test_every_member_referencing_column_has_a_treatment(): void
+    {
+        // `members` holds only activated members (ActiveMember), so every source reference to a member
+        // must resolve to one of three treatments: the step drops the row (memberRefs()), the preflight
+        // refuses to start on it, or it reaches no target member column at all. Anything else would put
+        // a skipped member's id into a target row — the FK failure, or the ghost, this all exists to
+        // prevent. Checked per column, like the file references, since a table can carry two.
+        $references = SourceSchema::default()->memberReferencingColumns();
+        $ledger = ActiveMember::references();
+
+        // Per step, not per reference: two steps can share a FROM table (community_member feeds the
+        // membership and the join request), and each inserts its own rows, so each owes the guard.
+        // Checking the reference alone would let one of them drop it and still pass on the other's.
+        $fromColumns = [];
+        $declaredGuards = [];
+        foreach (StepRegistry::all() as $step) {
+            foreach ($references as $reference) {
+                [$table, $column] = explode('.', $reference);
+                if ($table !== $step->sourceTable()) {
+                    continue;
+                }
+
+                $fromColumns[$reference] = true;
+                $declares = in_array($column, $step->memberRefs(), true);
+                $declaredGuards[$reference] = ($declaredGuards[$reference] ?? false) || $declares;
+
+                $this->assertTrue($declares || isset($ledger[$reference]),
+                    class_basename($step)." selects FROM `{$table}`, whose `{$column}` references `member`, but neither declares it in memberRefs() nor is it accounted for in ActiveMember::references() — a skipped member's id could reach a target row");
+            }
+        }
+
+        // And the references no step selects FROM: reached only by correlated subquery, so no
+        // memberRefs() can cover them and the ledger is the only place they can be handled.
+        foreach ($references as $reference) {
+            $this->assertTrue(isset($fromColumns[$reference]) || isset($ledger[$reference]),
+                "{$reference} references `member` but is no step's FROM column and ActiveMember::references() does not account for it");
+        }
+
+        // No reference is both dropped and declared: the two would disagree about what happens to it.
+        foreach (array_keys(array_filter($declaredGuards)) as $reference) {
+            $this->assertArrayNotHasKey($reference, $ledger,
+                "{$reference} is dropped by a step's memberRefs() and also declared in ActiveMember::references()");
+        }
+
+        // No stale declaration: a ledger entry must be a real fixture member FK, and carry what its
+        // treatment needs (a reason for UNUSED, so a silent non-migration is always justified).
+        foreach ($ledger as $reference => $meta) {
+            $this->assertContains($reference, $references,
+                "{$reference} is declared in ActiveMember::references() but is not a `member` foreign key in the source schema");
+            $this->assertContains($meta['treatment'], [ActiveMember::REFUSE, ActiveMember::UNUSED],
+                "{$reference} declares an unknown treatment '{$meta['treatment']}'");
+            if ($meta['treatment'] === ActiveMember::UNUSED) {
+                $this->assertNotEmpty($meta['reason'] ?? '', "{$reference} is declared UNUSED but carries no reason");
+            }
+        }
+    }
+
+    public function test_member_references_resolved_by_subquery_are_in_the_ledger(): void
+    {
+        // The guard/ledger split is only complete if the ledger covers the member ids that reach a
+        // target column without their source table being any step's FROM — those are invisible to
+        // memberRefs() by construction, so a plain "FROM table FKs" audit would pass while
+        // communities.pending_admin_member_id and messages.draft_recipient_id went unchecked.
+        $fromTables = array_map(static fn ($step): string => $step->sourceTable(), StepRegistry::all());
+        $ledger = ActiveMember::references();
+
+        foreach (['community_member_position.member_id', 'message_send_list.member_id'] as $reference) {
+            $this->assertSame(ActiveMember::REFUSE, $ledger[$reference]['treatment'] ?? null,
+                "{$reference} feeds a target member column through a correlated subquery and must be REFUSE-checked");
+            $this->assertNotEmpty($ledger[$reference]['scope'] ?? '',
+                "{$reference} is read by subquery with its own predicate, so its check needs a scope — the FROM step's filter is the wrong set");
+        }
+
+        // community_member_position drives a target member column but is no step's FROM; if that ever
+        // changes, the scope above stops being the right one to count.
+        $this->assertNotContains('community_member_position', $fromTables,
+            'community_member_position now has a standalone step — revisit its ledger scope');
     }
 
     public function test_every_imported_mail_template_has_a_disposition(): void

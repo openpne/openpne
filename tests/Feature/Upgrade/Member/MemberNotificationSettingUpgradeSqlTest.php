@@ -8,6 +8,7 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
+use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
@@ -21,7 +22,7 @@ use Tests\TestCase;
  */
 class MemberNotificationSettingUpgradeSqlTest extends TestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
 
     private int $memberId;
 
@@ -33,15 +34,18 @@ class MemberNotificationSettingUpgradeSqlTest extends TestCase
             $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL.');
         }
 
+        $this->createSourceMemberTable();
+
         DB::statement('DROP TABLE IF EXISTS `member_config`');
         DB::statement(SourceSchema::default()->createStatement('member_config', withoutForeignKeys: true));
 
-        $this->memberId = Member::factory()->create()->getKey();
+        $this->memberId = $this->activeMember()->getKey();
     }
 
     protected function tearDown(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
+            $this->dropSourceMemberTable();
             DB::statement('DROP TABLE IF EXISTS `member_config`');
         }
 

@@ -16,6 +16,7 @@ use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
+use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
@@ -27,10 +28,11 @@ use Tests\TestCase;
  */
 class CommunityUpgradeSqlTest extends TestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
 
     /** Source tables this step set reads, created from the real dump (FKs stripped to stand alone). */
     private array $sourceTables = [
+        'member',
         'community_category',
         'community',
         'community_config',
@@ -65,7 +67,7 @@ class CommunityUpgradeSqlTest extends TestCase
 
     public function test_migrates_communities_categories_members_and_requests(): void
     {
-        [$admin, $sub, $member, $applicant] = Member::factory()->count(4)->create()->all();
+        [$admin, $sub, $member, $applicant] = $this->activeMembers(4);
 
         // Synthetic root (lft=1, never selectable) + two real children, one admin-only.
         $this->seedCategory(1, 'ROOT', allow: 1, lft: 1);
@@ -164,6 +166,30 @@ class CommunityUpgradeSqlTest extends TestCase
         $this->runUpgrade(new CommunityUpgrade);
 
         $this->assertDatabaseHas('communities', ['id' => 120, 'file_id' => 42]);
+    }
+
+    public function test_default_community_rows_for_a_member_who_never_activated_are_dropped(): void
+    {
+        // OpenPNE 3's register form joins the default communities in the same save that writes the
+        // profile — one request before activation — so an abandoned signup leaves a membership row
+        // behind. Both halves of the is_pre split must drop it.
+        $joined = $this->activeMember();
+        $abandoned = $this->inactiveSourceMember(9100);
+
+        $this->seedCategory(1, 'General', 1, 1);
+        $this->seedCommunity(100, 'Default', 1);
+        $this->seedCommunityMember(1000, 100, $joined->id, isPre: 0);
+        $this->seedCommunityMember(1001, 100, $abandoned, isPre: 0);
+        $this->seedCommunityMember(1002, 100, $abandoned, isPre: 1);
+
+        $this->runUpgrade(new CommunityCategoryUpgrade);
+        $this->runUpgrade(new CommunityUpgrade);
+        $this->runUpgrade(new CommunityMemberUpgrade);
+        $this->runUpgrade(new CommunityJoinRequestUpgrade);
+
+        $this->assertDatabaseCount('community_members', 1);
+        $this->assertDatabaseHas('community_members', ['community_id' => 100, 'member_id' => $joined->id]);
+        $this->assertDatabaseCount('community_join_requests', 0);
     }
 
     private function runUpgrade(UpgradeStep $step): void

@@ -2,6 +2,7 @@
 
 namespace App\Upgrade\Steps;
 
+use App\Upgrade\ActiveMember;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
@@ -64,7 +65,11 @@ class FileUpgrade extends UpgradeStep
     public function ownedFileReferences(): array
     {
         return [
-            'member_image.file_id' => ['type' => 'member', 'table' => 'member_image', 'file' => 'file_id', 'id' => 'member_id'],
+            // Only an activated member owns their avatar: MemberImageUpgrade drops the row for a
+            // skipped one, so claiming ownership here would leave related_entity_id pointing at no
+            // member. The file itself still migrates, ownerless (FilePolicy resolves that private).
+            'member_image.file_id' => ['type' => 'member', 'table' => 'member_image', 'file' => 'file_id', 'id' => 'member_id',
+                'extra' => ' AND '.ActiveMember::referenceGuard('member_image', 'member_id')],
             // The community top image is a direct column on `community` (not a join table): the owner
             // is the community itself, so the id source is the community's own id.
             'community.file_id' => ['type' => 'community', 'table' => 'community', 'file' => 'file_id', 'id' => 'id'],

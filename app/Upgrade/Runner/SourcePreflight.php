@@ -2,6 +2,7 @@
 
 namespace App\Upgrade\Runner;
 
+use App\Upgrade\ActiveMember;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
 use App\Upgrade\StepRegistry;
@@ -156,6 +157,16 @@ final class SourcePreflight
         return "source `{$table}` holds {$rows} row(s) named `{$name}`, which the upgrade does not recognise — a third-party plugin or a source customisation. Not migrated; `openpne:upgrade-matrix` lists the names that are.";
     }
 
+    public static function inactiveMemberReferenceMessage(string $reference, int $rows): string
+    {
+        return "source `{$reference}` has {$rows} row(s) pointing at a member OpenPNE 3 never activated (or at no member at all). Stock OpenPNE 3 cannot produce those — an inactive account cannot post — so the upgrade will not guess whether to drop them with their comments and attachments. Delete or reassign them in the source, then re-run.";
+    }
+
+    public static function danglingMemberReferenceMessage(string $reference, int $rows): string
+    {
+        return "source `{$reference}` has {$rows} row(s) whose member is missing from the source entirely — an incomplete dump or a broken foreign key. Restore the full OpenPNE 3 dump, or delete those rows, then re-run.";
+    }
+
     /** @return list<string> the names the upgrade recognises in one NAME_SCAN_TABLES table */
     private static function knownNames(string $table): array
     {
@@ -173,6 +184,18 @@ final class SourcePreflight
         foreach ($this->steps as $step) {
             foreach ($step->readSourceTables() as $table) {
                 $tables[$table] = true;
+            }
+        }
+
+        // inactiveMemberReferences() resolves every REFUSE entry against `member`, so a step set that
+        // reads one needs the table even when no step's own SQL names it (a guard puts it there; a
+        // content step does not). Declaring it here makes a source without it abort on the structural
+        // check, rather than blow up mid-count or skip the validation unnoticed.
+        foreach (ActiveMember::references() as $reference => $meta) {
+            [$table] = explode('.', $reference);
+            if ($meta['treatment'] === ActiveMember::REFUSE && isset($tables[$table])) {
+                $tables['member'] = true;
+                break;
             }
         }
 
@@ -201,6 +224,15 @@ final class SourcePreflight
         foreach (self::CONFIG_NAME_TABLES as $table) {
             if (isset($present[$table])) {
                 $required[$table]['name'] = true;
+            }
+        }
+
+        // A guard reads `member` by correlated subquery too, so the same blind spot applies: a step
+        // subset without MemberUpgrade would otherwise reach the count with neither column checked.
+        foreach ($this->steps as $step) {
+            if ($step->memberRefs() !== [] && isset($present['member'])) {
+                $required['member']['id'] = true;
+                $required['member']['is_active'] = true;
             }
         }
 
@@ -269,6 +301,95 @@ final class SourcePreflight
         }
 
         return $unknown;
+    }
+
+    /**
+     * The member references this run cannot migrate, counted before the first write: rows a REFUSE
+     * ledger entry covers whose member is not an activated one, and rows a step's guard would drop
+     * whose member is missing from the source altogether. The first is an assumption violation the
+     * upgrade will not resolve silently; the second is a broken source that would otherwise vanish
+     * into the same guard. Both abort.
+     *
+     * Deliberately not part of inspect(), like unknownSourceNames(): it reads columns whose presence
+     * inspect() is what establishes — call it only on a clean structural verdict.
+     *
+     * @return array{refused: array<string, int>, dangling: array<string, int>} reference => rows
+     */
+    public function inactiveMemberReferences(string $prefix, ?string $database): array
+    {
+        $readTables = $this->readTables();
+        $compiler = new InsertSelectCompiler;
+
+        $count = function (string $table, string $condition, ?string $scope) use ($compiler, $prefix, $database): int {
+            $sql = 'select count(*) from '.InsertSelectCompiler::qualify($database, $prefix, $table)." as `{$table}`"
+                ." where {$condition}".($scope !== null ? " and ({$scope})" : '');
+
+            return (int) DB::scalar($compiler->resolveSourceRefs($sql, $prefix, $database));
+        };
+
+        $refused = [];
+        foreach (ActiveMember::references() as $reference => $meta) {
+            [$table, $column] = explode('.', $reference);
+            if ($meta['treatment'] !== ActiveMember::REFUSE || ! $this->readsColumn($readTables, $table, $column, $prefix, $database)) {
+                continue;
+            }
+
+            // A ledger scope replaces the FROM step's filter: the rows reaching a target member
+            // column are not always that step's rows (a correlated subquery has its own predicate).
+            $scope = $meta['scope'] ?? $this->fromStepFilter($table);
+            $rows = $count($table, 'not '.ActiveMember::referenceGuard($table, $column), $scope);
+            if ($rows > 0) {
+                $refused[$reference] = $rows;
+            }
+        }
+
+        $dangling = [];
+        foreach ($this->steps as $step) {
+            foreach ($step->memberRefs() as $column) {
+                $table = $step->sourceTable();
+                $reference = "{$table}.{$column}";
+                if (isset($dangling[$reference]) || ! $this->readsColumn($readTables, $table, $column, $prefix, $database)) {
+                    continue;
+                }
+
+                // filter(), not effectiveFilter(): the guards are what this is looking behind, and
+                // scoping by them would exclude exactly the rows a missing member produces.
+                $rows = $count($table, ActiveMember::danglingReference($table, $column), $step->filter());
+                if ($rows > 0) {
+                    $dangling[$reference] = $rows;
+                }
+            }
+        }
+
+        arsort($refused);
+        arsort($dangling);
+
+        return ['refused' => $refused, 'dangling' => $dangling];
+    }
+
+    /**
+     * The effective filter of the step that selects FROM $table, if any — so a count over that table
+     * sees the rows the run actually migrates. Null when no step has it as its FROM (the table is
+     * only reached by correlated subquery) or when that step takes every row.
+     */
+    private function fromStepFilter(string $table): ?string
+    {
+        foreach ($this->steps as $step) {
+            if ($step->sourceTable() === $table) {
+                return $step->effectiveFilter();
+            }
+        }
+
+        return null;
+    }
+
+    /** @param  list<string>  $readTables */
+    private function readsColumn(array $readTables, string $table, string $column, string $prefix, ?string $database): bool
+    {
+        return in_array($table, $readTables, true)
+            && $this->tableExists($table, $prefix, $database)
+            && $this->tableExists('member', $prefix, $database)
+            && in_array($column, $this->tableColumns($table, $prefix, $database), true);
     }
 
     private function tableExists(string $table, string $prefix, ?string $database): bool

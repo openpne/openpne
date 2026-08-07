@@ -65,7 +65,37 @@ class InsertSelectCompilerTest extends TestCase
         $sql = (new InsertSelectCompiler)->compile(new FriendshipUpgrade);
 
         $this->assertStringContainsString('FROM `member_relationship`', $sql);
-        $this->assertStringContainsString('WHERE is_friend = 1', $sql);
+        // The step's own filter, parenthesised, AND the active-member guard on each end.
+        $this->assertStringContainsString('WHERE (is_friend = 1) AND', $sql);
+        $this->assertStringContainsString('`member_relationship`.`member_id_from` IS NULL OR EXISTS', $sql);
+        $this->assertStringContainsString('`member_relationship`.`member_id_to` IS NULL OR EXISTS', $sql);
+    }
+
+    public function test_member_guard_is_the_whole_where_clause_when_the_step_has_no_filter(): void
+    {
+        // MemberProfileUpgrade does have a filter; MemberPreferenceUpgrade's guard rides alongside
+        // one too. Use a bare step so the "guard only" composition is pinned on its own.
+        $step = new class extends UpgradeStep
+        {
+            protected string $source = 'member_profile';
+
+            protected string $target = 'member_profiles';
+
+            public function columns(): array
+            {
+                return ['member_id' => Column::source('member_id')];
+            }
+
+            public function memberRefs(): array
+            {
+                return ['member_id'];
+            }
+        };
+
+        $sql = (new InsertSelectCompiler)->compile($step);
+
+        $this->assertStringContainsString('WHERE (`member_profile`.`member_id` IS NULL OR EXISTS', $sql);
+        $this->assertStringNotContainsString('AND (`member_profile`', $sql);
     }
 
     public function test_step_with_pending_targets_is_not_compilable(): void

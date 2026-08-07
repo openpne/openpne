@@ -60,6 +60,7 @@ class SourcePreflightTest extends TestCase
     {
         // opDiary not installed: `diary` is absent. The step no-ops against an empty ensure-existed
         // table, and the table is dropped afterwards (the source namespace is left clean).
+        $this->createSource('member');
         [$ok, $output] = $this->runSteps([new DiaryUpgrade]);
 
         $this->assertTrue($ok);
@@ -114,6 +115,7 @@ class SourcePreflightTest extends TestCase
         // Same `diary` present / `diary_image` absent, but the run reads only `diary` (no DiaryImageUpgrade),
         // so `diary_image` is outside the read set and must not trigger a partial abort.
         $this->createSource('diary');
+        $this->createSource('member');
 
         [$ok] = $this->runSteps([new DiaryUpgrade]);
 
@@ -134,6 +136,7 @@ class SourcePreflightTest extends TestCase
 
     public function test_dry_run_reports_but_creates_nothing(): void
     {
+        $this->createSource('member');
         [$ok, $output] = $this->runSteps([new DiaryUpgrade], new RunOptions(dryRun: true));
 
         $this->assertTrue($ok);
@@ -146,6 +149,7 @@ class SourcePreflightTest extends TestCase
     public function test_force_restart_with_a_bad_source_keeps_existing_data(): void
     {
         // Existing target rows + a checkpoint from an earlier run; --force-restart would normally clear both.
+        // Target rows only: the run aborts on the preflight, so no step reads a source member.
         [$a, $b] = Member::factory()->count(2)->create()->all();
         DB::table('friendships')->insert(['member_id' => $a->id, 'friend_id' => $b->id]);
         UpgradeState::create(['step_key' => 'FriendshipUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);
@@ -167,6 +171,8 @@ class SourcePreflightTest extends TestCase
     public function test_unrecognised_config_names_are_reported_with_row_counts(): void
     {
         $this->createSource('member_config');
+        $this->createSource('member');
+        $this->seedMembers(1, 2); // config rows for a member absent from the source are a broken dump
         $this->insertConfig([
             ['member_id' => 1, 'name' => 'op_custom_plugin_flag', 'value' => '1'],
             ['member_id' => 2, 'name' => 'op_custom_plugin_flag', 'value' => '0'],
@@ -245,6 +251,7 @@ class SourcePreflightTest extends TestCase
         foreach (['community', 'community_config', 'community_category', 'community_member_position'] as $table) {
             $this->createSource($table); // CommunityUpgrade reads all four
         }
+        $this->createSource('member'); // community_member_position.member_id is preflight-checked against it
         DB::table('community_config')->insert([
             ['community_id' => 1, 'name' => 'op_custom_community_flag', 'value' => '1',
                 'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00'],
@@ -293,12 +300,22 @@ class SourcePreflightTest extends TestCase
     public function test_a_source_holding_only_recognised_names_reports_nothing(): void
     {
         $this->createSource('member_config');
+        $this->createSource('member');
+        $this->seedMembers(1, 2); // config rows for a member absent from the source are a broken dump
         $this->insertConfig([['member_id' => 1, 'name' => 'age_public_flag', 'value' => '2']]);
 
         [$ok, $output] = $this->runSteps([new MemberPreferenceUpgrade], new RunOptions(dryRun: true));
 
         $this->assertTrue($ok);
         $this->assertStringNotContainsString('does not recognise', $output);
+    }
+
+    private function seedMembers(int ...$ids): void
+    {
+        foreach ($ids as $id) {
+            DB::table('member')->insert(['id' => $id, 'name' => "Member {$id}", 'is_login_rejected' => 0,
+                'is_active' => 1, 'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00']);
+        }
     }
 
     /** @param list<array{member_id: int, name: string, value: string}> $rows */
