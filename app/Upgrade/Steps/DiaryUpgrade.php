@@ -34,6 +34,17 @@ class DiaryUpgrade extends UpgradeStep
         ];
     }
 
+    /**
+     * `link_card_id` / `link_card_synced_at` are left at their schema default (null) rather than
+     * mapped: OpenPNE 3 has no equivalent, and a null `link_card_synced_at` is exactly the "never
+     * examined" state the read path looks for — so migrated records pick up cards on first view, if
+     * the operator has the feature on at all.
+     */
+    public function targetDefaults(): array
+    {
+        return ['link_card_id', 'link_card_synced_at'];
+    }
+
     public function gaps(): array
     {
         return [

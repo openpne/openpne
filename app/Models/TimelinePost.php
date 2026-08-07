@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLinkCard;
 use App\Support\Visibility;
 use Database\Factories\TimelinePostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -18,9 +19,12 @@ class TimelinePost extends Model
     /** @use HasFactory<TimelinePostFactory> */
     use HasFactory;
 
+    use HasLinkCard;
+
     protected function casts(): array
     {
         return [
+            'link_card_synced_at' => 'datetime',
             'visibility' => Visibility::class,
         ];
     }

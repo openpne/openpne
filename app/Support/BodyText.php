@@ -32,6 +32,24 @@ final class BodyText
     /** OpenPNE 3 op_decoration is_strip: removes <op:*> rich-text tags in both raw and entity-encoded form. */
     private const DECORATION_TAG = '/(?:&lt;|<)(\/?)(op:\w+)(?:\s+((?:(?!&lt;|<).)*))?(?:&gt;|>)/i';
 
+    /**
+     * The bare URLs this body links to, in the order they appear.
+     *
+     * Matched by the same expression render() links on, and prefixed the same way, so what a link
+     * card is fetched for is exactly what the reader sees underlined. Diverging here would produce
+     * the confusing case of a linked URL with no card, or a card for a URL that is not a link.
+     *
+     * @return list<string>
+     */
+    public static function urls(?string $text): array
+    {
+        if (preg_match_all(self::URL, (string) $text, $matches) === false) {
+            return [];
+        }
+
+        return array_map(self::absolute(...), $matches[1]);
+    }
+
     public static function render(?string $text): HtmlString
     {
         $segments = preg_split(self::URL, (string) $text, -1, PREG_SPLIT_DELIM_CAPTURE);
@@ -83,9 +101,14 @@ final class BodyText
 
     private static function link(string $url): string
     {
-        $href = str_starts_with(strtolower($url), 'www.') ? 'http://'.$url : $url;
         $visible = Str::limit($url, self::VISIBLE_URL_LIMIT, '...');
 
-        return '<a href="'.e($href).'" target="_blank" rel="noopener noreferrer nofollow">'.e($visible).'</a>';
+        return '<a href="'.e(self::absolute($url)).'" target="_blank" rel="noopener noreferrer nofollow">'.e($visible).'</a>';
+    }
+
+    /** A matched URL as an absolute one: a bare `www.` host is http, as OpenPNE 3 assumed. */
+    private static function absolute(string $url): string
+    {
+        return str_starts_with(strtolower($url), 'www.') ? 'http://'.$url : $url;
     }
 }

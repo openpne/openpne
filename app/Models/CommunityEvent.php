@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLinkCard;
 use App\Support\BodyFormat;
 use Database\Factories\CommunityEventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,9 +18,12 @@ class CommunityEvent extends Model
     /** @use HasFactory<CommunityEventFactory> */
     use HasFactory;
 
+    use HasLinkCard;
+
     protected function casts(): array
     {
         return [
+            'link_card_synced_at' => 'datetime',
             'event_updated_at' => 'datetime',
             'open_date' => 'datetime',
             'application_deadline' => 'datetime',

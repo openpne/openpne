@@ -7,6 +7,7 @@ use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\Autolink\AutolinkExtension;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Image;
+use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
 use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
 use League\CommonMark\Extension\Table\TableExtension;
 use League\CommonMark\MarkdownConverter;
@@ -14,6 +15,7 @@ use League\CommonMark\Node\Inline\Newline;
 use League\CommonMark\Node\Node;
 use League\CommonMark\Node\NodeIterator;
 use League\CommonMark\Node\StringContainerInterface;
+use League\CommonMark\Parser\MarkdownParser;
 use League\CommonMark\Renderer\ChildNodeRendererInterface;
 use League\CommonMark\Renderer\NodeRendererInterface;
 use League\CommonMark\Util\Xml;
@@ -38,6 +40,30 @@ final class MarkdownText
         $html = self::converter()->convert((string) $text)->getContent();
 
         return new HtmlString(self::sanitizer()->sanitize($html));
+    }
+
+    /**
+     * The URLs this body links to, in document order.
+     *
+     * Read from the parsed document rather than by matching text, so it sees exactly what the
+     * renderer will link: `[label](url)` and a bare URL (which the autolink extension turns into the
+     * same node) both count, while a URL inside a code span or fenced block does not — it is not a
+     * link on the page either, and a card for it would be surprising.
+     *
+     * @return list<string>
+     */
+    public static function urls(?string $text): array
+    {
+        $parser = new MarkdownParser(self::converter()->getEnvironment());
+        $urls = [];
+
+        foreach (new NodeIterator($parser->parse((string) $text)) as $node) {
+            if ($node instanceof Link) {
+                $urls[] = $node->getUrl();
+            }
+        }
+
+        return $urls;
     }
 
     /**

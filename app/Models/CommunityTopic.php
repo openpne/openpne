@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLinkCard;
 use App\Support\BodyFormat;
 use Database\Factories\CommunityTopicFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,9 +17,12 @@ class CommunityTopic extends Model
     /** @use HasFactory<CommunityTopicFactory> */
     use HasFactory;
 
+    use HasLinkCard;
+
     protected function casts(): array
     {
         return [
+            'link_card_synced_at' => 'datetime',
             'topic_updated_at' => 'datetime',
             'format' => BodyFormat::class,
         ];

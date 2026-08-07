@@ -107,6 +107,16 @@ enum SnsSettingKey: string
      */
     case FeatureFriendEnabled = 'feature_friend_enabled';
 
+    /**
+     * Whether a URL in a member's body is fetched and shown as a preview card.
+     *
+     * Off unless an operator turns it on. This is the only setting that makes the site issue
+     * outbound requests, and it does so for URLs in friends-only and private bodies as well as open
+     * ones — a decision about what this deployment tells the wider web, not a display preference.
+     * See docs/internals/link-cards.md.
+     */
+    case LinkCardEnabled = 'link_card_enabled';
+
     /** Per-site brand color as `#rrggbb`, or '' for none (App\Support\BrandColor). */
     case BrandColor = 'brand_color';
 
@@ -157,6 +167,7 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => SettingGroup::Features,
+            self::LinkCardEnabled => SettingGroup::LinkCard,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
             self::UserAgreement, self::PrivacyPolicy => SettingGroup::SitePolicy,
@@ -179,6 +190,9 @@ enum SnsSettingKey: string
             // OpenPNE 4-native: no OpenPNE 3 sns_config column. The upgrade establishes classic_default
             // out of band (App\Upgrade\Runner\UpgradeRunner), not as a copied setting.
             self::SurfaceMode => null,
+            // OpenPNE 3's enable_cmd is not an ancestor of this: it embedded three named services in the
+            // reader's browser, where this fetches arbitrary hosts from the server.
+            self::LinkCardEnabled => null,
             self::RegistrationMode => null,
             self::CaptchaEnabled => 'is_use_captcha',
             self::AllowWebPublicAge => 'is_allow_web_public_flag_age',
@@ -223,7 +237,9 @@ enum SnsSettingKey: string
             SettingGroup::Base, SettingGroup::GadgetLayout, SettingGroup::Design, SettingGroup::Privacy,
             SettingGroup::Diary, SettingGroup::SitePolicy => $this->op3SourceName() !== null,
             SettingGroup::Auth, SettingGroup::Timeline, SettingGroup::Surface, SettingGroup::Features,
-            SettingGroup::Branding, SettingGroup::LoginScreen => false,
+            // Link cards have no OpenPNE 3 ancestor, and enabling outbound requests is a decision for
+            // the operator of this site rather than something inherited from a migrated one.
+            SettingGroup::Branding, SettingGroup::LoginScreen, SettingGroup::LinkCard => false,
         };
     }
 
@@ -244,6 +260,8 @@ enum SnsSettingKey: string
             // Fail-closed, hardcoded (no env tier): a missing row must never open registration or
             // disable the bot challenge.
             self::RegistrationMode => 'invite',
+            // Off until an operator decides this deployment should make outbound requests.
+            self::LinkCardEnabled => false,
             self::CaptchaEnabled => true,
             // Off, matching OpenPNE 3's is_allow_web_public_flag_age default — members may not make
             // their age web-public until an admin opts in.
@@ -291,7 +309,8 @@ enum SnsSettingKey: string
             self::DiaryAllowWebPublic,
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
+            self::LinkCardEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
             default => is_string($value) ? trim($value) : (string) $value,
@@ -306,7 +325,8 @@ enum SnsSettingKey: string
             self::DiaryAllowWebPublic,
             self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => $value ? '1' : '0',
+            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
+            self::LinkCardEnabled => $value ? '1' : '0',
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
             default => (string) $value,
@@ -330,7 +350,9 @@ enum SnsSettingKey: string
             // it; a malformed/empty value must not open a web-public audience (the opposite of
             // CaptchaEnabled). This is about a STORED value: an absent row returned above, so diary's
             // on-by-default install fallback is untouched — unreadable is corruption, not consent.
-            self::AllowWebPublicAge, self::TimelineAllowWebPublic, self::DiaryAllowWebPublic => $value === '1',
+            self::AllowWebPublicAge, self::TimelineAllowWebPublic, self::DiaryAllowWebPublic,
+            // Fail closed, like the other opt-in switches: only an explicit '1' turns it on.
+            self::LinkCardEnabled => $value === '1',
             // Fail-OPEN, the one place that direction is right: an availability switch, so only an
             // explicit '0' takes a feature down. A malformed value must not black out a module and
             // strand its content — the opposite trade-off from the security keys above.
@@ -348,6 +370,7 @@ enum SnsSettingKey: string
             self::SnsTitle => __('SNS title'),
             self::AdminMailAddress => __('Administrator email address'),
             self::SurfaceMode => __('Surface mode'),
+            self::LinkCardEnabled => __('Show link previews'),
             self::RegistrationMode => __('Registration mode'),
             self::CaptchaEnabled => __('Require CAPTCHA'),
             self::AllowWebPublicAge => __('Allow members to make their age public to the web'),
@@ -388,7 +411,7 @@ enum SnsSettingKey: string
         return match ($this) {
             self::SnsName, self::AdminMailAddress => true,
             self::SnsTitle, self::SurfaceMode, self::RegistrationMode, self::CaptchaEnabled, self::AllowWebPublicAge,
-            self::TimelineAllowWebPublic, self::DiaryAllowWebPublic,
+            self::TimelineAllowWebPublic, self::DiaryAllowWebPublic, self::LinkCardEnabled,
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,

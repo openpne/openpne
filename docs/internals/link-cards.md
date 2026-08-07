@@ -25,6 +25,72 @@ there is nothing it could contribute that text and an image do not already give.
 oEmbed's `rich` type for the same reason. `OembedClientTest` pins that no field of the extracted
 metadata ever carries markup.
 
+## When a card is fetched
+
+Posting is not the only moment one is needed: records written before the feature was switched on
+have never been examined, and a card fetched a week ago has expired. Neither is reachable from a
+write, so there are two triggers.
+
+**On write**, the action that saved the body queues `SyncLinkCard`. That job re-reads the record, so
+its final write is conditional on the body still being the one it parsed: an edit landing in between
+clears the marker, and an unconditional write would attach the old body's card to the new text and
+mark it examined. It also writes through the query builder rather than saving the model — even
+`saveQuietly` bumps `updated_at`, and community topic and event lists are ordered by it, so a card
+synced from someone opening an old post would float it back to the top of the board. **On read**,
+[`LinkCardSync`](../../app/LinkCard/LinkCardSync.php) is called from the controller of a *detail*
+page — after authorization, never from a serializer, and never from a list, where one page view
+would queue a page's worth of jobs. Nothing runs inline; a page view never waits on the network.
+
+The two jobs are split because they are keyed differently:
+
+| | keyed by | does |
+|---|---|---|
+| `SyncLinkCard` | the record | reads the body, attaches the right card, queues a fetch if needed |
+| `FetchLinkCard` | the URL | the one job that touches the network |
+
+That split is what makes a link a thousand people posted cost one request.
+
+`link_card_synced_at` distinguishes **"examined, has no link"** from **"never examined"**. Without
+it the read path could not tell whether there is work to do, and a body with no URL would be
+re-parsed on every view forever. It is also why turning the setting off and on again loses nothing:
+records posted while it was off keep a null `link_card_synced_at`, so they are indistinguishable
+from any other never-examined record when it returns.
+
+### Two workers, one URL
+
+A popular link arrives as many identical jobs, and a slow job can come back after a newer one has
+already answered. Three mechanisms, each covering what the previous one does not:
+
+1. **`ShouldBeUnique`** collapses the duplicates a burst produces, before they queue.
+2. **A conditional UPDATE claims the fetch** (`LinkCard::claimFetch`). Of the jobs that do run, one
+   proceeds and the rest return immediately.
+3. **Every write back is fenced on the lease the claim returned** (`LinkCard::completeFetch`). This
+   is the one that is easy to leave out, and the claim does not cover it: worker A takes the lease
+   and stalls, the lease expires, worker B claims and finishes — and A, returning at last, would
+   overwrite B's newer result. The fence makes A's write match nothing and be dropped. An image A had
+   already stored is deleted at that point; it is referenced by nothing.
+
+The claim also carries the *state* it is claiming, not only the timing. `ShouldBeUnique` has a
+window, so a duplicate delayed past it arrives after the first job has succeeded — lease released,
+card fresh — and would otherwise claim it and fetch the same URL again for nothing.
+
+Whether a card is due is one predicate, `LinkCard::isDueForFetch`, used by the queueing side, the
+read path and the claim alike. Written separately they disagreed: `isStale()` alone reads a *failed*
+card as stale forever, since failures carry no expiry, so every new record mentioning a dead URL
+would queue a fetch straight through the backoff meant to prevent exactly that.
+
+A failed card is governed by `next_attempt_at` rather than by expiry, so a page that is simply gone
+stops costing anything quickly. The backoff doubles and is clamped: a URL that has failed ten times
+is not going to start working on a schedule.
+
+**A card that already renders is never demoted by a failed refresh.** A refresh failing says nothing
+about whether the metadata already held is still good, and blanking it turns one bad request into a
+visibly broken post — the card disappears from a page it has been on for a week because the far end
+returned a 500 this morning. Only the schedule moves, and the stale card keeps showing until a later
+attempt replaces it. That also avoids a leak that the alternative created: demoting the card while
+leaving `image_file_id` in place kept the old image referenced by a card nobody renders, where no
+unreferenced-file sweep could collect it.
+
 ## Pieces
 
 | | |
@@ -34,7 +100,10 @@ metadata ever carries markup.
 | [`MetadataExtractor`](../../app/LinkCard/MetadataExtractor.php) | Markup in, `LinkMetadata` out. Pure — it never fetches |
 | [`OembedClient`](../../app/LinkCard/OembedClient.php) | Calls a discovered oEmbed endpoint for the structured fields only |
 | [`LinkCardImage`](../../app/LinkCard/LinkCardImage.php) | Downloads the card image and stores it as a local `File` |
-| [`LinkCard`](../../app/Models/LinkCard.php) | The cached row, one per normalised URL |
+| [`LinkCard`](../../app/Models/LinkCard.php) | The cached row, one per normalised URL; owns the lease and the backoff |
+| [`LinkCardSync`](../../app/LinkCard/LinkCardSync.php) | Starts work from a page view |
+| [`LinkCardSettings`](../../app/LinkCard/LinkCardSettings.php) | The one place the on/off setting is read |
+| `SyncLinkCard` / `FetchLinkCard` | The two jobs (`app/Jobs`) |
 
 ## What normalisation may and may not do
 
@@ -140,6 +209,23 @@ them could regress without a red test. The fake also reports the pinned address 
 default — a fake reporting none would send every test down the unverified path, which is the shape of
 the hole the suite exists to catch.
 
+## The setting
+
+`SnsSettingKey::LinkCardEnabled`, **off unless an operator turns it on**. This is the only setting
+that makes the site issue outbound requests, and it does so for URLs in friends-only and private
+bodies as well as open ones — a decision about what this deployment tells the wider web, not a
+display preference. OpenPNE 3's `enable_cmd` is not an ancestor: that embedded three named services
+in the reader's browser, where this fetches arbitrary hosts from the server.
+
+It is read through `LinkCardSettings` from three places, and all three have to agree or the switch
+does not mean what it says: the read path (do not start work), the fetch job (do not make the
+request, even if it was queued while the setting was on), and the renderer (do not show a card
+fetched earlier).
+
+The admin page states what turning it on does, because "show link previews" does not imply it: the
+server reaches out to every linked page, from bodies only a few people can read as well as open
+ones, and each destination learns the link was shared here.
+
 ## Key invariants
 
 - One row per normalised URL; a widely-shared link is fetched once.
@@ -158,3 +244,13 @@ the hole the suite exists to catch.
   `BIGINT UNSIGNED` and MySQL refuses the constraint. SQLite accepts either, so the mismatch would
   only surface on a real deployment.
 - The size and animation checks run before the decode, enforced by test.
+- What gets a card is exactly what the reader sees linked: extraction is dispatched per format
+  (`BodyRenderer::urls`) alongside rendering, so a Markdown code span yields no card and a bare
+  `www.` host gets the same scheme the renderer gives it.
+- Only the first URL in a body becomes a card.
+- A fetch result is written only under the lease that claimed it.
+- The read trigger fires on detail pages only, and only ever queues work.
+- Syncing a card never changes a record's `updated_at`, and never writes to a body it did not read.
+- One predicate decides whether a fetch is due, shared by the queueing side, the read path and the
+  claim.
+- A failed refresh never removes a card that was already rendering.

@@ -38,6 +38,9 @@ enum SettingGroup
     /** Per-feature availability toggles (App\Support\Feature), edited on the features page. */
     case Features;
 
+    /** Whether bodies show link preview cards, and therefore whether this site fetches URLs at all. */
+    case LinkCard;
+
     /** Per-site branding (brand color, logo mark, favicon), edited on the branding page. */
     case Branding;
 
