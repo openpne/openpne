@@ -1,3 +1,4 @@
+import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
@@ -116,7 +117,8 @@ export default function CommunityEventShow() {
                 </dl>
 
                 <RichBody body={event.body} bodyHtml={event.bodyHtml} />
-                <ImageGrid images={event.images} size="size-24" className="mt-2" />
+                <LinkCard card={event.linkCard} />
+                    <ImageGrid images={event.images} size="size-24" className="mt-2" />
 
                 {canEdit && (
                     <div className="flex gap-4 text-sm">

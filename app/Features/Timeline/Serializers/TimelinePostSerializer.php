@@ -2,6 +2,7 @@
 
 namespace App\Features\Timeline\Serializers;
 
+use App\LinkCard\LinkCardSerializer;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -14,7 +15,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class TimelinePostSerializer
 {
     /**
-     * @return array{id: int, body: string, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, body: string, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function entry(TimelinePost $post): array
     {
@@ -36,6 +37,7 @@ class TimelinePostSerializer
                 'imageUrl' => $post->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
                 'avatarColor' => $post->member->avatar_color?->hex(),
             ],
+            'linkCard' => LinkCardSerializer::card($post),
             'createdAt' => $post->created_at->toIso8601String(),
         ];
     }

@@ -125,6 +125,8 @@ raw markdown source must not reach a mail body.
 - `bodyHtml` is null for plain, server-produced otherwise; `RichBody` is the only
   `dangerouslySetInnerHTML` sink.
 - `op3` exists only on rows written by the upgrade; no request path can create or change it.
+- A link card is drawn *beside* the body, never inside it: it is third-party text, and the sanitizer
+  allowlist has no `img` ([link-cards.md](link-cards.md)).
 - Markdown output survives either safety layer being wrong; input size is bounded before the
   pipeline, not inside it.
 - Styling: Modern uses the `.rich-body` block in [`app.css`](../../resources/css/app.css);

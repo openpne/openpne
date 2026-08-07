@@ -1,3 +1,4 @@
+import { LinkCard } from '@/components/link-card';
 import { Link, router } from '@inertiajs/react';
 import { MessageCircle } from 'lucide-react';
 import { ImageGrid } from '@/components/image-grid';
@@ -46,6 +47,7 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
             <p className="whitespace-pre-wrap break-words">
                 <UserText text={post.body} />
             </p>
+            <LinkCard card={post.linkCard} />
             <ImageGrid images={post.images} />
             {isOwn && (
                 <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>

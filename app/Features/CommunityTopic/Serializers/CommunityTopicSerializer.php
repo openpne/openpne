@@ -4,6 +4,7 @@ namespace App\Features\CommunityTopic\Serializers;
 
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\CommunityTopic\CommunityTopicCommentThread;
+use App\LinkCard\LinkCardSerializer;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\CommunityTopicCommentImage;
@@ -41,7 +42,7 @@ class CommunityTopicSerializer
     /**
      * The topic show shape: the full body and images plus the author and post time.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function detail(CommunityTopic $topic): array
     {
@@ -54,6 +55,7 @@ class CommunityTopicSerializer
             'bodyHtml' => $topic->format === BodyFormat::Plain ? null : BodyRenderer::render($topic->body, $topic->format)->toHtml(),
             'images' => $topic->images->map([self::class, 'image'])->all(),
             'author' => self::author($topic->member),
+            'linkCard' => LinkCardSerializer::card($topic),
             'createdAt' => $topic->created_at->toIso8601String(),
         ];
     }

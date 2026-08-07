@@ -1,3 +1,4 @@
+import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { ImageGrid } from '@/components/image-grid';
@@ -80,7 +81,8 @@ export default function CommunityTopicShow() {
                 </div>
 
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
-                <ImageGrid images={topic.images} size="size-24" className="mt-2" />
+                <LinkCard card={topic.linkCard} />
+                    <ImageGrid images={topic.images} size="size-24" className="mt-2" />
 
                 {canEdit && (
                     <div className="flex gap-4 text-sm">

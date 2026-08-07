@@ -139,8 +139,12 @@ enum CardContext: string
      * (`ShowTimelinePost`), while `TimelineAccess::canView` given the reply would answer for the
      * reply's own author and visibility. A card URL naming a reply would therefore ask a different
      * audience than the page it appears on, so it is refused rather than answered.
+     *
+     * Public because it has to hold for the metadata too: `TimelinePostSerializer::entry` shapes
+     * replies as well as roots, so a rule enforced only where the image URL is built would let a
+     * reply's title and description into a payload while its picture stayed unreachable.
      */
-    private function carriesCard(Model $record): bool
+    public function carriesCard(Model $record): bool
     {
         return ! ($record instanceof TimelinePost) || $record->in_reply_to_id === null;
     }
