@@ -253,6 +253,30 @@ the asker cannot see.
 `CardContext::imageUrl` builds the address, so a caller cannot produce a context-free one by reaching
 for `File::url()` and getting a link that authorises the wrong thing.
 
+## Drawing it
+
+The card is structured data next to the body, assembled by a component on each surface — never
+markup mixed into `bodyHtml` (see [body-text.md](body-text.md)). Every field is text a page we do not
+control chose to publish, so it reaches a template as a string to be escaped, and the picture comes
+from this site rather than the far end.
+
+[`LinkCardSerializer`](../../app/LinkCard/LinkCardSerializer.php) is the one shape both surfaces read.
+Classic could have assembled its own from the model, and the *gates* would have been what drifted:
+whether the setting is on, whether the card has enough to draw, and which URL its picture is served
+from are decided once, in there.
+
+**The domain is always shown, and shown last.** A title is written by the page being previewed and
+can claim to be anyone; the host is the one part of a card that cannot misstate where the link goes.
+`www.` is dropped because it distinguishes nothing a reader acts on.
+
+The body keeps its URL. Twitter and Slack remove the link text once a card replaces it; here the body
+is the author's text and is not rewritten to suit a preview that may not render — for a viewer whose
+card failed to fetch, or who is on a build where the feature is off, the link has to still be there.
+
+Timeline posts carry their card into lists as well as the detail page, so the four feed queries
+eager-load it. A card read per row would multiply across the feed, the profile and three gadgets,
+which all share the same Classic row partial.
+
 ## Testing against the real guard
 
 `FakesOutboundTransport` substitutes the socket and the DNS resolver **underneath** a real

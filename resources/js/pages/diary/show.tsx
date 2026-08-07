@@ -1,3 +1,4 @@
+import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { type FormEvent } from 'react';
@@ -68,7 +69,9 @@ export default function DiaryShow() {
 
                 <RichBody body={diary.body} bodyHtml={diary.bodyHtml} />
 
-                <ImageGrid images={diary.images} size="size-28" className="mt-1" />
+                <LinkCard card={diary.linkCard} />
+
+                    <ImageGrid images={diary.images} size="size-28" className="mt-1" />
 
                 {isOwner && (
                     <div className="flex gap-4 text-sm">
