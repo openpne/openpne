@@ -19,10 +19,8 @@
     </source>
     <php>
         <!--
-            Booting the framework once costs ~67MB, and PHPUnit holds on to a little per test for the
-            length of a run, so the suite outgrew PHP's 128M default and dies mid-run, in parallel
-            just as in sequence. Set here rather than in a php.ini so a contributor's first
-            `php artisan test` works on a stock PHP.
+            The suite outgrew PHP's 128M default: booting the framework costs ~67MB before a single
+            assertion. Set here, not in a php.ini, so ParaTest's worker processes inherit it too.
         -->
         <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
