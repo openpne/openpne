@@ -46,4 +46,9 @@ class MemberImageUpgrade extends UpgradeStep
     {
         return ['is_primary', 'member_id', 'id'];
     }
+
+    public function memberRefs(): array
+    {
+        return ['member_id'];
+    }
 }

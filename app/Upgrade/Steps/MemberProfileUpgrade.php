@@ -95,6 +95,11 @@ class MemberProfileUpgrade extends UpgradeStep
         return ['tree_key', 'id', 'profile_id', 'profile_option_id'];
     }
 
+    public function memberRefs(): array
+    {
+        return ['member_id'];
+    }
+
     public function gaps(): array
     {
         return [

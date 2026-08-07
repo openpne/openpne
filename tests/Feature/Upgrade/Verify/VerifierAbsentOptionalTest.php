@@ -48,7 +48,10 @@ class VerifierAbsentOptionalTest extends TestCase
     public function test_an_uninstalled_optional_plugin_passes(): void
     {
         // opDiary not installed: `diary` is absent. The runner ensure-exists'd an empty diary, ran 0
-        // rows, and dropped it — a legitimate completed state with target 0.
+        // rows, and dropped it — a legitimate completed state with target 0. `member` is core and
+        // present either way: diary.member_id is checked against it before the run starts.
+        DB::statement(SourceSchema::default()->createStatement('member', withoutForeignKeys: true));
+
         (new UpgradeRunner(new InsertSelectCompiler, [new DiaryUpgrade]))->run(new RunOptions);
 
         [$report, $out] = $this->verify([new DiaryUpgrade]);
@@ -86,7 +89,7 @@ class VerifierAbsentOptionalTest extends TestCase
 
     private function dropSources(): void
     {
-        foreach (['diary', 'diary_image'] as $table) {
+        foreach (['diary', 'diary_image', 'member'] as $table) {
             DB::statement("DROP TABLE IF EXISTS `{$table}`");
         }
     }

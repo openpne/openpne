@@ -89,8 +89,8 @@ class MemberUpgradeSqlTest extends TestCase
 
     public function test_member_without_address_or_password_migrates_as_login_impossible(): void
     {
-        // An inactive pre-registration: only the unconfirmed `pc_address_pre` exists, plus an
-        // empty `pc_address` that NULLIF must collapse to NULL rather than an empty login id.
+        // An activated member with no usable address: only the unconfirmed `pc_address_pre` exists,
+        // plus an empty `pc_address` that NULLIF must collapse to NULL rather than an empty login id.
         $this->seedMember(4, 'Dave');
         $this->seedConfig(4, 'pc_address_pre', 'dave@pre.example');
         $this->seedConfig(4, 'pc_address', '');
@@ -202,7 +202,7 @@ class MemberUpgradeSqlTest extends TestCase
         $this->assertSame(0, (int) DB::table('members')->where('id', 41)->value('is_login_rejected'));
     }
 
-    public function test_no_member_row_is_dropped(): void
+    public function test_no_activated_member_row_is_dropped(): void
     {
         $this->seedMember(7, 'Grace');
         $this->seedConfig(7, 'pc_address', 'grace@pc.example');
@@ -212,6 +212,50 @@ class MemberUpgradeSqlTest extends TestCase
         $this->runUpgrade();
 
         $this->assertSame(2, Member::query()->count());
+    }
+
+    public function test_a_registration_that_never_activated_is_not_a_member(): void
+    {
+        // OpenPNE 3's opActivateBehavior hides is_active = 0 from every query, and isSNSMember() is
+        // that same flag — the account exists but is neither visible nor usable. OpenPNE 4 has no
+        // such state, so carrying the row over would publish a member OpenPNE 3 never had.
+        $this->seedMember(50, 'Activated');
+        $this->seedInactiveMember(51, 'AdminInvitePending');
+
+        $this->runUpgrade();
+
+        $this->assertSame([50], Member::query()->orderBy('id')->pluck('id')->all());
+    }
+
+    public function test_an_abandoned_signup_does_not_arrive_with_working_credentials(): void
+    {
+        // The OpenPNE 3 register form saves the nickname, password and promoted address at
+        // member/registerInput, one request before member/registerEnd activates. Someone who never
+        // reached that second request is inactive *with* credentials — and OpenPNE 4 gates login on
+        // the password and is_login_rejected alone, so migrating them would hand out an account.
+        $this->seedInactiveMember(52, 'Abandoned');
+        $this->seedConfig(52, 'pc_address', 'abandoned@pc.example');
+        $this->seedConfig(52, 'password', md5('secret'));
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseMissing('members', ['email' => 'abandoned@pc.example']);
+        $this->assertSame(0, Member::query()->count());
+    }
+
+    public function test_a_null_activation_flag_reads_as_active(): void
+    {
+        // OpenPNE 3's listener passes `is_active IS NULL` as well as 1; the column is NOT NULL in the
+        // 3.6+ DDL, so a source old enough to hold NULLs is the only way to see it.
+        DB::statement('ALTER TABLE `member` MODIFY `is_active` tinyint(1) NULL');
+        DB::table('member')->insert([
+            'id' => 53, 'name' => 'LegacySchema', 'is_login_rejected' => 0, 'is_active' => null,
+            'created_at' => '2018-03-04 12:34:56', 'updated_at' => '2019-06-07 01:02:03',
+        ]);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('members', ['id' => 53, 'name' => 'LegacySchema']);
     }
 
     private function createSourceTables(): void
@@ -237,11 +281,22 @@ class MemberUpgradeSqlTest extends TestCase
 
     private function seedMember(int $id, string $name): void
     {
+        $this->seedMemberRow($id, $name, isActive: 1);
+    }
+
+    /** A registration that never completed (MemberTable::createPre, no activate()). */
+    private function seedInactiveMember(int $id, string $name): void
+    {
+        $this->seedMemberRow($id, $name, isActive: 0);
+    }
+
+    private function seedMemberRow(int $id, string $name, int $isActive): void
+    {
         DB::table('member')->insert([
             'id' => $id,
             'name' => $name,
             'is_login_rejected' => 0,
-            'is_active' => 1,
+            'is_active' => $isActive,
             'created_at' => '2018-03-04 12:34:56',
             'updated_at' => '2019-06-07 01:02:03',
         ]);

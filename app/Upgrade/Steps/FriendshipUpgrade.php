@@ -40,6 +40,12 @@ class FriendshipUpgrade extends UpgradeStep
         return ['is_friend'];
     }
 
+    /** Both ends: an invite friends the inviter to a member who has not activated yet. */
+    public function memberRefs(): array
+    {
+        return ['member_id_from', 'member_id_to'];
+    }
+
     public function gaps(): array
     {
         return [

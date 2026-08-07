@@ -58,7 +58,7 @@ class MessageUpgrade extends UpgradeStep
 
     public function filter(): ?string
     {
-        return $this->isPersonalMessage('message');
+        return self::isPersonalMessage('message');
     }
 
     public function filterColumns(): array
@@ -74,17 +74,30 @@ class MessageUpgrade extends UpgradeStep
     }
 
     /** SQL boolean: the `<table>` row is a personal message (message_type.type_name = 'message'). */
-    private function isPersonalMessage(string $table): string
+    public static function isPersonalMessage(string $table): string
     {
         return "`{$table}`.`message_type_id` IN (SELECT `id` FROM ".SourceRef::table('message_type')." WHERE `type_name` = 'message')";
+    }
+
+    /**
+     * SQL boolean: this `message_send_list` row is the one folded onto its draft's
+     * draft_recipient_id. The compose form is 1:1 so a draft normally has exactly one; where
+     * anomalous data carries several, the lowest id wins and the rest are dropped. Public because
+     * ActiveMember's preflight must count over the row this actually reads — refusing a migration
+     * over a duplicate the step discards would contradict that.
+     */
+    public static function draftRecipientRowSelector(): string
+    {
+        return '`message_send_list`.`id` = (SELECT MIN(`first`.`id`) FROM '.SourceRef::table('message_send_list').' `first`'
+            .' WHERE `first`.`message_id` = `message_send_list`.`message_id`)';
     }
 
     /** A draft's recipient, read from its (single) OpenPNE 3 send-list row; NULL for a sent message. */
     private function draftRecipientExpr(): string
     {
         return 'CASE WHEN `is_send` = 0 THEN '
-            .'(SELECT `msl`.`member_id` FROM '.SourceRef::table('message_send_list').' `msl` '
-            .'WHERE `msl`.`message_id` = `message`.`id` ORDER BY `msl`.`id` ASC LIMIT 1) '
+            .'(SELECT `message_send_list`.`member_id` FROM '.SourceRef::table('message_send_list').' `message_send_list` '
+            .'WHERE `message_send_list`.`message_id` = `message`.`id` AND '.self::draftRecipientRowSelector().' LIMIT 1) '
             .'ELSE NULL END';
     }
 
@@ -94,7 +107,7 @@ class MessageUpgrade extends UpgradeStep
         return "CASE WHEN `{$column}` <> 0 AND EXISTS ("
             .'SELECT 1 FROM '.SourceRef::table('message').' `p` '
             ."WHERE `p`.`id` = `message`.`{$column}` AND "
-            .$this->isPersonalMessage('p')
+            .self::isPersonalMessage('p')
             .") THEN `{$column}` ELSE NULL END";
     }
 

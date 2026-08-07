@@ -36,4 +36,9 @@ class CommunityJoinRequestUpgrade extends UpgradeStep
     {
         return ['is_pre'];
     }
+
+    public function memberRefs(): array
+    {
+        return ['member_id'];
+    }
 }

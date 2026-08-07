@@ -8,6 +8,7 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\MemberImageUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
+use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
@@ -19,7 +20,7 @@ use Tests\TestCase;
  */
 class MemberImageUpgradeSqlTest extends TestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
 
     protected function setUp(): void
     {
@@ -29,6 +30,8 @@ class MemberImageUpgradeSqlTest extends TestCase
             $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
         }
 
+        $this->createSourceMemberTable();
+
         DB::statement('DROP TABLE IF EXISTS `member_image`');
         DB::statement(SourceSchema::default()->createStatement('member_image', withoutForeignKeys: true));
     }
@@ -36,6 +39,7 @@ class MemberImageUpgradeSqlTest extends TestCase
     protected function tearDown(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
+            $this->dropSourceMemberTable();
             DB::statement('DROP TABLE IF EXISTS `member_image`');
         }
 
@@ -44,7 +48,7 @@ class MemberImageUpgradeSqlTest extends TestCase
 
     public function test_keeps_the_primary_image_and_drops_the_others(): void
     {
-        $member = Member::factory()->create();
+        $member = $this->activeMember();
         $this->seedFile(1);
         $this->seedFile(2);
         $this->seedFile(3);
@@ -60,7 +64,7 @@ class MemberImageUpgradeSqlTest extends TestCase
 
     public function test_ties_among_equal_rank_break_by_lowest_id(): void
     {
-        $member = Member::factory()->create();
+        $member = $this->activeMember();
         $this->seedFile(4);
         $this->seedFile(5);
         $this->seedMemberImage(11, $member->id, 5, isPrimary: null); // higher id, dropped
@@ -76,7 +80,7 @@ class MemberImageUpgradeSqlTest extends TestCase
     {
         // OpenPNE 3's Member::getImage() orders by is_primary DESC, so a demoted 0 (was the main image,
         // changeMainImage sets the old one false) outranks a never-primary NULL even at a higher id.
-        $member = Member::factory()->create();
+        $member = $this->activeMember();
         $this->seedFile(8);
         $this->seedFile(9);
         $this->seedMemberImage(30, $member->id, 8, isPrimary: null); // never primary, lower id
@@ -90,7 +94,7 @@ class MemberImageUpgradeSqlTest extends TestCase
 
     public function test_one_avatar_per_member_across_members(): void
     {
-        [$a, $b] = Member::factory()->count(2)->create()->all();
+        [$a, $b] = $this->activeMembers(2);
         $this->seedFile(6);
         $this->seedFile(7);
         $this->seedMemberImage(200, $a->id, 6, isPrimary: 1);

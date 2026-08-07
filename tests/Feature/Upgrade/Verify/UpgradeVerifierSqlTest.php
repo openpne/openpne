@@ -16,6 +16,7 @@ use App\Upgrade\Verify\UpgradeVerifier;
 use App\Upgrade\Verify\VerifyReport;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
+use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
@@ -25,7 +26,7 @@ use Tests\TestCase;
  */
 class UpgradeVerifierSqlTest extends TestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
 
     protected function setUp(): void
     {
@@ -34,6 +35,8 @@ class UpgradeVerifierSqlTest extends TestCase
         if (DB::connection()->getDriverName() !== 'mysql') {
             $this->markTestSkipped('verify re-counts the OpenPNE 3 source DDL on MySQL.');
         }
+
+        $this->createSourceMemberTable();
 
         DB::statement('DROP TABLE IF EXISTS `member_relationship`');
         DB::statement(SourceSchema::default()->createStatement('member_relationship', withoutForeignKeys: true));
@@ -44,6 +47,7 @@ class UpgradeVerifierSqlTest extends TestCase
     protected function tearDown(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
+            $this->dropSourceMemberTable();
             DB::statement('DROP TABLE IF EXISTS `member_relationship`');
         }
 
@@ -72,7 +76,7 @@ class UpgradeVerifierSqlTest extends TestCase
     public function test_source_drift_fails(): void
     {
         // A new mirrored friend row appears on the source after the run — source now exceeds rows_affected.
-        [$a, $b] = Member::factory()->count(2)->create()->all();
+        [$a, $b] = $this->activeMembers(2);
         $this->seedRelationship($a, $b, ['is_friend' => 1]);
 
         [$report] = $this->verify();
@@ -122,7 +126,7 @@ class UpgradeVerifierSqlTest extends TestCase
 
     private function seedGraph(): void
     {
-        [$a, $b, $c, $d, $e, $f] = Member::factory()->count(6)->create()->all();
+        [$a, $b, $c, $d, $e, $f] = $this->activeMembers(6);
         $this->seedRelationship($a, $b, ['is_friend' => 1]);
         $this->seedRelationship($b, $a, ['is_friend' => 1]);
         $this->seedRelationship($c, $d, ['is_friend_pre' => 1]);

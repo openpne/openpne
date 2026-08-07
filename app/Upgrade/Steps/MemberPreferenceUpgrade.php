@@ -57,6 +57,11 @@ class MemberPreferenceUpgrade extends UpgradeStep
         return ['name', 'id', 'member_id'];
     }
 
+    public function memberRefs(): array
+    {
+        return ['member_id'];
+    }
+
     public function gaps(): array
     {
         return [

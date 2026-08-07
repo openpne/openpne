@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Upgrade\Profile;
 
-use App\Models\Member;
 use App\Models\MemberProfile;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
@@ -11,6 +10,7 @@ use App\Upgrade\Steps\ProfileOptionUpgrade;
 use App\Upgrade\Steps\ProfileUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
+use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
@@ -24,7 +24,7 @@ use Tests\TestCase;
  */
 class MemberProfileUpgradeSqlTest extends TestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
 
     private int $memberId;
 
@@ -36,6 +36,8 @@ class MemberProfileUpgradeSqlTest extends TestCase
             $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL.');
         }
 
+        $this->createSourceMemberTable();
+
         foreach (['member_profile', 'profile_option', 'profile'] as $t) {
             DB::statement("DROP TABLE IF EXISTS `{$t}`");
         }
@@ -43,12 +45,13 @@ class MemberProfileUpgradeSqlTest extends TestCase
         DB::statement(SourceSchema::default()->createStatement('profile_option', withoutForeignKeys: true));
         DB::statement(SourceSchema::default()->createStatement('member_profile', withoutForeignKeys: true));
 
-        $this->memberId = Member::factory()->create()->getKey();
+        $this->memberId = $this->activeMember()->getKey();
     }
 
     protected function tearDown(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
+            $this->dropSourceMemberTable();
             foreach (['member_profile', 'profile_option', 'profile'] as $t) {
                 DB::statement("DROP TABLE IF EXISTS `{$t}`");
             }

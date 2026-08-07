@@ -15,6 +15,7 @@ use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
+use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
@@ -27,7 +28,7 @@ use Tests\TestCase;
  */
 class UpgradeRunnerSqlTest extends TestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
 
     protected function setUp(): void
     {
@@ -37,6 +38,8 @@ class UpgradeRunnerSqlTest extends TestCase
             $this->markTestSkipped('The runner executes INSERT...SELECT on MySQL.');
         }
 
+        $this->createSourceMemberTable();
+
         DB::statement('DROP TABLE IF EXISTS `member_relationship`');
         DB::statement(SourceSchema::default()->createStatement('member_relationship', withoutForeignKeys: true));
     }
@@ -44,6 +47,7 @@ class UpgradeRunnerSqlTest extends TestCase
     protected function tearDown(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
+            $this->dropSourceMemberTable();
             DB::statement('DROP TABLE IF EXISTS `member_relationship`');
         }
 
@@ -170,7 +174,7 @@ class UpgradeRunnerSqlTest extends TestCase
 
     private function seedGraph(): void
     {
-        [$a, $b, $c, $d, $e, $f] = Member::factory()->count(6)->create()->all();
+        [$a, $b, $c, $d, $e, $f] = $this->activeMembers(6);
         $this->seedRelationship($a, $b, ['is_friend' => 1]);
         $this->seedRelationship($b, $a, ['is_friend' => 1]);
         $this->seedRelationship($c, $d, ['is_friend_pre' => 1]);

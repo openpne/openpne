@@ -134,10 +134,25 @@ class CommunityUpgrade extends UpgradeStep
         );
     }
 
+    /**
+     * SQL boolean: this `community_member_position` row is the one whose member becomes its
+     * community's pending_admin_member_id. The UNIQUE is on (community_member_id, name), not
+     * (community_id, name), so a community can hold several admin_confirm rows and only the latest
+     * counts. Public because ActiveMember's preflight must count over exactly this row and no other —
+     * an older, unread duplicate is not something to refuse a migration over.
+     */
+    public static function pendingAdminRowSelector(): string
+    {
+        return "`community_member_position`.`name` = 'admin_confirm' AND `community_member_position`.`id` = "
+            .'(SELECT MAX(`latest`.`id`) FROM '.SourceRef::table('community_member_position').' `latest`'
+            ." WHERE `latest`.`community_id` = `community_member_position`.`community_id` AND `latest`.`name` = 'admin_confirm')";
+    }
+
     /** The pending admin-transfer target (community_member_position[name=admin_confirm]), else NULL. */
     private function pendingAdminExpr(): string
     {
-        return '(SELECT `member_id` FROM '.SourceRef::table('community_member_position')." WHERE `community_id` = `community`.`id` AND `name` = 'admin_confirm' ORDER BY `id` DESC LIMIT 1)";
+        return '(SELECT `community_member_position`.`member_id` FROM '.SourceRef::table('community_member_position').' `community_member_position`'
+            .' WHERE `community_member_position`.`community_id` = `community`.`id` AND '.self::pendingAdminRowSelector().' LIMIT 1)';
     }
 
     /**

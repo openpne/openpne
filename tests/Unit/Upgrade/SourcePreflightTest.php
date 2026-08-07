@@ -17,8 +17,9 @@ class SourcePreflightTest extends TestCase
 {
     public function test_read_source_tables_unions_the_from_and_subquery_tables(): void
     {
-        // FROM `community_member` plus the role subquery's `community_member_position`.
-        $this->assertSame(['community_member', 'community_member_position'], (new CommunityMemberUpgrade)->readSourceTables());
+        // FROM `community_member`, the role subquery's `community_member_position`, and `member` from
+        // the active-member guard — the preflight must require every table the SQL will name.
+        $this->assertSame(['community_member', 'community_member_position', 'member'], (new CommunityMemberUpgrade)->readSourceTables());
     }
 
     public function test_read_source_tables_scans_the_filter_too(): void
@@ -33,7 +34,8 @@ class SourcePreflightTest extends TestCase
 
     public function test_read_source_tables_for_a_step_without_subqueries(): void
     {
-        $this->assertSame(['member_relationship'], (new FriendshipUpgrade)->readSourceTables());
+        // `member` comes from the guard, not a mapping — the only subquery this step has.
+        $this->assertSame(['member_relationship', 'member'], (new FriendshipUpgrade)->readSourceTables());
     }
 
     public function test_optional_plugin_sources_group_by_plugin_with_a_floor(): void

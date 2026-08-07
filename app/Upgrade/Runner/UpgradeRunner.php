@@ -62,7 +62,14 @@ final class UpgradeRunner
             ? (new MailTemplatePreflight)->inspect($options->sourcePrefix, $options->sourceDatabase)
             : new MailTemplatePreflightReport([], []);
 
-        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors) as $error) {
+        // Same shape again: it counts rows in the source columns the structural check guards. An
+        // inactive-member reference the upgrade will not resolve on its own, or a member missing from
+        // the source, is a state no step can migrate correctly — so it joins this abort too.
+        $memberErrors = ! $report->hasErrors()
+            ? self::memberReferenceErrors($preflight->inactiveMemberReferences($options->sourcePrefix, $options->sourceDatabase))
+            : [];
+
+        foreach (array_merge($report->tableErrors, $report->columnErrors, $fileBinError !== null ? [$fileBinError] : [], $mailReport->errors, $memberErrors) as $error) {
             $out("ERROR {$error}");
         }
 
@@ -72,7 +79,7 @@ final class UpgradeRunner
             $out("WARN {$warning}");
         }
 
-        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors()) {
+        if ($report->hasErrors() || $fileBinError !== null || $mailReport->hasErrors() || $memberErrors !== []) {
             $out('Aborted: the OpenPNE 3 source did not pass preflight; nothing was migrated.');
 
             return false;
@@ -242,6 +249,23 @@ final class UpgradeRunner
 
         UpgradeState::query()->delete();
         $out('Reset: cleared upgrade state and target tables.');
+    }
+
+    /**
+     * @param  array{refused: array<string, int>, dangling: array<string, int>}  $found
+     * @return list<string>
+     */
+    private static function memberReferenceErrors(array $found): array
+    {
+        $errors = [];
+        foreach ($found['refused'] as $reference => $rows) {
+            $errors[] = SourcePreflight::inactiveMemberReferenceMessage($reference, $rows);
+        }
+        foreach ($found['dangling'] as $reference => $rows) {
+            $errors[] = SourcePreflight::danglingMemberReferenceMessage($reference, $rows);
+        }
+
+        return $errors;
     }
 
     /** @return list<string> distinct step target tables in reverse run order (FK-safe delete order). */
