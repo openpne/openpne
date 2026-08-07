@@ -17,6 +17,7 @@
         <div class="topicBody">
             @include('community-topic._images', ['images' => $topic->images])
             <x-user-text :value="$topic->body" :format="$topic->format" />
+            <x-link-card :record="$topic" />
         </div>
 
         @if ($canEdit)

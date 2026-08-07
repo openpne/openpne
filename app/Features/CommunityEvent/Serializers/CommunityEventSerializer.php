@@ -4,6 +4,7 @@ namespace App\Features\CommunityEvent\Serializers;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityEvent\CommunityEventCommentThread;
+use App\LinkCard\LinkCardSerializer;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityEventCommentImage;
@@ -51,7 +52,7 @@ class CommunityEventSerializer
      * the current roster size (the RSVP button state is computed by the controller). openDate and
      * applicationDeadline are date-only Y-m-d strings (see summary()); createdAt is a real datetime.
      *
-     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string, openDate: string, openDateComment: string, area: string, applicationDeadline: string|null, capacity: int|null, participantCount: int}
      */
     public static function detail(CommunityEvent $event): array
     {
@@ -64,6 +65,7 @@ class CommunityEventSerializer
             'bodyHtml' => $event->format === BodyFormat::Plain ? null : BodyRenderer::render($event->body, $event->format)->toHtml(),
             'images' => $event->images->map([self::class, 'image'])->all(),
             'author' => self::author($event->member),
+            'linkCard' => LinkCardSerializer::card($event),
             'createdAt' => $event->created_at->toIso8601String(),
             'openDate' => $event->open_date->format('Y-m-d'),
             'openDateComment' => $event->open_date_comment ?? '',

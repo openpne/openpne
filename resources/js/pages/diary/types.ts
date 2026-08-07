@@ -1,3 +1,5 @@
+import type { LinkCardData } from '@/components/link-card';
+
 export type DiaryVisibility = 'open' | 'members' | 'friends' | 'private';
 
 /** One audience a compose/edit form offers: the numeric Visibility as a string, plus its label key. */
@@ -41,6 +43,7 @@ export interface DiaryDetail extends DiarySummary {
     body: string;
     format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
+    linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     images: DiaryImage[];
 }
 

@@ -37,6 +37,7 @@
                 <div class="body">
                     @include('community-topic._images', ['images' => $diary->images])
                     <x-user-text :value="$diary->body" :format="$diary->format" />
+                    <x-link-card :record="$diary" />
                 </div>
             </dd>
         </dl>

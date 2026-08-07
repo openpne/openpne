@@ -1,3 +1,4 @@
+import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { ImageGrid } from '@/components/image-grid';
@@ -63,6 +64,7 @@ export default function TimelineShow() {
                 <p className="whitespace-pre-wrap break-words">
                     <UserText text={post.body} />
                 </p>
+                <LinkCard card={post.linkCard} />
                 <ImageGrid images={post.images} />
                 {post.author.id === viewerId && (
                     <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>

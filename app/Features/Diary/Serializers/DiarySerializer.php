@@ -2,6 +2,7 @@
 
 namespace App\Features\Diary\Serializers;
 
+use App\LinkCard\LinkCardSerializer;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DiaryCommentImage;
@@ -59,7 +60,7 @@ class DiarySerializer
      * detail is a superset of summary (the React DiaryDetail extends DiarySummary): it carries the
      * full images plus hasImages, so a caller typed on either shape reads consistent data.
      *
-     * @return array{id: int, title: string, excerpt: string, body: string, format: string, bodyHtml: string|null, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, createdAt: string}
+     * @return array{id: int, title: string, excerpt: string, body: string, format: string, bodyHtml: string|null, visibility: string, commentCount: int, hasImages: bool, thumbnails: list<string>, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function detail(Diary $diary): array
     {
@@ -87,6 +88,7 @@ class DiarySerializer
                 'imageUrl' => $diary->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
                 'avatarColor' => $diary->member->avatar_color?->hex(),
             ],
+            'linkCard' => LinkCardSerializer::card($diary),
             'createdAt' => $diary->created_at->toIso8601String(),
         ];
     }

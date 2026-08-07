@@ -1,3 +1,5 @@
+import type { LinkCardData } from '@/components/link-card';
+
 export interface CommunityCategory {
     id: number;
     name: string;
@@ -79,6 +81,7 @@ export interface TopicDetail {
     format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     images: TopicImage[];
+    linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TopicAuthor | null;
     createdAt: string;
 }
@@ -133,6 +136,7 @@ export interface EventDetail {
     format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     images: TopicImage[];
+    linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TopicAuthor | null;
     createdAt: string; // ISO 8601 datetime
     openDate: string; // Y-m-d (date only)

@@ -1,3 +1,5 @@
+import type { LinkCardData } from '@/components/link-card';
+
 export type TimelinePostVisibility = 'open' | 'members' | 'friends' | 'private';
 
 export interface TimelinePostAuthor {
@@ -20,6 +22,7 @@ export interface TimelinePostEntry {
     hasImages: boolean;
     replyCount: number; // 0 on replies and single route-bound posts (see TimelinePostSerializer)
     images: TimelinePostImage[];
+    linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TimelinePostAuthor;
     createdAt: string;
 }
