@@ -22,12 +22,16 @@ type Props = {
  * display-hidden: absolute positioning takes it out of the flow, so it neither shows nor spends a
  * `space-y` gap, while the h1 inside stays in the accessibility tree. The action is display-hidden
  * separately so its link never takes keyboard focus while invisible.
+ *
+ * The fold is scoped to `max-lg` rather than un-hidden at `lg`: Tailwind's un-hide utility resets
+ * `margin: 0`, which outranks the zero-specificity `:where()` selector `space-y-*` generates, so the
+ * frame's gap below this row would vanish at exactly the widths where the row is visible.
  */
 export function PageHeading({ title, action, fold, className }: Props) {
     return (
         <div
             className={cn(
-                fold ? 'sr-only lg:not-sr-only lg:flex lg:min-h-11' : 'flex min-h-11',
+                fold ? 'max-lg:sr-only lg:flex lg:min-h-11' : 'flex min-h-11',
                 'items-center justify-between gap-3',
                 className,
             )}
