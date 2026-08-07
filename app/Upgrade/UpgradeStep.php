@@ -85,6 +85,42 @@ abstract class UpgradeStep
     }
 
     /**
+     * FROM-row columns referencing `member`.`id` whose row the upgrade drops when that member is one
+     * MemberUpgrade skips (see ActiveMember). Declared per step rather than derived from the source
+     * FKs because dropping is only right where such a row can exist — a registration artifact
+     * (member_config, member_profile, member_image, member_relationship, community_member). A member
+     * reference on a content table cannot occur in stock OpenPNE 3 (an inactive account has no
+     * SNSMember credential, so it posts nothing) and dropping there would mean dropping the row's
+     * children too; SourcePreflight refuses to start on one instead. UpgradeMatrixAuditTest holds
+     * every source reference to one treatment or the other.
+     *
+     * @return list<string>
+     */
+    public function memberRefs(): array
+    {
+        return [];
+    }
+
+    /**
+     * The step's WHERE clause: its own filter() plus a guard per memberRefs() entry. Everything that
+     * reads the filter must read it through here — the compiler emits it, and the verifier counts the
+     * source rows with it, so a guard missing from either side would show up as a row-count mismatch.
+     */
+    final public function effectiveFilter(): ?string
+    {
+        $clauses = array_map(
+            fn (string $column): string => ActiveMember::referenceGuard($this->sourceTable(), $column),
+            $this->memberRefs(),
+        );
+
+        if ($this->filter() !== null) {
+            array_unshift($clauses, '('.$this->filter().')');
+        }
+
+        return $clauses === [] ? null : implode(' AND ', $clauses);
+    }
+
+    /**
      * Optional raw SQL boolean scoping the target rows this step owns, for the verify row-count
      * parity. null = the step owns the whole target table. Required once several steps write one
      * table, or something outside the steps also writes rows into it.
@@ -103,7 +139,7 @@ abstract class UpgradeStep
                 $used[$name] = true;
             }
         }
-        foreach ($this->filterColumns() as $name) {
+        foreach (array_merge($this->filterColumns(), $this->memberRefs()) as $name) {
             $used[$name] = true;
         }
 
@@ -125,7 +161,7 @@ abstract class UpgradeStep
             }
         }
 
-        foreach (SourceRef::tablesIn($this->filter() ?? '') as $table) {
+        foreach (SourceRef::tablesIn($this->effectiveFilter() ?? '') as $table) {
             $tables[$table] = true;
         }
 

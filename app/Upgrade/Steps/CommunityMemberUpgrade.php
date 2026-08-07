@@ -46,6 +46,12 @@ class CommunityMemberUpgrade extends UpgradeStep
         return ['is_pre'];
     }
 
+    /** The registration form joins the default communities one request before it activates. */
+    public function memberRefs(): array
+    {
+        return ['member_id'];
+    }
+
     public function gaps(): array
     {
         return [

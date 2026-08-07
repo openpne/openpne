@@ -112,8 +112,10 @@ Writes nothing. It prints the SQL each step would run, and — the part worth re
 
 **`ERROR` aborts the run**, before anything is written. These are states the upgrade cannot survive:
 a required table or column missing (an older or customised OpenPNE 3), a plugin whose tables are
-only partly present, files whose bytes are missing, or two mail translations that would land on the
-same template and locale. Fix the source and dry-run again.
+only partly present, files whose bytes are missing, two mail translations that would land on the same
+template and locale, or a diary, message, topic or event belonging to a member who never finished
+registering (see [Members who never finished registering](#members-who-never-finished-registering)).
+Fix the source and dry-run again.
 
 **`WARN` migrates anyway** — the row is carried, and you decide whether what it reports matters:
 
@@ -198,6 +200,28 @@ change from a problem when you go through it.
   OpenPNE 4 renders them. Worth reading once to see how they came out.
 - **Mail templates** — any warning you have not resolved yet is still unresolved here; stage 3 covers
   where to fix it so the fix is still there after the cutover.
+- **Member count** — expect it to be lower than the number of rows in OpenPNE 3's `member` table, and
+  to match what OpenPNE 3's own member list showed. The difference is the registrations below.
+
+### Members who never finished registering
+
+OpenPNE 3 creates a member row the moment someone requests a signup link or an admin sends an
+invite, and marks it active only when registration completes. Until then the row is hidden from
+every page and search in OpenPNE 3, and the account cannot use the site. Sites accumulate these for
+years — abandoned signups, invitations never accepted — and nothing cleans them up.
+
+OpenPNE 4 has no equivalent state: a member row *is* a member. So the upgrade does not carry those
+rows, or anything hanging off them (their profile, their default-community memberships, the
+friendship an invitation created). This is not optional, and it is the safe reading rather than the
+conservative one: OpenPNE 3's registration form saves the nickname, password and address one request
+*before* it activates the account, so an abandoned signup that reached that point would otherwise
+arrive in OpenPNE 4 as a member who can sign in.
+
+What the upgrade will not decide for you is content — a diary, message, topic or event — belonging to
+one of those members. Stock OpenPNE 3 cannot produce it, so its presence means something wrote to
+your database outside OpenPNE 3, and dropping it would take its comments and attachments too. The
+preflight names the table and the row count and stops. Delete or reassign those rows in the source
+and run again.
 
 ## 6. Cutover
 

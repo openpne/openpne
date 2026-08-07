@@ -11,6 +11,7 @@ use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
+use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
@@ -21,7 +22,7 @@ use Tests\TestCase;
  */
 class RelationGraphUpgradeSqlTest extends TestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
 
     protected function setUp(): void
     {
@@ -31,6 +32,8 @@ class RelationGraphUpgradeSqlTest extends TestCase
             $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
         }
 
+        $this->createSourceMemberTable();
+
         DB::statement('DROP TABLE IF EXISTS `member_relationship`');
         DB::statement(SourceSchema::default()->createStatement('member_relationship', withoutForeignKeys: true));
     }
@@ -38,6 +41,7 @@ class RelationGraphUpgradeSqlTest extends TestCase
     protected function tearDown(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
+            $this->dropSourceMemberTable();
             DB::statement('DROP TABLE IF EXISTS `member_relationship`');
         }
 
@@ -46,7 +50,7 @@ class RelationGraphUpgradeSqlTest extends TestCase
 
     public function test_decomposes_member_relationship_into_three_tables_by_flag(): void
     {
-        [$a, $b, $c, $d, $e, $f] = Member::factory()->count(6)->create()->all();
+        [$a, $b, $c, $d, $e, $f] = $this->activeMembers(6);
 
         // Friendship A<->B: OpenPNE 3 stores it as two mirrored is_friend rows.
         $this->seedRelationship($a, $b, ['is_friend' => 1]);
@@ -74,8 +78,8 @@ class RelationGraphUpgradeSqlTest extends TestCase
 
     public function test_preserves_created_at(): void
     {
-        $a = Member::factory()->create();
-        $b = Member::factory()->create();
+        $a = $this->activeMember();
+        $b = $this->activeMember();
         $this->seedRelationship($a, $b, ['is_friend' => 1, 'created_at' => '2017-08-09 10:11:12']);
 
         $this->runUpgrade(new FriendshipUpgrade);
@@ -87,6 +91,30 @@ class RelationGraphUpgradeSqlTest extends TestCase
         ]);
     }
 
+    public function test_a_relationship_with_a_member_who_never_activated_is_dropped(): void
+    {
+        // OpenPNE 3's member invite friends the inviter to the invitee at invite time
+        // (InviteForm::save), while the invitee is still an inactive pre-registration. That member is
+        // not migrated, so the friendship has no one to point at — on either end.
+        // (member_id_to, member_id_from) is unique, so each flag needs its own pair; one per
+        // decomposed table, and both directions, since the guard covers both ends.
+        $inviter = $this->activeMember();
+        [$friend, $requested, $blocked] = array_map($this->inactiveSourceMember(...), [9001, 9002, 9003]);
+
+        $this->seedRelationshipIds($inviter->id, $friend, ['is_friend' => 1]);
+        $this->seedRelationshipIds($friend, $inviter->id, ['is_friend' => 1]);
+        $this->seedRelationshipIds($requested, $inviter->id, ['is_friend_pre' => 1]);
+        $this->seedRelationshipIds($inviter->id, $blocked, ['is_access_block' => 1]);
+
+        $this->runUpgrade(new FriendshipUpgrade);
+        $this->runUpgrade(new FriendRequestUpgrade);
+        $this->runUpgrade(new MemberBlockUpgrade);
+
+        $this->assertDatabaseCount('friendships', 0);
+        $this->assertDatabaseCount('friend_requests', 0);
+        $this->assertDatabaseCount('member_blocks', 0);
+    }
+
     private function runUpgrade(UpgradeStep $step): void
     {
         DB::statement((new InsertSelectCompiler)->compile($step));
@@ -94,9 +122,15 @@ class RelationGraphUpgradeSqlTest extends TestCase
 
     private function seedRelationship(Member $from, Member $to, array $flags = []): void
     {
+        $this->seedRelationshipIds($from->id, $to->id, $flags);
+    }
+
+    /** @param  array<string, mixed>  $flags */
+    private function seedRelationshipIds(int $from, int $to, array $flags = []): void
+    {
         DB::table('member_relationship')->insert(array_merge([
-            'member_id_from' => $from->id,
-            'member_id_to' => $to->id,
+            'member_id_from' => $from,
+            'member_id_to' => $to,
             'is_friend' => null,
             'is_friend_pre' => null,
             'is_access_block' => null,

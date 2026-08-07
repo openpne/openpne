@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Upgrade\SnsSetting;
 
-use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
@@ -12,6 +11,7 @@ use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
+use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
@@ -22,7 +22,7 @@ use Tests\TestCase;
  */
 class SurfaceModeUpgradeTest extends TestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
 
     protected function setUp(): void
     {
@@ -32,6 +32,8 @@ class SurfaceModeUpgradeTest extends TestCase
             $this->markTestSkipped('The runner executes INSERT...SELECT on MySQL.');
         }
 
+        $this->createSourceMemberTable();
+
         DB::statement('DROP TABLE IF EXISTS `member_relationship`');
         DB::statement(SourceSchema::default()->createStatement('member_relationship', withoutForeignKeys: true));
     }
@@ -39,6 +41,7 @@ class SurfaceModeUpgradeTest extends TestCase
     protected function tearDown(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
+            $this->dropSourceMemberTable();
             DB::statement('DROP TABLE IF EXISTS `member_relationship`');
         }
 
@@ -87,7 +90,7 @@ class SurfaceModeUpgradeTest extends TestCase
 
     private function seedGraph(): void
     {
-        [$a, $b] = Member::factory()->count(2)->create()->all();
+        [$a, $b] = $this->activeMembers(2);
 
         foreach ([[$a, $b], [$b, $a]] as [$from, $to]) {
             DB::table('member_relationship')->insert([

@@ -7,6 +7,7 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\FileUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
+use Tests\Concerns\SeedsSourceMembers;
 use Tests\TestCase;
 
 /**
@@ -19,10 +20,11 @@ use Tests\TestCase;
  */
 class FileUpgradeSqlTest extends TestCase
 {
-    use MigratesUpgradeTargetsOnce;
+    use MigratesUpgradeTargetsOnce, SeedsSourceMembers;
 
     /** FileUpgrade's FROM table plus every table its owner CASE reads, created from the real dump. */
     private array $sourceTables = [
+        'member',
         'file',
         'member_image',
         'community',
@@ -100,11 +102,25 @@ class FileUpgradeSqlTest extends TestCase
     public function test_resolves_member_avatar_owner(): void
     {
         $this->seedFile(11);
+        $this->seedSourceMember(77, isActive: 1);
         DB::table('member_image')->insert(['id' => 1, 'member_id' => 77, 'file_id' => 11, 'is_primary' => 1, 'created_at' => '2017-01-01 00:00:00', 'updated_at' => '2017-01-01 00:00:00']);
 
         $this->runUpgrade();
 
         $this->assertDatabaseHas('files', ['id' => 11, 'related_entity_type' => 'member', 'related_entity_id' => 77]);
+    }
+
+    public function test_an_inactive_members_avatar_is_migrated_ownerless(): void
+    {
+        // MemberImageUpgrade drops the join row for a member the upgrade skips, so claiming the
+        // owner here would point related_entity_id at a member that never lands.
+        $this->seedFile(12);
+        $this->inactiveSourceMember(78);
+        DB::table('member_image')->insert(['id' => 2, 'member_id' => 78, 'file_id' => 12, 'is_primary' => 1, 'created_at' => '2017-01-01 00:00:00', 'updated_at' => '2017-01-01 00:00:00']);
+
+        $this->runUpgrade();
+
+        $this->assertDatabaseHas('files', ['id' => 12, 'related_entity_type' => null, 'related_entity_id' => null]);
     }
 
     public function test_resolves_community_top_image_owner(): void

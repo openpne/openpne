@@ -34,4 +34,9 @@ class MemberBlockUpgrade extends UpgradeStep
     {
         return ['is_access_block'];
     }
+
+    public function memberRefs(): array
+    {
+        return ['member_id_from', 'member_id_to'];
+    }
 }

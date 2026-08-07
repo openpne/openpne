@@ -16,7 +16,8 @@ use Tests\TestCase;
  * Proves --source-prefix reaches a step's correlated subqueries end-to-end, not just the FROM table:
  * a prefixed OpenPNE 3 `op_member_config` (a shared-rental install whose source carries a table
  * prefix) sits alongside the unprefixed OpenPNE 4 target, and MemberPreferenceUpgrade — whose filter
- * reads member_config again in a MAX() subquery — must read the prefixed table in both places.
+ * reads member_config again in a MAX() subquery, and whose active-member guard reads `member` — must
+ * read the prefixed tables in all three places.
  *
  * MigratesUpgradeTargetsOnce (not RefreshDatabase): creating the source table is DDL, which auto-commits on
  * MySQL and cannot be rolled back inside a transaction.
@@ -33,14 +34,17 @@ class PrefixedSourceUpgradeSqlTest extends TestCase
             $this->markTestSkipped('Upgrade INSERT...SELECT runs on MySQL (source DDL + set-based copy).');
         }
 
-        $ddl = SourceSchema::default()->createStatement('member_config', withoutForeignKeys: true);
-        DB::statement(str_replace('`member_config`', '`op_member_config`', $ddl));
+        foreach (['member_config', 'member'] as $table) {
+            $ddl = SourceSchema::default()->createStatement($table, withoutForeignKeys: true);
+            DB::statement(str_replace("`{$table}`", "`op_{$table}`", $ddl));
+        }
     }
 
     protected function tearDown(): void
     {
         if (DB::connection()->getDriverName() === 'mysql') {
             DB::statement('DROP TABLE IF EXISTS `op_member_config`');
+            DB::statement('DROP TABLE IF EXISTS `op_member`');
         }
 
         parent::tearDown();
@@ -49,6 +53,8 @@ class PrefixedSourceUpgradeSqlTest extends TestCase
     public function test_a_prefixed_source_table_and_its_subquery_are_read(): void
     {
         $member = Member::factory()->create();
+        DB::table('op_member')->insert(['id' => $member->getKey(), 'name' => 'Prefixed', 'is_login_rejected' => 0,
+            'is_active' => 1, 'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00']);
 
         // Two rows for one (member, name): the latest-row-per-name MAX() subquery — which also reads
         // op_member_config — must collapse them to the most recent value.

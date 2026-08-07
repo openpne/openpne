@@ -49,8 +49,8 @@ final class InsertSelectCompiler
 
         $sql = "INSERT INTO {$target} ({$targetColumns})\nSELECT {$selectList}\nFROM {$source}";
 
-        if ($step->filter() !== null) {
-            $sql .= "\nWHERE {$step->filter()}";
+        if ($step->effectiveFilter() !== null) {
+            $sql .= "\nWHERE {$step->effectiveFilter()}";
         }
 
         $sql = $this->resolveSourceRefs($sql, $sourcePrefix, $sourceDatabase);

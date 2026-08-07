@@ -36,4 +36,9 @@ class FriendRequestUpgrade extends UpgradeStep
     {
         return ['is_friend_pre'];
     }
+
+    public function memberRefs(): array
+    {
+        return ['member_id_from', 'member_id_to'];
+    }
 }

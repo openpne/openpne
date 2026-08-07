@@ -134,7 +134,7 @@ final class UpgradeVerifier
         // missing table, only when its FROM table or a filter subquery table is an absent optional
         // plugin — treat that as 0 (0 == 0 == 0 then passes). A core FROM whose columns merely read an
         // absent optional owner (e.g. FileUpgrade) still counts normally.
-        $countTables = array_merge([$step->sourceTable()], SourceRef::tablesIn($step->filter() ?? ''));
+        $countTables = array_merge([$step->sourceTable()], SourceRef::tablesIn($step->effectiveFilter() ?? ''));
         $sourceN = array_intersect($countTables, $absent) !== []
             ? 0
             : $this->sourceCount($step, $options);
@@ -171,8 +171,8 @@ final class UpgradeVerifier
         // correlated references resolve, and SourceRef tokens are qualified the same way.
         $source = InsertSelectCompiler::qualify($options->sourceDatabase, $options->sourcePrefix, $step->sourceTable());
         $sql = "SELECT COUNT(*) FROM {$source} AS `{$step->sourceTable()}`";
-        if ($step->filter() !== null) {
-            $sql .= " WHERE {$step->filter()}";
+        if ($step->effectiveFilter() !== null) {
+            $sql .= " WHERE {$step->effectiveFilter()}";
         }
 
         return (int) DB::scalar($this->compiler->resolveSourceRefs($sql, $options->sourcePrefix, $options->sourceDatabase));

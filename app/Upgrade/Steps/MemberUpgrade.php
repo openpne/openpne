@@ -3,20 +3,22 @@
 namespace App\Upgrade\Steps;
 
 use App\Support\Visibility;
+use App\Upgrade\ActiveMember;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;
 
 /**
- * OpenPNE 3 `member` → OpenPNE 4 `members`.
+ * OpenPNE 3 `member` → OpenPNE 4 `members`, activated members only (see ActiveMember, and the
+ * matching guard on every step whose rows point at a member).
  *
  * The login email, password hash, and profile-page visibility are not member-table columns
  * in OpenPNE 3 — they live in the `member_config` KV table — so they are pulled in with
  * correlated subqueries:
  *
- *  - email: PC address, falling back to the mobile address; neither present (e.g. an
- *    inactive pre-registration that only has `pc_address_pre`) yields NULL, i.e. a
- *    login-impossible member whose row is still preserved.
+ *  - email: PC address, falling back to the mobile address; neither present yields NULL, i.e. a
+ *    login-impossible member whose row is still preserved (an activated account can lack both, e.g.
+ *    one whose addresses were cleared administratively).
  *  - password: the bare 32-char MD5. INSERT...SELECT bypasses Eloquent, so the model's
  *    `hashed` cast does not fire and the legacy hash lands verbatim here; the runner's
  *    post-walk wrap pass (PasswordWrap) then converts it to bcrypt(md5) + password_scheme
@@ -64,11 +66,21 @@ class MemberUpgrade extends UpgradeStep
             'avatar_color'];
     }
 
+    /** Only activated members are carried; ActiveMember explains what the inactive rows are. */
+    public function filter(): ?string
+    {
+        return ActiveMember::predicate();
+    }
+
+    public function filterColumns(): array
+    {
+        return ['is_active'];
+    }
+
     public function gaps(): array
     {
         return [
-            'invite_member_id' => 'Inviter reference; no corresponding column in the current members schema.',
-            'is_active' => 'Account status flag; no corresponding column in the current members schema.',
+            'invite_member_id' => 'Inviter reference; no corresponding column in the current members schema. A pending invite is not carried either — the invitee is an inactive member the filter drops.',
         ];
     }
 

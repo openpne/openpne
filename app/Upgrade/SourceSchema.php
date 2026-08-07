@@ -62,11 +62,29 @@ final class SourceSchema
      */
     public function fileReferencingColumns(): array
     {
+        return $this->referencingColumns('file');
+    }
+
+    /**
+     * Every `table.column` that is a foreign key onto `member`(id), in fixture order. What the
+     * upgrade owes each one is either a row-dropping guard or a preflight refusal (ActiveMember);
+     * the matrix audit checks the list against both so a new step cannot leave one unhandled.
+     *
+     * @return list<string>
+     */
+    public function memberReferencingColumns(): array
+    {
+        return $this->referencingColumns('member');
+    }
+
+    /** @return list<string> `table.column` foreign keys onto $target(id), in fixture order */
+    private function referencingColumns(string $target): array
+    {
         preg_match_all('/CREATE TABLE `([a-z0-9_]+)` \((.*?)\n\) ENGINE=/s', $this->contents(), $blocks, PREG_SET_ORDER);
 
         $references = [];
         foreach ($blocks as [, $table, $body]) {
-            if (preg_match_all('/FOREIGN KEY \(`([a-z0-9_]+)`\) REFERENCES `file`\s*\(/', $body, $columns)) {
+            if (preg_match_all('/FOREIGN KEY \(`([a-z0-9_]+)`\) REFERENCES `'.preg_quote($target, '/').'`\s*\(/', $body, $columns)) {
                 foreach ($columns[1] as $column) {
                     $references[] = "{$table}.{$column}";
                 }
