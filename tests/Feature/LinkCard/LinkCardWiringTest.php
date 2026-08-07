@@ -122,11 +122,45 @@ class LinkCardWiringTest extends TestCase
         $card = LinkCard::factory()->create();
         $record->forceFill(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()])->saveQuietly();
 
+        // Re-faked so the create's own job is not what the assertions below see: without this the
+        // edit's dispatch could be missing entirely and the count would still look right.
+        Queue::fake();
+
         $this->{'edit'.$kind.'Body'}($record);
 
         $record->refresh();
         $this->assertNull($record->link_card_id, "{$kind}: the previous body's card survived the edit.");
         $this->assertNull($record->link_card_synced_at, "{$kind}: the new body was left marked as examined.");
+
+        Queue::assertPushed(
+            SyncLinkCard::class,
+            fn (SyncLinkCard $job): bool => $job->model === $record::class
+                && $job->id === $record->id
+                && $job->afterCommit === true,
+        );
+        Queue::assertPushed(SyncLinkCard::class, 1);
+    }
+
+    public function test_changing_only_the_format_detaches_the_card(): void
+    {
+        // The other field the card depends on. A body reads differently as Markdown — a bare URL in
+        // a code span stops being a link — so the card has to be worked out again even though the
+        // text is byte-for-byte identical.
+        $diary = $this->createDiary();
+        $card = LinkCard::factory()->create();
+        $diary->forceFill(['link_card_id' => $card->id, 'link_card_synced_at' => CarbonImmutable::now()])->saveQuietly();
+
+        $this->app->make(UpdateDiary::class)(
+            $this->member,
+            $diary,
+            new DiaryFormData(title: $diary->title, body: $diary->body, visibility: $diary->visibility, format: BodyFormat::Markdown),
+            ImageEdit::none(),
+        );
+
+        $diary->refresh();
+        $this->assertSame(BodyFormat::Markdown, $diary->format);
+        $this->assertNull($diary->link_card_id, 'A format change leaves the body reading differently, so the card must be redone.');
+        $this->assertNull($diary->link_card_synced_at);
     }
 
     /**

@@ -19,8 +19,10 @@ use Illuminate\Support\Facades\DB;
  * see zero references, and a record picking that URL up again at the same moment could have its
  * card deleted underneath it. So the sweep is deliberate and out of band.
  *
- * Deleting the row takes its image with it (the File cascade), which is the only way those bytes are
- * reachable for collection: while a card exists, its image is referenced.
+ * A card that does go takes its image with it — deleted explicitly, not by a cascade: the foreign key
+ * runs from the card to the File, so the database would sooner null the reference than remove the
+ * row. That deletion is the only way those bytes become collectable at all, since a File referenced
+ * by a living card is by definition still in use.
  *
  * Not scheduled. A site under the fleet model runs no per-site cron, and an unreferenced card is
  * cache, not garbage that hurts — so this is an operator's tool, run when storage says it is worth

@@ -68,6 +68,23 @@ class LinkCardsTableTest extends TestCase
         $this->assertDatabaseHas('link_cards', ['url_hash' => str_repeat('b', 64), 'image_file_id' => null]);
     }
 
+    public function test_the_link_card_key_is_indexed_on_every_body_table(): void
+    {
+        // The prune sweep asks "does any body still point at this card?" once per candidate. Without
+        // an index that is a full scan of all four tables each time, worst for exactly the
+        // unreferenced cards the command exists to find.
+        //
+        // InnoDB creates a backing index for every foreign key and SQLite creates none, so the two
+        // engines reach this by different routes — the migration adds one only on SQLite. Asserted
+        // on both lanes, because what matters is that the column is indexed, not how.
+        foreach (['diaries', 'community_topics', 'community_events', 'timeline_posts'] as $table) {
+            $this->assertTrue(
+                Schema::hasIndex($table, ['link_card_id']),
+                "{$table}.link_card_id is not indexed; the prune sweep degrades to a full scan.",
+            );
+        }
+    }
+
     public function test_the_tables_round_trip(): void
     {
         // Rolled back in reverse migration order, which is the only order that works and the one a
