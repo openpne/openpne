@@ -344,8 +344,9 @@ export function useSwipeDeck({
             return;
         }
 
+        // The stage's own transform, not a descendant's bubbling up to it.
         const done = (e: TransitionEvent) => {
-            if (e.propertyName !== 'transform') {
+            if (e.target !== stage || e.propertyName !== 'transform') {
                 return;
             }
             endExit.current?.();
