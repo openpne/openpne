@@ -23,7 +23,7 @@
                     <a x-show="linkUrl" :href="linkUrl" target="_blank" rel="noopener" class="op-lb-link">
                         {{ __('Link') }}: <span x-text="linkUrl"></span>
                     </a>
-                    <a :href="src" target="_blank" rel="noopener" class="op-lb-link">{{ __('Open original in new tab') }}</a>
+                    <a :href="src" target="_blank" rel="noopener" class="op-lb-link">{{ __('Open in new tab') }}</a>
                 </div>
             </div>
         </div>

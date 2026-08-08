@@ -1,7 +1,8 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
-import { useEffect, useRef } from 'react';
+import { useRef, type CSSProperties } from 'react';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 interface LightboxImage {
     url: string;
@@ -11,12 +12,12 @@ interface LightboxImage {
  * Full-size image viewer over the current page — the Modern counterpart of the admin
  * image-lightbox (same interaction contract: overlay/Esc/close dismiss, plus an
  * open-the-original escape hatch). Built on the same Radix Dialog primitive as the nav
- * drawer and confirm dialog, sharing their overlay style: it supplies the focus trap,
- * dismissal, scroll lock and focus restore.
+ * drawer and confirm dialog: it supplies the focus trap, dismissal, scroll lock and focus
+ * restore.
  *
  * Controlled multi-image viewer: the parent owns which of `images` is shown via `index`
  * (null = closed) and moves it with `onNavigate`. Navigation is bounded — no wrap — so the
- * prev/next affordances and the counter only exist for a set of more than one.
+ * prev/next affordances and the position readout only exist for a set of more than one.
  */
 export function Lightbox({
     images,
@@ -35,9 +36,9 @@ export function Lightbox({
     const t = useT();
     const touchStart = useRef<{ x: number; y: number } | null>(null);
 
-    const image = index === null ? null : (images[index] ?? null);
     const hasPrev = index !== null && index > 0;
     const hasNext = index !== null && index < images.length - 1;
+    const many = images.length > 1;
 
     const goPrev = () => {
         if (index !== null && index > 0) {
@@ -50,18 +51,6 @@ export function Lightbox({
         }
     };
 
-    // Start fetching the neighbours so a swipe/arrow rarely waits on the network.
-    useEffect(() => {
-        if (index === null) {
-            return;
-        }
-        for (const adjacent of [images[index - 1], images[index + 1]]) {
-            if (adjacent) {
-                new Image().src = adjacent.url;
-            }
-        }
-    }, [index, images]);
-
     return (
         <DialogPrimitive.Root
             open={index !== null}
@@ -72,7 +61,9 @@ export function Lightbox({
             }}
         >
             <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+                {/* No backdrop-blur: a full-viewport backdrop-filter recomposites every frame, which
+                    is the one thing a finger-tracking drag cannot afford. */}
+                <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/90" />
                 <DialogPrimitive.Content
                     aria-describedby={undefined}
                     onCloseAutoFocus={(e) => {
@@ -112,73 +103,132 @@ export function Lightbox({
                             goPrev();
                         }
                     }}
+                    // Scrim-mounted, not a panel: every pixel the frame kept was one the image lost.
+                    // `fixed inset-0` also retires the 100dvh arithmetic this replaces — on iOS a
+                    // fixed inset resolves against the small viewport, and the URL bar cannot move
+                    // while the dialog holds the scroll lock.
+                    // The chrome heights are declared once here and read by the bar, the dots and the
+                    // slide padding, so a tall image can never end up under either of them.
                     // touch-action pan-y keeps horizontal pans ours (the swipe) while leaving vertical
                     // scroll and pinch-zoom of the image to the browser.
-                    // Definite width, not max-width: a fixed box centered with left-1/2 + translate and
-                    // width:auto shrink-to-fits to the ~50vw available right of its left edge, so the
-                    // image would render at half screen width. A definite width lets it fill the frame.
-                    // Side padding carries the landscape insets — at 94vw the panel's edges (and with
-                    // them the prev/next buttons) reach into the cutout, and landscape is the
-                    // orientation an image gets viewed in.
-                    // Max height counts the top/bottom insets too: a plain 92vh leaves only 4vh below
-                    // a centered panel, less than a landscape home-indicator inset, and the centered
-                    // 2rem-plus-insets margin splits so that each half clears its own side's inset.
-                    // overflow-y-auto contains the overshoot when the image cap plus a wrapped footer
-                    // still exceeds the panel — scrolled, not spilling the footer under the indicator.
-                    className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-[min(94vw,60rem)] -translate-x-1/2 -translate-y-1/2 touch-pan-y touch-pinch-zoom overflow-y-auto rounded-xl bg-background p-3 pr-[calc(0.75rem+env(safe-area-inset-right))] pl-[calc(0.75rem+env(safe-area-inset-left))] text-foreground shadow-xl outline-none"
+                    style={
+                        {
+                            '--lb-chrome-top': 'calc(3.5rem + env(safe-area-inset-top))',
+                            '--lb-chrome-bottom': 'calc(2.5rem + env(safe-area-inset-bottom))',
+                        } as CSSProperties
+                    }
+                    className="fixed inset-0 z-50 touch-pan-y touch-pinch-zoom text-scrim-foreground outline-none"
                 >
                     <DialogPrimitive.Title className="sr-only">{t('Image')}</DialogPrimitive.Title>
-                    {image && (
-                        <div className="space-y-2.5">
-                            <div className="relative">
-                                {/* The image cap reserves ~9rem inside the panel's max height for the
-                                    footer row, paddings, and the centering margin, so a single-line
-                                    footer fits without scrolling; the panel scrolls only when a
-                                    wrapped footer outgrows the reserve. */}
-                                <img
-                                    src={image.url}
-                                    alt=""
-                                    className="mx-auto max-h-[calc(100dvh-9rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] max-w-full rounded-md"
-                                />
-                                {images.length > 1 && (
-                                    <>
-                                        {/* aria-disabled, not disabled: a focused button that turns disabled drops
-                                            focus to body, which would kill arrow-key navigation at either end. */}
-                                        <button
-                                            type="button"
-                                            onClick={goPrev}
-                                            aria-disabled={!hasPrev}
-                                            aria-label={t('Previous image')}
-                                            className="absolute left-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40"
-                                        >
-                                            <ChevronLeft className="size-6" aria-hidden />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={goNext}
-                                            aria-disabled={!hasNext}
-                                            aria-label={t('Next image')}
-                                            className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40"
-                                        >
-                                            <ChevronRight className="size-6" aria-hidden />
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
-                                <a href={image.url} target="_blank" rel="noopener noreferrer" className="text-link hover:underline">
-                                    {t('Open original in new tab')}
-                                </a>
-                                {index !== null && images.length > 1 && (
-                                    <span aria-live="polite" className="text-muted-foreground">
-                                        {index + 1} / {images.length}
-                                    </span>
-                                )}
-                                <DialogPrimitive.Close className="text-muted-foreground transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                                    {t('Close')}
-                                </DialogPrimitive.Close>
+
+                    {/* pointer-events-none so the gaps between the two controls stay part of the
+                        scrim and still dismiss; each control opts back in. */}
+                    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[var(--lb-chrome-top)] items-center justify-between pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] pt-[env(safe-area-inset-top)]">
+                        <DialogPrimitive.Close
+                            aria-label={t('Close')}
+                            className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <X className="size-5" aria-hidden />
+                        </DialogPrimitive.Close>
+                        {index !== null && (
+                            <a
+                                href={images[index]?.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="pointer-events-auto rounded-sm text-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                                {t('Open in new tab')}
+                            </a>
+                        )}
+                    </div>
+
+                    <div className="absolute inset-0 overflow-hidden">
+                        <div className="h-full w-full">
+                            <div
+                                style={{ '--lb-index': index ?? 0 } as CSSProperties}
+                                className="lightbox-track flex h-full w-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
+                            >
+                                {images.map((image, i) => (
+                                    <div
+                                        key={i}
+                                        data-active={i === index ? '' : undefined}
+                                        onClick={(e) => {
+                                            // Only the letterbox around the image dismisses; the image
+                                            // itself stays inert so a long-press or a zoom is not a
+                                            // race against closing.
+                                            if (e.target === e.currentTarget) {
+                                                onClose();
+                                            }
+                                        }}
+                                        // From sm up the wide side padding is the chevrons' own lane,
+                                        // so the image never runs under them. Below sm they overlap
+                                        // instead: a cursor in a phone-width window would otherwise
+                                        // spend a third of the width on two buttons, and a cursor has
+                                        // no swipe to fall back on, so the arrows have to stay.
+                                        className="flex h-full w-full shrink-0 items-center justify-center pb-[var(--lb-chrome-bottom)] pt-[var(--lb-chrome-top)] pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] sm:pointer-fine:pl-[calc(4rem+env(safe-area-inset-left))] sm:pointer-fine:pr-[calc(4rem+env(safe-area-inset-right))]"
+                                    >
+                                        <img
+                                            src={image.url}
+                                            alt=""
+                                            draggable={false}
+                                            // Every image is in the DOM, so the browser fetches the set
+                                            // on open (three at most, PostImages::MAX_IMAGES). Raise
+                                            // that ceiling and this needs to become a window around
+                                            // `index` instead.
+                                            fetchPriority={i === index ? 'high' : 'auto'}
+                                            className="max-h-full max-w-full"
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         </div>
+                    </div>
+
+                    {/* Dots rather than a counter: at three images a glanceable shape beats reading a
+                        fraction, and it frees the bar of a third element that pushed the readout off
+                        centre. Past a handful of images this stops scaling — swap it back for the
+                        number. The screen-reader readout is the sr-only text beside it. */}
+                    {many && index !== null && (
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex h-[var(--lb-chrome-bottom)] items-center justify-center pb-[env(safe-area-inset-bottom)]">
+                            <span aria-live="polite" aria-atomic="true" className="sr-only">
+                                {index + 1} / {images.length}
+                            </span>
+                            <span aria-hidden className="flex gap-1.5">
+                                {images.map((_, i) => (
+                                    <span
+                                        key={i}
+                                        className={cn('size-1.5 rounded-full', i === index ? 'bg-scrim-foreground' : 'bg-scrim-foreground/40')}
+                                    />
+                                ))}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Only where there is a pointer to aim: a touch device turns pages by swiping, and
+                        a viewport-width rule would have put chevrons back on a phone held sideways.
+                        aria-disabled, not disabled: a focused button that turns disabled drops focus
+                        to body, which would kill arrow-key navigation at either end. */}
+                    {many && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={goPrev}
+                                aria-disabled={!hasPrev}
+                                aria-label={t('Previous image')}
+                                className="absolute left-[calc(0.5rem+env(safe-area-inset-left))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
+                            >
+                                <ChevronLeft className="size-6" aria-hidden />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={goNext}
+                                aria-disabled={!hasNext}
+                                aria-label={t('Next image')}
+                                className="absolute right-[calc(0.5rem+env(safe-area-inset-right))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
+                            >
+                                <ChevronRight className="size-6" aria-hidden />
+                            </button>
+                        </>
                     )}
                 </DialogPrimitive.Content>
             </DialogPrimitive.Portal>

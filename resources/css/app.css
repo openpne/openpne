@@ -196,6 +196,17 @@ html body[data-scroll-locked] {
     margin-right: 0 !important;
 }
 
+/* The lightbox deck's position. The formula lives here, in CSS, so that React and the gesture code
+   never write the same DOM property: React sets --lb-index (the shown slide) and the drag sets
+   --lb-drag-x. Sharing style.transform instead would depend on React DOM only writing changed style
+   keys, which is an implementation detail, not a contract. A custom property still recomputes
+   transform, so transition: transform interpolates as usual.
+   The % resolves against the track's own border-box width, which is why it must stay w-full: a
+   w-max/w-fit track would measure 300% and land three slides off. */
+.lightbox-track {
+    transform: translate3d(calc(var(--lb-index, 0) * -100% + var(--lb-drag-x, 0px)), 0, 0);
+}
+
 /* OpenPNE 3 rich-text decoration on the Modern surface (RichBody). Mirrors the Classic skin's
    span.op_* rules (opSkinBasicPlugin/css/main.css); op_color/op_font carry an inline style, so
    they need none. */
