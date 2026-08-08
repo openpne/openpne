@@ -26,6 +26,7 @@ export function Lightbox({
     onClose,
     onNavigate,
     restoreFocus,
+    originRect,
 }: {
     images: LightboxImage[];
     index: number | null;
@@ -33,9 +34,11 @@ export function Lightbox({
     onNavigate: (index: number) => void;
     /** Focus target for dismissal — the thumbnails are plain buttons, not Radix triggers. */
     restoreFocus?: () => void;
+    /** Where the shown image sits on the page below, so closing can hand it back. */
+    originRect?: (index: number) => DOMRect | null;
 }) {
     const t = useT();
-    const deck = useSwipeDeck({ open: index !== null, index: index ?? 0, count: images.length, onNavigate, onClose });
+    const deck = useSwipeDeck({ open: index !== null, index: index ?? 0, count: images.length, onNavigate, onClose, originRect });
 
     const hasPrev = index !== null && index > 0;
     const hasNext = index !== null && index < images.length - 1;
@@ -144,12 +147,14 @@ export function Lightbox({
                                             }
                                             onClose();
                                         }}
-                                        // From sm up the wide side padding is the chevrons' own lane,
-                                        // so the image never runs under them. Below sm they overlap
+                                        // No side padding of its own: the picture runs to the screen
+                                        // edges, and only a landscape cutout pushes it in.
+                                        // From sm up the wide padding is the chevrons' own lane, so
+                                        // the image never runs under them. Below sm they overlap
                                         // instead: a cursor in a phone-width window would otherwise
                                         // spend a third of the width on two buttons, and a cursor has
                                         // no swipe to fall back on, so the arrows have to stay.
-                                        className="flex h-full w-full shrink-0 items-center justify-center pb-[var(--lb-chrome-bottom)] pt-[var(--lb-chrome-top)] pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] sm:pointer-fine:pl-[calc(4rem+env(safe-area-inset-left))] sm:pointer-fine:pr-[calc(4rem+env(safe-area-inset-right))]"
+                                        className="lightbox-slide flex h-full w-full shrink-0 items-center justify-center pb-[var(--lb-chrome-bottom)] pt-[var(--lb-chrome-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] sm:pointer-fine:pl-[calc(4rem+env(safe-area-inset-left))] sm:pointer-fine:pr-[calc(4rem+env(safe-area-inset-right))]"
                                     >
                                         <img
                                             src={image.url}

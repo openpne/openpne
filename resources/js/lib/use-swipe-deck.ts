@@ -191,9 +191,63 @@ export const IDENTITY_VARS: Readonly<Record<string, string>> = {
     '--lb-dismiss-x': '0px',
     '--lb-dismiss-y': '0px',
     '--lb-scale': '1',
+    '--lb-stage-opacity': '1',
     '--lb-scrim-opacity': '1',
     '--lb-chrome-opacity': '1',
 };
+
+export interface Rect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+/**
+ * The transform that lands `from` exactly on `to`, expressed about the centre of a box of
+ * `viewport` size — which is what the stage is, so this is what its own transform has to be.
+ *
+ * Scale takes whichever axis has to shrink further, so the picture ends up inside its thumbnail
+ * rather than spilling past it: the thumbnail is a square crop of an image that is not square.
+ */
+export function flightTo(from: Rect, to: Rect, viewport: { width: number; height: number }): { x: number; y: number; scale: number } {
+    if (from.width <= 0 || from.height <= 0) {
+        return { x: 0, y: 0, scale: 1 };
+    }
+
+    const scale = Math.min(to.width / from.width, to.height / from.height);
+    const cx = viewport.width / 2;
+    const cy = viewport.height / 2;
+    const fromCx = from.x + from.width / 2;
+    const fromCy = from.y + from.height / 2;
+    const toCx = to.x + to.width / 2;
+    const toCy = to.y + to.height / 2;
+
+    return {
+        x: round(toCx - cx - scale * (fromCx - cx)),
+        y: round(toCy - cy - scale * (fromCy - cy)),
+        scale: round(scale),
+    };
+}
+
+/** Where the picture goes when there is no thumbnail to go back to: on out the way it was pushed. */
+export function flightOut(axis: DragAxis, displacement: number, extent: number): { x: number; y: number; scale: number } {
+    const travel = (displacement < 0 ? -1 : 1) * extent * 2;
+
+    return { x: axis === 'x' ? travel : 0, y: axis === 'y' ? travel : 0, scale: 1 };
+}
+
+export function flightVars(flight: { x: number; y: number; scale: number }): Record<string, string> {
+    return {
+        ...IDENTITY_VARS,
+        '--lb-dismiss-x': `${flight.x}px`,
+        '--lb-dismiss-y': `${flight.y}px`,
+        '--lb-scale': String(flight.scale),
+        '--lb-stage-opacity': '0',
+        '--lb-scrim-opacity': '0',
+        '--lb-chrome-opacity': '0',
+    };
+}
 
 export function pageVars(dx: number): Record<string, string> {
     return { ...IDENTITY_VARS, '--lb-drag-x': `${round(dx)}px` };
@@ -231,6 +285,8 @@ interface Gesture {
     mode: GestureMode | null;
     /** Sign of the direction a sideways dismiss left the deck by; null when there isn't one. */
     outward: number | null;
+    /** Where the picture sat before this gesture moved it — the start of the flight home. */
+    imageRect: Rect | null;
     samples: Sample[];
     aborted: boolean;
 }
@@ -254,12 +310,15 @@ export function useSwipeDeck({
     count,
     onNavigate,
     onClose,
+    originRect,
 }: {
     open: boolean;
     index: number;
     count: number;
     onNavigate: (index: number) => void;
     onClose: () => void;
+    /** Where the shown image lives on the page underneath, if it lives anywhere. */
+    originRect?: (index: number) => Rect | null;
 }): SwipeDeck {
     const contentRef = useRef<HTMLDivElement | null>(null);
     const scrimRef = useRef<HTMLDivElement | null>(null);
@@ -269,19 +328,24 @@ export function useSwipeDeck({
     const exiting = useRef(false);
     const endExit = useRef<(() => void) | null>(null);
 
-    const write = (vars: Record<string, string>, dragging: boolean) => {
+    const write = (vars: Record<string, string>, { dragging = false, leaving = false } = {}) => {
         for (const el of [contentRef.current, scrimRef.current]) {
             if (!el) {
                 continue;
             }
             el.toggleAttribute('data-lb-dragging', dragging);
+            // Held through the flight as well as the drag: what leaves is one picture, so the deck
+            // it belongs to has to stay out of sight the whole way.
+            el.toggleAttribute('data-lb-leaving', leaving);
             for (const [name, value] of Object.entries(vars)) {
                 el.style.setProperty(name, value);
             }
         }
     };
 
-    const settle = () => write({ ...IDENTITY_VARS }, false);
+    const settle = () => write({ ...IDENTITY_VARS });
+
+    const activeImage = () => stageRef.current?.querySelector<HTMLImageElement>('[data-active] img') ?? null;
 
     // Whatever closed the viewer — the exit below, Escape, the close button — lands here, and it is
     // the only place the exit is torn down. Without it a close during the exit would leave its timer
@@ -318,24 +382,36 @@ export function useSwipeDeck({
 
     const paint = (g: Gesture, displacement: number) => {
         if (g.mode === 'page') {
-            write(pageVars(displacement), true);
+            write(pageVars(displacement), { dragging: true });
 
             return;
         }
         const effective = travelled(g, displacement);
         const visual = dismissVisual(dismissProgress(effective, extentOf(g)));
-        write(dismissVars(g.axis!, effective, visual), true);
+        write(dismissVars(g.axis!, effective, visual), { dragging: true, leaving: true });
     };
 
     /**
      * Carry the drag the rest of the way rather than cutting to nothing: the reader has been watching
      * the image shrink and the page come through, and an instant unmount throws that away at the
-     * moment it resolves. The animation's own end is what closes; the timer is only there for when
-     * that event never arrives, and reduced motion skips the wait entirely.
+     * moment it resolves.
+     *
+     * Where it goes is the picture's own place on the page below, when it has one — the reader's eye
+     * is already tracking the image, so putting it back where they will next find it costs them no
+     * search. Off the nearest edge is the fallback for when there is no such place.
+     *
+     * The animation's own end is what closes; the timer is only there for when that event never
+     * arrives, and reduced motion skips the wait entirely.
      */
-    const exit = (axis: DragAxis, endpoint: number) => {
+    const exit = (g: Gesture, displacement: number) => {
         exiting.current = true;
-        write(dismissVars(axis, endpoint, dismissVisual(1)), false);
+        const origin = originRect?.(index) ?? null;
+        const content = contentRef.current;
+        const flight =
+            origin && g.imageRect && content
+                ? flightTo(g.imageRect, origin, { width: content.clientWidth, height: content.clientHeight })
+                : flightOut(g.axis!, displacement, extentOf(g));
+        write(flightVars(flight), { leaving: true });
 
         const stage = stageRef.current;
         if (!stage || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -388,6 +464,9 @@ export function useSwipeDeck({
                 axis: null,
                 mode: null,
                 outward: null,
+                // Measured now, while the stage is still at rest: read mid-drag it would report where
+                // the drag has already put the picture, not where it started.
+                imageRect: activeImage()?.getBoundingClientRect() ?? null,
                 samples: [],
                 aborted: false,
             };
@@ -465,7 +544,7 @@ export function useSwipeDeck({
 
                 return;
             }
-            exit(g.axis, (effective < 0 ? -1 : 1) * extent * 2);
+            exit(g, effective);
         },
 
         onTouchCancel: () => {

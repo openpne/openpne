@@ -4,6 +4,9 @@ import {
     dismissProgress,
     dismissVars,
     dismissVisual,
+    flightOut,
+    flightTo,
+    flightVars,
     gestureMode,
     lockAxis,
     outwardDisplacement,
@@ -207,6 +210,56 @@ test('samples sharing a timestamp do not divide by zero', () => {
     const v = velocityFrom([{ s: 0, t: 40 }, { s: 30, t: 40 }]);
     assert.equal(v, 0);
     assert.ok(Number.isFinite(v));
+});
+
+test('a picture already sitting on its thumbnail has nowhere to fly', () => {
+    const box = { x: 100, y: 100, width: 50, height: 50 };
+    assert.deepEqual(flightTo(box, box, { width: 400, height: 400 }), { x: 0, y: 0, scale: 1 });
+});
+
+test('the flight lands the picture centred on its thumbnail', () => {
+    const from = { x: 0, y: 100, width: 200, height: 100 };
+    const to = { x: 300, y: 300, width: 50, height: 50 };
+    const viewport = { width: 400, height: 400 };
+    const { x, y, scale } = flightTo(from, to, viewport);
+
+    // Replay the transform the stage will apply and check where the picture's centre ends up.
+    const cx = viewport.width / 2;
+    const cy = viewport.height / 2;
+    const landedX = cx + scale * (from.x + from.width / 2 - cx) + x;
+    const landedY = cy + scale * (from.y + from.height / 2 - cy) + y;
+    assert.equal(landedX, to.x + to.width / 2);
+    assert.equal(landedY, to.y + to.height / 2);
+});
+
+test('the flight shrinks to fit inside the thumbnail, not to overflow it', () => {
+    // A wide picture into a square crop: matching the width would still be taller than the box.
+    const { scale } = flightTo({ x: 0, y: 0, width: 390, height: 250 }, { x: 0, y: 0, width: 112, height: 112 }, { width: 390, height: 844 });
+    // A tenth of a pixel of slack: the scale is rounded for a stable CSS string, and at these sizes
+    // that rounding is worth more than an exact fit.
+    assert.ok(scale * 390 <= 112.1, `width ${scale * 390}`);
+    assert.ok(scale * 250 <= 112.1, `height ${scale * 250}`);
+});
+
+test('a picture with no size does not divide by it', () => {
+    const flight = flightTo({ x: 0, y: 0, width: 0, height: 0 }, { x: 10, y: 10, width: 50, height: 50 }, { width: 400, height: 400 });
+    assert.deepEqual(flight, { x: 0, y: 0, scale: 1 });
+});
+
+test('with nowhere to fly the picture leaves the way it was pushed, at full size', () => {
+    assert.deepEqual(flightOut('y', 100, 250), { x: 0, y: 500, scale: 1 });
+    assert.deepEqual(flightOut('y', -100, 250), { x: 0, y: -500, scale: 1 });
+    assert.deepEqual(flightOut('x', -100, 120), { x: -240, y: 0, scale: 1 });
+});
+
+test('the flight fades the picture, the scrim and the chrome out together', () => {
+    const vars = flightVars({ x: -107, y: -116, scale: 0.2872 });
+    assert.equal(vars['--lb-dismiss-x'], '-107px');
+    assert.equal(vars['--lb-dismiss-y'], '-116px');
+    assert.equal(vars['--lb-scale'], '0.2872');
+    assert.equal(vars['--lb-stage-opacity'], '0');
+    assert.equal(vars['--lb-scrim-opacity'], '0');
+    assert.equal(vars['--lb-chrome-opacity'], '0');
 });
 
 test('the resting variables are the identity for both modes', () => {
