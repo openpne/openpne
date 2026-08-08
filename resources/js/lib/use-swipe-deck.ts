@@ -330,6 +330,7 @@ export function useSwipeDeck({
     const exiting = useRef(false);
     const endExit = useRef<(() => void) | null>(null);
     const endLeaving = useRef<(() => void) | null>(null);
+    const leavingToken = useRef<object | null>(null);
 
     const write = (vars: Record<string, string>, { dragging = false, leaving = false } = {}) => {
         for (const el of [contentRef.current, scrimRef.current]) {
@@ -348,21 +349,37 @@ export function useSwipeDeck({
 
     const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    /** Stop watching for a return to land. Says nothing about the flag — the caller owns that. */
+    const stopLeavingWatch = () => {
+        endLeaving.current?.();
+        endLeaving.current = null;
+        leavingToken.current = null;
+    };
+
     /**
      * The deck stays out of sight until the stage has actually finished travelling, not merely been
      * told where to go. Dropping the flag with the write would uncover the neighbours while the stage
      * is still shrunk on its way back, which is the very thing hiding them was for.
+     *
+     * Only the newest watch may drop the flag. One gesture can settle twice — a pinch aborts it, then
+     * the last finger lifting settles it again — and an older watch firing later would otherwise strip
+     * the flag off whatever gesture owns it by then.
      */
     const releaseLeavingWhenSettled = () => {
         const stage = stageRef.current;
-        const clear = () => {
-            endLeaving.current = null;
+        const token = {};
+        leavingToken.current = token;
+        const drop = () => {
+            if (leavingToken.current !== token) {
+                return;
+            }
+            stopLeavingWatch();
             for (const el of [contentRef.current, scrimRef.current]) {
                 el?.removeAttribute('data-lb-leaving');
             }
         };
         if (!stage || reducedMotion()) {
-            clear();
+            drop();
 
             return;
         }
@@ -370,24 +387,21 @@ export function useSwipeDeck({
             if (e.target !== stage || e.propertyName !== 'transform') {
                 return;
             }
-            stage.removeEventListener('transitionend', done);
-            clearTimeout(timer);
-            clear();
+            drop();
         };
         stage.addEventListener('transitionend', done);
-        const timer = setTimeout(() => {
-            stage.removeEventListener('transitionend', done);
-            clear();
-        }, EXIT_FALLBACK_MS);
+        const timer = setTimeout(drop, EXIT_FALLBACK_MS);
         endLeaving.current = () => {
             stage.removeEventListener('transitionend', done);
             clearTimeout(timer);
-            clear();
         };
     };
 
     const settle = () => {
         const leaving = contentRef.current?.hasAttribute('data-lb-leaving') ?? false;
+        // Cancel before re-arming, and re-assert the flag in the same write: a second settle would
+        // otherwise leave the first watch running with nothing holding its reference.
+        stopLeavingWatch();
         write({ ...IDENTITY_VARS }, { leaving });
         if (leaving) {
             releaseLeavingWhenSettled();
@@ -405,8 +419,7 @@ export function useSwipeDeck({
         }
         endExit.current?.();
         endExit.current = null;
-        endLeaving.current?.();
-        endLeaving.current = null;
+        stopLeavingWatch();
         exiting.current = false;
         gesture.current = null;
         settle();
@@ -418,6 +431,7 @@ export function useSwipeDeck({
             endExit.current = null;
             endLeaving.current?.();
             endLeaving.current = null;
+            leavingToken.current = null;
         },
         [],
     );
@@ -459,9 +473,10 @@ export function useSwipeDeck({
     const exit = (g: Gesture, displacement: number) => {
         exiting.current = true;
         const origin = originRect?.(index) ?? null;
+        const target = origin && origin.width > 0 && origin.height > 0 ? origin : null;
         const flight =
-            origin && g.imageRect && g.stageRect
-                ? flightTo(g.imageRect, origin, g.stageRect)
+            target && g.imageRect && g.stageRect
+                ? flightTo(g.imageRect, target, g.stageRect)
                 : flightOut(g.axis!, displacement, extentOf(g));
         write(flightVars(flight), { leaving: true });
 
@@ -512,7 +527,7 @@ export function useSwipeDeck({
             // into its slot — and takes the deck to that destination at once. Measuring first would
             // record a rect from the middle of that animation, and the picture would then fly home
             // from a place it was never at.
-            endLeaving.current?.();
+            stopLeavingWatch();
             write({ ...IDENTITY_VARS }, { dragging: true });
             gesture.current = {
                 startX: point.clientX,
