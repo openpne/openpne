@@ -206,6 +206,58 @@ html body[data-scroll-locked] {
 .lightbox-track {
     transform: translate3d(calc(var(--lb-index, 0) * -100% + var(--lb-drag-x, 0px)), 0, 0);
 }
+/* Closing is its own move on top of the deck's: the picture backs away and the page comes through.
+   It needs its own element because scale pivots on the element's centre, and the track is parked
+   -index*100% to the left — scaling that would zoom towards the first slide. */
+.lightbox-stage {
+    transform: translate3d(var(--lb-dismiss-x, 0px), var(--lb-dismiss-y, 0px), 0) scale(var(--lb-scale, 1));
+    opacity: var(--lb-stage-opacity, 1);
+}
+/* What leaves is one picture, not the deck it came from: with the stage shrinking, the neighbours
+   would otherwise come into view from the sides on the way out. */
+[data-lb-leaving] .lightbox-slide:not([data-active]) {
+    visibility: hidden;
+}
+.lightbox-scrim {
+    opacity: var(--lb-scrim-opacity, 1);
+}
+.lightbox-chrome {
+    opacity: var(--lb-chrome-opacity, 1);
+}
+.lightbox-track,
+.lightbox-stage,
+.lightbox-scrim,
+.lightbox-chrome {
+    transition-property: transform, opacity;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+/* The picture holds its opacity for most of the flight home and only fades at the end. The whole
+   point of the flight is that the eye can follow it to where the picture lives on the page, and the
+   shared easing is front-loaded enough that a plain fade would have it gone before it lands. The
+   last moments still fade, because what it lands on is a square crop of itself and cutting straight
+   from one to the other would pop. */
+.lightbox-stage {
+    transition-duration: 300ms, 120ms;
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1), linear;
+    transition-delay: 0ms, 180ms;
+}
+/* While a finger is down there is nothing to animate towards: the picture is wherever the finger
+   has put it, and easing into that position would just make it lag. */
+[data-lb-dragging] .lightbox-track,
+[data-lb-dragging] .lightbox-stage,
+[data-lb-dragging] .lightbox-chrome,
+[data-lb-dragging].lightbox-scrim {
+    transition-property: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .lightbox-track,
+    .lightbox-stage,
+    .lightbox-scrim,
+    .lightbox-chrome {
+        transition-property: none;
+    }
+}
 
 /* OpenPNE 3 rich-text decoration on the Modern surface (RichBody). Mirrors the Classic skin's
    span.op_* rules (opSkinBasicPlugin/css/main.css); op_color/op_font carry an inline style, so

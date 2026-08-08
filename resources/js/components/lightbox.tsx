@@ -1,7 +1,8 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
-import { useRef, type CSSProperties } from 'react';
+import { type CSSProperties } from 'react';
 import { useT } from '@/lib/i18n';
+import { useSwipeDeck } from '@/lib/use-swipe-deck';
 import { cn } from '@/lib/utils';
 
 interface LightboxImage {
@@ -25,6 +26,7 @@ export function Lightbox({
     onClose,
     onNavigate,
     restoreFocus,
+    originRect,
 }: {
     images: LightboxImage[];
     index: number | null;
@@ -32,9 +34,11 @@ export function Lightbox({
     onNavigate: (index: number) => void;
     /** Focus target for dismissal — the thumbnails are plain buttons, not Radix triggers. */
     restoreFocus?: () => void;
+    /** Where the shown image sits on the page below, so closing can hand it back. */
+    originRect?: (index: number) => DOMRect | null;
 }) {
     const t = useT();
-    const touchStart = useRef<{ x: number; y: number } | null>(null);
+    const deck = useSwipeDeck({ open: index !== null, index: index ?? 0, count: images.length, onNavigate, onClose, originRect });
 
     const hasPrev = index !== null && index > 0;
     const hasNext = index !== null && index < images.length - 1;
@@ -63,8 +67,9 @@ export function Lightbox({
             <DialogPrimitive.Portal>
                 {/* No backdrop-blur: a full-viewport backdrop-filter recomposites every frame, which
                     is the one thing a finger-tracking drag cannot afford. */}
-                <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/90" />
+                <DialogPrimitive.Overlay ref={deck.scrimRef} className="lightbox-scrim fixed inset-0 z-50 bg-black/90" />
                 <DialogPrimitive.Content
+                    ref={deck.contentRef}
                     aria-describedby={undefined}
                     onCloseAutoFocus={(e) => {
                         if (restoreFocus) {
@@ -79,51 +84,28 @@ export function Lightbox({
                             goNext();
                         }
                     }}
-                    onTouchStart={(e) => {
-                        // Drop the anchor on a second finger so a pinch-zoom never resolves as a swipe.
-                        const point = e.touches[0];
-                        touchStart.current = e.touches.length === 1 && point ? { x: point.clientX, y: point.clientY } : null;
-                    }}
-                    onTouchEnd={(e) => {
-                        const start = touchStart.current;
-                        touchStart.current = null;
-                        const touch = e.changedTouches[0];
-                        if (!start || !touch) {
-                            return;
-                        }
-                        const dx = touch.clientX - start.x;
-                        const dy = touch.clientY - start.y;
-                        // Horizontal dominance gate: a mostly-vertical drag stays a scroll, not a page turn.
-                        if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy)) {
-                            return;
-                        }
-                        if (dx < 0) {
-                            goNext();
-                        } else {
-                            goPrev();
-                        }
-                    }}
                     // Scrim-mounted, not a panel: every pixel the frame kept was one the image lost.
                     // `fixed inset-0` also retires the 100dvh arithmetic this replaces — on iOS a
                     // fixed inset resolves against the small viewport, and the URL bar cannot move
                     // while the dialog holds the scroll lock.
                     // The chrome heights are declared once here and read by the bar, the dots and the
                     // slide padding, so a tall image can never end up under either of them.
-                    // touch-action pan-y keeps horizontal pans ours (the swipe) while leaving vertical
-                    // scroll and pinch-zoom of the image to the browser.
+                    // touch-action pinch-zoom, with no pan: the browser keeps two-finger zoom and
+                    // hands over every one-finger pan, because a drag in any direction is ours —
+                    // sideways turns the page, up or down closes the viewer.
                     style={
                         {
                             '--lb-chrome-top': 'calc(3.5rem + env(safe-area-inset-top))',
                             '--lb-chrome-bottom': 'calc(2.5rem + env(safe-area-inset-bottom))',
                         } as CSSProperties
                     }
-                    className="fixed inset-0 z-50 touch-pan-y touch-pinch-zoom text-scrim-foreground outline-none"
+                    className="fixed inset-0 z-50 touch-pinch-zoom text-scrim-foreground outline-none"
                 >
                     <DialogPrimitive.Title className="sr-only">{t('Image')}</DialogPrimitive.Title>
 
                     {/* pointer-events-none so the gaps between the two controls stay part of the
                         scrim and still dismiss; each control opts back in. */}
-                    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[var(--lb-chrome-top)] items-center justify-between pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] pt-[env(safe-area-inset-top)]">
+                    <div className="lightbox-chrome pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[var(--lb-chrome-top)] items-center justify-between pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] pt-[env(safe-area-inset-top)]">
                         <DialogPrimitive.Close
                             aria-label={t('Close')}
                             className="pointer-events-auto flex size-10 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -142,30 +124,37 @@ export function Lightbox({
                         )}
                     </div>
 
-                    <div className="absolute inset-0 overflow-hidden">
-                        <div className="h-full w-full">
-                            <div
-                                style={{ '--lb-index': index ?? 0 } as CSSProperties}
-                                className="lightbox-track flex h-full w-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
-                            >
+                    <div {...deck.handlers} className="absolute inset-0 overflow-hidden">
+                        <div ref={deck.stageRef} className="lightbox-stage h-full w-full">
+                            <div style={{ '--lb-index': index ?? 0 } as CSSProperties} className="lightbox-track flex h-full w-full">
                                 {images.map((image, i) => (
                                     <div
                                         key={i}
                                         data-active={i === index ? '' : undefined}
                                         onClick={(e) => {
-                                            // Only the letterbox around the image dismisses; the image
-                                            // itself stays inert so a long-press or a zoom is not a
-                                            // race against closing.
-                                            if (e.target === e.currentTarget) {
-                                                onClose();
+                                            // Only the letterbox around the image dismisses.
+                                            if (e.target !== e.currentTarget) {
+                                                return;
                                             }
+                                            // A finger already has a way out — drag the picture aside —
+                                            // and tapping for it would race double-tap zoom and
+                                            // press-and-hold save. Anything else keeps click-outside,
+                                            // pen included: the drag is built on touch events, which a
+                                            // pen does not have to produce.
+                                            const pointerType = (e.nativeEvent as PointerEvent).pointerType;
+                                            if (pointerType === 'touch' || deck.draggedRecently()) {
+                                                return;
+                                            }
+                                            onClose();
                                         }}
-                                        // From sm up the wide side padding is the chevrons' own lane,
-                                        // so the image never runs under them. Below sm they overlap
+                                        // No side padding of its own: the picture runs to the screen
+                                        // edges, and only a landscape cutout pushes it in.
+                                        // From sm up the wide padding is the chevrons' own lane, so
+                                        // the image never runs under them. Below sm they overlap
                                         // instead: a cursor in a phone-width window would otherwise
                                         // spend a third of the width on two buttons, and a cursor has
                                         // no swipe to fall back on, so the arrows have to stay.
-                                        className="flex h-full w-full shrink-0 items-center justify-center pb-[var(--lb-chrome-bottom)] pt-[var(--lb-chrome-top)] pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] sm:pointer-fine:pl-[calc(4rem+env(safe-area-inset-left))] sm:pointer-fine:pr-[calc(4rem+env(safe-area-inset-right))]"
+                                        className="lightbox-slide flex h-full w-full shrink-0 items-center justify-center pb-[var(--lb-chrome-bottom)] pt-[var(--lb-chrome-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] sm:pointer-fine:pl-[calc(4rem+env(safe-area-inset-left))] sm:pointer-fine:pr-[calc(4rem+env(safe-area-inset-right))]"
                                     >
                                         <img
                                             src={image.url}
@@ -189,7 +178,7 @@ export function Lightbox({
                         centre. Past a handful of images this stops scaling — swap it back for the
                         number. The screen-reader readout is the sr-only text beside it. */}
                     {many && index !== null && (
-                        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex h-[var(--lb-chrome-bottom)] items-center justify-center pb-[env(safe-area-inset-bottom)]">
+                        <div className="lightbox-chrome pointer-events-none absolute inset-x-0 bottom-0 z-10 flex h-[var(--lb-chrome-bottom)] items-center justify-center pb-[env(safe-area-inset-bottom)]">
                             <span aria-live="polite" aria-atomic="true" className="sr-only">
                                 {index + 1} / {images.length}
                             </span>
@@ -215,7 +204,7 @@ export function Lightbox({
                                 onClick={goPrev}
                                 aria-disabled={!hasPrev}
                                 aria-label={t('Previous image')}
-                                className="absolute left-[calc(0.5rem+env(safe-area-inset-left))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
+                                className="lightbox-chrome absolute left-[calc(0.5rem+env(safe-area-inset-left))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
                             >
                                 <ChevronLeft className="size-6" aria-hidden />
                             </button>
@@ -224,7 +213,7 @@ export function Lightbox({
                                 onClick={goNext}
                                 aria-disabled={!hasNext}
                                 aria-label={t('Next image')}
-                                className="absolute right-[calc(0.5rem+env(safe-area-inset-right))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
+                                className="lightbox-chrome absolute right-[calc(0.5rem+env(safe-area-inset-right))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
                             >
                                 <ChevronRight className="size-6" aria-hidden />
                             </button>

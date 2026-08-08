@@ -19,6 +19,10 @@ export function ImageGrid({ images, size, className }: { images: GridImage[]; si
     const t = useT();
     const [openIndex, setOpenIndex] = useState<number | null>(null);
     const opener = useRef<HTMLButtonElement | null>(null);
+    // Where each picture sits on the page, so closing the viewer can put it back there rather than
+    // dropping it off an edge. The page is scroll-locked while the viewer is up, so a rect measured
+    // on the way out is still the rect the reader last saw.
+    const thumbs = useRef<(HTMLImageElement | null)[]>([]);
 
     if (images.length === 0) {
         return null;
@@ -39,7 +43,14 @@ export function ImageGrid({ images, size, className }: { images: GridImage[]; si
                             aria-haspopup="dialog"
                             className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                            <img src={image.thumbnailUrl} alt="" className={cn(size, 'rounded-md object-cover')} />
+                            <img
+                                ref={(el) => {
+                                    thumbs.current[i] = el;
+                                }}
+                                src={image.thumbnailUrl}
+                                alt=""
+                                className={cn(size, 'rounded-md object-cover')}
+                            />
                         </button>
                     </li>
                 ))}
@@ -50,6 +61,7 @@ export function ImageGrid({ images, size, className }: { images: GridImage[]; si
                 onClose={() => setOpenIndex(null)}
                 onNavigate={setOpenIndex}
                 restoreFocus={() => opener.current?.focus()}
+                originRect={(i) => thumbs.current[i]?.getBoundingClientRect() ?? null}
             />
         </>
     );
