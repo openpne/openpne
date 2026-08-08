@@ -11,6 +11,7 @@ use Illuminate\Support\ServiceProvider;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 use Intervention\Image\ImageManager;
+use InvalidArgumentException;
 
 class FilesServiceProvider extends ServiceProvider
 {
@@ -31,9 +32,17 @@ class FilesServiceProvider extends ServiceProvider
         $this->app->singleton(ImageManager::class, function (): ImageManager {
             // Both ship with intervention/image. imagick is the one worth choosing
             // deliberately: unlike GD it can convert an embedded colour profile.
-            $driver = match (config('openpne.images.driver')) {
+            //
+            // An unrecognised value throws rather than falling back to GD: a deployment
+            // that asked for a driver it does not get would run with different colour
+            // handling and never be told — a leftover `vips`, or a typo, would look like
+            // it took effect.
+            $driver = match ($configured = config('openpne.images.driver')) {
+                'gd' => GdDriver::class,
                 'imagick' => ImagickDriver::class,
-                default => GdDriver::class,
+                default => throw new InvalidArgumentException(
+                    "Unsupported openpne.images.driver [{$configured}]; expected 'gd' or 'imagick'.",
+                ),
             };
 
             // Nothing here renders animation (see StillImageDecoder), and skipping the
