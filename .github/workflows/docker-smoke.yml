@@ -49,6 +49,18 @@ jobs:
           echo "::error::login page did not return 200 within 5 minutes (last code: $code)"
           exit 1
 
+      # The image is only worth building if the extensions it exists to provide are
+      # actually loaded — a Dockerfile can install one and still not enable it.
+      - name: Assert the image loads its image-processing extensions
+        run: |
+          docker compose exec -T app php -r '
+            foreach (["gd", "imagick", "exif"] as $ext) {
+                if (!extension_loaded($ext)) {
+                    fwrite(STDERR, "$ext is not loaded\n");
+                    exit(1);
+                }
+            }'
+
       # The uid-mapping invariant from the compose design: nothing in the worktree
       # may end up owned by another user (root/www-data regressions).
       - name: Assert worktree ownership
