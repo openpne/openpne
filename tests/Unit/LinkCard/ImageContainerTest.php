@@ -100,7 +100,13 @@ class ImageContainerTest extends TestCase
 
     public function test_a_still_webp_is_a_safe_still(): void
     {
-        $this->assertTrue(ImageContainer::isSafeStill($this->webp($this->riffChunk('VP8 ', str_repeat("\x00", 16))), 'image/webp'));
+        // A real encode rather than a zero-filled chunk: the walk reads the canvas out of the
+        // bitstream header, so a synthetic payload proves nothing about the still case.
+        $gd = imagecreatetruecolor(40, 30);
+        ob_start();
+        imagewebp($gd, null, 80);
+
+        $this->assertTrue(ImageContainer::isSafeStill((string) ob_get_clean(), 'image/webp'));
     }
 
     public function test_an_animated_webp_behind_padding_is_refused(): void
