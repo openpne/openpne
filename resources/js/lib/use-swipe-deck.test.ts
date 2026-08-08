@@ -214,18 +214,18 @@ test('samples sharing a timestamp do not divide by zero', () => {
 
 test('a picture already sitting on its thumbnail has nowhere to fly', () => {
     const box = { x: 100, y: 100, width: 50, height: 50 };
-    assert.deepEqual(flightTo(box, box, { width: 400, height: 400 }), { x: 0, y: 0, scale: 1 });
+    assert.deepEqual(flightTo(box, box, { x: 0, y: 0, width: 400, height: 400 }), { x: 0, y: 0, scale: 1 });
 });
 
 test('the flight lands the picture centred on its thumbnail', () => {
     const from = { x: 0, y: 100, width: 200, height: 100 };
     const to = { x: 300, y: 300, width: 50, height: 50 };
-    const viewport = { width: 400, height: 400 };
-    const { x, y, scale } = flightTo(from, to, viewport);
+    const stage = { x: 0, y: 0, width: 400, height: 400 };
+    const { x, y, scale } = flightTo(from, to, stage);
 
     // Replay the transform the stage will apply and check where the picture's centre ends up.
-    const cx = viewport.width / 2;
-    const cy = viewport.height / 2;
+    const cx = stage.x + stage.width / 2;
+    const cy = stage.y + stage.height / 2;
     const landedX = cx + scale * (from.x + from.width / 2 - cx) + x;
     const landedY = cy + scale * (from.y + from.height / 2 - cy) + y;
     assert.equal(landedX, to.x + to.width / 2);
@@ -234,7 +234,7 @@ test('the flight lands the picture centred on its thumbnail', () => {
 
 test('the flight shrinks to fit inside the thumbnail, not to overflow it', () => {
     // A wide picture into a square crop: matching the width would still be taller than the box.
-    const { scale } = flightTo({ x: 0, y: 0, width: 390, height: 250 }, { x: 0, y: 0, width: 112, height: 112 }, { width: 390, height: 844 });
+    const { scale } = flightTo({ x: 0, y: 0, width: 390, height: 250 }, { x: 0, y: 0, width: 112, height: 112 }, { x: 0, y: 0, width: 390, height: 844 });
     // A tenth of a pixel of slack: the scale is rounded for a stable CSS string, and at these sizes
     // that rounding is worth more than an exact fit.
     assert.ok(scale * 390 <= 112.1, `width ${scale * 390}`);
@@ -242,7 +242,7 @@ test('the flight shrinks to fit inside the thumbnail, not to overflow it', () =>
 });
 
 test('a picture with no size does not divide by it', () => {
-    const flight = flightTo({ x: 0, y: 0, width: 0, height: 0 }, { x: 10, y: 10, width: 50, height: 50 }, { width: 400, height: 400 });
+    const flight = flightTo({ x: 0, y: 0, width: 0, height: 0 }, { x: 10, y: 10, width: 50, height: 50 }, { x: 0, y: 0, width: 400, height: 400 });
     assert.deepEqual(flight, { x: 0, y: 0, scale: 1 });
 });
 

@@ -204,20 +204,20 @@ export interface Rect {
 }
 
 /**
- * The transform that lands `from` exactly on `to`, expressed about the centre of a box of
- * `viewport` size — which is what the stage is, so this is what its own transform has to be.
+ * The transform that lands `from` exactly on `to`, expressed about the centre of `stage` — the
+ * element that will carry it, whose own box is the origin its transform pivots on.
  *
  * Scale takes whichever axis has to shrink further, so the picture ends up inside its thumbnail
  * rather than spilling past it: the thumbnail is a square crop of an image that is not square.
  */
-export function flightTo(from: Rect, to: Rect, viewport: { width: number; height: number }): { x: number; y: number; scale: number } {
-    if (from.width <= 0 || from.height <= 0) {
+export function flightTo(from: Rect, to: Rect, stage: Rect): { x: number; y: number; scale: number } {
+    if (from.width <= 0 || from.height <= 0 || to.width <= 0 || to.height <= 0) {
         return { x: 0, y: 0, scale: 1 };
     }
 
     const scale = Math.min(to.width / from.width, to.height / from.height);
-    const cx = viewport.width / 2;
-    const cy = viewport.height / 2;
+    const cx = stage.x + stage.width / 2;
+    const cy = stage.y + stage.height / 2;
     const fromCx = from.x + from.width / 2;
     const fromCy = from.y + from.height / 2;
     const toCx = to.x + to.width / 2;
@@ -287,6 +287,8 @@ interface Gesture {
     outward: number | null;
     /** Where the picture sat before this gesture moved it — the start of the flight home. */
     imageRect: Rect | null;
+    /** The stage's own box, which its transform pivots on. */
+    stageRect: Rect | null;
     samples: Sample[];
     aborted: boolean;
 }
@@ -327,6 +329,7 @@ export function useSwipeDeck({
     const draggedAt = useRef(0);
     const exiting = useRef(false);
     const endExit = useRef<(() => void) | null>(null);
+    const endLeaving = useRef<(() => void) | null>(null);
 
     const write = (vars: Record<string, string>, { dragging = false, leaving = false } = {}) => {
         for (const el of [contentRef.current, scrimRef.current]) {
@@ -343,7 +346,53 @@ export function useSwipeDeck({
         }
     };
 
-    const settle = () => write({ ...IDENTITY_VARS });
+    const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /**
+     * The deck stays out of sight until the stage has actually finished travelling, not merely been
+     * told where to go. Dropping the flag with the write would uncover the neighbours while the stage
+     * is still shrunk on its way back, which is the very thing hiding them was for.
+     */
+    const releaseLeavingWhenSettled = () => {
+        const stage = stageRef.current;
+        const clear = () => {
+            endLeaving.current = null;
+            for (const el of [contentRef.current, scrimRef.current]) {
+                el?.removeAttribute('data-lb-leaving');
+            }
+        };
+        if (!stage || reducedMotion()) {
+            clear();
+
+            return;
+        }
+        const done = (e: TransitionEvent) => {
+            if (e.target !== stage || e.propertyName !== 'transform') {
+                return;
+            }
+            stage.removeEventListener('transitionend', done);
+            clearTimeout(timer);
+            clear();
+        };
+        stage.addEventListener('transitionend', done);
+        const timer = setTimeout(() => {
+            stage.removeEventListener('transitionend', done);
+            clear();
+        }, EXIT_FALLBACK_MS);
+        endLeaving.current = () => {
+            stage.removeEventListener('transitionend', done);
+            clearTimeout(timer);
+            clear();
+        };
+    };
+
+    const settle = () => {
+        const leaving = contentRef.current?.hasAttribute('data-lb-leaving') ?? false;
+        write({ ...IDENTITY_VARS }, { leaving });
+        if (leaving) {
+            releaseLeavingWhenSettled();
+        }
+    };
 
     const activeImage = () => stageRef.current?.querySelector<HTMLImageElement>('[data-active] img') ?? null;
 
@@ -356,6 +405,8 @@ export function useSwipeDeck({
         }
         endExit.current?.();
         endExit.current = null;
+        endLeaving.current?.();
+        endLeaving.current = null;
         exiting.current = false;
         gesture.current = null;
         settle();
@@ -365,6 +416,8 @@ export function useSwipeDeck({
         () => () => {
             endExit.current?.();
             endExit.current = null;
+            endLeaving.current?.();
+            endLeaving.current = null;
         },
         [],
     );
@@ -406,15 +459,14 @@ export function useSwipeDeck({
     const exit = (g: Gesture, displacement: number) => {
         exiting.current = true;
         const origin = originRect?.(index) ?? null;
-        const content = contentRef.current;
         const flight =
-            origin && g.imageRect && content
-                ? flightTo(g.imageRect, origin, { width: content.clientWidth, height: content.clientHeight })
+            origin && g.imageRect && g.stageRect
+                ? flightTo(g.imageRect, origin, g.stageRect)
                 : flightOut(g.axis!, displacement, extentOf(g));
         write(flightVars(flight), { leaving: true });
 
         const stage = stageRef.current;
-        if (!stage || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        if (!stage || reducedMotion()) {
             onClose();
 
             return;
@@ -456,6 +508,12 @@ export function useSwipeDeck({
             }
             const point = e.touches[0]!;
             const content = contentRef.current;
+            // A touch interrupts whatever is still moving — a snapback easing home, a page settling
+            // into its slot — and takes the deck to that destination at once. Measuring first would
+            // record a rect from the middle of that animation, and the picture would then fly home
+            // from a place it was never at.
+            endLeaving.current?.();
+            write({ ...IDENTITY_VARS }, { dragging: true });
             gesture.current = {
                 startX: point.clientX,
                 startY: point.clientY,
@@ -464,9 +522,8 @@ export function useSwipeDeck({
                 axis: null,
                 mode: null,
                 outward: null,
-                // Measured now, while the stage is still at rest: read mid-drag it would report where
-                // the drag has already put the picture, not where it started.
                 imageRect: activeImage()?.getBoundingClientRect() ?? null,
+                stageRect: stageRef.current?.getBoundingClientRect() ?? null,
                 samples: [],
                 aborted: false,
             };
