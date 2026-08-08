@@ -8,8 +8,8 @@ use App\Files\FileStorage;
 use App\Models\File;
 use App\Observers\FileObserver;
 use Illuminate\Support\ServiceProvider;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
-use Intervention\Image\Drivers\Vips\Driver;
 use Intervention\Image\ImageManager;
 
 class FilesServiceProvider extends ServiceProvider
@@ -29,13 +29,11 @@ class FilesServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ImageManager::class, function (): ImageManager {
-            // gd (default) and imagick ship with intervention/image; vips additionally
-            // needs the intervention/image-driver-vips package + the libvips system
-            // library, and resolves with a clear error here if that is missing.
+            // Both ship with intervention/image. imagick is the one worth choosing
+            // deliberately: unlike GD it can convert an embedded colour profile.
             $driver = match (config('openpne.images.driver')) {
                 'imagick' => ImagickDriver::class,
-                'vips' => Driver::class,
-                default => \Intervention\Image\Drivers\Gd\Driver::class,
+                default => GdDriver::class,
             };
 
             // Nothing here renders animation (see StillImageDecoder), and skipping the
