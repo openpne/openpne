@@ -39,8 +39,8 @@
     "suggest": {
         "ext-exif": "Required for thumbnails of rotated photos to render upright: intervention/image reads EXIF Orientation only when exif_read_data exists.",
         "ext-gd": "Required to generate image thumbnails with the default GD driver (openpne.images.driver=gd).",
-        "ext-imagick": "Required to generate image thumbnails with the ImageMagick driver (openpne.images.driver=imagick).",
-        "intervention/image-driver-vips": "High-performance, low-memory thumbnail generation with the libvips driver (openpne.images.driver=vips); also needs ext-ffi and the libvips system library."
+        "ext-imagick": "Required for the ImageMagick driver (openpne.images.driver=imagick), the only driver that can convert an embedded colour profile: GD drops the profile and leaves the numbers, so a wide-gamut photo is then read as sRGB.",
+        "intervention/image-driver-vips": "High-performance, low-memory thumbnail generation with the libvips driver (openpne.images.driver=vips); also needs the libvips system library and ext-ffi — note that PHP disables FFI outside CLI unless ffi.enable is changed or the binding is created in opcache.preload, so this driver does not work in a web request out of the box."
     },
     "autoload": {
         "psr-4": {
