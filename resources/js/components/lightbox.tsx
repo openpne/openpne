@@ -35,7 +35,7 @@ export function Lightbox({
     restoreFocus?: () => void;
 }) {
     const t = useT();
-    const deck = useSwipeDeck({ index: index ?? 0, count: images.length, onNavigate, onClose });
+    const deck = useSwipeDeck({ open: index !== null, index: index ?? 0, count: images.length, onNavigate, onClose });
 
     const hasPrev = index !== null && index > 0;
     const hasNext = index !== null && index < images.length - 1;
@@ -122,24 +122,24 @@ export function Lightbox({
                     </div>
 
                     <div {...deck.handlers} className="absolute inset-0 overflow-hidden">
-                        <div className="lightbox-stage h-full w-full">
+                        <div ref={deck.stageRef} className="lightbox-stage h-full w-full">
                             <div style={{ '--lb-index': index ?? 0 } as CSSProperties} className="lightbox-track flex h-full w-full">
                                 {images.map((image, i) => (
                                     <div
                                         key={i}
                                         data-active={i === index ? '' : undefined}
                                         onClick={(e) => {
-                                            // Only the letterbox around the image dismisses, and never
-                                            // the click a swipe leaves behind.
-                                            if (e.target !== e.currentTarget || deck.dragged()) {
+                                            // Only the letterbox around the image dismisses.
+                                            if (e.target !== e.currentTarget) {
                                                 return;
                                             }
-                                            // A finger already has a way out — drag the picture aside
-                                            // — and tapping for it would race double-tap zoom and
-                                            // press-and-hold save. A cursor has neither, so it keeps
-                                            // click-outside.
+                                            // A finger already has a way out — drag the picture aside —
+                                            // and tapping for it would race double-tap zoom and
+                                            // press-and-hold save. Anything else keeps click-outside,
+                                            // pen included: the drag is built on touch events, which a
+                                            // pen does not have to produce.
                                             const pointerType = (e.nativeEvent as PointerEvent).pointerType;
-                                            if (pointerType === 'touch' || pointerType === 'pen') {
+                                            if (pointerType === 'touch' || deck.draggedRecently()) {
                                                 return;
                                             }
                                             onClose();

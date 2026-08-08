@@ -34,8 +34,16 @@ const FLICK_MIN_PX = 16;
 const PAGE_MIN_PX = 48;
 const PAGE_MAX_PX = 120;
 const PAGE_FRACTION = 0.2;
-/** Long enough to read as leaving, short enough not to sit between the reader and the page. */
-const EXIT_MS = 200;
+/**
+ * Backstop for the exit, which normally ends on the stage's transitionend. Comfortably longer than
+ * the transition in app.css so it only ever fires when that event is lost.
+ */
+const EXIT_FALLBACK_MS = 600;
+/**
+ * How long after a drag the click it synthesises can still arrive. Bounded rather than held until
+ * the next touch: on a device with both, a real cursor click has to keep working.
+ */
+const SYNTHETIC_CLICK_MS = 700;
 
 /** 4 decimals: enough for a smooth ramp, few enough that equal inputs give byte-equal strings. */
 const round = (n: number) => Math.round(n * 10000) / 10000;
@@ -66,6 +74,27 @@ export function gestureMode(axis: DragAxis, dx: number, index: number, count: nu
     const pastEnd = dx < 0 && index === count - 1;
 
     return pastStart || pastEnd ? 'dismiss' : 'page';
+}
+
+/**
+ * How much of a drag counts, once the direction it committed to is taken into account.
+ *
+ * A sideways dismiss is the paging gesture run off the end of the deck, so it only means anything
+ * in the direction it left by: at the first image you leave to the right, and dragging back left
+ * from there is heading for an image, not for the exit. Clamping at the origin makes that dead
+ * travel — the picture holds still — rather than a second exit in the wrong direction.
+ *
+ * A vertical dismiss has no such direction: up and down are both ways out, so `outward` is null and
+ * the whole drag counts.
+ */
+export function outwardDisplacement(displacement: number, outward: number | null): number {
+    if (outward === null) {
+        return displacement;
+    }
+
+    const travelled = Math.max(0, displacement * outward);
+
+    return travelled === 0 ? 0 : travelled * outward;
 }
 
 /** How far along the closing gesture is, 0 to 1. */
@@ -186,9 +215,11 @@ export interface SwipeDeck {
     contentRef: RefObject<HTMLDivElement | null>;
     /** The scrim is a portal sibling, not a descendant, so it is written to separately. */
     scrimRef: RefObject<HTMLDivElement | null>;
+    /** The element whose transform the exit rides out on. */
+    stageRef: RefObject<HTMLDivElement | null>;
     handlers: Pick<DOMAttributes<HTMLElement>, 'onTouchStart' | 'onTouchMove' | 'onTouchEnd' | 'onTouchCancel'>;
-    /** Whether the gesture that just ended moved — the click it synthesises must not dismiss. */
-    dragged: () => boolean;
+    /** Whether the click about to be handled is the one a finger's drag left behind. */
+    draggedRecently: () => boolean;
 }
 
 interface Gesture {
@@ -198,6 +229,8 @@ interface Gesture {
     height: number;
     axis: DragAxis | null;
     mode: GestureMode | null;
+    /** Sign of the direction a sideways dismiss left the deck by; null when there isn't one. */
+    outward: number | null;
     samples: Sample[];
     aborted: boolean;
 }
@@ -216,11 +249,13 @@ interface Gesture {
  * not available — and with that touch-action it is not needed.
  */
 export function useSwipeDeck({
+    open,
     index,
     count,
     onNavigate,
     onClose,
 }: {
+    open: boolean;
     index: number;
     count: number;
     onNavigate: (index: number) => void;
@@ -228,18 +263,11 @@ export function useSwipeDeck({
 }): SwipeDeck {
     const contentRef = useRef<HTMLDivElement | null>(null);
     const scrimRef = useRef<HTMLDivElement | null>(null);
+    const stageRef = useRef<HTMLDivElement | null>(null);
     const gesture = useRef<Gesture | null>(null);
-    const draggedRef = useRef(false);
-    const exitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    useEffect(
-        () => () => {
-            if (exitTimer.current !== null) {
-                clearTimeout(exitTimer.current);
-            }
-        },
-        [],
-    );
+    const draggedAt = useRef(0);
+    const exiting = useRef(false);
+    const endExit = useRef<(() => void) | null>(null);
 
     const write = (vars: Record<string, string>, dragging: boolean) => {
         for (const el of [contentRef.current, scrimRef.current]) {
@@ -255,6 +283,28 @@ export function useSwipeDeck({
 
     const settle = () => write({ ...IDENTITY_VARS }, false);
 
+    // Whatever closed the viewer — the exit below, Escape, the close button — lands here, and it is
+    // the only place the exit is torn down. Without it a close during the exit would leave its timer
+    // armed, and a viewer reopened before that timer fired would be shut by the previous one.
+    useEffect(() => {
+        if (open) {
+            return;
+        }
+        endExit.current?.();
+        endExit.current = null;
+        exiting.current = false;
+        gesture.current = null;
+        settle();
+    });
+
+    useEffect(
+        () => () => {
+            endExit.current?.();
+            endExit.current = null;
+        },
+        [],
+    );
+
     const abort = () => {
         if (gesture.current) {
             gesture.current.aborted = true;
@@ -264,19 +314,61 @@ export function useSwipeDeck({
 
     const extentOf = (g: Gesture) => (g.axis === 'y' ? g.height : g.width) * DISMISS_EXTENT;
 
+    const travelled = (g: Gesture, displacement: number) => outwardDisplacement(displacement, g.outward);
+
     const paint = (g: Gesture, displacement: number) => {
         if (g.mode === 'page') {
             write(pageVars(displacement), true);
 
             return;
         }
-        const visual = dismissVisual(dismissProgress(displacement, extentOf(g)));
-        write(dismissVars(g.axis!, displacement, visual), true);
+        const effective = travelled(g, displacement);
+        const visual = dismissVisual(dismissProgress(effective, extentOf(g)));
+        write(dismissVars(g.axis!, effective, visual), true);
+    };
+
+    /**
+     * Carry the drag the rest of the way rather than cutting to nothing: the reader has been watching
+     * the image shrink and the page come through, and an instant unmount throws that away at the
+     * moment it resolves. The animation's own end is what closes; the timer is only there for when
+     * that event never arrives, and reduced motion skips the wait entirely.
+     */
+    const exit = (axis: DragAxis, endpoint: number) => {
+        exiting.current = true;
+        write(dismissVars(axis, endpoint, dismissVisual(1)), false);
+
+        const stage = stageRef.current;
+        if (!stage || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            onClose();
+
+            return;
+        }
+
+        const done = (e: TransitionEvent) => {
+            if (e.propertyName !== 'transform') {
+                return;
+            }
+            endExit.current?.();
+            endExit.current = null;
+            onClose();
+        };
+        stage.addEventListener('transitionend', done);
+        const timer = setTimeout(() => {
+            endExit.current?.();
+            endExit.current = null;
+            onClose();
+        }, EXIT_FALLBACK_MS);
+        endExit.current = () => {
+            stage.removeEventListener('transitionend', done);
+            clearTimeout(timer);
+        };
     };
 
     const handlers: SwipeDeck['handlers'] = {
         onTouchStart: (e) => {
-            draggedRef.current = false;
+            if (exiting.current) {
+                return;
+            }
             if (e.touches.length !== 1) {
                 abort();
 
@@ -294,6 +386,7 @@ export function useSwipeDeck({
                 height: content?.clientHeight ?? 0,
                 axis: null,
                 mode: null,
+                outward: null,
                 samples: [],
                 aborted: false,
             };
@@ -301,7 +394,7 @@ export function useSwipeDeck({
 
         onTouchMove: (e) => {
             const g = gesture.current;
-            if (!g || g.aborted) {
+            if (!g || g.aborted || exiting.current) {
                 return;
             }
             // A second finger means a pinch. Dropping the anchor is not enough: the stage, scrim and
@@ -320,8 +413,9 @@ export function useSwipeDeck({
                     return;
                 }
                 g.mode = gestureMode(g.axis, dx, index, count);
+                g.outward = g.mode === 'dismiss' && g.axis === 'x' ? Math.sign(dx) : null;
             }
-            draggedRef.current = true;
+            draggedAt.current = performance.now();
             const displacement = g.axis === 'x' ? dx : dy;
             g.samples.push({ s: displacement, t: e.timeStamp });
             if (g.samples.length > 8) {
@@ -337,11 +431,12 @@ export function useSwipeDeck({
             }
             const g = gesture.current;
             gesture.current = null;
-            if (!g || g.aborted || !g.axis || !g.mode) {
+            if (!g || g.aborted || !g.axis || !g.mode || exiting.current) {
                 settle();
 
                 return;
             }
+            draggedAt.current = performance.now();
             const touch = e.changedTouches[0];
             // The release point, not the last move: the final stretch of a fast drag arrives only
             // here, and its timestamp is what tells a throw apart from a drag that stopped and held.
@@ -362,25 +457,29 @@ export function useSwipeDeck({
                 return;
             }
 
+            const effective = travelled(g, displacement);
             const extent = extentOf(g);
-            if (!shouldDismiss(dismissProgress(displacement, extent), velocity, displacement)) {
+            if (!shouldDismiss(dismissProgress(effective, extent), velocity, effective)) {
                 settle();
 
                 return;
             }
-            // Carry the drag the rest of the way rather than cutting to nothing: the reader has been
-            // watching the image shrink and the page come through, and an instant unmount throws that
-            // away at the moment it resolves.
-            const sign = displacement < 0 ? -1 : 1;
-            write(dismissVars(g.axis, sign * extent * 2, dismissVisual(1)), false);
-            exitTimer.current = setTimeout(onClose, EXIT_MS);
+            exit(g.axis, (effective < 0 ? -1 : 1) * extent * 2);
         },
 
         onTouchCancel: () => {
             gesture.current = null;
+            // A cancelled touch synthesises no click, so nothing needs suppressing afterwards.
+            draggedAt.current = 0;
             settle();
         },
     };
 
-    return { contentRef, scrimRef, handlers, dragged: () => draggedRef.current };
+    return {
+        contentRef,
+        scrimRef,
+        stageRef,
+        handlers,
+        draggedRecently: () => draggedAt.current > 0 && performance.now() - draggedAt.current < SYNTHETIC_CLICK_MS,
+    };
 }

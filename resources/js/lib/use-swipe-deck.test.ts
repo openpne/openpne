@@ -6,6 +6,7 @@ import {
     dismissVisual,
     gestureMode,
     lockAxis,
+    outwardDisplacement,
     pageVars,
     shouldDismiss,
     snapTarget,
@@ -59,6 +60,29 @@ test('a lone image is off the end in both directions', () => {
 test('a vertical drag closes wherever it starts from', () => {
     assert.equal(gestureMode('y', 0, 1, 3), 'dismiss');
     assert.equal(gestureMode('y', 0, 0, 3), 'dismiss');
+});
+
+test('a vertical dismiss counts travel in both directions', () => {
+    assert.equal(outwardDisplacement(120, null), 120);
+    assert.equal(outwardDisplacement(-120, null), -120);
+});
+
+test('a sideways dismiss only counts travel the way it left the deck', () => {
+    assert.equal(outwardDisplacement(120, 1), 120);
+    assert.equal(outwardDisplacement(-120, 1), 0, 'heading back towards the images is not heading out');
+    assert.equal(outwardDisplacement(-120, -1), -120);
+    assert.equal(outwardDisplacement(120, -1), 0);
+});
+
+test('reversing a sideways dismiss past the origin closes nothing', () => {
+    // Off the first image to the right, then dragged well back to the left: the picture holds at the
+    // origin, nothing previews a close, and the release has no travel to commit.
+    const effective = outwardDisplacement(-160, 1);
+    const progress = dismissProgress(effective, 253);
+    assert.equal(effective, 0);
+    assert.equal(progress, 0);
+    assert.deepEqual(dismissVisual(progress), { scale: 1, scrimOpacity: 1, chromeOpacity: 1 });
+    assert.equal(shouldDismiss(progress, -1.5, effective), false, 'a fast reversal is still a reversal');
 });
 
 test('dismiss progress runs from nothing to saturated', () => {
