@@ -195,16 +195,21 @@ export function Lightbox({
 
                     {/* Only where there is a pointer to aim: a touch device turns pages by swiping, and
                         a viewport-width rule would have put chevrons back on a phone held sideways.
+                        The chrome fade belongs on this wrapper, not on the buttons: an opacity of
+                        their own is how an end of the deck reads as an end, and one element cannot
+                        carry both.
                         aria-disabled, not disabled: a focused button that turns disabled drops focus
-                        to body, which would kill arrow-key navigation at either end. */}
+                        to body, which would kill arrow-key navigation at either end — measured, and
+                        the same is true of hiding it. So the unusable side stays put and says so by
+                        losing its button: no fill, and faint enough not to invite the click. */}
                     {many && (
-                        <>
+                        <div className="lightbox-chrome pointer-events-none absolute inset-0">
                             <button
                                 type="button"
                                 onClick={goPrev}
                                 aria-disabled={!hasPrev}
                                 aria-label={t('Previous image')}
-                                className="lightbox-chrome absolute left-[calc(0.5rem+env(safe-area-inset-left))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
+                                className="left-[calc(0.5rem+env(safe-area-inset-left))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:opacity-25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
                             >
                                 <ChevronLeft className="size-6" aria-hidden />
                             </button>
@@ -213,11 +218,11 @@ export function Lightbox({
                                 onClick={goNext}
                                 aria-disabled={!hasNext}
                                 aria-label={t('Next image')}
-                                className="lightbox-chrome absolute right-[calc(0.5rem+env(safe-area-inset-right))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
+                                className="right-[calc(0.5rem+env(safe-area-inset-right))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:opacity-25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
                             >
                                 <ChevronRight className="size-6" aria-hidden />
                             </button>
-                        </>
+                        </div>
                     )}
                 </DialogPrimitive.Content>
             </DialogPrimitive.Portal>
