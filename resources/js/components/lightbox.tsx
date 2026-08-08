@@ -201,7 +201,9 @@ export function Lightbox({
                         aria-disabled, not disabled: a focused button that turns disabled drops focus
                         to body, which would kill arrow-key navigation at either end — measured, and
                         the same is true of hiding it. So the unusable side stays put and says so by
-                        losing its button: no fill, and faint enough not to invite the click. */}
+                        losing its button: no fill, and an arrow faint enough not to invite the click.
+                        Faint by ink, never by the element's opacity — that would take the focus ring
+                        down with it, on the one button that has to stay focusable. */}
                     {many && (
                         <div className="lightbox-chrome pointer-events-none absolute inset-0">
                             <button
@@ -209,7 +211,7 @@ export function Lightbox({
                                 onClick={goPrev}
                                 aria-disabled={!hasPrev}
                                 aria-label={t('Previous image')}
-                                className="left-[calc(0.5rem+env(safe-area-inset-left))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:opacity-25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
+                                className="left-[calc(0.5rem+env(safe-area-inset-left))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
                             >
                                 <ChevronLeft className="size-6" aria-hidden />
                             </button>
@@ -218,7 +220,7 @@ export function Lightbox({
                                 onClick={goNext}
                                 aria-disabled={!hasNext}
                                 aria-label={t('Next image')}
-                                className="right-[calc(0.5rem+env(safe-area-inset-right))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:opacity-25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
+                                className="right-[calc(0.5rem+env(safe-area-inset-right))] pointer-events-auto absolute top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:bg-transparent aria-disabled:text-scrim-foreground/25 aria-disabled:hover:bg-transparent pointer-fine:flex sm:size-12"
                             >
                                 <ChevronRight className="size-6" aria-hidden />
                             </button>
