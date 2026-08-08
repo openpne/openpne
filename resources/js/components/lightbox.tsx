@@ -143,7 +143,7 @@ export function Lightbox({
                     </div>
 
                     <div className="absolute inset-0 overflow-hidden">
-                        <div className="lightbox-stage h-full w-full">
+                        <div className="h-full w-full">
                             <div
                                 style={{ '--lb-index': index ?? 0 } as CSSProperties}
                                 className="lightbox-track flex h-full w-full transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
@@ -160,11 +160,11 @@ export function Lightbox({
                                                 onClose();
                                             }
                                         }}
-                                        // The wide side padding is the chevrons' lane, so the image
-                                        // never sits under them. Only from sm up: a fine pointer in a
-                                        // phone-width window would otherwise spend a third of the
-                                        // width on two buttons, and there overlapping them is the
-                                        // lesser harm.
+                                        // From sm up the wide side padding is the chevrons' own lane,
+                                        // so the image never runs under them. Below sm they overlap
+                                        // instead: a cursor in a phone-width window would otherwise
+                                        // spend a third of the width on two buttons, and a cursor has
+                                        // no swipe to fall back on, so the arrows have to stay.
                                         className="flex h-full w-full shrink-0 items-center justify-center pb-[var(--lb-chrome-bottom)] pt-[var(--lb-chrome-top)] pl-[calc(0.5rem+env(safe-area-inset-left))] pr-[calc(0.5rem+env(safe-area-inset-right))] sm:pointer-fine:pl-[calc(4rem+env(safe-area-inset-left))] sm:pointer-fine:pr-[calc(4rem+env(safe-area-inset-right))]"
                                     >
                                         <img
@@ -215,7 +215,7 @@ export function Lightbox({
                                 onClick={goPrev}
                                 aria-disabled={!hasPrev}
                                 aria-label={t('Previous image')}
-                                className="absolute left-[calc(0.5rem+env(safe-area-inset-left))] top-1/2 hidden size-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex"
+                                className="absolute left-[calc(0.5rem+env(safe-area-inset-left))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
                             >
                                 <ChevronLeft className="size-6" aria-hidden />
                             </button>
@@ -224,7 +224,7 @@ export function Lightbox({
                                 onClick={goNext}
                                 aria-disabled={!hasNext}
                                 aria-label={t('Next image')}
-                                className="absolute right-[calc(0.5rem+env(safe-area-inset-right))] top-1/2 hidden size-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex"
+                                className="absolute right-[calc(0.5rem+env(safe-area-inset-right))] top-1/2 hidden size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-scrim-foreground transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-40 aria-disabled:hover:bg-black/40 pointer-fine:flex sm:size-12"
                             >
                                 <ChevronRight className="size-6" aria-hidden />
                             </button>

@@ -196,21 +196,15 @@ html body[data-scroll-locked] {
     margin-right: 0 !important;
 }
 
-/* Lightbox transforms. The formulas live here, in CSS, so that React and the gesture code never
-   write the same DOM property: React sets --lb-index (derived from the shown index) and the gesture
-   hook sets the drag deltas. Sharing style.transform instead would make the code
-   depend on React DOM only writing changed style keys, which is an implementation detail, not a
-   contract. Updating a custom property still recomputes transform, so `transition: transform`
-   interpolates as usual.
-   The track's % resolves against the track's own border-box width, which is why it must stay w-full
-   (a w-max/w-fit track would measure 300% and land three slides off). */
+/* The lightbox deck's position. The formula lives here, in CSS, so that React and the gesture code
+   never write the same DOM property: React sets --lb-index (the shown slide) and the drag sets
+   --lb-drag-x. Sharing style.transform instead would depend on React DOM only writing changed style
+   keys, which is an implementation detail, not a contract. A custom property still recomputes
+   transform, so transition: transform interpolates as usual.
+   The % resolves against the track's own border-box width, which is why it must stay w-full: a
+   w-max/w-fit track would measure 300% and land three slides off. */
 .lightbox-track {
     transform: translate3d(calc(var(--lb-index, 0) * -100% + var(--lb-drag-x, 0px)), 0, 0);
-}
-/* Separate from the track because scale needs the viewport's centre as its origin: the track is
-   shifted by -index*100%, so scaling it would pivot around slide 0. */
-.lightbox-stage {
-    transform: translate3d(var(--lb-dismiss-x, 0px), var(--lb-dismiss-y, 0px), 0) scale(var(--lb-scale, 1));
 }
 
 /* OpenPNE 3 rich-text decoration on the Modern surface (RichBody). Mirrors the Classic skin's
