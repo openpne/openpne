@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { shouldReconcile, urlBase64ToUint8Array } from './push.ts';
+import { reconcileOutcome, shouldReconcile, urlBase64ToUint8Array } from './push.ts';
 
 // A real base64url VAPID public key: an uncompressed P-256 point, so 65 bytes leading with 0x04. This
 // exact string carries both base64url-only characters (`-` and `_`) and needs one `=` of padding.
@@ -49,4 +49,25 @@ test('POST: the endpoint differs (a new subscription on this device)', () => {
 
 test('POST: the marker is older than the TTL (a cap-pruned row self-heals)', () => {
     assert.equal(shouldReconcile(MARKER, MARKER.endpoint, MARKER.memberId, NOW + TTL + 1, TTL), true);
+});
+
+// reconcileOutcome decides what a reconcile POST's status does to the local subscription: a 2xx
+// confirms it, a 429/5xx/(network error, handled as 'keep' by the caller) is a transient outage that
+// must not unsubscribe the member, and only a definitive 4xx refuses the rebind and fails closed.
+test('confirm: any 2xx is the rebind stored', () => {
+    for (const status of [200, 201, 204]) {
+        assert.equal(reconcileOutcome(status), 'confirm');
+    }
+});
+
+test('keep: a 429 or any 5xx is transient, never an unsubscribe', () => {
+    for (const status of [429, 500, 502, 503, 504]) {
+        assert.equal(reconcileOutcome(status), 'keep');
+    }
+});
+
+test('unsubscribe: a definitive 4xx (auth/CSRF/validation/gone) refuses the rebind', () => {
+    for (const status of [400, 401, 403, 404, 419, 422]) {
+        assert.equal(reconcileOutcome(status), 'unsubscribe');
+    }
 });

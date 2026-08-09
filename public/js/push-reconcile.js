@@ -9,12 +9,13 @@
  * minute of browsing and, failing closed on that 429, unsubscribe the member's own device. So the POST
  * fires only on an ownership transition (no marker, a different member/endpoint, or a stale marker),
  * mirroring shouldReconcile in resources/js/lib/push.ts — push.test.ts is the reference for this
- * predicate and the 429-is-transient / non-2xx-fails-closed handling; keep the two identical.
+ * predicate and for reconcileOutcome; keep the two identical.
  *
- * Fail closed on a *rejected* rebind (a non-2xx that is not a 429, or a network error with the
- * subscription in hand): unsubscribe locally so the prior owner's push can no longer land. A 429 is
- * rate-limiting, not rejection — keep the subscription and retry on the next navigation. Never
- * registers a worker — Classic only reconciles or invalidates a subscription that already exists.
+ * Fail closed only on a *refused* rebind — a definitive 4xx (reconcileOutcome): unsubscribe locally so
+ * the prior owner's push can no longer land. A 429, a 5xx or a dropped request is the server not
+ * answering rather than refusing, so keep the subscription and retry on the next navigation — a
+ * transient outage must not unsubscribe a member's own device. Never registers a worker — Classic only
+ * reconciles or invalidates a subscription that already exists.
  */
 (function () {
     'use strict';
@@ -38,6 +39,17 @@
             return true;
         }
         return !(marker.endpoint === endpoint && marker.memberId === memberId && now - marker.at < TTL_MS);
+    }
+
+    // Mirrors reconcileOutcome in resources/js/lib/push.ts (push.test.ts pins the cases).
+    function reconcileOutcome(status) {
+        if (status >= 200 && status < 300) {
+            return 'confirm';
+        }
+        if (status === 429 || status >= 500) {
+            return 'keep';
+        }
+        return 'unsubscribe';
     }
 
     function readBinding() {
@@ -91,20 +103,21 @@
                     body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
                 })
                     .then(function (res) {
-                        if (res.ok) {
+                        var outcome = reconcileOutcome(res.status);
+                        if (outcome === 'confirm') {
                             writeBinding({ endpoint: sub.endpoint, memberId: memberId, at: Date.now() });
                             return;
                         }
-                        if (res.status === 429) {
-                            return; // transient: marker unwritten, so the next navigation retries
+                        if (outcome === 'keep') {
+                            return; // transient (429/5xx): marker unwritten, so the next navigation retries
                         }
-                        throw new Error('rebind rejected'); // a non-2xx (non-429) is unconfirmed, same as a throw
+                        // Definitive 4xx: the reclaim was refused, so invalidate the endpoint.
+                        clearBinding();
+                        return sub.unsubscribe().catch(function () {});
                     })
                     .catch(function () {
-                        // Rebind rejected (non-429 non-2xx, or a network error) with the handle in hand:
-                        // invalidate the endpoint so the prior owner's push dies. 429 returned above.
-                        clearBinding();
-                        sub.unsubscribe().catch(function () {});
+                        // A dropped request is the server not answering, not refusing — keep the
+                        // subscription and let the next navigation retry, the same as a 429 or 5xx.
                     });
             })
             .catch(function () {

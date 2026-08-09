@@ -138,6 +138,22 @@ export function shouldReconcile(
     return !(marker.endpoint === endpoint && marker.memberId === memberId && now - marker.at < ttl);
 }
 
+/**
+ * What a reconcile POST's status means for the local subscription. A 2xx is the rebind confirmed. A
+ * 429 or any 5xx is the server not answering, not refusing — the binding may well be fine, so keep it
+ * and let the next navigation retry. Only a definitive 4xx (auth, CSRF, validation, unconfigured) is
+ * the reclaim refused, which fails closed. Pure so push.test.ts pins it; the Classic script mirrors it.
+ */
+export function reconcileOutcome(status: number): 'confirm' | 'keep' | 'unsubscribe' {
+    if (status >= 200 && status < 300) {
+        return 'confirm';
+    }
+    if (status === 429 || status >= 500) {
+        return 'keep';
+    }
+    return 'unsubscribe';
+}
+
 /** Reads the binding marker, degrading a blocked/broken store (private mode throws) to "no marker". */
 function readBinding(): PushBinding | null {
     try {
@@ -174,13 +190,14 @@ function clearBinding(): void {
  *
  * The POST fires only on an ownership transition ({@link shouldReconcile}) — a confirmed same-member
  * binding costs zero requests, so ordinary browsing never trips the store route's rate limit. When it
- * does fire and the server *rejects* the rebind (a non-2xx that is not a 429, or a thrown/rejected
- * fetch with the subscription in hand), the local subscription is unsubscribed so the endpoint dies
- * and the prior owner's push can no longer land: an unconfirmed rebind is a cross-account leak, so
- * privacy wins over convenience. A 429 is rate-limiting, not rejection — leave the subscription alone
- * and let the next navigation retry. `getRegistration()` (not `.ready`, which never resolves when no
- * worker is registered) keeps a member who never subscribed a no-op, and with no existing subscription
- * this never subscribes a fresh browser — a silent subscribe is not consent.
+ * does fire and the server *refuses* the rebind — a definitive 4xx ({@link reconcileOutcome}) — the
+ * local subscription is unsubscribed so the endpoint dies and the prior owner's push can no longer
+ * land: an unconfirmed rebind is a cross-account leak, so privacy wins over convenience. A 429, a 5xx
+ * or a dropped request is the server not answering rather than refusing, so the subscription is left
+ * alone and the next navigation retries — a transient outage must not unsubscribe a member's own
+ * device. `getRegistration()` (not `.ready`, which never resolves when no worker is registered) keeps
+ * a member who never subscribed a no-op, and with no existing subscription this never subscribes a
+ * fresh browser — a silent subscribe is not consent.
  */
 export async function reconcileSubscription(memberId: number): Promise<void> {
     if (!pushSupported() || Notification.permission !== 'granted') {
@@ -194,6 +211,7 @@ export async function reconcileSubscription(memberId: number): Promise<void> {
     if (!shouldReconcile(readBinding(), sub.endpoint, memberId, Date.now(), RECONCILE_TTL_MS)) {
         return;
     }
+    let outcome: 'confirm' | 'keep' | 'unsubscribe';
     try {
         const json = sub.toJSON();
         const res = await fetch('/push/subscriptions', {
@@ -202,15 +220,19 @@ export async function reconcileSubscription(memberId: number): Promise<void> {
             credentials: 'same-origin',
             body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
         });
-        if (res.ok) {
-            writeBinding({ endpoint: sub.endpoint, memberId, at: Date.now() });
-            return;
-        }
-        if (res.status === 429) {
-            return; // transient: the marker was not written, so the next navigation retries until it sticks.
-        }
+        outcome = reconcileOutcome(res.status);
     } catch {
-        // A thrown/rejected fetch is unconfirmed; fall through to fail closed, same as a non-429 non-2xx.
+        // A dropped request is the server not answering, not refusing — keep the subscription and let
+        // the next navigation retry, the same as a 429 or 5xx.
+        outcome = 'keep';
+    }
+    if (outcome === 'confirm') {
+        writeBinding({ endpoint: sub.endpoint, memberId, at: Date.now() });
+        return;
+    }
+    if (outcome === 'keep') {
+        // Marker unwritten, so the next navigation retries until the rebind sticks.
+        return;
     }
     clearBinding();
     await sub.unsubscribe();
