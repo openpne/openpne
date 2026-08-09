@@ -13,6 +13,7 @@
         "guzzlehttp/guzzle": "^7.15",
         "inertiajs/inertia-laravel": "^3.1",
         "intervention/image": "^4",
+        "laravel-notification-channels/webpush": "^11.0",
         "laravel/fortify": "^1.37",
         "laravel/framework": "^13.8",
         "league/commonmark": "^2.8",
@@ -37,8 +38,10 @@
         "roave/security-advisories": "dev-latest"
     },
     "suggest": {
+        "ext-bcmath": "Speeds up web push VAPID signing and payload encryption (minishlink/web-push); ext-gmp is faster still.",
         "ext-exif": "Required for thumbnails of rotated photos to render upright: intervention/image reads EXIF Orientation only when exif_read_data exists.",
         "ext-gd": "Required to generate image thumbnails with the default GD driver (openpne.images.driver=gd).",
+        "ext-gmp": "Fastest math backend for web push VAPID signing and payload encryption (minishlink/web-push).",
         "ext-imagick": "Required for the ImageMagick driver (openpne.images.driver=imagick), which unlike GD can convert an embedded colour profile to sRGB: GD drops the profile and leaves the numbers, so a wide-gamut photo is then read as sRGB."
     },
     "autoload": {

@@ -53,8 +53,8 @@ them every 60s while it is visible — and immediately on returning to it — fr
 count queries and nothing else, then pushes the result into the shared prop client-side
 ([`unread-sync.tsx`](../../resources/js/components/unread-sync.tsx)). The document title mirrors the
 layer-3 unread-row count as a `(N) ` prefix, applied through Inertia's title callback because the
-head manager owns that DOM write. A failed refresh keeps the counts it has. There is no websocket or
-push at this layer.
+head manager owns that DOM write. A failed refresh keeps the counts it has. There is no websocket at
+this layer; a closed tab is reached by web push instead (below).
 
 **Read-state separation is the invariant**: layer-1 counts never consume `read_at`, and reading
 the feed never mutates domain state. OpenPNE 3 kept only the per-event side — a `member_config`
@@ -135,6 +135,48 @@ excluded ids are snapshotted when the comment is posted and passed to the async 
 when it runs: a comment deleted in between would otherwise drop its author from the exclusion and
 notify them twice.
 
+## Web push
+
+A layer-3 row only reaches a member who is looking. Web push delivers the same event a second time,
+to a device, so a closed tab is still reachable.
+
+It is **not a channel of its own**. The dispatch is a listener on the framework's `NotificationSent`
+event filtered to `channel === 'database'`
+([`SendWebPushNudge`](../../app/Listeners/Notifications/SendWebPushNudge.php)): a feed row having been
+written is the eligibility, which means every catalog opt-in, fan-out rule and feature gate above has
+already decided, and a notification added later is pushed without being told about push.
+[`NotificationChannel`](../../app/Notifications/Settings/NotificationChannel.php) stays closed at
+web + mail, and the **web** opt-in gates both the row and the push. The nudge sends on
+`WebPushChannel`, so it cannot re-enter the filter.
+
+The listener runs inside the queued job that wrote the row, so everything past its two pure filters
+is wrapped in a `try`/`report()`: an exception escaping it would retry that job and **duplicate the
+feed row**. Its guards are ordered config → subscription probe → member toggle, since most members
+have no device and the probe is what keeps a member-wide fan-out at one query per recipient.
+
+The payload ([`WebPushNudge`](../../app/Notifications/Push/WebPushNudge.php)) carries the same
+sentence the feed row renders (`NotificationKindLabel`, so there is no second wording list), a fixed
+tag so a new nudge collapses the previous one on the device, and the unread count read at send time
+for the app badge. It is constructed from scalars, not models: an actor who withdraws between the row
+and the send degrades to the withdrawn-member label instead of failing to restore.
+
+Three switches, at three scopes:
+
+- **The site**: a VAPID keypair (`OPENPNE_VAPID_*`, `config/webpush.php`). Absent, the feature does
+  not exist — no shared prop, the subscribe endpoints 404, nothing is sent
+  ([`WebPushConfig`](../../app/Notifications/Push/WebPushConfig.php) is the single predicate all three
+  read). There is no administrator setting beside it: the keys *are* the switch.
+- **The member**: `PreferenceKey::PushDelivery`, one global pause switch — not a per-kind set, since
+  the catalog already decided which events exist. Subscribing a device is the consent, so it defaults
+  to enabled.
+- **The device**: a row in `push_subscriptions`, written by `POST /push/subscriptions`. The endpoint
+  is the subscription's identity and is unique globally, so re-registering it under another member
+  moves the row. The store is capped at 10 devices per member, oldest pruned. An endpoint the push
+  service reports as 404/410 is deleted by the package's report handler, so expiry needs no wiring.
+
+That endpoint is a URL the site later POSTs to, over a Guzzle client outside `App\Outbound` — see
+[outbound-http.md](outbound-http.md#the-push-endpoint-seam) for what holds its shape.
+
 ## Key invariants
 
 - `NotificationKind` is the only kind list; the stored `kind` column holds its case value.
@@ -144,3 +186,5 @@ notify them twice.
 - The imported `member_config` key names derive from `NotificationKind::op3ConfigName()`
   (`is_send_{name}_web` / `is_send_pc_{name}_mail`) — the upgrade has no second name list.
 - Layer-1 counts and layer-3 `read_at` never feed each other.
+- Push follows the feed: it is dispatched from the `database` send, never gated separately, and its
+  listener never lets an exception escape into the job that wrote the row.

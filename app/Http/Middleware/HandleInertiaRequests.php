@@ -8,6 +8,7 @@ use App\Features\Home\Serializers\RightRailSerializer;
 use App\Features\Home\UnreadCounts;
 use App\Features\Member\Queries\RandomMembers;
 use App\Models\Member;
+use App\Notifications\Push\WebPushConfig;
 use App\Services\TermService;
 use App\Support\BrandColor;
 use App\Support\Feature;
@@ -58,6 +59,12 @@ class HandleInertiaRequests extends Middleware
             // Evaluated per request for a member; a plain closure (not Inertia::optional) so it is
             // present on first render, which is where the rail shows.
             'rightRail' => $user ? fn () => $this->rightRail($user) : null,
+            // What the client needs to subscribe this device to push, or null when it cannot: a guest,
+            // or a site with no VAPID keypair (which is the whole feature's switch). Null is what the
+            // UI hides on, so nothing else has to re-derive "is push available here".
+            'push' => $user !== null && WebPushConfig::configured()
+                ? ['vapidPublicKey' => (string) config('webpush.vapid.public_key')]
+                : null,
             // Modern brand mark: color + optional logo URL; a null url renders a color initial badge.
             'snsLogo' => [
                 'color' => brand_color() ?? BrandColor::DEFAULT,
