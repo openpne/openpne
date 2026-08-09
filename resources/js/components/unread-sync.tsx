@@ -1,6 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
-import { clearAppBadge, resumeRegistration, setAppBadge } from '@/lib/push';
+import { clearAppBadge, reconcileSubscription, resumeRegistration, setAppBadge } from '@/lib/push';
 import type { PageProps, UnreadCounts } from '@/types';
 
 /** How often a visible tab re-reads the counts. */
@@ -26,8 +26,9 @@ function writeBadge(count: number): void {
  * refresh on return to the tab, which is the moment a stale badge is seen.
  */
 export function UnreadSync() {
-    const unread = usePage<PageProps>().props.unread;
+    const { unread, push } = usePage<PageProps>().props;
     const signedIn = unread != null;
+    const pushConfigured = push != null;
 
     // App-icon badge on every foreground change: mark-all, opening the feed and navigation all refresh
     // this prop. The fetch path below covers the other case — an unchanged value that a background
@@ -38,10 +39,16 @@ export function UnreadSync() {
         }
     }, [signedIn, unread?.notifications]);
 
-    // Opted-in devices re-fetch the worker each visit; resumeRegistration installs nothing otherwise.
+    // A device's push ownership follows the member signed in now: re-register the worker (an opted-in
+    // browser re-fetches an updated /sw.js) then rebind any existing subscription to this member —
+    // register first, reconcile awaits the ready worker. Runs only where the site offers push and
+    // someone is signed in; reconcile never subscribes a fresh browser.
     useEffect(() => {
-        resumeRegistration();
-    }, []);
+        if (pushConfigured && signedIn) {
+            resumeRegistration();
+            void reconcileSubscription();
+        }
+    }, [pushConfigured, signedIn]);
 
     useEffect(() => {
         if (!signedIn) {
@@ -50,16 +57,15 @@ export function UnreadSync() {
 
         let inFlight: AbortController | null = null;
 
-        const refresh = () => {
-            if (document.visibilityState !== 'visible') {
-                return;
-            }
-
+        // The authoritative counts read. Also overwrites the badge from the fresh value: a background
+        // push may have written a stale one, and if the count is unchanged the keyed effect above will
+        // not re-fire to correct it.
+        const fetchCounts = () => {
             inFlight?.abort();
             const controller = new AbortController();
             inFlight = controller;
 
-            fetch('/unread-counts', {
+            return fetch('/unread-counts', {
                 headers: { Accept: 'application/json' },
                 credentials: 'same-origin',
                 signal: controller.signal,
@@ -73,9 +79,6 @@ export function UnreadSync() {
                 })
                 .then((counts) => {
                     router.replaceProp('unread', counts);
-                    // Overwrite the badge unconditionally from the authoritative count: a background push
-                    // may have written a stale one, and if the count is unchanged the keyed effect above
-                    // will not re-fire to correct it.
                     writeBadge(counts.notifications);
                 })
                 .catch(() => {
@@ -84,15 +87,24 @@ export function UnreadSync() {
                 });
         };
 
+        const refresh = () => {
+            if (document.visibilityState !== 'visible') {
+                return;
+            }
+            void fetchCounts();
+        };
+
         const timer = setInterval(refresh, INTERVAL_MS);
         document.addEventListener('visibilitychange', refresh);
 
-        // The worker asks a visible tab to re-sync rather than writing the badge itself, so the
-        // foreground's authoritative count always wins over a late push's.
+        // The worker hands the badge's source of truth to a live tab. Fetch unconditionally — it asked,
+        // and the tab may have flipped hidden since the worker's matchAll — then ACK on the transferred
+        // port so the worker knows a handler took responsibility and skips its own fallback badge write.
         const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : null;
         const onMessage = (event: MessageEvent) => {
             if (event.data?.type === 'refresh-unread') {
-                refresh();
+                void fetchCounts();
+                event.ports[0]?.postMessage({ type: 'ack' });
             }
         };
         sw?.addEventListener('message', onMessage);

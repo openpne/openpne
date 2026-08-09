@@ -1019,6 +1019,7 @@
     "SNS title": "SNSタイトル",
     "Solve": "解決",
     "Some time has passed since you started, so please confirm it is you: enter your current password as well.": "開始から時間が経っているため、本人確認として現在のパスワードも入力してください。",
+    "Something went wrong. Please try again.": "エラーが発生しました。もう一度お試しください。",
     "Sort Order": "並び順",
     "SSL Handshake Failed": "SSL接続エラー",
     "Start": "開始",

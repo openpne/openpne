@@ -42,12 +42,16 @@ export async function currentSubscription(): Promise<PushSubscription | null> {
  * when permission is refused and 'error' on any failure, so the caller can message without a throw.
  */
 export async function subscribeThisDevice(vapidPublicKey: string): Promise<'subscribed' | 'denied' | 'error'> {
+    // Rolled back on any failure past subscribe(): "subscribed" must mean the server persisted the
+    // row, not merely that this browser created a PushSubscription. A local sub the server never
+    // stored would read back as subscribed forever.
+    let sub: PushSubscription | null = null;
     try {
         if (await Notification.requestPermission() !== 'granted') {
             return 'denied';
         }
         const registration = await navigator.serviceWorker.register('/sw.js');
-        const sub = await registration.pushManager.subscribe({
+        sub = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
@@ -58,25 +62,68 @@ export async function subscribeThisDevice(vapidPublicKey: string): Promise<'subs
             credentials: 'same-origin',
             body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
         });
-        return res.ok ? 'subscribed' : 'error';
+        if (!res.ok) {
+            await sub.unsubscribe();
+            return 'error';
+        }
+        return 'subscribed';
     } catch {
+        if (sub) {
+            try {
+                await sub.unsubscribe();
+            } catch {
+                // Already gone; nothing left to undo.
+            }
+        }
         return 'error';
     }
 }
 
-/** Drop this browser's subscription, both server-side and locally. Tolerates an already-gone sub. */
-export async function unsubscribeThisDevice(): Promise<void> {
+/**
+ * Drop this browser's subscription. Removes it locally regardless of the server's answer — a dead
+ * endpoint self-expires via the push service's 404/410, so local removal is always safe — but returns
+ * whether the server delete confirmed so the caller can distinguish a clean unsubscribe from a
+ * best-effort one. A thrown network error is left to propagate for the caller's finally to handle.
+ */
+export async function unsubscribeThisDevice(): Promise<boolean> {
     const sub = await currentSubscription();
     if (!sub) {
-        return;
+        return true;
     }
-    await fetch('/push/subscriptions/delete', {
+    const res = await fetch('/push/subscriptions/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...xsrfHeader() },
         credentials: 'same-origin',
         body: JSON.stringify({ endpoint: sub.endpoint }),
     });
     await sub.unsubscribe();
+    return res.ok;
+}
+
+/**
+ * Rebind this browser's existing subscription to the member signed in now. A push row belongs to
+ * whoever last POSTed its endpoint, so on a shared browser (A subscribes, logs out; B logs in) the
+ * server-side owner stays A while this browser still holds A's subscription — B would see "subscribed"
+ * and receive A's pushes. Re-POSTing the endpoint reclaims ownership for the current member and also
+ * heals a cap-pruned row (server row gone, browser sub present). Never subscribes a fresh browser:
+ * with no gesture and no existing subscription this is a no-op, since a silent subscribe is not consent.
+ */
+export async function reconcileSubscription(): Promise<void> {
+    if (!pushSupported() || Notification.permission !== 'granted') {
+        return;
+    }
+    const registration = await navigator.serviceWorker.ready;
+    const sub = await registration.pushManager.getSubscription();
+    if (!sub) {
+        return;
+    }
+    const json = sub.toJSON();
+    await fetch('/push/subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...xsrfHeader() },
+        credentials: 'same-origin',
+        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+    });
 }
 
 /**

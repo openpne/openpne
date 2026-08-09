@@ -174,6 +174,14 @@ Three switches, at three scopes:
   moves the row. The store is capped at 10 devices per member, oldest pruned. An endpoint the push
   service reports as 404/410 is deleted by the package's report handler, so expiry needs no wiring.
 
+The subscribe UI and the reconciler both live in the Modern app shell, so a device's push ownership
+follows the **most recent Modern session** on that browser: `UnreadSync` re-POSTs the browser's
+existing subscription on mount, reclaiming the row for whoever is signed in now (this also heals a
+cap-pruned row) and keeping a shared browser from delivering the previous member's pushes. A
+Classic-only session neither subscribes nor reconciles — a bounded, conscious limitation, not a silent
+gap: a member who only ever uses Classic is simply never a push device, and the row is corrected the
+next time the browser loads Modern.
+
 That endpoint is a URL the site later POSTs to, over a Guzzle client outside `App\Outbound` — see
 [outbound-http.md](outbound-http.md#the-push-endpoint-seam) for what holds its shape.
 

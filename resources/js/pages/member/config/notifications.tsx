@@ -45,6 +45,7 @@ function PushSection() {
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [deviceError, setDeviceError] = useState(false);
     // Device facts come from the browser, so they are only known after mount.
     const [permission, setPermission] = useState<ReturnType<typeof permissionState>>('unsupported');
     const [subscribed, setSubscribed] = useState(false);
@@ -80,11 +81,23 @@ function PushSection() {
         );
     };
 
-    const runDevice = async (action: () => Promise<unknown>) => {
+    // `action` resolves true when the operation succeeded and device state should be re-read, false to
+    // surface an error instead of a possibly-false "subscribed". finally always clears busy, so a
+    // rejected action (a thrown network error from unsubscribe) can never leave the button stuck.
+    const runDevice = async (action: () => Promise<boolean>) => {
         setBusy(true);
-        await action();
-        setBusy(false);
-        syncDevice();
+        setDeviceError(false);
+        try {
+            if (await action()) {
+                syncDevice();
+            } else {
+                setDeviceError(true);
+            }
+        } catch {
+            setDeviceError(true);
+        } finally {
+            setBusy(false);
+        }
     };
 
     return (
@@ -109,15 +122,34 @@ function PushSection() {
                 ) : subscribed ? (
                     <div className="flex flex-wrap items-center gap-3">
                         <span className="text-sm text-muted-foreground">{t('This device is subscribed.')}</span>
-                        <Button variant="outline" size="sm" loading={busy} onClick={() => runDevice(unsubscribeThisDevice)}>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            loading={busy}
+                            onClick={() =>
+                                runDevice(async () => {
+                                    // Local removal is truthful regardless of the server's answer (a dead
+                                    // endpoint self-expires), so this is a failure only if it throws.
+                                    await unsubscribeThisDevice();
+                                    return true;
+                                })
+                            }
+                        >
                             {t('Unsubscribe this device')}
                         </Button>
                     </div>
                 ) : (
-                    <Button size="sm" loading={busy} onClick={() => runDevice(() => subscribeThisDevice(push.vapidPublicKey))}>
+                    <Button
+                        size="sm"
+                        loading={busy}
+                        onClick={() => runDevice(async () => (await subscribeThisDevice(push.vapidPublicKey)) !== 'error')}
+                    >
                         {t('Subscribe this device')}
                     </Button>
                 )}
+                <p aria-live="assertive" className="min-h-5 text-sm text-destructive">
+                    {deviceError ? t('Something went wrong. Please try again.') : null}
+                </p>
             </div>
         </section>
     );

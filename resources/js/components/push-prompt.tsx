@@ -28,6 +28,7 @@ export function PushPrompt() {
     const t = useT();
     const push = usePage<PageProps>().props.push;
     const [hidden, setHidden] = useState(isDismissed);
+    const [failed, setFailed] = useState(false);
 
     if (!push || hidden || permissionState() !== 'default') {
         return null;
@@ -43,8 +44,14 @@ export function PushPrompt() {
     };
 
     const enable = async () => {
-        // Either way the browser leaves the 'default' state, so the prompt stops matching and hides.
-        await subscribeThisDevice(push.vapidPublicKey);
+        setFailed(false);
+        const result = await subscribeThisDevice(push.vapidPublicKey);
+        if (result === 'error') {
+            // The store failed; keep the prompt up with a retry hint. 'subscribed' and 'denied' are
+            // both terminal — 'denied' also flips permission out of 'default', failing the guard above.
+            setFailed(true);
+            return;
+        }
         setHidden(true);
     };
 
@@ -55,9 +62,12 @@ export function PushPrompt() {
                 {isIosNotInstalled() ? (
                     <p className="text-muted-foreground">{t('To get push notifications on iPhone or iPad, add this site to your Home Screen first.')}</p>
                 ) : (
-                    <Button size="sm" onClick={enable}>
-                        {t('Enable')}
-                    </Button>
+                    <>
+                        <Button size="sm" onClick={enable}>
+                            {t('Enable')}
+                        </Button>
+                        {failed && <p aria-live="assertive" className="text-destructive">{t('Something went wrong. Please try again.')}</p>}
+                    </>
                 )}
             </div>
             <button

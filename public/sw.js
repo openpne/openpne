@@ -9,7 +9,7 @@ self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
 self.addEventListener('push', (event) => {
-    let data = {};
+    let data;
     try {
         data = event.data ? event.data.json() : {};
     } catch {
@@ -23,47 +23,65 @@ self.addEventListener('push', (event) => {
         data,
     };
 
+    // In the awaited chain so the worker stays alive until the badge is reconciled.
     event.waitUntil(
         Promise.all([
             self.registration.showNotification(data.title || 'OpenPNE', options),
-            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-                // A visible tab holds the authoritative unread count, so let it re-sync the badge from
-                // its own fetch. Writing this push's (possibly late, possibly stale) count over the
-                // foreground's true value is exactly the race we avoid.
-                let anyVisible = false;
-                for (const client of clients) {
-                    if (client.visibilityState === 'visible') {
-                        anyVisible = true;
-                        client.postMessage({ type: 'refresh-unread' });
-                    }
-                }
-                if (!anyVisible && 'setAppBadge' in navigator && typeof data.unreadCount === 'number') {
-                    navigator.setAppBadge(data.unreadCount);
-                }
-            }),
+            reconcileBadge(data),
         ]).catch(() => {}),
     );
 });
 
+// A visible tab holds the authoritative unread count, so let it re-sync the badge from its own fetch;
+// writing this push's (possibly late, possibly stale) count over the foreground's true value is the
+// race we avoid. But matchAll at root scope also returns Classic and login pages, which have no
+// refresh-unread handler — a bare postMessage to those drops the badge silently. So suppress the
+// payload badge only when a client ACKs (proves it took the refresh); otherwise write it ourselves.
+async function reconcileBadge(data) {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const acked = await askVisibleClients(clients);
+    if (!acked && 'setAppBadge' in navigator && typeof data.unreadCount === 'number') {
+        await navigator.setAppBadge(data.unreadCount);
+    }
+}
+
+// Resolves true once any visible client ACKs on the port it was handed, false if none answer within
+// the timeout (no visible tab, or only handler-less Classic/login pages). No MessageChannel (old
+// engine) degrades to no-ACK so the fallback badge still runs.
+function askVisibleClients(clients) {
+    const visible = clients.filter((client) => client.visibilityState === 'visible');
+    if (visible.length === 0 || typeof MessageChannel === 'undefined') {
+        return Promise.resolve(false);
+    }
+    return new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(false), 500);
+        for (const client of visible) {
+            const channel = new MessageChannel();
+            channel.port1.onmessage = () => {
+                clearTimeout(timer);
+                resolve(true);
+            };
+            client.postMessage({ type: 'refresh-unread' }, [channel.port2]);
+        }
+    });
+}
+
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    if ('clearAppBadge' in navigator) {
-        try {
-            navigator.clearAppBadge();
-        } catch {
-            // Best effort; a browser without the Badging API just keeps whatever badge it had.
+    const url = (event.notification.data && event.notification.data.url) || '/notifications';
+    // clearAppBadge is awaited inside waitUntil so the worker is not killed mid-write; a browser
+    // without the Badging API just keeps whatever badge it had.
+    const badge = 'clearAppBadge' in navigator ? navigator.clearAppBadge().catch(() => {}) : Promise.resolve();
+    event.waitUntil(Promise.all([badge, focusOrOpenWindow(url)]));
+});
+
+async function focusOrOpenWindow(url) {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clients) {
+        if ('focus' in client) {
+            const focused = await client.focus();
+            return 'navigate' in focused ? focused.navigate(url) : undefined;
         }
     }
-
-    const url = (event.notification.data && event.notification.data.url) || '/notifications';
-    event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-            for (const client of clients) {
-                if ('focus' in client) {
-                    return client.focus().then((focused) => ('navigate' in focused ? focused.navigate(url) : undefined));
-                }
-            }
-            return self.clients.openWindow(url);
-        }),
-    );
-});
+    return self.clients.openWindow(url);
+}
