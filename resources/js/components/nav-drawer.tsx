@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { Menu } from 'lucide-react';
 import { useT } from '@/lib/i18n';
 import { Dialog, DialogTitle, DialogTrigger, SheetContent } from '@/components/ui/dialog';
 import { BrandMark } from '@/components/brand-mark';
+import { BrandName } from '@/components/brand-name';
 import { NavItems } from '@/components/nav-items';
-import type { PageProps } from '@/types';
 
 /**
  * The mobile bar's icon-control shape: a bare 24px glyph in a box as tall as the bar. The box is
@@ -23,7 +23,6 @@ export const BAR_CONTROL =
 export function NavDrawer() {
     const t = useT();
     const [open, setOpen] = useState(false);
-    const { name } = usePage<PageProps>().props;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -38,7 +37,7 @@ export function NavDrawer() {
                         className="mb-2 flex min-h-11 items-center gap-3 rounded-full px-2 transition hover:bg-accent"
                     >
                         <BrandMark size="sm" />
-                        <span className="truncate text-lg font-bold">{name}</span>
+                        <BrandName size="lg" className="truncate" />
                     </Link>
                 </DialogTitle>
                 <nav className="flex-1 overflow-y-auto">

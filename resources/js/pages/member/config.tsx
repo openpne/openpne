@@ -6,11 +6,11 @@ import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { DangerLink } from '@/components/ui/danger-link';
 import { FormActions, FormSection, RadioCardGroup } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { RadioCard } from '@/components/ui/radio-card';
 import { RadioPill } from '@/components/ui/radio-pill';
 import { type ColorMode, useColorMode } from '@/lib/color-mode';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 const APPEARANCE_OPTIONS: { value: ColorMode; label: string }[] = [
@@ -43,7 +43,9 @@ interface ConfigProps extends PageProps {
 function SettingsGroup({ title, danger = false, children }: { title: string; danger?: boolean; children: ReactNode }) {
     return (
         <section className="space-y-3">
-            <h2 className={cn('text-lg font-semibold', danger ? 'text-destructive' : 'text-foreground')}>{title}</h2>
+            <Heading as="h2" variant="group" className={danger ? 'text-destructive' : undefined}>
+                {title}
+            </Heading>
             <Card className={danger ? 'border-destructive/40' : undefined}>
                 <div className="divide-y divide-border px-4 sm:px-6">{children}</div>
             </Card>

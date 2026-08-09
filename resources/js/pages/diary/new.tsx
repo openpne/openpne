@@ -5,6 +5,7 @@ import { initialComposeFormat, type ComposeEditorPreference } from '@/components
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
@@ -38,7 +39,7 @@ export default function DiaryNew({
                     {t('Post')}
                 </Button>
             </ComposeSheetAction>
-            <h1 className="break-words text-lg font-semibold text-foreground lg:text-xl">{t('Write a %diary%')}</h1>
+            <Heading variant="pageCompose">{t('Write a %diary%')}</Heading>
 
             <Panel overflow="visible" sheet>
                 <form

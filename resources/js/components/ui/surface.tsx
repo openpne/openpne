@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Card } from '@/components/card';
+import { Heading } from '@/components/ui/heading';
 import { cn } from '@/lib/utils';
 
 /**
@@ -10,7 +11,9 @@ import { cn } from '@/lib/utils';
 export function SectionHeader({ title, right, className }: { title: ReactNode; right?: ReactNode; className?: string }) {
     return (
         <div className={cn('flex items-center gap-2 border-b border-border px-4 py-3 sm:px-5', className)}>
-            <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{title}</h2>
+            <Heading as="h2" variant="section" className="min-w-0 flex-1 truncate">
+                {title}
+            </Heading>
             {right}
         </div>
     );

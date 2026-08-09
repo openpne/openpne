@@ -3,6 +3,7 @@ import { Mail, UserPlus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { InitialBadge } from '@/components/initial-badge';
 import { NineTable } from '@/components/nine-table';
+import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { List, Panel } from '@/components/ui/surface';
@@ -126,7 +127,7 @@ export default function MemberShow() {
                         )}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <h1 className="break-words text-xl font-semibold text-foreground">{owner.name}</h1>
+                        <Heading variant="page">{owner.name}</Heading>
                         {age !== null && <p className="mt-0.5 text-sm text-muted-foreground">{t(':age years old', { age })}</p>}
                     </div>
                     {isSelf && (

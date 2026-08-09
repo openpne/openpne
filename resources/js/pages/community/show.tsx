@@ -4,6 +4,7 @@ import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
 import { EntryRow } from '@/components/entry-row';
+import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
@@ -65,7 +66,7 @@ export default function CommunityShow() {
                 <div className="flex items-start gap-4">
                     <CommunityImage name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
                     <div className="min-w-0 flex-1">
-                        <h1 className="break-words text-xl font-semibold">{community.name}</h1>
+                        <Heading variant="page">{community.name}</Heading>
                         {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}
                         <Link href={`/community/member/list?id=${community.id}`} className="text-sm text-link hover:underline">
                             {t(':count members', { count: community.memberCount })}
