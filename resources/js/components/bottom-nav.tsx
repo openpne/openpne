@@ -46,8 +46,10 @@ export function BottomNav({ hidden }: { hidden?: boolean }) {
                 hidden && 'translate-y-full',
             )}
         >
-            {/* The bar's inner height is what `--modern-bottom-offset` adds the safe-area inset to. */}
-            <ul className="flex h-14 items-stretch">
+            {/* This row is the top bar's height — the two bands a phone always carries are one
+                measure — and `--modern-bottom-offset` is it plus the hairline above and the
+                safe-area inset below. A tab fills the row, so the row is the tap target. */}
+            <ul className="flex h-12 items-stretch">
                 {bottomNavSections(props.enabledFeatures).map(({ href, match, exact, icon: Icon, label, badge }) => {
                     const active = exact ? path === match : path.startsWith(match);
                     const count = badge ? (props.unread?.[badge.count] ?? 0) : 0;
@@ -61,7 +63,7 @@ export function BottomNav({ hidden }: { hidden?: boolean }) {
                                     badge && count > 0 ? t(badge.label.key, { count }) : t(label.key, label.replacements)
                                 }
                                 className={
-                                    'flex size-full min-h-12 items-center justify-center transition ' +
+                                    'flex size-full min-h-11 items-center justify-center transition ' +
                                     (active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')
                                 }
                             >

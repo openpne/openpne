@@ -43,9 +43,12 @@ export function AppShell({ chrome, children }: { chrome: Chrome; children: React
         <ComposeSheetProvider exit={exit}>
             <div
                 className={cn(
-                    'mx-auto flex min-h-dvh max-w-6xl [--modern-top-offset:calc(3.5rem+env(safe-area-inset-top))] lg:[--modern-top-offset:0px] xl:max-w-7xl',
+                    'mx-auto flex min-h-dvh max-w-6xl [--modern-top-offset:calc(3rem+env(safe-area-inset-top))] lg:[--modern-top-offset:0px] xl:max-w-7xl',
                     member && !compose
-                        ? '[--modern-bottom-offset:calc(3.5rem+env(safe-area-inset-bottom))] lg:[--modern-bottom-offset:0px]'
+                        ? // The extra pixel is the bottom bar's top hairline: the top bar draws its own
+                          // inside its height, the bottom bar's sits above the row, and both vars mean
+                          // the same thing — how much of the screen the bar takes.
+                          '[--modern-bottom-offset:calc(3rem+1px+env(safe-area-inset-bottom))] lg:[--modern-bottom-offset:0px]'
                         : '[--modern-bottom-offset:env(safe-area-inset-bottom)] lg:[--modern-bottom-offset:0px]',
                 )}
             >

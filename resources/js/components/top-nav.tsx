@@ -14,6 +14,12 @@ import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
+/** The 6px above and below a 36px bar action, claimed as tap target: every control in the bar
+ *  answers across its full 48px height, whatever it paints — an action that filled the bar instead
+ *  would leave the glyph beside it looking stranded. The compose slot spells the same rule as a
+ *  descendant variant, because the actions it holds are portalled in from the page. */
+const BAR_ACTION_HIT = "relative after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-['']";
+
 /** The shell every bar variant shares — one element, one height. Height is read from
  *  `--modern-top-offset` rather than restated: the var *is* this bar's height (the top inset, which a
  *  standalone PWA draws under, is part of it), and a page's sticky header offsets by it. `hidden`
@@ -111,7 +117,9 @@ function ScopeIdentity({ scope }: { scope: ChromeScope }) {
         <div className="flex min-w-0 flex-1 items-center justify-center">
             <Link
                 href={scope.kind === 'community' ? `/community/${scope.id}` : `/member/${scope.id}`}
-                className="flex min-w-0 max-w-full items-center gap-2"
+                // Full bar height: the block paints at 32 to sit with its name, but it is a link, and
+                // the bar's targets are all 48.
+                className="flex min-h-12 min-w-0 max-w-full items-center gap-2"
             >
                 {scope.kind === 'community' ? (
                     <CommunityImage name={scope.name} src={scope.imageUrl} className="size-8" textClassName="text-xs" decorative />
@@ -149,7 +157,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     // Guest only: a guest lands from outside, where logo-left-goes-home is the web convention, and
     // has neither the bottom nav nor the drawer — this link is their one way home.
     const brand = (
-        <Link href="/dashboard" className="flex min-w-0 flex-1 items-center gap-2">
+        <Link href="/dashboard" className="flex min-h-12 min-w-0 flex-1 items-center gap-2">
             <BrandMark size="sm" />
             <span className="truncate font-bold">{name}</span>
         </Link>
@@ -162,7 +170,10 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                 {brand}
                 <Link
                     href="/login"
-                    className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-link transition hover:bg-accent"
+                    className={cn(
+                        'inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm font-medium text-link transition hover:bg-accent',
+                        BAR_ACTION_HIT,
+                    )}
                 >
                     {t('Log In')}
                 </Link>
@@ -184,10 +195,12 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
             return (
                 <TopBar hidden={hidden} seam={scrolled}>
                     <LeadingControl target={target} label={t('Close')} icon={X} sheet />
-                    {/* The page's action(s) land here (ComposeSheetAction), pushed to the far end.
-                        The bar's controls share one height: the close circle is 40px, so the slot
-                        holds every portalled action to it rather than each page remembering to. */}
-                    <div ref={slotRef} className="ml-auto flex items-center gap-2 [&_button]:min-h-10" />
+                    {/* The page's action(s) land here (ComposeSheetAction), pushed to the far end —
+                        BAR_ACTION_HIT applied to each, since they arrive through a portal. */}
+                    <div
+                        ref={slotRef}
+                        className="ml-auto flex items-center gap-2 [&_button]:relative [&_button::after]:absolute [&_button::after]:-inset-y-1.5 [&_button::after]:inset-x-0 [&_button::after]:content-['']"
+                    />
                 </TopBar>
             );
         }
@@ -202,7 +215,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                         <ScopeIdentity scope={chrome.scope} />
                         {/* Balances the back control — same box, mirrored margins — so the identity
                             centers on the bar. */}
-                        <span className="-mr-1 size-10 shrink-0" aria-hidden />
+                        <span className="-mr-1 size-12 shrink-0" aria-hidden />
                     </>
                 ) : (
                     chrome.context && (
@@ -235,7 +248,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                             </p>
                             {/* Balances the back control — same box, mirrored -mr-1 against its -ml-1 —
                                 so the text centers on the bar, not on what is left of it. */}
-                            <span className="-mr-1 size-10 shrink-0" aria-hidden />
+                            <span className="-mr-1 size-12 shrink-0" aria-hidden />
                         </>
                     )
                 )}
