@@ -11,11 +11,12 @@
  * mirroring shouldReconcile in resources/js/lib/push.ts — push.test.ts is the reference for this
  * predicate and for reconcileOutcome; keep the two identical.
  *
- * Fail closed only on a *refused* rebind — a definitive 4xx (reconcileOutcome): unsubscribe locally so
- * the prior owner's push can no longer land. A 429, a 5xx or a dropped request is the server not
- * answering rather than refusing, so keep the subscription and retry on the next navigation — a
- * transient outage must not unsubscribe a member's own device. Never registers a worker — Classic only
- * reconciles or invalidates a subscription that already exists.
+ * When the marker proves the subscription is another member's (same endpoint, different member), an
+ * unconfirmed rebind sheds it on ANY non-2xx — a transient failure is no reason to keep delivering the
+ * prior member's pushes. Otherwise (our own, or ownership unknown) only a definitive 4xx refusal sheds
+ * it; a 408/425/429/5xx or a dropped request is the server not answering, so keep the subscription and
+ * retry on the next navigation — a transient outage must not unsubscribe a member's own device. Never
+ * registers a worker — Classic only reconciles or invalidates a subscription that already exists.
  */
 (function () {
     'use strict';
@@ -42,14 +43,15 @@
     }
 
     // Mirrors reconcileOutcome in resources/js/lib/push.ts (push.test.ts pins the cases).
-    function reconcileOutcome(status) {
+    var DEFINITIVE_REFUSAL = [400, 401, 403, 404, 419, 422];
+    function reconcileOutcome(status, knownForeign) {
         if (status >= 200 && status < 300) {
             return 'confirm';
         }
-        if (status === 429 || status >= 500) {
-            return 'keep';
+        if (knownForeign) {
+            return 'unsubscribe'; // a subscription we know is another member's is shed on any non-2xx
         }
-        return 'unsubscribe';
+        return DEFINITIVE_REFUSAL.indexOf(status) !== -1 ? 'unsubscribe' : 'keep';
     }
 
     function readBinding() {
@@ -87,9 +89,13 @@
                 if (!sub) {
                     return; // no existing subscription: never subscribe a fresh browser
                 }
-                if (!shouldReconcile(readBinding(), sub.endpoint, Date.now())) {
+                var marker = readBinding();
+                if (!shouldReconcile(marker, sub.endpoint, Date.now())) {
                     return; // confirmed same-member binding: zero requests per load
                 }
+                // Marker proves prior ownership: a matching endpoint under a different member is a
+                // subscription we know is someone else's, so an unconfirmed rebind must shed it.
+                var knownForeign = !!marker && marker.endpoint === sub.endpoint && marker.memberId !== memberId;
                 var meta = document.querySelector('meta[name="csrf-token"]');
                 var json = sub.toJSON();
                 fetch('/push/subscriptions', {
@@ -103,21 +109,25 @@
                     body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
                 })
                     .then(function (res) {
-                        var outcome = reconcileOutcome(res.status);
+                        var outcome = reconcileOutcome(res.status, knownForeign);
                         if (outcome === 'confirm') {
                             writeBinding({ endpoint: sub.endpoint, memberId: memberId, at: Date.now() });
                             return;
                         }
                         if (outcome === 'keep') {
-                            return; // transient (429/5xx): marker unwritten, so the next navigation retries
+                            return; // transient: marker unwritten, so the next navigation retries
                         }
-                        // Definitive 4xx: the reclaim was refused, so invalidate the endpoint.
+                        // Refused (or known-foreign): invalidate the endpoint.
                         clearBinding();
                         return sub.unsubscribe().catch(function () {});
                     })
                     .catch(function () {
-                        // A dropped request is the server not answering, not refusing — keep the
-                        // subscription and let the next navigation retry, the same as a 429 or 5xx.
+                        // No answer. Keep our own/unknown subscription; a known-foreign one must still
+                        // be shed, since keeping it would leak the prior member's pushes.
+                        if (knownForeign) {
+                            clearBinding();
+                            sub.unsubscribe().catch(function () {});
+                        }
                     });
             })
             .catch(function () {

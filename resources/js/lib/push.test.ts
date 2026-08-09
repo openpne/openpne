@@ -51,23 +51,32 @@ test('POST: the marker is older than the TTL (a cap-pruned row self-heals)', () 
     assert.equal(shouldReconcile(MARKER, MARKER.endpoint, MARKER.memberId, NOW + TTL + 1, TTL), true);
 });
 
-// reconcileOutcome decides what a reconcile POST's status does to the local subscription: a 2xx
-// confirms it, a 429/5xx/(network error, handled as 'keep' by the caller) is a transient outage that
-// must not unsubscribe the member, and only a definitive 4xx refuses the rebind and fails closed.
-test('confirm: any 2xx is the rebind stored', () => {
+// reconcileOutcome decides what a reconcile POST's status does to the local subscription, given
+// whether the marker already proves it is another member's. A 2xx always confirms.
+test('confirm: any 2xx is the rebind stored, foreign or not', () => {
     for (const status of [200, 201, 204]) {
-        assert.equal(reconcileOutcome(status), 'confirm');
+        assert.equal(reconcileOutcome(status, false), 'confirm');
+        assert.equal(reconcileOutcome(status, true), 'confirm');
     }
 });
 
-test('keep: a 429 or any 5xx is transient, never an unsubscribe', () => {
-    for (const status of [429, 500, 502, 503, 504]) {
-        assert.equal(reconcileOutcome(status), 'keep');
+// Our own / ownership-unknown subscription: a transient status is kept, only a definitive refusal sheds.
+test('keep: a transient status on our own subscription is never an unsubscribe', () => {
+    for (const status of [408, 425, 429, 500, 502, 503, 504]) {
+        assert.equal(reconcileOutcome(status, false), 'keep');
     }
 });
 
 test('unsubscribe: a definitive 4xx (auth/CSRF/validation/gone) refuses the rebind', () => {
     for (const status of [400, 401, 403, 404, 419, 422]) {
-        assert.equal(reconcileOutcome(status), 'unsubscribe');
+        assert.equal(reconcileOutcome(status, false), 'unsubscribe');
+    }
+});
+
+// Known-foreign (marker: same endpoint, different member): ANY non-2xx sheds it, including transient —
+// keeping it would leak the prior member's pushes, and the retry is not time-bounded.
+test('unsubscribe: a known-foreign subscription is shed on any non-2xx, transient included', () => {
+    for (const status of [408, 425, 429, 500, 503, 400, 401, 403, 404, 419, 422]) {
+        assert.equal(reconcileOutcome(status, true), 'unsubscribe');
     }
 });
