@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { nextDirection, type PageDirection, renderedDirection, type ScrollState } from './use-scroll-direction.ts';
 
-const LIMITS = { threshold: 8, minDownY: 56 };
+const LIMITS = { threshold: 8, minDownY: 44 };
 
 /** Feed a run of positions through the reducer, starting at rest at the top. */
 const run = (positions: number[], from: ScrollState = { direction: 'up', anchorY: 0 }): ScrollState =>
@@ -50,8 +50,8 @@ test('a threshold-sized move flips, one short of it does not', () => {
 test('the first flip down waits for the bar to have scrolled away', () => {
     // Threshold travel alone would flip here, and the bar's own slot would go blank with it.
     assert.equal(run([8]).direction, 'up');
-    assert.equal(run([55]).direction, 'up');
-    assert.equal(run([56]).direction, 'down');
+    assert.equal(run([43]).direction, 'up');
+    assert.equal(run([44]).direction, 'down');
 });
 
 test('a reveal deep in the page re-hides on the plain threshold', () => {
