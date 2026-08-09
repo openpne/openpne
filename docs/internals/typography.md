@@ -53,7 +53,7 @@ independent of the visual rank.
 
 ## Key invariants
 
-- `FontWeightGuardTest` budgets every `.tsx` file under `resources/js` by weight-class count and
+- `FontWeightGuardTest` budgets every source file under `resources/js` by weight-class count and
   fails three ways: a weight in a file with no budget, a count above its budget, and a count below it
   (a budget lowered late stops being the source of truth).
 - **A budgeted file is not a skipped file.** Owners get an exact count, not a pass, because the files

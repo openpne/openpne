@@ -33,19 +33,28 @@ use Tests\TestCase;
  * a campaign whose debt is actively draining. Raise it if a net-zero swap ever slips through.
  *
  * Out of reach entirely, so it stays a review question rather than a test: semantic <strong> in
- * member-authored bodies (theirs to emphasize, not ours), plain CSS in app.css, and inline styles.
+ * anything rendered through RichBody (the author's emphasis, not ours — member bodies as well as the
+ * admin-written login message and policy pages), plain CSS in app.css, and inline styles.
  */
 class FontWeightGuardTest extends TestCase
 {
     /**
      * Every Tailwind weight utility except `font-normal` — 400 is the rule, so naming it is not a
-     * violation — plus both arbitrary escape hatches: the value form `font-[550]` and the property
-     * form `[font-weight:700]`. Anything narrower leaves a way to weight text that the guard waves
-     * through; `font-extrabold` in a fresh file would have passed all three checks.
+     * violation — plus every escape hatch that compiles to a font-weight:
      *
-     * Family utilities (`font-sans`, `font-mono`) share the prefix and are deliberately not matched.
+     *   font-[550]                   arbitrary value
+     *   [font-weight:700]            arbitrary property
+     *   font-(weight:--x)            custom property, typed
+     *   font-(--x)                   custom property, shorthand — weight is what the bare form means
+     *
+     * Verified against the installed Tailwind (4.3.3) rather than assumed: the last two both emit
+     * `font-weight: var(--x)`.
+     *
+     * Family utilities share the prefix and are deliberately not matched — `font-sans`, and
+     * `font-(family-name:--x)`, which is why the custom-property branch requires `--` or `weight:`
+     * right after the paren instead of accepting any `font-(`.
      */
-    private const WEIGHT_CLASS = '/\bfont-(?:thin|extralight|extrabold|semibold|medium|light|black|bold)\b|\bfont-\[|\[font-weight:/';
+    private const WEIGHT_CLASS = '/\bfont-(?:thin|extralight|extrabold|semibold|medium|light|black|bold)\b|\bfont-\[|\[font-weight:|\bfont-\((?:weight:)?--/';
 
     /** @var array<string, int> */
     private const ROLE_OWNERS = [
@@ -180,11 +189,17 @@ class FontWeightGuardTest extends TestCase
             'black' => ['<span className="font-black">', 1],
             'arbitrary value' => ['<span className="font-[550]">', 1],
             'arbitrary property' => ['<span className="[font-weight:700]">', 1],
+            'custom property, typed' => ['<span className="font-(weight:--my-fw)">', 1],
+            // The bare custom-property form is a weight, not a family: Tailwind emits
+            // `font-weight: var(--my-fw)` for it.
+            'custom property, shorthand' => ['<span className="font-(--my-fw)">', 1],
             'behind a variant' => ['<span className="lg:font-extrabold">', 1],
+            'custom property behind a variant' => ['<span className="lg:font-(--my-fw)">', 1],
             'several in one string' => ['"font-medium sm:font-bold"', 2],
             // 400 is the rule, so spelling it out is not a violation.
             'normal' => ['<span className="font-normal">', 0],
             'family utilities' => ['<span className="font-sans font-mono font-serif">', 0],
+            'family as a custom property' => ['<span className="font-(family-name:--my-font)">', 0],
             'a word ending in the utility name' => ['<span className="not-font-bolder">', 0],
         ];
     }
