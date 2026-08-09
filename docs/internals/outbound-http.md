@@ -87,8 +87,33 @@ remove the bound rather than tighten it; a non-positive value therefore falls ba
 The bound is not total: name resolution happens before the request and blocks on the system
 resolver's own timeout, outside the budget.
 
+## The push endpoint seam
+
+Web push is the one outbound path that does not go through `SafeHttpFetcher`. The requests are made
+by `minishlink/web-push` on a Guzzle client it builds itself, handed to the notification channel by
+the package; short of reimplementing the payload encryption there is nowhere to inject the fetcher.
+The boundary test above still holds — nothing in `app/` constructs that client — so this is a second
+seam, and it is weaker. What it is, plainly:
+
+- **The URL is not prose a member typed** but the `endpoint` a browser's push service issued, so its
+  shape is knowable in advance and is fixed on store by
+  [`PushEndpoint`](../../app/Rules/PushEndpoint.php): https, port 443, a named host, no userinfo,
+  bounded length. An address literal is refused — a real push service is always a name.
+- **The transport is closed to the moves that leave that shape behind** (`config/webpush.php`):
+  redirects are not followed and the proxy environment variables Guzzle otherwise honours are
+  disabled. A 30x or a proxy is exactly what turns a validated https host into a request elsewhere.
+  Timeouts bound a worker parked on an unresponsive service.
+
+What is not covered: the host is judged as a **name**, never as an address, so a name that resolves
+to a private address is not caught, and there is no connection pin — DNS may answer differently at
+send time than it did at store time. Two things bound that residue rather than close it: writing a
+row takes a signed-in member and survives a per-member cap, and **no response body is ever read back
+to anyone** — the channel consumes status codes only, to expire dead subscriptions.
+
 ## Key invariants
 
+- Push endpoints are shape-controlled at store and sent over a no-redirect, no-proxy client; that is
+  a weaker guarantee than the fetcher's, and it is the only outbound path allowed to be.
 - `App\Outbound` is the only directory in `app/` that opens a connection, enforced by test. The
   URL-aware path functions (`file_get_contents`, `file`, `fopen`, `readfile`, `get_headers`, `copy`)
   are banned outright everywhere else, with the existing local-path readers named in an exact

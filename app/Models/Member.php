@@ -9,6 +9,7 @@ use App\Notifications\Settings\NotificationKind;
 use App\Support\AvatarColor;
 use App\Support\ComposeEditor;
 use App\Support\PreferenceKey;
+use App\Support\PushDelivery;
 use App\Support\Surface;
 use App\Support\Visibility;
 use Database\Factories\MemberFactory;
@@ -23,13 +24,14 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\Events\RecoveryCodeReplaced;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'password_scheme', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class Member extends Authenticatable
 {
     /** @use HasFactory<MemberFactory> */
-    use ClearsPasswordScheme, HasFactory, Notifiable;
+    use ClearsPasswordScheme, HasFactory, HasPushSubscriptions, Notifiable;
 
     // The login pipeline detects a two-factor member via class_uses_recursive, so the trait is
     // load-bearing, not decorative.
@@ -229,12 +231,30 @@ class Member extends Authenticatable
         $this->writePreference(PreferenceKey::ComposeEditor, $editor);
     }
 
+    /**
+     * Whether this member's subscribed devices are nudged by web push, or the registry default
+     * (Enabled) when unset. Separate from preference() so the PushDelivery value type stays
+     * type-safe at the call site.
+     */
+    public function pushDelivery(): PushDelivery
+    {
+        $value = PreferenceKey::PushDelivery->decode($this->storedPreference(PreferenceKey::PushDelivery));
+        assert($value instanceof PushDelivery);
+
+        return $value;
+    }
+
+    public function setPushDelivery(PushDelivery $delivery): void
+    {
+        $this->writePreference(PreferenceKey::PushDelivery, $delivery);
+    }
+
     private function storedPreference(PreferenceKey $key): ?string
     {
         return $this->preferences->firstWhere('key', $key->value)?->value;
     }
 
-    private function writePreference(PreferenceKey $key, Visibility|Surface|ComposeEditor $value): void
+    private function writePreference(PreferenceKey $key, Visibility|Surface|ComposeEditor|PushDelivery $value): void
     {
         $this->preferences()->updateOrCreate(
             ['key' => $key->value],
