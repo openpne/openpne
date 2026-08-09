@@ -26,9 +26,10 @@ function writeBadge(count: number): void {
  * refresh on return to the tab, which is the moment a stale badge is seen.
  */
 export function UnreadSync() {
-    const { unread, push } = usePage<PageProps>().props;
+    const { unread, push, auth } = usePage<PageProps>().props;
     const signedIn = unread != null;
     const pushConfigured = push != null;
+    const memberId = auth.user?.id ?? null;
 
     // App-icon badge on every foreground change: mark-all, opening the feed and navigation all refresh
     // this prop. The fetch path below covers the other case — an unchanged value that a background
@@ -41,15 +42,16 @@ export function UnreadSync() {
 
     // A device's push ownership follows the member signed in now: re-register the worker (an opted-in
     // browser re-fetches an updated /sw.js) then rebind any existing subscription to this member.
-    // reconcileSubscription is fail-closed — an unconfirmed rebind unsubscribes locally — and never
-    // subscribes a fresh browser. This is the Modern half; the Classic surface runs the same rebind
-    // from its header (push-reconcile.js), so an account switch on either surface is covered.
+    // reconcileSubscription POSTs only on an ownership transition (memberId change / new device) and
+    // fails closed on a rejected rebind; it never subscribes a fresh browser. This is the Modern half;
+    // the Classic surface runs the same rebind from its header (push-reconcile.js), so an account
+    // switch on either surface is covered. signedIn ⇒ auth.user is non-null, so memberId is set here.
     useEffect(() => {
-        if (pushConfigured && signedIn) {
+        if (pushConfigured && signedIn && memberId != null) {
             resumeRegistration();
-            void reconcileSubscription();
+            void reconcileSubscription(memberId);
         }
-    }, [pushConfigured, signedIn]);
+    }, [pushConfigured, signedIn, memberId]);
 
     useEffect(() => {
         if (!signedIn) {

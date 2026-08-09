@@ -33,10 +33,15 @@ class ClassicPushReconcileTest extends TestCase
     {
         $this->configureVapid();
 
-        $this->actingAs(Member::factory()->create())
+        $member = Member::factory()->create();
+
+        // The script also carries the signed-in member's id, so the vanilla reconcile knows whose
+        // binding to confirm and re-POSTs only on an ownership transition.
+        $this->actingAs($member)
             ->get('/member/config?category=notification')
             ->assertOk()
-            ->assertSee('js/push-reconcile.js', false);
+            ->assertSee('js/push-reconcile.js', false)
+            ->assertSee('data-push-member-id="'.$member->getKey().'"', false);
     }
 
     public function test_a_guest_classic_page_never_loads_the_reconcile_script(): void
@@ -50,7 +55,8 @@ class ClassicPushReconcileTest extends TestCase
         $this->get('/login')
             ->assertOk()
             ->assertSee('name="csrf-token"', false)
-            ->assertDontSee('js/push-reconcile.js', false);
+            ->assertDontSee('js/push-reconcile.js', false)
+            ->assertDontSee('data-push-member-id', false);
     }
 
     public function test_an_unconfigured_site_omits_the_reconcile_script_for_a_member(): void
@@ -60,6 +66,7 @@ class ClassicPushReconcileTest extends TestCase
         $this->actingAs(Member::factory()->create())
             ->get('/member/config?category=notification')
             ->assertOk()
-            ->assertDontSee('js/push-reconcile.js', false);
+            ->assertDontSee('js/push-reconcile.js', false)
+            ->assertDontSee('data-push-member-id', false);
     }
 }

@@ -98,6 +98,69 @@ export async function unsubscribeThisDevice(): Promise<void> {
     await sub.unsubscribe();
 }
 
+/** A confirmed same-member/same-endpoint binding, stored per browser so reconcile can skip the POST. */
+interface PushBinding {
+    endpoint: string;
+    memberId: number;
+    at: number;
+}
+
+const PUSH_BOUND_KEY = 'openpne-push-bound';
+
+/**
+ * How long a confirmed binding is trusted before reconcile re-POSTs to re-confirm it. Short enough
+ * that a cap-pruned server row self-heals within a day; long enough that ordinary browsing never
+ * spends the store route's rate limit.
+ */
+const RECONCILE_TTL_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * Reconcile only on an ownership transition — no marker, a different member or endpoint, or a marker
+ * older than the TTL — never on a confirmed same-member binding. Re-confirming an unchanged binding on
+ * every load would consume the store route's `throttle:30,1` and, on the 429, fail closed and
+ * unsubscribe the member's own device. Pure so push.test.ts pins it; the Classic vanilla script mirrors
+ * this predicate inline.
+ */
+export function shouldReconcile(
+    marker: PushBinding | null,
+    endpoint: string,
+    memberId: number,
+    now: number,
+    ttl: number,
+): boolean {
+    if (!marker) {
+        return true;
+    }
+    return !(marker.endpoint === endpoint && marker.memberId === memberId && now - marker.at < ttl);
+}
+
+/** Reads the binding marker, degrading a blocked/broken store (private mode throws) to "no marker". */
+function readBinding(): PushBinding | null {
+    try {
+        const raw = localStorage.getItem(PUSH_BOUND_KEY);
+        return raw ? (JSON.parse(raw) as PushBinding) : null;
+    } catch {
+        return null;
+    }
+}
+
+function writeBinding(binding: PushBinding): void {
+    try {
+        localStorage.setItem(PUSH_BOUND_KEY, JSON.stringify(binding));
+    } catch {
+        // Blocked storage degrades to "no marker": reconcile will POST each load, but a 429 no longer
+        // unsubscribes, so the regression stays closed even without storage.
+    }
+}
+
+function clearBinding(): void {
+    try {
+        localStorage.removeItem(PUSH_BOUND_KEY);
+    } catch {
+        // Same degradation as writeBinding.
+    }
+}
+
 /**
  * Rebind this browser's existing subscription to the member signed in now, failing *closed*. A push
  * row belongs to whoever last POSTed its endpoint, so on a shared browser (A subscribes, logs out; B
@@ -105,14 +168,17 @@ export async function unsubscribeThisDevice(): Promise<void> {
  * "subscribed" and receive A's pushes. Re-POSTing the endpoint reclaims ownership for the current
  * member and also heals a cap-pruned row (server row gone, browser sub present).
  *
- * If the rebind cannot be confirmed — any non-2xx, or a thrown/rejected fetch — the local
- * subscription is unsubscribed so the endpoint dies and the prior owner's push can no longer land: an
- * unconfirmed rebind is a cross-account leak, so privacy wins over convenience. `getRegistration()`
- * (not `.ready`, which never resolves when no worker is registered) keeps a member who never
- * subscribed a no-op, and with no existing subscription this never subscribes a fresh browser — a
- * silent subscribe is not consent.
+ * The POST fires only on an ownership transition ({@link shouldReconcile}) — a confirmed same-member
+ * binding costs zero requests, so ordinary browsing never trips the store route's rate limit. When it
+ * does fire and the server *rejects* the rebind (a non-2xx that is not a 429, or a thrown/rejected
+ * fetch with the subscription in hand), the local subscription is unsubscribed so the endpoint dies
+ * and the prior owner's push can no longer land: an unconfirmed rebind is a cross-account leak, so
+ * privacy wins over convenience. A 429 is rate-limiting, not rejection — leave the subscription alone
+ * and let the next navigation retry. `getRegistration()` (not `.ready`, which never resolves when no
+ * worker is registered) keeps a member who never subscribed a no-op, and with no existing subscription
+ * this never subscribes a fresh browser — a silent subscribe is not consent.
  */
-export async function reconcileSubscription(): Promise<void> {
+export async function reconcileSubscription(memberId: number): Promise<void> {
     if (!pushSupported() || Notification.permission !== 'granted') {
         return;
     }
@@ -121,7 +187,9 @@ export async function reconcileSubscription(): Promise<void> {
     if (!sub) {
         return;
     }
-    let confirmed = false;
+    if (!shouldReconcile(readBinding(), sub.endpoint, memberId, Date.now(), RECONCILE_TTL_MS)) {
+        return;
+    }
     try {
         const json = sub.toJSON();
         const res = await fetch('/push/subscriptions', {
@@ -130,13 +198,18 @@ export async function reconcileSubscription(): Promise<void> {
             credentials: 'same-origin',
             body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
         });
-        confirmed = res.ok;
+        if (res.ok) {
+            writeBinding({ endpoint: sub.endpoint, memberId, at: Date.now() });
+            return;
+        }
+        if (res.status === 429) {
+            return; // transient: the marker was not written, so the next navigation retries until it sticks.
+        }
     } catch {
-        // A thrown/rejected fetch is unconfirmed, same as a non-2xx.
+        // A thrown/rejected fetch is unconfirmed; fall through to fail closed, same as a non-429 non-2xx.
     }
-    if (!confirmed) {
-        await sub.unsubscribe();
-    }
+    clearBinding();
+    await sub.unsubscribe();
 }
 
 /**
