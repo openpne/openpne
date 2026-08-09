@@ -8,13 +8,15 @@ import { NavItems } from '@/components/nav-items';
 import type { PageProps } from '@/types';
 
 /**
- * The mobile bar's icon-control shape: a closed circle, so a control can never visually merge with
- * the flat identity block (brand or page scope) beside it — circles are controls, flat image + name
- * is identity. Shared by the hamburger here and the detail bar's back control (top-nav.tsx); the
- * account menu's avatar is already a circle of its own.
+ * The mobile bar's icon-control shape: a bare 24px glyph in a box as tall as the bar. The box is
+ * the whole tap target and paints nothing, so the bar's only filled marks are identity (brand,
+ * avatar) — a glyph and a face are never mistaken for each other the way two filled circles of
+ * different diameters were. 48 is the bar's height, so the target is as large as it can be without
+ * reaching into the page below, and comfortably past the 44 floor the rest of the app holds to
+ * (min-h-11). Shared by the hamburger here and the detail bar's back/close control (top-nav.tsx).
  */
 export const BAR_CONTROL =
-    '-ml-1 inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-accent text-muted-foreground transition hover:border-input';
+    '-ml-1 inline-flex size-12 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent';
 
 /** Mobile hamburger that opens a slide-in nav sheet. The account menu stays in the top bar, so the
  *  sheet holds only the brand (home) and nav — no nested menu inside the dialog. */
