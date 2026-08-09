@@ -50,7 +50,11 @@ export async function subscribeThisDevice(vapidPublicKey: string): Promise<'subs
         if (await Notification.requestPermission() !== 'granted') {
             return 'denied';
         }
-        const registration = await navigator.serviceWorker.register('/sw.js');
+        // register() resolves before the worker is active, but pushManager.subscribe() rejects with
+        // no active worker — so wait for `ready`, or the first subscribe on a fresh device fails and
+        // only a second attempt (worker now active) succeeds.
+        await navigator.serviceWorker.register('/sw.js');
+        const registration = await navigator.serviceWorker.ready;
         sub = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
