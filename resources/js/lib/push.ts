@@ -138,6 +138,32 @@ export function shouldReconcile(
     return !(marker.endpoint === endpoint && marker.memberId === memberId && now - marker.at < ttl);
 }
 
+/** The statuses the store route (or a proxy in front of it) returns to *refuse* a rebind outright —
+ *  as opposed to a transient/retryable status (408/425/429/5xx) or the endpoint simply not answering. */
+const DEFINITIVE_REFUSAL = new Set([400, 401, 403, 404, 419, 422]);
+
+/**
+ * What a reconcile POST's status means for the local subscription, given whether the marker already
+ * proves this subscription was another member's (`knownForeign` — same endpoint, different member).
+ *
+ * A 2xx confirms the rebind. When we already know it is foreign, ANY non-2xx sheds it: a transient
+ * failure is not a reason to keep delivering the prior member's pushes to the person now signed in, and
+ * the retry is only on the next navigation, so a kept foreign sub is not time-bounded. Otherwise (our
+ * own subscription, or ownership unknown) only a definitive refusal fails closed; a 408/425/429/5xx or
+ * a dropped request is the server not answering, so the subscription is kept and the next navigation
+ * retries — a transient outage must not unsubscribe a member's own device. Pure so push.test.ts pins
+ * it; the Classic script mirrors it.
+ */
+export function reconcileOutcome(status: number, knownForeign: boolean): 'confirm' | 'keep' | 'unsubscribe' {
+    if (status >= 200 && status < 300) {
+        return 'confirm';
+    }
+    if (knownForeign) {
+        return 'unsubscribe';
+    }
+    return DEFINITIVE_REFUSAL.has(status) ? 'unsubscribe' : 'keep';
+}
+
 /** Reads the binding marker, degrading a blocked/broken store (private mode throws) to "no marker". */
 function readBinding(): PushBinding | null {
     try {
@@ -173,14 +199,15 @@ function clearBinding(): void {
  * member and also heals a cap-pruned row (server row gone, browser sub present).
  *
  * The POST fires only on an ownership transition ({@link shouldReconcile}) — a confirmed same-member
- * binding costs zero requests, so ordinary browsing never trips the store route's rate limit. When it
- * does fire and the server *rejects* the rebind (a non-2xx that is not a 429, or a thrown/rejected
- * fetch with the subscription in hand), the local subscription is unsubscribed so the endpoint dies
- * and the prior owner's push can no longer land: an unconfirmed rebind is a cross-account leak, so
- * privacy wins over convenience. A 429 is rate-limiting, not rejection — leave the subscription alone
- * and let the next navigation retry. `getRegistration()` (not `.ready`, which never resolves when no
- * worker is registered) keeps a member who never subscribed a no-op, and with no existing subscription
- * this never subscribes a fresh browser — a silent subscribe is not consent.
+ * binding costs zero requests, so ordinary browsing never trips the store route's rate limit. How an
+ * unconfirmed rebind is handled depends on whether the marker already proves the subscription is a
+ * different member's ({@link reconcileOutcome}): a *known-foreign* one is shed on any non-2xx (a
+ * transient failure is no reason to keep delivering the prior member's pushes to whoever is signed in
+ * now), while our own (or an ownership-unknown) subscription is kept through a transient outage and
+ * only shed on a definitive refusal — a transient outage must not unsubscribe a member's own device.
+ * `getRegistration()` (not `.ready`, which never resolves when no worker is registered) keeps a member
+ * who never subscribed a no-op, and with no existing subscription this never subscribes a fresh browser
+ * — a silent subscribe is not consent.
  */
 export async function reconcileSubscription(memberId: number): Promise<void> {
     if (!pushSupported() || Notification.permission !== 'granted') {
@@ -191,9 +218,14 @@ export async function reconcileSubscription(memberId: number): Promise<void> {
     if (!sub) {
         return;
     }
-    if (!shouldReconcile(readBinding(), sub.endpoint, memberId, Date.now(), RECONCILE_TTL_MS)) {
+    const marker = readBinding();
+    if (!shouldReconcile(marker, sub.endpoint, memberId, Date.now(), RECONCILE_TTL_MS)) {
         return;
     }
+    // The marker proves prior ownership: a matching endpoint under a different member is a subscription
+    // we know belongs to someone else, so an unconfirmed rebind must shed it rather than keep it.
+    const knownForeign = marker !== null && marker.endpoint === sub.endpoint && marker.memberId !== memberId;
+    let outcome: 'confirm' | 'keep' | 'unsubscribe';
     try {
         const json = sub.toJSON();
         const res = await fetch('/push/subscriptions', {
@@ -202,15 +234,19 @@ export async function reconcileSubscription(memberId: number): Promise<void> {
             credentials: 'same-origin',
             body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
         });
-        if (res.ok) {
-            writeBinding({ endpoint: sub.endpoint, memberId, at: Date.now() });
-            return;
-        }
-        if (res.status === 429) {
-            return; // transient: the marker was not written, so the next navigation retries until it sticks.
-        }
+        outcome = reconcileOutcome(res.status, knownForeign);
     } catch {
-        // A thrown/rejected fetch is unconfirmed; fall through to fail closed, same as a non-429 non-2xx.
+        // No answer from the server. Keep our own/unknown subscription and let the next navigation
+        // retry; a known-foreign one must still be shed, since keeping it would leak the prior member's.
+        outcome = knownForeign ? 'unsubscribe' : 'keep';
+    }
+    if (outcome === 'confirm') {
+        writeBinding({ endpoint: sub.endpoint, memberId, at: Date.now() });
+        return;
+    }
+    if (outcome === 'keep') {
+        // Marker unwritten, so the next navigation retries until the rebind sticks.
+        return;
     }
     clearBinding();
     await sub.unsubscribe();

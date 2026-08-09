@@ -182,14 +182,17 @@ the account switch is closed on whichever surface B signs in on. The POST fires 
 transition** — a per-browser `openpne-push-bound` marker (endpoint + member id + timestamp) records the
 last confirmed binding, and a match within a 12h TTL skips the POST — so a confirmed same-member binding
 costs zero requests and ordinary browsing (Classic is a full reload per page) never trips the store
-route's `throttle:30,1`. Reconciliation is **fail-closed on a rejected rebind POST**: when the server
-*refuses* the rebind (a non-2xx that is not a rate-limit 429, or a thrown/rejected fetch with the
-subscription in hand), the local subscription is unsubscribed so its endpoint dies rather than staying
-bound to the prior owner — privacy over convenience. A **429 is transient, not a refusal**: the
-subscription is kept and the next navigation retries (the marker stays unwritten until a 2xx). Failing
-to *obtain* the subscription handle is a no-op, not a fail-close — nothing is bound, so nothing is shed;
-likewise a member who never opted in has no subscription to rebind, and this never subscribes a fresh
-browser.
+route's `throttle:30,1`. How an unconfirmed rebind is handled turns on what the marker already knows
+(`reconcileOutcome`). A **known-foreign** subscription — the marker's endpoint matches but its member
+differs, so this device was confirmed as *another* member's — is shed on **any** non-2xx: a transient
+failure is no reason to keep delivering the prior member's pushes to whoever is signed in now, and the
+retry only fires on the next navigation (not a timer), so a kept foreign subscription is not
+time-bounded. For **our own, or an ownership-unknown** subscription, only a **definitive refusal**
+(400/401/403/404/419/422) sheds it; a 408/425/429/5xx or a dropped request is the server not answering,
+so the subscription is kept and the next navigation retries (the marker stays unwritten until a 2xx) —
+a transient outage must not unsubscribe a member's own device. Failing to *obtain* the subscription
+handle is a no-op, not a fail-close — nothing is bound, so nothing is shed; likewise a member who never
+opted in has no subscription to rebind, and this never subscribes a fresh browser.
 
 That endpoint is a URL the site later POSTs to, over a Guzzle client outside `App\Outbound` — see
 [outbound-http.md](outbound-http.md#the-push-endpoint-seam) for what holds its shape.

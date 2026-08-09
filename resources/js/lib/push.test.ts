@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { shouldReconcile, urlBase64ToUint8Array } from './push.ts';
+import { reconcileOutcome, shouldReconcile, urlBase64ToUint8Array } from './push.ts';
 
 // A real base64url VAPID public key: an uncompressed P-256 point, so 65 bytes leading with 0x04. This
 // exact string carries both base64url-only characters (`-` and `_`) and needs one `=` of padding.
@@ -49,4 +49,34 @@ test('POST: the endpoint differs (a new subscription on this device)', () => {
 
 test('POST: the marker is older than the TTL (a cap-pruned row self-heals)', () => {
     assert.equal(shouldReconcile(MARKER, MARKER.endpoint, MARKER.memberId, NOW + TTL + 1, TTL), true);
+});
+
+// reconcileOutcome decides what a reconcile POST's status does to the local subscription, given
+// whether the marker already proves it is another member's. A 2xx always confirms.
+test('confirm: any 2xx is the rebind stored, foreign or not', () => {
+    for (const status of [200, 201, 204]) {
+        assert.equal(reconcileOutcome(status, false), 'confirm');
+        assert.equal(reconcileOutcome(status, true), 'confirm');
+    }
+});
+
+// Our own / ownership-unknown subscription: a transient status is kept, only a definitive refusal sheds.
+test('keep: a transient status on our own subscription is never an unsubscribe', () => {
+    for (const status of [408, 425, 429, 500, 502, 503, 504]) {
+        assert.equal(reconcileOutcome(status, false), 'keep');
+    }
+});
+
+test('unsubscribe: a definitive 4xx (auth/CSRF/validation/gone) refuses the rebind', () => {
+    for (const status of [400, 401, 403, 404, 419, 422]) {
+        assert.equal(reconcileOutcome(status, false), 'unsubscribe');
+    }
+});
+
+// Known-foreign (marker: same endpoint, different member): ANY non-2xx sheds it, including transient —
+// keeping it would leak the prior member's pushes, and the retry is not time-bounded.
+test('unsubscribe: a known-foreign subscription is shed on any non-2xx, transient included', () => {
+    for (const status of [408, 425, 429, 500, 503, 400, 401, 403, 404, 419, 422]) {
+        assert.equal(reconcileOutcome(status, true), 'unsubscribe');
+    }
 });

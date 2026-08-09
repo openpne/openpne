@@ -9,11 +9,13 @@
  * minute of browsing and, failing closed on that 429, unsubscribe the member's own device. So the POST
  * fires only on an ownership transition (no marker, a different member/endpoint, or a stale marker),
  * mirroring shouldReconcile in resources/js/lib/push.ts — push.test.ts is the reference for this
- * predicate and the 429-is-transient / non-2xx-fails-closed handling; keep the two identical.
+ * predicate and for reconcileOutcome; keep the two identical.
  *
- * Fail closed on a *rejected* rebind (a non-2xx that is not a 429, or a network error with the
- * subscription in hand): unsubscribe locally so the prior owner's push can no longer land. A 429 is
- * rate-limiting, not rejection — keep the subscription and retry on the next navigation. Never
+ * When the marker proves the subscription is another member's (same endpoint, different member), an
+ * unconfirmed rebind sheds it on ANY non-2xx — a transient failure is no reason to keep delivering the
+ * prior member's pushes. Otherwise (our own, or ownership unknown) only a definitive 4xx refusal sheds
+ * it; a 408/425/429/5xx or a dropped request is the server not answering, so keep the subscription and
+ * retry on the next navigation — a transient outage must not unsubscribe a member's own device. Never
  * registers a worker — Classic only reconciles or invalidates a subscription that already exists.
  */
 (function () {
@@ -38,6 +40,18 @@
             return true;
         }
         return !(marker.endpoint === endpoint && marker.memberId === memberId && now - marker.at < TTL_MS);
+    }
+
+    // Mirrors reconcileOutcome in resources/js/lib/push.ts (push.test.ts pins the cases).
+    var DEFINITIVE_REFUSAL = [400, 401, 403, 404, 419, 422];
+    function reconcileOutcome(status, knownForeign) {
+        if (status >= 200 && status < 300) {
+            return 'confirm';
+        }
+        if (knownForeign) {
+            return 'unsubscribe'; // a subscription we know is another member's is shed on any non-2xx
+        }
+        return DEFINITIVE_REFUSAL.indexOf(status) !== -1 ? 'unsubscribe' : 'keep';
     }
 
     function readBinding() {
@@ -75,9 +89,13 @@
                 if (!sub) {
                     return; // no existing subscription: never subscribe a fresh browser
                 }
-                if (!shouldReconcile(readBinding(), sub.endpoint, Date.now())) {
+                var marker = readBinding();
+                if (!shouldReconcile(marker, sub.endpoint, Date.now())) {
                     return; // confirmed same-member binding: zero requests per load
                 }
+                // Marker proves prior ownership: a matching endpoint under a different member is a
+                // subscription we know is someone else's, so an unconfirmed rebind must shed it.
+                var knownForeign = !!marker && marker.endpoint === sub.endpoint && marker.memberId !== memberId;
                 var meta = document.querySelector('meta[name="csrf-token"]');
                 var json = sub.toJSON();
                 fetch('/push/subscriptions', {
@@ -91,20 +109,25 @@
                     body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
                 })
                     .then(function (res) {
-                        if (res.ok) {
+                        var outcome = reconcileOutcome(res.status, knownForeign);
+                        if (outcome === 'confirm') {
                             writeBinding({ endpoint: sub.endpoint, memberId: memberId, at: Date.now() });
                             return;
                         }
-                        if (res.status === 429) {
+                        if (outcome === 'keep') {
                             return; // transient: marker unwritten, so the next navigation retries
                         }
-                        throw new Error('rebind rejected'); // a non-2xx (non-429) is unconfirmed, same as a throw
+                        // Refused (or known-foreign): invalidate the endpoint.
+                        clearBinding();
+                        return sub.unsubscribe().catch(function () {});
                     })
                     .catch(function () {
-                        // Rebind rejected (non-429 non-2xx, or a network error) with the handle in hand:
-                        // invalidate the endpoint so the prior owner's push dies. 429 returned above.
-                        clearBinding();
-                        sub.unsubscribe().catch(function () {});
+                        // No answer. Keep our own/unknown subscription; a known-foreign one must still
+                        // be shed, since keeping it would leak the prior member's pushes.
+                        if (knownForeign) {
+                            clearBinding();
+                            sub.unsubscribe().catch(function () {});
+                        }
                     });
             })
             .catch(function () {
