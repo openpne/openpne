@@ -3,6 +3,7 @@
 namespace Tests\Feature\Frontend;
 
 use FilesystemIterator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use Tests\TestCase;
@@ -36,8 +37,15 @@ use Tests\TestCase;
  */
 class FontWeightGuardTest extends TestCase
 {
-    /** Tailwind weight utilities, plus arbitrary `font-[...]` so a numeric escape hatch is caught too. */
-    private const WEIGHT_CLASS = '/\bfont-(?:medium|semibold|bold)\b|\bfont-\[/';
+    /**
+     * Every Tailwind weight utility except `font-normal` — 400 is the rule, so naming it is not a
+     * violation — plus both arbitrary escape hatches: the value form `font-[550]` and the property
+     * form `[font-weight:700]`. Anything narrower leaves a way to weight text that the guard waves
+     * through; `font-extrabold` in a fresh file would have passed all three checks.
+     *
+     * Family utilities (`font-sans`, `font-mono`) share the prefix and are deliberately not matched.
+     */
+    private const WEIGHT_CLASS = '/\bfont-(?:thin|extralight|extrabold|semibold|medium|light|black|bold)\b|\bfont-\[|\[font-weight:/';
 
     /** @var array<string, int> */
     private const ROLE_OWNERS = [
@@ -123,22 +131,68 @@ class FontWeightGuardTest extends TestCase
         return self::ROLE_OWNERS + self::OUT_OF_SCOPE + self::EARNED_EXCEPTIONS + self::DEBT_BASELINE;
     }
 
-    /** Weight occurrences per .tsx file under resources/js, keyed by path relative to it. */
+    public static function weightOccurrences(string $contents): int
+    {
+        return preg_match_all(self::WEIGHT_CLASS, $contents);
+    }
+
+    /**
+     * Weight occurrences per source file under resources/js, keyed by path relative to it.
+     *
+     * `.ts` counts as UI source, not just `.tsx`: `compose/editor-extensions.ts` holds the class
+     * string ProseMirror's editable is rendered with, so a scan limited to components would read
+     * past it. Node test files are excluded — their fixtures are not shipped markup.
+     */
     private function occurrences(): array
     {
         $base = resource_path('js');
         $counts = [];
         $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($base, FilesystemIterator::SKIP_DOTS));
         foreach ($it as $file) {
-            if (! $file->isFile() || ! str_ends_with($file->getFilename(), '.tsx')) {
+            $name = $file->getFilename();
+            if (! $file->isFile() || ! (str_ends_with($name, '.ts') || str_ends_with($name, '.tsx')) || str_ends_with($name, '.test.ts')) {
                 continue;
             }
             $rel = str_replace($base.'/', '', $file->getPathname());
-            $counts[$rel] = preg_match_all(self::WEIGHT_CLASS, (string) file_get_contents($file->getPathname()));
+            $counts[$rel] = self::weightOccurrences((string) file_get_contents($file->getPathname()));
         }
         ksort($counts);
 
         return $counts;
+    }
+
+    /**
+     * What the pattern must catch and must not. The budgets below are only as good as this: a weight
+     * the regex cannot see costs nothing to add anywhere in the tree.
+     *
+     * @return array<string, array{string, int}>
+     */
+    public static function weightClassCases(): array
+    {
+        return [
+            'thin' => ['<span className="font-thin">', 1],
+            'extralight' => ['<span className="font-extralight">', 1],
+            'light' => ['<span className="font-light">', 1],
+            'medium' => ['<span className="font-medium">', 1],
+            'semibold' => ['<span className="font-semibold">', 1],
+            'bold' => ['<span className="font-bold">', 1],
+            'extrabold' => ['<span className="font-extrabold">', 1],
+            'black' => ['<span className="font-black">', 1],
+            'arbitrary value' => ['<span className="font-[550]">', 1],
+            'arbitrary property' => ['<span className="[font-weight:700]">', 1],
+            'behind a variant' => ['<span className="lg:font-extrabold">', 1],
+            'several in one string' => ['"font-medium sm:font-bold"', 2],
+            // 400 is the rule, so spelling it out is not a violation.
+            'normal' => ['<span className="font-normal">', 0],
+            'family utilities' => ['<span className="font-sans font-mono font-serif">', 0],
+            'a word ending in the utility name' => ['<span className="not-font-bolder">', 0],
+        ];
+    }
+
+    #[DataProvider('weightClassCases')]
+    public function test_pattern_sees_every_weight_utility(string $markup, int $expected): void
+    {
+        $this->assertSame($expected, self::weightOccurrences($markup));
     }
 
     public function test_no_font_weight_outside_a_budgeted_file(): void
