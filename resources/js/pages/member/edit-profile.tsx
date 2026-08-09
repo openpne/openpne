@@ -2,6 +2,7 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import { Fragment } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -82,7 +83,7 @@ export default function MemberEditProfile() {
     return (
         <>
             <Head title={t('Edit Profile')} />
-            <h1 className="break-words text-xl font-semibold text-foreground">{t('Edit Profile')}</h1>
+            <Heading variant="page">{t('Edit Profile')}</Heading>
 
             <Panel>
                 <form

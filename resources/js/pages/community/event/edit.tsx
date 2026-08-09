@@ -7,6 +7,7 @@ import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -81,7 +82,7 @@ export default function CommunityEventEdit() {
                     {isEdit ? t('Save') : t('Post')}
                 </Button>
             </ComposeSheetAction>
-            <h1 className="break-words text-lg font-semibold text-foreground lg:text-xl">{title}</h1>
+            <Heading variant="pageCompose">{title}</Heading>
 
             <Panel overflow="visible" sheet>
                 <form id={COMPOSE_FORM_ID} onSubmit={submit} className="space-y-4">

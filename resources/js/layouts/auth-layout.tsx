@@ -1,6 +1,8 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { BrandMark } from '@/components/brand-mark';
+import { BrandName } from '@/components/brand-name';
+import { Heading } from '@/components/ui/heading';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -40,7 +42,7 @@ interface AuthLayoutProps {
  */
 export function AuthLayout({ title, intro, width = 'standard', children }: AuthLayoutProps) {
     const t = useT();
-    const { locale, name } = usePage<PageProps>().props;
+    const { locale } = usePage<PageProps>().props;
     // One width for brand, intro and card: they read as a single column, so they share an edge.
     const column = WIDTH[width];
 
@@ -50,12 +52,14 @@ export function AuthLayout({ title, intro, width = 'standard', children }: AuthL
         <div className="flex min-h-dvh flex-col items-center justify-center bg-muted pt-[calc(1.5rem+env(safe-area-inset-top))] pr-[calc(1rem+env(safe-area-inset-right))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] sm:pt-[calc(3rem+env(safe-area-inset-top))] sm:pb-[calc(3rem+env(safe-area-inset-bottom))]">
             <header className={cn('mb-6 flex w-full flex-col items-center gap-3', column)}>
                 <BrandMark size="lg" />
-                <p className="max-w-full text-center text-lg font-bold break-words text-foreground">{name}</p>
+                <BrandName size="lg" className="max-w-full text-center break-words" />
             </header>
             {/* An aside, not a div: every node needs a landmark (axe region), and site copy is complementary to the sign-in task. */}
             {intro && <aside className={cn('mb-6 w-full', column)}>{intro}</aside>}
             <main className={cn('w-full space-y-6 rounded-lg border border-border bg-card p-6 shadow-sm', column)}>
-                <h1 className="text-center text-xl font-semibold text-foreground">{title}</h1>
+                <Heading variant="page" className="text-center">
+                    {title}
+                </Heading>
                 {children}
             </main>
             {/* The policy pages a visitor has to be able to read before they decide to join. */}

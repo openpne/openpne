@@ -1,3 +1,4 @@
+import { Heading } from '@/components/ui/heading';
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ export default function BlockAdd() {
     return (
         <>
             <Head title={title} />
-            <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
+            <Heading variant="page">{title}</Heading>
 
             <Panel bodyClassName="space-y-4">
                 <p className="text-foreground">{t("Block :name?", { name: target.name })}</p>

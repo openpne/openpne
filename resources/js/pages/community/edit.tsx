@@ -4,6 +4,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
@@ -80,7 +81,7 @@ export default function CommunityEdit() {
     return (
         <>
             <Head title={title} />
-            <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
+            <Heading variant="page">{title}</Heading>
 
             <Panel>
                 <form onSubmit={submit} className="space-y-4">
