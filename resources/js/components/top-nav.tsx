@@ -14,11 +14,11 @@ import { useScrolled } from '@/lib/use-scrolled';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
-/** The 4px above and below a 36px bar action, claimed as tap target: every control in the bar
- *  answers across its full 44px height, whatever it paints — an action that filled the bar instead
+/** The 6px above and below a 36px bar action, claimed as tap target: every control in the bar
+ *  answers across its full 48px height, whatever it paints — an action that filled the bar instead
  *  would leave the glyph beside it looking stranded. The compose slot spells the same rule as a
  *  descendant variant, because the actions it holds are portalled in from the page. */
-const BAR_ACTION_HIT = "relative after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']";
+const BAR_ACTION_HIT = "relative after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-['']";
 
 /** The shell every bar variant shares — one element, one height. Height is read from
  *  `--modern-top-offset` rather than restated: the var *is* this bar's height (the top inset, which a
@@ -118,8 +118,8 @@ function ScopeIdentity({ scope }: { scope: ChromeScope }) {
             <Link
                 href={scope.kind === 'community' ? `/community/${scope.id}` : `/member/${scope.id}`}
                 // Full bar height: the block paints at 32 to sit with its name, but it is a link, and
-                // the bar's targets are all 44.
-                className="flex min-h-11 min-w-0 max-w-full items-center gap-2"
+                // the bar's targets are all 48.
+                className="flex min-h-12 min-w-0 max-w-full items-center gap-2"
             >
                 {scope.kind === 'community' ? (
                     <CommunityImage name={scope.name} src={scope.imageUrl} className="size-8" textClassName="text-xs" decorative />
@@ -157,7 +157,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     // Guest only: a guest lands from outside, where logo-left-goes-home is the web convention, and
     // has neither the bottom nav nor the drawer — this link is their one way home.
     const brand = (
-        <Link href="/dashboard" className="flex min-h-11 min-w-0 flex-1 items-center gap-2">
+        <Link href="/dashboard" className="flex min-h-12 min-w-0 flex-1 items-center gap-2">
             <BrandMark size="sm" />
             <span className="truncate font-bold">{name}</span>
         </Link>
@@ -199,7 +199,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                         BAR_ACTION_HIT applied to each, since they arrive through a portal. */}
                     <div
                         ref={slotRef}
-                        className="ml-auto flex items-center gap-2 [&_button]:relative [&_button::after]:absolute [&_button::after]:-inset-y-1 [&_button::after]:inset-x-0 [&_button::after]:content-['']"
+                        className="ml-auto flex items-center gap-2 [&_button]:relative [&_button::after]:absolute [&_button::after]:-inset-y-1.5 [&_button::after]:inset-x-0 [&_button::after]:content-['']"
                     />
                 </TopBar>
             );
@@ -215,7 +215,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                         <ScopeIdentity scope={chrome.scope} />
                         {/* Balances the back control — same box, mirrored margins — so the identity
                             centers on the bar. */}
-                        <span className="-mr-1 size-11 shrink-0" aria-hidden />
+                        <span className="-mr-1 size-12 shrink-0" aria-hidden />
                     </>
                 ) : (
                     chrome.context && (
@@ -248,7 +248,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                             </p>
                             {/* Balances the back control — same box, mirrored -mr-1 against its -ml-1 —
                                 so the text centers on the bar, not on what is left of it. */}
-                            <span className="-mr-1 size-11 shrink-0" aria-hidden />
+                            <span className="-mr-1 size-12 shrink-0" aria-hidden />
                         </>
                     )
                 )}
