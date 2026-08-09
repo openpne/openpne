@@ -271,7 +271,7 @@ export default function MemberConfig() {
                 <GroupItem>
                     <DetailRow
                         title={t('Notifications')}
-                        value={t('Choose which notifications you receive, in-app and by email.')}
+                        value={t('Choose which notifications you receive, in-app, by email, and by push.')}
                         action={
                             <ActionLink href="/member/config/notifications" variant="outline" size="sm">
                                 {t('Edit')}

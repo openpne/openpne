@@ -45,6 +45,7 @@
             <div id="HeaderContainer">
                 <h1 id="logo"><a href="{{ url('/') }}">{{ sns_name() }}</a></h1>
                 @include('layouts.partials.notification-center')
+                @include('layouts.partials.push-reconcile')
                 @include('layouts.partials.global-nav')
                 {{-- Operator banner shown above the content, by login state. --}}
                 <div id="topBanner">{!! classic_top_banner() !!}</div>

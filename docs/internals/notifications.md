@@ -174,6 +174,23 @@ Three switches, at three scopes:
   moves the row. The store is capped at 10 devices per member, oldest pruned. An endpoint the push
   service reports as 404/410 is deleted by the package's report handler, so expiry needs no wiring.
 
+The subscribe UI is Modern-only, but **ownership reconciliation runs on every authenticated surface**:
+the Modern shell (`UnreadSync`) and the Classic header (a gated partial loading `push-reconcile.js`)
+both re-POST the browser's existing subscription to reclaim the row for whoever is signed in now (this
+also heals a cap-pruned row) so a shared browser cannot keep delivering the previous member's pushes —
+the account switch is closed on whichever surface B signs in on. The POST fires only on an **ownership
+transition** — a per-browser `openpne-push-bound` marker (endpoint + member id + timestamp) records the
+last confirmed binding, and a match within a 12h TTL skips the POST — so a confirmed same-member binding
+costs zero requests and ordinary browsing (Classic is a full reload per page) never trips the store
+route's `throttle:30,1`. Reconciliation is **fail-closed on a rejected rebind POST**: when the server
+*refuses* the rebind (a non-2xx that is not a rate-limit 429, or a thrown/rejected fetch with the
+subscription in hand), the local subscription is unsubscribed so its endpoint dies rather than staying
+bound to the prior owner — privacy over convenience. A **429 is transient, not a refusal**: the
+subscription is kept and the next navigation retries (the marker stays unwritten until a 2xx). Failing
+to *obtain* the subscription handle is a no-op, not a fail-close — nothing is bound, so nothing is shed;
+likewise a member who never opted in has no subscription to rebind, and this never subscribes a fresh
+browser.
+
 That endpoint is a URL the site later POSTs to, over a Guzzle client outside `App\Outbound` — see
 [outbound-http.md](outbound-http.md#the-push-endpoint-seam) for what holds its shape.
 
