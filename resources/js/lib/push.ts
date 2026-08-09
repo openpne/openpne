@@ -80,50 +80,63 @@ export async function subscribeThisDevice(vapidPublicKey: string): Promise<'subs
 }
 
 /**
- * Drop this browser's subscription. Removes it locally regardless of the server's answer — a dead
- * endpoint self-expires via the push service's 404/410, so local removal is always safe — but returns
- * whether the server delete confirmed so the caller can distinguish a clean unsubscribe from a
- * best-effort one. A thrown network error is left to propagate for the caller's finally to handle.
+ * Drop this browser's subscription. Local removal is the success condition — a dead endpoint
+ * self-expires via the push service's 404/410, so the server delete is best-effort and its answer is
+ * not load-bearing. A thrown network error is left to propagate for the caller's finally to handle.
  */
-export async function unsubscribeThisDevice(): Promise<boolean> {
+export async function unsubscribeThisDevice(): Promise<void> {
     const sub = await currentSubscription();
     if (!sub) {
-        return true;
+        return;
     }
-    const res = await fetch('/push/subscriptions/delete', {
+    await fetch('/push/subscriptions/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...xsrfHeader() },
         credentials: 'same-origin',
         body: JSON.stringify({ endpoint: sub.endpoint }),
     });
     await sub.unsubscribe();
-    return res.ok;
 }
 
 /**
- * Rebind this browser's existing subscription to the member signed in now. A push row belongs to
- * whoever last POSTed its endpoint, so on a shared browser (A subscribes, logs out; B logs in) the
- * server-side owner stays A while this browser still holds A's subscription — B would see "subscribed"
- * and receive A's pushes. Re-POSTing the endpoint reclaims ownership for the current member and also
- * heals a cap-pruned row (server row gone, browser sub present). Never subscribes a fresh browser:
- * with no gesture and no existing subscription this is a no-op, since a silent subscribe is not consent.
+ * Rebind this browser's existing subscription to the member signed in now, failing *closed*. A push
+ * row belongs to whoever last POSTed its endpoint, so on a shared browser (A subscribes, logs out; B
+ * logs in) the server-side owner stays A while this browser still holds A's subscription — B would see
+ * "subscribed" and receive A's pushes. Re-POSTing the endpoint reclaims ownership for the current
+ * member and also heals a cap-pruned row (server row gone, browser sub present).
+ *
+ * If the rebind cannot be confirmed — any non-2xx, or a thrown/rejected fetch — the local
+ * subscription is unsubscribed so the endpoint dies and the prior owner's push can no longer land: an
+ * unconfirmed rebind is a cross-account leak, so privacy wins over convenience. `getRegistration()`
+ * (not `.ready`, which never resolves when no worker is registered) keeps a member who never
+ * subscribed a no-op, and with no existing subscription this never subscribes a fresh browser — a
+ * silent subscribe is not consent.
  */
 export async function reconcileSubscription(): Promise<void> {
     if (!pushSupported() || Notification.permission !== 'granted') {
         return;
     }
-    const registration = await navigator.serviceWorker.ready;
-    const sub = await registration.pushManager.getSubscription();
+    const registration = await navigator.serviceWorker.getRegistration();
+    const sub = await registration?.pushManager.getSubscription();
     if (!sub) {
         return;
     }
-    const json = sub.toJSON();
-    await fetch('/push/subscriptions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...xsrfHeader() },
-        credentials: 'same-origin',
-        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
-    });
+    let confirmed = false;
+    try {
+        const json = sub.toJSON();
+        const res = await fetch('/push/subscriptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...xsrfHeader() },
+            credentials: 'same-origin',
+            body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+        });
+        confirmed = res.ok;
+    } catch {
+        // A thrown/rejected fetch is unconfirmed, same as a non-2xx.
+    }
+    if (!confirmed) {
+        await sub.unsubscribe();
+    }
 }
 
 /**

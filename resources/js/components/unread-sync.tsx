@@ -40,9 +40,10 @@ export function UnreadSync() {
     }, [signedIn, unread?.notifications]);
 
     // A device's push ownership follows the member signed in now: re-register the worker (an opted-in
-    // browser re-fetches an updated /sw.js) then rebind any existing subscription to this member —
-    // register first, reconcile awaits the ready worker. Runs only where the site offers push and
-    // someone is signed in; reconcile never subscribes a fresh browser.
+    // browser re-fetches an updated /sw.js) then rebind any existing subscription to this member.
+    // reconcileSubscription is fail-closed — an unconfirmed rebind unsubscribes locally — and never
+    // subscribes a fresh browser. This is the Modern half; the Classic surface runs the same rebind
+    // from its header (push-reconcile.js), so an account switch on either surface is covered.
     useEffect(() => {
         if (pushConfigured && signedIn) {
             resumeRegistration();

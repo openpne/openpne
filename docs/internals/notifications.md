@@ -174,13 +174,15 @@ Three switches, at three scopes:
   moves the row. The store is capped at 10 devices per member, oldest pruned. An endpoint the push
   service reports as 404/410 is deleted by the package's report handler, so expiry needs no wiring.
 
-The subscribe UI and the reconciler both live in the Modern app shell, so a device's push ownership
-follows the **most recent Modern session** on that browser: `UnreadSync` re-POSTs the browser's
-existing subscription on mount, reclaiming the row for whoever is signed in now (this also heals a
-cap-pruned row) and keeping a shared browser from delivering the previous member's pushes. A
-Classic-only session neither subscribes nor reconciles — a bounded, conscious limitation, not a silent
-gap: a member who only ever uses Classic is simply never a push device, and the row is corrected the
-next time the browser loads Modern.
+The subscribe UI is Modern-only, but **ownership reconciliation runs on every authenticated surface**:
+the Modern shell (`UnreadSync`) and the Classic header (a gated partial loading `push-reconcile.js`)
+both re-POST the browser's existing subscription on load, reclaiming the row for whoever is signed in
+now (this also heals a cap-pruned row) so a shared browser cannot keep delivering the previous member's
+pushes — the account switch is closed on whichever surface B signs in on. Reconciliation is
+**fail-closed**: when the server cannot confirm the rebind (any non-2xx or a network failure), the
+local subscription is unsubscribed so its endpoint dies rather than staying bound to the prior owner —
+privacy over convenience. Neither path ever subscribes a fresh browser: a member who never opted in has
+no subscription to rebind, so reconciliation is a no-op there.
 
 That endpoint is a URL the site later POSTs to, over a Guzzle client outside `App\Outbound` — see
 [outbound-http.md](outbound-http.md#the-push-endpoint-seam) for what holds its shape.
