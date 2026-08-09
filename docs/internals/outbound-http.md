@@ -123,7 +123,8 @@ to anyone** — the channel consumes status codes only, to expire dead subscript
   `T_STRING`. Renaming on import is caught at the `use function` line, since no call-site name check
   can survive an alias. A dynamic callable is not caught, and no check of this kind would — the test
   is a guard rail, not a proof.
-- No URL is dialled without having passed `SafeHttpFetcher::validate()` — including redirect targets.
+- No URL is dialled from `App\Outbound` without having passed `SafeHttpFetcher::validate()` —
+  including redirect targets. The push endpoint seam above is the one outbound path outside it.
 - The address validated is the address connected to, verified after the fact rather than assumed.
 - `PublicIpGuard` is derived from IANA's special-purpose registries and re-judges any embedded IPv4
   (IPv4-mapped, 6to4, NAT64) on the address the packet actually reaches. `denied_cidrs` can only

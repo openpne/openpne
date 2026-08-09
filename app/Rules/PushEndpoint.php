@@ -12,9 +12,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
  *
  * The URL arrives from the member's browser, but nothing stops a client from sending any URL it
  * likes, and the send happens in a queue worker against a Guzzle client outside App\Outbound — so
- * this is where the destination shape is fixed: https on the default port, a named host, no
- * embedded credentials. An address literal is refused because every real push service is a named
- * host, and a literal is how an internal target is reached without leaving a name to inspect.
+ * this is where the destination shape is fixed: https on the default port, a fully-qualified host,
+ * no embedded credentials. An address literal or a single-label host (`intranet`) is refused —
+ * every real push service is a dotted name, and both are shapes an internal target hides behind.
  *
  * Shape control only: it cannot stop a name that resolves inward (docs/internals/outbound-http.md).
  * The transport's no-redirect, no-proxy configuration is the other half.
@@ -43,6 +43,9 @@ final class PushEndpoint implements ValidationRule
         $host = $parts['host'] ?? '';
 
         // A bracketed IPv6 literal reaches here with its brackets; strip them before judging.
-        return $host !== '' && filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) === false;
+        // A dotless host is a single-label internal name, never a push service.
+        return $host !== ''
+            && str_contains($host, '.')
+            && filter_var(trim($host, '[]'), FILTER_VALIDATE_IP) === false;
     }
 }

@@ -6,6 +6,8 @@ namespace Tests\Feature\Notifications;
 
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Minishlink\WebPush\VAPID;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\FakesWebPushTransport;
 use Tests\TestCase;
@@ -21,6 +23,9 @@ class PushSubscriptionEndpointTest extends TestCase
     use RefreshDatabase;
 
     private const ENDPOINT = 'https://push.example.com/subscription/abc';
+
+    /** A real base64url P-256 point, generated once — keygen is slow to repeat per test. */
+    private static ?string $validP256dh = null;
 
     protected function setUp(): void
     {
@@ -122,6 +127,7 @@ class PushSubscriptionEndpointTest extends TestCase
             'embedded credentials' => ['https://user:pass@push.example.com/s'],
             'IPv4 literal' => ['https://127.0.0.1/s'],
             'IPv6 literal' => ['https://[::1]/s'],
+            'single-label host' => ['https://intranet/s'],
             'non-default port' => ['https://push.example.com:8443/s'],
             'no host' => ['https:///s'],
             'not a URL' => ['nonsense'],
@@ -147,6 +153,9 @@ class PushSubscriptionEndpointTest extends TestCase
         return [
             'p256dh outside base64url' => ['keys.p256dh', 'not base64url!!'],
             'p256dh too short' => ['keys.p256dh', str_repeat('k', 43)],
+            // 65 base64url bytes that clear the length gate but are not a P-256 point.
+            'p256dh 65 bytes, wrong prefix' => ['keys.p256dh', self::base64Url(str_repeat("\x01", 65))],
+            'p256dh 0x04 but off-curve' => ['keys.p256dh', self::base64Url("\x04".str_repeat("\x00", 64))],
             'auth too long' => ['keys.auth', str_repeat('a', 43)],
             'auth empty' => ['keys.auth', ''],
         ];
@@ -182,13 +191,61 @@ class PushSubscriptionEndpointTest extends TestCase
         $this->assertSame(0, $member->pushSubscriptions()->count());
     }
 
+    /**
+     * With no VAPID keypair the store does not exist, so the 404 gate has to win over an invalid
+     * body — otherwise a bad request on an unconfigured site leaks a 422 for an absent endpoint.
+     */
+    public function test_an_unconfigured_site_404s_before_it_validates_the_body(): void
+    {
+        config(['webpush.vapid.public_key' => '', 'webpush.vapid.private_key' => '']);
+        $member = Member::factory()->create();
+
+        $this->actingAs($member)
+            ->post('/push/subscriptions', $this->payload('http://push.example.com/plain'))
+            ->assertNotFound();
+    }
+
+    /**
+     * The endpoint is byte-exact identity: two that differ only in path case are two devices, not a
+     * collision that transfers one over the other. Only MySQL needs forcing — utf8mb4_bin makes its
+     * default case-insensitive collation binary; SQLite TEXT is already BINARY.
+     */
+    public function test_endpoints_differing_only_in_case_are_distinct_devices(): void
+    {
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            $this->markTestSkipped('Endpoint case-sensitivity is a MySQL collation concern; SQLite TEXT is already binary.');
+        }
+
+        $member = Member::factory()->create();
+        $lower = 'https://push.example.com/device/token';
+        $upper = 'https://push.example.com/device/TOKEN';
+
+        $this->actingAs($member)->post('/push/subscriptions', $this->payload($lower))->assertNoContent();
+        $this->actingAs($member)->post('/push/subscriptions', $this->payload($upper))->assertNoContent();
+
+        $endpoints = $member->pushSubscriptions()->pluck('endpoint')->all();
+        $this->assertCount(2, $endpoints);
+        $this->assertContains($lower, $endpoints);
+        $this->assertContains($upper, $endpoints);
+    }
+
     /** @return array<string, mixed> */
     private function payload(string $endpoint = self::ENDPOINT, string $auth = 'YWJjZGVmZ2hpamtsbW5vcA'): array
     {
         return [
             'endpoint' => $endpoint,
-            // 87 base64url chars decode to the 65-byte uncompressed P-256 point a browser hands over.
-            'keys' => ['p256dh' => str_repeat('k', 86).'Q', 'auth' => $auth],
+            'keys' => ['p256dh' => $this->validP256dh(), 'auth' => $auth],
         ];
+    }
+
+    /** The real uncompressed P-256 point a browser hands over — an on-curve value the ingress accepts. */
+    private function validP256dh(): string
+    {
+        return self::$validP256dh ??= VAPID::createVapidKeys()['publicKey'];
+    }
+
+    private static function base64Url(string $raw): string
+    {
+        return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
     }
 }
