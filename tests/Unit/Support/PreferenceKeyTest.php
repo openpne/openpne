@@ -4,6 +4,7 @@ namespace Tests\Unit\Support;
 
 use App\Support\ComposeEditor;
 use App\Support\PreferenceKey;
+use App\Support\PushDelivery;
 use App\Support\Surface;
 use App\Support\Visibility;
 use InvalidArgumentException;
@@ -31,6 +32,9 @@ class PreferenceKeyTest extends TestCase
 
         $this->assertNull(PreferenceKey::ComposeEditor->op3SourceName());
         $this->assertNotContains(PreferenceKey::ComposeEditor, PreferenceKey::upgradableCases());
+
+        $this->assertNull(PreferenceKey::PushDelivery->op3SourceName());
+        $this->assertNotContains(PreferenceKey::PushDelivery, PreferenceKey::upgradableCases());
     }
 
     public function test_preferred_surface_is_tri_state(): void
@@ -58,6 +62,25 @@ class PreferenceKeyTest extends TestCase
         $this->assertSame('markdown', PreferenceKey::ComposeEditor->encode(ComposeEditor::Markdown));
         $this->assertSame(ComposeEditor::Plain, PreferenceKey::ComposeEditor->decode('plain'));
         $this->assertSame('plain', PreferenceKey::ComposeEditor->encode(ComposeEditor::Plain));
+    }
+
+    public function test_push_delivery_defaults_on_and_fails_to_that_default(): void
+    {
+        // Subscribing a device is the consent, so an absent row means "deliver"; a corrupted value
+        // reads the same rather than silently muting a member who never asked for that.
+        $this->assertSame(PushDelivery::Enabled, PreferenceKey::PushDelivery->default());
+        $this->assertSame(PushDelivery::Enabled, PreferenceKey::PushDelivery->decode(null));
+        $this->assertSame(PushDelivery::Enabled, PreferenceKey::PushDelivery->decode('nonsense'));
+
+        $this->assertSame(PushDelivery::Disabled, PreferenceKey::PushDelivery->decode('disabled'));
+    }
+
+    public function test_encode_decode_round_trips_every_push_delivery(): void
+    {
+        foreach (PushDelivery::cases() as $delivery) {
+            $encoded = PreferenceKey::PushDelivery->encode($delivery);
+            $this->assertSame($delivery, PreferenceKey::PushDelivery->decode($encoded));
+        }
     }
 
     public function test_encode_decode_round_trips_every_compose_editor(): void

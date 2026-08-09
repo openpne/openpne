@@ -27,6 +27,7 @@ use App\Features\Message\MessageController;
 use App\Features\Notifications\NotificationCenterController;
 use App\Features\Notifications\NotificationFeedController;
 use App\Features\Notifications\NotificationSettingsController;
+use App\Features\Notifications\PushSubscriptionController;
 use App\Features\Profile\ProfileController;
 use App\Features\Timeline\TimelineController;
 use App\Files\AppIcon;
@@ -413,6 +414,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/{notification}/open', 'open')->whereUuid('notification')->name('notifications.open');
     });
 
+    // This device's push subscription, written by a fire-and-forget fetch (204, no body). The store
+    // is capped per member in the controller; the throttle bounds the churn one member can cause
+    // reaching that cap. Deleting is a POST like every other write here.
+    Route::post('/push/subscriptions', [PushSubscriptionController::class, 'store'])
+        ->middleware('throttle:30,1')->name('push.subscriptions.store');
+    Route::post('/push/subscriptions/delete', [PushSubscriptionController::class, 'destroy'])
+        ->name('push.subscriptions.destroy');
+
     // The Classic header panel: its rows, and the two decisions OpenPNE 3 let a member take without
     // leaving the page.
     Route::prefix('notifications/center')->controller(NotificationCenterController::class)->group(function () {
@@ -530,6 +539,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // as ?category=notification). Modern edits on a detail page with per-toggle saves.
     Route::get('/member/config/notifications', [NotificationSettingsController::class, 'edit'])->name('member.config.notifications.edit');
     Route::post('/member/config/notifications', [NotificationSettingsController::class, 'update'])->name('member.config.notifications');
+    // The global push pause switch, its own POST like every other member-config section.
+    Route::post('/member/config/notifications/push', [NotificationSettingsController::class, 'updatePush'])->name('member.config.notifications.push');
 
     // Member two-factor management (OpenPNE 4-native; Classic serves it as ?category=mfa).
     // Re-auth per flow (enable opens a window that covers confirm; disable/regenerate also demand a

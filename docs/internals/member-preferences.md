@@ -42,6 +42,9 @@ default applies to every member who has not made an explicit choice. The default
   (`rich` | `markdown` | `plain`) with a **concrete** default (`Rich`): a corrupt row fails closed to
   `Rich`, never `null`. Read via [`Member::composeEditor(): ComposeEditor`](../../app/Models/Member.php),
   separate from `Member::preference()` to keep the value type at the call site.
+- `PushDelivery` is the same shape (`Member::pushDelivery()`, corrupt row reads `Enabled`). It
+  defaults **on** because subscribing a device is the consent — the preference only pauses it
+  afterwards. See [notifications.md](notifications.md#web-push).
 
 Writes go through `Member::setPreference()` / `setPreferredSurface()` / `setComposeEditor()`
 (store an explicit value, even one equal to the default) and `resetPreference()` /
