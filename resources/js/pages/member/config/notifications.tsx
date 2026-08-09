@@ -1,10 +1,12 @@
 import { router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SettingsSubpage } from '@/components/settings-subpage';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioCardGroup } from '@/components/ui/field';
 import { RadioPill } from '@/components/ui/radio-pill';
 import { useT } from '@/lib/i18n';
+import { currentSubscription, isIosNotInstalled, permissionState, subscribeThisDevice, unsubscribeThisDevice } from '@/lib/push';
 import type { PageProps } from '@/types';
 
 interface KindRow {
@@ -23,12 +25,103 @@ interface Group {
 
 interface NotificationsProps extends PageProps {
     form: { groups: Group[] };
+    pushSettings: { enabled: boolean };
 }
 
 type Channel = 'web' | 'mail';
 type TriState = 'all' | 'friends' | 'off';
 
 const CHANNELS: Channel[] = ['web', 'mail'];
+
+/**
+ * Push: a global pause switch (instant-saved like the catalog toggles) plus this-device
+ * subscribe/unsubscribe. Rendered only where the site has a VAPID keypair — the `push` shared prop is
+ * that switch, so nothing here re-derives whether push is available. The catalog grid is unrelated:
+ * push is an extra delivery of what already reaches the in-app feed, not a per-kind channel.
+ */
+function PushSection() {
+    const t = useT();
+    const { push, pushSettings } = usePage<NotificationsProps>().props;
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [busy, setBusy] = useState(false);
+    // Device facts come from the browser, so they are only known after mount.
+    const [permission, setPermission] = useState<ReturnType<typeof permissionState>>('unsupported');
+    const [subscribed, setSubscribed] = useState(false);
+    const [iosGuidance, setIosGuidance] = useState(false);
+
+    const syncDevice = useCallback(() => {
+        setPermission(permissionState());
+        setIosGuidance(isIosNotInstalled());
+        void currentSubscription().then((sub) => setSubscribed(sub !== null));
+    }, []);
+
+    useEffect(() => {
+        syncDevice();
+    }, [syncDevice]);
+
+    if (!push) {
+        return null;
+    }
+
+    const savePush = (enabled: boolean) => {
+        setSaving(true);
+        router.post(
+            '/member/config/notifications/push',
+            { enabled },
+            {
+                preserveScroll: true,
+                onFinish: () => setSaving(false),
+                onSuccess: () => {
+                    setSaved(true);
+                    window.setTimeout(() => setSaved(false), 2000);
+                },
+            },
+        );
+    };
+
+    const runDevice = async (action: () => Promise<unknown>) => {
+        setBusy(true);
+        await action();
+        setBusy(false);
+        syncDevice();
+    };
+
+    return (
+        <section className="space-y-4">
+            <h2 className="border-b border-border pb-2 text-base font-semibold text-foreground">{t('Push notifications')}</h2>
+            <label className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+                <span className="text-sm text-foreground">{t('Send push notifications to my devices')}</span>
+                <Checkbox checked={pushSettings.enabled} disabled={saving} onChange={(e) => savePush(e.target.checked)} />
+            </label>
+            <p aria-live="polite" className="min-h-5 text-sm text-muted-foreground">{saved ? `✓ ${t('Saved')}` : null}</p>
+
+            <div className="space-y-2">
+                <h3 className="text-sm font-medium text-foreground">{t('This device')}</h3>
+                {iosGuidance ? (
+                    <p className="text-sm text-muted-foreground">{t('To get push notifications on iPhone or iPad, add this site to your Home Screen first.')}</p>
+                ) : permission === 'unsupported' ? (
+                    <p className="text-sm text-muted-foreground">{t('This browser cannot receive push notifications.')}</p>
+                ) : permission === 'denied' ? (
+                    <p className="text-sm text-muted-foreground">
+                        {t('Notifications are blocked for this site in your browser settings. Allow them there to subscribe this device.')}
+                    </p>
+                ) : subscribed ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-sm text-muted-foreground">{t('This device is subscribed.')}</span>
+                        <Button variant="outline" size="sm" loading={busy} onClick={() => runDevice(unsubscribeThisDevice)}>
+                            {t('Unsubscribe this device')}
+                        </Button>
+                    </div>
+                ) : (
+                    <Button size="sm" loading={busy} onClick={() => runDevice(() => subscribeThisDevice(push.vapidPublicKey))}>
+                        {t('Subscribe this device')}
+                    </Button>
+                )}
+            </div>
+        </section>
+    );
+}
 
 /** Notification catalog opt-ins: instant per-toggle saves; the page re-renders from server truth. */
 export default function NotificationSettings() {
@@ -61,6 +154,7 @@ export default function NotificationSettings() {
     return (
         <SettingsSubpage title={t('Notifications')}>
             <div className="space-y-8">
+                <PushSection />
                 {form.groups.map((group) => {
                     // An "(x only)" variant renders with its broad kind as one three-state control
                     // per channel; everything else is a plain per-channel checkbox row.

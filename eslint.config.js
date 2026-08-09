@@ -61,4 +61,14 @@ export default tseslint.config(
             globals: globals.browser,
         },
     },
+    {
+        // The hand-written service worker at the site root: a classic script (no modules), and it
+        // needs the service-worker globals (self, clients, registration), not just browser ones.
+        // public/js/filament is ignored above, but public/sw.js is deliberately linted.
+        files: ['public/sw.js'],
+        languageOptions: {
+            sourceType: 'script',
+            globals: globals.serviceworker,
+        },
+    },
 );

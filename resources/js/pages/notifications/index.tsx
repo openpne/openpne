@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
+import { PushPrompt } from '@/components/push-prompt';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { formatDateTime } from '@/lib/date';
@@ -39,6 +40,7 @@ export default function NotificationsIndex() {
     return (
         <>
             <Head title={title} />
+            <PushPrompt />
             {(unread?.notifications ?? 0) > 0 && (
                 <div className="flex justify-end">
                     <Button
