@@ -52,6 +52,9 @@ export interface PageProps {
     enabledFeatures: Record<FeatureKey, boolean>;
     unread: UnreadCounts | null;
     rightRail: RightRail | null;
+    /** What this device needs to subscribe to push, or null when push is unavailable here (a guest,
+     *  or a site with no VAPID keypair). Null is what the push UI hides on. */
+    push: { vapidPublicKey: string } | null;
     flash: {
         status: string | null;
         error: string | null;

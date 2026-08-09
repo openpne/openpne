@@ -9,10 +9,12 @@ use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
+use Tests\Concerns\FakesWebPushTransport;
 use Tests\TestCase;
 
 class NotificationSettingsPageTest extends TestCase
 {
+    use FakesWebPushTransport;
     use RefreshDatabase;
 
     public function test_modern_page_lists_only_wired_kinds_grouped_by_category(): void
@@ -43,6 +45,37 @@ class NotificationSettingsPageTest extends TestCase
                 ->where('form.groups.4.key', 'message')
                 ->where('form.groups.4.kinds.0.mail', false)
                 ->where('form.groups.4.kinds.1.dependOnNot', 'message_new'),
+            );
+    }
+
+    public function test_the_modern_page_carries_push_props_when_the_site_is_configured(): void
+    {
+        $this->configureVapid();
+
+        $this->actingAs(Member::factory()->create())->get('/member/config/notifications')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('member/config/notifications')
+                // Shared VAPID key + the page's own pause-switch state (default on).
+                ->where('push.vapidPublicKey', config('webpush.vapid.public_key'))
+                ->where('pushSettings.enabled', true)
+                // The push section does not touch the catalog grid.
+                ->has('form.groups', 5)
+                ->where('form.groups.0.kinds.0.kind', 'diary_new_post'),
+            );
+    }
+
+    public function test_the_push_shared_prop_is_absent_without_a_vapid_keypair(): void
+    {
+        config(['webpush.vapid.public_key' => '', 'webpush.vapid.private_key' => '']);
+
+        $this->actingAs(Member::factory()->create())->get('/member/config/notifications')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('push', null)
+                // The controller still ships the pause-switch value; the UI hides on the null shared prop.
+                ->where('pushSettings.enabled', true)
+                ->has('form.groups', 5),
             );
     }
 
