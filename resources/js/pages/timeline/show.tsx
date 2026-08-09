@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -51,7 +52,7 @@ export default function TimelineShow() {
     return (
         <>
             <Head title={headTitle} />
-            <h1 className="break-words text-xl font-semibold">{t('Post detail')}</h1>
+            <Heading variant="page">{t('Post detail')}</Heading>
 
             <Panel bodyClassName="space-y-2">
                 <div className="flex items-center justify-between gap-3 text-sm">

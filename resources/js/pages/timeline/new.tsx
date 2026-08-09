@@ -2,6 +2,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { COMPOSE_FORM_ID, ComposeSheetAction } from '@/components/compose/compose-sheet-action';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,7 +32,7 @@ export default function TimelineNew({
                     {t('%Post_activity%')}
                 </Button>
             </ComposeSheetAction>
-            <h1 className="break-words text-lg font-semibold text-foreground lg:text-xl">{t('%Post_activity%')}</h1>
+            <Heading variant="pageCompose">{t('%Post_activity%')}</Heading>
 
             <Panel sheet>
                 <form

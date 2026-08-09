@@ -5,6 +5,7 @@ import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/ui/button';
 import { Field, FormActions } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
@@ -68,7 +69,7 @@ export default function MessageCompose() {
                 </Button>
             </ComposeSheetAction>
 
-            <h1 className="break-words text-lg font-semibold text-foreground lg:text-xl">{t('Compose Message')}</h1>
+            <Heading variant="pageCompose">{t('Compose Message')}</Heading>
 
             <Panel sheet>
                 <form id={COMPOSE_FORM_ID} onSubmit={(e) => e.preventDefault()} className="space-y-4">

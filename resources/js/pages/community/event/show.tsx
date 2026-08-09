@@ -5,6 +5,7 @@ import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
+import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -71,7 +72,7 @@ export default function CommunityEventShow() {
         <>
             <Head title={event.name} />
 
-            <h1 className="break-words text-xl font-semibold">{event.name}</h1>
+            <Heading variant="page">{event.name}</Heading>
 
             <Panel bodyClassName="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

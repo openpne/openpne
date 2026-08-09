@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Heading } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -29,7 +30,7 @@ export default function FriendLink() {
     return (
         <>
             <Head title={title} />
-            <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
+            <Heading variant="page">{title}</Heading>
 
             <Panel bodyClassName="space-y-4">
                 <p className="text-foreground">{t('Send a %friend% request to :name?', { name: target.name })}</p>

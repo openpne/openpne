@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { LogIn, Pencil } from 'lucide-react';
 import { AvatarMenu } from '@/components/avatar-menu';
 import { BrandMark } from '@/components/brand-mark';
+import { BrandName } from '@/components/brand-name';
 import { NavItems } from '@/components/nav-items';
 import { ActionLink } from '@/components/ui/action-link';
 import { useT } from '@/lib/i18n';
@@ -11,7 +12,7 @@ import type { PageProps } from '@/types';
  *  web-public profile is reachable signed out) sees only the brand and a sign-in link. */
 export function LeftNav() {
     const t = useT();
-    const { name, auth, enabledFeatures } = usePage<PageProps>().props;
+    const { auth, enabledFeatures } = usePage<PageProps>().props;
 
     return (
         // Full-height at lg+, so on a tablet running the installed app its first and last rows would
@@ -22,7 +23,7 @@ export function LeftNav() {
                 className="flex min-h-11 items-center gap-3 rounded-full px-2 transition hover:bg-accent"
             >
                 <BrandMark size="md" />
-                <span className="truncate text-lg font-bold">{name}</span>
+                <BrandName size="lg" className="truncate" />
             </Link>
             {auth.user ? (
                 <>

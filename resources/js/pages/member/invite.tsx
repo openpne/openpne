@@ -2,6 +2,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +26,7 @@ export default function MemberInvite() {
     return (
         <>
             <Head title={title} />
-            <h1 className="break-words text-xl font-semibold text-foreground">{title}</h1>
+            <Heading variant="page">{title}</Heading>
 
             <p className="text-sm text-muted-foreground">{t('Enter an email address to send a registration link.')}</p>
 

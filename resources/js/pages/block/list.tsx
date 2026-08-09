@@ -1,3 +1,4 @@
+import { Heading } from '@/components/ui/heading';
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { useState, type FormEvent } from "react";
 import { Avatar } from "@/components/avatar";
@@ -35,9 +36,9 @@ export default function BlockList() {
             <Head title={t("Blocked members")} />
 
             <div className="space-y-2">
-                <h1 className="break-words text-xl font-semibold text-foreground">
+                <Heading variant="page">
                     {t("Block a member")}
-                </h1>
+                </Heading>
                 <Panel bodyClassName="space-y-3">
                     <form onSubmit={add} className="flex items-center gap-2">
                         <label htmlFor="block_member_id" className="text-sm font-medium text-foreground">

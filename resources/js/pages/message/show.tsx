@@ -2,6 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { Panel } from '@/components/ui/surface';
@@ -61,7 +62,7 @@ export default function MessageShow() {
                 </nav>
             )}
 
-            <h1 className="break-words text-xl font-semibold text-foreground">{message.subject}</h1>
+            <Heading variant="page">{message.subject}</Heading>
 
             <Panel bodyClassName="space-y-3 text-foreground">
                 <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">

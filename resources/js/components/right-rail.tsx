@@ -2,6 +2,7 @@ import { Link, useForm, usePage } from '@inertiajs/react';
 import { type FormEvent, type ReactNode } from 'react';
 import { NineTable } from '@/components/nine-table';
 import { SearchSubmitButton } from '@/components/search-submit-button';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -53,7 +54,9 @@ function RailSection({ title, viewAllHref, children }: { title: string; viewAllH
     return (
         <section>
             <div className="mb-2 flex items-baseline justify-between gap-2">
-                <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+                <Heading as="h2" variant="section">
+                    {title}
+                </Heading>
                 <Link href={viewAllHref} className="text-xs text-link hover:underline">
                     {t('View all')}
                 </Link>

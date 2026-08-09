@@ -3,6 +3,7 @@ import { Check } from 'lucide-react';
 import { InitialBadge } from '@/components/initial-badge';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { pickReadableTextColor } from '@/lib/identity-mark';
@@ -41,7 +42,7 @@ export default function MemberAvatar() {
     return (
         <>
             <Head title={t('Profile image')} />
-            <h1 className="break-words text-xl font-semibold text-foreground">{t('Profile image')}</h1>
+            <Heading variant="page">{t('Profile image')}</Heading>
 
             <Panel bodyClassName="space-y-4">
                 {avatar ? (

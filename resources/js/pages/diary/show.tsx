@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { RichBody } from '@/components/rich-body';
+import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
@@ -56,7 +57,7 @@ export default function DiaryShow() {
     return (
         <>
             <Head title={diary.title} />
-            <h1 className="break-words text-xl font-semibold">{diary.title}</h1>
+            <Heading variant="page">{diary.title}</Heading>
 
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

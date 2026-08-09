@@ -6,6 +6,7 @@ import { CurrentImagesField } from '@/components/current-images-field';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Panel } from '@/components/ui/surface';
@@ -51,7 +52,7 @@ export default function DiaryEdit() {
                     {t('Save')}
                 </Button>
             </ComposeSheetAction>
-            <h1 className="break-words text-lg font-semibold text-foreground lg:text-xl">{t('Edit %diary%')}</h1>
+            <Heading variant="pageCompose">{t('Edit %diary%')}</Heading>
 
             <Panel overflow="visible" sheet>
                 <form

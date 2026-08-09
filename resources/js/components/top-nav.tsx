@@ -4,9 +4,11 @@ import { type ComponentType, type ReactNode, useEffect, useRef, useSyncExternalS
 import { Avatar } from '@/components/avatar';
 import { AvatarMenu } from '@/components/avatar-menu';
 import { BrandMark } from '@/components/brand-mark';
+import { BrandName } from '@/components/brand-name';
 import { useComposeExit, useComposeSlotRef } from '@/components/compose/compose-sheet-action';
 import { CommunityImage } from '@/components/community-image';
 import { BAR_CONTROL, NavDrawer } from '@/components/nav-drawer';
+import { headingVariants } from '@/components/ui/heading';
 import { backTarget, type BackTarget, backTracker } from '@/lib/back-nav';
 import { useT } from '@/lib/i18n';
 import type { Chrome, ChromeLabel, ChromeScope } from '@/lib/member-chrome';
@@ -126,7 +128,9 @@ function ScopeIdentity({ scope }: { scope: ChromeScope }) {
                 ) : (
                     <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} size="sm" decorative />
                 )}
-                <span className="truncate font-bold">{scope.name}</span>
+                {/* The scope names the region the bar is in, the same job the hub bar's centered label
+                    does — so it takes the same heading weight, not a heavier one. */}
+                <span className={cn(headingVariants({ variant: 'bar' }), 'truncate')}>{scope.name}</span>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             </Link>
         </div>
@@ -143,7 +147,7 @@ function ScopeIdentity({ scope }: { scope: ChromeScope }) {
 export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean }) {
     const t = useT();
     const { component, props } = usePage<PageProps>();
-    const { name, auth } = props;
+    const { auth } = props;
     const tracker = backTracker();
     const slotRef = useComposeSlotRef();
     // Only the sheet needs this: everywhere else the bar's hairline is unconditional, and a listener
@@ -159,7 +163,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
     const brand = (
         <Link href="/dashboard" className="flex min-h-12 min-w-0 flex-1 items-center gap-2">
             <BrandMark size="sm" />
-            <span className="truncate font-bold">{name}</span>
+            <BrandName className="truncate" />
         </Link>
     );
 
@@ -264,7 +268,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
         return (
             <TopBar hidden={hidden}>
                 <NavDrawer />
-                <span aria-hidden className="min-w-0 flex-1 truncate text-center text-base font-semibold">
+                <span aria-hidden className={cn(headingVariants({ variant: 'bar' }), 'min-w-0 flex-1 truncate text-center')}>
                     {label(chrome.title)}
                 </span>
                 <AvatarMenu user={auth.user} compact />
@@ -280,7 +284,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
             <NavDrawer />
             <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
                 <BrandMark size="sm" />
-                <span className="truncate font-bold">{name}</span>
+                <BrandName className="truncate" />
             </div>
             <AvatarMenu user={auth.user} compact />
         </TopBar>

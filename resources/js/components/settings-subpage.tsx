@@ -1,7 +1,7 @@
 import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Card, CardBody } from '@/components/card';
-import { cn } from '@/lib/utils';
+import { Heading } from '@/components/ui/heading';
 
 /**
  * Detail page for one consequential setting (email/password/withdrawal): the page title as h1 and
@@ -12,7 +12,9 @@ export function SettingsSubpage({ title, danger = false, children }: { title: st
     return (
         <>
             <Head title={title} />
-            <h1 className={cn('text-xl font-semibold', danger ? 'text-destructive' : 'text-foreground')}>{title}</h1>
+            <Heading variant="page" className={danger ? 'text-destructive' : undefined}>
+                {title}
+            </Heading>
             <Card className={danger ? 'border-destructive/40' : undefined}>
                 <CardBody>{children}</CardBody>
             </Card>
