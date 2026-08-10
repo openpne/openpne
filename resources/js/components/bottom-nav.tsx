@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
-import { UnreadPill } from '@/components/unread-pill';
+import { CountPill } from '@/components/count-pill';
 import { bottomNavSections } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -69,7 +69,7 @@ export function BottomNav({ hidden }: { hidden?: boolean }) {
                             >
                                 <span className="relative inline-flex">
                                     <Icon className="size-6" strokeWidth={active ? 2.25 : 2} aria-hidden />
-                                    <UnreadPill count={count} className="absolute -top-2 -right-2.5" />
+                                    <CountPill count={count} className="absolute -top-2 -right-2.5" />
                                 </span>
                             </Link>
                         </li>

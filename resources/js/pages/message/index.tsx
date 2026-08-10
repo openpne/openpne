@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Pagination } from '@/components/pagination';
+import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
 import { Checkbox } from '@/components/ui/checkbox';
 import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, PaginatedMessages } from './types';
 
@@ -128,8 +130,9 @@ export default function MessageIndex() {
                                         decorative
                                     />
                                     <div className="min-w-0 flex-1">
-                                        <p className={m.unread ? 'truncate font-semibold text-foreground' : 'truncate text-foreground'}>
+                                        <p className={cn('truncate text-foreground', unreadTextClass(m.unread))}>
                                             <Link href={showPath(m.id)} className={stretchedLink}>
+                                                {m.unread && <UnreadLabel />}
                                                 {m.subject || t('(No subject)')}
                                             </Link>
                                         </p>
@@ -138,9 +141,7 @@ export default function MessageIndex() {
                                             {formatDateTime(m.date)}
                                         </p>
                                     </div>
-                                    {m.unread && (
-                                        <span role="img" aria-label={t('Unread')} className="mt-1 size-2 shrink-0 rounded-full bg-selected" />
-                                    )}
+                                    {m.unread && <UnreadDot className="mt-1" />}
                                 </ListRow>
                             ))}
                         </List>
