@@ -6,7 +6,7 @@ import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { CountBadge } from '@/components/entry-row';
 import { Timestamp } from '@/components/timestamp';
-import { UserText } from '@/components/user-text';
+import { EntityText } from '@/components/entity-text';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,7 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
                 </div>
             </div>
             <p className="whitespace-pre-wrap break-words">
-                <UserText text={post.body} />
+                <EntityText text={post.body} mentions={post.mentions} />
             </p>
             <LinkCard card={post.linkCard} />
             <ImageGrid images={post.images} />

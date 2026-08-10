@@ -29,6 +29,14 @@ serializers expose `bodyHtml` (always `null` for plain), and
 [`<x-user-text>`](../../resources/views/components/user-text.blade.php). Nothing else may emit
 raw user-derived HTML; `bodyHtml` must never be assembled from client input.
 
+A body carrying **entities** — today the timeline's `@mention` ranges — renders one level up through
+the same arrangement: [`EntityText`](../../app/Support/EntityText.php) on the server,
+[`entity-split.ts`](../../resources/js/lib/entity-split.ts) on the client, each delegating the text
+*between* entities to `BodyText` / `linkify` and each held to the same lockstep discipline (one
+shared case table, pinned on both sides). Entities add no `bodyHtml`: the ranges travel to Modern as
+data and the client links them, so `RichBody` stays the sole `dangerouslySetInnerHTML` sink. See
+[timeline.md](timeline.md).
+
 ## `op3` — migration-only, frozen
 
 The upgrade tags every migrated diary body `op3`; `Op3Text` ports OpenPNE 3's PC-mode
@@ -118,9 +126,10 @@ raw markdown source must not reach a mail body.
 
 ## Key invariants
 
-- One dispatch: server-produced trusted HTML comes only from `BodyRenderer`; excerpt/mail
-  text come from its `excerpt`/`plainText`. The Modern plain path renders client-side
-  (`UserText`, React-escaped) and carries no trusted HTML. No call site escapes or renders a
+- One dispatch: server-produced trusted HTML comes only from `BodyRenderer`, or from `EntityText`
+  composing it out of `BodyText` for a body with entities; excerpt/mail text come from
+  `BodyRenderer`'s `excerpt`/`plainText`. The Modern plain path renders client-side (`UserText`,
+  `EntityText`, React-escaped) and carries no trusted HTML. No call site escapes or renders a
   body by hand.
 - `bodyHtml` is null for plain, server-produced otherwise; `RichBody` is the only
   `dangerouslySetInnerHTML` sink.
