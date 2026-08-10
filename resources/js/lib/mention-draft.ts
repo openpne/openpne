@@ -75,6 +75,21 @@ export function detectTrigger(value: string, caret: number): MentionTrigger | nu
     return null;
 }
 
+/** A search result, tagged with the query it answers. */
+export interface MentionResults<C> {
+    query: string;
+    items: C[];
+}
+
+/**
+ * The candidates the picker may show and confirm: only ones searched for the query the caret is in
+ * right now. Typing on past `@a` leaves that search's answer in hand until the next one lands, and
+ * confirming it would attach a member who was never offered for what the field now reads.
+ */
+export function offeredCandidates<C>(query: string | null, results: MentionResults<C> | null): C[] {
+    return query !== null && results !== null && results.query === query ? results.items : [];
+}
+
 /** What an open picker does with a keystroke; null leaves the key to the field. */
 export type MentionKey = 'next' | 'previous' | 'confirm' | 'dismiss' | null;
 
@@ -125,46 +140,95 @@ export function applyPick(mentions: DraftMention[], value: string, trigger: Ment
     };
 }
 
-/** Carry the draft across an edit, given the value before and after it. */
+/**
+ * Carry the draft across an edit, given the value before and after it.
+ *
+ * A pair of values does not name the span that changed: where the text repeats around the edit,
+ * deleting the first `@Alice ` of two and deleting the second leave the very same pair behind. So
+ * the edit is read twice, from each end, and a mention is carried only where both readings say the
+ * same thing — see {@link settle} for what is done with the rest.
+ */
 export function applyEdit(mentions: DraftMention[], oldValue: string, newValue: string): DraftMention[] {
     if (mentions.length === 0) {
         return mentions;
     }
 
-    // One replaced span, found as what the two values do not share at either end. A textarea edit is
-    // a single contiguous change (typing, deleting, pasting over a selection), so one span describes
-    // it — and where the scan splits a surrogate pair, both halves sit inside one code point, which
-    // no mention boundary ever falls inside.
+    // What the two values share at either end. A textarea edit is a single contiguous change
+    // (typing, deleting, pasting over a selection), so one span describes it — and where a scan
+    // splits a surrogate pair, both halves sit inside one code point, which no mention boundary ever
+    // falls inside.
     const limit = Math.min(oldValue.length, newValue.length);
     let prefix = 0;
     while (prefix < limit && oldValue.charCodeAt(prefix) === newValue.charCodeAt(prefix)) {
         prefix += 1;
     }
     let suffix = 0;
-    while (suffix < limit - prefix && oldValue.charCodeAt(oldValue.length - 1 - suffix) === newValue.charCodeAt(newValue.length - 1 - suffix)) {
+    while (suffix < limit && oldValue.charCodeAt(oldValue.length - 1 - suffix) === newValue.charCodeAt(newValue.length - 1 - suffix)) {
         suffix += 1;
     }
 
-    return carry(mentions, prefix, oldValue.length - suffix, newValue.length - suffix - prefix);
+    // The two ends the shared runs may be split at: the rightmost span the prefix allows, and the
+    // leftmost one the suffix allows. They coincide unless the runs overlap, which is exactly when
+    // the edit is ambiguous.
+    const left = read(mentions, oldValue, newValue, prefix, Math.min(suffix, limit - prefix));
+    const right = read(mentions, oldValue, newValue, Math.min(prefix, limit - suffix), suffix);
+
+    return mentions.flatMap((mention, index) => {
+        const start = settle(left[index] ?? null, right[index] ?? null, mention, mentions);
+
+        return start === null ? [] : [{ ...mention, start }];
+    });
+}
+
+/** Where each mention lands under one reading of the edit. */
+function read(mentions: DraftMention[], oldValue: string, newValue: string, start: number, suffix: number): (number | null)[] {
+    return mentions.map((mention) => carryOne(mention, start, oldValue.length - suffix, newValue.length - suffix - start));
 }
 
 /**
- * The draft after `[start, end)` became `inserted` code units: a mention before the edit is
- * untouched, one after it moves, and one the edit reached into stops being a mention at all — only
- * text the member picked may stay one, and they just rewrote part of it.
+ * The start both readings support, or null to give the mention up.
+ *
+ * Where they disagree the draft may not guess: picking the wrong one of two same-named members
+ * points the link and the notification at the member the writer just deleted, and nothing
+ * downstream can catch it — {@link toPayload} and the server both re-read the same `@name` text.
+ * Losing a mention to plain text is the honest failure.
+ *
+ * A mention only one reading keeps is still safe to keep while no other entry carries its label:
+ * the text it covers can then belong to no one else, whichever reading was true.
  */
+function settle(left: number | null, right: number | null, mention: DraftMention, mentions: DraftMention[]): number | null {
+    if (left === right) {
+        return left;
+    }
+    if (left !== null && right !== null) {
+        return null;
+    }
+
+    return mentions.some((other) => other !== mention && other.label === mention.label) ? null : (left ?? right);
+}
+
+/**
+ * Where a mention lands once `[start, end)` has become `inserted` code units, or null if the edit
+ * reached into it — only text the member picked may stay a mention, and they just rewrote part of
+ * it. A mention before the edit is untouched, one after it moves.
+ */
+function carryOne(mention: DraftMention, start: number, end: number, inserted: number): number | null {
+    if (mention.start + 1 + mention.label.length <= start) {
+        return mention.start;
+    }
+    if (mention.start >= end) {
+        return mention.start + inserted - (end - start);
+    }
+
+    return null;
+}
+
+/** The draft after `[start, end)` became `inserted` code units. */
 function carry(mentions: DraftMention[], start: number, end: number, inserted: number): DraftMention[] {
-    const delta = inserted - (end - start);
-
     return mentions.flatMap((mention) => {
-        if (mention.start + 1 + mention.label.length <= start) {
-            return [mention];
-        }
-        if (mention.start >= end) {
-            return [{ ...mention, start: mention.start + delta }];
-        }
+        const carried = carryOne(mention, start, end, inserted);
 
-        return [];
+        return carried === null ? [] : [{ ...mention, start: carried }];
     });
 }
 

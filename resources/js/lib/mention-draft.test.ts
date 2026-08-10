@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { applyEdit, applyPick, detectTrigger, keyAction, toPayload, type DraftMention } from './mention-draft.ts';
+import { applyEdit, applyPick, detectTrigger, keyAction, offeredCandidates, toPayload, type DraftMention } from './mention-draft.ts';
 
 const GRIN = '\u{1F600}';
 
@@ -155,6 +155,61 @@ test('an edit destroys only the mention it reached into', () => {
 test('a draft with no mentions is returned as it came', () => {
     const draft: DraftMention[] = [];
     assert.equal(applyEdit(draft, 'a', 'ab'), draft);
+});
+
+// --- edits a pair of values cannot describe on its own
+
+// Two members who share a display name, mentioned in that order.
+const twoAlices = [picked(0, 'Alice', 1), picked(7, 'Alice', 2)];
+
+test('deleting one of two same-named mentions gives up both, from either end', () => {
+    // Deleting the first "@Alice " and deleting the second leave the identical pair of values, so
+    // nothing in the pair says which member is still on screen. Guessing would point the link and
+    // the notification at the one just deleted.
+    const draft = applyEdit(twoAlices, '@Alice @Alice ', '@Alice ');
+    assert.deepEqual(draft, []);
+    assert.deepEqual(toPayload(draft, '@Alice '), []);
+});
+
+test('deleting one of three same-named mentions gives up all three', () => {
+    assert.deepEqual(applyEdit([picked(0, 'Alice', 1), picked(7, 'Alice', 2), picked(14, 'Alice', 3)], '@Alice @Alice @Alice ', '@Alice @Alice '), []);
+});
+
+test('a same-named pair is given up without taking the mention beside it', () => {
+    const draft = applyEdit([...twoAlices, picked(14, 'Bob', 9)], '@Alice @Alice @Bob ', '@Alice @Bob ');
+    assert.deepEqual(draft, [picked(7, 'Bob', 9)]);
+});
+
+test('deleting the first of two differently named mentions keeps the second', () => {
+    // Ambiguous too — the "@" left at 0 may be either mention's — but only one member is named Bob,
+    // so the text that survived can be nobody else's.
+    const draft = applyEdit([picked(0, 'Alice', 1), picked(7, 'Bob', 9)], '@Alice @Bob ', '@Bob ');
+    assert.deepEqual(draft, [picked(0, 'Bob', 9)]);
+    assert.deepEqual(toPayload(draft, '@Bob '), [{ member_id: 9, offset: 0, length: 4 }]);
+});
+
+test('deleting the last of two differently named mentions keeps the first', () => {
+    assert.deepEqual(applyEdit([picked(0, 'Alice', 1), picked(7, 'Bob', 9)], '@Alice @Bob ', '@Alice '), [picked(0, 'Alice', 1)]);
+});
+
+// --- candidates belong to the query they answer
+
+test('candidates answer the query they were searched for', () => {
+    assert.deepEqual(offeredCandidates('al', { query: 'al', items: [alice] }), [alice]);
+});
+
+test('candidates from a shorter query neither show nor confirm once it grows', () => {
+    // The search for "@a" has landed and the field is already at "@al": until the next search
+    // answers there is nothing to offer, so Enter is a line break again rather than a pick.
+    const stale = { query: 'a', items: [alice] };
+    assert.deepEqual(offeredCandidates('al', stale), []);
+    assert.equal(keyAction('Enter', { open: offeredCandidates('al', stale).length > 0, composing: false }), null);
+    assert.equal(keyAction('Tab', { open: offeredCandidates('al', stale).length > 0, composing: false }), null);
+});
+
+test('no trigger offers nothing, whatever the last search returned', () => {
+    assert.deepEqual(offeredCandidates(null, { query: 'al', items: [alice] }), []);
+    assert.deepEqual(offeredCandidates('al', null), []);
 });
 
 // --- payload

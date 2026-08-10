@@ -2,7 +2,17 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import { Avatar } from '@/components/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
-import { applyEdit, applyPick, detectTrigger, keyAction, MAX_MENTIONS, type DraftMention, type MentionTrigger } from '@/lib/mention-draft';
+import {
+    applyEdit,
+    applyPick,
+    detectTrigger,
+    keyAction,
+    MAX_MENTIONS,
+    offeredCandidates,
+    type DraftMention,
+    type MentionResults,
+    type MentionTrigger,
+} from '@/lib/mention-draft';
 import { cn } from '@/lib/utils';
 
 /**
@@ -48,18 +58,21 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, .
     const caret = useRef<number | null>(null);
 
     const [trigger, setTrigger] = useState<MentionTrigger | null>(null);
-    const [candidates, setCandidates] = useState<Candidate[]>([]);
+    // Kept with the query it answers, so a search the field has already typed past shows nothing and
+    // confirms nothing while the next one is still out (offeredCandidates).
+    const [results, setResults] = useState<MentionResults<Candidate> | null>(null);
     const [active, setActive] = useState(0);
     // Esc gives up on the trigger the caret is in, not on the picker: detecting no trigger at all
     // ends the refusal, so deleting the "@" and typing it again offers the list once more.
     const [dismissed, setDismissed] = useState(false);
 
     const query = trigger !== null && !dismissed && mentions.length < MAX_MENTIONS ? trigger.query : null;
-    const open = query !== null && candidates.length > 0;
+    const candidates = offeredCandidates(query, results);
+    const open = candidates.length > 0;
 
     useEffect(() => {
         if (query === null) {
-            setCandidates([]);
+            setResults(null);
 
             return;
         }
@@ -73,14 +86,14 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, .
             })
                 .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
                 .then((body: { candidates?: Candidate[] }) => {
-                    setCandidates(body.candidates ?? []);
+                    setResults({ query, items: body.candidates ?? [] });
                     setActive(0);
                 })
                 .catch(() => {
                     // A refused or failed search closes the picker and says nothing: the member is
                     // writing a message, and an error about a decoration would interrupt that.
                     if (!controller.signal.aborted) {
-                        setCandidates([]);
+                        setResults({ query, items: [] });
                     }
                 });
         }, SEARCH_DEBOUNCE_MS);
