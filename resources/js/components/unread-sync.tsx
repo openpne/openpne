@@ -1,5 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
+import { createRestoreQueue } from '@/lib/history-restore';
 import { clearAppBadge, reconcileSubscription, resumeRegistration, setAppBadge } from '@/lib/push';
 import type { PageProps, UnreadCounts } from '@/types';
 
@@ -100,6 +101,34 @@ export function UnreadSync() {
         const timer = setInterval(refresh, INTERVAL_MS);
         document.addEventListener('visibilitychange', refresh);
 
+        // A restored page carries the counts it had when it was left, so a badge can climb back over
+        // a notification the member has already read — which reads as new mail arriving. Inertia
+        // rebuilds a popstate target from its own history state, and the back/forward cache returns
+        // the document whole. The popstate half refreshes from `navigate`, which Inertia fires once
+        // it has swapped the restored props in: reading from there is ordered after that write
+        // rather than racing it. Rapid backs are why this counts (see createRestoreQueue).
+        const restores = createRestoreQueue();
+        const onPopstate = (event: PopStateEvent) => {
+            // Only an entry Inertia owns gets a `navigate`. A hash-only popstate has none, so
+            // counting it would leave the count to be spent on an ordinary navigation later.
+            if ((event.state as { page?: unknown } | null)?.page !== undefined) {
+                restores.handlePopstate();
+            }
+        };
+        const onNavigate = () => {
+            if (restores.handleNavigate()) {
+                refresh();
+            }
+        };
+        const onPageshow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                refresh();
+            }
+        };
+        window.addEventListener('popstate', onPopstate);
+        window.addEventListener('pageshow', onPageshow);
+        const stopNavigate = router.on('navigate', onNavigate);
+
         // The worker hands the badge's source of truth to a live tab. Fetch unconditionally — it asked,
         // and the tab may have flipped hidden since the worker's matchAll — then ACK on the transferred
         // port so the worker knows a handler took responsibility and skips its own fallback badge write.
@@ -115,6 +144,9 @@ export function UnreadSync() {
         return () => {
             clearInterval(timer);
             document.removeEventListener('visibilitychange', refresh);
+            window.removeEventListener('popstate', onPopstate);
+            window.removeEventListener('pageshow', onPageshow);
+            stopNavigate();
             sw?.removeEventListener('message', onMessage);
             inFlight?.abort();
         };

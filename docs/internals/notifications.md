@@ -55,7 +55,9 @@ document covers the delivery model around it.
 ### Liveness
 
 The shared `unread` counts would otherwise only move on a navigation. An open Modern tab refreshes
-them every 60s while it is visible — and immediately on returning to it — from
+them every 60s while it is visible — and immediately on returning to it, and on a page restored from
+history, where the counts come back as they were before the member read anything and a badge would
+otherwise climb back over what they have already read — from
 [`GET /unread-counts`](../../app/Features/Home/UnreadCountsController.php), which runs the three
 count queries and nothing else, then pushes the result into the shared prop client-side
 ([`unread-sync.tsx`](../../resources/js/components/unread-sync.tsx)). The document title mirrors the
