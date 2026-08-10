@@ -160,8 +160,9 @@ class AdminPanelProvider extends PanelProvider
                 ->defaultTimeDisplayFormat('H:i');
         });
 
-        // Infolists and forms read their defaults from Schema, so an entry added later lands on the same
-        // format instead of Filament's `M j, Y H:i:s`.
+        // Infolist entries read their defaults from Schema, so one added later lands on the same format
+        // instead of Filament's `M j, Y H:i:s`. Form inputs do not: DateTimePicker carries its own
+        // defaults, and would need configuring separately if a date input ever needs to match.
         Schema::configureUsing(function (Schema $schema): void {
             $schema
                 ->defaultDateDisplayFormat('Y-m-d')

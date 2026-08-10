@@ -63,26 +63,94 @@ class AdminDateFormatTest extends TestCase
     }
 
     /**
+     * Every Filament method that formats a date, split by what the contract allows. Tooltips included:
+     * they render the same value in the same panel.
+     */
+    private const MUST_TAKE_THE_DEFAULT = ['date', 'dateTime', 'time', 'dateTooltip', 'dateTimeTooltip', 'timeTooltip'];
+
+    private const NOT_IN_ADMIN = [
+        // Relative time cannot be filtered by period or compared between two rows.
+        'since' => 'relative time has no place in admin',
+        'sinceTooltip' => 'relative time has no place in admin',
+        // The iso* family renders the locale's narrative form, which is the shape admin deliberately
+        // avoids — use dateTime() and take the panel default.
+        'isoDate' => 'renders the localized form instead of sortable digits',
+        'isoDateTime' => 'renders the localized form instead of sortable digits',
+        'isoTime' => 'renders the localized form instead of sortable digits',
+        'isoDateTooltip' => 'renders the localized form instead of sortable digits',
+        'isoDateTimeTooltip' => 'renders the localized form instead of sortable digits',
+        'isoTimeTooltip' => 'renders the localized form instead of sortable digits',
+    ];
+
+    /**
      * The format lives in one place, so a screen added later inherits it. A column passing its own would
      * still render — and would drift the moment the default changes — which no rendering test elsewhere
      * would catch.
+     *
+     * Tokenized rather than matched as text: an argument can arrive as a literal, a named argument, a
+     * constant or a closure, and a pattern written for one of those spellings quietly passes the rest.
+     * What is checked is only whether the parentheses are empty.
      */
     public function test_no_column_carries_a_format_of_its_own(): void
     {
         $offenders = [];
 
-        foreach (File::allFiles(app_path('Filament')) as $file) {
-            if ($file->getExtension() !== 'php') {
-                continue;
-            }
-
-            preg_match_all('/->(?:date|dateTime|time|isoDate|isoDateTime|dateTimeTooltip)\(\s*[\'"]/', (string) file_get_contents($file->getPathname()), $matches);
-
-            if ($matches[0] !== []) {
-                $offenders[] = $file->getRelativePathname().': '.implode(', ', $matches[0]);
+        foreach ($this->filamentSources() as $path => $source) {
+            foreach ($this->dateCalls($source) as [$method, $hasArguments]) {
+                if (isset(self::NOT_IN_ADMIN[$method])) {
+                    $offenders[] = "{$path}: ->{$method}() — ".self::NOT_IN_ADMIN[$method];
+                } elseif ($hasArguments && in_array($method, self::MUST_TAKE_THE_DEFAULT, true)) {
+                    $offenders[] = "{$path}: ->{$method}(…) — drop the argument and take the panel default";
+                }
             }
         }
 
-        $this->assertSame([], $offenders, "Drop the format and let the panel default apply:\n".implode("\n", $offenders));
+        $this->assertSame([], $offenders, "docs/internals/datetime.md, Admin:\n".implode("\n", $offenders));
+    }
+
+    /** @return array<string, string> relative path => source */
+    private function filamentSources(): array
+    {
+        $sources = [];
+
+        foreach (File::allFiles(app_path('Filament')) as $file) {
+            if ($file->getExtension() === 'php') {
+                $sources[$file->getRelativePathname()] = (string) file_get_contents($file->getPathname());
+            }
+        }
+
+        return $sources;
+    }
+
+    /**
+     * Every `->method(` in a source, with whether its parentheses hold anything.
+     *
+     * @return list<array{0: string, 1: bool}>
+     */
+    private function dateCalls(string $source): array
+    {
+        $tokens = array_values(array_filter(
+            token_get_all($source),
+            fn ($token): bool => ! is_array($token) || ! in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true),
+        ));
+
+        $calls = [];
+
+        foreach ($tokens as $index => $token) {
+            if (! is_array($token) || $token[0] !== T_OBJECT_OPERATOR) {
+                continue;
+            }
+
+            $name = $tokens[$index + 1] ?? null;
+            $open = $tokens[$index + 2] ?? null;
+
+            if (! is_array($name) || $name[0] !== T_STRING || $open !== '(') {
+                continue;
+            }
+
+            $calls[] = [$name[1], ($tokens[$index + 3] ?? null) !== ')'];
+        }
+
+        return $calls;
     }
 }
