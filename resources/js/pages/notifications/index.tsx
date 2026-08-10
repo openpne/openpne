@@ -82,7 +82,7 @@ export default function NotificationsIndex() {
                                             {!item.read && <UnreadLabel />}
                                             {item.label}
                                         </span>
-                                        <Timestamp at={item.createdAt} preset="listStamp" className="block text-xs text-muted-foreground" />
+                                        <Timestamp at={item.createdAt} preset="relative" className="block text-xs text-muted-foreground" />
                                     </span>
                                     {!item.read && <UnreadDot />}
                                 </Link>

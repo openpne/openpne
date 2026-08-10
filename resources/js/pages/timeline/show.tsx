@@ -83,7 +83,7 @@ export default function TimelineShow() {
                                     <Link href={`/member/${reply.author.id}/timeline`} className="text-link hover:underline">
                                         {reply.author.name}
                                     </Link>
-                                    <Timestamp at={reply.createdAt} preset="listStamp" className="text-muted-foreground" />
+                                    <Timestamp at={reply.createdAt} preset="relative" className="text-muted-foreground" />
                                 </div>
                                 <p className="whitespace-pre-wrap break-words">
                                     <UserText text={reply.body} />

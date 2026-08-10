@@ -9,6 +9,7 @@ import {
     formatExact,
     formatListStamp,
     msUntilNextSiteDay,
+    relativeParts,
     siteCurrentYear,
 } from './date.ts';
 
@@ -102,6 +103,46 @@ test('the delay is right where the site has no midnight at all', () => {
 
     // And having crossed it, the next boundary is a whole day out rather than zero.
     assert.equal(msUntilNextSiteDay(new Date('2026-09-06T04:00:00Z'), zone), 23 * 3_600_000);
+});
+
+const ago = (now: string, then: string) => relativeParts(then, 'Asia/Tokyo', new Date(now));
+
+test('how long ago is reported in the coarsest unit that still says something', () => {
+    const now = '2026-08-10T12:00:00Z';
+
+    assert.deepEqual(ago(now, '2026-08-10T11:59:30Z'), { unit: 'now' });
+    assert.deepEqual(ago(now, '2026-08-10T11:59:00Z'), { unit: 'minute', count: 1 });
+    assert.deepEqual(ago(now, '2026-08-10T11:15:00Z'), { unit: 'minute', count: 45 });
+    assert.deepEqual(ago(now, '2026-08-10T11:00:00Z'), { unit: 'hour', count: 1 });
+    assert.deepEqual(ago(now, '2026-08-09T13:00:00Z'), { unit: 'hour', count: 23 });
+});
+
+/**
+ * The reason days are counted on the calendar and not by dividing elapsed time: Saturday 11:00 read on
+ * Monday 10:00 is 47 hours, and floor division would call that one day ago when Saturday is two days
+ * before Monday.
+ */
+test('days are calendar days on the site clock, not elapsed time over 24 hours', () => {
+    // Tokyo: Saturday 2026-08-08 20:00 local, read Monday 2026-08-10 19:00 local. 47 hours.
+    assert.deepEqual(ago('2026-08-10T10:00:00Z', '2026-08-08T11:00:00Z'), { unit: 'day', count: 2 });
+
+    // And an hour either side of a boundary is still the hour bucket, so "yesterday 23:00" read at
+    // 01:00 says two hours rather than a day.
+    assert.deepEqual(ago('2026-08-10T16:00:00Z', '2026-08-10T14:00:00Z'), { unit: 'hour', count: 2 });
+});
+
+test('past a week, how long ago stops being the answer', () => {
+    const now = '2026-08-10T12:00:00Z';
+
+    assert.deepEqual(ago(now, '2026-08-04T12:00:00Z'), { unit: 'day', count: 6 });
+    assert.equal(ago(now, '2026-08-03T12:00:00Z'), null);
+    assert.equal(relativeParts('', 'Asia/Tokyo', new Date(now)), null);
+});
+
+// A clock a little ahead of ours is not a prediction, and a negative count is not a reading of it.
+test('a future instant reads as just now, never as a negative', () => {
+    assert.deepEqual(ago('2026-08-10T12:00:00Z', '2026-08-10T12:00:30Z'), { unit: 'now' });
+    assert.deepEqual(ago('2026-08-10T12:00:00Z', '2026-08-11T12:00:00Z'), { unit: 'now' });
 });
 
 test('a civil date is the stored day in every timezone, with the weekday only when asked', () => {
