@@ -60,9 +60,18 @@ export default function NotificationsIndex() {
                         {t('Mark all as read')}
                     </Button>
                 )}
-                <ActionLink href="/member/config/notifications" variant="ghost" size="sm" className="text-foreground">
+                {/* Short label, precise accessible name: "Notification settings" does not fit beside
+                    the read-all button on a narrow phone in English, and the gear plus this screen
+                    is what scopes the word. The visible text is contained in the accessible one, as
+                    WCAG's label-in-name asks. */}
+                <ActionLink
+                    href="/member/config/notifications"
+                    variant="outline"
+                    size="sm"
+                    aria-label={t('Notification settings')}
+                >
                     <Settings className="size-4" aria-hidden />
-                    {t('Notification settings')}
+                    {t('Settings')}
                 </ActionLink>
             </div>
             {feed.data.length === 0 ? (
