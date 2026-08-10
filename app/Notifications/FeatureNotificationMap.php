@@ -18,6 +18,7 @@ use App\Notifications\Diary\DiaryPostedNotification;
 use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Message\MessageReceivedNotification;
+use App\Notifications\Timeline\TimelineMentionedNotification;
 
 /**
  * Every feature-owned notification class, for the display side: `notifications.type` holds exactly
@@ -47,6 +48,7 @@ final class FeatureNotificationMap
         FriendRequestAcceptedNotification::class,
         FriendRequestedNotification::class,
         MessageReceivedNotification::class,
+        TimelineMentionedNotification::class,
     ];
 
     /** @return list<class-string<FeatureNotification>> the classes whose unit is switched off */

@@ -12,6 +12,7 @@ use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Models\Message;
+use App\Models\TimelinePost;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
 use App\Notifications\CommentReason;
@@ -31,6 +32,7 @@ use App\Notifications\Member\RegistrationCompletedNotification;
 use App\Notifications\Member\WithdrawalAdminNotification;
 use App\Notifications\Member\WithdrawalCompletedNotification;
 use App\Notifications\Message\MessageReceivedNotification;
+use App\Notifications\Timeline\TimelineMentionedNotification;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -89,6 +91,7 @@ class MailTemplateDriftGuardTest extends TestCase
         $topic = CommunityTopic::factory()->create(['member_id' => $recipient->getKey()]);
         $topicComment = $topic->comments()->create(['member_id' => $sender->getKey(), 'number' => 1, 'body' => 'a comment']);
         $community = Community::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $sender->getKey()]);
 
         // One notification per sendable template; RegistrationLink carries an inviter name + message so the
         // conditional block that uses them is actually exercised.
@@ -111,6 +114,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new MfaEnabledNotification('en'), $recipient],
             [new MfaDisabledNotification('en'), $recipient],
             [new MfaResetLinkNotification('the-token', 'en'), new AnonymousNotifiable],
+            [new TimelineMentionedNotification($sender, $post), $recipient],
         ];
 
         $this->assertCount(count(MailTemplate::sendable()), $notifications, 'one guarded notification per sendable template');
