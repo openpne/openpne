@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { EntryRow } from '@/components/entry-row';
-import { formatDate } from '@/lib/date';
+import { useDateFormat } from '@/lib/use-date-format';
 import type { DiarySummary } from './types';
 
 /**
@@ -10,11 +10,12 @@ import type { DiarySummary } from './types';
  * has-photos marker still shows via `hasImages`).
  */
 export function DiaryRow({ diary, rich = false, actions }: { diary: DiarySummary; rich?: boolean; actions?: ReactNode }) {
+    const date = useDateFormat();
     return (
         <EntryRow
             href={`/diary/${diary.id}`}
             author={diary.author}
-            date={formatDate(diary.createdAt)}
+            date={date.instantDate(diary.createdAt)}
             content={diary.title}
             commentCount={diary.commentCount}
             hasImages={diary.hasImages}

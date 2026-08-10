@@ -5,8 +5,8 @@ import { PushPrompt } from '@/components/push-prompt';
 import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
-import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
@@ -36,6 +36,7 @@ interface FeedProps extends PageProps {
  *  marks it read and lands on what it is about; the page itself never marks anything. */
 export default function NotificationsIndex() {
     const t = useT();
+    const date = useDateFormat();
     const { feed, unread } = usePage<FeedProps>().props;
     const title = t('Notifications');
 
@@ -82,7 +83,7 @@ export default function NotificationsIndex() {
                                             {!item.read && <UnreadLabel />}
                                             {item.label}
                                         </span>
-                                        <span className="block text-xs text-muted-foreground">{formatDateTime(item.createdAt)}</span>
+                                        <span className="block text-xs text-muted-foreground">{date.instant(item.createdAt)}</span>
                                     </span>
                                     {!item.read && <UnreadDot />}
                                 </Link>

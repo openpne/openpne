@@ -30,6 +30,7 @@ use App\Rules\NotCommonPassword;
 use App\Rules\NotContextWord;
 use App\Services\SnsSettingService;
 use App\Services\TermService;
+use App\Support\SiteTimezone;
 use App\Translation\TermTranslator;
 use Closure;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -112,6 +113,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        SiteTimezone::assertUsable((string) config('app.timezone'));
+
         if (config('openpne.security.force_https')) {
             // Commit URL generation + the session cookie to HTTPS even when PHP sees a plain-HTTP
             // request (e.g. behind a TLS-terminating proxy), so links and cookies are never downgraded.

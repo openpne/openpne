@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { headingVariants } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import { buildArchiveGrid, countBucket, selectedBeyondRecentYears, withKeyword, type MonthlyCount } from './archive-months';
 
@@ -20,11 +21,6 @@ const BUCKET_FILL = ['', 'bg-selected/10', 'bg-selected/20', 'bg-selected/30', '
 // Always-visible recent years; older years fold behind a disclosure.
 const RECENT_YEARS = 2;
 
-const monthLabel = (year: number, month: number): string =>
-    new Date(year, month - 1).toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
-
-const shortMonthLabel = (month: number): string => new Date(2000, month - 1).toLocaleDateString(undefined, { month: 'short' });
-
 /**
  * Viewer-scoped year×month heat grid over a member's diary archive: each month cell links to that
  * month's archive (shaded by entry count), so the reader can scan when they wrote and jump to a
@@ -32,9 +28,10 @@ const shortMonthLabel = (month: number): string => new Date(2000, month - 1).toL
  */
 export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) {
     const t = useT();
+    const date = useDateFormat();
     const [showEarlier, setShowEarlier] = useState(false);
 
-    const rows = buildArchiveGrid(counts, new Date().getFullYear(), ownerId, keyword, selected);
+    const rows = buildArchiveGrid(counts, date.currentYear(), ownerId, keyword, selected);
     if (rows.length === 0) {
         return null;
     }
@@ -56,8 +53,8 @@ export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) 
                                 const isSelected = selected?.year === row.year && selected?.month === cell.month;
                                 const label =
                                     cell.count > 0
-                                        ? `${monthLabel(row.year, cell.month)}, ${t(':count entries', { count: cell.count })}`
-                                        : monthLabel(row.year, cell.month);
+                                        ? `${date.civilMonth(row.year, cell.month)}, ${t(':count entries', { count: cell.count })}`
+                                        : date.civilMonth(row.year, cell.month);
                                 const cellClass = cn(
                                     'flex min-h-11 flex-col items-center justify-center gap-0.5 rounded text-sm',
                                     cell.href ? BUCKET_FILL[countBucket(cell.count)] : 'text-muted-foreground',
@@ -67,7 +64,7 @@ export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) 
                                     <>
                                         {/* A localized month name ("7月" / "Jul"), not a bare digit: the label is what
                                             makes the grid read as a calendar at a glance. */}
-                                        <span className="text-xs">{shortMonthLabel(cell.month)}</span>
+                                        <span className="text-xs">{date.civilMonthShort(cell.month)}</span>
                                         {/* The count line is always reserved (nbsp on empty months) so the month labels
                                             sit at the same height in every cell. Inherits the cell foreground: muted
                                             text fails contrast on the heavier fills. */}

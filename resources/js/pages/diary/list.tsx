@@ -7,6 +7,7 @@ import { dangerActionClass } from '@/components/ui/danger-link';
 import { Input } from '@/components/ui/input';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 import { DiaryArchiveGrid } from './archive-grid';
 import type { MonthlyCount } from './archive-months';
@@ -26,6 +27,7 @@ interface ListProps extends PageProps {
 
 export default function DiaryList() {
     const t = useT();
+    const date = useDateFormat();
     const confirm = useConfirm();
     const page = usePage<ListProps>();
     const { owner, isOwner, diaries, monthlyCounts, keyword, archive } = page.props;
@@ -54,7 +56,7 @@ export default function DiaryList() {
         }
     };
 
-    const monthHeading = archive ? new Date(archive.year, archive.month - 1).toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : null;
+    const monthHeading = archive ? date.civilMonth(archive.year, archive.month) : null;
 
     return (
         <>

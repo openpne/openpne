@@ -26,6 +26,7 @@ class BlockMember
             $inserted = DB::table('member_blocks')->insertOrIgnore([
                 'blocker_id' => $blocker->getKey(),
                 'blocked_id' => $target->getKey(),
+                'created_at' => now(),
             ]);
 
             if ($inserted === 0) {
