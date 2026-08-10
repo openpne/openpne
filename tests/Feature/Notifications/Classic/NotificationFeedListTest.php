@@ -53,6 +53,24 @@ class NotificationFeedListTest extends TestCase
         $this->assertStringContainsString($read, $body);
     }
 
+    /**
+     * Opening a row marks it read and leaves, so the page the browser keeps for back is stale the
+     * moment it is kept. The feed loads the restore refresh for that; the rest of Classic does not,
+     * since what that script costs a screen is the instant back the cache was giving it.
+     */
+    public function test_only_the_feed_refreshes_itself_after_a_back_forward_restore(): void
+    {
+        $viewer = Member::factory()->create();
+
+        $this->actingAs($viewer)->get('/notifications')
+            ->assertOk()
+            ->assertSee('js/classic-refresh-on-restore.js', false);
+
+        $this->actingAs($viewer)->get('/')
+            ->assertOk()
+            ->assertDontSee('js/classic-refresh-on-restore.js', false);
+    }
+
     public function test_the_pager_brackets_the_list(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();

@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -290,6 +291,40 @@ class NotificationFeedTest extends TestCase
                 ->where('unread.friendRequests', 1)
                 ->where('unread.notifications', 0),
             );
+    }
+
+    /**
+     * Returning to the feed revalidates it rather than showing the history state Inertia restores,
+     * and both props that carry read state have to come back from the partial reload it sends: the
+     * rows, and the count the bell and the mark-all button read.
+     */
+    public function test_the_partial_reload_a_restored_feed_sends_answers_with_fresh_read_state(): void
+    {
+        [$viewer, $actor] = Member::factory()->count(2)->create()->all();
+        $row = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
+
+        // What the member left behind, and what the browser hands back on the way in.
+        $this->actingOnModern($viewer)->get('/notifications')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('feed.data.0.read', false)
+                ->where('unread.notifications', 1),
+            );
+
+        $row->markAsRead(); // what opening the row did, one navigation ago
+        $this->freshRequestState();
+
+        $this->actingOnModern($viewer)
+            ->withHeaders([
+                'X-Inertia' => 'true',
+                'X-Inertia-Version' => (string) Inertia::getVersion(),
+                'X-Inertia-Partial-Component' => 'notifications/index',
+                'X-Inertia-Partial-Data' => 'feed,unread',
+            ])
+            ->get('/notifications')
+            ->assertOk()
+            // A partial reload answers as JSON, so this reads the page object rather than the view's.
+            ->assertJsonPath('props.feed.data.0.read', true)
+            ->assertJsonPath('props.unread.notifications', 0);
     }
 
     /**
