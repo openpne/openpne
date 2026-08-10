@@ -7,6 +7,10 @@
  * not mounted when the popstate fires — it is what the popstate is about to swap in. The record
  * carries the URL it landed on, so only the page it is about can spend it: a record nobody asks
  * about expires by never matching again, without needing a second event to clear it.
+ *
+ * A consumer that is already mounted — the shell, which owns props no single page does — cannot use
+ * that record: it has to act *after* the restore has written its own stale props, which the record
+ * says nothing about. {@link createRestoreQueue} is that shape of the same fact.
  */
 
 export interface RestoreTracker {
@@ -39,6 +43,41 @@ const tracker = createRestoreTracker();
 /** True when this page is the one a popstate restored; reading it spends the record. */
 export function consumeHistoryRestore(): boolean {
     return tracker.consume(window.location.href);
+}
+
+/**
+ * Restores waiting for the `navigate` that completes them: Inertia fires it once the restored page
+ * state has been swapped in, so a consumer reading from there is ordered after that write instead of
+ * racing it.
+ */
+export interface RestoreQueue {
+    /** A popstate on an entry Inertia owns — the `navigate` completing it is still to come. */
+    handlePopstate(): void;
+    /** Inertia's `navigate`; true when this one completes a restore. */
+    handleNavigate(): boolean;
+}
+
+/**
+ * A count, not a flag: holding back fires every popstate before any of their navigates arrive, and a
+ * flag would answer only the first — leaving the last restore's stale props as the final write, which
+ * is the one that stays. The same shape, and the same reason, as `back-nav.ts`.
+ */
+export function createRestoreQueue(): RestoreQueue {
+    let pending = 0;
+
+    return {
+        handlePopstate() {
+            pending += 1;
+        },
+        handleNavigate() {
+            if (pending === 0) {
+                return false;
+            }
+            pending -= 1;
+
+            return true;
+        },
+    };
 }
 
 let installed = false;

@@ -1,5 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
+import { createRestoreQueue } from '@/lib/history-restore';
 import { clearAppBadge, reconcileSubscription, resumeRegistration, setAppBadge } from '@/lib/push';
 import type { PageProps, UnreadCounts } from '@/types';
 
@@ -103,16 +104,19 @@ export function UnreadSync() {
         // A restored page carries the counts it had when it was left, so a badge can climb back over
         // a notification the member has already read — which reads as new mail arriving. Inertia
         // rebuilds a popstate target from its own history state, and the back/forward cache returns
-        // the document whole. The popstate half waits for the `navigate` that follows, because that
-        // is where the restore writes its own stale counts over these props: refreshing after it is
-        // ordered rather than merely faster than it.
-        let restored = false;
-        const onPopstate = () => {
-            restored = true;
+        // the document whole. The popstate half refreshes from `navigate`, which Inertia fires once
+        // it has swapped the restored props in: reading from there is ordered after that write
+        // rather than racing it. Rapid backs are why this counts (see createRestoreQueue).
+        const restores = createRestoreQueue();
+        const onPopstate = (event: PopStateEvent) => {
+            // Only an entry Inertia owns gets a `navigate`. A hash-only popstate has none, so
+            // counting it would leave the count to be spent on an ordinary navigation later.
+            if ((event.state as { page?: unknown } | null)?.page !== undefined) {
+                restores.handlePopstate();
+            }
         };
         const onNavigate = () => {
-            if (restored) {
-                restored = false;
+            if (restores.handleNavigate()) {
                 refresh();
             }
         };

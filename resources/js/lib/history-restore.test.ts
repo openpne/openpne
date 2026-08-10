@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createRestoreTracker } from './history-restore.ts';
+import { createRestoreQueue, createRestoreTracker } from './history-restore.ts';
 
 const FEED = 'https://example.test/notifications';
 const DASHBOARD = 'https://example.test/dashboard';
@@ -35,4 +35,30 @@ test('a paged feed restores per page', () => {
 
     assert.equal(tracker.consume(FEED), false);
     assert.equal(tracker.consume(`${FEED}?page=2`), true);
+});
+
+test('an ordinary navigate completes no restore', () => {
+    const queue = createRestoreQueue();
+
+    assert.equal(queue.handleNavigate(), false);
+});
+
+test("a restore is completed by its own navigate, and by nothing after it", () => {
+    const queue = createRestoreQueue();
+    queue.handlePopstate();
+
+    assert.equal(queue.handleNavigate(), true);
+    assert.equal(queue.handleNavigate(), false);
+});
+
+test('holding back completes every restore, not just the first', () => {
+    const queue = createRestoreQueue();
+    // Both popstates land before either navigate does — the sequence back-nav.ts documents.
+    queue.handlePopstate();
+    queue.handlePopstate();
+
+    assert.equal(queue.handleNavigate(), true);
+    // A flag would answer false here, and the second restore's stale props would be the last write.
+    assert.equal(queue.handleNavigate(), true);
+    assert.equal(queue.handleNavigate(), false);
 });
