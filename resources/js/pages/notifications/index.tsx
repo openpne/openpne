@@ -1,9 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Settings } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { PushPrompt } from '@/components/push-prompt';
 import { Timestamp } from '@/components/timestamp';
 import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
+import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -43,12 +45,12 @@ export default function NotificationsIndex() {
         <>
             <Head title={title} />
             <PushPrompt />
-            {/* What arrives here is decided elsewhere, so the feed carries the way to that page —
-                min-h keeps the row the same height whether or not the read-all button is in it. */}
-            <div className="flex min-h-9 items-center justify-between gap-3">
-                <Link href="/member/config/notifications" className="text-sm text-link hover:underline">
-                    {t('Notification settings')}
-                </Link>
+            {/* What arrives here is decided elsewhere, so the feed carries the way to that page. Both
+                controls cluster right: below lg the h1 folds into the bar, and a lone noun phrase at
+                the left edge lands where the heading would have been and reads as one. They take the
+                same weight — one framed and one bare read as an inconsistency rather than as a
+                hierarchy — and settings sits outermost, the corner it is looked for in. */}
+            <div className="flex items-center justify-end gap-2">
                 {(unread?.notifications ?? 0) > 0 && (
                     <Button
                         variant="outline"
@@ -58,6 +60,23 @@ export default function NotificationsIndex() {
                         {t('Mark all as read')}
                     </Button>
                 )}
+                {/* The full name wherever it fits, the bare word where it does not: beside the
+                    read-all button, English needs a ~360px viewport for "Notification settings"
+                    alone. Cutting over at sm rather than at that measured edge leaves room for a
+                    longer word in another locale. The two reasons to shorten and to be precise sit
+                    on opposite sides of a breakpoint — the left nav's own "Settings", which this
+                    word would otherwise double, appears only from lg. The accessible name stays the
+                    full one at every width, and the short label is contained in it (label-in-name). */}
+                <ActionLink
+                    href="/member/config/notifications"
+                    variant="outline"
+                    size="sm"
+                    aria-label={t('Notification settings')}
+                >
+                    <Settings className="size-4" aria-hidden />
+                    <span className="sm:hidden">{t('Settings')}</span>
+                    <span className="hidden sm:inline">{t('Notification settings')}</span>
+                </ActionLink>
             </div>
             {feed.data.length === 0 ? (
                 <Panel>
