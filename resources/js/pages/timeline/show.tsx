@@ -60,7 +60,7 @@ export default function TimelineShow() {
                         <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="sm" decorative />
                         <span className="truncate">{post.author.name}</span>
                     </Link>
-                    <Timestamp at={post.createdAt} className="shrink-0 text-muted-foreground" />
+                    <Timestamp at={post.createdAt} preset="absolute" className="shrink-0 text-muted-foreground" />
                 </div>
                 <p className="whitespace-pre-wrap break-words">
                     <UserText text={post.body} />
@@ -83,7 +83,7 @@ export default function TimelineShow() {
                                     <Link href={`/member/${reply.author.id}/timeline`} className="text-link hover:underline">
                                         {reply.author.name}
                                     </Link>
-                                    <Timestamp at={reply.createdAt} className="text-muted-foreground" />
+                                    <Timestamp at={reply.createdAt} preset="listStamp" className="text-muted-foreground" />
                                 </div>
                                 <p className="whitespace-pre-wrap break-words">
                                     <UserText text={reply.body} />

@@ -49,7 +49,7 @@ export default tseslint.config(
         // Components reach them through <Timestamp> / <CivilDate>, which bind the site's; the hook is
         // for the values that are not a timestamp (a month label, the current year).
         files: ['resources/js/**/*.{ts,tsx}'],
-        ignores: ['resources/js/lib/use-date-format.ts', 'resources/js/lib/date.test.ts'],
+        ignores: ['resources/js/lib/use-date-format.ts', 'resources/js/lib/use-site-day.ts', 'resources/js/lib/date.test.ts'],
         rules: {
             'no-restricted-imports': [
                 'error',

@@ -23,7 +23,7 @@ export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
             community={entry.community}
             content={entry.name}
             bylineNote={entry.kind === 'topic' ? t('%Topic%') : t('Event')}
-            date={<Timestamp at={entry.updatedAt} preset="day" />}
+            date={<Timestamp at={entry.updatedAt} preset="listStamp" />}
             commentCount={entry.commentCount}
             participantCount={entry.participantCount ?? 0}
         />

@@ -34,7 +34,7 @@ export default function CommunityTopicIndex() {
                                     href={`/communityTopic/${topic.id}`}
                                     author={topic.author}
                                     content={topic.name}
-                                    date={<Timestamp at={topic.updatedAt} preset="day" />}
+                                    date={<Timestamp at={topic.updatedAt} preset="listStamp" />}
                                     commentCount={topic.commentCount}
                                 />
                             ))}

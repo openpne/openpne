@@ -138,7 +138,7 @@ export default function MessageIndex() {
                                         </p>
                                         <p className="truncate text-xs text-muted-foreground">
                                             {m.counterparty?.name ?? t('Withdrawn member')} &mdash;{' '}
-                                            <Timestamp at={m.date} />
+                                            <Timestamp at={m.date} preset="listStamp" />
                                         </p>
                                     </div>
                                     {m.unread && <UnreadDot className="mt-1" />}

@@ -34,7 +34,7 @@ export default function CommunityEventIndex() {
                                     href={`/communityEvent/${event.id}`}
                                     author={event.author}
                                     content={event.name}
-                                    date={<>{t('Open date')}: <CivilDate value={event.openDate} /></>}
+                                    date={<>{t('Open date')}: <CivilDate value={event.openDate} weekday /></>}
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}
                                 />
