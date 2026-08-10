@@ -93,6 +93,84 @@ export function formatCivilMonthShort(month: number, { locale }: DateFormatConte
 /** Longer than any civil day: a fall-back day is 25 hours, and this only has to bracket the boundary. */
 const LONGEST_SITE_DAY_MS = 26 * 3_600_000;
 
+/** Past this the reader is no longer placing the row against now, so an absolute shape reads better. */
+const RELATIVE_DAY_LIMIT = 7;
+
+/**
+ * How long ago, in the coarsest unit that still says something — or `null` once "how long ago" stops
+ * being the useful answer and a date should be shown instead.
+ *
+ * Days are counted as **calendar days on the site's clock**, not as elapsed time divided by 24 hours.
+ * Saturday 11:00 read on Monday 10:00 is 47 hours, which floor division calls one day ago; in Japanese
+ * as in English, Saturday is two days before Monday. Hours below a day keep using elapsed time, so
+ * yesterday 23:00 read at 01:00 is still "2 hours ago" rather than "1 day ago".
+ */
+export function relativeParts(
+    iso: string,
+    timeZone: string,
+    now: Date = new Date(),
+): { unit: 'now' } | { unit: 'minute' | 'hour' | 'day'; count: number } | null {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    // A future instant means a clock a little ahead of ours, not a prediction; "just now" is the
+    // truthful reading, and negative counts are not.
+    const elapsed = Math.max(0, now.getTime() - date.getTime());
+
+    if (elapsed < 60_000) {
+        return { unit: 'now' };
+    }
+
+    if (elapsed < 3_600_000) {
+        return { unit: 'minute', count: Math.floor(elapsed / 60_000) };
+    }
+
+    if (elapsed < 86_400_000) {
+        return { unit: 'hour', count: Math.floor(elapsed / 3_600_000) };
+    }
+
+    const days = siteDayNumber(now, timeZone) - siteDayNumber(date, timeZone);
+
+    return days < RELATIVE_DAY_LIMIT ? { unit: 'day', count: days } : null;
+}
+
+/**
+ * When the text {@link relativeParts} produced stops being true, or `null` when the next change is a
+ * site-day boundary — which the shared day clock already waits on, so scheduling it here as well would
+ * be a second timer for the same moment.
+ */
+export function nextRelativeRefreshDelay(iso: string, now: Date = new Date()): number | null {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    const elapsed = Math.max(0, now.getTime() - date.getTime());
+
+    if (elapsed < 60_000) {
+        return 60_000 - elapsed;
+    }
+
+    if (elapsed < 3_600_000) {
+        return 60_000 - (elapsed % 60_000);
+    }
+
+    if (elapsed < 86_400_000) {
+        return 3_600_000 - (elapsed % 3_600_000);
+    }
+
+    return null;
+}
+
+/** The site's calendar day as a day count, so two of them subtract into a number of days. */
+function siteDayNumber(date: Date, timeZone: string): number {
+    const { year, month, day } = siteDayParts(date, timeZone);
+
+    return Date.UTC(year, month - 1, day) / 86_400_000;
+}
+
 /**
  * How long until the site's calendar day changes. `formatListStamp` renders relative to today, so a
  * page left open past the site's midnight would keep yesterday's rows saying a time — the shape
