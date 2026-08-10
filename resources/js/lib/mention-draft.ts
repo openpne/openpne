@@ -174,7 +174,7 @@ export function applyEdit(mentions: DraftMention[], oldValue: string, newValue: 
     const right = read(mentions, oldValue, newValue, Math.min(prefix, limit - suffix), suffix);
 
     return mentions.flatMap((mention, index) => {
-        const start = settle(left[index] ?? null, right[index] ?? null, mention, mentions);
+        const start = settle(left[index] ?? null, right[index] ?? null);
 
         return start === null ? [] : [{ ...mention, start }];
     });
@@ -188,23 +188,14 @@ function read(mentions: DraftMention[], oldValue: string, newValue: string, star
 /**
  * The start both readings support, or null to give the mention up.
  *
- * Where they disagree the draft may not guess: picking the wrong one of two same-named members
- * points the link and the notification at the member the writer just deleted, and nothing
- * downstream can catch it — {@link toPayload} and the server both re-read the same `@name` text.
- * Losing a mention to plain text is the honest failure.
- *
- * A mention only one reading keeps is still safe to keep while no other entry carries its label:
- * the text it covers can then belong to no one else, whichever reading was true.
+ * Where they disagree the draft may not guess — not even for a label no other entry carries: the
+ * body may hold the same `@name` as hand-typed plain text (the feature's own contract), and the
+ * guess would promote it to a mention of the member the writer just deleted. Nothing downstream
+ * can catch it — {@link toPayload} and the server both re-read the same `@name` text. Losing a
+ * mention to plain text is the honest failure; inventing one is not.
  */
-function settle(left: number | null, right: number | null, mention: DraftMention, mentions: DraftMention[]): number | null {
-    if (left === right) {
-        return left;
-    }
-    if (left !== null && right !== null) {
-        return null;
-    }
-
-    return mentions.some((other) => other !== mention && other.label === mention.label) ? null : (left ?? right);
+function settle(left: number | null, right: number | null): number | null {
+    return left === right ? left : null;
 }
 
 /**

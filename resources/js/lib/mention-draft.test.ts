@@ -175,17 +175,30 @@ test('deleting one of three same-named mentions gives up all three', () => {
     assert.deepEqual(applyEdit([picked(0, 'Alice', 1), picked(7, 'Alice', 2), picked(14, 'Alice', 3)], '@Alice @Alice @Alice ', '@Alice @Alice '), []);
 });
 
-test('a same-named pair is given up without taking the mention beside it', () => {
+test('a same-named pair takes its ambiguity-spanning neighbour down with it', () => {
+    // The shared "@" lets one reading eat into Bob's handle, so his fate differs between readings
+    // too. He degrades to plain text with the pair — the honest cost of never guessing.
     const draft = applyEdit([...twoAlices, picked(14, 'Bob', 9)], '@Alice @Alice @Bob ', '@Alice @Bob ');
-    assert.deepEqual(draft, [picked(7, 'Bob', 9)]);
+    assert.deepEqual(draft, []);
 });
 
-test('deleting the first of two differently named mentions keeps the second', () => {
-    // Ambiguous too — the "@" left at 0 may be either mention's — but only one member is named Bob,
-    // so the text that survived can be nobody else's.
+test('deleting the first of two differently named mentions gives up the second too', () => {
+    // Ambiguous as well — the "@" left at 0 may be either mention's, so the readings disagree about
+    // Bob. A unique label is not enough to keep him: the body may hold a hand-typed plain "@Bob"
+    // (the feature's own contract), and a guess could promote that to a mention. The price of never
+    // guessing is that Bob degrades to plain text here.
     const draft = applyEdit([picked(0, 'Alice', 1), picked(7, 'Bob', 9)], '@Alice @Bob ', '@Bob ');
-    assert.deepEqual(draft, [picked(0, 'Bob', 9)]);
-    assert.deepEqual(toPayload(draft, '@Bob '), [{ member_id: 9, offset: 0, length: 4 }]);
+    assert.deepEqual(draft, []);
+    assert.deepEqual(toPayload(draft, '@Bob '), []);
+});
+
+test('a deleted mention never jumps onto a hand-typed copy of its handle', () => {
+    // A picked "@Alice " followed by the same handle typed by hand (plain text by contract).
+    // Deleting the picked one must not leave a mention: the surviving "@Alice" is the hand-typed
+    // text, which the writer chose not to make a mention.
+    const draft = applyEdit([picked(0, 'Alice', 1)], '@Alice @Alice ', '@Alice ');
+    assert.deepEqual(draft, []);
+    assert.deepEqual(toPayload(draft, '@Alice '), []);
 });
 
 test('deleting the last of two differently named mentions keeps the first', () => {
