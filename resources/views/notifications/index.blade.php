@@ -1,5 +1,7 @@
 @extends('layouts.classic')
 
+@use('App\Features\Member\MemberConfigCategory')
+
 @section('title', __('Notifications'))
 
 @section('content')
@@ -49,5 +51,13 @@
                 </ul>
             </div>
         @endif
+        {{-- What arrives here is decided in member config, so the feed carries the way to it.
+             OpenPNE 3's parts frame renders its moreInfo option as div.moreInfo > ul.moreInfo,
+             after the body; operation is where a form's own buttons go. --}}
+        <div class="moreInfo">
+            <ul class="moreInfo">
+                <li><a href="{{ route('member.config', ['category' => MemberConfigCategory::Notification->value]) }}">{{ __('Notification settings') }}</a></li>
+            </ul>
+        </div>
     </x-classic.parts>
 @endsection

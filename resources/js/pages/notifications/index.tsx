@@ -43,8 +43,13 @@ export default function NotificationsIndex() {
         <>
             <Head title={title} />
             <PushPrompt />
-            {(unread?.notifications ?? 0) > 0 && (
-                <div className="flex justify-end">
+            {/* What arrives here is decided elsewhere, so the feed carries the way to that page —
+                min-h keeps the row the same height whether or not the read-all button is in it. */}
+            <div className="flex min-h-9 items-center justify-between gap-3">
+                <Link href="/member/config/notifications" className="text-sm text-link hover:underline">
+                    {t('Notification settings')}
+                </Link>
+                {(unread?.notifications ?? 0) > 0 && (
                     <Button
                         variant="outline"
                         size="sm"
@@ -52,8 +57,8 @@ export default function NotificationsIndex() {
                     >
                         {t('Mark all as read')}
                     </Button>
-                </div>
-            )}
+                )}
+            </div>
             {feed.data.length === 0 ? (
                 <Panel>
                     <p className="text-sm text-muted-foreground">{t('No notifications yet.')}</p>
