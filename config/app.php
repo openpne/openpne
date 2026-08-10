@@ -59,13 +59,13 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | The site's timezone, as an IANA name. Stored and displayed wall-clock time both use it, so
+    | changing it on a live site reinterprets every DATETIME already in the database — treat it as
+    | fixed at deploy time (docs/internals/runtime.md). Validated at boot by AppServiceProvider.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------

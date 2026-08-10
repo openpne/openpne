@@ -60,6 +60,8 @@ export interface PageProps {
         error: string | null;
     };
     locale: string;
+    /** Site timezone as an IANA name; every instant is displayed in it. */
+    timezone: string;
     terms: Record<string, string>;
     [key: string]: unknown;
 }

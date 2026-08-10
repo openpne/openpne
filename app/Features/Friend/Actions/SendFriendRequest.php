@@ -43,6 +43,7 @@ class SendFriendRequest
             DB::table('friend_requests')->insert([
                 'requester_id' => $requester->getKey(),
                 'target_id' => $target->getKey(),
+                'created_at' => now(),
             ]);
 
             FriendRequested::dispatch($requester, $target);
@@ -56,9 +57,13 @@ class SendFriendRequest
             ->where('target_id', $requester->getKey())
             ->delete();
 
+        // One timestamp for both halves of the mirror: two now() calls straddling a second boundary
+        // would date the same friendship differently depending on the direction read.
+        $at = now();
+
         DB::table('friendships')->insert([
-            ['member_id' => $requester->getKey(), 'friend_id' => $originalRequester->getKey()],
-            ['member_id' => $originalRequester->getKey(), 'friend_id' => $requester->getKey()],
+            ['member_id' => $requester->getKey(), 'friend_id' => $originalRequester->getKey(), 'created_at' => $at],
+            ['member_id' => $originalRequester->getKey(), 'friend_id' => $requester->getKey(), 'created_at' => $at],
         ]);
 
         FriendRequestAccepted::dispatch($originalRequester, $requester);

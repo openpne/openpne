@@ -55,6 +55,11 @@ class UpgradeFromThreeCommand extends Command
             return self::FAILURE;
         }
 
+        // OpenPNE 3 DATETIMEs are wall-clock in whatever zone that server ran in, and every step copies
+        // them through unchanged — so the site zone has to match it already. There is deliberately no
+        // conversion afterwards (docs/internals/runtime.md), which makes this the last chance to notice.
+        $this->line('Site timezone: '.config('app.timezone').' — migrated timestamps are read as this zone, unconverted.');
+
         $runner = app(UpgradeRunner::class);
         $out = fn (string $line) => $this->line($line);
 

@@ -2,8 +2,8 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntryRow } from '@/components/entry-row';
 import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
-import { formatDate } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 import { ActivityRow, type CommunityActivityEntry } from './community/activity-row';
 import { DiaryRow } from './diary/diary-row';
@@ -99,13 +99,14 @@ function DigestSection({ title, viewAllHref, extra, children }: { title: string;
 }
 
 function TimelineRow({ post }: { post: TimelinePostEntry }) {
+    const date = useDateFormat();
     return (
         <EntryRow
             href={`/timeline/${post.id}`}
             author={post.author}
             content={post.body}
             contentLines={2}
-            date={formatDate(post.createdAt)}
+            date={date.instantDate(post.createdAt)}
             replyCount={post.replyCount}
         />
     );

@@ -2,8 +2,8 @@ import { Head, usePage } from '@inertiajs/react';
 import { EntryRow } from '@/components/entry-row';
 import { Pagination } from '@/components/pagination';
 import { List, Panel } from '@/components/ui/surface';
-import { formatDate } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, PaginatedEvents } from '../types';
 
@@ -15,6 +15,7 @@ interface IndexProps extends PageProps {
 
 export default function CommunityEventIndex() {
     const t = useT();
+    const date = useDateFormat();
     const { events } = usePage<IndexProps>().props;
 
     return (
@@ -34,7 +35,7 @@ export default function CommunityEventIndex() {
                                     href={`/communityEvent/${event.id}`}
                                     author={event.author}
                                     content={event.name}
-                                    date={`${t('Open date')}: ${formatDate(event.openDate)}`}
+                                    date={`${t('Open date')}: ${date.civilDate(event.openDate)}`}
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}
                                 />

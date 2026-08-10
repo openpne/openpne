@@ -13,8 +13,8 @@ import { Field } from '@/components/ui/field';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
-import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, TopicDetail, TopicThread } from '../types';
 
@@ -28,6 +28,7 @@ interface ShowProps extends PageProps {
 
 export default function CommunityTopicShow() {
     const t = useT();
+    const date = useDateFormat();
     const confirm = useConfirm();
     const { topic, thread, canComment, canEdit } = usePage<ShowProps>().props;
 
@@ -78,7 +79,7 @@ export default function CommunityTopicShow() {
                     ) : (
                         <span>{t('Withdrawn member')}</span>
                     )}
-                    <span>&mdash; {formatDateTime(topic.createdAt)}</span>
+                    <span>&mdash; {date.instant(topic.createdAt)}</span>
                 </div>
 
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
@@ -136,7 +137,7 @@ export default function CommunityTopicShow() {
                                         <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
                                     <span className="ml-auto shrink-0">#{comment.number}</span>
-                                    <span className="shrink-0">{formatDateTime(comment.createdAt)}</span>
+                                    <span className="shrink-0">{date.instant(comment.createdAt)}</span>
                                     {comment.deletable && (
                                         <button type="button" onClick={() => deleteComment(comment.id)} className={`${dangerActionClass} shrink-0`}>
                                             {t('Delete')}

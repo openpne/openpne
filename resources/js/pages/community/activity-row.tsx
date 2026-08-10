@@ -1,6 +1,6 @@
 import { EntryRow } from '@/components/entry-row';
-import { formatDate } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { useDateFormat } from '@/lib/use-date-format';
 
 export interface CommunityActivityEntry {
     kind: 'topic' | 'event';
@@ -17,13 +17,14 @@ export interface CommunityActivityEntry {
  *  misattribute the row. */
 export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
     const t = useT();
+    const date = useDateFormat();
     return (
         <EntryRow
             href={entry.kind === 'topic' ? `/communityTopic/${entry.id}` : `/communityEvent/${entry.id}`}
             community={entry.community}
             content={entry.name}
             bylineNote={entry.kind === 'topic' ? t('%Topic%') : t('Event')}
-            date={formatDate(entry.updatedAt)}
+            date={date.instantDate(entry.updatedAt)}
             commentCount={entry.commentCount}
             participantCount={entry.participantCount ?? 0}
         />

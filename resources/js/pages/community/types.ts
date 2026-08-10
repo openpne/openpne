@@ -126,7 +126,7 @@ export interface EventSummary {
     participantCount: number;
     author: TopicAuthor | null;
     updatedAt: string; // ISO 8601 datetime
-    openDate: string; // Y-m-d (date only, no timezone — format with formatDate)
+    openDate: string; // Y-m-d civil date, no instant — format with civilDate, never as an instant
 }
 
 export interface EventDetail {

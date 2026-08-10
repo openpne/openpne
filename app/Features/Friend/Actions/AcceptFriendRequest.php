@@ -30,9 +30,12 @@ class AcceptFriendRequest
                 ->where('target_id', $accepter->getKey())
                 ->delete();
 
+            // One timestamp for both halves of the mirror (see SendFriendRequest).
+            $at = now();
+
             DB::table('friendships')->insert([
-                ['member_id' => $accepter->getKey(), 'friend_id' => $requester->getKey()],
-                ['member_id' => $requester->getKey(), 'friend_id' => $accepter->getKey()],
+                ['member_id' => $accepter->getKey(), 'friend_id' => $requester->getKey(), 'created_at' => $at],
+                ['member_id' => $requester->getKey(), 'friend_id' => $accepter->getKey(), 'created_at' => $at],
             ]);
 
             FriendRequestAccepted::dispatch($requester, $accepter);

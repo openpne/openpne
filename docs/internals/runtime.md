@@ -24,6 +24,53 @@ stock install.
 2. `OPENPNE_ENV_PATH` MUST NOT be set inside `.env` — it is resolved before the
    `.env` file is loaded and is what tells the framework where that file lives.
 
+## Site timezone
+
+`APP_TIMEZONE` (IANA name, default `UTC`) is the site's single clock. There is no
+per-member timezone: stored wall-clock time and displayed wall-clock time are the
+same value read in the same zone, on both surfaces.
+
+That makes it a **deployment-time setting, not a runtime one**. Changing it on a
+live site does not re-render existing rows into the new zone — it reinterprets
+them, so every timestamp already stored silently shifts meaning. Set it before
+the first write and treat a later change as a data migration.
+
+| Variable | Effect |
+|----------|--------|
+| `APP_TIMEZONE` | The zone every timestamp is written and displayed in. Must be a canonical IANA name — aliases like `Etc/UTC`, `GMT` and `Japan` are rejected, so use `UTC` / `Asia/Tokyo`. Validated at boot (`App\Support\SiteTimezone`) because `date_default_timezone_set` only warns on a name it cannot use, leaving the previous zone silently in effect. |
+
+Key invariants:
+
+1. **The application stamps its own timestamps.** Four tables default
+   `created_at` to the database clock (`useCurrent()`): `friend_requests`,
+   `friendships`, `member_blocks`, `community_join_requests`. No connection
+   timezone is configured, so that clock is UTC on SQLite and the server's zone on
+   MySQL — a row the app did not stamp puts a second clock in one column. Every
+   write path passes `now()` explicitly; the default remains only for raw SQL and
+   the upgrade importer.
+2. **The client formats in the site's zone, not the browser's.** Instants are
+   serialized as offset-bearing ISO and the zone travels with them as the
+   `timezone` shared prop, so Modern places them on the same clock Classic renders
+   (`resources/js/lib/date.ts`). Formatting with the browser's zone is what made
+   the two surfaces disagree by the viewer's offset.
+3. **Instants and civil dates are different types.** An event's open date is a
+   `Y-m-d` calendar day with no instant attached; reading one as an instant shifts
+   it a day for viewers west of UTC. The client has separate formatters and will
+   render a misrouted value verbatim rather than shift it.
+
+### Upgrading from OpenPNE 3
+
+OpenPNE 3 stores `DATETIME` as its server's wall clock, and the upgrade copies
+those values through unchanged. So `APP_TIMEZONE` must already name the zone that
+OpenPNE 3 ran in **before** the upgrade runs — otherwise every migrated timestamp
+is off by the difference.
+
+There is deliberately no migration that shifts existing rows. Once a database
+holds both migrated OpenPNE 3 wall-clock values and rows OpenPNE 4 wrote under a
+different zone, the values alone cannot say which is which, and a blanket shift
+would corrupt one of the two sets. Set the zone first; a database that already
+mixed them needs a re-import, not a conversion.
+
 ## Reverse proxy & HTTPS
 
 The app almost always runs behind a reverse proxy (the fleet edge, or a

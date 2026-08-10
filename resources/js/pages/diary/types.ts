@@ -47,7 +47,7 @@ export interface DiaryDetail extends DiarySummary {
     images: DiaryImage[];
 }
 
-/** The older/newer pager target: identity + title + date (formatDate-compatible ISO string). */
+/** The older/newer pager target: identity + title + createdAt as an offset-bearing ISO instant. */
 export interface DiaryNeighbor {
     id: number;
     title: string;

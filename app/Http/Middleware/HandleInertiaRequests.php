@@ -75,6 +75,10 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'locale' => $locale,
+            // The one clock both surfaces render in. Shipped so the client formats in the site's zone
+            // instead of the browser's, which is what made Modern and Classic disagree by the viewer's
+            // offset (docs/internals/runtime.md).
+            'timezone' => config('app.timezone'),
             'terms' => $this->termsForClient($locale),
         ];
     }
