@@ -47,9 +47,9 @@ export default function NotificationsIndex() {
             <PushPrompt />
             {/* What arrives here is decided elsewhere, so the feed carries the way to that page. Both
                 controls cluster right: below lg the h1 folds into the bar, and a lone noun phrase at
-                the left edge lands where the heading would have been and reads as one. Settings sits
-                outermost — the corner it is looked for in — and stays the lighter of the two, being a
-                rare errand next to the button this screen is actually worked with. */}
+                the left edge lands where the heading would have been and reads as one. They take the
+                same weight — one framed and one bare read as an inconsistency rather than as a
+                hierarchy — and settings sits outermost, the corner it is looked for in. */}
             <div className="flex items-center justify-end gap-2">
                 {(unread?.notifications ?? 0) > 0 && (
                     <Button
