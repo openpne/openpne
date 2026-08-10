@@ -9,6 +9,7 @@ import { SyncLocaleWithServer } from '@/components/sync-locale';
 // on the settings page, so without this the listener/sync would load lazily with that page).
 import '@/lib/color-mode';
 import { installBackNav } from '@/lib/back-nav';
+import { installHistoryRestore } from '@/lib/history-restore';
 import { withUnreadPrefix } from '@/lib/unread-title';
 import type { PageProps } from '@/types';
 
@@ -43,6 +44,9 @@ void createInertiaApp({
         // Before the app mounts, so the first `navigate` (the initial load) is counted as the
         // session's floor rather than as a step the detail bar could offer to go back from.
         installBackNav(router);
+        // Before the app mounts likewise: a page that revalidates on a restore has to find the
+        // record already there when it arrives.
+        installHistoryRestore();
         // `fallbackLocale="en"` (not the app default `ja`) so that an en miss
         // surfaces as the raw English key — matching the "key === English
         // text" omission policy. ja-as-fallback would silently render Japanese
