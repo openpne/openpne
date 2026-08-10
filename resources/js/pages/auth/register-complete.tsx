@@ -53,7 +53,7 @@ export default function RegisterComplete() {
                     field it sits above (not the one below it). */}
                 <div className="divide-y divide-border">
                     <div className="space-y-1 pb-5 last:pb-0">
-                        <span className="block text-sm font-medium text-foreground">{t('Mail Address')}</span>
+                        <span className="block text-sm text-foreground">{t('Mail Address')}</span>
                         <p className="text-sm text-muted-foreground">{email}</p>
                     </div>
 

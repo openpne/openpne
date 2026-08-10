@@ -29,9 +29,16 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
                             aria-current={active ? 'page' : undefined}
                             className={
                                 'flex min-h-11 items-center gap-3 rounded-full px-3 text-base transition ' +
+                                // Hover paints the background and leaves the text muted, so the two
+                                // never converge: the current item is the only one showing the
+                                // background *and* foreground text. Brightening the text on hover
+                                // would make a hovered item identical to the current one — in dark
+                                // --accent-foreground and --foreground are the same value — which is
+                                // what font weight used to hide before it was removed from the
+                                // non-unread states.
                                 (active
-                                    ? 'bg-accent font-semibold text-foreground'
-                                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground')
+                                    ? 'bg-accent text-foreground'
+                                    : 'text-muted-foreground hover:bg-accent')
                             }
                         >
                             <Icon className="size-5 shrink-0" strokeWidth={active ? 2.25 : 2} />

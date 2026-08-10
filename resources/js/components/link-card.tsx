@@ -48,7 +48,7 @@ export function LinkCard({ card }: { card: LinkCardData | null }) {
                 />
             )}
             <div className="min-w-0 flex-1 p-3">
-                <p className="line-clamp-2 font-medium break-words text-foreground">{card.title}</p>
+                <p className="line-clamp-2 break-words text-foreground">{card.title}</p>
                 {card.description && <p className="mt-1 line-clamp-2 text-sm break-words text-muted-foreground">{card.description}</p>}
                 <p className="mt-1 truncate text-xs text-muted-foreground">{card.domain}</p>
             </div>
