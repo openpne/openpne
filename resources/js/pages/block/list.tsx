@@ -41,7 +41,7 @@ export default function BlockList() {
                 </Heading>
                 <Panel bodyClassName="space-y-3">
                     <form onSubmit={add} className="flex items-center gap-2">
-                        <label htmlFor="block_member_id" className="text-sm font-medium text-foreground">
+                        <label htmlFor="block_member_id" className="text-sm text-foreground">
                             {t("Member ID")}
                         </label>
                         <Input

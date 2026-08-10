@@ -175,7 +175,7 @@ export function TopNav({ chrome, hidden }: { chrome: Chrome; hidden?: boolean })
                 <Link
                     href="/login"
                     className={cn(
-                        'inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm font-medium text-link transition hover:bg-accent',
+                        'inline-flex min-h-9 shrink-0 items-center rounded-full px-3 text-sm text-link transition hover:bg-accent',
                         BAR_ACTION_HIT,
                     )}
                 >

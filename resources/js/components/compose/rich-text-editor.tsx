@@ -499,7 +499,7 @@ function LinkDialog({ editor }: { editor: Editor }) {
                     }}
                 >
                     <div className="space-y-1.5">
-                        <label htmlFor={urlId} className="text-sm font-medium text-foreground">
+                        <label htmlFor={urlId} className="text-sm text-foreground">
                             {t('Link URL')}
                         </label>
                         <Input

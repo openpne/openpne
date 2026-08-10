@@ -179,7 +179,7 @@ export default function CommunityEdit() {
                                 type="file"
                                 accept="image/jpeg,image/png,image/gif,image/webp"
                                 onChange={(e) => form.setData('image', e.target.files?.[0] ?? null)}
-                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80"
+                                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
                             />
                         </Field>
                         {community?.imageUrl && (

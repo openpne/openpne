@@ -161,7 +161,7 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
                 aria-invalid={error ? true : undefined}
                 aria-describedby={errorId}
                 onChange={pick}
-                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80 disabled:opacity-50"
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80 disabled:opacity-50"
             />
             {busy && <p className="text-xs text-muted-foreground">{t('Processing images…')}</p>}
             {error && (

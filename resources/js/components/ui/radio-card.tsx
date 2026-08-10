@@ -22,7 +22,7 @@ export function RadioCard({ label, description, className, ...props }: Props) {
         >
             <input type="radio" className="mt-0.5 size-4 shrink-0 accent-selected outline-none" {...props} />
             <span className="text-sm">
-                <span className="font-medium text-foreground">{label}</span>
+                <span className="text-foreground">{label}</span>
                 {description && <span className="mt-0.5 block text-muted-foreground">{description}</span>}
             </span>
         </label>

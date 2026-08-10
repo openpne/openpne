@@ -82,32 +82,14 @@ class FontWeightGuardTest extends TestCase
     private const EARNED_EXCEPTIONS = [];
 
     /**
-     * Files still carrying decorative weight, with the count each may have. Shrinks as the campaign
-     * lands; the disposition and owning PR for every one of these is in
-     * worklog/current/modern-emphasis-inventory.md (private workspace).
+     * Files still carrying decorative weight. Now empty: every one has been migrated, so the first
+     * check below is a complete gate — a weight class anywhere outside the three permanent maps
+     * fails. Add an entry only to park a deliberate, temporary exception, and only with a plan to
+     * remove it.
      *
      * @var array<string, int>
      */
-    private const DEBT_BASELINE = [
-        'components/action-fab.tsx' => 1,
-        'components/avatar-menu.tsx' => 1,
-        'components/compose/rich-text-editor.tsx' => 1,
-        'components/confirm-dialog.tsx' => 2,
-        'components/current-images-field.tsx' => 1,
-        'components/images-field.tsx' => 1,
-        'components/top-nav.tsx' => 1,
-        'components/ui/button.tsx' => 1,
-        'components/ui/label.tsx' => 1,
-        'components/ui/otp-input.tsx' => 1,
-        'components/ui/radio-card.tsx' => 1,
-        'pages/block/list.tsx' => 1,
-        'pages/community/edit.tsx' => 1,
-        'pages/member/avatar.tsx' => 1,
-        'pages/member/edit-profile.tsx' => 1,
-        'pages/member/profile-field-input.tsx' => 1,
-        'pages/member/search.tsx' => 4,
-        'pages/timeline/new.tsx' => 1,
-    ];
+    private const DEBT_BASELINE = [];
 
     /** @return array<string, int> */
     private function budgets(): array
