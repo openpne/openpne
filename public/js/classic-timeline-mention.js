@@ -230,6 +230,39 @@
         });
     }
 
+    /**
+     * toPayload's inverse, for the draft a failed validation flashed back: re-anchor each stored
+     * code-point row onto the restored body and resume edit tracking as if it was never submitted.
+     * A row the body no longer carries — or one that was never a well-formed row — is dropped;
+     * the server re-validates whatever is resubmitted, so nothing here is trusted for more than
+     * picking up where the writer left off.
+     */
+    function fromPayload(rows, value) {
+        var points = Array.from(value);
+        var mentions = [];
+        for (var i = 0; i < rows.length; i += 1) {
+            var memberId = Number(rows[i].member_id);
+            var offset = Number(rows[i].offset);
+            var length = Number(rows[i].length);
+            if (!isFinite(memberId) || memberId <= 0 || !isFinite(offset) || offset < 0 || !isFinite(length) || length < 2 || offset + length > points.length) {
+                continue;
+            }
+            var handle = points.slice(offset, offset + length).join('');
+            if (handle.charAt(0) !== '@') {
+                continue;
+            }
+            mentions.push({
+                memberId: memberId,
+                label: handle.slice(1),
+                start: points.slice(0, offset).join('').length,
+            });
+        }
+
+        return mentions.sort(function (a, b) {
+            return a.start - b.start;
+        });
+    }
+
     var api = {
         MAX_MENTIONS: MAX_MENTIONS,
         detectTrigger: detectTrigger,
@@ -238,6 +271,7 @@
         applyPick: applyPick,
         applyEdit: applyEdit,
         toPayload: toPayload,
+        fromPayload: fromPayload,
     };
 
     // The browser goes on to the wiring below. `node --test` evaluates this same file as a classic
@@ -252,6 +286,22 @@
     /** Distinguishes the listboxes when a page carries more than one compose form. */
     var listSeq = 0;
 
+    /** The flashed draft rows a failed validation re-rendered (timeline/_mention-draft.blade.php). */
+    function readRows(form) {
+        var inputs = form.querySelectorAll('input[type="hidden"][data-mention]');
+        var rows = {};
+        for (var i = 0; i < inputs.length; i += 1) {
+            var match = /^mentions\[(\d+)\]\[(member_id|offset|length)\]$/.exec(inputs[i].name);
+            if (match) {
+                (rows[match[1]] = rows[match[1]] || {})[match[2]] = inputs[i].value;
+            }
+        }
+
+        return Object.keys(rows).map(function (key) {
+            return rows[key];
+        });
+    }
+
     function setUp(form) {
         var textarea = form.querySelector('textarea[name="body"]');
         var url = form.getAttribute('data-mention-candidates-url');
@@ -259,7 +309,7 @@
             return;
         }
 
-        var mentions = [];
+        var mentions = fromPayload(readRows(form), textarea.value);
         var value = textarea.value;
         var trigger = null;
         // Kept with the query it answers, so a search the field has already typed past shows nothing
@@ -521,6 +571,10 @@
             composing = false;
             syncTrigger();
         });
+
+        // Normalize whatever the flashed draft re-rendered: surviving rows are rewritten in the
+        // script's own shape, garbage ones leave the form.
+        writeRows();
     }
 
     if (window.fetch) {

@@ -13,6 +13,7 @@
 <form method="POST" action="{{ route('timeline.store') }}" enctype="multipart/form-data" data-timeline-compose hidden
       data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
     @csrf
+    @include('timeline._mention-draft')
     <input type="hidden" name="return_to" value="{{ $returnTo }}">
     <div class="timeline-postform well">
         {{-- No maxlength: it measures UTF-16 units, so it would block a body of 140 astral code

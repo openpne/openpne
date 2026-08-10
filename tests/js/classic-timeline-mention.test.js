@@ -20,7 +20,7 @@ const load = runInThisContext(`(function (module) {\n${source}\n})`, { filename:
 const script = { exports: {} };
 load(script);
 
-const { detectTrigger, keyAction, applyPick, applyEdit, toPayload, offeredCandidates } = script.exports;
+const { detectTrigger, keyAction, applyPick, applyEdit, toPayload, fromPayload, offeredCandidates } = script.exports;
 
 const GRIN = '\u{1F600}';
 
@@ -273,3 +273,26 @@ test('rows come out ascending by offset', () => {
     ]);
 });
 
+// --- restoring a flashed draft (fromPayload)
+
+test('a flashed payload re-anchors onto the restored body', () => {
+    // Hidden inputs carry strings; the astral emoji shifts the UTF-16 start past the code-point offset.
+    const value = '😀 hi @Alice ';
+    const rows = [{ member_id: '7', offset: '5', length: '6' }];
+    assert.deepEqual(fromPayload(rows, value), [{ memberId: 7, label: 'Alice', start: 6 }]);
+});
+
+test('a round trip through the payload is the identity', () => {
+    const mentions = [{ memberId: 7, label: 'Alice', start: 3 }];
+    const value = 'hi @Alice ';
+    assert.deepEqual(fromPayload(toPayload(mentions, value), value), mentions);
+});
+
+test('rows the body no longer carries, and malformed ones, are dropped', () => {
+    assert.deepEqual(fromPayload([
+        { member_id: '7', offset: '3', length: '6' },  // no "@" at 3
+        { member_id: '0', offset: '0', length: '2' },  // impossible id
+        { member_id: '7', offset: '90', length: '6' }, // past the end
+        { member_id: 'x', offset: '0', length: '2' },  // not numbers
+    ], 'hi Alice'), []);
+});

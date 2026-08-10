@@ -9,6 +9,7 @@
         <form method="POST" action="{{ route('timeline.store') }}" enctype="multipart/form-data"
               data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
             @csrf
+            @include('timeline._mention-draft')
             <table>
                 <tr>
                     <th><label for="timeline_body">{{ __('Body') }}</label></th>

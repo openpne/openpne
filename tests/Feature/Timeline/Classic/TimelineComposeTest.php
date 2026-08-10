@@ -201,6 +201,29 @@ class TimelineComposeTest extends TestCase
             ->assertSee('id="timeline-submit-error"', false);
     }
 
+    public function test_a_failed_post_keeps_the_draft_mention_rows(): void
+    {
+        // old('body') already keeps the text in place; without these rows the draft's mentions
+        // would silently unlink on resubmit — and the flashed rows also carry them for no-JS.
+        $member = Member::factory()->create();
+        $alice = Member::factory()->create(['name' => 'Alice']);
+        $mentions = [['member_id' => (string) $alice->getKey(), 'offset' => '3', 'length' => '6']];
+
+        $this->actingAs($member)
+            ->post(route('timeline.store'), ['body' => 'hi @Alice', 'visibility' => 99, 'return_to' => 'index', 'mentions' => $mentions])
+            ->assertRedirect(route('timeline.index'));
+        $this->actingAs($member)->get(route('timeline.index'))->assertOk()
+            ->assertSee('name="mentions[0][member_id]" value="'.$alice->getKey().'"', false)
+            ->assertSee('name="mentions[0][offset]" value="3"', false)
+            ->assertSee('name="mentions[0][length]" value="6"', false);
+
+        $this->actingAs($member)
+            ->post(route('timeline.store'), ['body' => 'hi @Alice', 'visibility' => 99, 'mentions' => $mentions])
+            ->assertRedirect(route('timeline.new'));
+        $this->actingAs($member)->get(route('timeline.new'))->assertOk()
+            ->assertSee('name="mentions[0][member_id]" value="'.$alice->getKey().'"', false);
+    }
+
     public function test_a_failed_standalone_post_returns_to_the_compose_page(): void
     {
         $member = Member::factory()->create();
