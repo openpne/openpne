@@ -58,6 +58,36 @@ class TimelineComposeTest extends TestCase
         $this->assertSame(1, substr_count($html, 'opTimelinePlugin/css/counter.css'));
     }
 
+    public function test_every_compose_form_wires_the_mention_picker(): void
+    {
+        $member = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+        $url = route('timeline.mention_candidates');
+
+        // The three Classic bodies a mention can be written in: the inline box, the standalone
+        // compose page and the reply form. Each carries its own endpoint — the script scopes by
+        // form, so nothing is read off the document or a shared singleton.
+        foreach ([route('timeline.index'), route('timeline.new'), route('timeline.show', $post)] as $screen) {
+            $this->actingAs($member)->get($screen)->assertOk()
+                ->assertSee('data-timeline-mention data-mention-candidates-url="'.$url.'"', false)
+                ->assertSee('js/classic-timeline-mention.js', false);
+        }
+    }
+
+    public function test_the_home_gadgets_share_one_mention_script(): void
+    {
+        $this->makeHomeGadget('timelineAll');
+        $this->makeHomeGadget('timelineFriend');
+        $member = Member::factory()->create();
+
+        $html = $this->actingAs($member)->get('/')->assertOk()->getContent();
+
+        // Both boxes are wired, from one copy of the script and one stylesheet.
+        $this->assertSame(2, substr_count($html, 'data-timeline-mention '));
+        $this->assertSame(1, substr_count($html, 'js/classic-timeline-mention.js'));
+        $this->assertSame(1, substr_count($html, 'css/classic-timeline-mention.css'));
+    }
+
     public function test_the_member_timeline_and_show_render_no_compose_box(): void
     {
         $member = Member::factory()->create();

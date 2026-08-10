@@ -10,7 +10,8 @@
         <link rel="stylesheet" href="{{ asset('opTimelinePlugin/css/counter.css') }}">
     @endpush
 @endonce
-<form method="POST" action="{{ route('timeline.store') }}" enctype="multipart/form-data" data-timeline-compose hidden>
+<form method="POST" action="{{ route('timeline.store') }}" enctype="multipart/form-data" data-timeline-compose hidden
+      data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
     @csrf
     <input type="hidden" name="return_to" value="{{ $returnTo }}">
     <div class="timeline-postform well">
@@ -41,3 +42,4 @@
 @once
     <script src="{{ asset('js/classic-timeline-compose.js') }}" defer></script>
 @endonce
+@include('timeline._mention-picker')

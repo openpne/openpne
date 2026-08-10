@@ -7,8 +7,8 @@
         "build": "vite build",
         "dev": "vite",
         "type-check": "tsc --noEmit",
-        "test": "node --test --experimental-strip-types 'resources/js/**/*.test.ts'",
-        "lint": "eslint resources/js public/js public/sw.js vite.config.ts eslint.config.js --max-warnings=0"
+        "test": "node --test --experimental-strip-types 'resources/js/**/*.test.ts' 'tests/js/**/*.test.js'",
+        "lint": "eslint resources/js public/js public/sw.js tests/js vite.config.ts eslint.config.js --max-warnings=0"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
