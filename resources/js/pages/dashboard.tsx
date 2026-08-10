@@ -103,8 +103,8 @@ function TimelineRow({ post }: { post: TimelinePostEntry }) {
         <EntryRow
             href={`/timeline/${post.id}`}
             author={post.author}
-            title={post.body}
-            titleClassName="line-clamp-2 text-sm text-foreground"
+            content={post.body}
+            contentLines={2}
             date={formatDate(post.createdAt)}
             replyCount={post.replyCount}
         />
