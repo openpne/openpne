@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Pagination } from '@/components/pagination';
+import { Timestamp } from '@/components/timestamp';
 import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
 import { Checkbox } from '@/components/ui/checkbox';
 import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, PaginatedMessages } from './types';
@@ -55,7 +55,6 @@ const BULK: Record<MessageBoxSlug, BulkAction[]> = {
 
 export default function MessageIndex() {
     const t = useT();
-    const date = useDateFormat();
     const confirm = useConfirm();
     const { box, messages } = usePage<IndexProps>().props;
     const showPath = SHOW_PATH[box];
@@ -139,7 +138,7 @@ export default function MessageIndex() {
                                         </p>
                                         <p className="truncate text-xs text-muted-foreground">
                                             {m.counterparty?.name ?? t('Withdrawn member')} &mdash;{' '}
-                                            {date.instant(m.date)}
+                                            <Timestamp at={m.date} />
                                         </p>
                                     </div>
                                     {m.unread && <UnreadDot className="mt-1" />}

@@ -52,7 +52,13 @@ Key invariants:
    serialized as offset-bearing ISO and the zone travels with them as the
    `timezone` shared prop, so Modern places them on the same clock Classic renders
    (`resources/js/lib/date.ts`). Formatting with the browser's zone is what made
-   the two surfaces disagree by the viewer's offset.
+   the two surfaces disagree by the viewer's offset. `Intl` and `toLocale*` are
+   restricted to that module by eslint, so a new call site cannot reintroduce the
+   drift; Modern renders instants through `<Timestamp>` / `<CivilDate>`, which bind
+   the site's zone and locale and put the machine-readable value in `dateTime`.
+   Where the display drops information — a day standing in for an instant — the
+   element also carries the exact value as a title. It is never the only place a
+   value appears: `title` reaches neither screen readers nor the keyboard.
 3. **Instants and civil dates are different types.** An event's open date is a
    `Y-m-d` calendar day with no instant attached; reading one as an instant shifts
    it a day for viewers west of UTC. The client has separate formatters and will

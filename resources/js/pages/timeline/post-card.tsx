@@ -5,10 +5,10 @@ import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { CountBadge } from '@/components/entry-row';
+import { Timestamp } from '@/components/timestamp';
 import { UserText } from '@/components/user-text';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import type { TimelinePostEntry } from './types';
 
@@ -21,7 +21,6 @@ interface TimelinePostCardProps {
 // shows only on the viewer's own posts.
 export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
     const t = useT();
-    const date = useDateFormat();
     const confirm = useConfirm();
     const isOwn = post.author.id === viewerId;
 
@@ -41,7 +40,7 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
                 <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
                     <CountBadge icon={MessageCircle} count={post.replyCount} srLabel={t(':count replies', { count: post.replyCount })} />
                     <Link href={`/timeline/${post.id}`} className="hover:text-foreground hover:underline">
-                        {date.instant(post.createdAt)}
+                        <Timestamp at={post.createdAt} />
                     </Link>
                 </div>
             </div>

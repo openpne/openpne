@@ -52,8 +52,8 @@ type EntryRowProps = EntrySubject & {
     contentLines?: 1 | 2;
     /** Plain byline text between the subject name and the date (the activity digest's Topic/Event kind). */
     bylineNote?: string;
-    /** Pre-formatted date string shown in the byline. */
-    date?: string;
+    /** The byline's date slot — a `<Timestamp>` / `<CivilDate>`, optionally with a label beside it. */
+    date?: ReactNode;
     commentCount?: number;
     /** Timeline reply count; renders the same speech-bubble icon as comments, with a replies label. */
     replyCount?: number;

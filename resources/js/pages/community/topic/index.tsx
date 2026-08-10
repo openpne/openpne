@@ -1,9 +1,9 @@
 import { Head, usePage } from '@inertiajs/react';
 import { EntryRow } from '@/components/entry-row';
 import { Pagination } from '@/components/pagination';
+import { Timestamp } from '@/components/timestamp';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, PaginatedTopics } from '../types';
 
@@ -15,7 +15,6 @@ interface IndexProps extends PageProps {
 
 export default function CommunityTopicIndex() {
     const t = useT();
-    const date = useDateFormat();
     const { topics } = usePage<IndexProps>().props;
 
     return (
@@ -35,7 +34,7 @@ export default function CommunityTopicIndex() {
                                     href={`/communityTopic/${topic.id}`}
                                     author={topic.author}
                                     content={topic.name}
-                                    date={date.instantDate(topic.updatedAt)}
+                                    date={<Timestamp at={topic.updatedAt} preset="day" />}
                                     commentCount={topic.commentCount}
                                 />
                             ))}

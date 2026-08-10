@@ -5,6 +5,7 @@ import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
+import { CivilDate, Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,6 @@ import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, EventDetail, EventThread } from '../types';
 
@@ -30,7 +30,6 @@ interface ShowProps extends PageProps {
 
 export default function CommunityEventShow() {
     const t = useT();
-    const date = useDateFormat();
     const confirm = useConfirm();
     const { event, thread, canComment, canEdit, isParticipant, rosterOpen, isFull } = usePage<ShowProps>().props;
 
@@ -85,13 +84,13 @@ export default function CommunityEventShow() {
                     ) : (
                         <span>{t('Withdrawn member')}</span>
                     )}
-                    <span>&mdash; {date.instant(event.createdAt)}</span>
+                    <span>&mdash; <Timestamp at={event.createdAt} /></span>
                 </div>
 
                 <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
                     <dt className="text-muted-foreground">{t('Open date')}</dt>
                     <dd>
-                        {date.civilDate(event.openDate)}
+                        <CivilDate value={event.openDate} />
                         {event.openDateComment && <span className="text-muted-foreground"> ({event.openDateComment})</span>}
                     </dd>
                     {event.area && (
@@ -105,7 +104,7 @@ export default function CommunityEventShow() {
                     {event.applicationDeadline && (
                         <>
                             <dt className="text-muted-foreground">{t('Application deadline')}</dt>
-                            <dd>{date.civilDate(event.applicationDeadline)}</dd>
+                            <dd><CivilDate value={event.applicationDeadline} /></dd>
                         </>
                     )}
                     <dt className="text-muted-foreground">{t('Count of Member')}</dt>
@@ -173,7 +172,7 @@ export default function CommunityEventShow() {
                                         <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
                                     <span className="ml-auto shrink-0">#{comment.number}</span>
-                                    <span className="shrink-0">{date.instant(comment.createdAt)}</span>
+                                    <Timestamp at={comment.createdAt} className="shrink-0" />
                                     {comment.deletable && (
                                         <button type="button" onClick={() => deleteComment(comment.id)} className={`${dangerActionClass} shrink-0`}>
                                             {t('Delete')}

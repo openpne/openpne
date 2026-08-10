@@ -2,12 +2,12 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 import type { MessageBoxSlug, MessageDetail } from './types';
 
@@ -25,7 +25,6 @@ const SHOW_PATH: Record<MessageBoxSlug, (id: number) => string> = {
 
 export default function MessageShow() {
     const t = useT();
-    const date = useDateFormat();
     const confirm = useConfirm();
     const { message } = usePage<ShowProps>().props;
     const showPath = SHOW_PATH[message.box];
@@ -85,7 +84,7 @@ export default function MessageShow() {
                         )}
                     </dd>
                     <dt className="text-muted-foreground">{t('Created At')}</dt>
-                    <dd>{date.instant(message.createdAt)}</dd>
+                    <dd><Timestamp at={message.createdAt} /></dd>
                 </dl>
 
                 <ImageGrid images={message.images} size="size-24" />

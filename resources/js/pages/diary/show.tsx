@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/confirm-dialog';
 import { ImageGrid } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { RichBody } from '@/components/rich-body';
+import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,6 @@ import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { DiaryComment, DiaryDetail, DiaryNeighbor } from './types';
@@ -29,7 +29,6 @@ interface ShowProps extends PageProps {
 
 export default function DiaryShow() {
     const t = useT();
-    const date = useDateFormat();
     const confirm = useConfirm();
     const { diary, comments, older, newer, auth } = usePage<ShowProps>().props;
     const isOwner = auth.user?.id === diary.author.id;
@@ -66,7 +65,7 @@ export default function DiaryShow() {
                     <Link href={`/member/${diary.author.id}`} className="text-link hover:underline">
                         {diary.author.name}
                     </Link>
-                    <span>&mdash; {date.instant(diary.createdAt)}</span>
+                    <span>&mdash; <Timestamp at={diary.createdAt} /></span>
                 </div>
 
                 <RichBody body={diary.body} bodyHtml={diary.bodyHtml} />
@@ -132,7 +131,7 @@ export default function DiaryShow() {
                                         <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
                                     <span className="ml-auto shrink-0">#{comment.number}</span>
-                                    <span className="shrink-0">{date.instant(comment.createdAt)}</span>
+                                    <Timestamp at={comment.createdAt} className="shrink-0" />
                                     {comment.deletable && (
                                         <button type="button" onClick={() => deleteComment(comment.id)} className={cn(dangerActionClass, 'shrink-0')}>
                                             {t('Delete')}
