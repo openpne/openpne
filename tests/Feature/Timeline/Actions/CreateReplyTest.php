@@ -18,7 +18,7 @@ class CreateReplyTest extends TestCase
         [$author, $replier] = Member::factory()->count(2)->create()->all();
         $parent = TimelinePost::factory()->friends()->create(['member_id' => $author->getKey()]);
 
-        $reply = (new CreateReply)($replier, $parent, 'nice post');
+        $reply = app(CreateReply::class)($replier, $parent, 'nice post');
 
         $this->assertSame($parent->getKey(), $reply->in_reply_to_id);
         $this->assertSame($replier->getKey(), $reply->member_id);
@@ -32,7 +32,7 @@ class CreateReplyTest extends TestCase
         $author = Member::factory()->create();
         $parent = TimelinePost::factory()->create(['member_id' => $author->getKey()]);
 
-        $reply = (new CreateReply)($author, $parent, 'no image here');
+        $reply = app(CreateReply::class)($author, $parent, 'no image here');
 
         $this->assertCount(0, $reply->images);
     }

@@ -11,7 +11,10 @@ use Illuminate\Http\UploadedFile;
 
 class CreateTimelinePost
 {
-    public function __construct(private readonly PostImages $images) {}
+    public function __construct(
+        private readonly PostImages $images,
+        private readonly ResolveMentions $mentions,
+    ) {}
 
     /**
      * Post to the author's own timeline. OpenPNE 3 allows one image per post; $image is attached as
@@ -19,14 +22,22 @@ class CreateTimelinePost
      */
     public function __invoke(Member $author, TimelinePostFormData $data, ?UploadedFile $image = null): TimelinePost
     {
+        // Resolved outside the transaction below: it only reads.
+        $mentions = ($this->mentions)($author, $data->body, $data->mentions);
+
         $post = $this->images->attach(
             'timelinePost',
             $image !== null ? [$image] : [],
-            persist: fn (): TimelinePost => TimelinePost::create([
-                'member_id' => $author->getKey(),
-                'body' => $data->body,
-                'visibility' => $data->visibility,
-            ]),
+            persist: function () use ($author, $data, $mentions): TimelinePost {
+                $post = TimelinePost::create([
+                    'member_id' => $author->getKey(),
+                    'body' => $data->body,
+                    'visibility' => $data->visibility,
+                ]);
+                $post->mentions()->createMany($mentions);
+
+                return $post;
+            },
             relation: fn (TimelinePost $post) => $post->images(),
         );
 

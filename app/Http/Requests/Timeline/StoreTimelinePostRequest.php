@@ -4,6 +4,7 @@ namespace App\Http\Requests\Timeline;
 
 use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Features\Timeline\TimelineVisibility;
+use App\Http\Requests\Concerns\MentionRules;
 use App\Http\Requests\Concerns\PostImageRules;
 use App\Support\Visibility;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,6 +22,13 @@ class StoreTimelinePostRequest extends FormRequest
         'home' => 'home',
     ];
 
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('body'))) {
+            $this->merge(['body' => MentionRules::normalizeNewlines($this->input('body'))]);
+        }
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
@@ -30,6 +38,7 @@ class StoreTimelinePostRequest extends FormRequest
             'visibility' => ['required', TimelineVisibility::rule()],
             'image' => PostImageRules::single(),
             'return_to' => ['nullable', Rule::in(array_keys(self::RETURN_ROUTES))],
+            ...MentionRules::rules(),
         ];
     }
 
@@ -61,6 +70,7 @@ class StoreTimelinePostRequest extends FormRequest
         return new TimelinePostFormData(
             body: $validated['body'],
             visibility: Visibility::from($validated['visibility']),
+            mentions: MentionRules::normalize($validated['mentions'] ?? []),
         );
     }
 }
