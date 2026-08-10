@@ -1,48 +1,84 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { nextRelativeRefreshDelay } from './date.ts';
+import { msUntilNextSiteDay, relativeDeadline, relativeParts } from './date.ts';
 
 /**
- * The hook itself is four lines around this delay, so what is worth pinning is that following the
- * delay actually lands on the moment the text changes — the property the hook depends on and the one a
- * future edit could quietly break.
+ * The hook is a timer around this deadline, so what is worth pinning is the property the pair of timers
+ * rests on: between now and whichever boundary comes first, the text does not change — and at the
+ * deadline it has. Compared through the production formatter, since a second copy of the bucket rules in
+ * the test could agree with itself while both drifted from what the screen shows.
+ *
+ * Two boundaries, because two timers share the work: this stamp's own next minute or hour, and the
+ * site's midnight, which the shared day clock waits on. Asserting only against the deadline would call
+ * it a failure whenever midnight legitimately arrives first.
  */
-const textAt = (at: string, now: Date, timeZone = 'Asia/Tokyo') => {
-    const elapsed = Math.max(0, now.getTime() - new Date(at).getTime());
+const shown = (at: string, now: Date, timeZone: string) => JSON.stringify(relativeParts(at, timeZone, now));
 
-    if (elapsed < 60_000) return 'now';
-    if (elapsed < 3_600_000) return `minute:${Math.floor(elapsed / 60_000)}`;
-    if (elapsed < 86_400_000) return `hour:${Math.floor(elapsed / 3_600_000)}`;
+const assertNoChangeIsMissed = (at: string, now: Date, timeZone: string, label: string) => {
+    const deadline = relativeDeadline(at, timeZone, now);
+    assert.notEqual(deadline, null, `${label}: expected a scheduled wake`);
 
-    return `day:${timeZone}`;
+    const dayBoundary = now.getTime() + msUntilNextSiteDay(now, timeZone);
+    const firstBoundary = Math.min(deadline as number, dayBoundary);
+
+    const before = shown(at, now, timeZone);
+
+    assert.equal(shown(at, new Date(firstBoundary - 1), timeZone), before, `${label}: text changed before either timer`);
+    assert.notEqual(shown(at, new Date(deadline as number), timeZone), before, `${label}: text unchanged at the wake`);
 };
 
-test('waking after the delay always lands on a changed text', () => {
+test('waking at the deadline always lands on a changed text', () => {
     const at = '2026-08-10T12:00:00Z';
 
     for (const offsetMs of [0, 30_000, 59_999, 60_000, 90_000, 3_599_999, 3_600_000, 5_400_000, 86_399_999]) {
-        const now = new Date(new Date(at).getTime() + offsetMs);
-        const delay = nextRelativeRefreshDelay(at, now);
-        assert.notEqual(delay, null, `expected a scheduled wake at +${offsetMs}ms`);
-
-        const before = textAt(at, now);
-        const justBefore = textAt(at, new Date(now.getTime() + (delay as number) - 1));
-        const after = textAt(at, new Date(now.getTime() + (delay as number)));
-
-        assert.equal(justBefore, before, `text changed before the wake at +${offsetMs}ms`);
-        assert.notEqual(after, before, `text unchanged at the wake at +${offsetMs}ms`);
+        assertNoChangeIsMissed(at, new Date(new Date(at).getTime() + offsetMs), 'Asia/Tokyo', `+${offsetMs}ms`);
     }
 });
 
-// Past a day the only thing that changes the text is the calendar rolling over, and the shared day
-// clock is already waiting on that; arming here too would be a second timer for the same moment.
-test('past a day it arms nothing and leaves the boundary to the day clock', () => {
-    const at = '2026-08-10T12:00:00Z';
+/**
+ * A fall-back day is 25 hours, so 24 hours elapsed can still be the same calendar day — where "0 days
+ * ago" would be a reading of nothing. The hour bucket carries it, which means it also has a deadline to
+ * keep.
+ */
+test('a day longer than 24 hours stays on hours and keeps scheduling', () => {
+    const zone = 'America/New_York';
+    const at = '2026-11-01T04:30:00Z'; // 2026-11-01 00:30 EDT
 
-    assert.equal(nextRelativeRefreshDelay(at, new Date('2026-08-11T12:00:00Z')), null);
-    assert.equal(nextRelativeRefreshDelay(at, new Date('2026-08-20T12:00:00Z')), null);
+    // 24 hours later it is 23:30 on the same local day.
+    const sameDayAt24h = new Date('2026-11-02T04:30:00Z');
+    assert.deepEqual(relativeParts(at, zone, sameDayAt24h), { unit: 'hour', count: 24 });
+    assertNoChangeIsMissed(at, sameDayAt24h, zone, 'hour 24 on a 25-hour day');
+
+    // An hour on, the calendar has turned over and it becomes a day.
+    assert.deepEqual(relativeParts(at, zone, new Date('2026-11-02T05:30:00Z')), { unit: 'day', count: 1 });
 });
 
-test('an unusable value arms nothing rather than spinning', () => {
-    assert.equal(nextRelativeRefreshDelay('', new Date('2026-08-10T12:00:00Z')), null);
+/** Antarctica/Troll shifts by two hours at once, so 2026-10-25 there is 26 hours long. */
+test('a 26-hour day stays on hours for both of the extra ones', () => {
+    const zone = 'Antarctica/Troll';
+    const at = '2026-10-24T22:30:00Z'; // 2026-10-25 00:30 local
+
+    assert.deepEqual(relativeParts(at, zone, new Date('2026-10-25T22:30:00Z')), { unit: 'hour', count: 24 });
+    assert.deepEqual(relativeParts(at, zone, new Date('2026-10-25T23:30:00Z')), { unit: 'hour', count: 25 });
+    assertNoChangeIsMissed(at, new Date('2026-10-25T23:30:00Z'), zone, 'hour 25 on a 26-hour day');
+
+    // And only once the local date turns over does it become a day.
+    assert.deepEqual(relativeParts(at, zone, new Date('2026-10-26T00:30:00Z')), { unit: 'day', count: 1 });
+});
+
+// A clock running ahead of ours should wake once, when its text really changes — not once a minute
+// until it catches up.
+test('a future instant schedules one wake at the moment it stops being just now', () => {
+    const at = '2026-08-11T12:00:00Z';
+    const now = new Date('2026-08-10T12:00:00Z');
+
+    assert.deepEqual(relativeParts(at, 'Asia/Tokyo', now), { unit: 'now' });
+    assert.equal(relativeDeadline(at, 'Asia/Tokyo', now), new Date(at).getTime() + 60_000);
+});
+
+// Past a week the text is a date, and the only thing that changes a date is the calendar rolling over —
+// which the shared day clock is already waiting on.
+test('past a week it arms nothing and leaves the boundary to the day clock', () => {
+    assert.equal(relativeDeadline('2026-08-10T12:00:00Z', 'Asia/Tokyo', new Date('2026-08-20T12:00:00Z')), null);
+    assert.equal(relativeDeadline('', 'Asia/Tokyo', new Date('2026-08-10T12:00:00Z')), null);
 });

@@ -47,6 +47,8 @@ Two things about that are deliberate:
 - **Days are calendar days on the site's clock, not elapsed time divided by 24.** Saturday 11:00 read on
   Monday 10:00 is 47 hours; floor division calls that one day ago, but Saturday is two days before
   Monday. Hours below a day stay on elapsed time, so yesterday 23:00 read at 01:00 is still `2時間前`.
+  Where the two disagree — a day longer than 24 hours, so still the same date after 24 hours elapsed —
+  hours win and read `24時間前`, because `0日前` is not a reading of anything.
 - **One unit, no "about".** `3日4時間前` and `約3時間前` both say less than `3日前` does.
 
 A week is where it stops. Past that the reader is no longer placing the row against now, and a count of
@@ -80,7 +82,13 @@ exact day of something from three days ago is not a task the design owes a keybo
    - **A relative stamp's own boundary is per stamp** (`use-relative-refresh.ts`), because each one
      reaches its next minute or hour at its own moment. Only the one boundary ahead is armed, so a
      twenty-row list holds twenty pending timers and fires each once, rather than everything waking on a
-     common tick. Past a day it arms nothing and leaves the day clock to it.
+     common tick. Nothing is armed for the other presets, and nothing past a day — the day clock has it.
+
+   Two details keep those two honest. The component reads the clock **once** per render and uses that
+   one reading for the text and for the boundary: two readings can straddle a boundary, and then the
+   timer waits for the one *after* the text has already changed. And what it hands the hook is a
+   **deadline, not a delay** — a delay measured after commit has the same problem, so the hook arms
+   `deadline - now` and refreshes immediately when that has already gone by.
 4. **Formatting lives in one module.** eslint keeps `Intl` and `toLocale*` inside
    `resources/js/lib/date.ts` and the raw formatters importable only by `useDateFormat`, so a new call
    site cannot reintroduce per-viewer drift.

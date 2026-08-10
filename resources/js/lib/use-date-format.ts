@@ -7,6 +7,7 @@ import {
     formatCivilMonthShort,
     formatExact,
     formatListStamp,
+    relativeDeadline,
     relativeParts,
     siteCurrentYear,
 } from '@/lib/date';
@@ -25,7 +26,8 @@ import type { PageProps } from '@/types';
 export function useDateFormat(): {
     absolute: (iso: string) => string;
     listStamp: (iso: string) => string;
-    relative: (iso: string) => string;
+    relative: (iso: string, now?: Date) => string;
+    relativeDeadline: (iso: string, now?: Date) => number | null;
     civilDate: (value: string, weekday?: boolean) => string;
     civilMonth: (year: number, month: number) => string;
     civilMonthShort: (month: number) => string;
@@ -39,7 +41,8 @@ export function useDateFormat(): {
     return {
         absolute: (iso) => formatAbsolute(iso, context),
         listStamp: (iso) => formatListStamp(iso, context),
-        relative: (iso) => relativeLabel(iso, context, t),
+        relative: (iso, now) => relativeLabel(iso, context, t, now),
+        relativeDeadline: (iso, now) => relativeDeadline(iso, context.timeZone, now),
         civilDate: (value, weekday) => formatCivilDate(value, context, weekday),
         civilMonth: (year, month) => formatCivilMonth(year, month, context),
         civilMonthShort: (month) => formatCivilMonthShort(month, context),
@@ -55,8 +58,13 @@ export function useDateFormat(): {
  * "1 minutes ago", and the wrapper exposes only the string form of `t` (see i18n.ts). Every key is a
  * literal here so the translation scanner can find it.
  */
-function relativeLabel(iso: string, context: DateFormatContext, t: (key: string, replacements?: Record<string, number>) => string): string {
-    const parts = relativeParts(iso, context.timeZone);
+function relativeLabel(
+    iso: string,
+    context: DateFormatContext,
+    t: (key: string, replacements?: Record<string, number>) => string,
+    now?: Date,
+): string {
+    const parts = relativeParts(iso, context.timeZone, now);
 
     if (parts === null) {
         return formatListStamp(iso, context);

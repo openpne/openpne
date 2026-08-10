@@ -24,13 +24,21 @@ export type TimestampPreset = 'absolute' | 'listStamp' | 'relative';
  */
 export function Timestamp({ at, preset, className }: { at: string; preset: TimestampPreset; className?: string }) {
     const date = useDateFormat();
+    // One reading of the clock for both the text and the deadline. Two readings — one per render, one
+    // per effect — can straddle a boundary, and then the timer waits for the boundary after the one the
+    // text has already passed.
+    const now = new Date();
+
     // `listStamp` is shaped relative to today and `relative` counts days on the same calendar, so both
     // have to be re-read when the site's day turns over. Subscribed for every preset because a hook
     // cannot be conditional; an `absolute` stamp just re-renders once a day to the same string.
     useSiteDay(usePage<PageProps>().props.timezone);
-    useRelativeRefresh(at);
+    // Only a relative stamp has a boundary of its own to wait for. Passing null for the others is what
+    // keeps a page of list stamps from holding a timer each.
+    useRelativeRefresh(preset === 'relative' ? date.relativeDeadline(at, now) : null);
 
-    const text = preset === 'relative' ? date.relative(at) : preset === 'listStamp' ? date.listStamp(at) : date.absolute(at);
+    const text =
+        preset === 'relative' ? date.relative(at, now) : preset === 'listStamp' ? date.listStamp(at) : date.absolute(at);
 
     return (
         <time dateTime={at} title={preset === 'absolute' ? undefined : date.exact(at)} className={className}>

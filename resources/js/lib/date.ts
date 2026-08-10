@@ -110,6 +110,62 @@ export function relativeParts(
     timeZone: string,
     now: Date = new Date(),
 ): { unit: 'now' } | { unit: 'minute' | 'hour' | 'day'; count: number } | null {
+    const bucket = relativeBucket(iso, timeZone, now);
+
+    if (bucket === null || bucket.unit === 'beyond') {
+        return null;
+    }
+
+    return bucket.unit === 'now' ? { unit: 'now' } : { unit: bucket.unit, count: bucket.count };
+}
+
+/**
+ * The instant this stamp's text stops being true, or `null` when the next change is a site-day boundary
+ * — which the shared day clock already waits on, so scheduling it here as well would be a second timer
+ * for the same moment.
+ *
+ * A deadline rather than a delay because the caller renders the text and arms the timer at two
+ * different moments: a delay computed in one and applied in the other schedules the boundary *after*
+ * the one the text is already past, leaving a stale bucket on screen until it fires.
+ */
+export function relativeDeadline(iso: string, timeZone: string, now: Date = new Date()): number | null {
+    const bucket = relativeBucket(iso, timeZone, now);
+
+    if (bucket === null || bucket.unit === 'beyond') {
+        return null;
+    }
+
+    const difference = now.getTime() - new Date(iso).getTime();
+
+    // Signed, so a clock running ahead of ours schedules one wake at the moment its text really changes
+    // rather than one a minute until it catches up.
+    if (bucket.unit === 'now') {
+        return now.getTime() + (60_000 - difference);
+    }
+
+    if (bucket.unit === 'minute') {
+        return now.getTime() + (60_000 - (difference % 60_000));
+    }
+
+    // The hour bucket, which a long day can carry past 24 hours, changes on the hour. Its exit into days
+    // is a site-day boundary, and the day clock has that one.
+    return now.getTime() + (3_600_000 - (difference % 3_600_000));
+}
+
+/**
+ * The one place the buckets are decided, so the text and its deadline can never disagree about which
+ * one a stamp is in.
+ *
+ * `days === 0` keeps the hour bucket even past 24 hours elapsed. A fall-back day is 25 hours long, so
+ * something posted at 00:30 is 24 hours old at 23:30 *the same day* — and "0 days ago" is not a reading
+ * of anything. Hours below a day stay on elapsed time, which is what keeps yesterday 23:00 read at
+ * 01:00 saying two hours rather than a day.
+ */
+function relativeBucket(
+    iso: string,
+    timeZone: string,
+    now: Date,
+): { unit: 'now' } | { unit: 'minute' | 'hour' | 'day'; count: number } | { unit: 'beyond' } | null {
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) {
         return null;
@@ -127,41 +183,13 @@ export function relativeParts(
         return { unit: 'minute', count: Math.floor(elapsed / 60_000) };
     }
 
-    if (elapsed < 86_400_000) {
+    const days = siteDayNumber(now, timeZone) - siteDayNumber(date, timeZone);
+
+    if (elapsed < 86_400_000 || days === 0) {
         return { unit: 'hour', count: Math.floor(elapsed / 3_600_000) };
     }
 
-    const days = siteDayNumber(now, timeZone) - siteDayNumber(date, timeZone);
-
-    return days < RELATIVE_DAY_LIMIT ? { unit: 'day', count: days } : null;
-}
-
-/**
- * When the text {@link relativeParts} produced stops being true, or `null` when the next change is a
- * site-day boundary — which the shared day clock already waits on, so scheduling it here as well would
- * be a second timer for the same moment.
- */
-export function nextRelativeRefreshDelay(iso: string, now: Date = new Date()): number | null {
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) {
-        return null;
-    }
-
-    const elapsed = Math.max(0, now.getTime() - date.getTime());
-
-    if (elapsed < 60_000) {
-        return 60_000 - elapsed;
-    }
-
-    if (elapsed < 3_600_000) {
-        return 60_000 - (elapsed % 60_000);
-    }
-
-    if (elapsed < 86_400_000) {
-        return 3_600_000 - (elapsed % 3_600_000);
-    }
-
-    return null;
+    return days < RELATIVE_DAY_LIMIT ? { unit: 'day', count: days } : { unit: 'beyond' };
 }
 
 /** The site's calendar day as a day count, so two of them subtract into a number of days. */

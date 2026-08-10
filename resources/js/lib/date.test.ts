@@ -9,7 +9,6 @@ import {
     formatExact,
     formatListStamp,
     msUntilNextSiteDay,
-    nextRelativeRefreshDelay,
     relativeParts,
     siteCurrentYear,
 } from './date.ts';
@@ -144,16 +143,6 @@ test('past a week, how long ago stops being the answer', () => {
 test('a future instant reads as just now, never as a negative', () => {
     assert.deepEqual(ago('2026-08-10T12:00:00Z', '2026-08-10T12:00:30Z'), { unit: 'now' });
     assert.deepEqual(ago('2026-08-10T12:00:00Z', '2026-08-11T12:00:00Z'), { unit: 'now' });
-});
-
-test('the refresh waits for the moment the text stops being true', () => {
-    const at = '2026-08-10T12:00:00Z';
-
-    assert.equal(nextRelativeRefreshDelay(at, new Date('2026-08-10T12:00:30Z')), 30_000); // to "1 minute"
-    assert.equal(nextRelativeRefreshDelay(at, new Date('2026-08-10T12:01:30Z')), 30_000); // to "2 minutes"
-    assert.equal(nextRelativeRefreshDelay(at, new Date('2026-08-10T13:30:00Z')), 1_800_000); // to "2 hours"
-    // Past a day the next change is a site-day boundary, which the shared day clock already waits on.
-    assert.equal(nextRelativeRefreshDelay(at, new Date('2026-08-12T13:30:00Z')), null);
 });
 
 test('a civil date is the stored day in every timezone, with the weekday only when asked', () => {
