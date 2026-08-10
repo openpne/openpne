@@ -21,7 +21,7 @@ export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
         <EntryRow
             href={entry.kind === 'topic' ? `/communityTopic/${entry.id}` : `/communityEvent/${entry.id}`}
             community={entry.community}
-            title={entry.name}
+            content={entry.name}
             bylineNote={entry.kind === 'topic' ? t('%Topic%') : t('Event')}
             date={formatDate(entry.updatedAt)}
             commentCount={entry.commentCount}

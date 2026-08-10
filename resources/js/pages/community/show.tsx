@@ -136,7 +136,7 @@ export default function CommunityShow() {
                                     key={topic.id}
                                     href={`/communityTopic/${topic.id}`}
                                     author={topic.author}
-                                    title={topic.name}
+                                    content={topic.name}
                                     date={formatDate(topic.updatedAt)}
                                     commentCount={topic.commentCount}
                                 />
@@ -173,7 +173,7 @@ export default function CommunityShow() {
                                     key={event.id}
                                     href={`/communityEvent/${event.id}`}
                                     author={event.author}
-                                    title={event.name}
+                                    content={event.name}
                                     date={`${t('Open date')}: ${formatDate(event.openDate)}`}
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}

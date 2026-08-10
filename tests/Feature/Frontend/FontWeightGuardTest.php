@@ -93,7 +93,6 @@ class FontWeightGuardTest extends TestCase
         'components/compose/rich-text-editor.tsx' => 2,
         'components/confirm-dialog.tsx' => 3,
         'components/current-images-field.tsx' => 1,
-        'components/entry-row.tsx' => 2,
         'components/images-field.tsx' => 1,
         'components/link-card.tsx' => 1,
         'components/markdown-preview.tsx' => 1,

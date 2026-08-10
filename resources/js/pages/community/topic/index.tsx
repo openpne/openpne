@@ -33,7 +33,7 @@ export default function CommunityTopicIndex() {
                                     key={topic.id}
                                     href={`/communityTopic/${topic.id}`}
                                     author={topic.author}
-                                    title={topic.name}
+                                    content={topic.name}
                                     date={formatDate(topic.updatedAt)}
                                     commentCount={topic.commentCount}
                                 />
