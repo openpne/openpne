@@ -3,6 +3,7 @@
 namespace App\Features\Timeline\Actions;
 
 use App\Features\Timeline\Data\TimelinePostFormData;
+use App\Features\Timeline\Events\TimelinePostPosted;
 use App\Files\PostImages;
 use App\Jobs\SyncLinkCard;
 use App\Models\Member;
@@ -34,7 +35,12 @@ class CreateTimelinePost
                     'body' => $data->body,
                     'visibility' => $data->visibility,
                 ]);
-                $post->mentions()->createMany(($this->mentions)($author, $data->body, $data->mentions));
+                $mentions = ($this->mentions)($author, $data->body, $data->mentions);
+                $post->mentions()->createMany($mentions);
+
+                // Dispatched here so the snapshot is taken from the rows just written; delivery
+                // waits for the commit (ShouldDispatchAfterCommit).
+                TimelinePostPosted::dispatch($post, $author, ResolveMentions::memberIds($mentions));
 
                 return $post;
             },

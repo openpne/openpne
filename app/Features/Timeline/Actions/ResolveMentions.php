@@ -57,6 +57,18 @@ class ResolveMentions
     }
 
     /**
+     * The distinct members a resolved set names, which is the audience the mention notification
+     * addresses — one member mentioned twice in a body is still one recipient.
+     *
+     * @param  list<array{member_id: int, offset: int, length: int}>  $resolved
+     * @return list<int>
+     */
+    public static function memberIds(array $resolved): array
+    {
+        return array_values(array_unique(array_column($resolved, 'member_id')));
+    }
+
+    /**
      * The names, keyed by id, of the payload's members the author may mention: existing, not banned,
      * not the author, and with no block in either direction. One query, so ten mentions cost what
      * one does.

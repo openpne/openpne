@@ -26,25 +26,31 @@ class NotificationSettingsPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/config/notifications')
-                ->has('form.groups', 5)
-                ->where('form.groups.0.key', 'diary')
-                ->has('form.groups.0.kinds', 4)
-                ->where('form.groups.0.kinds.0.kind', 'diary_new_post')
-                ->where('form.groups.0.kinds.1.dependOnNot', 'diary_new_post')
-                ->where('form.groups.1.key', 'community_topic')
+                ->has('form.groups', 6)
+                // %Activity% carries one wired kind; its four unwired siblings stay off the page.
+                ->where('form.groups.0.key', 'timeline')
+                ->where('form.groups.0.caption', __('%Activity%'))
+                ->has('form.groups.0.kinds', 1)
+                ->where('form.groups.0.kinds.0.kind', 'timeline_mention')
+                ->where('form.groups.0.kinds.0.caption', __('When you are mentioned in a %activity% post'))
+                ->where('form.groups.1.key', 'diary')
                 ->has('form.groups.1.kinds', 4)
-                ->where('form.groups.1.kinds.0.kind', 'community_topic_new_post')
-                ->where('form.groups.1.kinds.1.kind', 'community_topic_comment_new_post')
-                ->where('form.groups.2.key', 'community_event')
+                ->where('form.groups.1.kinds.0.kind', 'diary_new_post')
+                ->where('form.groups.1.kinds.1.dependOnNot', 'diary_new_post')
+                ->where('form.groups.2.key', 'community_topic')
                 ->has('form.groups.2.kinds', 4)
-                ->where('form.groups.2.kinds.0.kind', 'community_event_new_post')
-                ->where('form.groups.3.key', 'friend_link')
-                ->has('form.groups.3.kinds', 2)
-                ->where('form.groups.3.kinds.0.kind', 'friend_link_confirm')
-                ->where('form.groups.3.kinds.0.web', true)
-                ->where('form.groups.4.key', 'message')
-                ->where('form.groups.4.kinds.0.mail', false)
-                ->where('form.groups.4.kinds.1.dependOnNot', 'message_new'),
+                ->where('form.groups.2.kinds.0.kind', 'community_topic_new_post')
+                ->where('form.groups.2.kinds.1.kind', 'community_topic_comment_new_post')
+                ->where('form.groups.3.key', 'community_event')
+                ->has('form.groups.3.kinds', 4)
+                ->where('form.groups.3.kinds.0.kind', 'community_event_new_post')
+                ->where('form.groups.4.key', 'friend_link')
+                ->has('form.groups.4.kinds', 2)
+                ->where('form.groups.4.kinds.0.kind', 'friend_link_confirm')
+                ->where('form.groups.4.kinds.0.web', true)
+                ->where('form.groups.5.key', 'message')
+                ->where('form.groups.5.kinds.0.mail', false)
+                ->where('form.groups.5.kinds.1.dependOnNot', 'message_new'),
             );
     }
 
@@ -60,8 +66,8 @@ class NotificationSettingsPageTest extends TestCase
                 ->where('push.vapidPublicKey', config('webpush.vapid.public_key'))
                 ->where('pushSettings.enabled', true)
                 // The push section does not touch the catalog grid.
-                ->has('form.groups', 5)
-                ->where('form.groups.0.kinds.0.kind', 'diary_new_post'),
+                ->has('form.groups', 6)
+                ->where('form.groups.0.kinds.0.kind', 'timeline_mention'),
             );
     }
 
@@ -75,7 +81,7 @@ class NotificationSettingsPageTest extends TestCase
                 ->where('push', null)
                 // The controller still ships the pause-switch value; the UI hides on the null shared prop.
                 ->where('pushSettings.enabled', true)
-                ->has('form.groups', 5),
+                ->has('form.groups', 6),
             );
     }
 
