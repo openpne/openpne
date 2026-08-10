@@ -14,7 +14,7 @@ export function DiaryRow({ diary, rich = false, actions }: { diary: DiarySummary
         <EntryRow
             href={`/diary/${diary.id}`}
             author={diary.author}
-            date={<Timestamp at={diary.createdAt} preset="day" />}
+            date={<Timestamp at={diary.createdAt} preset="listStamp" />}
             content={diary.title}
             commentCount={diary.commentCount}
             hasImages={diary.hasImages}

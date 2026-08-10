@@ -137,7 +137,7 @@ export default function CommunityShow() {
                                     href={`/communityTopic/${topic.id}`}
                                     author={topic.author}
                                     content={topic.name}
-                                    date={<Timestamp at={topic.updatedAt} preset="day" />}
+                                    date={<Timestamp at={topic.updatedAt} preset="listStamp" />}
                                     commentCount={topic.commentCount}
                                 />
                             ))}
@@ -174,7 +174,7 @@ export default function CommunityShow() {
                                     href={`/communityEvent/${event.id}`}
                                     author={event.author}
                                     content={event.name}
-                                    date={<>{t('Open date')}: <CivilDate value={event.openDate} /></>}
+                                    date={<>{t('Open date')}: <CivilDate value={event.openDate} weekday /></>}
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}
                                 />

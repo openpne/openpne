@@ -105,7 +105,7 @@ function TimelineRow({ post }: { post: TimelinePostEntry }) {
             author={post.author}
             content={post.body}
             contentLines={2}
-            date={<Timestamp at={post.createdAt} preset="day" />}
+            date={<Timestamp at={post.createdAt} preset="listStamp" />}
             replyCount={post.replyCount}
         />
     );

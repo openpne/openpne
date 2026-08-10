@@ -2,12 +2,12 @@ import { usePage } from '@inertiajs/react';
 import { useMemo } from 'react';
 import {
     type DateFormatContext,
+    formatAbsolute,
     formatCivilDate,
     formatCivilMonth,
     formatCivilMonthShort,
     formatExact,
-    formatInstant,
-    formatInstantDate,
+    formatListStamp,
     siteCurrentYear,
 } from '@/lib/date';
 import type { PageProps } from '@/types';
@@ -18,11 +18,11 @@ import type { PageProps } from '@/types';
  * and a stale locale here would render dates in one language beside a UI in another.
  */
 export function useDateFormat(): {
-    civilDate: (value: string) => string;
+    absolute: (iso: string) => string;
+    listStamp: (iso: string) => string;
+    civilDate: (value: string, weekday?: boolean) => string;
     civilMonth: (year: number, month: number) => string;
     civilMonthShort: (month: number) => string;
-    instantDate: (iso: string) => string;
-    instant: (iso: string) => string;
     exact: (iso: string) => string;
     currentYear: () => number;
 } {
@@ -32,11 +32,11 @@ export function useDateFormat(): {
         const context: DateFormatContext = { locale, timeZone: timezone };
 
         return {
-            civilDate: (value) => formatCivilDate(value, context),
+            absolute: (iso) => formatAbsolute(iso, context),
+            listStamp: (iso) => formatListStamp(iso, context),
+            civilDate: (value, weekday) => formatCivilDate(value, context, weekday),
             civilMonth: (year, month) => formatCivilMonth(year, month, context),
             civilMonthShort: (month) => formatCivilMonthShort(month, context),
-            instantDate: (iso) => formatInstantDate(iso, context),
-            instant: (iso) => formatInstant(iso, context),
             exact: (iso) => formatExact(iso, context),
             currentYear: () => siteCurrentYear(context),
         };
