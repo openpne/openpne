@@ -95,22 +95,44 @@ export function formatCivilMonthShort(month: number, { locale }: DateFormatConte
  * page left open past the site's midnight would keep yesterday's rows saying a time — the shape
  * depends on the clock, and something has to re-read it (see use-site-day.ts).
  *
- * Derived from the site's own wall clock, so a viewer in another zone still turns over with the site.
- * The result is an estimate: a DST shift later in the day moves the boundary, so the caller must
- * re-compute after waking rather than trust one delay to be exact.
+ * Counting the site's remaining wall-clock seconds out of 86400 is wrong on a day that is not 24 hours
+ * long: a spring-forward day is 23, which puts the wake an hour *after* the real boundary, and no
+ * amount of re-arming recovers a delay that is too long. So the next midnight is located as an instant
+ * instead — the site's own wall time is read back to find the offset in force there.
  */
 export function msUntilNextSiteDay(now: Date, timeZone: string): number {
+    const { year, month, day } = siteDayParts(now, timeZone);
+    // Next civil day at 00:00 site-local, held as if it were UTC. Date.UTC carries the month and year.
+    const wallMidnight = Date.UTC(year, month - 1, day + 1);
+    // Two passes: the offset at `now` may not be the offset at midnight, and the second pass reads it
+    // from the instant the first pass landed on.
+    const firstPass = wallMidnight - siteOffsetMs(now, timeZone);
+    const instant = wallMidnight - siteOffsetMs(new Date(firstPass), timeZone);
+
+    return Math.max(0, instant - now.getTime());
+}
+
+/**
+ * The site's offset from UTC at an instant, in milliseconds. Derived by reading the instant as site
+ * wall time and asking what UTC instant that wall time would be — the difference is the offset. `Intl`
+ * exposes no offset directly, and a hardcoded table would go stale with tzdata.
+ */
+function siteOffsetMs(date: Date, timeZone: string): number {
     const parts = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
         hourCycle: 'h23',
         timeZone,
-    }).formatToParts(now);
+    }).formatToParts(date);
     const read = (type: string) => Number(parts.find((part) => part.type === type)?.value);
-    const elapsed = read('hour') * 3600 + read('minute') * 60 + read('second');
+    const asUtc = Date.UTC(read('year'), read('month') - 1, read('day'), read('hour'), read('minute'), read('second'));
 
-    return (86400 - elapsed) * 1000 - now.getMilliseconds();
+    // Whole seconds on both sides: the formatted parts carry no milliseconds.
+    return asUtc - Math.floor(date.getTime() / 1000) * 1000;
 }
 
 /**

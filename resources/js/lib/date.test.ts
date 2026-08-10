@@ -68,6 +68,24 @@ test('the delay to the next site day is measured on the site clock', () => {
     assert.equal(msUntilNextSiteDay(new Date('2026-08-09T15:00:00Z'), 'Asia/Tokyo'), 86_400_000);
 });
 
+/**
+ * A day is not always 24 hours. Counting the remaining wall-clock seconds out of 86400 lands an hour
+ * late on a spring-forward day, and a delay that is too long is the one error re-arming cannot recover.
+ */
+test('the delay is right on both DST transition days', () => {
+    const zone = 'America/New_York';
+
+    // 2026-03-08 00:30 EST. 2 AM is skipped, so this day is 23 hours: the next midnight is 22.5h away.
+    const springForward = new Date('2026-03-08T05:30:00Z');
+    assert.equal(msUntilNextSiteDay(springForward, zone), 22.5 * 3_600_000);
+    assert.equal(new Date(springForward.getTime() + 22.5 * 3_600_000).toISOString(), '2026-03-09T04:00:00.000Z');
+
+    // 2026-11-01 00:30 EDT. 1 AM repeats, so this day is 25 hours and the next midnight is 24.5h away.
+    const fallBack = new Date('2026-11-01T04:30:00Z');
+    assert.equal(msUntilNextSiteDay(fallBack, zone), 24.5 * 3_600_000);
+    assert.equal(new Date(fallBack.getTime() + 24.5 * 3_600_000).toISOString(), '2026-11-02T05:00:00.000Z');
+});
+
 test('a civil date is the stored day in every timezone, with the weekday only when asked', () => {
     for (const context of [tokyo, newYork, { locale: 'ja-JP', timeZone: 'UTC' }]) {
         assert.equal(formatCivilDate('2026-08-10', context), '2026年8月10日');

@@ -21,9 +21,10 @@ export function createSiteDayClock() {
 
     const arm = () => {
         clearTimeout(timer);
-        // Never below a second. The delay is an estimate — a DST shift inside the day moves the real
-        // boundary — so a short wake is expected and harmless: it just re-arms from the new now. The
-        // floor is what stops a mis-estimate from spinning.
+        // The floor is a spin guard, not slack in the delay: a zone whose midnight itself is skipped by
+        // a transition could compute zero, and waking early only re-arms from the new now. A delay that
+        // is too *long* is what cannot be recovered, which is why msUntilNextSiteDay locates the real
+        // boundary rather than assuming a 24-hour day.
         timer = setTimeout(tick, Math.max(1000, msUntilNextSiteDay(new Date(), timeZone)));
     };
 
