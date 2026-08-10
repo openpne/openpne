@@ -1,7 +1,8 @@
 import { LinkCard } from '@/components/link-card';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import type { FormEvent } from 'react';
+import { useId, type FormEvent } from 'react';
 import { ImageGrid } from '@/components/image-grid';
+import { MentionTextarea } from '@/components/compose/mention-textarea';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Timestamp } from '@/components/timestamp';
@@ -11,10 +12,11 @@ import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
-import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
+import { toPayload, type DraftMention } from '@/lib/mention-draft';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
+import { BodyCounter, overBodyLimit } from './body-counter';
 import type { TimelinePostEntry } from './types';
 
 interface ShowProps extends PageProps {
@@ -30,11 +32,14 @@ export default function TimelineShow() {
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
-    const form = useForm({ body: '' });
+    const counterId = useId();
+    const form = useForm({ body: '', mentions: [] as DraftMention[] });
 
     const submitReply = (e: FormEvent) => {
         e.preventDefault();
-        form.post(`/timeline/${post.id}/reply`, { onSuccess: () => form.reset('body') });
+        // See timeline/new.tsx: the draft is UTF-16 offsets, the request is code-point ranges.
+        form.transform((data) => ({ ...data, mentions: toPayload(data.mentions, data.body) }));
+        form.post(`/timeline/${post.id}/reply`, { onSuccess: () => form.reset('body', 'mentions') });
     };
 
     const deletePost = async () => {
@@ -99,12 +104,27 @@ export default function TimelineShow() {
                 </Panel>
             )}
 
-            <Panel>
+            {/* The mention popup hangs out of the reply field's row. */}
+            <Panel overflow="visible">
                 <form onSubmit={submitReply} className="space-y-2">
-                    <Field label={t('Reply')} htmlFor="reply_body" error={form.errors.body}>
-                        <Textarea id="reply_body" required maxLength={140} rows={3} value={form.data.body} onChange={(e) => form.setData('body', e.target.value)} />
+                    <Field
+                        label={t('Reply')}
+                        htmlFor="reply_body"
+                        error={form.errors.body}
+                        labelRight={<BodyCounter id={counterId} body={form.data.body} />}
+                    >
+                        <MentionTextarea
+                            id="reply_body"
+                            required
+                            rows={3}
+                            aria-describedby={counterId}
+                            value={form.data.body}
+                            onChange={(body) => form.setData('body', body)}
+                            mentions={form.data.mentions}
+                            onMentionsChange={(mentions) => form.setData('mentions', mentions)}
+                        />
                     </Field>
-                    <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === ''}>
+                    <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === '' || overBodyLimit(form.data.body)}>
                         {t('Reply')}
                     </Button>
                 </form>

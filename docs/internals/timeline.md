@@ -22,6 +22,15 @@ pinned against each other case by case
 Linking by id rather than by the name in the body is what makes a rename harmless: the display text
 stays as it was written, and the link still reaches the person who was meant.
 
+### Composing one
+
+Modern's picker is [`MentionTextarea`](../../resources/js/components/compose/mention-textarea.tsx)
+over the pure draft in [`mention-draft.ts`](../../resources/js/lib/mention-draft.ts). The draft
+positions a mention by UTF-16 offset — the unit the DOM reports a caret in — and converts to code
+points once, at submit, over the value being sent. Edits carry a mention along, and an edit that
+reaches into a handle drops it: only text the member picked stays a mention, which is the same
+judgment the server makes again on arrival.
+
 ### Two layers of failure
 
 The payload is only ever produced by the picker, so the two kinds of wrong input are answered
