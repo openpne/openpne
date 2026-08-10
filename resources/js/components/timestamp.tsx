@@ -1,15 +1,16 @@
 import { usePage } from '@inertiajs/react';
 import { useDateFormat } from '@/lib/use-date-format';
+import { useRelativeRefresh } from '@/lib/use-relative-refresh';
 import { useSiteDay } from '@/lib/use-site-day';
 import type { PageProps } from '@/types';
 
 /**
  * Which shape a displayed instant takes. `absolute` is the whole date and time, for a page that is the
  * permanent reference for one thing. `listStamp` shows only what tells one row from its neighbours —
- * time for today, date for this year, year for anything older. Which screens get which is
- * docs/internals/datetime.md.
+ * time for today, date for this year, year for anything older. `relative` says how long ago, for a
+ * place whose whole point is what is new. Which screens get which is docs/internals/datetime.md.
  */
-export type TimestampPreset = 'absolute' | 'listStamp';
+export type TimestampPreset = 'absolute' | 'listStamp' | 'relative';
 
 /**
  * The single element every displayed instant goes through. It exists to make three things structural
@@ -23,14 +24,25 @@ export type TimestampPreset = 'absolute' | 'listStamp';
  */
 export function Timestamp({ at, preset, className }: { at: string; preset: TimestampPreset; className?: string }) {
     const date = useDateFormat();
-    // `listStamp` is shaped relative to today, so it has to be re-read when the site's day turns over.
-    // Subscribed for both presets because a hook cannot be conditional; an `absolute` stamp just
-    // re-renders once a day to the same string.
+    // One reading of the clock for both the text and the deadline. Two readings — one per render, one
+    // per effect — can straddle a boundary, and then the timer waits for the boundary after the one the
+    // text has already passed.
+    const now = new Date();
+
+    // `listStamp` is shaped relative to today and `relative` counts days on the same calendar, so both
+    // have to be re-read when the site's day turns over. Subscribed for every preset because a hook
+    // cannot be conditional; an `absolute` stamp just re-renders once a day to the same string.
     useSiteDay(usePage<PageProps>().props.timezone);
+    // Only a relative stamp has a boundary of its own to wait for. Passing null for the others is what
+    // keeps a page of list stamps from holding a timer each.
+    useRelativeRefresh(preset === 'relative' ? date.relativeDeadline(at, now) : null);
+
+    const text =
+        preset === 'relative' ? date.relative(at, now) : preset === 'listStamp' ? date.listStamp(at) : date.absolute(at);
 
     return (
-        <time dateTime={at} title={preset === 'listStamp' ? date.exact(at) : undefined} className={className}>
-            {preset === 'listStamp' ? date.listStamp(at) : date.absolute(at)}
+        <time dateTime={at} title={preset === 'absolute' ? undefined : date.exact(at)} className={className}>
+            {text}
         </time>
     );
 }
