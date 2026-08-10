@@ -56,6 +56,20 @@ class MentionCandidatesTest extends TestCase
         $this->assertSame([$other->getKey()], $this->candidateIds($viewer, 'Match'));
     }
 
+    public function test_it_never_offers_a_name_too_long_to_ever_mention(): void
+    {
+        // "@" + a 140-code-point name can never fit the 140-code-point body, so offering it would
+        // guarantee a dropped mention. 139 is the last name that fits. The multibyte pair is what
+        // catches a byte-counting length function: 139 × "あ" is 417 bytes but must still appear.
+        $viewer = Member::factory()->create();
+        $fits = Member::factory()->create(['name' => str_repeat('a', 139)]);
+        Member::factory()->create(['name' => str_repeat('a', 140)]);
+        $fitsWide = Member::factory()->create(['name' => str_repeat('あ', 139)]);
+        Member::factory()->create(['name' => str_repeat('あ', 140)]);
+
+        $this->assertSame([$fits->getKey(), $fitsWide->getKey()], $this->candidateIds($viewer, ''));
+    }
+
     public function test_it_never_offers_a_banned_member(): void
     {
         $viewer = Member::factory()->create();

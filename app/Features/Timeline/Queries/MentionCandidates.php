@@ -7,6 +7,7 @@ use App\Models\Member;
 use App\Support\Feature;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Who the compose form's @mention picker may offer for a search term: the viewer's friends first,
@@ -23,6 +24,12 @@ use Illuminate\Database\Eloquent\Collection;
 class MentionCandidates
 {
     public const LIMIT = 8;
+
+    /**
+     * The longest name a mention can carry: the handle is "@" plus the name, and the body caps at
+     * 140 code points. A longer name could be picked but never posted, so it is never offered.
+     */
+    public const MAX_NAME = 139;
 
     /**
      * The LIKE escape character. Not a backslash: MySQL and SQLite read a backslash inside the
@@ -85,12 +92,17 @@ class MentionCandidates
      */
     private function constrain(Builder $query, Member $viewer, string $pattern): void
     {
+        // Code points, to match the body cap the name must fit into — sqlite's LENGTH counts them;
+        // MySQL's counts bytes and needs CHAR_LENGTH.
+        $length = DB::connection()->getDriverName() === 'sqlite' ? 'LENGTH' : 'CHAR_LENGTH';
+
         $query
             // The ref the endpoint serializes draws an avatar, so a tier costs one avatar query, not one per row.
             ->with('avatar.file')
             ->whereKeyNot($viewer->getKey())
             ->where('members.is_login_rejected', false)
             ->whereRaw('members.name LIKE ? ESCAPE ?', [$pattern, self::ESCAPE])
+            ->whereRaw("{$length}(members.name) <= ?", [self::MAX_NAME])
             ->orderBy('members.name')
             ->orderBy('members.id');
 
