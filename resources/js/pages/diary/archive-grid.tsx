@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { useState } from 'react';
+import { headingVariants } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -49,7 +50,7 @@ export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) 
             <div className="space-y-4">
                 {visibleRows.map((row) => (
                     <div key={row.year}>
-                        <div className="mb-1.5 text-xs font-semibold text-muted-foreground">{row.year}</div>
+                        <div className={cn(headingVariants({ variant: 'label' }), 'mb-1.5')}>{row.year}</div>
                         <div className="grid grid-cols-6 gap-1 sm:grid-cols-12">
                             {row.months.map((cell) => {
                                 const isSelected = selected?.year === row.year && selected?.month === cell.month;

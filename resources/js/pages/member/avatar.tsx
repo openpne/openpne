@@ -4,6 +4,7 @@ import { InitialBadge } from '@/components/initial-badge';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Heading } from '@/components/ui/heading';
+import { headingVariants } from '@/components/ui/heading';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import { pickReadableTextColor } from '@/lib/identity-mark';
@@ -114,7 +115,7 @@ export default function MemberAvatar() {
                     }}
                 >
                     <fieldset className="space-y-3">
-                        <legend className="text-base font-semibold text-foreground">{t('Badge color')}</legend>
+                        <legend className={headingVariants({ variant: 'section' })}>{t('Badge color')}</legend>
                         <p className="text-sm text-muted-foreground">{t('Shown in place of your photo when no profile image is set.')}</p>
 
                         {/* The badge as others would see it with the tentative color — visible even

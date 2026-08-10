@@ -4,6 +4,7 @@ import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioCardGroup } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { RadioPill } from '@/components/ui/radio-pill';
 import { useT } from '@/lib/i18n';
 import { currentSubscription, isIosNotInstalled, permissionState, subscribeThisDevice, unsubscribeThisDevice } from '@/lib/push';
@@ -102,7 +103,7 @@ function PushSection() {
 
     return (
         <section className="space-y-4">
-            <h2 className="border-b border-border pb-2 text-base font-semibold text-foreground">{t('Push notifications')}</h2>
+            <Heading as="h2" variant="section" className="border-b border-border pb-2">{t('Push notifications')}</Heading>
             <label className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
                 <span className="text-sm text-foreground">{t('Send push notifications to my devices')}</span>
                 <Checkbox checked={pushSettings.enabled} disabled={saving} onChange={(e) => savePush(e.target.checked)} />
@@ -110,7 +111,7 @@ function PushSection() {
             <p aria-live="polite" className="min-h-5 text-sm text-muted-foreground">{saved ? `✓ ${t('Saved')}` : null}</p>
 
             <div className="space-y-2">
-                <h3 className="text-sm font-medium text-foreground">{t('This device')}</h3>
+                <Heading as="h3" variant="minor">{t('This device')}</Heading>
                 {iosGuidance ? (
                     <p className="text-sm text-muted-foreground">{t('To get push notifications on iPhone or iPad, add this site to your Home Screen first.')}</p>
                 ) : permission === 'unsupported' ? (
@@ -196,7 +197,7 @@ export default function NotificationSettings() {
 
                     return (
                         <section key={group.key} className="space-y-4">
-                            <h2 className="border-b border-border pb-2 text-base font-semibold text-foreground">{group.caption}</h2>
+                            <Heading as="h2" variant="section" className="border-b border-border pb-2">{group.caption}</Heading>
                             {singles.map((kind) => (
                                 <div key={kind.kind} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
                                     <span className="text-sm text-foreground">{kind.caption}</span>
