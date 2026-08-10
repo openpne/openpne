@@ -177,6 +177,82 @@ class NotifyTimelineMentionedTest extends TestCase
         Notification::assertSentToTimes($alice, TimelineMentionedNotification::class, 1);
     }
 
+    public function test_should_send_drops_a_block_landing_while_queued(): void
+    {
+        Notification::fake();
+        $author = Member::factory()->create();
+        $alice = Member::factory()->create(['name' => 'Alice']);
+        $post = $this->createPost($author, 'hi @Alice', [$alice]);
+        $notification = new TimelineMentionedNotification($author, $post);
+
+        $this->assertTrue($notification->shouldSend($alice->fresh(), 'mail'));
+
+        $this->block($alice, $author);
+
+        $this->assertFalse($notification->shouldSend($alice->fresh(), 'mail'));
+    }
+
+    public function test_should_send_drops_a_ban_landing_while_queued(): void
+    {
+        Notification::fake();
+        $author = Member::factory()->create();
+        $alice = Member::factory()->create(['name' => 'Alice']);
+        $post = $this->createPost($author, 'hi @Alice', [$alice]);
+        $notification = new TimelineMentionedNotification($author, $post);
+
+        $this->assertTrue($notification->shouldSend($alice->fresh(), 'database'));
+
+        $alice->forceFill(['is_login_rejected' => true])->save();
+
+        $this->assertFalse($notification->shouldSend($alice->fresh(), 'database'));
+    }
+
+    public function test_should_send_drops_a_friends_thread_recipient_unfriended_while_queued(): void
+    {
+        Notification::fake();
+        $author = Member::factory()->create();
+        $alice = Member::factory()->create(['name' => 'Alice']);
+        $this->makeFriends($author, $alice);
+        $post = $this->createPost($author, 'hi @Alice', [$alice], Visibility::Friends);
+        $notification = new TimelineMentionedNotification($author, $post);
+
+        $this->assertTrue($notification->shouldSend($alice->fresh(), 'mail'));
+
+        DB::table('friendships')->delete();
+
+        // The mail would carry the post body to someone no longer in the thread's audience.
+        $this->assertFalse($notification->shouldSend($alice->fresh(), 'mail'));
+    }
+
+    public function test_a_queued_delivery_re_checks_before_sending(): void
+    {
+        config(['queue.default' => 'database']);
+        $author = Member::factory()->create();
+        $alice = Member::factory()->create(['name' => 'Alice']);
+
+        $this->createPost($author, 'hi @Alice', [$alice]);
+        $this->assertGreaterThan(0, $this->queuedNotificationJobs());
+
+        $this->block($alice, $author);
+        $this->artisan('queue:work', ['--stop-when-empty' => true, '--sleep' => 0, '--memory' => 1024]);
+
+        $this->assertDatabaseMissing('notifications', ['notifiable_id' => $alice->getKey()]);
+    }
+
+    public function test_a_queued_delivery_sends_when_still_eligible(): void
+    {
+        config(['queue.default' => 'database']);
+        $author = Member::factory()->create();
+        $alice = Member::factory()->create(['name' => 'Alice']);
+
+        $this->createPost($author, 'hi @Alice', [$alice]);
+        $this->assertGreaterThan(0, $this->queuedNotificationJobs());
+
+        $this->artisan('queue:work', ['--stop-when-empty' => true, '--sleep' => 0, '--memory' => 1024]);
+
+        $this->assertDatabaseHas('notifications', ['notifiable_id' => $alice->getKey()]);
+    }
+
     public function test_the_web_opt_out_drops_the_feed_row(): void
     {
         Notification::fake();
@@ -224,6 +300,12 @@ class NotifyTimelineMentionedTest extends TestCase
             TimelineMentionedNotification::class,
             fn (TimelineMentionedNotification $notification, array $channels): bool => $channels === ['database'],
         );
+    }
+
+    /** The queued notification sends — a post also queues housekeeping jobs (link-card sync). */
+    private function queuedNotificationJobs(): int
+    {
+        return DB::table('jobs')->where('payload', 'like', '%SendQueuedNotifications%')->count();
     }
 
     /** @param  list<Member>  $mentioned */

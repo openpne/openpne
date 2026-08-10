@@ -33,28 +33,33 @@ class TimelineMentionRecipients
             return [];
         }
 
-        $root = $post->in_reply_to_id === null ? $post : $post->parent;
-        if ($root === null) {
-            return [];
-        }
-
         $recipients = [];
 
         foreach (Member::query()->findMany($mentionedMemberIds) as $member) {
-            // Storage already drops a self-mention; this holds the line if that ever changes.
-            if ($member->is($author) || ! $this->canReceive($member, $root, $author)) {
-                continue;
+            if ($this->eligible($member, $post, $author)) {
+                $recipients[] = $member;
             }
-
-            $recipients[] = $member;
         }
 
         return $recipients;
     }
 
-    private function canReceive(Member $recipient, TimelinePost $root, Member $author): bool
+    /**
+     * Whether $recipient may receive a mention notification about $post right now. Evaluated twice
+     * per mention — when the listener enqueues, and again in the notification's shouldSend()
+     * immediately before each channel delivers — because a queued notification can outlive the
+     * facts it was enqueued under (a ban, a new block, a revoked friendship on a Friends thread).
+     */
+    public function eligible(Member $recipient, TimelinePost $post, Member $author): bool
     {
-        return ! $recipient->is_login_rejected
+        $root = $post->in_reply_to_id === null ? $post : $post->parent;
+        if ($root === null) {
+            return false;
+        }
+
+        // Storage already drops a self-mention; this holds the line if that ever changes.
+        return ! $recipient->is($author)
+            && ! $recipient->is_login_rejected
             && TimelineAccess::canView($recipient, $root)
             && ! BlockLookup::hasAnyBlockBetween($recipient, $author);
     }
