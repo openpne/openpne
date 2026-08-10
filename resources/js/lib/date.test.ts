@@ -5,6 +5,7 @@ import {
     formatCivilDate,
     formatCivilMonth,
     formatCivilMonthShort,
+    formatExact,
     formatInstant,
     formatInstantDate,
     siteCurrentYear,
@@ -25,6 +26,14 @@ test('an instant renders in the site timezone, not the viewer\'s', () => {
 test('an instant reduced to a day uses the site timezone for the day boundary', () => {
     assert.equal(formatInstantDate(evening, tokyo), '2026/8/10');
     assert.equal(formatInstantDate(evening, newYork), '2026/8/9');
+});
+
+// What a display that names only the day stands in for, so the title is never the same string as the
+// text beside it.
+test('the exact value names the second and the zone it was read in', () => {
+    assert.equal(formatExact(evening, tokyo), '2026年8月10日 0:05:16');
+    assert.equal(formatExact(evening, newYork), '2026年8月9日 11:05:16');
+    assert.notEqual(formatExact(evening, tokyo), formatInstantDate(evening, tokyo));
 });
 
 test('a civil date is the stored day in every timezone', () => {
