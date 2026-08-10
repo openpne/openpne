@@ -46,7 +46,7 @@ function Fab({ action, extended }: { action: ChromeAction; extended: boolean }) 
                 <action.icon className="size-6" strokeWidth={2.25} aria-hidden />
                 <span
                     className={cn(
-                        'overflow-hidden font-medium whitespace-nowrap transition-[max-width,margin,opacity] motion-reduce:transition-none',
+                        'overflow-hidden whitespace-nowrap transition-[max-width,margin,opacity] motion-reduce:transition-none',
                         extended ? 'ml-2 max-w-48 opacity-100' : 'ml-0 max-w-0 opacity-0',
                     )}
                 >

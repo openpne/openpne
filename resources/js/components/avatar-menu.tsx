@@ -33,7 +33,7 @@ export function AvatarMenu({ user, compact = false }: { user: AuthUser; compact?
                 }
             >
                 <Avatar id={user.id} name={user.name} src={user.imageUrl} color={user.avatarColor} size="sm" decorative={!compact} />
-                {!compact && <span className="flex-1 truncate text-left text-sm font-medium">{user.name}</span>}
+                {!compact && <span className="flex-1 truncate text-left text-sm">{user.name}</span>}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="top" className="w-64">
                 <DropdownMenuItem asChild>
