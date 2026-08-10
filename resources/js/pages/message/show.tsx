@@ -84,7 +84,7 @@ export default function MessageShow() {
                         )}
                     </dd>
                     <dt className="text-muted-foreground">{t('Created At')}</dt>
-                    <dd><Timestamp at={message.createdAt} /></dd>
+                    <dd><Timestamp at={message.createdAt} preset="absolute" /></dd>
                 </dl>
 
                 <ImageGrid images={message.images} size="size-24" />

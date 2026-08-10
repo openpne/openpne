@@ -1,27 +1,36 @@
+import { usePage } from '@inertiajs/react';
 import { useDateFormat } from '@/lib/use-date-format';
+import { useSiteDay } from '@/lib/use-site-day';
+import type { PageProps } from '@/types';
 
 /**
- * How much of an instant the display shows. `instant` names the time of day; `day` names only the
- * calendar day, so it stands in for something more precise and carries the exact value as a title.
+ * Which shape a displayed instant takes. `absolute` is the whole date and time, for a page that is the
+ * permanent reference for one thing. `listStamp` shows only what tells one row from its neighbours —
+ * time for today, date for this year, year for anything older. Which screens get which is
+ * docs/internals/datetime.md.
  */
-export type TimestampPreset = 'instant' | 'day';
+export type TimestampPreset = 'absolute' | 'listStamp';
 
 /**
  * The single element every displayed instant goes through. It exists to make three things structural
  * rather than per-call-site: the machine-readable value lives in `dateTime`, the site's clock and
- * locale come from the shared props, and a display that drops information offers the exact value.
+ * locale come from the shared props, and a shape that abbreviates offers the whole value on hover.
  *
- * A title is deliberately absent when the display already names the second — repeating it there is
- * noise. Where it is present it is a mouse-only convenience: `title` on a non-interactive element
- * reaches neither the keyboard nor assistive technology, so it must never be the only place a value
- * a reader needs appears. A preset whose text stops naming the date needs a real disclosure instead.
+ * That hover title is a mouse-only convenience and must stay non-essential: `title` on a
+ * non-interactive element reaches neither the keyboard nor assistive technology, so anything a reader
+ * needs in order to act belongs in the visible text or `dateTime`. `absolute` gets no title — it
+ * already names the day and the minute, and a title differing only in its seconds is noise.
  */
-export function Timestamp({ at, preset = 'instant', className }: { at: string; preset?: TimestampPreset; className?: string }) {
+export function Timestamp({ at, preset, className }: { at: string; preset: TimestampPreset; className?: string }) {
     const date = useDateFormat();
+    // `listStamp` is shaped relative to today, so it has to be re-read when the site's day turns over.
+    // Subscribed for both presets because a hook cannot be conditional; an `absolute` stamp just
+    // re-renders once a day to the same string.
+    useSiteDay(usePage<PageProps>().props.timezone);
 
     return (
-        <time dateTime={at} title={preset === 'day' ? date.exact(at) : undefined} className={className}>
-            {preset === 'day' ? date.instantDate(at) : date.instant(at)}
+        <time dateTime={at} title={preset === 'listStamp' ? date.exact(at) : undefined} className={className}>
+            {preset === 'listStamp' ? date.listStamp(at) : date.absolute(at)}
         </time>
     );
 }
@@ -31,13 +40,16 @@ export function Timestamp({ at, preset = 'instant', className }: { at: string; p
  * from {@link Timestamp} so the two cannot be swapped: rendering a civil date as an instant shifts it a
  * day for viewers west of the site (resources/js/lib/date.ts). No title, because `Y-m-d` is already the
  * whole value.
+ *
+ * `weekday` is for a date someone plans around; it is on wherever an event's own dates are shown, so
+ * the same datum never appears in two shapes.
  */
-export function CivilDate({ value, className }: { value: string; className?: string }) {
+export function CivilDate({ value, weekday = false, className }: { value: string; weekday?: boolean; className?: string }) {
     const date = useDateFormat();
 
     return (
         <time dateTime={value} className={className}>
-            {date.civilDate(value)}
+            {date.civilDate(value, weekday)}
         </time>
     );
 }

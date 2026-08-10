@@ -65,7 +65,7 @@ export default function DiaryShow() {
                     <Link href={`/member/${diary.author.id}`} className="text-link hover:underline">
                         {diary.author.name}
                     </Link>
-                    <span>&mdash; <Timestamp at={diary.createdAt} /></span>
+                    <span>&mdash; <Timestamp at={diary.createdAt} preset="absolute" /></span>
                 </div>
 
                 <RichBody body={diary.body} bodyHtml={diary.bodyHtml} />
@@ -131,7 +131,7 @@ export default function DiaryShow() {
                                         <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
                                     <span className="ml-auto shrink-0">#{comment.number}</span>
-                                    <Timestamp at={comment.createdAt} className="shrink-0" />
+                                    <Timestamp at={comment.createdAt} preset="listStamp" className="shrink-0" />
                                     {comment.deletable && (
                                         <button type="button" onClick={() => deleteComment(comment.id)} className={cn(dangerActionClass, 'shrink-0')}>
                                             {t('Delete')}

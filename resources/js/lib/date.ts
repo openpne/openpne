@@ -6,11 +6,16 @@
 // Locale and timezone are passed in rather than left to the browser: the site's locale is an
 // admin/member choice the browser knows nothing about, and the site timezone is the one clock Classic
 // also renders in (docs/internals/runtime.md). React callers bind them via useDateFormat.
+//
+// Which shape goes where is docs/internals/datetime.md. Two rules are baked in here rather than left
+// to call sites: seconds never reach a display, and the hour is always two digits so a column of
+// times lines up.
 
 const UTC = 'UTC';
 const CIVIL_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const DAY_PARTS = { year: 'numeric', month: 'numeric', day: 'numeric' } as const;
-const TIME_PARTS = { hour: 'numeric', minute: '2-digit', second: '2-digit' } as const;
+const YEAR_MONTH_DAY = { year: 'numeric', month: 'long', day: 'numeric' } as const;
+const MONTH_DAY = { month: 'long', day: 'numeric' } as const;
+const HOUR_MINUTE = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' } as const;
 
 export interface DateFormatContext {
     locale: string;
@@ -18,28 +23,59 @@ export interface DateFormatContext {
     timeZone: string;
 }
 
-/** A calendar day with no instant attached, as the day it was stored — in every browser timezone. */
-export function formatCivilDate(value: string, { locale }: DateFormatContext): string {
-    return render(civilToUtcInstant(value), value, locale, { ...DAY_PARTS, timeZone: UTC });
-}
-
-/** An instant, reduced to the calendar day it falls on in the site timezone. */
-export function formatInstantDate(iso: string, { locale, timeZone }: DateFormatContext): string {
-    return render(new Date(iso), iso, locale, { ...DAY_PARTS, timeZone });
-}
-
-/** An instant with its time of day, in the site timezone. */
-export function formatInstant(iso: string, { locale, timeZone }: DateFormatContext): string {
-    return render(new Date(iso), iso, locale, { ...DAY_PARTS, ...TIME_PARTS, timeZone });
+/**
+ * The whole date and time, for a page that is the permanent reference for one thing — a diary entry,
+ * a message. The year is always present because such a page gets linked to and read out of its
+ * original context.
+ */
+export function formatAbsolute(iso: string, { locale, timeZone }: DateFormatContext): string {
+    return render(new Date(iso), iso, locale, { ...YEAR_MONTH_DAY, ...HOUR_MINUTE, timeZone });
 }
 
 /**
- * The whole instant, down to the second, for the affordance that reveals what a shortened display is
- * standing in for. Long month name rather than the numeric form so it cannot be misread as the display
- * value repeated.
+ * Only the part that distinguishes a row from the ones around it: today's rows differ by time, this
+ * year's by date, older ones by year. Dropping what the reader can infer from where they are is what
+ * keeps a list scannable — and it is why this shape, unlike {@link formatAbsolute}, is worth revealing
+ * in full on hover.
  */
+export function formatListStamp(iso: string, context: DateFormatContext, now: Date = new Date()): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+        return iso;
+    }
+
+    const { locale, timeZone } = context;
+    const then = siteDayParts(date, timeZone);
+    const today = siteDayParts(now, timeZone);
+
+    if (then.year === today.year && then.month === today.month && then.day === today.day) {
+        return render(date, iso, locale, { ...HOUR_MINUTE, timeZone });
+    }
+
+    return render(date, iso, locale, { ...(then.year === today.year ? MONTH_DAY : YEAR_MONTH_DAY), timeZone });
+}
+
+/**
+ * A calendar day with no instant attached, as the day it was stored — in every browser timezone. The
+ * weekday is for a date someone plans around: an event's open date is read as "which day is that",
+ * which the numbers alone do not answer.
+ */
+export function formatCivilDate(value: string, { locale }: DateFormatContext, weekday = false): string {
+    return render(civilToUtcInstant(value), value, locale, {
+        ...YEAR_MONTH_DAY,
+        ...(weekday ? { weekday: 'short' as const } : {}),
+        timeZone: UTC,
+    });
+}
+
+/** What a list stamp is standing in for, down to the second, for the hover affordance. */
 export function formatExact(iso: string, { locale, timeZone }: DateFormatContext): string {
-    return render(new Date(iso), iso, locale, { dateStyle: 'long', timeStyle: 'medium', timeZone });
+    return render(new Date(iso), iso, locale, {
+        ...YEAR_MONTH_DAY,
+        ...HOUR_MINUTE,
+        second: '2-digit',
+        timeZone,
+    });
 }
 
 /** A civil year+month, for the diary archive headings. */
@@ -54,16 +90,78 @@ export function formatCivilMonthShort(month: number, { locale }: DateFormatConte
     return new Intl.DateTimeFormat(locale, { month: 'short', timeZone: UTC }).format(Date.UTC(2000, month - 1, 1));
 }
 
+/** Longer than any civil day: a fall-back day is 25 hours, and this only has to bracket the boundary. */
+const LONGEST_SITE_DAY_MS = 26 * 3_600_000;
+
+/**
+ * How long until the site's calendar day changes. `formatListStamp` renders relative to today, so a
+ * page left open past the site's midnight would keep yesterday's rows saying a time — the shape
+ * depends on the clock, and something has to re-read it (see use-site-day.ts).
+ *
+ * Searched for rather than calculated, because neither shortcut survives a DST transition. Counting
+ * the remaining wall-clock seconds out of 86400 lands an hour late on a 23-hour day, and a delay that
+ * is too long is the one error re-arming cannot recover. Converting the next local `00:00` to an
+ * instant fails where that wall time does not exist at all — in America/Santiago on 2026-09-06 the
+ * clock goes 23:59 → 01:00, so there is no midnight to convert and the conversion has no fixed point.
+ *
+ * What is always well defined is the first instant whose site date differs from now's, so that is what
+ * this brackets and bisects. ~30 comparisons, once a day per page.
+ */
+export function msUntilNextSiteDay(now: Date, timeZone: string): number {
+    const today = siteDayKey(now, timeZone);
+    let sameDay = now.getTime();
+    let nextDay = sameDay + LONGEST_SITE_DAY_MS;
+
+    if (siteDayKey(new Date(nextDay), timeZone) === today) {
+        return LONGEST_SITE_DAY_MS; // Unreachable for real zones; re-arming re-checks rather than trusting it.
+    }
+
+    // All the way to the millisecond. Stopping at second granularity would leave the wake up to a
+    // second late, and late is the direction that shows a stale stamp.
+    while (nextDay - sameDay > 1) {
+        const midpoint = sameDay + Math.floor((nextDay - sameDay) / 2);
+
+        if (siteDayKey(new Date(midpoint), timeZone) === today) {
+            sameDay = midpoint;
+        } else {
+            nextDay = midpoint;
+        }
+    }
+
+    return Math.max(0, nextDay - now.getTime());
+}
+
+/** The site's calendar day as a comparable string. */
+function siteDayKey(date: Date, timeZone: string): string {
+    const { year, month, day } = siteDayParts(date, timeZone);
+
+    return `${year}-${month}-${day}`;
+}
+
 /**
  * The year it currently is on the site's clock. `new Date().getFullYear()` is the viewer's year, which
  * is the previous one for a browser west of a site that has just crossed into January — enough to
- * shift a year-ranged view off the site's calendar. Pinned to the Gregorian calendar rather than the
- * display locale, since the result is arithmetic, not text.
+ * shift a year-ranged view off the site's calendar.
  */
 export function siteCurrentYear({ timeZone }: DateFormatContext, now: Date = new Date()): number {
-    const parts = new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone }).formatToParts(now);
+    return siteDayParts(now, timeZone).year;
+}
 
-    return Number(parts.find((part) => part.type === 'year')?.value);
+/**
+ * Which calendar day an instant falls on for the site, as numbers. Pinned to en-US so the parts are
+ * Gregorian digits: this feeds comparisons, and a locale with its own calendar or numerals would make
+ * "same day" depend on the display language.
+ */
+function siteDayParts(date: Date, timeZone: string): { year: number; month: number; day: number } {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        timeZone,
+    }).formatToParts(date);
+    const read = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+
+    return { year: read('year'), month: read('month'), day: read('day') };
 }
 
 /**

@@ -40,7 +40,7 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
                 <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
                     <CountBadge icon={MessageCircle} count={post.replyCount} srLabel={t(':count replies', { count: post.replyCount })} />
                     <Link href={`/timeline/${post.id}`} className="hover:text-foreground hover:underline">
-                        <Timestamp at={post.createdAt} />
+                        <Timestamp at={post.createdAt} preset="listStamp" />
                     </Link>
                 </div>
             </div>

@@ -84,13 +84,13 @@ export default function CommunityEventShow() {
                     ) : (
                         <span>{t('Withdrawn member')}</span>
                     )}
-                    <span>&mdash; <Timestamp at={event.createdAt} /></span>
+                    <span>&mdash; <Timestamp at={event.createdAt} preset="absolute" /></span>
                 </div>
 
                 <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
                     <dt className="text-muted-foreground">{t('Open date')}</dt>
                     <dd>
-                        <CivilDate value={event.openDate} />
+                        <CivilDate value={event.openDate} weekday />
                         {event.openDateComment && <span className="text-muted-foreground"> ({event.openDateComment})</span>}
                     </dd>
                     {event.area && (
@@ -104,7 +104,7 @@ export default function CommunityEventShow() {
                     {event.applicationDeadline && (
                         <>
                             <dt className="text-muted-foreground">{t('Application deadline')}</dt>
-                            <dd><CivilDate value={event.applicationDeadline} /></dd>
+                            <dd><CivilDate value={event.applicationDeadline} weekday /></dd>
                         </>
                     )}
                     <dt className="text-muted-foreground">{t('Count of Member')}</dt>
@@ -172,7 +172,7 @@ export default function CommunityEventShow() {
                                         <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
                                     <span className="ml-auto shrink-0">#{comment.number}</span>
-                                    <Timestamp at={comment.createdAt} className="shrink-0" />
+                                    <Timestamp at={comment.createdAt} preset="listStamp" className="shrink-0" />
                                     {comment.deletable && (
                                         <button type="button" onClick={() => deleteComment(comment.id)} className={`${dangerActionClass} shrink-0`}>
                                             {t('Delete')}
