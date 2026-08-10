@@ -52,4 +52,10 @@ class TimelinePost extends Model
     {
         return $this->hasMany(TimelinePostImage::class)->orderBy('number');
     }
+
+    /** @return HasMany<TimelinePostMention, $this> The @mentions in the body, in body order. */
+    public function mentions(): HasMany
+    {
+        return $this->hasMany(TimelinePostMention::class)->orderBy('offset');
+    }
 }

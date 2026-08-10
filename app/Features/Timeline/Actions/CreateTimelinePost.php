@@ -11,7 +11,10 @@ use Illuminate\Http\UploadedFile;
 
 class CreateTimelinePost
 {
-    public function __construct(private readonly PostImages $images) {}
+    public function __construct(
+        private readonly PostImages $images,
+        private readonly ResolveMentions $mentions,
+    ) {}
 
     /**
      * Post to the author's own timeline. OpenPNE 3 allows one image per post; $image is attached as
@@ -22,11 +25,19 @@ class CreateTimelinePost
         $post = $this->images->attach(
             'timelinePost',
             $image !== null ? [$image] : [],
-            persist: fn (): TimelinePost => TimelinePost::create([
-                'member_id' => $author->getKey(),
-                'body' => $data->body,
-                'visibility' => $data->visibility,
-            ]),
+            // Mentions resolve inside the transaction: resolution share-locks the mentioned
+            // members, so one deleted mid-request fails resolution (row dropped, post goes
+            // through) instead of failing the FK insert (post rolled back).
+            persist: function () use ($author, $data): TimelinePost {
+                $post = TimelinePost::create([
+                    'member_id' => $author->getKey(),
+                    'body' => $data->body,
+                    'visibility' => $data->visibility,
+                ]);
+                $post->mentions()->createMany(($this->mentions)($author, $data->body, $data->mentions));
+
+                return $post;
+            },
             relation: fn (TimelinePost $post) => $post->images(),
         );
 

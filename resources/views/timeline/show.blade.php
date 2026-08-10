@@ -45,7 +45,7 @@
 
         <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-reply-form" class="timeline-reply-form">
             @csrf
-            <textarea name="body" maxlength="140" required></textarea>
+            <textarea name="body" required></textarea>
             @error('body')
                 <p role="alert">{{ $message }}</p>
             @enderror

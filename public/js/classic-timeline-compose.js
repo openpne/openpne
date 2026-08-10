@@ -11,10 +11,11 @@
 
   var MAXLENGTH = 140;
 
-  // OpenPNE 3's counter (counter.js) counts a newline as two characters, matching the CRLF the
-  // browser submits and the server's max:140 over it.
-  function submittedLength(value) {
-    return value.replace(/\r\n|\r|\n/g, '\r\n').length;
+  // Code points, over the body with its newlines normalized the way the server normalizes them
+  // (StoreTimelinePostRequest) — so this counter, the server's max:140 and the mention offsets all
+  // measure the same thing. String.length would count an astral emoji as two.
+  function bodyLength(value) {
+    return Array.from(value.replace(/\r\n?/g, '\n')).length;
   }
 
   function setUp(form) {
@@ -32,7 +33,7 @@
     }
 
     function sync() {
-      var remaining = MAXLENGTH - submittedLength(textarea.value);
+      var remaining = MAXLENGTH - bodyLength(textarea.value);
       counter.textContent = String(remaining);
       // OpenPNE 3 counter.js: red past the limit, orange for the last 25, black otherwise.
       counter.style.color = remaining < 0 ? '#FF0000' : (remaining <= 25 ? '#FFA500' : '#000000');

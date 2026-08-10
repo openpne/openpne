@@ -147,7 +147,7 @@ class TimelineController extends Controller
         $root = $query($viewer, $timelinePost);
         abort_if($root === null, 404);
 
-        $action($viewer, $root, $request->validated('body'));
+        $action($viewer, $root, $request->validated('body'), $request->toMentions());
 
         return redirect()
             ->route('timeline.show', ['timelinePost' => $root->getKey()])
