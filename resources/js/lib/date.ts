@@ -90,49 +90,52 @@ export function formatCivilMonthShort(month: number, { locale }: DateFormatConte
     return new Intl.DateTimeFormat(locale, { month: 'short', timeZone: UTC }).format(Date.UTC(2000, month - 1, 1));
 }
 
+/** Longer than any civil day: a fall-back day is 25 hours, and this only has to bracket the boundary. */
+const LONGEST_SITE_DAY_MS = 26 * 3_600_000;
+
 /**
  * How long until the site's calendar day changes. `formatListStamp` renders relative to today, so a
  * page left open past the site's midnight would keep yesterday's rows saying a time — the shape
  * depends on the clock, and something has to re-read it (see use-site-day.ts).
  *
- * Counting the site's remaining wall-clock seconds out of 86400 is wrong on a day that is not 24 hours
- * long: a spring-forward day is 23, which puts the wake an hour *after* the real boundary, and no
- * amount of re-arming recovers a delay that is too long. So the next midnight is located as an instant
- * instead — the site's own wall time is read back to find the offset in force there.
+ * Searched for rather than calculated, because neither shortcut survives a DST transition. Counting
+ * the remaining wall-clock seconds out of 86400 lands an hour late on a 23-hour day, and a delay that
+ * is too long is the one error re-arming cannot recover. Converting the next local `00:00` to an
+ * instant fails where that wall time does not exist at all — in America/Santiago on 2026-09-06 the
+ * clock goes 23:59 → 01:00, so there is no midnight to convert and the conversion has no fixed point.
+ *
+ * What is always well defined is the first instant whose site date differs from now's, so that is what
+ * this brackets and bisects. ~30 comparisons, once a day per page.
  */
 export function msUntilNextSiteDay(now: Date, timeZone: string): number {
-    const { year, month, day } = siteDayParts(now, timeZone);
-    // Next civil day at 00:00 site-local, held as if it were UTC. Date.UTC carries the month and year.
-    const wallMidnight = Date.UTC(year, month - 1, day + 1);
-    // Two passes: the offset at `now` may not be the offset at midnight, and the second pass reads it
-    // from the instant the first pass landed on.
-    const firstPass = wallMidnight - siteOffsetMs(now, timeZone);
-    const instant = wallMidnight - siteOffsetMs(new Date(firstPass), timeZone);
+    const today = siteDayKey(now, timeZone);
+    let sameDay = now.getTime();
+    let nextDay = sameDay + LONGEST_SITE_DAY_MS;
 
-    return Math.max(0, instant - now.getTime());
+    if (siteDayKey(new Date(nextDay), timeZone) === today) {
+        return LONGEST_SITE_DAY_MS; // Unreachable for real zones; re-arming re-checks rather than trusting it.
+    }
+
+    // All the way to the millisecond. Stopping at second granularity would leave the wake up to a
+    // second late, and late is the direction that shows a stale stamp.
+    while (nextDay - sameDay > 1) {
+        const midpoint = sameDay + Math.floor((nextDay - sameDay) / 2);
+
+        if (siteDayKey(new Date(midpoint), timeZone) === today) {
+            sameDay = midpoint;
+        } else {
+            nextDay = midpoint;
+        }
+    }
+
+    return Math.max(0, nextDay - now.getTime());
 }
 
-/**
- * The site's offset from UTC at an instant, in milliseconds. Derived by reading the instant as site
- * wall time and asking what UTC instant that wall time would be — the difference is the offset. `Intl`
- * exposes no offset directly, and a hardcoded table would go stale with tzdata.
- */
-function siteOffsetMs(date: Date, timeZone: string): number {
-    const parts = new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hourCycle: 'h23',
-        timeZone,
-    }).formatToParts(date);
-    const read = (type: string) => Number(parts.find((part) => part.type === type)?.value);
-    const asUtc = Date.UTC(read('year'), read('month') - 1, read('day'), read('hour'), read('minute'), read('second'));
+/** The site's calendar day as a comparable string. */
+function siteDayKey(date: Date, timeZone: string): string {
+    const { year, month, day } = siteDayParts(date, timeZone);
 
-    // Whole seconds on both sides: the formatted parts carry no milliseconds.
-    return asUtc - Math.floor(date.getTime() / 1000) * 1000;
+    return `${year}-${month}-${day}`;
 }
 
 /**

@@ -24,27 +24,23 @@ seconds in places — and is not yet held to this document.
 
 | Shape | Japanese | Used for |
 |-------|----------|----------|
-| `absolute` | `2026年8月10日 00:05` | The one thing a page is about — a diary entry, a message, a topic, an event, a timeline post — and any row with no page of its own, which is every comment and reply. It gets read out of context, so the year stays. |
-| `listStamp` | today `00:05` · this year `8月10日` · older `2025年12月31日` | A row that links to a page naming its date in full: list entries, notifications, feed cards. |
+| `absolute` | `2026年8月10日 00:05` | The one thing a page is about — a diary entry, a message, a topic, an event, a timeline post. It gets linked to and read out of context, so the year stays. |
+| `listStamp` | today `00:05` · this year `8月10日` · older `2025年12月31日` | A row in a time-ordered list: list entries, comments, replies, notifications, feed cards. |
 | civil date | `2026年8月10日`, with weekday `2026年8月10日(月)` | A calendar day with no instant behind it. The weekday is on wherever an event's own dates appear, so the same datum never shows in two shapes. |
 
 `listStamp` carries the full value as a `title`; `absolute` does not, since it already names the day
 and the minute and a title differing only in seconds is noise.
 
-**That title is a mouse-only convenience and must stay non-essential.** `title` on a non-interactive
-element reaches neither the keyboard nor assistive technology, so it can only ever be a shortcut to
-something already reachable another way.
+**That title is a convenience with no contract on it.** `title` on a non-interactive element reaches
+neither the keyboard nor assistive technology, so nothing may depend on it.
 
-What makes that acceptable is a condition on where `listStamp` may be used, not a general licence:
-**only on a row that links to a page naming its date in full.** The reader's task in such a list is to
-pick a row; the abbreviated stamp orders the rows, and the page behind it holds the whole value for
-anyone — keyboard and screen-reader users included, not only those who can hover.
+Which is fine here, because a list stamp does not withhold anything: **in a time-ordered list the
+abbreviated stamp is the whole content.** The reader's task is to place a row relative to the others,
+and the day or year it leaves out is what their position in the list already tells them. `dateTime`
+carries the exact instant for machines. Nobody — hovering or not — needs the second a row was written.
 
-That condition is what puts comments and replies on `absolute` instead. They have no page of their own,
-so an abbreviated stamp there would leave the full date reachable by mouse alone.
-
-A shape whose visible text stops naming the date on a row with nowhere to go would need a real
-disclosure. Relative time is the case that forces that question, and it does not ship here.
+A shape that did withhold something a reader needs would need a real disclosure rather than a title.
+Relative time is the case that forces that question, and it does not ship here.
 
 ## Key invariants
 

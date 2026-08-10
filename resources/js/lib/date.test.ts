@@ -86,6 +86,24 @@ test('the delay is right on both DST transition days', () => {
     assert.equal(new Date(fallBack.getTime() + 24.5 * 3_600_000).toISOString(), '2026-11-02T05:00:00.000Z');
 });
 
+/**
+ * Where the transition is at midnight itself there is no local `00:00` to convert: America/Santiago on
+ * 2026-09-06 goes 23:59 → 01:00. Converting a wall time that does not exist lands before the boundary
+ * and then keeps reporting zero, which the clock's one-second floor turns into a re-render every second
+ * until the hour is out.
+ */
+test('the delay is right where the site has no midnight at all', () => {
+    const zone = 'America/Santiago';
+    // 2026-09-05 22:30 local. The date turns over at 01:00 local, which is 04:00Z.
+    const beforeTheGap = new Date('2026-09-06T02:30:00Z');
+
+    assert.equal(msUntilNextSiteDay(beforeTheGap, zone), 1.5 * 3_600_000);
+    assert.equal(new Date(beforeTheGap.getTime() + 1.5 * 3_600_000).toISOString(), '2026-09-06T04:00:00.000Z');
+
+    // And having crossed it, the next boundary is a whole day out rather than zero.
+    assert.equal(msUntilNextSiteDay(new Date('2026-09-06T04:00:00Z'), zone), 23 * 3_600_000);
+});
+
 test('a civil date is the stored day in every timezone, with the weekday only when asked', () => {
     for (const context of [tokyo, newYork, { locale: 'ja-JP', timeZone: 'UTC' }]) {
         assert.equal(formatCivilDate('2026-08-10', context), '2026年8月10日');
