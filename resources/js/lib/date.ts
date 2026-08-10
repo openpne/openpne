@@ -147,6 +147,12 @@ export function relativeDeadline(iso: string, timeZone: string, now: Date = new 
         return now.getTime() + (60_000 - (difference % 60_000));
     }
 
+    // A day count only changes when the calendar does, and the shared day clock is already waiting on
+    // that. Arming here too would wake every hour to render the same words.
+    if (bucket.unit === 'day') {
+        return null;
+    }
+
     // The hour bucket, which a long day can carry past 24 hours, changes on the hour. Its exit into days
     // is a site-day boundary, and the day clock has that one.
     return now.getTime() + (3_600_000 - (difference % 3_600_000));

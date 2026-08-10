@@ -76,9 +76,19 @@ test('a future instant schedules one wake at the moment it stops being just now'
     assert.equal(relativeDeadline(at, 'Asia/Tokyo', now), new Date(at).getTime() + 60_000);
 });
 
-// Past a week the text is a date, and the only thing that changes a date is the calendar rolling over —
-// which the shared day clock is already waiting on.
-test('past a week it arms nothing and leaves the boundary to the day clock', () => {
-    assert.equal(relativeDeadline('2026-08-10T12:00:00Z', 'Asia/Tokyo', new Date('2026-08-20T12:00:00Z')), null);
-    assert.equal(relativeDeadline('', 'Asia/Tokyo', new Date('2026-08-10T12:00:00Z')), null);
+/**
+ * A day count and a date both only change when the calendar does, and the shared day clock is already
+ * waiting on that. Arming here as well would wake every hour to render the same words.
+ */
+test('anything counted in days arms nothing and leaves the boundary to the day clock', () => {
+    const at = '2026-08-10T12:00:00Z';
+
+    for (const now of ['2026-08-11T13:30:00Z', '2026-08-12T13:30:00Z', '2026-08-16T13:30:00Z']) {
+        const parts = relativeParts(at, 'Asia/Tokyo', new Date(now));
+        assert.equal(parts?.unit, 'day', `${now}: expected the day bucket`);
+        assert.equal(relativeDeadline(at, 'Asia/Tokyo', new Date(now)), null, `${now}: armed a timer anyway`);
+    }
+
+    assert.equal(relativeDeadline(at, 'Asia/Tokyo', new Date('2026-08-20T12:00:00Z')), null); // past a week
+    assert.equal(relativeDeadline('', 'Asia/Tokyo', new Date(at)), null);
 });
