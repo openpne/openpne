@@ -12,7 +12,7 @@
                 <tr>
                     <th><label for="timeline_body">{{ __('Body') }}</label></th>
                     <td>
-                        <textarea id="timeline_body" name="body" maxlength="140" required>{{ old('body') }}</textarea>
+                        <textarea id="timeline_body" name="body" required>{{ old('body') }}</textarea>
                         @error('body')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>

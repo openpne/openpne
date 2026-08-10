@@ -69,7 +69,11 @@ class ResolveMentions
         $query = Member::query()
             ->whereIn('id', $ids)
             ->whereKeyNot($author->getKey())
-            ->where('is_login_rejected', false);
+            ->where('is_login_rejected', false)
+            // Callers resolve inside the post's insert transaction; the share lock holds each
+            // matched member in place until the mention rows are in, so a resolved id cannot
+            // vanish before its FK insert. A no-op on sqlite, whose writes serialize anyway.
+            ->sharedLock();
 
         BlockLookup::excludeBlockedBetween($query, $author, 'members.id');
 

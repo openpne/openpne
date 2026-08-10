@@ -20,17 +20,17 @@ class CreateReply
      */
     public function __invoke(Member $author, TimelinePost $parent, string $body, array $mentions = []): TimelinePost
     {
-        // Resolved outside the transaction below: it only reads.
-        $resolved = ($this->mentions)($author, $body, $mentions);
-
-        return DB::transaction(function () use ($author, $parent, $body, $resolved): TimelinePost {
+        // Mentions resolve inside the transaction: resolution share-locks the mentioned members,
+        // so one deleted mid-request fails resolution (row dropped, reply goes through) instead
+        // of failing the FK insert (reply rolled back).
+        return DB::transaction(function () use ($author, $parent, $body, $mentions): TimelinePost {
             $reply = TimelinePost::create([
                 'member_id' => $author->getKey(),
                 'in_reply_to_id' => $parent->getKey(),
                 'body' => $body,
                 'visibility' => $parent->visibility,
             ]);
-            $reply->mentions()->createMany($resolved);
+            $reply->mentions()->createMany(($this->mentions)($author, $body, $mentions));
 
             return $reply;
         });

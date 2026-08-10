@@ -14,7 +14,9 @@
     @csrf
     <input type="hidden" name="return_to" value="{{ $returnTo }}">
     <div class="timeline-postform well">
-        <textarea id="timeline-textarea" name="body" class="input-xlarge" rows="1" maxlength="140" placeholder="{{ __('What are you doing?') }}">{{ old('body') }}</textarea>
+        {{-- No maxlength: it measures UTF-16 units, so it would block a body of 140 astral code
+             points the counter and the server both accept. The JS gate and max:140 bound this. --}}
+        <textarea id="timeline-textarea" name="body" class="input-xlarge" rows="1" placeholder="{{ __('What are you doing?') }}">{{ old('body') }}</textarea>
         {{-- OpenPNE 3's error seams, fed server-side after a failed POST. --}}
         @if ($errors->has('body') || $errors->has('visibility'))
             <div id="timeline-submit-error" style="display: block;">{{ $errors->first('body') ?: $errors->first('visibility') }}</div>

@@ -26,9 +26,9 @@ return new class extends Migration
             $table->unsignedSmallInteger('offset');
             $table->unsignedSmallInteger('length');
 
-            // Reads a post's mentions, and enforces that two ranges never start at the same place —
-            // the DB's copy of the non-overlap invariant App\Features\Timeline\Actions\ResolveMentions
-            // holds. Leads with timeline_post_id, so it also backs that FK.
+            // Reads a post's mentions, and keeps two rows off one start offset — the slice of
+            // App\Features\Timeline\Actions\ResolveMentions' non-overlap invariant an index can
+            // hold. Leads with timeline_post_id, so it also backs that FK.
             $table->unique(['timeline_post_id', 'offset']);
         });
     }

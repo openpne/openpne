@@ -22,19 +22,19 @@ class CreateTimelinePost
      */
     public function __invoke(Member $author, TimelinePostFormData $data, ?UploadedFile $image = null): TimelinePost
     {
-        // Resolved outside the transaction below: it only reads.
-        $mentions = ($this->mentions)($author, $data->body, $data->mentions);
-
         $post = $this->images->attach(
             'timelinePost',
             $image !== null ? [$image] : [],
-            persist: function () use ($author, $data, $mentions): TimelinePost {
+            // Mentions resolve inside the transaction: resolution share-locks the mentioned
+            // members, so one deleted mid-request fails resolution (row dropped, post goes
+            // through) instead of failing the FK insert (post rolled back).
+            persist: function () use ($author, $data): TimelinePost {
                 $post = TimelinePost::create([
                     'member_id' => $author->getKey(),
                     'body' => $data->body,
                     'visibility' => $data->visibility,
                 ]);
-                $post->mentions()->createMany($mentions);
+                $post->mentions()->createMany(($this->mentions)($author, $data->body, $data->mentions));
 
                 return $post;
             },
