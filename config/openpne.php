@@ -169,6 +169,9 @@ return [
         // The Markdown preview endpoint fires per keystroke-batch, so it is capped looser than a post.
         'preview' => (int) env('OPENPNE_THROTTLE_PREVIEW', 60),
         'preview_ip' => (int) env('OPENPNE_THROTTLE_PREVIEW_IP', 120),
+        // The @mention picker is keystroke-driven (debounced) like the preview, so it shares its cap.
+        'mention_search' => (int) env('OPENPNE_THROTTLE_MENTION_SEARCH', 60),
+        'mention_search_ip' => (int) env('OPENPNE_THROTTLE_MENTION_SEARCH_IP', 120),
         'message' => (int) env('OPENPNE_THROTTLE_MESSAGE', 10),
         'message_ip' => (int) env('OPENPNE_THROTTLE_MESSAGE_IP', 30),
         'friend' => (int) env('OPENPNE_THROTTLE_FRIEND', 15),

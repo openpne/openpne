@@ -45,12 +45,14 @@ class ModernOnlyCoverageTest extends TestCase
     private const KNOWN_LEAKS = [];
 
     /**
-     * Not pages: what a shell's own script fetches — a Classic HTML fragment, or the Modern shell's
-     * JSON counts. Neither renders a surface, so there is nothing here for modern_only to get wrong.
+     * Not pages: what a shell's or a form's own script fetches — a Classic HTML fragment, the Modern
+     * shell's JSON counts, the compose form's mention candidates. None renders a surface, so there is
+     * nothing here for modern_only to get wrong.
      */
     private const FRAGMENTS = [
         'notifications.center',
         'unread.counts',
+        'timeline.mention_candidates',
     ];
 
     /**
