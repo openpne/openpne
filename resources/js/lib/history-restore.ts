@@ -59,8 +59,9 @@ export interface RestoreQueue {
 
 /**
  * A count, not a flag: holding back fires every popstate before any of their navigates arrive, and a
- * flag would answer only the first — leaving the last restore's stale props as the final write, which
- * is the one that stays. The same shape, and the same reason, as `back-nav.ts`.
+ * flag would answer only the first — leaving the last restore with no refresh ordered after its own
+ * swap, so whether the counts end up right would come down to request timing. The same shape, and the
+ * same reason, as `back-nav.ts`.
  */
 export function createRestoreQueue(): RestoreQueue {
     let pending = 0;

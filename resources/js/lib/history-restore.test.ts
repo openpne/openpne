@@ -58,7 +58,7 @@ test('holding back completes every restore, not just the first', () => {
     queue.handlePopstate();
 
     assert.equal(queue.handleNavigate(), true);
-    // A flag would answer false here, and the second restore's stale props would be the last write.
+    // A flag would answer false here, leaving the second restore with no refresh ordered after it.
     assert.equal(queue.handleNavigate(), true);
     assert.equal(queue.handleNavigate(), false);
 });
