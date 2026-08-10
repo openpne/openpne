@@ -72,6 +72,19 @@ class TimelineComposeTest extends TestCase
             ->assertDontSee('data-timeline-compose', false);
     }
 
+    public function test_no_body_textarea_ships_a_maxlength(): void
+    {
+        // maxlength counts UTF-16 units, so it would block a body of 140 astral code points that
+        // the counter and the server's max:140 (both code points) accept. The inline box is gated
+        // by classic-timeline-compose.js; the no-JS forms fall through to the server rule.
+        $member = Member::factory()->create();
+        $post = TimelinePost::factory()->create(['member_id' => $member->getKey()]);
+
+        $this->actingAs($member)->get(route('timeline.index'))->assertOk()->assertDontSee('maxlength', false);
+        $this->actingAs($member)->get(route('timeline.new'))->assertOk()->assertDontSee('maxlength', false);
+        $this->actingAs($member)->get(route('timeline.show', $post))->assertOk()->assertDontSee('maxlength', false);
+    }
+
     public function test_the_form_offers_the_shared_visibility_options_with_members_preselected(): void
     {
         $member = Member::factory()->create();
