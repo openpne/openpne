@@ -56,7 +56,7 @@ class NotificationFeedListTest extends TestCase
     /**
      * Opening a row marks it read and leaves, so the page the browser keeps for back is stale the
      * moment it is kept. The feed loads the restore refresh for that; the rest of Classic does not,
-     * since disabling the back/forward cache is what that script costs a screen.
+     * since what that script costs a screen is the instant back the cache was giving it.
      */
     public function test_only_the_feed_refreshes_itself_after_a_back_forward_restore(): void
     {

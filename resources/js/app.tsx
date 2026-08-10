@@ -46,7 +46,7 @@ void createInertiaApp({
         installBackNav(router);
         // Before the app mounts likewise: a page that revalidates on a restore has to find the
         // record already there when it arrives.
-        installHistoryRestore(router);
+        installHistoryRestore();
         // `fallbackLocale="en"` (not the app default `ja`) so that an en miss
         // surfaces as the raw English key — matching the "key === English
         // text" omission policy. ja-as-fallback would silently render Japanese

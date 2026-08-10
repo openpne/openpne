@@ -4,66 +4,55 @@
  * said when it was left, however far its server state has moved since.
  *
  * The restore is recorded here rather than handled where it happens, because the page that cares is
- * not mounted when the popstate fires — it is what the popstate is about to swap in. Any visit the
- * member starts clears the record: whatever that visit lands on came from the server.
+ * not mounted when the popstate fires — it is what the popstate is about to swap in. The record
+ * carries the URL it landed on, so only the page it is about can spend it: a record nobody asks
+ * about expires by never matching again, without needing a second event to clear it.
  */
 
 export interface RestoreTracker {
-    /** The browser's `popstate`, which Inertia answers from history. */
-    handlePopstate(): void;
-    /** A visit the member started; what it lands on is the server's answer. */
-    handleVisitStart(): void;
-    /** True once per restore: reading it clears it. */
-    consume(): boolean;
+    /** The browser's `popstate`, which Inertia answers from history; `url` is where it landed. */
+    handlePopstate(url: string): void;
+    /** True when the record is this page's; spending it clears it. */
+    consume(url: string): boolean;
 }
 
 export function createRestoreTracker(): RestoreTracker {
-    let restored = false;
+    let restoredUrl: string | null = null;
 
     return {
-        handlePopstate() {
-            restored = true;
+        handlePopstate(url) {
+            restoredUrl = url;
         },
-        handleVisitStart() {
-            restored = false;
-        },
-        consume() {
-            const wasRestored = restored;
-            restored = false;
+        consume(url) {
+            if (restoredUrl !== url) {
+                return false;
+            }
+            restoredUrl = null;
 
-            return wasRestored;
+            return true;
         },
     };
 }
 
 const tracker = createRestoreTracker();
 
-/**
- * True when this render is a page Inertia restored from history; reading it clears it, so the first
- * page to ask is the one that gets the answer. A restore nobody asks about is dropped by the next
- * visit rather than kept for a later page.
- */
+/** True when this page is the one a popstate restored; reading it spends the record. */
 export function consumeHistoryRestore(): boolean {
-    return tracker.consume();
-}
-
-/** Inertia's router, narrowed to the one event this needs. */
-interface StartEvents {
-    on(type: 'start', callback: () => void): () => void;
+    return tracker.consume(window.location.href);
 }
 
 let installed = false;
 
 /**
- * Feed the tracker from the router and the browser. The entry calls this (rather than the module
- * wiring itself on import) so importing the tracker stays free of a router and a DOM.
+ * Feed the tracker from the browser. The entry calls this (rather than the module wiring itself on
+ * import) so importing the tracker stays free of a DOM.
  */
-export function installHistoryRestore(router: StartEvents): void {
+export function installHistoryRestore(): void {
     if (installed) {
         return;
     }
     installed = true;
 
-    window.addEventListener('popstate', () => tracker.handlePopstate());
-    router.on('start', () => tracker.handleVisitStart());
+    // `popstate` fires after the address has already moved, so this is where the restore landed.
+    window.addEventListener('popstate', () => tracker.handlePopstate(window.location.href));
 }

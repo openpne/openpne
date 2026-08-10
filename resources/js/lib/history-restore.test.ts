@@ -2,29 +2,37 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createRestoreTracker } from './history-restore.ts';
 
-test('a page reached by an ordinary visit is not a restore', () => {
-    const tracker = createRestoreTracker();
-    tracker.handleVisitStart();
+const FEED = 'https://example.test/notifications';
+const DASHBOARD = 'https://example.test/dashboard';
 
-    assert.equal(tracker.consume(), false);
+test('a page reached without a popstate is not a restore', () => {
+    const tracker = createRestoreTracker();
+
+    assert.equal(tracker.consume(FEED), false);
 });
 
-test('a popstate is a restore, and reading it spends it', () => {
+test('a popstate is a restore for the page it landed on, and reading it spends it', () => {
     const tracker = createRestoreTracker();
-    tracker.handlePopstate();
+    tracker.handlePopstate(FEED);
 
-    assert.equal(tracker.consume(), true);
+    assert.equal(tracker.consume(FEED), true);
     // The page that asked has already reloaded; a second render must not reload again.
-    assert.equal(tracker.consume(), false);
+    assert.equal(tracker.consume(FEED), false);
 });
 
-test('a restore no page asked about is dropped by the next visit', () => {
+test('a restore belongs to its own page and no other', () => {
     const tracker = createRestoreTracker();
     // Back onto a page that does not revalidate: nothing consumes the record.
-    tracker.handlePopstate();
+    tracker.handlePopstate(DASHBOARD);
 
-    tracker.handleVisitStart();
+    // Whatever the member visits next came from the server, however stale the page before it was.
+    assert.equal(tracker.consume(FEED), false);
+});
 
-    // The page this visit lands on is the server's answer, however stale the one before it was.
-    assert.equal(tracker.consume(), false);
+test('a paged feed restores per page', () => {
+    const tracker = createRestoreTracker();
+    tracker.handlePopstate(`${FEED}?page=2`);
+
+    assert.equal(tracker.consume(FEED), false);
+    assert.equal(tracker.consume(`${FEED}?page=2`), true);
 });
