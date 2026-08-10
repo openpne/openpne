@@ -13,7 +13,7 @@
         <div class="timeline-member-name">
             <a class="screen-name" href="{{ route('member.profile.show', $post->member) }}">{{ $post->member->name }}</a>
         </div>
-        <div class="timeline-post-body" id="timeline-post-body-{{ $post->getKey() }}"><x-user-text :value="$post->body" /></div>
+        <div class="timeline-post-body" id="timeline-post-body-{{ $post->getKey() }}"><x-timeline-body :post="$post" /></div>
         <x-link-card :record="$post" />
         @foreach ($post->images as $image)
             @if ($image->file)

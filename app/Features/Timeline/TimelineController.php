@@ -87,9 +87,10 @@ class TimelineController extends Controller
         // ShowTimelinePost already gated the block (null → 404 above); record the author for the
         // Classic friend localNav when viewing someone else's post.
         $this->markLocalNavSubject($post->member);
-        // Eager-load the replies' images too: the serializer reads each post's images, so loading
-        // only replies.member would lazy-load one (empty, by the no-image contract) query per reply.
-        $post->load(['member.avatar.file', 'replies.member.avatar.file', 'replies.images.file']);
+        // Eager-load the replies' images and mentions too: both are read per reply when it renders,
+        // so loading only replies.member would fire a query per reply for each (an images load being
+        // empty, by the no-image contract, still costs the query).
+        $post->load(['member.avatar.file', 'replies.member.avatar.file', 'replies.images.file', 'replies.mentions']);
         // The thread root only. Replies share this table but render as a thread underneath, where a
         // stack of cards would read as noise — and asking per reply would queue a job each. Placed
         // after the reply-permalink redirect above, so a request that never renders queues nothing.

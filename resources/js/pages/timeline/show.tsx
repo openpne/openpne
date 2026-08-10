@@ -6,7 +6,7 @@ import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
-import { UserText } from '@/components/user-text';
+import { EntityText } from '@/components/entity-text';
 import { Button } from '@/components/ui/button';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { Field } from '@/components/ui/field';
@@ -63,7 +63,7 @@ export default function TimelineShow() {
                     <Timestamp at={post.createdAt} preset="absolute" className="shrink-0 text-muted-foreground" />
                 </div>
                 <p className="whitespace-pre-wrap break-words">
-                    <UserText text={post.body} />
+                    <EntityText text={post.body} mentions={post.mentions} />
                 </p>
                 <LinkCard card={post.linkCard} />
                 <ImageGrid images={post.images} />
@@ -86,7 +86,7 @@ export default function TimelineShow() {
                                     <Timestamp at={reply.createdAt} preset="relative" className="text-muted-foreground" />
                                 </div>
                                 <p className="whitespace-pre-wrap break-words">
-                                    <UserText text={reply.body} />
+                                    <EntityText text={reply.body} mentions={reply.mentions} />
                                 </p>
                                 {reply.author.id === viewerId && (
                                     <button type="button" onClick={() => deleteReply(reply.id)} className={cn(dangerActionClass, 'text-sm')}>

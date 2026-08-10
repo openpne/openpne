@@ -19,7 +19,7 @@
                     <br>
                 @endif
                 <strong class="name"><a href="{{ route('member.profile.show', $author) }}">{{ $author->name }}</a></strong>
-                <span class="bodyText"><x-user-text :value="$post->body" /></span>
+                <span class="bodyText"><x-timeline-body :post="$post" /></span>
             </span>
             <span class="info">
                 {{-- OpenPNE 3 showed a relative time; the Classic port links the absolute timestamp used across the timeline to the post permalink. --}}
