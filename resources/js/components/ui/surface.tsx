@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 export function SectionHeader({ title, right, className }: { title: ReactNode; right?: ReactNode; className?: string }) {
     return (
         <div className={cn('flex items-center gap-2 border-b border-border px-4 py-3 sm:px-5', className)}>
-            <Heading as="h2" variant="section" className="min-w-0 flex-1 truncate">
+            <Heading as="h2" variant="minor" className="min-w-0 flex-1 truncate">
                 {title}
             </Heading>
             {right}

@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
 import { Field, FormActions, FormSection } from '@/components/ui/field';
+import { Heading } from '@/components/ui/heading';
 import { Input } from '@/components/ui/input';
 import { OtpInput } from '@/components/ui/otp-input';
 import { useT } from '@/lib/i18n';
@@ -22,7 +23,7 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
 
     return (
         <section className="space-y-2 rounded-md border-2 border-dashed border-foreground/30 p-4">
-            <h2 className="text-base font-semibold text-foreground">{t('Recovery codes')}</h2>
+            <Heading as="h2" variant="section">{t('Recovery codes')}</Heading>
             <p className="text-sm font-semibold text-foreground">{t('These codes are shown only this once.')}</p>
             <p className="text-sm text-muted-foreground">
                 {t('Save them somewhere safe now — each can be used once to sign in if you lose your authenticator.')}

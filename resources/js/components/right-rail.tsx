@@ -54,7 +54,7 @@ function RailSection({ title, viewAllHref, children }: { title: string; viewAllH
     return (
         <section>
             <div className="mb-2 flex items-baseline justify-between gap-2">
-                <Heading as="h2" variant="section">
+                <Heading as="h2" variant="minor">
                     {title}
                 </Heading>
                 <Link href={viewAllHref} className="text-xs text-link hover:underline">
