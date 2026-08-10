@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { ImageGrid } from '@/components/image-grid';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
+import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,6 @@ import { Field } from '@/components/ui/field';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { TimelinePostEntry } from './types';
@@ -25,7 +25,6 @@ interface ShowProps extends PageProps {
 
 export default function TimelineShow() {
     const t = useT();
-    const date = useDateFormat();
     const confirm = useConfirm();
     const { post, replies, viewerId } = usePage<ShowProps>().props;
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
@@ -61,7 +60,7 @@ export default function TimelineShow() {
                         <Avatar id={post.author.id} name={post.author.name} src={post.author.imageUrl} color={post.author.avatarColor} size="sm" decorative />
                         <span className="truncate">{post.author.name}</span>
                     </Link>
-                    <span className="shrink-0 text-muted-foreground">{date.instant(post.createdAt)}</span>
+                    <Timestamp at={post.createdAt} className="shrink-0 text-muted-foreground" />
                 </div>
                 <p className="whitespace-pre-wrap break-words">
                     <UserText text={post.body} />
@@ -84,7 +83,7 @@ export default function TimelineShow() {
                                     <Link href={`/member/${reply.author.id}/timeline`} className="text-link hover:underline">
                                         {reply.author.name}
                                     </Link>
-                                    <span className="text-muted-foreground">{date.instant(reply.createdAt)}</span>
+                                    <Timestamp at={reply.createdAt} className="text-muted-foreground" />
                                 </div>
                                 <p className="whitespace-pre-wrap break-words">
                                     <UserText text={reply.body} />

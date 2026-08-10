@@ -33,6 +33,15 @@ export function formatInstant(iso: string, { locale, timeZone }: DateFormatConte
     return render(new Date(iso), iso, locale, { ...DAY_PARTS, ...TIME_PARTS, timeZone });
 }
 
+/**
+ * The whole instant, down to the second, for the affordance that reveals what a shortened display is
+ * standing in for. Long month name rather than the numeric form so it cannot be misread as the display
+ * value repeated.
+ */
+export function formatExact(iso: string, { locale, timeZone }: DateFormatContext): string {
+    return render(new Date(iso), iso, locale, { dateStyle: 'long', timeStyle: 'medium', timeZone });
+}
+
 /** A civil year+month, for the diary archive headings. */
 export function formatCivilMonth(year: number, month: number, { locale }: DateFormatContext): string {
     return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', timeZone: UTC }).format(

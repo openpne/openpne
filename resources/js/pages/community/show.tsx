@@ -4,13 +4,13 @@ import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
 import { EntryRow } from '@/components/entry-row';
+import { CivilDate, Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
 
@@ -31,7 +31,6 @@ interface ShowProps extends PageProps {
 
 export default function CommunityShow() {
     const t = useT();
-    const date = useDateFormat();
     const confirm = useConfirm();
     const {
         community, viewerRole, canManage, isPending, isTransferNominee, canJoin, canLeave, members,
@@ -138,7 +137,7 @@ export default function CommunityShow() {
                                     href={`/communityTopic/${topic.id}`}
                                     author={topic.author}
                                     content={topic.name}
-                                    date={date.instantDate(topic.updatedAt)}
+                                    date={<Timestamp at={topic.updatedAt} preset="day" />}
                                     commentCount={topic.commentCount}
                                 />
                             ))}
@@ -175,7 +174,7 @@ export default function CommunityShow() {
                                     href={`/communityEvent/${event.id}`}
                                     author={event.author}
                                     content={event.name}
-                                    date={`${t('Open date')}: ${date.civilDate(event.openDate)}`}
+                                    date={<>{t('Open date')}: <CivilDate value={event.openDate} /></>}
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}
                                 />

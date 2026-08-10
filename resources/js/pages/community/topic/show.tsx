@@ -6,6 +6,7 @@ import { ImagesField } from '@/components/images-field';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { RichBody } from '@/components/rich-body';
+import { Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,6 @@ import { dangerActionClass } from '@/components/ui/danger-link';
 import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
-import { useDateFormat } from '@/lib/use-date-format';
 import type { PageProps } from '@/types';
 import type { CommunitySummary, TopicDetail, TopicThread } from '../types';
 
@@ -28,7 +28,6 @@ interface ShowProps extends PageProps {
 
 export default function CommunityTopicShow() {
     const t = useT();
-    const date = useDateFormat();
     const confirm = useConfirm();
     const { topic, thread, canComment, canEdit } = usePage<ShowProps>().props;
 
@@ -79,7 +78,7 @@ export default function CommunityTopicShow() {
                     ) : (
                         <span>{t('Withdrawn member')}</span>
                     )}
-                    <span>&mdash; {date.instant(topic.createdAt)}</span>
+                    <span>&mdash; <Timestamp at={topic.createdAt} /></span>
                 </div>
 
                 <RichBody body={topic.body} bodyHtml={topic.bodyHtml} />
@@ -137,7 +136,7 @@ export default function CommunityTopicShow() {
                                         <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
                                     <span className="ml-auto shrink-0">#{comment.number}</span>
-                                    <span className="shrink-0">{date.instant(comment.createdAt)}</span>
+                                    <Timestamp at={comment.createdAt} className="shrink-0" />
                                     {comment.deletable && (
                                         <button type="button" onClick={() => deleteComment(comment.id)} className={`${dangerActionClass} shrink-0`}>
                                             {t('Delete')}
