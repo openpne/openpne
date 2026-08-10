@@ -2,10 +2,12 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { PushPrompt } from '@/components/push-prompt';
+import { UnreadDot, unreadTextClass } from '@/components/unread';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { formatDateTime } from '@/lib/date';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 
 interface FeedActor {
@@ -76,16 +78,12 @@ export default function NotificationsIndex() {
                                         decorative
                                     />
                                     <span className="min-w-0 flex-1">
-                                        <span className={'block text-sm ' + (item.read ? 'text-muted-foreground' : 'font-medium')}>
+                                        <span className={cn('block text-sm', unreadTextClass(!item.read))}>
                                             {item.label}
                                         </span>
                                         <span className="block text-xs text-muted-foreground">{formatDateTime(item.createdAt)}</span>
                                     </span>
-                                    {!item.read && (
-                                        <span className="size-2 shrink-0 rounded-full bg-selected">
-                                            <span className="sr-only">{t('Unread')}</span>
-                                        </span>
-                                    )}
+                                    {!item.read && <UnreadDot />}
                                 </Link>
                             </li>
                         ))}

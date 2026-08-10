@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useRef } from 'react';
-import { UnreadPill } from '@/components/unread-pill';
+import { UnreadPill } from '@/components/unread';
 import { bottomNavSections } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';

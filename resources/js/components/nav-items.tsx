@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { UnreadPill } from '@/components/unread-pill';
+import { UnreadPill } from '@/components/unread';
 import { visibleNavSections } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
