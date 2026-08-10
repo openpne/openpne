@@ -172,8 +172,8 @@ class FeatureNotificationVisibilityTest extends TestCase
         $this->actingOnModern($member)->get('/member/config/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('form.groups', 4)
-                ->where('form.groups.3.key', 'friend_link'),
+                ->has('form.groups', 5)
+                ->where('form.groups.4.key', 'friend_link'),
             );
     }
 
@@ -187,6 +187,6 @@ class FeatureNotificationVisibilityTest extends TestCase
             ->assertOk()
             ->viewData('notificationGroups');
 
-        $this->assertSame(['diary', 'community_topic', 'community_event', 'friend_link'], array_column($groups, 'key'));
+        $this->assertSame(['timeline', 'diary', 'community_topic', 'community_event', 'friend_link'], array_column($groups, 'key'));
     }
 }
