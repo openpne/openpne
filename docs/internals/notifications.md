@@ -23,7 +23,14 @@ document covers the delivery model around it.
    ([`app/Features/Notifications/`](../../app/Features/Notifications), `/notifications`):
    rows are hydrated at render time from their ids (a withdrawn actor degrades to
    a fallback label), opening a row marks it read and redirects to its target, and viewing the
-   feed marks nothing — only opening a row or the explicit mark-all does. Modern reports the
+   feed marks nothing — only opening a row or the explicit mark-all does. **Returning to the feed
+   re-reads it**: a restore hands back the page as it was left — Inertia's stored page state on a
+   popstate, the whole document from the back/forward cache — which is the state before the row the
+   member just opened was marked read. Modern revalidates from
+   [`history-restore.ts`](../../resources/js/lib/history-restore.ts), Classic reloads from
+   [`classic-refresh-on-restore.js`](../../public/js/classic-refresh-on-restore.js); only this
+   screen carries either, since a screen that cannot go stale behind the member's own back has no
+   reason to pay for it. Modern reports the
    unread-row count (via `UnreadCounts`, alongside the layer-1 numbers) in the nav badge and the
    phone bottom bar's notifications tab. Both read the shared `unread` prop, so they cannot
    disagree.

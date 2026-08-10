@@ -1,5 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Settings } from 'lucide-react';
+import { useEffect } from 'react';
 import { Avatar } from '@/components/avatar';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { PushPrompt } from '@/components/push-prompt';
@@ -8,6 +9,7 @@ import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
+import { consumeHistoryRestore } from '@/lib/history-restore';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
@@ -40,6 +42,27 @@ export default function NotificationsIndex() {
     const t = useT();
     const { feed, unread } = usePage<FeedProps>().props;
     const title = t('Notifications');
+
+    // Coming back here does not re-read it — Inertia rebuilds a popstate target from its own history
+    // state, and the browser restores a bfcache entry whole — so the row the member opened one
+    // navigation ago would still say unread. Read state is the server's `read_at` and nothing else,
+    // so arriving from either kind of restore asks for it again rather than patching it locally.
+    useEffect(() => {
+        const refresh = () => router.reload({ only: ['feed', 'unread'] });
+
+        if (consumeHistoryRestore()) {
+            refresh();
+        }
+
+        const onPageshow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                refresh();
+            }
+        };
+        window.addEventListener('pageshow', onPageshow);
+
+        return () => window.removeEventListener('pageshow', onPageshow);
+    }, []);
 
     return (
         <>
