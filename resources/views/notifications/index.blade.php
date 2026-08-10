@@ -1,5 +1,7 @@
 @extends('layouts.classic')
 
+@use('App\Features\Member\MemberConfigCategory')
+
 @section('title', __('Notifications'))
 
 @section('content')
@@ -37,8 +39,10 @@
             @endforeach
             <x-classic.pager :paginator="$feed" />
         @endif
-        @if ($unreadCount > 0)
-            <div class="operation">
+        {{-- Two lists, as the skin splits them: `.button` drops the arrow marker for a form's
+             submit, a plain `moreInfo` keeps it for a link out. --}}
+        <div class="operation">
+            @if ($unreadCount > 0)
                 <ul class="moreInfo button">
                     <li>
                         <form method="POST" action="{{ route('notifications.readAll') }}">
@@ -47,7 +51,13 @@
                         </form>
                     </li>
                 </ul>
-            </div>
-        @endif
+            @endif
+            {{-- What arrives here is decided in member config, so the feed carries the way to it. --}}
+            <ul class="moreInfo">
+                <li>
+                    <a href="{{ route('member.config', ['category' => MemberConfigCategory::Notification->value]) }}">{{ __('Notification settings') }}</a>
+                </li>
+            </ul>
+        </div>
     </x-classic.parts>
 @endsection
