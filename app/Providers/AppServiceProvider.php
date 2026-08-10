@@ -167,13 +167,15 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Named limiters for the content-posting and mail-triggering member writes (auth-flow limiters
-     * live in FortifyServiceProvider). Attached per route in routes/web.php.
+     * Named limiters for the content-posting and mail-triggering member writes, plus the
+     * keystroke-driven endpoints a compose form calls (auth-flow limiters live in
+     * FortifyServiceProvider). Attached per route in routes/web.php.
      */
     private function configureRateLimiting(): void
     {
         RateLimiter::for('posting', $this->writeLimiter('posting', 'posting', 'posting_ip'));
         RateLimiter::for('preview', $this->writeLimiter('preview', 'preview', 'preview_ip'));
+        RateLimiter::for('mention-search', $this->writeLimiter('mention-search', 'mention_search', 'mention_search_ip'));
         RateLimiter::for('message-send', $this->writeLimiter('message', 'message', 'message_ip'));
         RateLimiter::for('friend-request', $this->writeLimiter('friend', 'friend', 'friend_ip'));
         RateLimiter::for('community-join', $this->writeLimiter('community', 'community', 'community_ip'));
