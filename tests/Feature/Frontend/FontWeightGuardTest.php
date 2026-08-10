@@ -19,18 +19,27 @@ use Tests\TestCase;
  * file through would let any later weight in it stay green forever — the hole this design exists to
  * close.
  *
- * Four budgets, differing only in whether they are meant to reach zero:
+ * Four budgets:
  *  - ROLE_OWNERS      the canonical implementation of an allowed role. Permanent.
  *  - OUT_OF_SCOPE     identity marks: the brand lockup and the initial badge. Not body text, so the
  *                     rule does not reach them. Permanent.
- *  - EARNED_EXCEPTIONS weights kept after a component was tried at 400 and the on-device comparison
- *                     rejected it. Each entry records what failed. Permanent once earned, empty until
- *                     something earns a place here.
- *  - DEBT_BASELINE    not yet migrated. Only ever shrinks; empty ends the campaign.
+ *  - EARNED_EXCEPTIONS weight kept after a component was tried at 400 and the on-device comparison
+ *                     rejected it. Permanent once earned; every entry carries the route and state it
+ *                     was judged in and which axis it failed, so it can be re-judged rather than
+ *                     inherited on trust. Empty — nothing has earned a place.
+ *  - DEBT_BASELINE    not yet migrated. Empty, and meant to stay that way: the migration is finished,
+ *                     which is what makes the first check a complete gate.
  *
- * The count is a ratchet, and a ratchet on counts cannot see a removal and an addition inside one
- * file cancelling out. Occurrence fingerprints would close that; the budget is the cheaper guard for
- * a campaign whose debt is actively draining. Raise it if a net-zero swap ever slips through.
+ * So a weight that fails the gate has one of two honest answers, and "add it to DEBT_BASELINE" is
+ * neither. Either it is naming a region or marking unread, and belongs in the recipe that owns that
+ * role; or it does not, and comes out. A component that genuinely needs to keep weight goes through
+ * the on-device comparison and lands in EARNED_EXCEPTIONS with its reason. Parking one in the debt
+ * list is only for splitting a large migration across PRs, and then only with the removal PR already
+ * identified — otherwise the list quietly becomes the exceptions list without the reasons.
+ *
+ * The finished gate still budgets by count, for the five permanent owner and identity files. A count
+ * cannot see a removal and an addition inside one of them cancelling out; occurrence fingerprints
+ * would. Move to those if that failure mode ever actually appears.
  *
  * Out of reach entirely, so it stays a review question rather than a test: semantic <strong> in
  * anything rendered through RichBody (the author's emphasis, not ours — member bodies as well as the
@@ -82,10 +91,8 @@ class FontWeightGuardTest extends TestCase
     private const EARNED_EXCEPTIONS = [];
 
     /**
-     * Files still carrying decorative weight. Now empty: every one has been migrated, so the first
-     * check below is a complete gate — a weight class anywhere outside the three permanent maps
-     * fails. Add an entry only to park a deliberate, temporary exception, and only with a plan to
-     * remove it.
+     * Files still carrying decorative weight. Empty, and see the class docblock before adding one:
+     * this is a migration ledger, not a second exceptions list.
      *
      * @var array<string, int>
      */

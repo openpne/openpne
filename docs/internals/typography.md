@@ -67,6 +67,13 @@ element for the stylesheet's order to resolve.
 
 ## Key invariants
 
+- **The migration is finished, so the guard is a complete gate**: a weight class anywhere outside the
+  heading recipe, the unread helper and the three identity marks fails. When it does, there are two
+  honest answers — the text names a region or marks unread and belongs in the recipe that owns that
+  role, or it does not and the weight comes out. A component that genuinely needs to keep weight
+  earns it through the on-device comparison (label against value, current against not-current,
+  primary against secondary, in light and dark, including hover, focus and disabled) and is recorded
+  with the state it was judged in and the axis it failed. Nothing has earned that yet.
 - `FontWeightGuardTest` budgets every source file under `resources/js` by weight-class count and
   fails three ways: a weight in a file with no budget, a count above its budget, and a count below it
   (a budget lowered late stops being the source of truth).
@@ -77,5 +84,5 @@ element for the stylesheet's order to resolve.
   holds the class string the editable is rendered with — and covers every weight utility except
   `font-normal`, plus both arbitrary forms (`font-[550]`, `[font-weight:700]`). Plain CSS, inline
   styles and semantic `<strong>` are outside it by construction, so they stay a review question.
-- A count ratchet cannot see a removal and an addition inside one file cancelling out. Occurrence
-  fingerprints would; the budget is the cheaper guard while the debt is actively draining.
+- The budgets are counts, which cannot see a removal and an addition inside one owner file cancelling
+  out. Occurrence fingerprints would; move to those if that ever actually happens.
