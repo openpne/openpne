@@ -92,7 +92,7 @@ export function OtpInput({ value, onChange, label, length = 6, autoFocus, id, ..
                     aria-describedby={i === 0 ? aria['aria-describedby'] : undefined}
                     className={cn(
                         // Mirrors the Input tokens; text-base keeps iOS Safari from zoom-locking on focus.
-                        'h-12 w-10 rounded-field border border-field-border bg-field text-center text-base font-semibold text-foreground shadow-sm transition-colors',
+                        'h-12 w-10 rounded-field border border-field-border bg-field text-center text-base text-foreground shadow-sm transition-colors',
                         'focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         'aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-destructive/30',
                     )}

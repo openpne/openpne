@@ -37,7 +37,7 @@ function AgeVisibilityBlock({
     return (
         <div className="py-5 last:pb-0">
             <div className="flex items-center justify-between gap-2">
-                <label htmlFor="age_visibility" className="text-sm font-medium text-foreground">
+                <label htmlFor="age_visibility" className="text-sm text-foreground">
                     {t('Who can see your age')}
                 </label>
                 <VisibilitySelect

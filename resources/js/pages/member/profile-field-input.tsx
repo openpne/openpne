@@ -47,7 +47,7 @@ export function ProfileFieldInput({ field, value, onChange, error, labelRight }:
                 {/* aria-required is not valid on a group/fieldset, so the required cue rides the legend's
                     text: the visual star is decorative and the translated word is sr-only. The legend is
                     a flex row so the visibility control sits on the caption line. */}
-                <legend className="flex w-full items-center justify-between gap-2 text-sm font-medium text-foreground">
+                <legend className="flex w-full items-center justify-between gap-2 text-sm text-foreground">
                     <span id={`${id}-legend`}>
                         {field.caption}
                         {field.is_required && (

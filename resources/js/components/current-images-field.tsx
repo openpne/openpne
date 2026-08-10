@@ -22,7 +22,7 @@ export function CurrentImagesField({ images, removedIds, onToggle }: CurrentImag
 
     return (
         <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-foreground">{t('Current images')}</legend>
+            <legend className="text-sm text-foreground">{t('Current images')}</legend>
             <ul className="flex flex-wrap gap-3">
                 {images.map((image, i) => (
                     <li key={image.id} className="space-y-1 text-center">

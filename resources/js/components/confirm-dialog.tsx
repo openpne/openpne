@@ -77,12 +77,12 @@ export function ConfirmDialogHost() {
                                 )}
                             </div>
                             <div className="flex flex-col-reverse gap-2 border-t border-border px-5 py-3 sm:flex-row sm:justify-end">
-                                <AlertDialog.Cancel className="inline-flex min-h-11 items-center justify-center rounded-md bg-secondary px-5 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/80 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+                                <AlertDialog.Cancel className="inline-flex min-h-11 items-center justify-center rounded-md bg-secondary px-5 text-sm text-secondary-foreground transition hover:bg-secondary/80 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                                     {opts.cancelLabel ?? t('Cancel')}
                                 </AlertDialog.Cancel>
                                 <AlertDialog.Action
                                     onClick={() => settle(true)}
-                                    className={`inline-flex min-h-11 items-center justify-center rounded-md px-5 text-sm font-medium transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                                    className={`inline-flex min-h-11 items-center justify-center rounded-md px-5 text-sm transition active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                                         opts.danger
                                             ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
                                             : 'bg-primary text-primary-foreground hover:bg-primary/90'

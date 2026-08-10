@@ -112,7 +112,7 @@ export default function MemberSearch() {
                         {/* Derived age, gated by AgeVisibility (separate from the birthday field). */}
                         {showAge && (
                             <fieldset className="space-y-1.5">
-                                <legend className="text-sm font-medium text-foreground">{t('Age')}</legend>
+                                <legend className="text-sm text-foreground">{t('Age')}</legend>
                                 <div className="flex items-center gap-2">
                                     <Input
                                         type="number"
@@ -201,7 +201,7 @@ function SearchField({ field, value, range, monthDay, onValue, onRange, onMonthD
             // Month/day only; the birth year (= age) is searched via the Age field.
             return (
                 <fieldset className="space-y-1.5">
-                    <legend className="text-sm font-medium text-foreground">{field.caption}</legend>
+                    <legend className="text-sm text-foreground">{field.caption}</legend>
                     <div className="flex flex-wrap items-center gap-2">
                         {(['from', 'to'] as const).map((bound) => (
                             <span key={bound} className="flex items-center gap-1">
@@ -237,7 +237,7 @@ function SearchField({ field, value, range, monthDay, onValue, onRange, onMonthD
         case 'checkbox':
             return (
                 <fieldset className="space-y-1.5">
-                    <legend className="text-sm font-medium text-foreground">{field.caption}</legend>
+                    <legend className="text-sm text-foreground">{field.caption}</legend>
                     <div className="space-y-1.5">
                         {field.options.map((opt) => (
                             <label key={opt.id} className="flex items-center gap-2 text-sm text-foreground">
@@ -257,7 +257,7 @@ function SearchField({ field, value, range, monthDay, onValue, onRange, onMonthD
         case 'date':
             return (
                 <fieldset className="space-y-1.5">
-                    <legend className="text-sm font-medium text-foreground">{field.caption}</legend>
+                    <legend className="text-sm text-foreground">{field.caption}</legend>
                     <div className="flex flex-wrap items-center gap-2">
                         <Input type="date" className="w-auto" aria-label={`${field.caption} ${t('Start')}`} value={range?.from ?? ''} onChange={(e) => onRange('from', e.target.value)} />
                         <span className="text-muted-foreground">–</span>
