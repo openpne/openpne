@@ -37,7 +37,7 @@ the first write and treat a later change as a data migration.
 
 | Variable | Effect |
 |----------|--------|
-| `APP_TIMEZONE` | The zone every timestamp is written and displayed in. Validated at boot (`App\Support\SiteTimezone`) because `date_default_timezone_set` only warns on a name it cannot use, leaving the previous zone silently in effect. |
+| `APP_TIMEZONE` | The zone every timestamp is written and displayed in. Must be a canonical IANA name — aliases like `Etc/UTC`, `GMT` and `Japan` are rejected, so use `UTC` / `Asia/Tokyo`. Validated at boot (`App\Support\SiteTimezone`) because `date_default_timezone_set` only warns on a name it cannot use, leaving the previous zone silently in effect. |
 
 Key invariants:
 

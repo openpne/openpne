@@ -7,6 +7,7 @@ import {
     formatCivilMonthShort,
     formatInstant,
     formatInstantDate,
+    siteCurrentYear,
 } from './date.ts';
 
 const tokyo: DateFormatContext = { locale: 'ja-JP', timeZone: 'Asia/Tokyo' };
@@ -54,4 +55,21 @@ test('an unusable value falls back to itself instead of throwing', () => {
 
 test('an instant handed to the civil formatter shows up verbatim, never shifted a day', () => {
     assert.equal(formatCivilDate(evening, tokyo), evening);
+});
+
+// Date.UTC would roll these into a neighbouring month/year, which is exactly the silently-wrong
+// rendering the civil formatter exists to prevent.
+test('a date that parses but does not exist is not rolled into the next month', () => {
+    assert.equal(formatCivilDate('2026-02-31', tokyo), '2026-02-31');
+    assert.equal(formatCivilDate('2026-13-01', tokyo), '2026-13-01');
+    assert.equal(formatCivilDate('2026-00-10', tokyo), '2026-00-10');
+    assert.equal(formatCivilDate('0026-08-10', tokyo), '0026-08-10'); // Date.UTC would read this as 1926
+});
+
+test('the current year is the site\'s, not the viewer\'s, across the new year', () => {
+    // 2026-01-01 00:30 in Tokyo is still 2025-12-31 in New York.
+    const newYear = new Date('2025-12-31T15:30:00Z');
+
+    assert.equal(siteCurrentYear(tokyo, newYear), 2026);
+    assert.equal(siteCurrentYear(newYork, newYear), 2025);
 });

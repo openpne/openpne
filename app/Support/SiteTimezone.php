@@ -15,15 +15,20 @@ final class SiteTimezone
     /**
      * A bad name would otherwise pass silently: LoadConfiguration's date_default_timezone_set only
      * warns on one it cannot use and leaves the previous zone in place, so every timestamp would be
-     * written and read in a zone nobody chose. Restricted to PHP's IANA list, a strict subset of what
-     * the client's Intl accepts, so a value that boots is always formattable in the browser too.
+     * written and read in a zone nobody chose.
+     *
+     * The canonical group only — every one of its zones is also formattable by the client's Intl, which
+     * is what lets both surfaces share the value. `ALL_WITH_BC` cannot be used for this: it carries
+     * tzdata filenames (`leapseconds`, `localtime`, `tzdata.zi`, `Factory`) that Intl rejects and that
+     * make date_default_timezone_get raise "Timezone database is corrupt". Non-canonical aliases
+     * (`Etc/UTC`, `GMT`, `Japan`) are rejected on purpose — configure the canonical name instead.
      *
      * @throws InvalidArgumentException
      */
     public static function assertUsable(string $timezone): void
     {
-        if (! in_array($timezone, DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true)) {
-            throw new InvalidArgumentException("APP_TIMEZONE [{$timezone}] is not an IANA timezone name.");
+        if (! in_array($timezone, DateTimeZone::listIdentifiers(), true)) {
+            throw new InvalidArgumentException("APP_TIMEZONE [{$timezone}] is not a canonical IANA timezone name.");
         }
     }
 }

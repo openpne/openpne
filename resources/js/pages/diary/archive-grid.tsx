@@ -31,7 +31,7 @@ export function DiaryArchiveGrid({ counts, ownerId, selected, keyword }: Props) 
     const date = useDateFormat();
     const [showEarlier, setShowEarlier] = useState(false);
 
-    const rows = buildArchiveGrid(counts, new Date().getFullYear(), ownerId, keyword, selected);
+    const rows = buildArchiveGrid(counts, date.currentYear(), ownerId, keyword, selected);
     if (rows.length === 0) {
         return null;
     }

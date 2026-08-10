@@ -7,6 +7,7 @@ import {
     formatCivilMonthShort,
     formatInstant,
     formatInstantDate,
+    siteCurrentYear,
 } from '@/lib/date';
 import type { PageProps } from '@/types';
 
@@ -21,6 +22,7 @@ export function useDateFormat(): {
     civilMonthShort: (month: number) => string;
     instantDate: (iso: string) => string;
     instant: (iso: string) => string;
+    currentYear: () => number;
 } {
     const { locale, timezone } = usePage<PageProps>().props;
 
@@ -33,6 +35,7 @@ export function useDateFormat(): {
             civilMonthShort: (month) => formatCivilMonthShort(month, context),
             instantDate: (iso) => formatInstantDate(iso, context),
             instant: (iso) => formatInstant(iso, context),
+            currentYear: () => siteCurrentYear(context),
         };
     }, [locale, timezone]);
 }

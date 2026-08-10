@@ -46,6 +46,18 @@ export function formatCivilMonthShort(month: number, { locale }: DateFormatConte
 }
 
 /**
+ * The year it currently is on the site's clock. `new Date().getFullYear()` is the viewer's year, which
+ * is the previous one for a browser west of a site that has just crossed into January — enough to
+ * shift a year-ranged view off the site's calendar. Pinned to the Gregorian calendar rather than the
+ * display locale, since the result is arithmetic, not text.
+ */
+export function siteCurrentYear({ timeZone }: DateFormatContext, now: Date = new Date()): number {
+    const parts = new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone }).formatToParts(now);
+
+    return Number(parts.find((part) => part.type === 'year')?.value);
+}
+
+/**
  * `Intl` throws on an unrepresentable date where the old `toLocaleString` returned "Invalid Date", and
  * an absent timestamp does reach the client as `''` (the notification feed serializes a null
  * created_at that way). Falling back to the raw value keeps a bad payload a visible wrong string on
@@ -64,6 +76,11 @@ function render(date: Date, raw: string, locale: string, options: Intl.DateTimeF
  * the browser's zone is. Anything that is not a bare `Y-m-d` — an instant passed to the civil-date
  * formatter by mistake, say — is left for {@link render} to surface verbatim rather than silently
  * shifted to a neighbouring day.
+ *
+ * The round-trip comparison is what makes that promise hold for a date that parses but does not
+ * exist: `Date.UTC` rolls `2026-02-31` into March and `2026-13-01` into the next year, so matching the
+ * regex is not enough. It also catches the two-digit-year window, where `Date.UTC(26, …)` would mean
+ * 1926.
  */
 function civilToUtcInstant(value: string): Date {
     const parts = CIVIL_DATE.exec(value);
@@ -71,5 +88,10 @@ function civilToUtcInstant(value: string): Date {
         return new Date(Number.NaN);
     }
 
-    return new Date(Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])));
+    const [year, month, day] = [Number(parts[1]), Number(parts[2]), Number(parts[3])];
+    const date = new Date(Date.UTC(year, month - 1, day));
+    const survivedRoundTrip =
+        date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+
+    return survivedRoundTrip ? date : new Date(Number.NaN);
 }
