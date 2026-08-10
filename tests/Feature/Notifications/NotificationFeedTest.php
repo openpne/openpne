@@ -12,6 +12,7 @@ use App\Models\Diary;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\MessageRecipient;
+use App\Models\TimelinePost;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Message\MessageReceivedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -145,6 +146,31 @@ class NotificationFeedTest extends TestCase
         $hidden = Diary::factory()->private()->create(['member_id' => $owner->getKey()]);
         $gone = $this->seedRow($viewer, 'diary_commented', ['commenter_id' => $actor->getKey(), 'diary_id' => 424242, 'reason' => 'related']);
         $unviewable = $this->seedRow($viewer, 'diary_commented', ['commenter_id' => $actor->getKey(), 'diary_id' => $hidden->getKey(), 'reason' => 'related']);
+
+        $this->actingAs($viewer)->post("/notifications/{$gone->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
+        $this->actingAs($viewer)->post("/notifications/{$unviewable->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
+    }
+
+    public function test_open_redirects_a_mention_to_the_thread_root(): void
+    {
+        [$viewer, $author] = Member::factory()->count(2)->create()->all();
+        $root = TimelinePost::factory()->create(['member_id' => $author->getKey()]);
+        // The row addresses the reply that named the viewer; a thread has one address.
+        $reply = TimelinePost::factory()->replyTo($root)->create(['member_id' => $author->getKey()]);
+        $row = $this->seedRow($viewer, 'timeline_mentioned', ['author_id' => $author->getKey(), 'post_id' => $reply->getKey()]);
+
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
+            ->assertRedirect('/timeline/'.$root->getKey());
+    }
+
+    public function test_open_falls_back_to_the_feed_when_the_mentioning_post_is_gone_or_hidden(): void
+    {
+        [$viewer, $author] = Member::factory()->count(2)->create()->all();
+        $hidden = TimelinePost::factory()->private()->create(['member_id' => $author->getKey()]);
+        $gone = $this->seedRow($viewer, 'timeline_mentioned', ['author_id' => $author->getKey(), 'post_id' => 424242]);
+        $unviewable = $this->seedRow($viewer, 'timeline_mentioned', ['author_id' => $author->getKey(), 'post_id' => $hidden->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$gone->getKey()}/open")
             ->assertRedirect(route('notifications.index'));

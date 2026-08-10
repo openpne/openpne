@@ -10,12 +10,14 @@ use App\Features\Notifications\NotificationCenterRow;
 use App\Features\Notifications\NotificationFeedRow;
 use App\Features\Notifications\NotificationKindLabel;
 use App\Features\Notifications\Queries\ListNotificationCenterRows;
+use App\Features\Timeline\TimelineAccess;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Member;
 use App\Models\MessageRecipient;
+use App\Models\TimelinePost;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
@@ -109,7 +111,7 @@ class NotificationFeedSerializer
             'community_joined' => $data['new_member_id'] ?? null,
             'community_admin_transfer_requested' => $data['requester_id'] ?? null,
             'community_sub_admin_appointed' => $data['appointer_id'] ?? null,
-            'diary_posted', 'community_topic_posted', 'community_event_posted' => $data['author_id'] ?? null,
+            'diary_posted', 'community_topic_posted', 'community_event_posted', 'timeline_mentioned' => $data['author_id'] ?? null,
             default => null,
         };
     }
@@ -134,6 +136,7 @@ class NotificationFeedSerializer
             'diary_posted' => self::diaryUrl($row, $data['diary_id'] ?? null),
             'community_topic_posted' => self::topicUrl($row, $data['topic_id'] ?? null),
             'community_event_posted' => self::eventUrl($row, $data['event_id'] ?? null),
+            'timeline_mentioned' => self::timelineUrl($row, $data['post_id'] ?? null),
             default => null,
         };
     }
@@ -245,6 +248,26 @@ class NotificationFeedSerializer
 
         return $viewer !== null && CommunityEventAccess::canViewEvent($event, $viewer)
             ? '/communityEvent/'.$event->getKey()
+            : null;
+    }
+
+    /**
+     * A deleted post — or a thread the recipient can no longer view — counts as gone. A thread has
+     * one address, so a row about a reply opens the root; the whole thread is one audience, which
+     * is also what the clearance is read against.
+     */
+    private static function timelineUrl(DatabaseNotification $row, ?int $postId): ?string
+    {
+        $post = $postId === null ? null : TimelinePost::find($postId);
+        $root = $post === null || $post->in_reply_to_id === null ? $post : $post->parent;
+        if ($root === null) {
+            return null;
+        }
+
+        $viewer = Member::find($row->notifiable_id);
+
+        return $viewer !== null && TimelineAccess::canView($viewer, $root)
+            ? '/timeline/'.$root->getKey()
             : null;
     }
 

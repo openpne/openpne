@@ -290,7 +290,7 @@ final class StepRegistry
             $names[] = $key->op3SourceName();
         }
 
-        foreach (NotificationKind::cases() as $kind) {
+        foreach (NotificationKind::importableCases() as $kind) {
             foreach (NotificationChannel::cases() as $channel) {
                 $names[] = $kind->op3ConfigName($channel);
             }

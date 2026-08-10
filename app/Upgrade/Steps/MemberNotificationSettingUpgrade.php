@@ -13,9 +13,9 @@ use App\Upgrade\UpgradeStep;
  * `member_notification_settings`.
  * The migrated source names are derived from NotificationKind × NotificationChannel
  * (NotificationKind::op3ConfigName()), so registering a kind is all it takes to migrate its two
- * keys — there is no second list here to drift. Every registered kind imports, wired or not:
+ * keys — there is no second list here to drift. Every importable kind imports, wired or not:
  * the upgrade is one-shot, so an unwired kind's stored choice must be preserved regardless
- * of whether a sender exists.
+ * of whether a sender exists. A kind native to OpenPNE 4 has no source key and is passed over.
  *
  * Values are copied verbatim in the source's own semantics: '0' is the only opt-out, anything
  * else means enabled (the fail-open default the source form wrote). member_config is a KV table
@@ -99,7 +99,7 @@ class MemberNotificationSettingUpgrade extends UpgradeStep
     private function pairs(): array
     {
         $pairs = [];
-        foreach (NotificationKind::cases() as $kind) {
+        foreach (NotificationKind::importableCases() as $kind) {
             foreach (NotificationChannel::cases() as $channel) {
                 $pairs[] = [$kind, $channel];
             }

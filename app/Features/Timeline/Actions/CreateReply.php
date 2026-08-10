@@ -2,6 +2,7 @@
 
 namespace App\Features\Timeline\Actions;
 
+use App\Features\Timeline\Events\TimelineReplyPosted;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +31,12 @@ class CreateReply
                 'body' => $body,
                 'visibility' => $parent->visibility,
             ]);
-            $reply->mentions()->createMany(($this->mentions)($author, $body, $mentions));
+            $resolved = ($this->mentions)($author, $body, $mentions);
+            $reply->mentions()->createMany($resolved);
+
+            // Dispatched here so the snapshot is taken from the rows just written; delivery waits
+            // for the commit (ShouldDispatchAfterCommit).
+            TimelineReplyPosted::dispatch($reply, $author, ResolveMentions::memberIds($resolved));
 
             return $reply;
         });

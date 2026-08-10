@@ -42,6 +42,7 @@ final class NotificationKindLabel
             'diary_posted' => __(':name posted a new %diary%.', ['name' => $name]),
             'community_topic_posted' => __(':name posted a new %topic%.', ['name' => $name]),
             'community_event_posted' => __(':name posted a new event.', ['name' => $name]),
+            'timeline_mentioned' => __(':name mentioned you in a %activity% post.', ['name' => $name]),
             default => __('New notification'),
         };
     }

@@ -50,6 +50,7 @@ class NotificationKindLabelTest extends TestCase
             'new diary' => ['diary_posted', null, 'Alice posted a new diary.'],
             'new topic' => ['community_topic_posted', null, 'Alice posted a new topic.'],
             'new event' => ['community_event_posted', null, 'Alice posted a new event.'],
+            'mention' => ['timeline_mentioned', null, 'Alice mentioned you in a timeline post.'],
         ];
     }
 

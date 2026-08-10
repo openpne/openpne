@@ -27,6 +27,7 @@ enum MailTemplate: string
     case MessageReceived = 'message-received';
     case DiaryCommentReceived = 'diary-comment';
     case DiaryPostedNotified = 'diary-posted';
+    case TimelineMentionNotified = 'timeline-mention';
     case CommunityPostingNotified = 'community-posting';
     case CommunityJoinNotice = 'community-join';
     case RegistrationCompleted = 'registration-complete';
@@ -140,6 +141,18 @@ enum MailTemplate: string
                     'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
                     'diary_title' => ['help' => 'The %diary% title.', 'sample' => 'Example title'],
                     'url' => ['help' => 'The %diary% URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::TimelineMentionNotified => new MailTemplateDefinition(
+                // OpenPNE-4-only: OpenPNE 3's timeline had no @mentions, so there is no source
+                // wording to carry — the default is authored here.
+                op3SourceName: null,
+                isConfigurable: true,
+                caption: 'Mentioned in a %activity% post',
+                variables: [
+                    'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
+                    'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
+                    'url' => ['help' => 'The %activity% post URL.', 'sample' => 'https://example.test'],
                 ],
             ),
             self::CommunityPostingNotified => new MailTemplateDefinition(

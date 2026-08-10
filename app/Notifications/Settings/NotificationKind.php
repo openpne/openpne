@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifications\Settings;
 
+use LogicException;
+
 /**
  * The closed registry of member-configurable notification kinds (the notification catalog; its
  * OpenPNE 3 notification-extension lineage is described in docs/internals/notifications.md).
@@ -12,7 +14,8 @@ namespace App\Notifications\Settings;
  *
  * Every importable catalog item is registered, wired or not, so the one-shot upgrade can
  * preserve every member's stored choice; only wired kinds (those with an OpenPNE 4 sender)
- * surface in the settings UI.
+ * surface in the settings UI. A kind without an op3Name is native to OpenPNE 4 — it has no
+ * stored choice to import, so the upgrade passes over it.
  */
 enum NotificationKind: string
 {
@@ -21,6 +24,7 @@ enum NotificationKind: string
     case TimelineNewPostCommunity = 'timeline_new_post_community';
     case TimelineReplyPost = 'timeline_reply_post';
     case TimelineRelatedPost = 'timeline_related_post';
+    case TimelineMention = 'timeline_mention';
 
     case DiaryNewPost = 'diary_new_post';
     case DiaryNewPostOnlyFriends = 'diary_new_post_only_friends';
@@ -75,6 +79,11 @@ enum NotificationKind: string
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineRelatedPost',
                 caption: 'Comments on %activity% posts you commented on',
+            ),
+            self::TimelineMention => new NotificationKindDefinition(
+                category: NotificationCategory::Timeline,
+                caption: 'When you are mentioned in a %activity% post',
+                isWired: true,
             ),
             self::DiaryNewPost => new NotificationKindDefinition(
                 category: NotificationCategory::Diary,
@@ -213,10 +222,17 @@ enum NotificationKind: string
      * The member_config key for this kind on $channel, in the exact format the OpenPNE 3
      * notification extension's settings form stored. The upgrade derives its imported name set
      * from this, so there is no second list to keep in sync.
+     *
+     * @throws LogicException for a native kind, which has no source key — callers select their
+     *                        input with importableCases() rather than filtering the result.
      */
     public function op3ConfigName(NotificationChannel $channel): string
     {
         $name = $this->definition()->op3Name;
+
+        if ($name === null) {
+            throw new LogicException("{$this->value} is an OpenPNE 4 native kind and has no OpenPNE 3 config name.");
+        }
 
         return match ($channel) {
             NotificationChannel::Web => "is_send_{$name}_web",
@@ -228,6 +244,18 @@ enum NotificationKind: string
     public static function wiredCases(): array
     {
         return array_values(array_filter(self::cases(), static fn (self $kind): bool => $kind->isWired()));
+    }
+
+    /**
+     * @return list<self> kinds the OpenPNE 3 upgrade imports (those with a source name). The SSoT
+     *                    for every op3ConfigName() caller, so a native kind cannot reach one.
+     */
+    public static function importableCases(): array
+    {
+        return array_values(array_filter(
+            self::cases(),
+            static fn (self $kind): bool => $kind->definition()->op3Name !== null,
+        ));
     }
 
     /**

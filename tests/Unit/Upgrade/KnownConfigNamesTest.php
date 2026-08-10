@@ -9,6 +9,7 @@ use App\Notifications\Settings\NotificationKind;
 use App\Support\PreferenceKey;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\CommunityUpgrade;
+use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
 use App\Upgrade\UpgradeStep;
 use PHPUnit\Framework\TestCase;
@@ -36,15 +37,50 @@ class KnownConfigNamesTest extends TestCase
         }
     }
 
-    public function test_member_config_names_cover_every_registered_notification_key(): void
+    public function test_member_config_names_cover_every_importable_notification_key(): void
     {
         $known = StepRegistry::knownMemberConfigNames();
 
-        foreach (NotificationKind::cases() as $kind) {
+        foreach (NotificationKind::importableCases() as $kind) {
             foreach (NotificationChannel::cases() as $channel) {
                 $this->assertContains($kind->op3ConfigName($channel), $known);
             }
         }
+    }
+
+    /**
+     * A kind OpenPNE 4 added itself has no source key, so the upgrade must pass over it entirely:
+     * it can neither widen the recognised-name set (every extra name there is one the preflight
+     * stops reporting) nor appear as a target the step could write.
+     */
+    public function test_a_native_notification_kind_stays_out_of_the_upgrade(): void
+    {
+        $importable = NotificationKind::importableCases();
+        $native = array_values(array_filter(
+            NotificationKind::cases(),
+            static fn (NotificationKind $kind): bool => ! in_array($kind, $importable, true),
+        ));
+        $this->assertNotEmpty($native, 'no native kind registered — this guard now proves nothing');
+
+        $step = new MemberNotificationSettingUpgrade;
+        $sql = ($step->filter() ?? '').' '.implode(' ', array_map(
+            static fn ($column): string => (string) $column->expr,
+            $step->columns(),
+        ));
+
+        foreach ($native as $kind) {
+            $this->assertStringNotContainsString($kind->value, $sql, "{$kind->value} is a target the upgrade can write");
+        }
+
+        $sendKeys = array_filter(
+            StepRegistry::knownMemberConfigNames(),
+            static fn (string $name): bool => str_starts_with($name, 'is_send_'),
+        );
+        $this->assertCount(
+            count($importable) * count(NotificationChannel::cases()),
+            $sendKeys,
+            'the recognised is_send_ family must be exactly the importable kinds’ two keys each',
+        );
     }
 
     public function test_member_config_names_cover_the_documented_dispositions(): void
