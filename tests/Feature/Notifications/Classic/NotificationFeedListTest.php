@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications\Classic;
 
+use App\Features\Member\MemberConfigCategory;
 use App\Features\Notifications\NotificationCenterWindow;
 use App\Models\Member;
 use App\Notifications\Friend\FriendRequestedNotification;
@@ -121,6 +122,24 @@ class NotificationFeedListTest extends TestCase
             ->assertOk()
             ->assertSee(__('No notifications yet.'))
             ->assertDontSee('class="pagerRelative"', false);
+    }
+
+    /** The way to what decides this feed's contents, independent of whether it has any. */
+    public function test_the_settings_link_shows_whether_or_not_the_feed_has_rows(): void
+    {
+        $viewer = Member::factory()->create();
+        $settings = route('member.config', ['category' => MemberConfigCategory::Notification->value]);
+
+        $this->actingAs($viewer)->get('/notifications')
+            ->assertOk()
+            ->assertSee('href="'.$settings.'"', false)
+            ->assertSee(__('Notification settings'));
+
+        $this->seedRow($viewer, 'diary_commented', []);
+
+        $this->actingAs($viewer)->get('/notifications')
+            ->assertOk()
+            ->assertSee('href="'.$settings.'"', false);
     }
 
     /**
