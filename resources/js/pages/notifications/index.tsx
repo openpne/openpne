@@ -2,7 +2,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { PushPrompt } from '@/components/push-prompt';
-import { UnreadDot, unreadTextClass } from '@/components/unread';
+import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { formatDateTime } from '@/lib/date';
@@ -79,6 +79,7 @@ export default function NotificationsIndex() {
                                     />
                                     <span className="min-w-0 flex-1">
                                         <span className={cn('block text-sm', unreadTextClass(!item.read))}>
+                                            {!item.read && <UnreadLabel />}
                                             {item.label}
                                         </span>
                                         <span className="block text-xs text-muted-foreground">{formatDateTime(item.createdAt)}</span>

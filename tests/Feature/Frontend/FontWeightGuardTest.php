@@ -60,8 +60,8 @@ class FontWeightGuardTest extends TestCase
     private const ROLE_OWNERS = [
         // headingVariants: the one place a heading's weight is written.
         'components/ui/heading.tsx' => 1,
-        // unreadTextClass + the count pill: the one place unread is expressed.
-        'components/unread.tsx' => 2,
+        // unreadTextClass: the one place unread is expressed.
+        'components/unread.tsx' => 1,
     ];
 
     /** @var array<string, int> */

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Pagination } from '@/components/pagination';
-import { UnreadDot, unreadTextClass } from '@/components/unread';
+import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
 import { Checkbox } from '@/components/ui/checkbox';
 import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { formatDateTime } from '@/lib/date';
@@ -132,6 +132,7 @@ export default function MessageIndex() {
                                     <div className="min-w-0 flex-1">
                                         <p className={cn('truncate text-foreground', unreadTextClass(m.unread))}>
                                             <Link href={showPath(m.id)} className={stretchedLink}>
+                                                {m.unread && <UnreadLabel />}
                                                 {m.subject || t('(No subject)')}
                                             </Link>
                                         </p>

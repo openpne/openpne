@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { UnreadPill } from '@/components/unread';
+import { CountPill } from '@/components/count-pill';
 import { visibleNavSections } from '@/lib/member-chrome';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
@@ -36,7 +36,7 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
                         >
                             <Icon className="size-5 shrink-0" strokeWidth={active ? 2.25 : 2} />
                             <span className="flex-1 truncate">{t(label.key, label.replacements)}</span>
-                            {badge && <UnreadPill count={count} label={t(badge.label.key, { count })} />}
+                            {badge && <CountPill count={count} label={t(badge.label.key, { count })} />}
                         </Link>
                     </li>
                 );
