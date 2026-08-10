@@ -104,7 +104,7 @@ function TimelineRow({ post }: { post: TimelinePostEntry }) {
             href={`/timeline/${post.id}`}
             author={post.author}
             title={post.body}
-            titleClassName="line-clamp-2 text-sm text-foreground"
+            contentLines={2}
             date={formatDate(post.createdAt)}
             replyCount={post.replyCount}
         />

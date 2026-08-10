@@ -5,6 +5,7 @@ import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { ListRow, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 /** Icon + count meta cluster for list rows. Renders nothing at zero. */
 export function CountBadge({ icon: Icon, count, srLabel }: { icon: LucideIcon; count: number; srLabel: string }) {
@@ -43,8 +44,11 @@ type EntrySubject =
 type EntryRowProps = EntrySubject & {
     href: string;
     title: ReactNode;
-    /** Replaces the one-line truncate title styling (e.g. a two-line clamped timeline body). */
-    titleClassName?: string;
+    /** How much of the content line to show before clamping. A body-only entry (a timeline post) has
+     *  no title to stand in for it, so it gets two lines; everything else states itself in one.
+     *  Deliberately not a `title | body` switch: the whole point is that the two are the same slot,
+     *  and a name carrying the distinction invites a weight or size difference back into it. */
+    contentLines?: 1 | 2;
     /** Plain byline text between the subject name and the date (the activity digest's Topic/Event kind). */
     bylineNote?: string;
     /** Pre-formatted date string shown in the byline. */
@@ -68,11 +72,17 @@ type EntryRowProps = EntrySubject & {
 /**
  * The canonical content-entry list row (diary / topic / event / timeline / activity digests): an
  * author-first social card. The byline pairs the subject image — a member's circular avatar or the
- * community's square image — with its name · note · date · counts, then the title, an optional
- * excerpt, and an optional photo strip. Person/action rows (friend, block, message boxes) keep
- * their own layouts — this is not for them.
+ * community's square image — with its name · note · date · counts, then the content line, an
+ * optional excerpt, and an optional photo strip. Person/action rows (friend, block, message boxes)
+ * keep their own layouts — this is not for them.
+ *
+ * Three sizes carry the hierarchy and no weight does: the content line is the largest text (16px,
+ * foreground), the byline name is smaller (14px, foreground), and the meta beside it smaller and
+ * muted. Weight is spent on headings and unread state alone, so a row has one thing to look at.
+ * Author-first is about who leads the row, which the avatar and the byline still do; when the name
+ * and the line below it were both 16/500/foreground, the row had two focal points and therefore none.
  */
-export function EntryRow({ href, author, community, title, titleClassName, bylineNote, date, commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, excerpt, thumbnails, actions }: EntryRowProps) {
+export function EntryRow({ href, author, community, title, contentLines = 1, bylineNote, date, commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, excerpt, thumbnails, actions }: EntryRowProps) {
     const t = useT();
 
     // The photo strip already shows there are photos, so the camera marker only appears without it.
@@ -107,7 +117,7 @@ export function EntryRow({ href, author, community, title, titleClassName, bylin
     );
 
     const titleLine = (
-        <p className={titleClassName ?? 'truncate font-medium text-foreground'}>
+        <p className={cn(contentLines === 2 ? 'line-clamp-2' : 'truncate', 'text-foreground')}>
             <Link href={href} className={stretchedLink}>
                 {title}
             </Link>
@@ -128,7 +138,7 @@ export function EntryRow({ href, author, community, title, titleClassName, bylin
     const content = (
         <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
-                <span className="truncate font-medium text-foreground">{subjectName}</span>
+                <span className="truncate text-sm text-foreground">{subjectName}</span>
                 {bylineMeta.length > 0 && (
                     <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
                         {bylineMeta.flatMap((item, index) => [
