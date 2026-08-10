@@ -74,7 +74,7 @@ export default function MessageEdit() {
                 <form id={COMPOSE_FORM_ID} onSubmit={(e) => e.preventDefault()} className="space-y-4">
                     {draft.recipient && (
                         <div className="flex items-center gap-2 text-sm">
-                            <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
+                            <span className="text-muted-foreground">{t('Recipient')}</span>
                             <Avatar id={draft.recipient.id} name={draft.recipient.name} src={draft.recipient.imageUrl} color={draft.recipient.avatarColor} size="sm" decorative />
                             <Link href={`/member/${draft.recipient.id}`} className="text-link hover:underline">
                                 {draft.recipient.name}

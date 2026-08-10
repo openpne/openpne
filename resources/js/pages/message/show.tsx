@@ -66,7 +66,7 @@ export default function MessageShow() {
 
             <Panel bodyClassName="space-y-3 text-foreground">
                 <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
-                    <dt className="font-medium text-muted-foreground">{counterpartyHeading}</dt>
+                    <dt className="text-muted-foreground">{counterpartyHeading}</dt>
                     <dd>
                         {message.counterparties.length === 0 ? (
                             <span>{t('Withdrawn member')}</span>
@@ -83,7 +83,7 @@ export default function MessageShow() {
                             </ul>
                         )}
                     </dd>
-                    <dt className="font-medium text-muted-foreground">{t('Created At')}</dt>
+                    <dt className="text-muted-foreground">{t('Created At')}</dt>
                     <dd>{formatDateTime(message.createdAt)}</dd>
                 </dl>
 

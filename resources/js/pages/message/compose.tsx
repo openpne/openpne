@@ -74,7 +74,7 @@ export default function MessageCompose() {
             <Panel sheet>
                 <form id={COMPOSE_FORM_ID} onSubmit={(e) => e.preventDefault()} className="space-y-4">
                     <div className="flex items-center gap-2 text-sm">
-                        <span className="font-medium text-muted-foreground">{t('Recipient')}</span>
+                        <span className="text-muted-foreground">{t('Recipient')}</span>
                         <Avatar id={recipient.id} name={recipient.name} src={recipient.imageUrl} color={recipient.avatarColor} size="sm" decorative />
                         <Link href={`/member/${recipient.id}`} className="text-link hover:underline">
                             {recipient.name}

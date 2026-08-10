@@ -92,7 +92,7 @@ export function AuthLayout({ title, intro, width = 'standard', children }: AuthL
                                 </span>
                             )}
                             {opt.value === locale ? (
-                                <span lang={opt.value} aria-current="true" className="px-2 py-1 font-medium text-foreground">
+                                <span lang={opt.value} aria-current="true" className="px-2 py-1 text-foreground">
                                     {opt.label}
                                 </span>
                             ) : (

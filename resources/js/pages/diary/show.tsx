@@ -93,7 +93,7 @@ export default function DiaryShow() {
                             <ChevronLeft className="size-4 shrink-0 text-link" aria-hidden />
                             <span className="min-w-0">
                                 <span className="block text-xs text-muted-foreground">{t('Older %Diary%')}</span>
-                                <span className="block truncate text-sm font-medium text-link group-hover:underline">{older.title}</span>
+                                <span className="block truncate text-sm text-link group-hover:underline">{older.title}</span>
                             </span>
                         </Link>
                     ) : (
@@ -103,7 +103,7 @@ export default function DiaryShow() {
                         <Link href={`/diary/${newer.id}`} className="group flex min-h-11 min-w-0 flex-1 items-center justify-end gap-1.5 text-right">
                             <span className="min-w-0">
                                 <span className="block text-xs text-muted-foreground">{t('Newer %Diary%')}</span>
-                                <span className="block truncate text-sm font-medium text-link group-hover:underline">{newer.title}</span>
+                                <span className="block truncate text-sm text-link group-hover:underline">{newer.title}</span>
                             </span>
                             <ChevronRight className="size-4 shrink-0 text-link" aria-hidden />
                         </Link>
@@ -130,7 +130,7 @@ export default function DiaryShow() {
                                     ) : (
                                         <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
-                                    <span className="ml-auto shrink-0 font-medium">#{comment.number}</span>
+                                    <span className="ml-auto shrink-0">#{comment.number}</span>
                                     <span className="shrink-0">{formatDateTime(comment.createdAt)}</span>
                                     {comment.deletable && (
                                         <button type="button" onClick={() => deleteComment(comment.id)} className={cn(dangerActionClass, 'shrink-0')}>

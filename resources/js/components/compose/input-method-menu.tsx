@@ -71,7 +71,7 @@ export function InputMethodMenu({ value, onSelect }: { value: InputMethod; onSel
                                 </DropdownMenuItemIndicator>
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="block font-medium">{item.label}</span>
+                                <span className="block">{item.label}</span>
                                 <span id={`${descId}-${item.value}`} className="mt-0.5 block text-xs text-muted-foreground">
                                     {item.description}
                                 </span>

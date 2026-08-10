@@ -90,7 +90,7 @@ export default function CommunitySearch() {
                                 <ListRow key={community.id} rowLink chevron>
                                     <CommunityImage name={community.name} src={community.imageUrl} className="size-12" decorative />
                                     <div className="min-w-0 flex-1">
-                                        <p className="font-medium text-foreground">
+                                        <p className="text-foreground">
                                             <Link href={`/community/${community.id}`} className={stretchedLink}>
                                                 {community.name}
                                             </Link>
