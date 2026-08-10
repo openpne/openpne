@@ -33,7 +33,7 @@ export default function CommunityEventIndex() {
                                     key={event.id}
                                     href={`/communityEvent/${event.id}`}
                                     author={event.author}
-                                    title={event.name}
+                                    content={event.name}
                                     date={`${t('Open date')}: ${formatDate(event.openDate)}`}
                                     commentCount={event.commentCount}
                                     participantCount={event.participantCount}

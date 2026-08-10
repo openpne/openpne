@@ -43,7 +43,8 @@ type EntrySubject =
 
 type EntryRowProps = EntrySubject & {
     href: string;
-    title: ReactNode;
+    /** The line that identifies the entry: a title where there is one, the body itself where there is not. */
+    content: ReactNode;
     /** How much of the content line to show before clamping. A body-only entry (a timeline post) has
      *  no title to stand in for it, so it gets two lines; everything else states itself in one.
      *  Deliberately not a `title | body` switch: the whole point is that the two are the same slot,
@@ -82,7 +83,7 @@ type EntryRowProps = EntrySubject & {
  * Author-first is about who leads the row, which the avatar and the byline still do; when the name
  * and the line below it were both 16/500/foreground, the row had two focal points and therefore none.
  */
-export function EntryRow({ href, author, community, title, contentLines = 1, bylineNote, date, commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, excerpt, thumbnails, actions }: EntryRowProps) {
+export function EntryRow({ href, author, community, content, contentLines = 1, bylineNote, date, commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, excerpt, thumbnails, actions }: EntryRowProps) {
     const t = useT();
 
     // The photo strip already shows there are photos, so the camera marker only appears without it.
@@ -116,10 +117,10 @@ export function EntryRow({ href, author, community, title, contentLines = 1, byl
         <Avatar id={author?.id ?? 0} name={subjectName} src={author?.imageUrl ?? null} color={author?.avatarColor ?? null} size="sm" decorative />
     );
 
-    const titleLine = (
-        <p className={cn(contentLines === 2 ? 'line-clamp-2' : 'truncate', 'text-foreground')}>
+    const contentLine = (
+        <p className={cn(contentLines === 2 ? 'line-clamp-2' : 'truncate', 'text-base text-foreground')}>
             <Link href={href} className={stretchedLink}>
-                {title}
+                {content}
             </Link>
         </p>
     );
@@ -135,7 +136,7 @@ export function EntryRow({ href, author, community, title, contentLines = 1, byl
     }
     bylineMeta.push(...counts);
 
-    const content = (
+    const textColumn = (
         <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-sm text-foreground">{subjectName}</span>
@@ -150,7 +151,7 @@ export function EntryRow({ href, author, community, title, contentLines = 1, byl
                     </span>
                 )}
             </div>
-            <div className="mt-0.5">{titleLine}</div>
+            <div className="mt-0.5">{contentLine}</div>
             {excerpt && <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{excerpt}</p>}
             {thumbnails && thumbnails.length > 0 && (
                 <div className="mt-2 flex gap-1.5">
@@ -166,7 +167,7 @@ export function EntryRow({ href, author, community, title, contentLines = 1, byl
         return (
             <ListRow rowLink className="items-start">
                 {subjectImage}
-                {content}
+                {textColumn}
                 {/* Raised above the row link, but only the actions themselves take the clicks: the
                     gaps between them stay transparent, so they open the entry like the rest of the row. */}
                 <span className="pointer-events-none relative z-10 flex shrink-0 items-center gap-3 text-sm [&>*]:pointer-events-auto">{actions}</span>
@@ -177,7 +178,7 @@ export function EntryRow({ href, author, community, title, contentLines = 1, byl
     return (
         <ListRow rowLink chevron className="items-start">
             {subjectImage}
-            {content}
+            {textColumn}
         </ListRow>
     );
 }
