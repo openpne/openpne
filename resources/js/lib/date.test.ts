@@ -8,6 +8,7 @@ import {
     formatCivilMonthShort,
     formatExact,
     formatListStamp,
+    msUntilNextSiteDay,
     siteCurrentYear,
 } from './date.ts';
 
@@ -55,6 +56,16 @@ test('the boundaries a list stamp turns on are the site\'s calendar, not the vie
     assert.equal(formatListStamp('2025-12-31T16:00:00Z', tokyo, newYear), '01:00');
     assert.equal(siteCurrentYear(tokyo, newYear), 2026);
     assert.equal(siteCurrentYear(newYork, newYear), 2025);
+});
+
+// What the shared clock waits on, so a list stamp is re-read when the site's day turns over.
+test('the delay to the next site day is measured on the site clock', () => {
+    // 2026-08-09 23:59:59 in Tokyo, 10:59:59 in New York.
+    const now = new Date('2026-08-09T14:59:59Z');
+
+    assert.equal(msUntilNextSiteDay(now, 'Asia/Tokyo'), 1_000);
+    assert.equal(msUntilNextSiteDay(now, 'America/New_York'), 46_801_000);
+    assert.equal(msUntilNextSiteDay(new Date('2026-08-09T15:00:00Z'), 'Asia/Tokyo'), 86_400_000);
 });
 
 test('a civil date is the stored day in every timezone, with the weekday only when asked', () => {

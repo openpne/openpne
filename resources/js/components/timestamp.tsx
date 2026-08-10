@@ -1,4 +1,7 @@
+import { usePage } from '@inertiajs/react';
 import { useDateFormat } from '@/lib/use-date-format';
+import { useSiteDay } from '@/lib/use-site-day';
+import type { PageProps } from '@/types';
 
 /**
  * Which shape a displayed instant takes. `absolute` is the whole date and time, for a page that is the
@@ -20,6 +23,10 @@ export type TimestampPreset = 'absolute' | 'listStamp';
  */
 export function Timestamp({ at, preset, className }: { at: string; preset: TimestampPreset; className?: string }) {
     const date = useDateFormat();
+    // `listStamp` is shaped relative to today, so it has to be re-read when the site's day turns over.
+    // Subscribed for both presets because a hook cannot be conditional; an `absolute` stamp just
+    // re-renders once a day to the same string.
+    useSiteDay(usePage<PageProps>().props.timezone);
 
     return (
         <time dateTime={at} title={preset === 'listStamp' ? date.exact(at) : undefined} className={className}>

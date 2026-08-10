@@ -91,6 +91,29 @@ export function formatCivilMonthShort(month: number, { locale }: DateFormatConte
 }
 
 /**
+ * How long until the site's calendar day changes. `formatListStamp` renders relative to today, so a
+ * page left open past the site's midnight would keep yesterday's rows saying a time — the shape
+ * depends on the clock, and something has to re-read it (see use-site-day.ts).
+ *
+ * Derived from the site's own wall clock, so a viewer in another zone still turns over with the site.
+ * The result is an estimate: a DST shift later in the day moves the boundary, so the caller must
+ * re-compute after waking rather than trust one delay to be exact.
+ */
+export function msUntilNextSiteDay(now: Date, timeZone: string): number {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+        timeZone,
+    }).formatToParts(now);
+    const read = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+    const elapsed = read('hour') * 3600 + read('minute') * 60 + read('second');
+
+    return (86400 - elapsed) * 1000 - now.getMilliseconds();
+}
+
+/**
  * The year it currently is on the site's clock. `new Date().getFullYear()` is the viewer's year, which
  * is the previous one for a browser west of a site that has just crossed into January — enough to
  * shift a year-ranged view off the site's calendar.

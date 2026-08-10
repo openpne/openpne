@@ -3,8 +3,9 @@
 Which shape a date takes on screen, and why. The clock itself — `APP_TIMEZONE`, how it reaches the
 client, how instants are stored — is [runtime.md](runtime.md).
 
-Applies to the Modern surface and the admin panel. Classic keeps OpenPNE 3's formats: its value to a
-migrating site is that screens do not move under them.
+Applies to the Modern surface. Classic keeps OpenPNE 3's formats: its value to a migrating site is
+that screens do not move under them. The admin panel still renders Filament's own defaults — down to
+seconds in places — and is not yet held to this document.
 
 ## Rules
 
@@ -31,9 +32,18 @@ migrating site is that screens do not move under them.
 and the minute and a title differing only in seconds is noise.
 
 **That title is a mouse-only convenience and must stay non-essential.** `title` on a non-interactive
-element reaches neither the keyboard nor assistive technology. Anything a reader needs in order to act
-belongs in the visible text or in `dateTime`. A shape whose visible text stops naming the date
-altogether needs a real disclosure, not a title.
+element reaches neither the keyboard nor assistive technology, so it can only ever be a shortcut to
+something already reachable another way.
+
+What makes that acceptable for `listStamp` is a deliberate call about `listStamp` specifically, not a
+general licence: **in a list ordered by time, which calendar day a row falls on is supplementary.** The
+reader's task there is to pick a row, and every such row links to a page that names the date in full.
+`dateTime` carries the exact instant for machines. Today's rows, which name no date at all, are the
+sharp end of that call — accepted because the list is the newest-first view of the reader's own site.
+
+A shape whose visible text stops naming the date **and** whose reader needs the date in order to act
+would need a real disclosure instead. Relative time is the case to settle that for, and it does not
+ship here.
 
 ## Key invariants
 
@@ -43,6 +53,11 @@ altogether needs a real disclosure, not a title.
    and a value handed to the wrong one renders verbatim rather than shifted.
 2. **Every boundary is the site's, not the viewer's.** "Today" and "this year" are computed on the
    site's calendar, so one row reads the same for every reader wherever they are.
-3. **Formatting lives in one module.** eslint keeps `Intl` and `toLocale*` inside
+3. **A shape that depends on the clock re-reads it.** `listStamp` is relative to today, so one shared
+   timer per page wakes at the site's next midnight and on return to a backgrounded tab
+   (`use-site-day.ts`). Without it a page left open past midnight would keep yesterday's rows showing a
+   bare time, and one left open over New Year would keep last year's rows without their year. Any future
+   now-dependent shape has to subscribe to the same clock.
+4. **Formatting lives in one module.** eslint keeps `Intl` and `toLocale*` inside
    `resources/js/lib/date.ts` and the raw formatters importable only by `useDateFormat`, so a new call
    site cannot reintroduce per-viewer drift.
