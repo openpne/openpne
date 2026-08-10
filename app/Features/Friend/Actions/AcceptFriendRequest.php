@@ -31,8 +31,8 @@ class AcceptFriendRequest
                 ->delete();
 
             DB::table('friendships')->insert([
-                ['member_id' => $accepter->getKey(), 'friend_id' => $requester->getKey()],
-                ['member_id' => $requester->getKey(), 'friend_id' => $accepter->getKey()],
+                ['member_id' => $accepter->getKey(), 'friend_id' => $requester->getKey(), 'created_at' => now()],
+                ['member_id' => $requester->getKey(), 'friend_id' => $accepter->getKey(), 'created_at' => now()],
             ]);
 
             FriendRequestAccepted::dispatch($requester, $accepter);

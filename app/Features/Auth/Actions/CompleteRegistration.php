@@ -61,8 +61,8 @@ class CompleteRegistration
         }
 
         DB::table('friendships')->insert([
-            ['member_id' => $pending->inviter_id, 'friend_id' => $member->getKey()],
-            ['member_id' => $member->getKey(), 'friend_id' => $pending->inviter_id],
+            ['member_id' => $pending->inviter_id, 'friend_id' => $member->getKey(), 'created_at' => now()],
+            ['member_id' => $member->getKey(), 'friend_id' => $pending->inviter_id, 'created_at' => now()],
         ]);
     }
 }
