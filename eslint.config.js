@@ -54,11 +54,13 @@ export default tseslint.config(
             'no-restricted-imports': [
                 'error',
                 {
-                    // Patterns, not `paths`: `paths` matches the literal specifier, so every relative
-                    // spelling of the same module (`../lib/date`, `./date` from inside lib/) would pass.
+                    // One regex over the specifier rather than `paths` or a glob list: `paths` matches
+                    // only the literal string, and a glob list has to enumerate every spelling of the
+                    // same module — the alias, each relative depth, and the `.ts` suffix that
+                    // date.test.ts already uses and would be copied from.
                     patterns: [
                         {
-                            group: ['@/lib/date', '**/lib/date', './date', './date.ts'],
+                            regex: '(^@/lib/date|/lib/date|^\\./date)(\\.ts)?$',
                             message: 'Render timestamps with <Timestamp> / <CivilDate>; for other values use useDateFormat().',
                         },
                     ],
