@@ -9,6 +9,7 @@ use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Features\Timeline\Queries\MemberTimeline;
+use App\Features\Timeline\Queries\MentionCandidates;
 use App\Features\Timeline\Queries\ShowTimelinePost;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
@@ -20,6 +21,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -125,6 +127,18 @@ class TimelineController extends Controller
                     TimelineVisibility::options(),
                 ),
             ]),
+        ]);
+    }
+
+    /** Members the compose form's @mention picker may offer for its search term. */
+    public function mentionCandidates(Request $request, MentionCandidates $query): JsonResponse
+    {
+        $request->validate(['q' => ['nullable', 'string', 'max:100']]);
+
+        $candidates = $query($this->viewer(), $request->string('q')->value());
+
+        return response()->json([
+            'candidates' => array_map([MemberRefSerializer::class, 'ref'], $candidates->all()),
         ]);
     }
 
