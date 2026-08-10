@@ -70,6 +70,11 @@ The ranges are eager-loaded by every feed query and by the thread load, because 
 partial is shared by the feeds, the profile and three gadgets — a read per row would multiply across
 all of them.
 
+Mentions link wherever the full body renders. The Modern dashboard's activity digest is not such a
+place: its rows are one link each to the thread and render the body as a plain clamped preview —
+URLs are not linkified there either, and an inline anchor inside a row-wide link would be nested
+interactive content. The mention reads as text in the preview and links in the thread the row opens.
+
 ## OpenPNE 3 mentions are not migrated
 
 The upgrade carries a timeline body over verbatim and writes no mention rows. The feature was
