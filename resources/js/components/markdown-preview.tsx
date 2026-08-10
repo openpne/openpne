@@ -66,7 +66,7 @@ export function MarkdownPreview({ body, enabled }: { body: string; enabled: bool
         // hears the failure (the rendered body itself is not announced — re-reading the whole
         // preview on every debounce would be noise).
         <div className="space-y-1" aria-busy={state === 'pending'}>
-            <p className="text-xs font-medium text-muted-foreground">{t('Preview')}</p>
+            <p className="text-xs text-muted-foreground">{t('Preview')}</p>
             {state === 'error' ? (
                 <p className="text-xs text-muted-foreground" role="status">
                     {t('Preview unavailable.')}

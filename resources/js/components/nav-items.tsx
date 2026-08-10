@@ -30,7 +30,7 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
                             className={
                                 'flex min-h-11 items-center gap-3 rounded-full px-3 text-base transition ' +
                                 (active
-                                    ? 'bg-accent font-semibold text-foreground'
+                                    ? 'bg-accent text-foreground'
                                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground')
                             }
                         >

@@ -171,7 +171,7 @@ export default function CommunityEventShow() {
                                     ) : (
                                         <span className="truncate">{t('Withdrawn member')}</span>
                                     )}
-                                    <span className="ml-auto shrink-0 font-medium">#{comment.number}</span>
+                                    <span className="ml-auto shrink-0">#{comment.number}</span>
                                     <span className="shrink-0">{formatDateTime(comment.createdAt)}</span>
                                     {comment.deletable && (
                                         <button type="button" onClick={() => deleteComment(comment.id)} className={`${dangerActionClass} shrink-0`}>
