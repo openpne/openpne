@@ -60,9 +60,12 @@ class CompleteRegistration
             return;
         }
 
+        // One timestamp for both halves of the mirror (see SendFriendRequest).
+        $at = now();
+
         DB::table('friendships')->insert([
-            ['member_id' => $pending->inviter_id, 'friend_id' => $member->getKey(), 'created_at' => now()],
-            ['member_id' => $member->getKey(), 'friend_id' => $pending->inviter_id, 'created_at' => now()],
+            ['member_id' => $pending->inviter_id, 'friend_id' => $member->getKey(), 'created_at' => $at],
+            ['member_id' => $member->getKey(), 'friend_id' => $pending->inviter_id, 'created_at' => $at],
         ]);
     }
 }
