@@ -84,7 +84,9 @@ an **absent row means the kind's default (enabled)**, matching the extension's a
 `Member::wantsNotification()` / `setNotificationSetting()`.
 
 Every catalog item is registered so the one-shot upgrade can preserve stored choices, but only
-**wired** kinds (those with an OpenPNE 4 sender) appear in the settings UI.
+**wired** kinds (those with an OpenPNE 4 sender) appear in the settings UI. A kind with no
+`op3Name` is native to OpenPNE 4: there is no stored choice to import, so `importableCases()`
+(not `cases()`) is what the upgrade derives its source keys from.
 
 `dependOnNot` encodes the extension's "(x only)" variants: `MessageNewOnlyFriends` only takes
 effect while `MessageNew` is off — an enabled broad kind already covers the narrower audience.
@@ -143,6 +145,23 @@ the inline notifications share the `community_*_commented` feed kind, distinguis
 excluded ids are snapshotted when the comment is posted and passed to the async job, not re-derived
 when it runs: a comment deleted in between would otherwise drop its author from the exclusion and
 notify them twice.
+
+## Timeline mentions
+
+A timeline post's stored `@mentions` notify the members they name. The posting events
+([`TimelinePostPosted`](../../app/Features/Timeline/Events/TimelinePostPosted.php) /
+[`TimelineReplyPosted`](../../app/Features/Timeline/Events/TimelineReplyPosted.php)) carry the
+distinct mentioned ids as a snapshot taken inside the writing transaction, so every listener splits
+one audience the same way — the same trick, and the same reason, as the comment exclusion above.
+
+[`TimelineMentionRecipients`](../../app/Features/Timeline/Queries/TimelineMentionRecipients.php)
+gates each recipient on being unbanned, able to view the post, and free of a block in either
+direction with the author. Storage settled ban and block at write time, so those are re-checks;
+viewability is not checked there at all — a member may be mentioned in a post they cannot read,
+which stays the plain text it is rather than becoming a notification. Viewability is judged on the
+**thread root**, not the mentioning row: a reply inherits its parent's visibility, so a thread is
+one audience owned by the root's author. The feed row addresses the mentioning post and resolves
+the root when it builds the link, so a thread keeps one address.
 
 ## Web push
 
@@ -213,7 +232,8 @@ That endpoint is a URL the site later POSTs to, over a Guzzle client outside `Ap
   when it equals the default (the UI saves what the member picked; the upgrade copies source
   rows verbatim where present), so a default flip later applies only to members with no stored row.
 - The imported `member_config` key names derive from `NotificationKind::op3ConfigName()`
-  (`is_send_{name}_web` / `is_send_pc_{name}_mail`) — the upgrade has no second name list.
+  (`is_send_{name}_web` / `is_send_pc_{name}_mail`) over `importableCases()` — the upgrade has no
+  second name list, and a native kind has no key to invent (asking for one throws).
 - Layer-1 counts and layer-3 `read_at` never feed each other.
 - Push follows the feed: it is dispatched from the `database` send, never gated separately, and its
   listener never lets an exception escape into the job that wrote the row.

@@ -27,6 +27,7 @@ class FeatureNotificationCoverageTest extends TestCase
         'Community' => Feature::Community,
         'CommunityTopic' => Feature::CommunityTopic,
         'CommunityEvent' => Feature::CommunityEvent,
+        'Timeline' => Feature::Timeline,
     ];
 
     /** @return list<class-string<Notification>> every notification class under app/Notifications/$dir */

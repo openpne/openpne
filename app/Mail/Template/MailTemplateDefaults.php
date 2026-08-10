@@ -54,6 +54,10 @@ final class MailTemplateDefaults
             'en' => 'New diary from {{ member_name }}: "{{ diary_title }}"',
             'ja' => '【{{ op_config.sns_name }}】新着日記「{{ diary_title }}」',
         ],
+        'timeline-mention' => [
+            'en' => '{{ member_name }} mentioned you',
+            'ja' => '【{{ op_config.sns_name }}】{{ member_name }} さんからのメンション',
+        ],
         'community-posting' => [
             'en' => '[{{ op_config.sns_name }}] {{ community_name }} {{ topic_name }}',
             'ja' => '【{{ op_config.sns_name }}】{{ community_name }} {{ topic_name }}',

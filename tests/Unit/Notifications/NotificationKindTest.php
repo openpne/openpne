@@ -6,6 +6,7 @@ namespace Tests\Unit\Notifications;
 
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 /** Registry self-consistency: every kind is fully specified and the imported key mapping is well-formed. */
@@ -13,9 +14,34 @@ class NotificationKindTest extends TestCase
 {
     public function test_op3_names_are_unique(): void
     {
-        $names = array_map(static fn (NotificationKind $kind): string => $kind->definition()->op3Name, NotificationKind::cases());
+        $names = array_map(
+            static fn (NotificationKind $kind): ?string => $kind->definition()->op3Name,
+            NotificationKind::importableCases(),
+        );
 
         $this->assertSame($names, array_values(array_unique($names)));
+    }
+
+    public function test_importable_cases_are_exactly_the_kinds_carrying_a_source_name(): void
+    {
+        $importable = NotificationKind::importableCases();
+
+        foreach (NotificationKind::cases() as $kind) {
+            $this->assertSame(
+                $kind->definition()->op3Name !== null,
+                in_array($kind, $importable, true),
+                "{$kind->value} is on the wrong side of the import boundary",
+            );
+        }
+    }
+
+    public function test_a_native_kind_has_no_op3_config_name(): void
+    {
+        // Asking for one is a caller that forgot to select with importableCases(), not a fallback
+        // to invent a key from — a made-up name would silently migrate nothing.
+        $this->expectException(LogicException::class);
+
+        NotificationKind::TimelineMention->op3ConfigName(NotificationChannel::Web);
     }
 
     public function test_op3_config_names_follow_the_openpne3_construction(): void
@@ -29,7 +55,7 @@ class NotificationKindTest extends TestCase
     public function test_config_names_are_unique_across_kinds_and_channels(): void
     {
         $names = [];
-        foreach (NotificationKind::cases() as $kind) {
+        foreach (NotificationKind::importableCases() as $kind) {
             foreach (NotificationChannel::cases() as $channel) {
                 $names[] = $kind->op3ConfigName($channel);
             }
@@ -55,6 +81,7 @@ class NotificationKindTest extends TestCase
     {
         $this->assertSame(
             [
+                NotificationKind::TimelineMention,
                 NotificationKind::DiaryNewPost,
                 NotificationKind::DiaryNewPostOnlyFriends,
                 NotificationKind::DiaryReplyPost,
