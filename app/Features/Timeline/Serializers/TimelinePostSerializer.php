@@ -5,6 +5,7 @@ namespace App\Features\Timeline\Serializers;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
+use App\Models\TimelinePostMention;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
@@ -15,7 +16,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class TimelinePostSerializer
 {
     /**
-     * @return array{id: int, body: string, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function entry(TimelinePost $post): array
     {
@@ -24,6 +25,13 @@ class TimelinePostSerializer
         return [
             'id' => $post->getKey(),
             'body' => $post->body,
+            // The @mention ranges over the body, in body order; the client links them (entity-text.tsx).
+            // No display name travels with them — the body already carries it, frozen at post time.
+            'mentions' => $post->mentions->map(fn (TimelinePostMention $mention): array => [
+                'memberId' => $mention->member_id,
+                'offset' => $mention->offset,
+                'length' => $mention->length,
+            ])->all(),
             'visibility' => $post->visibility->slug(),
             'hasImages' => $images !== [],
             // Top-level list queries eager-load withCount('replies'); a reply (never shown with a

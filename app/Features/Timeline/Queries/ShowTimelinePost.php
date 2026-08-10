@@ -15,7 +15,7 @@ class ShowTimelinePost
 {
     public function __invoke(Member $viewer, int $postId): ?TimelinePost
     {
-        $post = TimelinePost::with(['member.avatar.file', 'images.file', 'linkCard.image'])->find($postId);
+        $post = TimelinePost::with(['member.avatar.file', 'images.file', 'linkCard.image', 'mentions'])->find($postId);
 
         if ($post === null) {
             return null;
@@ -23,7 +23,7 @@ class ShowTimelinePost
 
         if ($post->in_reply_to_id !== null) {
             // The cascade keeps a reply's parent alive, so this re-fetch is defensive only.
-            $post = TimelinePost::with(['member.avatar.file', 'images.file', 'linkCard.image'])->find($post->in_reply_to_id);
+            $post = TimelinePost::with(['member.avatar.file', 'images.file', 'linkCard.image', 'mentions'])->find($post->in_reply_to_id);
 
             if ($post === null) {
                 return null;
