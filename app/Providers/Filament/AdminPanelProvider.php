@@ -16,8 +16,10 @@ use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Schemas\Schema;
 use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -135,5 +137,37 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+    }
+
+    /**
+     * The admin panel's one date format, set as Filament's default rather than passed per column, so a
+     * new screen inherits it instead of picking its own (docs/internals/datetime.md).
+     *
+     * Sortable digits, not the locale's narrative form the member surface uses: this is a surface for
+     * scanning and comparing rows, and `2026-08-10 00:05` lines up in a column where `2026年8月10日`
+     * does not. No seconds, and no relative time anywhere — an operator filtering by period cannot work
+     * from "3 days ago".
+     *
+     * Timezone needs no wiring: Filament resolves it through FilamentTimezone, which falls back to
+     * `config('app.timezone')` — the same site clock both member surfaces render in.
+     */
+    public function boot(): void
+    {
+        Table::configureUsing(function (Table $table): void {
+            $table
+                ->defaultDateDisplayFormat('Y-m-d')
+                ->defaultDateTimeDisplayFormat('Y-m-d H:i')
+                ->defaultTimeDisplayFormat('H:i');
+        });
+
+        // Infolist entries read their defaults from Schema, so one added later lands on the same format
+        // instead of Filament's `M j, Y H:i:s`. Form inputs do not: DateTimePicker carries its own
+        // defaults, and would need configuring separately if a date input ever needs to match.
+        Schema::configureUsing(function (Schema $schema): void {
+            $schema
+                ->defaultDateDisplayFormat('Y-m-d')
+                ->defaultDateTimeDisplayFormat('Y-m-d H:i')
+                ->defaultTimeDisplayFormat('H:i');
+        });
     }
 }
