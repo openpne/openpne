@@ -37,7 +37,7 @@ class DiariesTable
 
                 TextColumn::make('created_at')
                     ->label(__('Created At'))
-                    ->dateTime('Y-m-d')
+                    ->dateTime()
                     ->sortable(),
             ])
             ->filters([
