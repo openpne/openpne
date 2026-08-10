@@ -39,10 +39,8 @@
             @endforeach
             <x-classic.pager :paginator="$feed" />
         @endif
-        {{-- Two lists, as the skin splits them: `.button` drops the arrow marker for a form's
-             submit, a plain `moreInfo` keeps it for a link out. --}}
-        <div class="operation">
-            @if ($unreadCount > 0)
+        @if ($unreadCount > 0)
+            <div class="operation">
                 <ul class="moreInfo button">
                     <li>
                         <form method="POST" action="{{ route('notifications.readAll') }}">
@@ -51,12 +49,14 @@
                         </form>
                     </li>
                 </ul>
-            @endif
-            {{-- What arrives here is decided in member config, so the feed carries the way to it. --}}
+            </div>
+        @endif
+        {{-- What arrives here is decided in member config, so the feed carries the way to it.
+             OpenPNE 3's parts frame renders its moreInfo option as div.moreInfo > ul.moreInfo,
+             after the body; operation is where a form's own buttons go. --}}
+        <div class="moreInfo">
             <ul class="moreInfo">
-                <li>
-                    <a href="{{ route('member.config', ['category' => MemberConfigCategory::Notification->value]) }}">{{ __('Notification settings') }}</a>
-                </li>
+                <li><a href="{{ route('member.config', ['category' => MemberConfigCategory::Notification->value]) }}">{{ __('Notification settings') }}</a></li>
             </ul>
         </div>
     </x-classic.parts>
