@@ -12,8 +12,9 @@ export type TimestampPreset = 'instant' | 'day';
  * locale come from the shared props, and a display that drops information offers the exact value.
  *
  * A title is deliberately absent when the display already names the second — repeating it there is
- * noise, and `title` is reachable by neither screen readers nor the keyboard, so it must never be the
- * only place a value appears.
+ * noise. Where it is present it is a mouse-only convenience: `title` on a non-interactive element
+ * reaches neither the keyboard nor assistive technology, so it must never be the only place a value
+ * a reader needs appears. A preset whose text stops naming the date needs a real disclosure instead.
  */
 export function Timestamp({ at, preset = 'instant', className }: { at: string; preset?: TimestampPreset; className?: string }) {
     const date = useDateFormat();

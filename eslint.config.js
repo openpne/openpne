@@ -14,7 +14,9 @@ import tseslint from 'typescript-eslint';
 // no-restricted-syntax and would otherwise replace this one, keeps enforcing it too.
 const DATE_FORMATTING_RESTRICTIONS = [
     {
-        selector: "NewExpression[callee.object.name='Intl'][callee.property.name=/^(DateTimeFormat|RelativeTimeFormat)$/]",
+        // The member access, not the call: `Intl.DateTimeFormat(...)` is valid without `new`, and
+        // aliasing it to a variable would slip past a call-shaped selector too.
+        selector: "MemberExpression[object.name='Intl'][property.name=/^(DateTimeFormat|RelativeTimeFormat)$/]",
         message: 'Format dates through resources/js/lib/date.ts (site timezone + locale), not Intl directly.',
     },
     {
@@ -52,9 +54,11 @@ export default tseslint.config(
             'no-restricted-imports': [
                 'error',
                 {
-                    paths: [
+                    // Patterns, not `paths`: `paths` matches the literal specifier, so every relative
+                    // spelling of the same module (`../lib/date`, `./date` from inside lib/) would pass.
+                    patterns: [
                         {
-                            name: '@/lib/date',
+                            group: ['@/lib/date', '**/lib/date', './date', './date.ts'],
                             message: 'Render timestamps with <Timestamp> / <CivilDate>; for other values use useDateFormat().',
                         },
                     ],

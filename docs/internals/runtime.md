@@ -57,8 +57,12 @@ Key invariants:
    drift; Modern renders instants through `<Timestamp>` / `<CivilDate>`, which bind
    the site's zone and locale and put the machine-readable value in `dateTime`.
    Where the display drops information — a day standing in for an instant — the
-   element also carries the exact value as a title. It is never the only place a
-   value appears: `title` reaches neither screen readers nor the keyboard.
+   element also carries the exact value as a native `title`. That title is a
+   **mouse-only convenience and must stay non-essential**: `title` on a
+   non-interactive element reaches neither the keyboard nor assistive technology, so
+   anything a reader needs in order to act belongs in the visible text or `dateTime`.
+   A display whose visible text stops naming the date at all needs a real
+   disclosure, not a title.
 3. **Instants and civil dates are different types.** An event's open date is a
    `Y-m-d` calendar day with no instant attached; reading one as an instant shifts
    it a day for viewers west of UTC. The client has separate formatters and will
