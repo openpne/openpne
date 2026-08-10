@@ -60,10 +60,13 @@ export default function NotificationsIndex() {
                         {t('Mark all as read')}
                     </Button>
                 )}
-                {/* Short label, precise accessible name: "Notification settings" does not fit beside
-                    the read-all button on a narrow phone in English, and the gear plus this screen
-                    is what scopes the word. The visible text is contained in the accessible one, as
-                    WCAG's label-in-name asks. */}
+                {/* The full name wherever it fits, the bare word where it does not: beside the
+                    read-all button, English needs a ~360px viewport for "Notification settings"
+                    alone. Cutting over at sm rather than at that measured edge leaves room for a
+                    longer word in another locale. The two reasons to shorten and to be precise sit
+                    on opposite sides of a breakpoint — the left nav's own "Settings", which this
+                    word would otherwise double, appears only from lg. The accessible name stays the
+                    full one at every width, and the short label is contained in it (label-in-name). */}
                 <ActionLink
                     href="/member/config/notifications"
                     variant="outline"
@@ -71,7 +74,8 @@ export default function NotificationsIndex() {
                     aria-label={t('Notification settings')}
                 >
                     <Settings className="size-4" aria-hidden />
-                    {t('Settings')}
+                    <span className="sm:hidden">{t('Settings')}</span>
+                    <span className="hidden sm:inline">{t('Notification settings')}</span>
                 </ActionLink>
             </div>
             {feed.data.length === 0 ? (
