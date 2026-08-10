@@ -100,6 +100,31 @@ export function UnreadSync() {
         const timer = setInterval(refresh, INTERVAL_MS);
         document.addEventListener('visibilitychange', refresh);
 
+        // A restored page carries the counts it had when it was left, so a badge can climb back over
+        // a notification the member has already read — which reads as new mail arriving. Inertia
+        // rebuilds a popstate target from its own history state, and the back/forward cache returns
+        // the document whole. The popstate half waits for the `navigate` that follows, because that
+        // is where the restore writes its own stale counts over these props: refreshing after it is
+        // ordered rather than merely faster than it.
+        let restored = false;
+        const onPopstate = () => {
+            restored = true;
+        };
+        const onNavigate = () => {
+            if (restored) {
+                restored = false;
+                refresh();
+            }
+        };
+        const onPageshow = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                refresh();
+            }
+        };
+        window.addEventListener('popstate', onPopstate);
+        window.addEventListener('pageshow', onPageshow);
+        const stopNavigate = router.on('navigate', onNavigate);
+
         // The worker hands the badge's source of truth to a live tab. Fetch unconditionally — it asked,
         // and the tab may have flipped hidden since the worker's matchAll — then ACK on the transferred
         // port so the worker knows a handler took responsibility and skips its own fallback badge write.
@@ -115,6 +140,9 @@ export function UnreadSync() {
         return () => {
             clearInterval(timer);
             document.removeEventListener('visibilitychange', refresh);
+            window.removeEventListener('popstate', onPopstate);
+            window.removeEventListener('pageshow', onPageshow);
+            stopNavigate();
             sw?.removeEventListener('message', onMessage);
             inFlight?.abort();
         };
