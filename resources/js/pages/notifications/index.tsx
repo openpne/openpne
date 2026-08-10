@@ -1,9 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Settings } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
 import { Pagination, type PaginationMeta } from '@/components/pagination';
 import { PushPrompt } from '@/components/push-prompt';
 import { Timestamp } from '@/components/timestamp';
 import { UnreadDot, UnreadLabel, unreadTextClass } from '@/components/unread';
+import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
@@ -43,12 +45,12 @@ export default function NotificationsIndex() {
         <>
             <Head title={title} />
             <PushPrompt />
-            {/* What arrives here is decided elsewhere, so the feed carries the way to that page —
-                min-h keeps the row the same height whether or not the read-all button is in it. */}
-            <div className="flex min-h-9 items-center justify-between gap-3">
-                <Link href="/member/config/notifications" className="text-sm text-link hover:underline">
-                    {t('Notification settings')}
-                </Link>
+            {/* What arrives here is decided elsewhere, so the feed carries the way to that page. Both
+                controls cluster right: below lg the h1 folds into the bar, and a lone noun phrase at
+                the left edge lands where the heading would have been and reads as one. Settings sits
+                outermost — the corner it is looked for in — and stays the lighter of the two, being a
+                rare errand next to the button this screen is actually worked with. */}
+            <div className="flex items-center justify-end gap-2">
                 {(unread?.notifications ?? 0) > 0 && (
                     <Button
                         variant="outline"
@@ -58,6 +60,10 @@ export default function NotificationsIndex() {
                         {t('Mark all as read')}
                     </Button>
                 )}
+                <ActionLink href="/member/config/notifications" variant="ghost" size="sm" className="text-foreground">
+                    <Settings className="size-4" aria-hidden />
+                    {t('Notification settings')}
+                </ActionLink>
             </div>
             {feed.data.length === 0 ? (
                 <Panel>
