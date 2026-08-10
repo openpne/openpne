@@ -36,7 +36,7 @@ class CommunityEventsTable
 
                 TextColumn::make('open_date')
                     ->label(__('Event Date'))
-                    ->dateTime('Y-m-d')
+                    ->date()
                     ->sortable(),
 
                 TextColumn::make('event_members_count')
@@ -46,7 +46,7 @@ class CommunityEventsTable
 
                 TextColumn::make('created_at')
                     ->label(__('Created At'))
-                    ->dateTime('Y-m-d')
+                    ->dateTime()
                     ->sortable(),
             ])
             ->recordActions([

@@ -39,7 +39,7 @@ class RecentMembersWidget extends TableWidget
 
                 TextColumn::make('created_at')
                     ->label(__('Created At'))
-                    ->dateTime('Y-m-d H:i'),
+                    ->dateTime(),
             ])
             // No member detail/edit page (OpenPNE parity); jump to the moderation list instead.
             ->recordUrl(fn (Member $record): string => MemberResource::getUrl('index'))

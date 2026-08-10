@@ -40,7 +40,7 @@ class EventMembersRelationManager extends RelationManager
 
                 TextColumn::make('created_at')
                     ->label(__('Created At'))
-                    ->dateTime('Y-m-d'),
+                    ->dateTime(),
             ])
             ->recordActions([
                 // Plain row delete: removes the community_event_members RSVP row (no images, no nesting).

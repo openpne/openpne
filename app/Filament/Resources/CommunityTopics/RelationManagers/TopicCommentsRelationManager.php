@@ -47,7 +47,7 @@ class TopicCommentsRelationManager extends RelationManager
 
                 TextColumn::make('created_at')
                     ->label(__('Created At'))
-                    ->dateTime('Y-m-d'),
+                    ->dateTime(),
             ])
             ->recordActions([
                 DeleteAction::make()

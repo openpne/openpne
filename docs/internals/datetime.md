@@ -3,9 +3,9 @@
 Which shape a date takes on screen, and why. The clock itself — `APP_TIMEZONE`, how it reaches the
 client, how instants are stored — is [runtime.md](runtime.md).
 
-Applies to the Modern surface. Classic keeps OpenPNE 3's formats: its value to a migrating site is
-that screens do not move under them. The admin panel still renders Filament's own defaults — down to
-seconds in places — and is not yet held to this document.
+Applies to the Modern surface and the admin panel, which have different readers and so different
+shapes — see [Admin](#admin). Classic keeps OpenPNE 3's formats: its value to a migrating site is that
+screens do not move under them.
 
 ## Rules
 
@@ -65,6 +65,25 @@ instant for machines. Nobody — hovering or not — needs the second a row was 
 `relative` is the same call taken one step further, and the window is what makes it safe: it only ever
 replaces a date that is less than a week old, and past a week the date comes back. Reaching for the
 exact day of something from three days ago is not a task the design owes a keyboard path.
+
+## Admin
+
+| | Format |
+|---|---|
+| An instant | `2026-08-10 09:05` |
+| A civil date | `2026-08-14` |
+
+Sortable digits rather than the locale's narrative form, because the reader is different: an operator
+scans and compares rows, and `2026-08-10 09:05` lines up in a column where `2026年8月10日` does not.
+The two rules the member surface sets still hold — no seconds, and a civil date never grows a time.
+
+**No relative time anywhere in admin.** "3 days ago" cannot be filtered by period or compared between
+two rows, which is most of what an operator does with a timestamp. Cloudscape names the same reason.
+
+The format is Filament's panel-wide default (`AdminPanelProvider::boot`), not an argument per column, so
+a screen added later inherits it; a column passing its own is a test failure. Timezone needs no wiring —
+Filament resolves it through `FilamentTimezone`, which falls back to `config('app.timezone')`, the same
+site clock the member surfaces render in.
 
 ## Key invariants
 
