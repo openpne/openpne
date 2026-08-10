@@ -1,5 +1,6 @@
 import { cloneElement, type ComponentProps, isValidElement, type ReactElement, type ReactNode, useId } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { headingVariants } from '@/components/ui/heading';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
@@ -94,7 +95,7 @@ export function FormSection({
     return (
         <section className="space-y-4">
             <div className="space-y-0.5">
-                <Heading className="text-base font-semibold text-foreground">{title}</Heading>
+                <Heading className={headingVariants({ variant: 'section' })}>{title}</Heading>
                 {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
             {children}
