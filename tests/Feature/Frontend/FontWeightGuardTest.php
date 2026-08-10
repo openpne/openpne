@@ -103,8 +103,6 @@ class FontWeightGuardTest extends TestCase
         'pages/block/list.tsx' => 1,
         'pages/community/edit.tsx' => 1,
         'pages/member/avatar.tsx' => 1,
-        'pages/member/config.tsx' => 1,
-        'pages/member/config/mfa.tsx' => 1,
         'pages/member/edit-profile.tsx' => 1,
         'pages/member/profile-field-input.tsx' => 1,
         'pages/member/search.tsx' => 4,

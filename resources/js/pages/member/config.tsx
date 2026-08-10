@@ -65,7 +65,10 @@ function DetailRow({ title, value, action }: { title: string; value?: ReactNode;
     return (
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <div className="space-y-0.5">
-                <h3 className="text-base font-semibold text-foreground">{title}</h3>
+                {/* Still an h3 — a settings page is worth navigating by heading — but styled as
+                    the row's content line, which is what it is: the name of one setting, with its
+                    current value muted underneath. */}
+                <h3 className="text-base text-foreground">{title}</h3>
                 {value && <p className="text-sm text-muted-foreground">{value}</p>}
             </div>
             {action}

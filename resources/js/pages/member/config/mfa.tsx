@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { TriangleAlert } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { SettingsSubpage } from '@/components/settings-subpage';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,13 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
     return (
         <section className="space-y-2 rounded-md border-2 border-dashed border-foreground/30 p-4">
             <Heading as="h2" variant="section">{t('Recovery codes')}</Heading>
-            <p className="text-sm font-semibold text-foreground">{t('These codes are shown only this once.')}</p>
+            <p className="flex items-start gap-1.5 text-sm text-foreground">
+                {/* Inherits the text color rather than taking --warning: that amber is a fill token and
+                    reads 1.96:1 on a light card, under the 3:1 a meaningful glyph needs. The shape is
+                    the channel here, not the hue. */}
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {t('These codes are shown only this once.')}
+            </p>
             <p className="text-sm text-muted-foreground">
                 {t('Save them somewhere safe now — each can be used once to sign in if you lose your authenticator.')}
             </p>

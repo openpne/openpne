@@ -30,6 +30,11 @@ always an `h1`/`h2`/`h3`: the top bar's label is a `span` and dialog titles are 
 Those consume the recipe; document headings use the component, which keeps the heading level
 independent of the visual rank.
 
+The independence runs the other way too: an element can be a heading in the document without taking a
+heading rank. A settings row's name is an `h3` — the page is worth navigating by heading — styled as
+the row's content line, because that is what it is. A bare `h3` outside the recipe is that case, not
+a missed migration.
+
 | variant | size | used by |
 |---|---|---|
 | `page` | 20px | page titles |
