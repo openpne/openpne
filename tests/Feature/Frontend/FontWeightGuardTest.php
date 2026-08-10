@@ -37,9 +37,9 @@ use Tests\TestCase;
  * list is only for splitting a large migration across PRs, and then only with the removal PR already
  * identified — otherwise the list quietly becomes the exceptions list without the reasons.
  *
- * The count is a ratchet, and a ratchet on counts cannot see a removal and an addition inside one
- * file cancelling out. Occurrence fingerprints would close that; the budget is the cheaper guard for
- * a campaign whose debt is actively draining. Raise it if a net-zero swap ever slips through.
+ * The finished gate still budgets by count, for the five permanent owner and identity files. A count
+ * cannot see a removal and an addition inside one of them cancelling out; occurrence fingerprints
+ * would. Move to those if that failure mode ever actually appears.
  *
  * Out of reach entirely, so it stays a review question rather than a test: semantic <strong> in
  * anything rendered through RichBody (the author's emphasis, not ours — member bodies as well as the

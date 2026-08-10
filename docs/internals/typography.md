@@ -84,5 +84,5 @@ element for the stylesheet's order to resolve.
   holds the class string the editable is rendered with — and covers every weight utility except
   `font-normal`, plus both arbitrary forms (`font-[550]`, `[font-weight:700]`). Plain CSS, inline
   styles and semantic `<strong>` are outside it by construction, so they stay a review question.
-- A count ratchet cannot see a removal and an addition inside one file cancelling out. Occurrence
-  fingerprints would; the budget is the cheaper guard while the debt is actively draining.
+- The budgets are counts, which cannot see a removal and an addition inside one owner file cancelling
+  out. Occurrence fingerprints would; move to those if that ever actually happens.
