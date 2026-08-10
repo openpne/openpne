@@ -1,4 +1,4 @@
-/** Counts above this render as `99+`, matching the badge pill (see UnreadPill). */
+/** Counts above this render as `99+`, matching the badge pill (see CountPill). */
 const CLAMP = 99;
 
 /**
