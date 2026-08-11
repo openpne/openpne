@@ -43,6 +43,10 @@ final class NotificationKindLabel
             'community_topic_posted' => __(':name posted a new %topic%.', ['name' => $name]),
             'community_event_posted' => __(':name posted a new event.', ['name' => $name]),
             'timeline_mentioned' => __(':name mentioned you in a %activity% post.', ['name' => $name]),
+            'timeline_posted' => __(':name posted to the %activity%.', ['name' => $name]),
+            'timeline_replied' => $cause === CommentReason::Related
+                ? __(':name commented on a %activity% post you commented on.', ['name' => $name])
+                : __(':name commented on your %activity% post.', ['name' => $name]),
             default => __('New notification'),
         };
     }

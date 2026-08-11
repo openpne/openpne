@@ -19,6 +19,8 @@ use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Message\MessageReceivedNotification;
 use App\Notifications\Timeline\TimelineMentionedNotification;
+use App\Notifications\Timeline\TimelinePostedNotification;
+use App\Notifications\Timeline\TimelineRepliedNotification;
 
 /**
  * Every feature-owned notification class, for the display side: `notifications.type` holds exactly
@@ -49,6 +51,8 @@ final class FeatureNotificationMap
         FriendRequestedNotification::class,
         MessageReceivedNotification::class,
         TimelineMentionedNotification::class,
+        TimelinePostedNotification::class,
+        TimelineRepliedNotification::class,
     ];
 
     /** @return list<class-string<FeatureNotification>> the classes whose unit is switched off */
