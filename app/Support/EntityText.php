@@ -5,8 +5,8 @@ namespace App\Support;
 use Illuminate\Support\HtmlString;
 
 /**
- * Renders a plain-text body whose spans carry linked entities — today a timeline post's @mentions —
- * as safe HTML.
+ * Renders a plain-text body whose spans carry linked entities — today a timeline post's @mentions
+ * and #hashtags — as safe HTML.
  *
  * Architecture mirrors Op3Text: cut the entity ranges out of the raw body first and send only the
  * text between them through BodyText (escape, autolink, nl2br), so no rendering rule is duplicated.
@@ -15,8 +15,9 @@ use Illuminate\Support\HtmlString;
  *
  * Ranges are half-open [offset, offset+length) in Unicode code points, ascending and
  * non-overlapping. The write path is what guarantees that shape (App\Features\Timeline\Actions\
- * ResolveMentions), and a post is never edited, so a stored range still describes its body; nothing
- * is re-checked here. A range whose entity is gone is simply not passed in and renders as the plain
+ * ResolveMentions and App\Features\Timeline\HashtagParser, whose sets never intersect — the caller
+ * merges them by offset), and a post is never edited, so a stored range still describes its body;
+ * nothing is re-checked here. A range whose entity is gone is simply not passed in and renders as the plain
  * text it always was.
  */
 final class EntityText

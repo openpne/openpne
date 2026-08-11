@@ -6,6 +6,7 @@ use App\LinkCard\LinkCardSerializer;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use App\Models\TimelinePostMention;
+use App\Models\TimelinePostTag;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
@@ -16,7 +17,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class TimelinePostSerializer
 {
     /**
-     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     * @return array{id: int, body: string, mentions: list<array{memberId: int, offset: int, length: int}>, tags: list<array{tag: string, offset: int, length: int}>, visibility: string, hasImages: bool, replyCount: int, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
      */
     public static function entry(TimelinePost $post): array
     {
@@ -31,6 +32,14 @@ class TimelinePostSerializer
                 'memberId' => $mention->member_id,
                 'offset' => $mention->offset,
                 'length' => $mention->length,
+            ])->all(),
+            // The #hashtag ranges, in body order; the client links each to its tag page. The tag
+            // travels normalized (the body's own text is inside the range), because that is what the
+            // page is addressed by.
+            'tags' => $post->tags->map(fn (TimelinePostTag $tag): array => [
+                'tag' => $tag->tag,
+                'offset' => $tag->offset,
+                'length' => $tag->length,
             ])->all(),
             'visibility' => $post->visibility->slug(),
             'hasImages' => $images !== [],

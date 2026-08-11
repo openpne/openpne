@@ -45,7 +45,7 @@ export function TimelinePostCard({ post, viewerId }: TimelinePostCardProps) {
                 </div>
             </div>
             <p className="whitespace-pre-wrap break-words">
-                <EntityText text={post.body} mentions={post.mentions} />
+                <EntityText text={post.body} mentions={post.mentions} tags={post.tags} />
             </p>
             <LinkCard card={post.linkCard} />
             <ImageGrid images={post.images} />

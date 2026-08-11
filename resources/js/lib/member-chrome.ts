@@ -461,6 +461,12 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             ? { mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }
             : { mode: 'contextual', title: ACTIVITY, context: memberContext(owner), scope: memberScope(owner) };
     },
+    // A lens on the feed, so it crumbs back to the feed and names the tag in its own header.
+    'timeline/tag': (props) => ({
+        mode: 'contextual',
+        title: t('%Activity% posts tagged #:tag', { tag: (props as { tag: string }).tag }),
+        context: [{ href: '/timeline', label: ACTIVITY }],
+    }),
     // Crumb label is the bare author name, the post card right below carries the same name as
     // content; the page's h1 is a generic post label so nothing renders twice.
     'timeline/show': (props) => {

@@ -68,7 +68,7 @@ export default function TimelineShow() {
                     <Timestamp at={post.createdAt} preset="absolute" className="shrink-0 text-muted-foreground" />
                 </div>
                 <p className="whitespace-pre-wrap break-words">
-                    <EntityText text={post.body} mentions={post.mentions} />
+                    <EntityText text={post.body} mentions={post.mentions} tags={post.tags} />
                 </p>
                 <LinkCard card={post.linkCard} />
                 <ImageGrid images={post.images} />
@@ -91,7 +91,7 @@ export default function TimelineShow() {
                                     <Timestamp at={reply.createdAt} preset="relative" className="text-muted-foreground" />
                                 </div>
                                 <p className="whitespace-pre-wrap break-words">
-                                    <EntityText text={reply.body} mentions={reply.mentions} />
+                                    <EntityText text={reply.body} mentions={reply.mentions} tags={reply.tags} />
                                 </p>
                                 {reply.author.id === viewerId && (
                                     <button type="button" onClick={() => deleteReply(reply.id)} className={cn(dangerActionClass, 'text-sm')}>
