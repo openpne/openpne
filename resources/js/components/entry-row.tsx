@@ -111,10 +111,11 @@ export function EntryRow({ href, author, community, content, contentLines = 1, b
     // avatar when null) or the community itself.
     const subjectName = community ? community.name : (author?.name ?? t('Withdrawn member'));
     const subjectImage = community ? (
-        <CommunityImage name={community.name} src={community.imageUrl} className="size-8" textClassName="text-xs" decorative />
+        // Matches the Avatar's md size — the two alternate in this one byline slot.
+        <CommunityImage name={community.name} src={community.imageUrl} className="size-10" textClassName="text-sm" decorative />
     ) : (
         // id === 0 renders the withdrawn blank badge, which is why the fallback passes author?.id ?? 0.
-        <Avatar id={author?.id ?? 0} name={subjectName} src={author?.imageUrl ?? null} color={author?.avatarColor ?? null} size="sm" decorative />
+        <Avatar id={author?.id ?? 0} name={subjectName} src={author?.imageUrl ?? null} color={author?.avatarColor ?? null} size="md" decorative />
     );
 
     const contentLine = (

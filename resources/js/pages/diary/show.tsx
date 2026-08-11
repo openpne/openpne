@@ -61,7 +61,7 @@ export default function DiaryShow() {
 
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} size="sm" decorative />
+                    <Avatar id={diary.author.id} name={diary.author.name} src={diary.author.imageUrl} color={diary.author.avatarColor} size="md" decorative />
                     <Link href={`/member/${diary.author.id}`} className="text-link hover:underline">
                         {diary.author.name}
                     </Link>
@@ -122,7 +122,7 @@ export default function DiaryShow() {
                                     text block trips axe link-in-text-block; this also matches the
                                     topic/event comment header shape. */}
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} size="sm" decorative />
+                                    <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} size="md" decorative />
                                     {comment.author ? (
                                         <Link href={`/member/${comment.author.id}`} className="truncate text-link hover:underline">
                                             {comment.author.name}
