@@ -6,6 +6,7 @@ use App\Models\Community;
 use App\Models\CommunityMember;
 use App\Models\Diary;
 use App\Models\Member;
+use App\Models\MemberImage;
 use App\Models\MemberProfile;
 use App\Models\Profile;
 use App\Models\TimelinePost;
@@ -70,6 +71,20 @@ class MemberProfileRoutesTest extends TestCase
                 ->where('profile.owner.avatarColor', null)
                 ->has('profile.fields', 1)
             );
+    }
+
+    public function test_modern_owner_avatar_is_sized_for_the_80px_profile_header(): void
+    {
+        config(['openpne.surface_mode' => 'modern_default']);
+        $owner = Member::factory()->create();
+        MemberImage::factory()->create(['member_id' => $owner->getKey()]);
+        $viewer = Member::factory()->create();
+
+        // The header paints at 80px, so it takes 180 rather than the 120 the list avatars use.
+        $expected = $owner->fresh()->avatar->file->thumbnailUrl(180, 180, square: true);
+
+        $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('profile.owner.avatarUrl', $expected));
     }
 
     public function test_modern_owner_carries_the_chosen_badge_color_as_hex(): void

@@ -121,7 +121,7 @@ class MessageSerializer
         return [
             'id' => $member->getKey(),
             'name' => $member->name,
-            'imageUrl' => $member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
             'avatarColor' => $member->avatar_color?->hex(),
         ];
     }

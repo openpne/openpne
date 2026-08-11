@@ -205,7 +205,7 @@ class MentionCandidatesTest extends TestCase
         $candidate = Member::factory()->create(['name' => 'Match Ann']);
         $candidate->forceFill(['avatar_color' => AvatarColor::Green])->save();
         MemberImage::factory()->create(['member_id' => $candidate->getKey()]);
-        $expected = $candidate->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+        $expected = $candidate->load('avatar.file')->avatar->file->thumbnailUrl(120, 120, square: true);
 
         $this->actingAs($viewer)->getJson(self::URI.'?q=Match')
             ->assertOk()

@@ -51,7 +51,7 @@ class TimelinePostSerializer
             'author' => [
                 'id' => $post->member->getKey(),
                 'name' => $post->member->name,
-                'imageUrl' => $post->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                'imageUrl' => $post->member->avatar?->file?->thumbnailUrl(120, 120, square: true),
                 'avatarColor' => $post->member->avatar_color?->hex(),
             ],
             'linkCard' => LinkCardSerializer::card($post),

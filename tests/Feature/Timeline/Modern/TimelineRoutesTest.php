@@ -42,7 +42,7 @@ class TimelineRoutesTest extends TestCase
         $member = Member::factory()->create();
         $member->forceFill(['avatar_color' => AvatarColor::Green])->save();
         MemberImage::factory()->create(['member_id' => $member->getKey()]);
-        $expected = $member->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+        $expected = $member->load('avatar.file')->avatar->file->thumbnailUrl(120, 120, square: true);
 
         $this->actingAs($member)
             ->get("/member/{$member->getKey()}/timeline")

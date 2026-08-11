@@ -49,7 +49,7 @@ class DiarySerializer
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
-                'imageUrl' => $diary->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                'imageUrl' => $diary->member->avatar?->file?->thumbnailUrl(120, 120, square: true),
                 'avatarColor' => $diary->member->avatar_color?->hex(),
             ],
             'createdAt' => $diary->created_at->toIso8601String(),
@@ -85,7 +85,7 @@ class DiarySerializer
             'author' => [
                 'id' => $diary->member->getKey(),
                 'name' => $diary->member->name,
-                'imageUrl' => $diary->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                'imageUrl' => $diary->member->avatar?->file?->thumbnailUrl(120, 120, square: true),
                 'avatarColor' => $diary->member->avatar_color?->hex(),
             ],
             'linkCard' => LinkCardSerializer::card($diary),
@@ -145,7 +145,7 @@ class DiarySerializer
             'author' => $comment->member ? [
                 'id' => $comment->member->getKey(),
                 'name' => $comment->member->name,
-                'imageUrl' => $comment->member->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                'imageUrl' => $comment->member->avatar?->file?->thumbnailUrl(120, 120, square: true),
                 'avatarColor' => $comment->member->avatar_color?->hex(),
             ] : null,
             'createdAt' => $comment->created_at->toIso8601String(),
