@@ -3,6 +3,7 @@
 namespace App\Features\Timeline\Actions;
 
 use App\Features\Timeline\Events\TimelineReplyPosted;
+use App\Features\Timeline\HashtagParser;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,8 @@ class CreateReply
             ]);
             $resolved = ($this->mentions)($author, $body, $mentions);
             $reply->mentions()->createMany($resolved);
+            // After resolution, because a mention wins any range the two would both claim.
+            $reply->tags()->createMany(HashtagParser::parse($body, $resolved));
 
             // Dispatched here so the snapshot is taken from the rows just written; delivery waits
             // for the commit (ShouldDispatchAfterCommit).

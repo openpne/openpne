@@ -107,3 +107,49 @@ member, never because a body was scanned for text that looks like one.
 - An entity's own range is escaped but never autolinked.
 - `EntityText` and `entity-split.ts` are a lockstep pair, like `BodyText` and `linkify.ts`.
 - A reply inherits its parent's visibility; the thread is one audience.
+
+## A hashtag is a range too, but nobody picks it
+
+`#tag` in a body becomes a `timeline_post_tags` row: the same half-open code-point range a mention
+records, plus the tag itself. The shape is shared; the source is not. A mention exists because a
+member chose someone from the picker, so the client sends the range. Nothing picks a hashtag — there
+is no entity to pick — so [`HashtagParser`](../../app/Features/Timeline/HashtagParser.php) reads the
+body at save time, and that is the only place a row comes from.
+
+What it takes: a `#` or `＃` at the start of the body or after whitespace, then 1–30 code points of
+letters, marks, numbers or `_`. A longer run yields **no** tag rather than its first 30 characters, a
+tag of digits only is a number and not a topic (`#2026`), and a body contributes at most ten. Where a
+candidate would overlap a stored mention **the mention wins**: a marker inside a display name is part
+of that name.
+
+### The stored tag is normalized; the range is not
+
+`tag` is the matched text put through NFKC and then lowercased, so `#Tag`, `#ＴＡＧ` and `#tag` are
+one topic and a lookup is an equality test. `offset`/`length` still describe the *raw* body, so a
+reader sees the text that was typed and the tag page finds it anyway.
+
+That normalization is a stored format, not a display choice: every row was written by the rule in
+force when it was written, so changing the rule means re-normalizing all of them rather than parsing
+differently from then on. NFKC is also why the length cap is checked twice — one code point can
+expand into several (`ﬁ` into `fi`), so a run that fit before normalization can overrun after it.
+
+### Bodies the parser never saw
+
+`openpne:timeline-backfill-hashtags` re-derives every post's rows from its body, dropping and
+rewriting one post's set per transaction. It covers posts written before the feature and posts the
+OpenPNE 3 upgrade brings in — run it after an upgrade — and re-running it is how a site adopts a
+parser change.
+
+Mentions are deliberately not backfilled, for the reason above: a mention exists because someone
+picked a member, never because a body was scanned.
+
+Nothing renders a tag as a link yet. The link and the page it opens arrive together, so a tag never
+points somewhere that does not exist.
+
+### Hashtag invariants
+
+- A tag row is derived from the body and nothing else; having one leaves the body unchanged.
+- `tag` is NFKC-lowercased and at most 30 code points. `offset`/`length` are code points over the raw
+  body, as a mention's are.
+- A candidate overlapping a mention is dropped, so the two range sets never intersect.
+- Re-running the backfill over an unchanged body and mention set changes nothing.

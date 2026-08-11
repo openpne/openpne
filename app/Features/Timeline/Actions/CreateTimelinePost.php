@@ -4,6 +4,7 @@ namespace App\Features\Timeline\Actions;
 
 use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Features\Timeline\Events\TimelinePostPosted;
+use App\Features\Timeline\HashtagParser;
 use App\Files\PostImages;
 use App\Jobs\SyncLinkCard;
 use App\Models\Member;
@@ -37,6 +38,8 @@ class CreateTimelinePost
                 ]);
                 $mentions = ($this->mentions)($author, $data->body, $data->mentions);
                 $post->mentions()->createMany($mentions);
+                // After resolution, because a mention wins any range the two would both claim.
+                $post->tags()->createMany(HashtagParser::parse($data->body, $mentions));
 
                 // Dispatched here so the snapshot is taken from the rows just written; delivery
                 // waits for the commit (ShouldDispatchAfterCommit).

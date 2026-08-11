@@ -58,4 +58,10 @@ class TimelinePost extends Model
     {
         return $this->hasMany(TimelinePostMention::class)->orderBy('offset');
     }
+
+    /** @return HasMany<TimelinePostTag, $this> The #hashtags in the body, in body order. */
+    public function tags(): HasMany
+    {
+        return $this->hasMany(TimelinePostTag::class)->orderBy('offset');
+    }
 }
