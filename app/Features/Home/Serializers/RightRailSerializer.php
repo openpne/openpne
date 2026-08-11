@@ -15,8 +15,8 @@ use Illuminate\Support\Collection;
  * friends or an SNS-wide sample (the fallback while `friend` is switched off), and the client reads
  * it for the heading and the view-all link. One key, so a call site cannot ship both.
  *
- * Both grids ask for 180px: the rail is a fixed `w-80`, so its three-up tiles land at 90px and 180
- * is exactly the 2x source they need. Every other surface paints these images far smaller.
+ * Both grids ask for 180px: the rail is a fixed `w-80`, so its three-up tiles land at ~90px and 180
+ * is the nearest whitelisted size to the 2x they need. Every other surface paints these far smaller.
  */
 class RightRailSerializer
 {

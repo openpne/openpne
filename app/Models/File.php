@@ -71,9 +71,11 @@ class File extends Model
      * URL of a thumbnail variant, in the OpenPNE 3-compatible /cache/img form. The size
      * must be whitelisted (config openpne.images.allowed_sizes) to resolve.
      *
-     * Ask for at least twice the CSS box the image paints into, not the box itself: the
-     * whitelist is OpenPNE 3's 1x-display set, so the box size reads as the obvious
-     * argument and leaves every retina client upscaling.
+     * Where CSS sizes the image (every Modern surface), ask for at least twice the box it
+     * paints into, not the box itself: the whitelist is OpenPNE 3's 1x-display set, so the
+     * box size reads as the obvious argument and leaves every retina client upscaling.
+     * Classic is the exception — its `<img>` carries no dimensions, so the size requested
+     * here *is* the rendered size and changing it moves the layout.
      */
     public function thumbnailUrl(int $width, int $height, bool $square = false): string
     {

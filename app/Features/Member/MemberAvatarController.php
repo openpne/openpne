@@ -75,7 +75,8 @@ class MemberAvatarController extends Controller
 
     /**
      * The viewer's avatar as the shared Modern image shape, or null when unset. thumbnailUrl is the
-     * 180px square editor preview; url is the full-bytes (FilePolicy-gated) original.
+     * editor preview, which paints at 128px and so asks for the 320px square; url is the full-bytes
+     * (FilePolicy-gated) original.
      *
      * @return array{url: string, thumbnailUrl: string}|null
      */
@@ -83,7 +84,7 @@ class MemberAvatarController extends Controller
     {
         $file = $this->viewer()->avatar?->file;
 
-        return $file ? ['url' => $file->url(), 'thumbnailUrl' => $file->thumbnailUrl(180, 180, square: true)] : null;
+        return $file ? ['url' => $file->url(), 'thumbnailUrl' => $file->thumbnailUrl(320, 320, square: true)] : null;
     }
 
     /**

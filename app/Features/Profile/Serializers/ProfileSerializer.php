@@ -31,7 +31,8 @@ class ProfileSerializer
             'owner' => [
                 'id' => $owner->getKey(),
                 'name' => $owner->name,
-                'avatarUrl' => $owner->avatar?->file?->thumbnailUrl(120, 120, square: true),
+                // The profile header paints this at 80px, the largest avatar outside the editor.
+                'avatarUrl' => $owner->avatar?->file?->thumbnailUrl(180, 180, square: true),
                 'avatarColor' => $owner->avatar_color?->hex(),
             ],
             'isSelf' => $isSelf,
