@@ -121,7 +121,7 @@ export default function NotificationsIndex() {
                                         name={item.actor?.name ?? t('Withdrawn member')}
                                         src={item.actor?.imageUrl ?? null}
                                         color={item.actor?.avatarColor ?? null}
-                                        size="sm"
+                                        size="md"
                                         decorative
                                     />
                                     <span className="min-w-0 flex-1">

@@ -76,7 +76,7 @@ export default function CommunityEventShow() {
 
             <Panel bodyClassName="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} color={event.author?.avatarColor ?? null} size="sm" decorative />
+                    <Avatar id={event.author?.id ?? 0} name={event.author?.name ?? ''} src={event.author?.imageUrl ?? null} color={event.author?.avatarColor ?? null} size="md" decorative />
                     {event.author ? (
                         <Link href={`/member/${event.author.id}`} className="text-link hover:underline">
                             {event.author.name}
@@ -163,7 +163,7 @@ export default function CommunityEventShow() {
                         {thread.comments.map((comment) => (
                             <li key={comment.id} className="px-4 py-4 sm:px-5">
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} size="sm" decorative />
+                                    <Avatar id={comment.author?.id ?? 0} name={comment.author?.name ?? ''} src={comment.author?.imageUrl ?? null} color={comment.author?.avatarColor ?? null} size="md" decorative />
                                     {comment.author ? (
                                         <Link href={`/member/${comment.author.id}`} className="truncate text-link hover:underline">
                                             {comment.author.name}

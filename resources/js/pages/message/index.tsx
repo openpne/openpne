@@ -126,7 +126,7 @@ export default function MessageIndex() {
                                         name={m.counterparty?.name ?? ''}
                                         src={m.counterparty?.imageUrl ?? null}
                                         color={m.counterparty?.avatarColor ?? null}
-                                        size="sm"
+                                        size="md"
                                         decorative
                                     />
                                     <div className="min-w-0 flex-1">

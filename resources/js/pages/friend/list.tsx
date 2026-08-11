@@ -41,7 +41,7 @@ export default function FriendList() {
                             {friends.data.map((friend) => (
                                 <ListRow key={friend.id}>
                                     <Link href={`/member/${friend.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
-                                        <Avatar id={friend.id} name={friend.name} src={friend.imageUrl} color={friend.avatarColor} size="sm" decorative />
+                                        <Avatar id={friend.id} name={friend.name} src={friend.imageUrl} color={friend.avatarColor} size="md" decorative />
                                         <span className="min-w-0 flex-1 truncate">{friend.name}</span>
                                     </Link>
                                     {isOwner && (
