@@ -29,6 +29,7 @@ export default function MessageShow() {
     const { message } = usePage<ShowProps>().props;
     const showPath = SHOW_PATH[message.box];
     const counterpartyHeading = message.viewerIsSender ? t('Recipient') : t('Sender');
+    const onlyCounterparty = message.counterparties.length === 1;
     // Reply is offered on a received message whose sender still exists (the inbox counterparty).
     const canReply = message.box === 'receive' && message.counterparties.length > 0;
 
@@ -74,7 +75,10 @@ export default function MessageShow() {
                             <ul className="flex flex-wrap gap-x-4 gap-y-1">
                                 {message.counterparties.map((m) => (
                                     <li key={m.id} className="flex items-center gap-1">
-                                        <Avatar id={m.id} name={m.name} src={m.imageUrl} color={m.avatarColor} size="sm" decorative />
+                                        {/* The same exactly-one rule the top bar applies to this set: one counterparty is
+                                            the person the message is with, so it gets the content size; several are an
+                                            audience roster (only reachable from upgraded OpenPNE 3 sends) and stay dense. */}
+                                        <Avatar id={m.id} name={m.name} src={m.imageUrl} color={m.avatarColor} size={onlyCounterparty ? 'md' : 'sm'} decorative />
                                         <Link href={`/member/${m.id}`} className="text-link hover:underline">
                                             {m.name}
                                         </Link>

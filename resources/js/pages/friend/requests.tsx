@@ -16,7 +16,7 @@ interface ManageProps extends PageProps {
 function MemberCell({ member }: { member: FriendMember }) {
     return (
         <Link href={`/member/${member.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-foreground hover:underline">
-            <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="sm" decorative />
+            <Avatar id={member.id} name={member.name} src={member.imageUrl} color={member.avatarColor} size="md" decorative />
             <span className="min-w-0 flex-1 truncate">{member.name}</span>
         </Link>
     );
