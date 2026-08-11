@@ -81,6 +81,10 @@ class NotificationKindTest extends TestCase
     {
         $this->assertSame(
             [
+                NotificationKind::TimelineNewPost,
+                NotificationKind::TimelineNewPostOnlyFriends,
+                NotificationKind::TimelineReplyPost,
+                NotificationKind::TimelineRelatedPost,
                 NotificationKind::TimelineMention,
                 NotificationKind::DiaryNewPost,
                 NotificationKind::DiaryNewPostOnlyFriends,

@@ -58,6 +58,10 @@ final class MailTemplateDefaults
             'en' => '{{ member_name }} mentioned you',
             'ja' => '【{{ op_config.sns_name }}】{{ member_name }} さんからのメンション',
         ],
+        'timeline-posting' => [
+            'en' => 'New {{ op_term.activity }} post from {{ member_name }}',
+            'ja' => '【{{ op_config.sns_name }}】{{ member_name }} さんの{{ op_term.activity }}投稿',
+        ],
         'community-posting' => [
             'en' => '[{{ op_config.sns_name }}] {{ community_name }} {{ topic_name }}',
             'ja' => '【{{ op_config.sns_name }}】{{ community_name }} {{ topic_name }}',

@@ -28,6 +28,7 @@ enum MailTemplate: string
     case DiaryCommentReceived = 'diary-comment';
     case DiaryPostedNotified = 'diary-posted';
     case TimelineMentionNotified = 'timeline-mention';
+    case TimelinePostingNotified = 'timeline-posting';
     case CommunityPostingNotified = 'community-posting';
     case CommunityJoinNotice = 'community-join';
     case RegistrationCompleted = 'registration-complete';
@@ -151,6 +152,20 @@ enum MailTemplate: string
                 caption: 'Mentioned in a %activity% post',
                 variables: [
                     'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
+                    'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
+                    'url' => ['help' => 'The %activity% post URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::TimelinePostingNotified => new MailTemplateDefinition(
+                op3SourceName: 'pc_timelineNewPost',
+                isConfigurable: true,
+                // One template for every timeline broadcast (new posts and replies), matching the
+                // source template — a second case could not import the same source row.
+                caption: 'Notification of %Activity% Posting',
+                variables: [
+                    'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
+                    // The name OpenPNE 3's wording used, kept alongside so an imported body renders.
+                    'author' => ['help' => 'The author’s name.', 'sample' => 'Example'],
                     'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The %activity% post URL.', 'sample' => 'https://example.test'],
                 ],
