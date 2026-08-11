@@ -70,6 +70,29 @@ class TimelineReplyTest extends TestCase
         $this->assertDatabaseCount('timeline_posts', 1);
     }
 
+    public function test_a_failed_reply_keeps_the_draft_and_its_mention_rows(): void
+    {
+        // The reply form restores old('body') like the compose forms do; without it the flashed
+        // mention rows would re-render against an empty body and be dropped as mismatched.
+        $author = Member::factory()->create();
+        $alice = Member::factory()->create(['name' => 'Alice']);
+        $post = TimelinePost::factory()->create(['member_id' => $author->getKey(), 'visibility' => Visibility::Members]);
+        $body = str_repeat('x', 135).' @Alice'; // 142 code points: fails max:140, flashes the draft
+
+        $this->actingAs($author)
+            ->from(route('timeline.show', $post))
+            ->post("/timeline/{$post->getKey()}/reply", [
+                'body' => $body,
+                'mentions' => [['member_id' => (string) $alice->getKey(), 'offset' => '136', 'length' => '6']],
+            ])
+            ->assertRedirect(route('timeline.show', $post));
+
+        $this->actingAs($author)->get(route('timeline.show', $post))->assertOk()
+            ->assertSee('>'.$body.'</textarea>', false)
+            ->assertSee('name="mentions[0][member_id]" value="'.$alice->getKey().'"', false)
+            ->assertSee('name="mentions[0][offset]" value="136"', false);
+    }
+
     public function test_reply_permalink_re_centers_to_the_thread_root(): void
     {
         // OpenPNE 3 opens the thread at the top-level post; a reply's permalink redirects there.
