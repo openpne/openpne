@@ -38,7 +38,7 @@ class FriendFeed
     {
         $query = TimelinePost::query()
             ->whereNull('in_reply_to_id')
-            ->with(['member.avatar.file', 'images.file', 'linkCard.image', 'mentions'])
+            ->with(['member.avatar.file', 'images.file', 'linkCard.image', 'mentions', 'tags'])
             ->withCount('replies');
 
         TimelineFeedScope::applyFriendsOnly($query, $viewer);

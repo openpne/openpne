@@ -65,8 +65,7 @@ final class HashtagParser
                 continue;
             }
 
-            // normalize() only fails on invalid UTF-8, which the pattern's /u already refused.
-            $tag = mb_strtolower(Normalizer::normalize($raw, Normalizer::FORM_KC) ?: $raw);
+            $tag = self::normalize($raw);
 
             // A run of digits is a number someone wrote, not a topic. NFKC can also turn one
             // character into several (`Ⅷ` into `viii`), overrunning the cap the pattern enforced.
@@ -82,6 +81,17 @@ final class HashtagParser
         }
 
         return $tags;
+    }
+
+    /**
+     * The stored form of a tag, and therefore the only form a lookup may compare against: the column
+     * is byte-equal on every engine, so a query that skips this finds nothing for `#Tag` or `#ＴＡＧ`.
+     */
+    public static function normalize(string $tag): string
+    {
+        // Normalizer::normalize() only fails on invalid UTF-8, which the pattern's /u already refused
+        // on the write side; a lookup term reaching here malformed keeps its raw form and matches nothing.
+        return mb_strtolower(Normalizer::normalize($tag, Normalizer::FORM_KC) ?: $tag);
     }
 
     /**

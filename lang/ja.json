@@ -2,6 +2,7 @@
     "%Activity%": "%Activity%",
     "%Activity% of %Friend%": "%Friend%の%Activity%",
     "%activity% of %my_friend%": "%my_friend%の%activity%",
+    "%Activity% posts tagged #:tag": "「#:tag」の%activity%投稿",
     "%Activity% settings": "%Activity%設定",
     "%Community% %Topics%": "%Community%%Topics%",
     "%Community% %topics%": "%Community%%topics%",

@@ -186,9 +186,9 @@ class ModernOnlyCoverageTest extends TestCase
     }
 
     /**
-     * The core parameterized canonical show pages (profile / diary / community) — the classification
-     * guard only covers parameterless routes, so these are asserted explicitly (Codex). Under
-     * modern_only each must render its Inertia component.
+     * The core parameterized canonical show pages (profile / diary / community / a hashtag's feed) —
+     * the classification guard only covers parameterless routes, so these are asserted explicitly
+     * (Codex). Under modern_only each must render its Inertia component.
      */
     public function test_parameterized_member_show_pages_render_modern_under_modern_only(): void
     {
@@ -196,6 +196,9 @@ class ModernOnlyCoverageTest extends TestCase
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['visibility' => Visibility::Members]);
         $community = Community::factory()->create();
+
+        $this->actingAs($viewer)->get('/timeline/tag/op4')
+            ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('timeline/tag'));
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('member/show'));

@@ -1,5 +1,5 @@
 import type { LinkCardData } from '@/components/link-card';
-import type { MentionEntity } from '@/lib/entity-split';
+import type { MentionEntity, TagEntity } from '@/lib/entity-split';
 
 export type TimelinePostVisibility = 'open' | 'members' | 'friends' | 'private';
 
@@ -24,6 +24,7 @@ export interface TimelinePostEntry {
     replyCount: number; // 0 on replies and single route-bound posts (see TimelinePostSerializer)
     images: TimelinePostImage[];
     mentions: MentionEntity[]; // @mention ranges over the body, in body order
+    tags: TagEntity[]; // #hashtag ranges over the body, in body order
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TimelinePostAuthor;
     createdAt: string;

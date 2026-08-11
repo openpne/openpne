@@ -11,6 +11,7 @@ use App\Features\Timeline\Queries\HomeFeed;
 use App\Features\Timeline\Queries\MemberTimeline;
 use App\Features\Timeline\Queries\MentionCandidates;
 use App\Features\Timeline\Queries\ShowTimelinePost;
+use App\Features\Timeline\Queries\TagFeed;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
@@ -74,6 +75,29 @@ class TimelineController extends Controller
         ]);
     }
 
+    /**
+     * One hashtag's posts. The tag arrives as it was typed into the URL, so it is normalized the way
+     * the parser normalized what is stored — the page for `#Tag` and the page for `#tag` are one page.
+     */
+    public function tag(Request $request, string $tag, TagFeed $query): View|InertiaResponse
+    {
+        $viewer = $this->viewer();
+        $tag = HashtagParser::normalize($tag);
+        $posts = $query($viewer, $tag);
+
+        return $this->respondWith($request, 'timeline', [
+            SurfaceResolver::CLASSIC => fn () => view('timeline.tag', [
+                'tag' => $tag,
+                'posts' => $posts,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('timeline/tag', [
+                'tag' => $tag,
+                'viewerId' => $viewer->getKey(),
+                'posts' => TimelinePostSerializer::paginator($posts),
+            ]),
+        ]);
+    }
+
     public function show(Request $request, int $timelinePost, ShowTimelinePost $query, LinkCardSync $linkCards): View|InertiaResponse|RedirectResponse
     {
         $viewer = $this->viewer();
@@ -89,10 +113,10 @@ class TimelineController extends Controller
         // ShowTimelinePost already gated the block (null → 404 above); record the author for the
         // Classic friend localNav when viewing someone else's post.
         $this->markLocalNavSubject($post->member);
-        // Eager-load the replies' images and mentions too: both are read per reply when it renders,
-        // so loading only replies.member would fire a query per reply for each (an images load being
-        // empty, by the no-image contract, still costs the query).
-        $post->load(['member.avatar.file', 'replies.member.avatar.file', 'replies.images.file', 'replies.mentions']);
+        // Eager-load the replies' images, mentions and tags too: all three are read per reply when it
+        // renders, so loading only replies.member would fire a query per reply for each (an images
+        // load being empty, by the no-image contract, still costs the query).
+        $post->load(['member.avatar.file', 'replies.member.avatar.file', 'replies.images.file', 'replies.mentions', 'replies.tags']);
         // The thread root only. Replies share this table but render as a thread underneath, where a
         // stack of cards would read as noise — and asking per reply would queue a job each. Placed
         // after the reply-permalink redirect above, so a request that never renders queues nothing.

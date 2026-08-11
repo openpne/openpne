@@ -73,6 +73,56 @@ class EntityTextTest extends TestCase
         );
     }
 
+    public function test_a_hashtag_becomes_an_anchor_to_its_tag_page(): void
+    {
+        $html = (string) EntityText::render('ship it #op4', [$this->tag(8, 4, '/timeline/tag/op4')]);
+
+        $this->assertSame('ship it <a href="/timeline/tag/op4" class="hashtag">#op4</a>', $html);
+    }
+
+    public function test_a_mention_and_a_hashtag_in_one_body_are_both_linked(): void
+    {
+        $html = (string) EntityText::render('hi @Alice #op4 bye', [$this->mention(3, 6), $this->tag(10, 4, '/timeline/tag/op4')]);
+
+        $this->assertSame(
+            'hi <a href="/member/7" class="mention">@Alice</a> <a href="/timeline/tag/op4" class="hashtag">#op4</a> bye',
+            $html,
+        );
+    }
+
+    public function test_a_hashtag_and_a_mention_render_back_to_back(): void
+    {
+        $html = (string) EntityText::render('#op4@Alice', [$this->tag(0, 4, '/timeline/tag/op4'), $this->mention(4, 6)]);
+
+        $this->assertSame(
+            '<a href="/timeline/tag/op4" class="hashtag">#op4</a><a href="/member/7" class="mention">@Alice</a>',
+            $html,
+        );
+    }
+
+    public function test_a_full_width_marker_is_shown_as_typed_while_the_href_carries_the_normalized_tag(): void
+    {
+        // The range is over the raw body, so the reader sees ＃ and full-width text; the href is the
+        // stored tag (NFKC + lowercase), percent-encoded — TagRenderTest pins route()'s own output.
+        $html = (string) EntityText::render('＃ＴＡＧ です', [$this->tag(0, 4, '/timeline/tag/tag')]);
+
+        $this->assertSame('<a href="/timeline/tag/tag" class="hashtag">＃ＴＡＧ</a> です', $html);
+    }
+
+    public function test_an_astral_emoji_before_the_hashtag_does_not_shift_the_range(): void
+    {
+        $html = (string) EntityText::render('😀 #op4', [$this->tag(2, 4, '/timeline/tag/op4')]);
+
+        $this->assertSame('😀 <a href="/timeline/tag/op4" class="hashtag">#op4</a>', $html);
+    }
+
+    public function test_a_percent_encoded_tag_href_survives_escaping(): void
+    {
+        $html = (string) EntityText::render('#タグ', [$this->tag(0, 3, '/timeline/tag/%E3%82%BF%E3%82%B0')]);
+
+        $this->assertSame('<a href="/timeline/tag/%E3%82%BF%E3%82%B0" class="hashtag">#タグ</a>', $html);
+    }
+
     public function test_a_display_name_containing_a_url_is_not_autolinked_inside_the_anchor(): void
     {
         // A member named "www.example.com": autolinking the range would nest an anchor in an anchor.
@@ -111,5 +161,11 @@ class EntityTextTest extends TestCase
     private function mention(int $offset, int $length, string $href = '/member/7'): array
     {
         return ['offset' => $offset, 'length' => $length, 'kind' => 'mention', 'href' => $href];
+    }
+
+    /** @return array{offset: int, length: int, kind: string, href: string} */
+    private function tag(int $offset, int $length, string $href): array
+    {
+        return ['offset' => $offset, 'length' => $length, 'kind' => 'hashtag', 'href' => $href];
     }
 }
