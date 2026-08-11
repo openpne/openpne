@@ -37,7 +37,7 @@ class DiaryCommentRoutesTest extends TestCase
             'number' => 1, 'body' => 'First post',
         ]);
         $viewer = Member::factory()->create();
-        $expectedImageUrl = $commenter->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+        $expectedImageUrl = $commenter->load('avatar.file')->avatar->file->thumbnailUrl(120, 120, square: true);
 
         $this->actingAs($viewer)->get("/diary/{$diary->getKey()}")
             ->assertInertia(fn ($page) => $page

@@ -172,7 +172,7 @@ class NotificationFeedSerializer
             'actor' => $actor === null ? null : [
                 'id' => $actor->getKey(),
                 'name' => $actor->name,
-                'imageUrl' => $actor->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                'imageUrl' => $actor->avatar?->file?->thumbnailUrl(120, 120, square: true),
                 'avatarColor' => $actor->avatar_color?->hex(),
             ],
         ];

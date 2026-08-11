@@ -95,7 +95,7 @@ class DashboardTest extends TestCase
         CommunityMember::factory()->member()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
         CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
 
-        $expected = $community->image->thumbnailUrl(76, 76, square: true);
+        $expected = $community->image->thumbnailUrl(120, 120, square: true);
 
         $this->actingAs($viewer)
             ->get('/dashboard')

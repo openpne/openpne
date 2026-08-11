@@ -162,7 +162,7 @@ class DiaryArchiveRoutesTest extends TestCase
         $owner->forceFill(['avatar_color' => AvatarColor::Green])->save();
         MemberImage::factory()->create(['member_id' => $owner->getKey()]);
         Diary::factory()->create(['member_id' => $owner->getKey(), 'visibility' => Visibility::Members, 'created_at' => '2026-03-10 09:00:00']);
-        $expected = $owner->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+        $expected = $owner->load('avatar.file')->avatar->file->thumbnailUrl(120, 120, square: true);
 
         $ownerRef = fn ($page) => $page
             ->where('owner.id', $owner->getKey())

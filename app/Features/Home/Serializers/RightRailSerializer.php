@@ -14,6 +14,9 @@ use Illuminate\Support\Collection;
  * The faces grid names its own audience: `people.kind` says whether the rows are the viewer's
  * friends or an SNS-wide sample (the fallback while `friend` is switched off), and the client reads
  * it for the heading and the view-all link. One key, so a call site cannot ship both.
+ *
+ * Both grids ask for 180px: the rail is a fixed `w-80`, so its three-up tiles land at 90px and 180
+ * is exactly the 2x source they need. Every other surface paints these images far smaller.
  */
 class RightRailSerializer
 {
@@ -31,7 +34,7 @@ class RightRailSerializer
                 'items' => $people->map(fn (Member $m): array => [
                     'id' => $m->getKey(),
                     'name' => $m->name,
-                    'imageUrl' => $m->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                    'imageUrl' => $m->avatar?->file?->thumbnailUrl(180, 180, square: true),
                     'avatarColor' => $m->avatar_color?->hex(),
                     'href' => "/member/{$m->getKey()}",
                 ])->all(),
@@ -39,7 +42,7 @@ class RightRailSerializer
             'joinedCommunities' => $communities->map(fn (Community $c): array => [
                 'id' => $c->getKey(),
                 'name' => $c->name,
-                'imageUrl' => $c->image?->thumbnailUrl(120, 120, square: true),
+                'imageUrl' => $c->image?->thumbnailUrl(180, 180, square: true),
                 // Communities have no chosen badge color; the shared RightRailItem shape keeps the key.
                 'avatarColor' => null,
                 'href' => "/community/{$c->getKey()}",

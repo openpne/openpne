@@ -45,7 +45,7 @@ class BlockRoutesTest extends TestCase
         $blocked = Member::factory()->create();
         MemberImage::factory()->create(['member_id' => $blocked->getKey()]);
         $this->block($member, $blocked);
-        $expected = $blocked->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+        $expected = $blocked->load('avatar.file')->avatar->file->thumbnailUrl(120, 120, square: true);
 
         $this->actingAs($member)->get('/block/list')
             ->assertInertia(fn (AssertableInertia $page) => $page

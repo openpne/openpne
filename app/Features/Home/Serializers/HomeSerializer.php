@@ -73,9 +73,9 @@ class HomeSerializer
             'community' => [
                 'id' => $row->community->getKey(),
                 'name' => $row->community->name,
-                // Byline-avatar size (76px square), matching DiarySerializer's author image — not the
-                // 180px community tile CommunitySerializer serves.
-                'imageUrl' => $row->community->image?->thumbnailUrl(76, 76, square: true),
+                // Byline-avatar size, matching DiarySerializer's author image — not the larger
+                // community tile CommunitySerializer serves.
+                'imageUrl' => $row->community->image?->thumbnailUrl(120, 120, square: true),
             ],
             'updatedAt' => $row->updated_at->toIso8601String(),
         ];

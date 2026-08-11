@@ -38,7 +38,7 @@ class HandleInertiaRequests extends Middleware
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'imageUrl' => $user->avatar?->file?->thumbnailUrl(76, 76, square: true),
+                    'imageUrl' => $user->avatar?->file?->thumbnailUrl(120, 120, square: true),
                     'avatarColor' => $user->avatar_color?->hex(),
                 ] : null,
             ],
