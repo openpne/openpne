@@ -122,7 +122,7 @@ class InertiaSharedPropsTest extends TestCase
     {
         $member = Member::factory()->create();
         app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 100, 100));
-        $expected = $member->fresh()->avatar->file->thumbnailUrl(76, 76, square: true);
+        $expected = $member->fresh()->avatar->file->thumbnailUrl(120, 120, square: true);
 
         $this->actingAs($member)
             ->get('/dashboard')

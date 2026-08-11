@@ -31,7 +31,8 @@ class ProfileSerializer
             'owner' => [
                 'id' => $owner->getKey(),
                 'name' => $owner->name,
-                'avatarUrl' => $owner->avatar?->file?->thumbnailUrl(120, 120, square: true),
+                // The profile header paints this at 80px, the largest avatar outside the editor.
+                'avatarUrl' => $owner->avatar?->file?->thumbnailUrl(180, 180, square: true),
                 'avatarColor' => $owner->avatar_color?->hex(),
             ],
             'isSelf' => $isSelf,
@@ -51,8 +52,8 @@ class ProfileSerializer
     /**
      * The digest shown to an authenticated viewer: viewer-scoped counts plus a preview of the owner's
      * recent diaries, friends, and joined communities. Grid thumbnails are 320×320 — the profile body
-     * column is far wider than the shell's 76/120px right rail, so RightRailSerializer::rail (sized for
-     * that rail) is deliberately not reused.
+     * column is far wider than the shell's right rail, so RightRailSerializer::rail (sized for that
+     * rail) is deliberately not reused.
      *
      * @param  array{diaries: int, activity: int, friends: int, communities: int}  $stats
      * @param  Collection<int, Diary>  $recentDiaries  images.file eager-loaded by the caller (rich rows)

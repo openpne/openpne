@@ -48,6 +48,18 @@ class AvatarRoutesTest extends TestCase
             );
     }
 
+    public function test_the_editor_preview_is_sized_for_the_128px_box_it_paints_into(): void
+    {
+        $member = Member::factory()->create();
+        app(SetAvatar::class)($member, UploadedFile::fake()->image('me.png', 600, 600));
+
+        $expected = $member->fresh()->avatar->file->thumbnailUrl(320, 320, square: true);
+
+        $this->actingAs($member)
+            ->get('/member/avatar')
+            ->assertInertia(fn ($page) => $page->where('avatar.thumbnailUrl', $expected));
+    }
+
     public function test_upload_stores_the_avatar_and_redirects_to_the_editor(): void
     {
         $member = Member::factory()->create();

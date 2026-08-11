@@ -65,7 +65,7 @@ class FriendRoutesTest extends TestCase
         $bob = Member::factory()->create();
         MemberImage::factory()->create(['member_id' => $bob->getKey()]);
         $this->makeFriends($alice, $bob);
-        $expected = $bob->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true);
+        $expected = $bob->load('avatar.file')->avatar->file->thumbnailUrl(120, 120, square: true);
 
         $this->actingAs($alice)->get('/friend/list')
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -98,8 +98,8 @@ class FriendRoutesTest extends TestCase
 
         $this->actingAs($alice)->get('/friend/requests')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('received.data.0.imageUrl', $bob->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true))
-                ->where('sent.data.0.imageUrl', $carol->load('avatar.file')->avatar->file->thumbnailUrl(76, 76, square: true))
+                ->where('received.data.0.imageUrl', $bob->load('avatar.file')->avatar->file->thumbnailUrl(120, 120, square: true))
+                ->where('sent.data.0.imageUrl', $carol->load('avatar.file')->avatar->file->thumbnailUrl(120, 120, square: true))
             );
     }
 
