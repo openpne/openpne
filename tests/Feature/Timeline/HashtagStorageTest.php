@@ -9,6 +9,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -80,6 +81,19 @@ class HashtagStorageTest extends TestCase
             ['tag' => 'ops', 'offset' => 8, 'length' => 4],
             ['tag' => 'ok', 'offset' => 13, 'length' => 3],
         ], $post);
+    }
+
+    public function test_a_tag_lookup_is_byte_equality_on_every_engine(): void
+    {
+        // The parser's NFKC + lowercase is the whole equivalence. MySQL's default collation would
+        // additionally fold accents (cafe = café) where SQLite would not — the tag column pins
+        // MySQL to utf8mb4_bin so an equality lookup means the same thing on both engines.
+        $author = Member::factory()->create();
+        $this->createPost($author, 'a #cafe visit');
+        $this->createPost($author, 'un #café aussi');
+
+        $this->assertSame(1, DB::table('timeline_post_tags')->where('tag', 'cafe')->count());
+        $this->assertSame(1, DB::table('timeline_post_tags')->where('tag', 'café')->count());
     }
 
     public function test_deleting_the_post_removes_its_hashtags(): void

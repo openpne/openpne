@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
@@ -19,13 +20,23 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('timeline_post_tags', function (Blueprint $table) {
+        $mysql = DB::connection()->getDriverName() === 'mysql';
+
+        Schema::create('timeline_post_tags', function (Blueprint $table) use ($mysql) {
             $table->id();
             $table->foreignId('timeline_post_id')->constrained('timeline_posts')->cascadeOnDelete();
             // The parser caps a tag at 30 code points. The headroom keeps a later cap change a
             // parser change rather than a migration, and 64 still leaves the index below an order of
             // magnitude inside InnoDB's key length limit.
-            $table->string('tag', 64);
+            $tag = $table->string('tag', 64);
+            // The parser's NFKC + lowercase is the whole equivalence: MySQL's default
+            // utf8mb4_unicode_ci would additionally fold accents and kana (cafe = café), which
+            // SQLite's binary TEXT does not — the engines would disagree on what a tag equals.
+            // utf8mb4_bin pins MySQL to byte equality; SQLite is already there (push_subscriptions
+            // precedent: it rejects the MySQL collation name, so only MySQL sets it).
+            if ($mysql) {
+                $tag->collation('utf8mb4_bin');
+            }
             $table->unsignedSmallInteger('offset');
             $table->unsignedSmallInteger('length');
 
