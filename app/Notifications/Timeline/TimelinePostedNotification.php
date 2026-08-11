@@ -9,7 +9,6 @@ use App\Models\TimelinePost;
 use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
 use App\Notifications\FeatureNotification;
-use App\Notifications\Settings\NotificationKind;
 use App\Support\Feature;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,10 +16,12 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells a member a new post or reply @mentions them. Mail + database, gated by the recipient's
- * catalog kind.
+ * Announces a new timeline post to a recipient in the broadcast audience. The fan-out job resolves
+ * each recipient's channels once (bulk, from the opt-out set and the template's admin toggle) and
+ * passes the decided list, so `via()` returns it verbatim — one notification instance per recipient,
+ * never a per-channel duplicate of the database feed row.
  */
-class TimelineMentionedNotification extends Notification implements FeatureNotification, ShouldQueue
+class TimelinePostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
     use GatedByFeature {
         shouldSend as private featureShouldSend;
@@ -28,9 +29,11 @@ class TimelineMentionedNotification extends Notification implements FeatureNotif
     use Queueable;
     use RendersMailTemplate;
 
+    /** @param list<string> $channels the pre-resolved delivery channels (mail and/or database). */
     public function __construct(
-        public readonly Member $author,
         public readonly TimelinePost $post,
+        public readonly Member $author,
+        public readonly array $channels,
     ) {}
 
     public static function feature(): Feature
@@ -48,15 +51,16 @@ class TimelineMentionedNotification extends Notification implements FeatureNotif
     /** @return list<string> */
     public function via(Member $notifiable): array
     {
-        return $this->templateChannelsFor(MailTemplate::TimelineMentionNotified, NotificationKind::TimelineMention, $notifiable, ['database']);
+        return $this->channels;
     }
 
     public function toMail(Member $notifiable): MailMessage
     {
-        return $this->mailFromTemplate(MailTemplate::TimelineMentionNotified, [
+        return $this->mailFromTemplate(MailTemplate::TimelinePostingNotified, [
             'member_name' => $this->author->name,
+            'author' => $this->author->name,
             'body' => $this->post->body,
-            'url' => route('timeline.show', ['timelinePost' => $this->threadRootId()]),
+            'url' => route('timeline.show', ['timelinePost' => $this->post->getKey()]),
         ]);
     }
 
@@ -64,17 +68,9 @@ class TimelineMentionedNotification extends Notification implements FeatureNotif
     public function toArray(Member $notifiable): array
     {
         return [
-            'kind' => 'timeline_mentioned',
+            'kind' => 'timeline_posted',
             'author_id' => $this->author->getKey(),
-            // The mentioning post, not its thread: the feed resolves the root when it builds the
-            // link, so a row keeps pointing at what was actually written.
             'post_id' => $this->post->getKey(),
         ];
-    }
-
-    /** A thread has one address — the top-level post's permalink (see TimelineController::show). */
-    private function threadRootId(): int
-    {
-        return (int) ($this->post->in_reply_to_id ?? $this->post->getKey());
     }
 }

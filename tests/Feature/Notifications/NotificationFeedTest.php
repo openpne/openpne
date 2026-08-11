@@ -165,6 +165,58 @@ class NotificationFeedTest extends TestCase
             ->assertRedirect('/timeline/'.$root->getKey());
     }
 
+    public function test_open_redirects_a_new_post_row_to_the_post(): void
+    {
+        [$viewer, $author] = Member::factory()->count(2)->create()->all();
+        $post = TimelinePost::factory()->create(['member_id' => $author->getKey()]);
+        $row = $this->seedRow($viewer, 'timeline_posted', ['author_id' => $author->getKey(), 'post_id' => $post->getKey()]);
+
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
+            ->assertRedirect('/timeline/'.$post->getKey());
+    }
+
+    public function test_open_redirects_a_reply_row_to_the_thread_root(): void
+    {
+        [$viewer, $replier] = Member::factory()->count(2)->create()->all();
+        $root = TimelinePost::factory()->create(['member_id' => $viewer->getKey()]);
+        $reply = TimelinePost::factory()->replyTo($root)->create(['member_id' => $replier->getKey()]);
+        $row = $this->seedRow($viewer, 'timeline_replied', [
+            'replier_id' => $replier->getKey(), 'post_id' => $reply->getKey(), 'reason' => 'reply',
+        ]);
+
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
+            ->assertRedirect('/timeline/'.$root->getKey());
+    }
+
+    public function test_a_reply_row_hydrates_the_replier_as_its_actor(): void
+    {
+        [$viewer, $replier] = Member::factory()->count(2)->create()->all();
+        $root = TimelinePost::factory()->create(['member_id' => $viewer->getKey()]);
+        $reply = TimelinePost::factory()->replyTo($root)->create(['member_id' => $replier->getKey()]);
+        $this->seedRow($viewer, 'timeline_replied', [
+            'replier_id' => $replier->getKey(), 'post_id' => $reply->getKey(), 'reason' => 'related',
+        ]);
+
+        $this->actingOnModern($viewer)->get('/notifications')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('feed.data.0.kind', 'timeline_replied')
+                ->where('feed.data.0.reason', 'related')
+                ->where('feed.data.0.actor.name', $replier->name)
+                ->where('feed.data.0.label', __(':name commented on a %activity% post you commented on.', ['name' => $replier->name])),
+            );
+    }
+
+    public function test_open_falls_back_to_the_feed_when_a_broadcast_row_is_no_longer_viewable(): void
+    {
+        [$viewer, $author] = Member::factory()->count(2)->create()->all();
+        $hidden = TimelinePost::factory()->private()->create(['member_id' => $author->getKey()]);
+        $row = $this->seedRow($viewer, 'timeline_posted', ['author_id' => $author->getKey(), 'post_id' => $hidden->getKey()]);
+
+        $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
+            ->assertRedirect(route('notifications.index'));
+    }
+
     public function test_open_falls_back_to_the_feed_when_the_mentioning_post_is_gone_or_hidden(): void
     {
         [$viewer, $author] = Member::factory()->count(2)->create()->all();
