@@ -1,0 +1,35 @@
+/* The @mention picker's candidate list (public/js/classic-timeline-mention.js). It sits in the
+   document flow directly under the field rather than over it: the OpenPNE 3 skins position the
+   compose box themselves, and an overlay would have to guess at their offsets. Classes, not inline
+   styles, so a customer stylesheet can restyle it like the rest of the skin. */
+.classicMentionList {
+  max-width: 320px;
+  margin: 2px 0 0;
+  border: 1px solid #ccc;
+  background: #fff;
+}
+
+/* The rule below sets no `display`, but a customer stylesheet might; keep `hidden` winning. */
+.classicMentionList[hidden] {
+  display: none;
+}
+
+.classicMentionOption {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+/* Where the keyboard and the pointer agree the selection is. */
+.classicMentionOptionActive {
+  background: #eee;
+}
+
+.classicMentionAvatar {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-right: 6px;
+}
