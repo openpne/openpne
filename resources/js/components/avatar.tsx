@@ -5,10 +5,11 @@ import { InitialBadge } from '@/components/initial-badge';
  * The circle shape distinguishes it from a community image.
  *
  * Size follows the avatar's role, not the surrounding font size. `md` (40px) is for the person a
- * piece of content or a list row is *about* — entry and comment authors, member / message /
- * notification rows — where the avatar is the primary identification cue. `sm` (32px) is for app
- * chrome and dense pickers (own avatar, scope identity, mention candidates, recipient chips,
- * settings rows), where it is not the reason the row exists. `lg` (48px) is for roster grids.
+ * piece of content or a row is *about* — entry and comment authors, the counterparty a message is
+ * with, member / message box / notification rows — where the avatar is the primary identification
+ * cue. `sm` (32px) is for app chrome and dense pickers (own avatar, scope identity, mention
+ * candidates, compose recipient chips, settings rows), where it is not the reason the row exists.
+ * `lg` (48px) is for roster grids.
  */
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg';
 
