@@ -7,6 +7,7 @@ import { splitEntities } from './entity-split.ts';
 // <UserText> — so these assert the raw segment shape only.
 
 const alice = (offset: number, length: number, memberId = 7) => ({ memberId, offset, length });
+const tagged = (offset: number, length: number, tag: string) => ({ tag, offset, length });
 
 test('an ascii mention becomes a mention segment between the surrounding text', () => {
     assert.deepEqual(splitEntities('hi @Alice there', [alice(3, 6)]), [
@@ -66,6 +67,53 @@ test('two adjacent mentions render back to back', () => {
         { kind: 'mention', text: '@Alice', memberId: 7 },
         { kind: 'text', text: '' },
         { kind: 'mention', text: '@Bob', memberId: 8 },
+        { kind: 'text', text: '' },
+    ]);
+});
+
+test('a hashtag becomes a hashtag segment carrying the normalized tag', () => {
+    assert.deepEqual(splitEntities('ship it #op4', [], [tagged(8, 4, 'op4')]), [
+        { kind: 'text', text: 'ship it ' },
+        { kind: 'hashtag', text: '#op4', tag: 'op4' },
+        { kind: 'text', text: '' },
+    ]);
+});
+
+test('a mention and a hashtag in one body are merged in body order', () => {
+    assert.deepEqual(splitEntities('hi @Alice #op4 bye', [alice(3, 6)], [tagged(10, 4, 'op4')]), [
+        { kind: 'text', text: 'hi ' },
+        { kind: 'mention', text: '@Alice', memberId: 7 },
+        { kind: 'text', text: ' ' },
+        { kind: 'hashtag', text: '#op4', tag: 'op4' },
+        { kind: 'text', text: ' bye' },
+    ]);
+});
+
+test('a hashtag and a mention render back to back', () => {
+    // The tag list is passed second but comes first in the body: the merge is by offset, not by list.
+    assert.deepEqual(splitEntities('#op4@Alice', [alice(4, 6)], [tagged(0, 4, 'op4')]), [
+        { kind: 'text', text: '' },
+        { kind: 'hashtag', text: '#op4', tag: 'op4' },
+        { kind: 'text', text: '' },
+        { kind: 'mention', text: '@Alice', memberId: 7 },
+        { kind: 'text', text: '' },
+    ]);
+});
+
+test('a full width marker stays in the segment text while the tag is the normalized one', () => {
+    // The range is over the raw body, so the reader sees ＃ and full-width text; <EntityText> links
+    // it to the normalized tag, percent-encoded there.
+    assert.deepEqual(splitEntities('＃ＴＡＧ です', [], [tagged(0, 4, 'tag')]), [
+        { kind: 'text', text: '' },
+        { kind: 'hashtag', text: '＃ＴＡＧ', tag: 'tag' },
+        { kind: 'text', text: ' です' },
+    ]);
+});
+
+test('an astral emoji before the hashtag does not shift the range', () => {
+    assert.deepEqual(splitEntities('😀 #op4', [], [tagged(2, 4, 'op4')]), [
+        { kind: 'text', text: '😀 ' },
+        { kind: 'hashtag', text: '#op4', tag: 'op4' },
         { kind: 'text', text: '' },
     ]);
 });

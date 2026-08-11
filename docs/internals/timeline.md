@@ -182,8 +182,29 @@ parser change.
 Mentions are deliberately not backfilled, for the reason above: a mention exists because someone
 picked a member, never because a body was scanned.
 
-Nothing renders a tag as a link yet. The link and the page it opens arrive together, so a tag never
-points somewhere that does not exist.
+### The page a tag opens
+
+`/timeline/tag/{tag}` ([`TagFeed`](../../app/Features/Timeline/Queries/TagFeed.php)) is the home feed
+narrowed to the top-level posts carrying the tag — **`TimelineFeedScope` unchanged**: collecting posts
+under a tag must not widen who may read them, so a friends-only post reaches the same friends there
+as anywhere else.
+
+The URL carries the tag as it was typed, so the action puts it through `HashtagParser::normalize`
+before looking it up. That is not a convenience: the column is byte-equal on every engine (utf8mb4_bin
+on MySQL), so an un-normalized `#Tag` or `#ＴＡＧ` would find nothing rather than the topic it names.
+A tag nobody used renders an empty feed, not a 404 — zero results is an answer, and a tag is not an
+entity that can be missing.
+
+### Linking the ranges
+
+A tag range is an `EntityText` entity like a mention, with `hashtag` as its kind (and so its anchor
+class) and the tag page as its href. Classic merges the two sets by offset in `<x-timeline-body>` and
+Modern in `splitEntities`; nothing has to resolve an overlap, because the parser never stored one.
+The anchor's text is the raw range, so a body written with `＃ＴＡＧ` shows `＃ＴＡＧ` and links to
+`/timeline/tag/tag`.
+
+Where mentions link, tags link — with the same exception, and for the same reason: the Modern
+dashboard's activity digest stays a plain clamped preview whose row is itself one link.
 
 ### Hashtag invariants
 
@@ -192,3 +213,6 @@ points somewhere that does not exist.
   body, as a mention's are.
 - A candidate overlapping a mention is dropped, so the two range sets never intersect.
 - Re-running the backfill over an unchanged body and mention set changes nothing.
+- Every tag lookup normalizes its term with `HashtagParser::normalize`; the stored form is the only
+  form the column compares.
+- The tag page applies the home feed's audience scope; a tag is a lens on the feed, never a way past it.
