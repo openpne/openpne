@@ -27,12 +27,16 @@ class NotificationSettingsPageTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/config/notifications')
                 ->has('form.groups', 6)
-                // %Activity% carries one wired kind; its four unwired siblings stay off the page.
+                // %Activity% carries five wired kinds; the dormant community variant stays off the page.
                 ->where('form.groups.0.key', 'timeline')
                 ->where('form.groups.0.caption', __('%Activity%'))
-                ->has('form.groups.0.kinds', 1)
-                ->where('form.groups.0.kinds.0.kind', 'timeline_mention')
-                ->where('form.groups.0.kinds.0.caption', __('When you are mentioned in a %activity% post'))
+                ->has('form.groups.0.kinds', 5)
+                ->where('form.groups.0.kinds.0.kind', 'timeline_new_post')
+                ->where('form.groups.0.kinds.1.dependOnNot', 'timeline_new_post')
+                ->where('form.groups.0.kinds.2.kind', 'timeline_reply_post')
+                ->where('form.groups.0.kinds.3.kind', 'timeline_related_post')
+                ->where('form.groups.0.kinds.4.kind', 'timeline_mention')
+                ->where('form.groups.0.kinds.4.caption', __('When you are mentioned in a %activity% post'))
                 ->where('form.groups.1.key', 'diary')
                 ->has('form.groups.1.kinds', 4)
                 ->where('form.groups.1.kinds.0.kind', 'diary_new_post')
@@ -67,7 +71,7 @@ class NotificationSettingsPageTest extends TestCase
                 ->where('pushSettings.enabled', true)
                 // The push section does not touch the catalog grid.
                 ->has('form.groups', 6)
-                ->where('form.groups.0.kinds.0.kind', 'timeline_mention'),
+                ->where('form.groups.0.kinds.0.kind', 'timeline_new_post'),
             );
     }
 
@@ -126,7 +130,7 @@ class NotificationSettingsPageTest extends TestCase
 
         $this->actingAs($member)
             ->from('/member/config/notifications')
-            ->post('/member/config/notifications', ['settings' => ['timeline_new_post' => ['mail' => false]]])
+            ->post('/member/config/notifications', ['settings' => ['timeline_new_post_community' => ['mail' => false]]])
             ->assertSessionHasErrors('settings');
 
         $this->assertDatabaseCount('member_notification_settings', 0);
@@ -154,7 +158,8 @@ class NotificationSettingsPageTest extends TestCase
             ->assertSee('action="'.route('member.config.notifications').'"', false)
             ->assertSee(NotificationKind::FriendLinkConfirm->caption())
             ->assertSee(NotificationKind::MessageNew->caption())
-            ->assertDontSee(NotificationKind::TimelineNewPost->caption());
+            ->assertSee(NotificationKind::TimelineNewPost->caption())
+            ->assertDontSee(NotificationKind::TimelineNewPostCommunity->caption());
     }
 
     public function test_legacy_config_notification_url_redirects_to_the_category(): void

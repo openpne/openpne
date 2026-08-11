@@ -96,6 +96,43 @@ bodies would invent links OpenPNE 3 never drew, against display names that were 
 Mentions are therefore prospective only, and by design: a mention exists because someone picked a
 member, never because a body was scanned for text that looks like one.
 
+## Notifications
+
+Five catalog kinds, all decided from the two posting events
+([`TimelinePostPosted`](../../app/Features/Timeline/Events/TimelinePostPosted.php) /
+[`TimelineReplyPosted`](../../app/Features/Timeline/Events/TimelineReplyPosted.php)):
+
+| what happened | who hears | kind |
+|---|---|---|
+| a top-level post | everyone who can see it | `timelineNewPost`, or `timelineNewPostOnlyFriends` for the author's friends |
+| a reply | the thread root's author | `timelineReplyPost` |
+| a reply | the root's other repliers | `timelineRelatedPost` |
+| either, naming a member | that member | `timelineMention` (OpenPNE-4-only) |
+
+The new-post audience follows the post's visibility, exactly as OpenPNE 3's `notifyNewActivity` did:
+Open/Members → every active member, Friends → the author's friends, Private → nobody. The two
+new-post kinds compose as a union, the same `dependOnNot` shape as the diary broadcast
+([notifications.md](notifications.md#broadcast-fan-out)) — OpenPNE 3 wrote it as an `elseif`, which
+is the same set. A reply never broadcasts; it only notifies the root's author and its other
+repliers, deduplicated so the root's author gets Reply and not also Related.
+
+**Precedence is Mention > Reply > Related > NewPost, with one notification per member.** Its only
+input is the mention snapshot the events carry, taken inside the writing transaction: the mention
+notification sends to that set, and the two other paths subtract that same set rather than
+re-deriving one — including the broadcast, which runs later in a queued job, where a re-derived set
+could no longer be the one that was actually notified.
+
+Every recipient is judged by one predicate
+([`TimelineNotificationEligibility`](../../app/Features/Timeline/TimelineNotificationEligibility.php)):
+not the author, not banned, able to view the **thread root**, and no block in either direction with
+the author. It is evaluated twice — when the listener or fan-out enqueues, and again in each
+notification's `shouldSend()` immediately before a channel delivers — because these notifications
+queue, and a mail carries the post body to whoever is eligible at *delivery* time, not at post time.
+
+`timelineNewPostCommunity` stays dormant (`isWired: false`). OpenPNE 3 registered it and never sent
+it, and OpenPNE 4's timeline has no community scope; it is kept registered only so the upgrade
+preserves a member's stored choice.
+
 ## Key invariants
 
 - Offsets and lengths are Unicode code points, half-open, ascending, non-overlapping. The write path
@@ -106,4 +143,6 @@ member, never because a body was scanned for text that looks like one.
 - A range with no row renders as plain text, which is what makes the member cascade safe.
 - An entity's own range is escaped but never autolinked.
 - `EntityText` and `entity-split.ts` are a lockstep pair, like `BodyText` and `linkify.ts`.
-- A reply inherits its parent's visibility; the thread is one audience.
+- A reply inherits its parent's visibility; the thread is one audience — which is also what a
+  notification's viewability and its feed row's link are judged against.
+- The events' mention snapshot is the only input to notification precedence; no path re-derives it.

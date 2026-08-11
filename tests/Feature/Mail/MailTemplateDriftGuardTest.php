@@ -33,6 +33,7 @@ use App\Notifications\Member\WithdrawalAdminNotification;
 use App\Notifications\Member\WithdrawalCompletedNotification;
 use App\Notifications\Message\MessageReceivedNotification;
 use App\Notifications\Timeline\TimelineMentionedNotification;
+use App\Notifications\Timeline\TimelinePostedNotification;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
@@ -115,6 +116,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new MfaDisabledNotification('en'), $recipient],
             [new MfaResetLinkNotification('the-token', 'en'), new AnonymousNotifiable],
             [new TimelineMentionedNotification($sender, $post), $recipient],
+            [new TimelinePostedNotification($post, $sender, ['mail']), $recipient],
         ];
 
         $this->assertCount(count(MailTemplate::sendable()), $notifications, 'one guarded notification per sendable template');

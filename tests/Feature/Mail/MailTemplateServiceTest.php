@@ -60,6 +60,20 @@ class MailTemplateServiceTest extends TestCase
         $this->assertStringContainsString('■', $self->body);
     }
 
+    public function test_timeline_posting_defaults_match_the_openpne3_sample(): void
+    {
+        // An OpenPNE 3-origin default is kept byte-exact with the extension's sample (subject
+        // spacing, the author variable, the no-space ">>") so a fresh install mails what the
+        // extension mailed and an imported customised body finds its variables.
+        $this->setSnsName('My Community');
+
+        $rendered = $this->service()->render(MailTemplate::TimelinePostingNotified, 'ja', [
+            'member_name' => 'アリス', 'author' => 'アリス', 'body' => '本文', 'url' => 'https://sns.example/timeline/1',
+        ]);
+        $this->assertSame('【My Community】 アリスさんのタイムライン投稿', $rendered->subject);
+        $this->assertStringStartsWith("アリス>>\n\n本文\n\nhttps://sns.example/timeline/1", $rendered->body);
+    }
+
     public function test_db_override_replaces_the_default_body(): void
     {
         $this->setSnsName('My Community');

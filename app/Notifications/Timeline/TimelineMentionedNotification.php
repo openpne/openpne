@@ -2,7 +2,7 @@
 
 namespace App\Notifications\Timeline;
 
-use App\Features\Timeline\Queries\TimelineMentionRecipients;
+use App\Features\Timeline\TimelineNotificationEligibility;
 use App\Mail\Template\MailTemplate;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -38,16 +38,11 @@ class TimelineMentionedNotification extends Notification implements FeatureNotif
         return Feature::Timeline;
     }
 
-    /**
-     * Re-checked per channel at delivery, not only at enqueue: this notification queues, and by the
-     * time the job runs the recipient may be banned, blocked, or off a Friends thread's audience —
-     * SerializesModels hands this method fresh rows, so the answer is current, and a stale mention
-     * must not deliver a mail carrying the post body.
-     */
+    /** SerializesModels hands this fresh rows, so the eligibility answer is delivery-time current. */
     public function shouldSend(Member $notifiable, string $channel): bool
     {
         return $this->featureShouldSend($notifiable, $channel)
-            && app(TimelineMentionRecipients::class)->eligible($notifiable, $this->post, $this->author);
+            && TimelineNotificationEligibility::canReceive($notifiable, $this->post, $this->author);
     }
 
     /** @return list<string> */

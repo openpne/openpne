@@ -24,8 +24,8 @@ class I18nCoverageSourcesTest extends TestCase
         $this->assertArrayHasKey('The %community% name.', $sources);
         $this->assertArrayHasKey('%Diaries%', $sources);
 
-        // Unsurfaced → out: an unwired kind's caption.
-        $this->assertArrayNotHasKey('New %activity% posts (everyone)', $sources);
+        // Unsurfaced → out: the dormant community-timeline kind's caption.
+        $this->assertArrayNotHasKey('New %community% %activity% posts', $sources);
         // Its category is in all the same, because a sibling kind of it is wired — the corpus
         // follows what renders. (No all-unwired category is left to assert the other way.)
         $this->assertArrayHasKey('%Activity%', $sources);

@@ -146,22 +146,24 @@ excluded ids are snapshotted when the comment is posted and passed to the async 
 when it runs: a comment deleted in between would otherwise drop its author from the exclusion and
 notify them twice.
 
-## Timeline mentions
+A new timeline post broadcasts like a diary — visibility-scoped audience
+([`TimelinePostedRecipients`](../../app/Features/Timeline/Queries/TimelinePostedRecipients.php)), the
+same two-kind union, a queued [`BroadcastTimelinePosted`](../../app/Jobs/BroadcastTimelinePosted.php)
+— with the community broadcast's exclusion shape on top: the members the post `@mentions` are
+subtracted, and its mail leg needs the shared (configurable) `timeline-posting` template. Its reply
+notifications subtract the same set. Who hears what, and why, is
+[timeline.md](timeline.md#notifications).
 
-A timeline post's stored `@mentions` notify the members they name. The posting events
-([`TimelinePostPosted`](../../app/Features/Timeline/Events/TimelinePostPosted.php) /
-[`TimelineReplyPosted`](../../app/Features/Timeline/Events/TimelineReplyPosted.php)) carry the
-distinct mentioned ids as a snapshot taken inside the writing transaction, so every listener splits
-one audience the same way — the same trick, and the same reason, as the comment exclusion above.
+## Delivery-time re-checks
 
-[`TimelineMentionRecipients`](../../app/Features/Timeline/Queries/TimelineMentionRecipients.php)
-gates each recipient on being unbanned, able to view the post, and free of a block in either
-direction with the author. Storage settled ban and block at write time, so those are re-checks;
-viewability is not checked there at all — a member may be mentioned in a post they cannot read,
-which stays the plain text it is rather than becoming a notification. Viewability is judged on the
-**thread root**, not the mentioning row: a reply inherits its parent's visibility, so a thread is
-one audience owned by the root's author. The feed row addresses the mentioning post and resolves
-the root when it builds the link, so a thread keeps one address.
+A queued notification decides its channels when it is *enqueued* and delivers them later. For most
+kinds that gap is harmless: the recipient already holds the thing being announced. It is not harmless
+where the mail carries content the recipient's access to can lapse — a ban, a new block, a revoked
+friendship on a Friends thread — so every timeline notification re-runs its eligibility in
+`shouldSend()`, the one hook `NotificationSender` consults immediately before each channel send
+([`TimelineNotificationEligibility`](../../app/Features/Timeline/TimelineNotificationEligibility.php),
+composed with the feature gate through a trait alias). `via()` cannot serve this: it runs at enqueue
+time, and `SendQueuedNotifications` replays the channels decided back then.
 
 ## Web push
 

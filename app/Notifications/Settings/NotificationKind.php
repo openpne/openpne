@@ -58,13 +58,17 @@ enum NotificationKind: string
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineNewPost',
                 caption: 'New %activity% posts (everyone)',
+                isWired: true,
             ),
             self::TimelineNewPostOnlyFriends => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineNewPostOnlyFriends',
                 caption: 'New %activity% posts (%friends% only)',
                 dependOnNot: self::TimelineNewPost,
+                isWired: true,
             ),
+            // Dormant: OpenPNE 3 defined this kind but never sent it, and OpenPNE 4's timeline has
+            // no community scope to send it for. Wire it when community timelines land.
             self::TimelineNewPostCommunity => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineNewPostCommunity',
@@ -74,11 +78,13 @@ enum NotificationKind: string
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineReplyPost',
                 caption: 'Comments on your %activity% posts',
+                isWired: true,
             ),
             self::TimelineRelatedPost => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineRelatedPost',
                 caption: 'Comments on %activity% posts you commented on',
+                isWired: true,
             ),
             self::TimelineMention => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,

@@ -51,6 +51,9 @@ class NotificationKindLabelTest extends TestCase
             'new topic' => ['community_topic_posted', null, 'Alice posted a new topic.'],
             'new event' => ['community_event_posted', null, 'Alice posted a new event.'],
             'mention' => ['timeline_mentioned', null, 'Alice mentioned you in a timeline post.'],
+            'new timeline post' => ['timeline_posted', null, 'Alice posted to the timeline.'],
+            'reply on mine' => ['timeline_replied', 'reply', 'Alice commented on your timeline post.'],
+            'reply on one I replied to' => ['timeline_replied', 'related', 'Alice commented on a timeline post you commented on.'],
         ];
     }
 
