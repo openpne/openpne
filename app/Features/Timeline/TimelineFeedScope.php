@@ -20,12 +20,19 @@ use Illuminate\Support\Facades\DB;
  * The friend branch of apply() follows the `friend` unit, so every consumer of the home feed loses
  * it from one place. applyFriendsOnly() carries no such check: its only callers are the two
  * friend-scoped gadgets, which the unit hides whole.
+ *
+ * Every method here is an SNS-wide feed, so all of them drop community-scoped posts — a community
+ * timeline is reached only through applyCommunity(), which is the sole opt-in. New SNS-wide feeds
+ * inherit the exclusion by going through this class, as OpenPNE 3's opActivityQueryBuilder did with
+ * `foreign_table IS NULL OR <> "community"`.
  */
 final class TimelineFeedScope
 {
     /** @param  Builder<TimelinePost>  $query */
     public static function apply(Builder $query, Member $viewer): void
     {
+        self::excludeCommunityScoped($query);
+
         $viewerId = $viewer->getKey();
 
         $query->where(function (Builder $audience) use ($viewerId) {
@@ -65,6 +72,8 @@ final class TimelineFeedScope
      */
     public static function applyFriendsOnly(Builder $query, Member $viewer): void
     {
+        self::excludeCommunityScoped($query);
+
         $viewerId = $viewer->getKey();
 
         $query->where(function (Builder $audience) use ($viewerId) {
@@ -97,8 +106,16 @@ final class TimelineFeedScope
      */
     public static function applyMembersOnly(Builder $query, Member $viewer): void
     {
+        self::excludeCommunityScoped($query);
+
         $query->where('timeline_posts.visibility', '<=', Visibility::Members->value);
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
+    }
+
+    /** @param  Builder<TimelinePost>  $query */
+    private static function excludeCommunityScoped(Builder $query): void
+    {
+        $query->whereNull('timeline_posts.community_id');
     }
 }

@@ -7,6 +7,7 @@ use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Models\TimelinePostImage;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -47,5 +48,19 @@ class DeleteTimelinePostTest extends TestCase
         // The FK cascade drops the join row; DeleteTimelinePost purges the File (and its bytes).
         $this->assertDatabaseMissing('timeline_post_images', ['timeline_post_id' => $post->getKey()]);
         $this->assertDatabaseMissing('files', ['id' => $fileId]);
+    }
+
+    public function test_purges_an_image_a_reply_carries(): void
+    {
+        // OpenPNE 4's writer attaches no image to a reply, but the column allows one and upgraded
+        // OpenPNE 3 threads can carry one — and the cascade takes the join row with it, so nothing
+        // else could ever reach that File again.
+        $post = TimelinePost::factory()->create();
+        $reply = TimelinePost::factory()->replyTo($post)->create();
+        $image = TimelinePostImage::factory()->create(['timeline_post_id' => $reply->getKey()]);
+
+        (new DeleteTimelinePost)($post);
+
+        $this->assertDatabaseMissing('files', ['id' => $image->file_id]);
     }
 }

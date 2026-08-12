@@ -12,8 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // One timeline post. A reply is a row whose in_reply_to_id points at its parent; top-level
-// posts leave it null.
-#[Fillable(['member_id', 'in_reply_to_id', 'body', 'visibility'])]
+// posts leave it null. community_id set scopes the post to that community's timeline; null is
+// SNS-wide.
+#[Fillable(['member_id', 'community_id', 'in_reply_to_id', 'body', 'visibility'])]
 class TimelinePost extends Model
 {
     /** @use HasFactory<TimelinePostFactory> */
@@ -33,6 +34,12 @@ class TimelinePost extends Model
     public function member(): BelongsTo
     {
         return $this->belongsTo(Member::class);
+    }
+
+    /** @return BelongsTo<Community, $this> The community this post is scoped to, or null for SNS-wide. */
+    public function community(): BelongsTo
+    {
+        return $this->belongsTo(Community::class);
     }
 
     /** @return BelongsTo<TimelinePost, $this> The parent this post replies to, or null. */

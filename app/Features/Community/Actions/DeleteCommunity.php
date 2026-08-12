@@ -7,6 +7,7 @@ use App\Features\Community\Exceptions\CommunityActionException;
 use App\Features\Community\Exceptions\CommunityActionFailure;
 use App\Features\CommunityEvent\Actions\DeleteEvent;
 use App\Features\CommunityTopic\Actions\DeleteTopic;
+use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Models\Community;
 use App\Models\File;
 use App\Models\Member;
@@ -17,6 +18,7 @@ class DeleteCommunity
     public function __construct(
         private readonly DeleteTopic $deleteTopic,
         private readonly DeleteEvent $deleteEvent,
+        private readonly DeleteTimelinePost $deleteTimelinePost,
     ) {}
 
     public function __invoke(Member $actor, Community $community): void
@@ -44,6 +46,13 @@ class DeleteCommunity
 
         foreach ($community->events()->get() as $event) {
             $this->deleteEvent->purge($event);
+        }
+
+        // Same for the community's timeline: the cascade drops timeline_post_images rows but not the
+        // File bytes. Top-level posts only — DeleteTimelinePost cascades their replies, which carry
+        // no image of their own.
+        foreach ($community->timelinePosts()->whereNull('in_reply_to_id')->get() as $post) {
+            ($this->deleteTimelinePost)($post);
         }
 
         // The cascade removes memberships and join requests but never the top-image File bytes. Read
