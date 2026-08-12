@@ -11,6 +11,7 @@ use App\Models\TimelinePost;
 use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /**
@@ -128,6 +129,38 @@ class CommunityTimelinePageTest extends TestCase
         $this->actingAs(Member::factory()->create())->get("/community/{$community->getKey()}")
             ->assertOk()
             ->assertDontSee($post->body);
+    }
+
+    public function test_the_modern_community_home_carries_the_box_for_members_only(): void
+    {
+        config(['openpne.surface_mode' => 'modern_only']);
+        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
+        $member = $this->joined($community);
+        $post = TimelinePost::factory()->inCommunity($community)->create(['member_id' => $member->getKey()]);
+
+        $this->actingAs($member)->get("/community/{$community->getKey()}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('timelinePosts', 1)
+                ->where('timelinePosts.0.id', $post->getKey()));
+
+        $this->actingAs(Member::factory()->create())->get("/community/{$community->getKey()}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('timelinePosts', null));
+    }
+
+    public function test_the_timeline_unit_takes_the_modern_box_away(): void
+    {
+        config(['openpne.surface_mode' => 'modern_only']);
+        $community = Community::factory()->create();
+        $member = $this->joined($community);
+
+        $this->setSnsSetting(Feature::Timeline->settingKey(), false);
+        $this->freshRequestState();
+
+        $this->actingAs($member)->get("/community/{$community->getKey()}")
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('timelinePosts', null));
     }
 
     // Replying from a community thread ---------------------------------------

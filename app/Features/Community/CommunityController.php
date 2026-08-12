@@ -29,6 +29,7 @@ use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\CommunityTimelineAccess;
 use App\Features\Timeline\Queries\CommunityTimeline;
+use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\CommunityRequest;
@@ -130,6 +131,11 @@ class CommunityController extends Controller
                 'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
                 'recentEvents' => $showEvents ? CommunityEventSerializer::summaries($recentEvents($found)) : null,
                 'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
+                // Members only, as the Classic box is: it leads to posting, which a non-member
+                // cannot do. Null hides the card, the same seam the two boards use.
+                'timelinePosts' => $showTimeline
+                    ? array_map([TimelinePostSerializer::class, 'entry'], $communityTimeline->take($viewer, $found, self::TIMELINE_BOX)->all())
+                    : null,
             ]),
         ]);
     }
