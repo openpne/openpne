@@ -3,10 +3,12 @@
 namespace App\Features\Timeline;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\Community\Serializers\CommunitySerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\Actions\CreateReply;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
+use App\Features\Timeline\Queries\CommunityTimeline;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Features\Timeline\Queries\MemberTimeline;
 use App\Features\Timeline\Queries\MentionCandidates;
@@ -15,9 +17,11 @@ use App\Features\Timeline\Queries\TagFeed;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Timeline\StoreCommunityTimelinePostRequest;
 use App\Http\Requests\Timeline\StoreReplyRequest;
 use App\Http\Requests\Timeline\StoreTimelinePostRequest;
 use App\LinkCard\LinkCardSync;
+use App\Models\Community;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\SurfaceResolver;
@@ -76,6 +80,66 @@ class TimelineController extends Controller
     }
 
     /**
+     * One community's timeline. The community carries the localNav, as OpenPNE 3 did by setting
+     * sf_nav_type to `community` on this page — the reader is inside a community here, not on
+     * someone's profile.
+     */
+    public function community(Request $request, Community $community, CommunityTimeline $query): View|InertiaResponse
+    {
+        $viewer = $this->viewer();
+        abort_unless(CommunityTimelineAccess::canViewTimeline($community, $viewer), 404);
+
+        $posts = $query($viewer, $community);
+        $this->markLocalNavCommunity($community);
+
+        return $this->respondWith($request, 'timeline', [
+            SurfaceResolver::CLASSIC => fn () => view('timeline.community', [
+                'community' => $community,
+                'viewer' => $viewer,
+                'posts' => $posts,
+                'canPost' => CommunityTimelineAccess::canPost($community, $viewer),
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('timeline/community', [
+                'community' => CommunitySerializer::summary($community),
+                'viewerId' => $viewer->getKey(),
+                'canPost' => CommunityTimelineAccess::canPost($community, $viewer),
+                'posts' => TimelinePostSerializer::paginator($posts),
+            ]),
+        ]);
+    }
+
+    /**
+     * The Modern compose page for a community. Modern-only: Classic composes inline in the box, as
+     * OpenPNE 3 did, so a standalone Classic form here would be a second way in that OpenPNE 3
+     * never had.
+     */
+    public function newCommunity(Community $community): InertiaResponse
+    {
+        abort_unless(CommunityTimelineAccess::canPost($community, $this->viewer()), 404);
+        $this->markLocalNavCommunity($community);
+
+        return Inertia::render('timeline/community-new', [
+            'defaultVisibility' => (string) Visibility::Members->value,
+            'visibilityOptions' => [],
+            'community' => CommunitySerializer::summary($community),
+        ]);
+    }
+
+    public function storeCommunity(StoreCommunityTimelinePostRequest $request, Community $community, CreateTimelinePost $action): RedirectResponse
+    {
+        $viewer = $this->viewer();
+        // Reading an everyone-readable community does not admit someone to its conversation; the
+        // action refuses too, which is what protects the reply route that has no such check here.
+        abort_unless(CommunityTimelineAccess::canPost($community, $viewer), 404);
+
+        $action($viewer, $request->toData(), $request->file('image'), $community);
+
+        return redirect()
+            ->route('community.timeline', ['community' => $community->getKey()])
+            ->with('status', __('Posted.'));
+    }
+
+    /**
      * One hashtag's posts. The tag arrives as it was typed into the URL, so it is normalized the way
      * the parser normalized what is stored — the page for `#Tag` and the page for `#tag` are one page.
      */
@@ -110,9 +174,14 @@ class TimelineController extends Controller
             return redirect()->route('timeline.show', ['timelinePost' => $post->getKey()]);
         }
 
-        // ShowTimelinePost already gated the block (null → 404 above); record the author for the
-        // Classic friend localNav when viewing someone else's post.
-        $this->markLocalNavSubject($post->member);
+        // ShowTimelinePost already gated the block (null → 404 above); record what the page is
+        // about for the Classic localNav. A community post is about its community, not its author —
+        // the reader arrived from inside the community and the nav should keep them there.
+        if ($post->community !== null) {
+            $this->markLocalNavCommunity($post->community);
+        } else {
+            $this->markLocalNavSubject($post->member);
+        }
         // Eager-load the replies' images, mentions and tags too: all three are read per reply when it
         // renders, so loading only replies.member would fire a query per reply for each (an images
         // load being empty, by the no-image contract, still costs the query).
@@ -154,12 +223,28 @@ class TimelineController extends Controller
         ]);
     }
 
-    /** Members the compose form's @mention picker may offer for its search term. */
+    /**
+     * Members the compose form's @mention picker may offer for its search term. Composing into a
+     * community narrows the offer to its members, so the picker and the submit agree — and the
+     * caller must be one of them, or this would hand a members-only community's roster to an
+     * outsider a name at a time.
+     */
     public function mentionCandidates(Request $request, MentionCandidates $query): JsonResponse
     {
-        $request->validate(['q' => ['nullable', 'string', 'max:100']]);
+        $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'community' => ['nullable', 'integer'],
+        ]);
 
-        $candidates = $query($this->viewer(), $request->string('q')->value());
+        $viewer = $this->viewer();
+        $community = null;
+
+        if ($request->filled('community')) {
+            $community = Community::find($request->integer('community'));
+            abort_unless($community !== null && CommunityTimelineAccess::canPost($community, $viewer), 404);
+        }
+
+        $candidates = $query($viewer, $request->string('q')->value(), $community);
 
         return response()->json([
             'candidates' => array_map([MemberRefSerializer::class, 'ref'], $candidates->all()),
@@ -212,12 +297,21 @@ class TimelineController extends Controller
         // Capture the thread root before the row is gone: deleting a reply returns to its thread,
         // deleting a top-level post returns to the author's timeline.
         $parentId = $timelinePost->in_reply_to_id;
+        $communityId = $timelinePost->community_id;
         $action($timelinePost);
 
         if ($parentId !== null) {
             return redirect()
                 ->route('timeline.show', ['timelinePost' => $parentId])
                 ->with('status', __('Reply deleted.'));
+        }
+
+        // A community post came from the community's timeline, not the author's; sending them to
+        // their own would leave the page they were on for one they were not.
+        if ($communityId !== null) {
+            return redirect()
+                ->route('community.timeline', ['community' => $communityId])
+                ->with('status', __('Post deleted.'));
         }
 
         return redirect()

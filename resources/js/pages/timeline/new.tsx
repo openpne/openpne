@@ -16,9 +16,12 @@ type VisibilityOption = { value: string; label: string };
 export default function TimelineNew({
     defaultVisibility,
     visibilityOptions,
+    community,
 }: {
     defaultVisibility: string;
     visibilityOptions: VisibilityOption[];
+    /** Composing into a community: its members are the audience, so no visibility is chosen. */
+    community?: { id: number; name: string };
 }) {
     const t = useT();
     const counterId = useId();
@@ -32,7 +35,7 @@ export default function TimelineNew({
 
     return (
         <>
-            <Head title={t('%Post_activity%')} />
+            <Head title={community ? t(':community %activity%', { community: community.name }) : t('%Post_activity%')} />
             <ComposeSheetAction>
                 <Button type="submit" form={COMPOSE_FORM_ID} size="sm" loading={processing} disabled={tooLong}>
                     {t('%Post_activity%')}
@@ -52,7 +55,7 @@ export default function TimelineNew({
                         transform((form) => ({ ...form, mentions: toPayload(form.mentions, form.body) }));
                         // forceFormData: the upload needs a multipart body, which Inertia uses
                         // automatically once a File is present but not for an initially-null field.
-                        post('/timeline/create', { forceFormData: true });
+                        post(community ? `/community/${community.id}/timeline` : '/timeline/create', { forceFormData: true });
                     }}
                     className="space-y-4"
                 >
@@ -71,18 +74,21 @@ export default function TimelineNew({
                             onChange={(body) => setData('body', body)}
                             mentions={data.mentions}
                             onMentionsChange={(mentions) => setData('mentions', mentions)}
+                            communityId={community?.id}
                         />
                     </Field>
 
-                    <Field label={t('Visibility')} htmlFor="timeline_visibility" error={errors.visibility}>
-                        <Select id="timeline_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
-                            {visibilityOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {t(option.label)}
-                                </option>
-                            ))}
-                        </Select>
-                    </Field>
+                    {!community && (
+                        <Field label={t('Visibility')} htmlFor="timeline_visibility" error={errors.visibility}>
+                            <Select id="timeline_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
+                                {visibilityOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {t(option.label)}
+                                    </option>
+                                ))}
+                            </Select>
+                        </Field>
+                    )}
 
                     <Field label={t('Image')} htmlFor="timeline_image" error={errors.image}>
                         <input

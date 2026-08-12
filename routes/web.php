@@ -507,6 +507,26 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // No GET delete-confirm twin — Modern confirms delete inline (Radix AlertDialog).
     });
 
+    // A community's timeline. Both units gate it: it is the timeline seen through a community, so
+    // switching either off takes it away. The path has three segments, so it can never be captured
+    // by the /community/{community} wildcard above.
+    Route::controller(TimelineController::class)
+        ->middleware([EnsureFeatureEnabled::class.':community', EnsureFeatureEnabled::class.':timeline'])
+        ->group(function () {
+            Route::get('/community/{community}/timeline', 'community')->whereNumber('community')->name('community.timeline');
+            // Modern-only, like /community/recent: Classic composes inline in the box, as OpenPNE 3 did.
+            Route::get('/community/{community}/timeline/new', 'newCommunity')->whereNumber('community')->name('community.timeline.new');
+            Route::post('/community/{community}/timeline', 'storeCommunity')->whereNumber('community')
+                ->middleware('throttle:posting')->name('community.timeline.store');
+        });
+
+    // OpenPNE 3 reached the community timeline at /timeline/community/id/:id through the global
+    // /:module/:action fallback; preserve that URL by redirecting to the canonical page.
+    Route::get('/timeline/community/id/{community}', fn (int $community) => redirect()->route('community.timeline', ['community' => $community]))
+        ->whereNumber('community')
+        ->middleware([EnsureFeatureEnabled::class.':community', EnsureFeatureEnabled::class.':timeline'])
+        ->name('community.timeline.compat');
+
     // OpenPNE 3 linked the single-post permalink at /timeline/show/id/:id (reached via the global
     // /:module/:action fallback); preserve that URL by redirecting to the canonical timeline.show.
     Route::get('/timeline/show/id/{timelinePost}', fn (int $timelinePost) => redirect()->route('timeline.show', ['timelinePost' => $timelinePost]))

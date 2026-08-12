@@ -44,9 +44,11 @@ type Props = Omit<ComponentProps<'textarea'>, 'value' | 'onChange'> & {
     onChange: (value: string) => void;
     mentions: DraftMention[];
     onMentionsChange: (mentions: DraftMention[]) => void;
+    /** Composing into a community: the offer narrows to its members, as the submit does. */
+    communityId?: number;
 };
 
-export function MentionTextarea({ value, onChange, mentions, onMentionsChange, ...props }: Props) {
+export function MentionTextarea({ value, onChange, mentions, onMentionsChange, communityId, ...props }: Props) {
     const t = useT();
     const listId = useId();
     const field = useRef<HTMLTextAreaElement>(null);
@@ -79,7 +81,8 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, .
 
         const controller = new AbortController();
         const timer = setTimeout(() => {
-            fetch(`/timeline/mention-candidates?q=${encodeURIComponent(query)}`, {
+            const scope = communityId === undefined ? '' : `&community=${communityId}`;
+            fetch(`/timeline/mention-candidates?q=${encodeURIComponent(query)}${scope}`, {
                 headers: { Accept: 'application/json' },
                 credentials: 'same-origin',
                 signal: controller.signal,
@@ -102,7 +105,7 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, .
             clearTimeout(timer);
             controller.abort();
         };
-    }, [query]);
+    }, [query, communityId]);
 
     useLayoutEffect(() => {
         const at = caret.current;

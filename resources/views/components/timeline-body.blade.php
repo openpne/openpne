@@ -5,7 +5,7 @@
     'kind' => 'mention',
     // The mentioned member is linked by id, so a rename since the post never breaks the target.
     'href' => route('member.profile.show', $mention->member_id),
-])->concat($post->tags->map(fn ($tag) => [
+])->concat($post->linkableTags()->map(fn ($tag) => [
     'offset' => $tag->offset,
     'length' => $tag->length,
     'kind' => 'hashtag',
