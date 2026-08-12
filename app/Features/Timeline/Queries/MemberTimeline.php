@@ -2,10 +2,9 @@
 
 namespace App\Features\Timeline\Queries;
 
-use App\Features\Block\BlockLookup;
+use App\Features\Timeline\TimelineVisibilityScope;
 use App\Models\Member;
 use App\Models\TimelinePost;
-use App\Support\Visibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -43,11 +42,7 @@ class MemberTimeline
             ->with(['member.avatar.file', 'images.file', 'linkCard.image', 'mentions', 'tags'])
             ->withCount('replies');
 
-        if (! $viewer->is($owner) && BlockLookup::ownerBlocksViewer($owner, $viewer)) {
-            $query->whereRaw('1 = 0');
-        } else {
-            $query->where('visibility', '<=', Visibility::clearanceFor($viewer, $owner)->value);
-        }
+        TimelineVisibilityScope::apply($query, $viewer, $owner);
 
         // OpenPNE 3 opActivityQueryBuilder orders by id DESC. Keep created_at as the primary key
         // for human-meaningful order, with id DESC as the stable tiebreaker for same-second posts

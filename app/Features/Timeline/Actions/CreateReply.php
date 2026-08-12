@@ -15,8 +15,8 @@ class CreateReply
     /**
      * Reply to a top-level post (the controller gates viewability and re-centers to the thread
      * root, so $parent is always top-level). A reply is a post row with in_reply_to_id set; it
-     * carries no image (OpenPNE 3 parity) and inherits the parent's visibility so the whole thread
-     * is gated as one audience.
+     * carries no image (OpenPNE 3 parity) and inherits the parent's visibility and community so the
+     * whole thread is gated as one audience, in one place.
      *
      * @param  list<array{member_id: int, offset: int, length: int}>  $mentions  the picker's selection, not yet resolved against $body
      */
@@ -28,6 +28,7 @@ class CreateReply
         return DB::transaction(function () use ($author, $parent, $body, $mentions): TimelinePost {
             $reply = TimelinePost::create([
                 'member_id' => $author->getKey(),
+                'community_id' => $parent->community_id,
                 'in_reply_to_id' => $parent->getKey(),
                 'body' => $body,
                 'visibility' => $parent->visibility,
