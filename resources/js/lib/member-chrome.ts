@@ -223,6 +223,11 @@ const topicBoardContext = (community: CommunityRef): Chrome['context'] => [
     { href: `/communityTopic/listCommunity/${community.id}`, label: t('%Topics%') },
 ];
 
+const communityTimelineContext = (community: CommunityRef): Chrome['context'] => [
+    ...communityContext(community)!,
+    { href: `/community/${community.id}/timeline`, label: ACTIVITY },
+];
+
 const eventBoardContext = (community: CommunityRef): Chrome['context'] => [
     ...communityContext(community)!,
     { href: `/communityEvent/listCommunity/${community.id}`, label: t('Events') },
@@ -455,6 +460,24 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         };
     },
     'timeline/index': () => ({ mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }),
+    'timeline/community': (props) => {
+        const { community, canPost } = props as unknown as { community: CommunityRef; canPost: boolean };
+        return {
+            mode: 'contextual',
+            title: ACTIVITY,
+            context: communityContext(community),
+            scope: communityScope(community),
+            action: canPost
+                ? { href: `/community/${community.id}/timeline/new`, label: t('%Post_activity%'), icon: Pencil }
+                : undefined,
+        };
+    },
+    // The crumb names the community, as the topic and event compose forms do: a member in several
+    // communities has to be able to see which one they are posting into.
+    'timeline/community-new': (props) => {
+        const { community } = props as unknown as { community: CommunityRef };
+        return { context: communityTimelineContext(community) };
+    },
     'timeline/member': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
@@ -470,7 +493,13 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // Crumb label is the bare author name, the post card right below carries the same name as
     // content; the page's h1 is a generic post label so nothing renders twice.
     'timeline/show': (props) => {
-        const { post } = props as unknown as { post: { author: MemberRef } };
+        const { post, community } = props as unknown as { post: { author: MemberRef }; community: CommunityRef | null };
+        // A community thread is about its community: the reader arrived from inside one, and the
+        // author's timeline is not where the post lives.
+        if (community) {
+            return { context: communityTimelineContext(community), scope: communityScope(community) };
+        }
+
         return {
             context: [{ href: `/member/${post.author.id}/timeline`, label: post.author.name }],
             scope: memberScope(post.author),
@@ -551,6 +580,8 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'diary/new': { form: true, compose: true, context: [{ href: '/diary/list', label: DIARIES }] },
     'timeline/show': { foreground: true },
     'timeline/new': { form: true, compose: true, context: [{ href: '/timeline', label: ACTIVITY }] },
+    // Context comes from HUB_CHROME, which knows which community is being composed into.
+    'timeline/community-new': { form: true, compose: true },
 };
 
 /**

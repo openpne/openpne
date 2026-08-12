@@ -6,6 +6,7 @@ use App\Models\Concerns\HasLinkCard;
 use App\Support\Visibility;
 use Database\Factories\TimelinePostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -70,5 +71,18 @@ class TimelinePost extends Model
     public function tags(): HasMany
     {
         return $this->hasMany(TimelinePostTag::class)->orderBy('offset');
+    }
+
+    /**
+     * The tags that have somewhere to go. A community post's tags are stored and normalized like
+     * any other, but the tag page is SNS-wide and excludes community posts — linking one would
+     * hand the reader a page that does not contain the post they clicked it from. Both surfaces
+     * read this rather than tags(), so neither can start linking them alone.
+     *
+     * @return Collection<int, TimelinePostTag>
+     */
+    public function linkableTags(): Collection
+    {
+        return $this->community_id === null ? $this->tags : new Collection;
     }
 }
