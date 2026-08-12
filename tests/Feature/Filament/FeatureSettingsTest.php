@@ -51,10 +51,10 @@ class FeatureSettingsTest extends TestCase
 
     public function test_a_stored_value_round_trips_into_the_form(): void
     {
-        $this->setSnsSetting(SnsSettingKey::FeatureMessageEnabled, false);
+        $this->setSnsSetting(SnsSettingKey::FeatureDirectMessageEnabled, false);
 
         Livewire::test(FeatureSettings::class)
-            ->assertSet('data.feature_message_enabled', false)
+            ->assertSet('data.feature_direct_message_enabled', false)
             ->assertSet('data.feature_diary_enabled', true);
     }
 
@@ -84,7 +84,7 @@ class FeatureSettingsTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertFalse(Feature::Diary->enabled());
-        $this->assertTrue(Feature::Message->enabled());
+        $this->assertTrue(Feature::DirectMessage->enabled());
     }
 
     public function test_switching_communities_off_takes_their_topics_and_events_with_them(): void

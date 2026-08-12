@@ -5,8 +5,8 @@ namespace Tests\Unit\Upgrade;
 use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\StepRegistry;
 use App\Upgrade\Steps\CommunityMemberUpgrade;
+use App\Upgrade\Steps\DirectMessageRecipientUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
-use App\Upgrade\Steps\MessageRecipientUpgrade;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -24,7 +24,7 @@ class SourcePreflightTest extends TestCase
 
     public function test_read_source_tables_scans_the_filter_too(): void
     {
-        $tables = (new MessageRecipientUpgrade)->readSourceTables();
+        $tables = (new DirectMessageRecipientUpgrade)->readSourceTables();
 
         $this->assertContains('message_send_list', $tables); // FROM
         $this->assertContains('message', $tables);           // filter() subquery

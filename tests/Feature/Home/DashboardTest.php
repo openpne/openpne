@@ -8,10 +8,10 @@ use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DiaryImage;
+use App\Models\DirectMessage;
+use App\Models\DirectMessageRecipient;
 use App\Models\File;
 use App\Models\Member;
-use App\Models\Message;
-use App\Models\MessageRecipient;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -195,8 +195,8 @@ class DashboardTest extends TestCase
         $requester = Member::factory()->create();
         DB::table('friend_requests')->insert(['requester_id' => $requester->getKey(), 'target_id' => $viewer->getKey()]);
 
-        $message = Message::factory()->create(['sender_id' => $requester->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $requester->getKey()]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
 
         $community = Community::factory()->create();
         CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);

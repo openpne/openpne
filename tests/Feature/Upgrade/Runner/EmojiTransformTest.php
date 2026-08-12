@@ -5,8 +5,8 @@ namespace Tests\Feature\Upgrade\Runner;
 use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\Diary;
+use App\Models\DirectMessage;
 use App\Models\Member;
-use App\Models\Message;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\EmojiMap;
 use App\Upgrade\Runner\EmojiTransform;
@@ -50,10 +50,10 @@ class EmojiTransformTest extends TestCase
     {
         $member = Member::factory()->create(['name' => 'ken[i:1]']);
         $diary = Diary::factory()->create(['title' => 't[i:1]', 'body' => 'b[i:98]']);
-        $message = Message::factory()->create(['subject' => null, 'body' => 'hi[i:136]']);
+        $message = DirectMessage::factory()->create(['subject' => null, 'body' => 'hi[i:136]']);
         $event = CommunityEvent::factory()->create(['open_date_comment' => '[i:1]13:00', 'area' => 'Tokyo[i:98]']);
 
-        $this->runTransform(['members', 'diaries', 'messages', 'community_events']);
+        $this->runTransform(['members', 'diaries', 'direct_messages', 'community_events']);
 
         $this->assertSame('ken'.EmojiMap::convert('[i:1]'), $member->fresh()->name);
         $this->assertSame('t'.EmojiMap::convert('[i:1]'), $diary->fresh()->title);

@@ -5,7 +5,7 @@ import type { FeatureKey } from '../types/index.ts';
 
 const allOn: Record<FeatureKey, boolean> = {
     diary: true,
-    message: true,
+    directMessage: true,
     timeline: true,
     community: true,
     communityTopic: true,
@@ -21,7 +21,7 @@ test('every section shows while every unit is on', () => {
 
 test('a section goes with its unit', () => {
     assert.equal(hrefs({ ...allOn, diary: false }).includes('/diary/list'), false);
-    assert.equal(hrefs({ ...allOn, message: false }).includes('/message'), false);
+    assert.equal(hrefs({ ...allOn, directMessage: false }).includes('/message'), false);
     assert.equal(hrefs({ ...allOn, friend: false }).includes('/friend/list'), false);
     assert.equal(hrefs({ ...allOn, timeline: false }).includes('/timeline'), false);
     assert.equal(hrefs({ ...allOn, community: false }).includes('/community/search'), false);
@@ -46,7 +46,7 @@ test('the bottom bar carries Home and its three sections in bar order', () => {
 
 test('a bottom tab goes with its unit', () => {
     assert.deepEqual(bottomHrefs({ ...allOn, diary: false }), ['/dashboard', '/notifications', '/message']);
-    assert.deepEqual(bottomHrefs({ ...allOn, message: false }), ['/dashboard', '/diary/list', '/notifications']);
+    assert.deepEqual(bottomHrefs({ ...allOn, directMessage: false }), ['/dashboard', '/diary/list', '/notifications']);
 });
 
 test('Home and notifications survive every unit being off', () => {

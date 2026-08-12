@@ -22,7 +22,7 @@ final class NotificationKindLabel
         return match ($kind) {
             'friend_requested' => __(':name sent you a %friend% request.', ['name' => $name]),
             'friend_request_accepted' => __(':name accepted your %friend% request.', ['name' => $name]),
-            'message_received' => __(':name sent you a message.', ['name' => $name]),
+            'direct_message_received' => __(':name sent you a message.', ['name' => $name]),
             'diary_commented' => $cause === CommentReason::Related
                 ? __(':name commented on a %diary% you commented on.', ['name' => $name])
                 : __(':name commented on your %diary%.', ['name' => $name]),

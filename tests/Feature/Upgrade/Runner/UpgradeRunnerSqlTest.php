@@ -147,6 +147,27 @@ class UpgradeRunnerSqlTest extends TestCase
         $this->assertDatabaseCount('friendships', 2);
     }
 
+    public function test_a_run_stamps_the_naming_epoch_and_refuses_state_from_another_one(): void
+    {
+        $this->seedGraph();
+        $runner = $this->runner($this->relationSteps());
+        $this->assertTrue($runner->run(new RunOptions));
+        $this->assertSame(['epoch' => UpgradeRunner::NAMING_EPOCH], UpgradeState::query()->where('step_key', 'naming_epoch')->value('metadata'));
+
+        UpgradeState::query()->where('step_key', 'naming_epoch')->update(['metadata' => json_encode(['epoch' => UpgradeRunner::NAMING_EPOCH - 1])]);
+
+        $lines = [];
+        $ok = $runner->run(new RunOptions, function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString('naming epoch', implode("\n", $lines));
+
+        // --force-restart clears the state, so the same command starts over cleanly.
+        $this->assertTrue($runner->run(new RunOptions(forceRestart: true)));
+    }
+
     public function test_the_command_runs_the_runner_on_mysql(): void
     {
         $this->seedGraph();

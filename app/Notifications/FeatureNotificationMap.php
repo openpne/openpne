@@ -15,9 +15,9 @@ use App\Notifications\CommunityTopic\TopicCommentedNotification;
 use App\Notifications\CommunityTopic\TopicPostedNotification;
 use App\Notifications\Diary\DiaryCommentedNotification;
 use App\Notifications\Diary\DiaryPostedNotification;
+use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
-use App\Notifications\Message\MessageReceivedNotification;
 use App\Notifications\Timeline\TimelineCommunityPostedNotification;
 use App\Notifications\Timeline\TimelineMentionedNotification;
 use App\Notifications\Timeline\TimelinePostedNotification;
@@ -50,7 +50,7 @@ final class FeatureNotificationMap
         DiaryPostedNotification::class,
         FriendRequestAcceptedNotification::class,
         FriendRequestedNotification::class,
-        MessageReceivedNotification::class,
+        DirectMessageReceivedNotification::class,
         TimelineCommunityPostedNotification::class,
         TimelineMentionedNotification::class,
         TimelinePostedNotification::class,

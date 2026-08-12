@@ -21,7 +21,7 @@ class NotificationSettingsPageTest extends TestCase
     public function test_modern_page_lists_only_wired_kinds_grouped_by_category(): void
     {
         $member = Member::factory()->create();
-        $member->setNotificationSetting(NotificationKind::MessageNew, NotificationChannel::Mail, false);
+        $member->setNotificationSetting(NotificationKind::DirectMessageNew, NotificationChannel::Mail, false);
 
         $this->actingAs($member)->get('/member/config/notifications')
             ->assertOk()
@@ -53,9 +53,9 @@ class NotificationSettingsPageTest extends TestCase
                 ->has('form.groups.4.kinds', 2)
                 ->where('form.groups.4.kinds.0.kind', 'friend_link_confirm')
                 ->where('form.groups.4.kinds.0.web', true)
-                ->where('form.groups.5.key', 'message')
+                ->where('form.groups.5.key', 'direct_message')
                 ->where('form.groups.5.kinds.0.mail', false)
-                ->where('form.groups.5.kinds.1.dependOnNot', 'message_new'),
+                ->where('form.groups.5.kinds.1.dependOnNot', 'direct_message_new'),
             );
     }
 
@@ -112,8 +112,8 @@ class NotificationSettingsPageTest extends TestCase
         $this->actingAs($member)->post('/member/config/notifications', ['settings' => [
             'friend_link_confirm' => ['web' => '1', 'mail' => '0'],
             'friend_link_complete' => ['web' => '1', 'mail' => '1'],
-            'message_new' => ['web' => '0', 'mail' => '0'],
-            'message_new_only_friends' => ['web' => '1', 'mail' => '1'],
+            'direct_message_new' => ['web' => '0', 'mail' => '0'],
+            'direct_message_new_only_friends' => ['web' => '1', 'mail' => '1'],
         ]])
             ->assertRedirect(route('member.config', ['category' => 'notification']))
             ->assertSessionHas('status');
@@ -121,8 +121,8 @@ class NotificationSettingsPageTest extends TestCase
         $fresh = $member->fresh();
         $this->assertFalse($fresh->wantsNotification(NotificationKind::FriendLinkConfirm, NotificationChannel::Mail));
         $this->assertTrue($fresh->wantsNotification(NotificationKind::FriendLinkComplete, NotificationChannel::Mail));
-        $this->assertFalse($fresh->wantsNotification(NotificationKind::MessageNew, NotificationChannel::Web));
-        $this->assertTrue($fresh->wantsNotification(NotificationKind::MessageNewOnlyFriends, NotificationChannel::Web));
+        $this->assertFalse($fresh->wantsNotification(NotificationKind::DirectMessageNew, NotificationChannel::Web));
+        $this->assertTrue($fresh->wantsNotification(NotificationKind::DirectMessageNewOnlyFriends, NotificationChannel::Web));
     }
 
     public function test_only_wired_kinds_are_writable(): void
@@ -160,8 +160,8 @@ class NotificationSettingsPageTest extends TestCase
 
         $this->actingAs($member)
             ->from('/member/config/notifications')
-            ->post('/member/config/notifications', ['settings' => ['message_new' => ['push' => true]]])
-            ->assertSessionHasErrors('settings.message_new');
+            ->post('/member/config/notifications', ['settings' => ['direct_message_new' => ['push' => true]]])
+            ->assertSessionHasErrors('settings.direct_message_new');
 
         $this->assertDatabaseCount('member_notification_settings', 0);
     }
@@ -175,7 +175,7 @@ class NotificationSettingsPageTest extends TestCase
             ->assertSee('id="member_config_notification"', false)
             ->assertSee('action="'.route('member.config.notifications').'"', false)
             ->assertSee(NotificationKind::FriendLinkConfirm->caption())
-            ->assertSee(NotificationKind::MessageNew->caption())
+            ->assertSee(NotificationKind::DirectMessageNew->caption())
             ->assertSee(NotificationKind::TimelineNewPost->caption())
             ->assertSee(NotificationKind::TimelineNewPostCommunity->caption());
     }

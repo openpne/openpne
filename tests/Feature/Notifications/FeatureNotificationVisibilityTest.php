@@ -6,8 +6,8 @@ namespace Tests\Feature\Notifications;
 
 use App\Features\Notifications\NotificationCenterCounts;
 use App\Models\Member;
+use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
-use App\Notifications\Message\MessageReceivedNotification;
 use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
@@ -27,16 +27,16 @@ class FeatureNotificationVisibilityTest extends TestCase
 
     private function switchMessages(bool $on): void
     {
-        $this->setSnsSetting(Feature::Message->settingKey(), $on);
+        $this->setSnsSetting(Feature::DirectMessage->settingKey(), $on);
         $this->freshRequestState();
     }
 
     private function seedMessageRow(Member $viewer, Member $sender, ?Carbon $createdAt = null): DatabaseNotification
     {
-        return $this->seedRow($viewer, MessageReceivedNotification::class, [
-            'kind' => 'message_received',
+        return $this->seedRow($viewer, DirectMessageReceivedNotification::class, [
+            'kind' => 'direct_message_received',
             'sender_id' => $sender->getKey(),
-            'message_id' => 1,
+            'direct_message_id' => 1,
         ], $createdAt);
     }
 
@@ -133,7 +133,7 @@ class FeatureNotificationVisibilityTest extends TestCase
         $this->seedFriendRow($viewer, $actor);
 
         $this->assertSame(
-            ['message' => 1, 'friend' => 1, 'other' => 0],
+            ['direct_message' => 1, 'friend' => 1, 'other' => 0],
             $this->app->make(NotificationCenterCounts::class)->for($viewer),
         );
 
@@ -146,7 +146,7 @@ class FeatureNotificationVisibilityTest extends TestCase
 
         $this->freshRequestState();
         $this->assertSame(
-            ['message' => 0, 'friend' => 1, 'other' => 0],
+            ['direct_message' => 0, 'friend' => 1, 'other' => 0],
             $this->app->make(NotificationCenterCounts::class)->for($viewer),
         );
     }

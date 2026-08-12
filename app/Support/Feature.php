@@ -13,14 +13,16 @@ use App\Services\SnsSettingService;
  * Switching a unit off is a gate, never a data operation: its rows, files and relationships stay,
  * and switching it back on restores the feature intact (OpenPNE 3 `plugin.is_enabled` parity).
  *
- * The case value is the feature vocabulary the surface resolver already uses (App\Support\SurfaceResolver),
- * the route-name prefix, and the URL segment — one word per unit, not three lists.
+ * The case value is the feature vocabulary the surface resolver already uses (App\Support\SurfaceResolver);
+ * it is normally the route-name prefix and the URL segment too. DirectMessage is the one unit where
+ * those come apart: its routes and URLs stay on the OpenPNE 3 `message` word until they are
+ * redesigned, so it declares its prefixes explicitly below.
  */
 enum Feature: string
 {
     case Diary = 'diary';
 
-    case Message = 'message';
+    case DirectMessage = 'directMessage';
 
     case Timeline = 'timeline';
 
@@ -37,7 +39,7 @@ enum Feature: string
     {
         return match ($this) {
             self::Diary => SnsSettingKey::FeatureDiaryEnabled,
-            self::Message => SnsSettingKey::FeatureMessageEnabled,
+            self::DirectMessage => SnsSettingKey::FeatureDirectMessageEnabled,
             self::Timeline => SnsSettingKey::FeatureTimelineEnabled,
             self::Community => SnsSettingKey::FeatureCommunityEnabled,
             self::CommunityTopic => SnsSettingKey::FeatureCommunityTopicEnabled,
@@ -95,7 +97,16 @@ enum Feature: string
      */
     public function routeNamePrefixes(): array
     {
-        return [$this->value.'.'];
+        return match ($this) {
+            // The DM routes and URLs keep the OpenPNE 3 `message` word until they are redesigned.
+            self::DirectMessage => ['message.'],
+            self::Diary => ['diary.'],
+            self::Timeline => ['timeline.'],
+            self::Community => ['community.'],
+            self::CommunityTopic => ['communityTopic.'],
+            self::CommunityEvent => ['communityEvent.'],
+            self::Friend => ['friend.'],
+        };
     }
 
     /** The unit owning a route name, or null when no unit does. */

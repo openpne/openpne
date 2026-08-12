@@ -76,7 +76,7 @@
             @php($id = $view->message->getKey())
             <div class="operation">
                 <ul class="moreInfo button">
-                    @if ($view->box === \App\Features\Message\MessageBox::Receive)
+                    @if ($view->box === \App\Features\DirectMessage\DirectMessageBox::Receive)
                         {{-- Reply is shown on a received message whose sender still exists. --}}
                         @if ($view->message->sender !== null)
                             <li><a href="{{ route('message.reply', ['message' => $id]) }}" class="input_submit">{{ __('Reply') }}</a></li>
@@ -87,14 +87,14 @@
                                 <button type="submit" class="input_submit">{{ __('Delete') }}</button>
                             </form>
                         </li>
-                    @elseif ($view->box === \App\Features\Message\MessageBox::Sent)
+                    @elseif ($view->box === \App\Features\DirectMessage\DirectMessageBox::Sent)
                         <li>
                             <form method="POST" action="{{ route('message.send.trash', ['message' => $id]) }}">
                                 @csrf
                                 <button type="submit" class="input_submit">{{ __('Delete') }}</button>
                             </form>
                         </li>
-                    @elseif ($view->box === \App\Features\Message\MessageBox::Trash)
+                    @elseif ($view->box === \App\Features\DirectMessage\DirectMessageBox::Trash)
                         <li>
                             <form method="POST" action="{{ route('message.trash.restore', ['message' => $id]) }}">
                                 @csrf

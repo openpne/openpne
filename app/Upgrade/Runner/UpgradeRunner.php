@@ -26,9 +26,23 @@ use Throwable;
  * A checkpoint records only that a step ran, not the step definition it ran. Changing a step's column
  * mapping invalidates prior UpgradeState checkpoints: resuming a database that was upgraded or
  * interrupted under an older step set is unsupported — reset (--force-restart) and re-run from scratch.
+ *
+ * The one case the runner can detect on its own is a rename of the identifiers a checkpoint is keyed
+ * by (step_key is a class basename, and the target tables it wrote are named too): NAMING_EPOCH is
+ * bumped with each such rename and stamped into the state on the first run, so a resume under a
+ * different epoch aborts instead of silently skipping steps whose old keys no longer exist.
  */
 final class UpgradeRunner
 {
+    /**
+     * Bumped whenever the upgrade's own identifiers are renamed (step class names, target tables).
+     * 2 = the Message → DirectMessage rename.
+     */
+    public const NAMING_EPOCH = 2;
+
+    /** The `step_key` the epoch marker occupies. Not a step: no registry entry ever bears this name. */
+    private const EPOCH_KEY = 'naming_epoch';
+
     /** @param list<UpgradeStep>|null $steps */
     public function __construct(
         private readonly InsertSelectCompiler $compiler,
@@ -115,6 +129,12 @@ final class UpgradeRunner
             $this->reset($out);
         }
 
+        // After the restart (which clears the marker with the rest of the state), so --force-restart
+        // is exactly the escape hatch the abort message names.
+        if (! $this->claimNamingEpoch($out)) {
+            return false;
+        }
+
         $created = $preflight->ensureExists($report->absentOptional, $options->sourcePrefix, $options->sourceDatabase, $out);
 
         try {
@@ -179,6 +199,50 @@ final class UpgradeRunner
         if ($inserted > 0) {
             $out('Surface set to classic_default; switch to modern_only with `php artisan openpne:surface-mode modern_only` once the Modern migration is complete.');
         }
+    }
+
+    /**
+     * Stamp this run's naming epoch, or refuse to resume state written under another one.
+     *
+     * A checkpoint is keyed by a step's class basename and records rows written into named target
+     * tables; after a rename, the old keys match no current step, so a resume would report every
+     * renamed step as pending and re-copy into the new tables alongside the old rows. Detected here
+     * rather than left to a runbook, because the failure is silent. Public alongside reset() so the
+     * guard is exercisable without a MySQL source.
+     */
+    public function claimNamingEpoch(?Closure $out = null): bool
+    {
+        $out ??= static fn (string $line): null => null;
+
+        $marker = UpgradeState::query()->where('step_key', self::EPOCH_KEY)->first();
+
+        if ($marker === null) {
+            UpgradeState::create([
+                'step_key' => self::EPOCH_KEY,
+                'status' => UpgradeState::STATUS_COMPLETED,
+                'metadata' => ['epoch' => self::NAMING_EPOCH],
+                'finished_at' => now(),
+            ]);
+
+            return true;
+        }
+
+        // An absent/garbled epoch is a marker this version cannot vouch for: treat it as a mismatch
+        // rather than adopt the run.
+        $found = $marker->metadata['epoch'] ?? null;
+        if ($found === self::NAMING_EPOCH) {
+            return true;
+        }
+
+        $out(sprintf(
+            'Aborted: the upgrade state was written under naming epoch %s, but this version is epoch %d. '
+            .'Its checkpoints name steps and tables that have since been renamed, so it cannot be resumed — '
+            .'re-run with --force-restart to start over from an empty target.',
+            var_export($found, true),
+            self::NAMING_EPOCH,
+        ));
+
+        return false;
     }
 
     /** The per-step loop: skip not-runnable / already-completed, else compile + (plan or run) each. */

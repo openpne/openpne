@@ -10,7 +10,7 @@ document covers the delivery model around it.
 ## The three layers
 
 1. **Live counts** — "needs action" numbers derived from each domain's own truth (pending
-   `friend_requests` rows, unread `message_recipients`, pending `community_join_requests`).
+   `friend_requests` rows, unread `direct_message_recipients`, pending `community_join_requests`).
    No notification table, no seen state: acting on the item (accept / reject / read) is what
    makes the count drop. [`App\Features\Home\UnreadCounts`](../../app/Features/Home/UnreadCounts.php).
 2. **Display surfaces over layer 1** — Modern's nav badges, its dashboard notice panel, and the
@@ -88,8 +88,8 @@ Every catalog item is registered so the one-shot upgrade can preserve stored cho
 `op3Name` is native to OpenPNE 4: there is no stored choice to import, so `importableCases()`
 (not `cases()`) is what the upgrade derives its source keys from.
 
-`dependOnNot` encodes the extension's "(x only)" variants: `MessageNewOnlyFriends` only takes
-effect while `MessageNew` is off — an enabled broad kind already covers the narrower audience.
+`dependOnNot` encodes the extension's "(x only)" variants: `DirectMessageNewOnlyFriends` only takes
+effect while `DirectMessageNew` is off — an enabled broad kind already covers the narrower audience.
 Delivery reproduces the extension's chain: broad kind on → deliver; else narrow kind on and the
 relation holds (e.g. sender is a friend) → deliver.
 

@@ -72,7 +72,7 @@ class PluginFeatureUpgradeSqlTest extends TestCase
         $this->runUpgrade();
 
         $this->assertDatabaseHas('sns_settings', ['key' => 'feature_diary_enabled', 'value' => '0']);
-        $this->assertDatabaseMissing('sns_settings', ['key' => 'feature_message_enabled']);
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'feature_direct_message_enabled']);
     }
 
     public function test_the_topic_plugin_takes_events_down_too(): void

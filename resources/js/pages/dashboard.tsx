@@ -35,7 +35,7 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
     const features = usePage<PageProps>().props.enabledFeatures;
     // Each notice links into the unit it belongs to (the server already reports it as nothing).
     const friendRequests = features.friend ? announcements.friendRequests : 0;
-    const unreadMessages = features.message ? announcements.unreadMessages : 0;
+    const unreadMessages = features.directMessage ? announcements.unreadMessages : 0;
     const communityApprovals = features.community ? announcements.communityApprovals : [];
 
     if (friendRequests === 0 && unreadMessages === 0 && communityApprovals.length === 0) {

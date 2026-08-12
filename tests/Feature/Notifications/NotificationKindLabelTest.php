@@ -35,7 +35,7 @@ class NotificationKindLabelTest extends TestCase
         return [
             'friend request' => ['friend_requested', null, 'Alice sent you a friend request.'],
             'friend request accepted' => ['friend_request_accepted', null, 'Alice accepted your friend request.'],
-            'message' => ['message_received', null, 'Alice sent you a message.'],
+            'message' => ['direct_message_received', null, 'Alice sent you a message.'],
             'diary comment on mine' => ['diary_commented', 'reply', 'Alice commented on your diary.'],
             'diary comment on one I commented on' => ['diary_commented', 'related', 'Alice commented on a diary you commented on.'],
             'topic comment on mine' => ['community_topic_commented', 'reply', 'Alice commented on your topic.'],

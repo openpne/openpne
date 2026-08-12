@@ -3,7 +3,7 @@
 @props(['current', 'linkCurrent' => false])
 <div class="parts pageNav">
     <ul>
-        @foreach (\App\Features\Message\MessageBox::cases() as $box)
+        @foreach (\App\Features\DirectMessage\DirectMessageBox::cases() as $box)
             <li @class(['current' => $current === $box])>
                 @if ($current !== $box || $linkCurrent)
                     <a href="{{ route($box->listRoute()) }}">{{ $box->heading() }}</a>

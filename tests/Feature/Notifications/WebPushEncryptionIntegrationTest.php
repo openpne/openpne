@@ -57,7 +57,7 @@ class WebPushEncryptionIntegrationTest extends TestCase
             'aes128gcm',
         );
 
-        $member->notify(new WebPushNudge('message_received', null, null));
+        $member->notify(new WebPushNudge('direct_message_received', null, null));
 
         // The scripted response was consumed: encryption produced a real request that reached the
         // handler exactly once. A key that only threw inside Encryption would leave it untouched.

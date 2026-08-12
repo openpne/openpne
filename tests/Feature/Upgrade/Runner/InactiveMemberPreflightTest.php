@@ -11,10 +11,10 @@ use App\Upgrade\SourceSchema;
 use App\Upgrade\Steps\CommunityCategoryUpgrade;
 use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
+use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
-use App\Upgrade\Steps\MessageUpgrade;
 use App\Upgrade\UpgradeStep;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
@@ -97,7 +97,7 @@ class InactiveMemberPreflightTest extends TestCase
         $this->seedMessageType(2, 'friend_link');
         $this->seedMessage(10, memberId: 1, typeId: 2); // notification, not migrated
 
-        [$ok, $output] = $this->runSteps([new MessageUpgrade]);
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 
         $this->assertTrue($ok, $output);
         $this->assertStringNotContainsString('message.member_id', $output);
@@ -110,7 +110,7 @@ class InactiveMemberPreflightTest extends TestCase
         $this->seedMessageType(1, 'message');
         $this->seedMessage(10, memberId: 1, typeId: 1);
 
-        [$ok, $output] = $this->runSteps([new MessageUpgrade]);
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message.member_id', 1), $output);
@@ -118,8 +118,8 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_a_send_list_row_is_counted_through_its_parent_message_not_the_from_step_filter(): void
     {
-        // A draft's recipient reaches messages.draft_recipient_id by correlated subquery, so the
-        // sent-only filter of MessageRecipientUpgrade is the wrong set to count over.
+        // A draft's recipient reaches direct_messages.draft_recipient_id by correlated subquery, so the
+        // sent-only filter of DirectMessageRecipientUpgrade is the wrong set to count over.
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
         $this->seedMember(1, isActive: 1);
         $this->seedMember(2, isActive: 0);
@@ -128,7 +128,7 @@ class InactiveMemberPreflightTest extends TestCase
         DB::table('message_send_list')->insert(['id' => 1, 'message_id' => 10, 'member_id' => 2, 'is_read' => 0,
             'is_deleted' => 0, 'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
 
-        [$ok, $output] = $this->runSteps([new MessageUpgrade]);
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message_send_list.member_id', 1), $output);
@@ -160,7 +160,7 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_a_draft_send_list_row_the_step_discards_is_not_an_abort(): void
     {
-        // MessageUpgrade folds the lowest-id send-list row onto draft_recipient_id and drops the rest,
+        // DirectMessageUpgrade folds the lowest-id send-list row onto draft_recipient_id and drops the rest,
         // so only that row's member can reach a target column. Refusing over a discarded duplicate
         // would contradict the step.
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
@@ -172,7 +172,7 @@ class InactiveMemberPreflightTest extends TestCase
         $this->seedSendListRow(2, messageId: 10, memberId: 2); // discarded duplicate, inactive
         Member::factory()->create(['id' => 1]); // MemberUpgrade's output, which the message references
 
-        [$ok, $output] = $this->runSteps([new MessageUpgrade]);
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 
         $this->assertTrue($ok, $output);
     }
@@ -187,7 +187,7 @@ class InactiveMemberPreflightTest extends TestCase
         $this->seedSendListRow(1, messageId: 10, memberId: 2); // selected, inactive
         $this->seedSendListRow(2, messageId: 10, memberId: 1);
 
-        [$ok, $output] = $this->runSteps([new MessageUpgrade]);
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::inactiveMemberReferenceMessage('message_send_list.member_id', 1), $output);
@@ -195,8 +195,8 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_a_send_list_row_under_an_out_of_range_is_send_is_not_an_abort(): void
     {
-        // is_send is a bare tinyint with no CHECK. MessageUpgrade folds a recipient only WHEN
-        // is_send = 0 and MessageRecipientUpgrade writes receipts only for = 1, so a third value puts
+        // is_send is a bare tinyint with no CHECK. DirectMessageUpgrade folds a recipient only WHEN
+        // is_send = 0 and DirectMessageRecipientUpgrade writes receipts only for = 1, so a third value puts
         // no member id anywhere — the row migrates as a draft with no recipient, and refusing over its
         // send-list member would be a refusal about data neither step reads.
         $this->createSources('member', 'message', 'message_type', 'message_send_list', 'deleted_message');
@@ -207,10 +207,10 @@ class InactiveMemberPreflightTest extends TestCase
         $this->seedMessage(10, memberId: 1, typeId: 1, isSend: 2);
         $this->seedSendListRow(1, messageId: 10, memberId: 2); // would be the selected row, inactive
 
-        [$ok, $output] = $this->runSteps([new MessageUpgrade]);
+        [$ok, $output] = $this->runSteps([new DirectMessageUpgrade]);
 
         $this->assertTrue($ok, $output);
-        $this->assertDatabaseHas('messages', ['id' => 10, 'draft_recipient_id' => null]);
+        $this->assertDatabaseHas('direct_messages', ['id' => 10, 'draft_recipient_id' => null]);
     }
 
     public function test_a_superseded_admin_confirm_row_is_not_an_abort(): void

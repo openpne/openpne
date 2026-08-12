@@ -42,7 +42,7 @@ final class MailTemplateDefaults
             'en' => 'You have a new {{ op_term.friend }} request',
             'ja' => '{{ op_term.friend }}リクエストが届きました',
         ],
-        'message-received' => [
+        'direct-message-received' => [
             'en' => 'You have a new message',
             'ja' => '新しいメッセージが届きました',
         ],

@@ -93,7 +93,7 @@ class InertiaSharedPropsTest extends TestCase
         $this->get('/login')
             ->assertInertia(fn ($page) => $page->where('enabledFeatures', $allFalse));
 
-        $this->setSnsSetting(Feature::Message->settingKey(), false);
+        $this->setSnsSetting(Feature::DirectMessage->settingKey(), false);
         $this->freshRequestState();
 
         $this->get('/login')
