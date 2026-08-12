@@ -21,7 +21,7 @@
         @endif
         <div id="timeline-list">
             @foreach ($posts as $post)
-                @include('timeline._post', ['post' => $post])
+                @include('timeline._post', ['post' => $post, 'canReply' => $canPost])
             @endforeach
         </div>
     </div>

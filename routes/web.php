@@ -514,7 +514,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         ->middleware([EnsureFeatureEnabled::class.':community', EnsureFeatureEnabled::class.':timeline'])
         ->group(function () {
             Route::get('/community/{community}/timeline', 'community')->whereNumber('community')->name('community.timeline');
-            // Modern-only, like /community/recent: Classic composes inline in the box, as OpenPNE 3 did.
+            // Both surfaces: Classic's inline box ships hidden and is swapped in by script, so its
+            // fallback link needs a real form to reach.
             Route::get('/community/{community}/timeline/new', 'newCommunity')->whereNumber('community')->name('community.timeline.new');
             Route::post('/community/{community}/timeline', 'storeCommunity')->whereNumber('community')
                 ->middleware('throttle:posting')->name('community.timeline.store');

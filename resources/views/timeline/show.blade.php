@@ -19,7 +19,7 @@
              to the reply form below. --}}
         <div class="timeline-large">
             <div id="timeline-list">
-                @include('timeline._post', ['post' => $post])
+                @include('timeline._post', ['post' => $post, 'canReply' => $canReply])
             </div>
         </div>
 

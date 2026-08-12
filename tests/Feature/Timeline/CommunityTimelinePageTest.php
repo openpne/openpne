@@ -10,6 +10,7 @@ use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -210,6 +211,39 @@ class CommunityTimelinePageTest extends TestCase
         $this->actingAs($member)->get("/community/{$community->getKey()}/timeline/new")
             ->assertOk()
             ->assertSee('name="body"', false);
+    }
+
+    public function test_the_page_costs_the_same_queries_whatever_the_row_count(): void
+    {
+        // The reply link's answer is the same for every row — one community, one viewer — so it is
+        // decided once by the caller. Deciding it in the row partial instead cost two queries a row
+        // (the community relation, then the membership lookup).
+        $community = Community::factory()->create();
+        $member = $this->joined($community);
+        TimelinePost::factory()->inCommunity($community)->create(['member_id' => $member->getKey()]);
+
+        // The first request of the process pays for warm-up (settings, feature resolution) that the
+        // rest read from cache, so it is spent before either measurement rather than measured.
+        $this->actingAs($member)->get("/community/{$community->getKey()}/timeline")->assertOk();
+
+        $one = $this->countQueries(fn () => $this->actingAs($member)->get("/community/{$community->getKey()}/timeline")->assertOk());
+
+        TimelinePost::factory()->inCommunity($community)->count(9)->create(['member_id' => $member->getKey()]);
+
+        $ten = $this->countQueries(fn () => $this->actingAs($member)->get("/community/{$community->getKey()}/timeline")->assertOk());
+
+        $this->assertSame($one, $ten, "the page grew from {$one} to {$ten} queries between 1 and 10 rows");
+    }
+
+    private function countQueries(callable $request): int
+    {
+        $count = 0;
+        DB::listen(function () use (&$count): void {
+            $count++;
+        });
+        $request();
+
+        return $count;
     }
 
     private function joined(Community $community): Member
