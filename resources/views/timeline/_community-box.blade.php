@@ -7,9 +7,11 @@
 @include('timeline._stylesheets')
 <x-classic.parts id="communityTimeline" name="communityTimeline" :title="$title">
     @if ($canPost)
-        {{-- The no-JS compose path; classic-timeline-compose.js swaps it for the inline form. --}}
+        {{-- The no-JS compose path; classic-timeline-compose.js swaps it for the inline form. It
+             must reach a real form: the inline one ships hidden, so a link back to this page would
+             leave a reader without script unable to post at all. --}}
         <p data-timeline-compose-fallback>
-            <a href="{{ route('community.timeline', ['community' => $community]) }}">{{ __('%Post_activity%') }}</a>
+            <a href="{{ route('community.timeline.new', ['community' => $community]) }}">{{ __('%Post_activity%') }}</a>
         </p>
     @endif
 

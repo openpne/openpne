@@ -24,6 +24,7 @@ use App\LinkCard\LinkCardSync;
 use App\Models\Community;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\Feature;
 use App\Support\SurfaceResolver;
 use App\Support\Visibility;
 use Illuminate\Http\JsonResponse;
@@ -109,19 +110,26 @@ class TimelineController extends Controller
     }
 
     /**
-     * The Modern compose page for a community. Modern-only: Classic composes inline in the box, as
-     * OpenPNE 3 did, so a standalone Classic form here would be a second way in that OpenPNE 3
-     * never had.
+     * The compose page for a community. Classic needs it as much as Modern: the box's form ships
+     * hidden and is swapped in by script, so without a real page behind the fallback link there is
+     * no way to post at all with the script off.
      */
-    public function newCommunity(Community $community): InertiaResponse
+    public function newCommunity(Request $request, Community $community): View|InertiaResponse
     {
         abort_unless(CommunityTimelineAccess::canPost($community, $this->viewer()), 404);
         $this->markLocalNavCommunity($community);
 
-        return Inertia::render('timeline/community-new', [
-            'defaultVisibility' => (string) Visibility::Members->value,
-            'visibilityOptions' => [],
-            'community' => CommunitySerializer::summary($community),
+        return $this->respondWith($request, 'timeline', [
+            SurfaceResolver::CLASSIC => fn () => view('timeline.new', [
+                'community' => $community,
+                'visibilityOptions' => [],
+                'defaultVisibility' => Visibility::Members,
+            ]),
+            SurfaceResolver::MODERN => fn () => Inertia::render('timeline/community-new', [
+                'defaultVisibility' => (string) Visibility::Members->value,
+                'visibilityOptions' => [],
+                'community' => CommunitySerializer::summary($community),
+            ]),
         ]);
     }
 
@@ -191,15 +199,24 @@ class TimelineController extends Controller
         // after the reply-permalink redirect above, so a request that never renders queues nothing.
         $linkCards->ensure($post);
 
+        // Reading a community thread does not admit someone to it: an everyone-readable community
+        // is open to any member, but only its own may reply.
+        $canReply = $post->community === null || CommunityTimelineAccess::canPost($post->community, $viewer);
+
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [
                 'post' => $post,
                 'viewer' => $viewer,
+                'canReply' => $canReply,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/show', [
                 'post' => TimelinePostSerializer::entry($post),
                 'replies' => array_map([TimelinePostSerializer::class, 'entry'], $post->replies->all()),
                 'viewerId' => $viewer->getKey(),
+                'canReply' => $canReply,
+                // The Modern chrome reads props, not the request attribute markLocalNavCommunity
+                // sets, so the community has to travel for the crumb and scope to follow the thread.
+                'community' => $post->community === null ? null : CommunitySerializer::summary($post->community),
             ]),
         ]);
     }
@@ -240,7 +257,10 @@ class TimelineController extends Controller
         $community = null;
 
         if ($request->filled('community')) {
-            $community = Community::find($request->integer('community'));
+            // The unit gate is checked here, not left to canPost: this endpoint is gated on the
+            // timeline unit alone, and the roster is exactly what switching the community unit off
+            // is meant to take away.
+            $community = Feature::Community->enabled() ? Community::find($request->integer('community')) : null;
             abort_unless($community !== null && CommunityTimelineAccess::canPost($community, $viewer), 404);
         }
 
@@ -270,6 +290,9 @@ class TimelineController extends Controller
         // the same clearance/block gate, so a reply always attaches to a viewable top-level post.
         $root = $query($viewer, $timelinePost);
         abort_if($root === null, 404);
+        // The action refuses too, but it throws; the reply route is the SNS-wide one, so the gate
+        // has to be here for an outsider on an everyone-readable community to get a 404, not a 500.
+        abort_if($root->community !== null && ! CommunityTimelineAccess::canPost($root->community, $viewer), 404);
 
         $action($viewer, $root, $request->validated('body'), $request->toMentions());
 

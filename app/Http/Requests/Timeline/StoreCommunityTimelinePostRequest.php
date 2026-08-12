@@ -29,6 +29,8 @@ class StoreCommunityTimelinePostRequest extends FormRequest
             // OpenPNE 3 activity_data.body is string(140).
             'body' => ['required', 'string', 'max:140'],
             'image' => PostImageRules::single(),
+            // Which of the two forms posted this, so a validation failure returns to it.
+            'from' => ['nullable', 'in:new'],
             ...MentionRules::rules(),
         ];
     }
@@ -46,10 +48,17 @@ class StoreCommunityTimelinePostRequest extends FormRequest
         );
     }
 
-    /** A failure lands back on the community's timeline, where the form is. */
+    /**
+     * A failure lands back on the form that was submitted. The community's timeline carries an
+     * inline box (Classic), but the standalone compose page is its own screen — returning a
+     * validation error to the list would drop the draft and the errors on a page with nowhere to
+     * show them. `from` names the compose page; anything else is the inline box.
+     */
     protected function getRedirectUrl(): string
     {
-        return $this->redirector->getUrlGenerator()
-            ->route('community.timeline', ['community' => $this->route('community')]);
+        $community = $this->route('community');
+        $route = $this->input('from') === 'new' ? 'community.timeline.new' : 'community.timeline';
+
+        return $this->redirector->getUrlGenerator()->route($route, ['community' => $community]);
     }
 }

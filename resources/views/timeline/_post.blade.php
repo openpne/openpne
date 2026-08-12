@@ -26,7 +26,13 @@
             @endif
         </div>
         <div class="timeline-post-control">
-            <a href="{{ route('timeline.show', $post) }}#timeline-reply-form">{{ __('Post comment') }}</a>
+            {{-- The anchor is the reply form, which a community thread only shows to its own
+                 members; offering it to anyone else would land them on a page with no such form. --}}
+            @if ($post->community === null || \App\Features\Timeline\CommunityTimelineAccess::canPost($post->community, auth()->user()))
+                <a href="{{ route('timeline.show', $post) }}#timeline-reply-form">{{ __('Post comment') }}</a>
+            @else
+                <a href="{{ route('timeline.show', $post) }}">{{ __('Show') }}</a>
+            @endif
             @if ($post->member->is(auth()->user()))
                 | <a href="{{ route('timeline.delete.show', $post) }}">{{ __('Delete') }}</a>
             @endif

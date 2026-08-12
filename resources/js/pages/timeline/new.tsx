@@ -30,6 +30,9 @@ export default function TimelineNew({
         visibility: defaultVisibility,
         image: null as File | null,
         mentions: [] as DraftMention[],
+        // Names this form to the server, so a validation failure comes back here and not to the
+        // community timeline's inline box.
+        from: community ? 'new' : undefined,
     });
     const tooLong = overBodyLimit(data.body);
 
