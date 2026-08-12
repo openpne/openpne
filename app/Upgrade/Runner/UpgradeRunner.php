@@ -109,6 +109,12 @@ final class UpgradeRunner
         }
 
         if ($options->dryRun) {
+            // Same compatibility gate as a real run, but read-only: a plan against legacy or
+            // mismatched state must say so instead of PLANning steps that would never be allowed.
+            if (! $this->claimNamingEpoch($out, dryRun: true)) {
+                return false;
+            }
+
             foreach ($report->absentOptional as $table) {
                 $out("PLAN would create empty source table `{$table}` (".SourcePreflight::absentPluginMessage($table).')');
             }
@@ -208,21 +214,35 @@ final class UpgradeRunner
      * tables; after a rename, the old keys match no current step, so a resume would report every
      * renamed step as pending and re-copy into the new tables alongside the old rows. Detected here
      * rather than left to a runbook, because the failure is silent. Public alongside reset() so the
-     * guard is exercisable without a MySQL source.
+     * guard is exercisable without a MySQL source. With $dryRun the check runs but never writes the
+     * marker — a plan stays read-only.
      */
-    public function claimNamingEpoch(?Closure $out = null): bool
+    public function claimNamingEpoch(?Closure $out = null, bool $dryRun = false): bool
     {
         $out ??= static fn (string $line): null => null;
 
         $marker = UpgradeState::query()->where('step_key', self::EPOCH_KEY)->first();
 
         if ($marker === null) {
-            UpgradeState::create([
-                'step_key' => self::EPOCH_KEY,
-                'status' => UpgradeState::STATUS_COMPLETED,
-                'metadata' => ['epoch' => self::NAMING_EPOCH],
-                'finished_at' => now(),
-            ]);
+            // Checkpoints without a marker predate the marker itself (or were written by a version
+            // that named steps differently), which is exactly the state this guard exists to refuse —
+            // adopting it would leave the renamed steps looking never-run.
+            if (UpgradeState::query()->exists()) {
+                $out('Aborted: the upgrade state has checkpoints but no naming-epoch marker, so it was '
+                    .'written under earlier step/table names and cannot be resumed — re-run with '
+                    .'--force-restart to start over from an empty target.');
+
+                return false;
+            }
+
+            if (! $dryRun) {
+                UpgradeState::create([
+                    'step_key' => self::EPOCH_KEY,
+                    'status' => UpgradeState::STATUS_COMPLETED,
+                    'metadata' => ['epoch' => self::NAMING_EPOCH],
+                    'finished_at' => now(),
+                ]);
+            }
 
             return true;
         }

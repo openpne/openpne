@@ -61,7 +61,8 @@ return new class extends Migration
             $table->timestamp('recipient_purged_at')->nullable();
             $table->timestamps();
 
-            $table->index(['recipient_id', 'recipient_deleted_at']);
+            // Named: the conventional name exceeds MySQL's 64-character identifier limit.
+            $table->index(['recipient_id', 'recipient_deleted_at'], 'direct_message_recipients_recipient_id_deleted_at_index');
         });
     }
 

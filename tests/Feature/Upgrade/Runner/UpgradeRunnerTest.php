@@ -117,6 +117,36 @@ class UpgradeRunnerTest extends TestCase
         $this->assertTrue($runner->claimNamingEpoch());
     }
 
+    public function test_checkpoints_without_a_marker_are_refused_as_legacy_state(): void
+    {
+        // The exact state the guard exists for: a run interrupted before the marker was introduced
+        // has step rows under the old names and nothing else.
+        UpgradeState::create(['step_key' => 'MessageUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);
+
+        $lines = [];
+        $ok = (new UpgradeRunner(new InsertSelectCompiler, []))->claimNamingEpoch(function (string $line) use (&$lines): void {
+            $lines[] = $line;
+        });
+
+        $this->assertFalse($ok);
+        $this->assertStringContainsString('--force-restart', implode("\n", $lines));
+        // Refusal must not adopt the state: no marker row may appear.
+        $this->assertFalse(UpgradeState::query()->where('step_key', 'naming_epoch')->exists());
+    }
+
+    public function test_a_dry_run_checks_the_epoch_without_writing_the_marker(): void
+    {
+        $runner = new UpgradeRunner(new InsertSelectCompiler, []);
+
+        $this->assertTrue($runner->claimNamingEpoch(dryRun: true));
+        $this->assertFalse(UpgradeState::query()->where('step_key', 'naming_epoch')->exists());
+
+        UpgradeState::create(['step_key' => 'MessageUpgrade', 'status' => UpgradeState::STATUS_COMPLETED]);
+
+        $this->assertFalse($runner->claimNamingEpoch(dryRun: true));
+        $this->assertFalse(UpgradeState::query()->where('step_key', 'naming_epoch')->exists());
+    }
+
     public function test_the_epoch_marker_is_not_walked_as_a_step(): void
     {
         // step_key doubles as the marker's row key, so a registry that ever produced this basename
