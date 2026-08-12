@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
 import { useConfirm } from '@/components/confirm-dialog';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
+import type { TimelinePostEntry } from '../timeline/types';
 import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
 
 interface ShowProps extends PageProps {
@@ -27,6 +28,7 @@ interface ShowProps extends PageProps {
     canPostTopic: boolean;
     recentEvents: EventSummary[] | null;
     canPostEvent: boolean;
+    timelinePosts: TimelinePostEntry[] | null; // null → not a member, or the unit is off
 }
 
 export default function CommunityShow() {
@@ -34,7 +36,7 @@ export default function CommunityShow() {
     const confirm = useConfirm();
     const {
         community, viewerRole, canManage, isPending, isTransferNominee, canJoin, canLeave, members,
-        recentTopics, canPostTopic, recentEvents, canPostEvent,
+        recentTopics, canPostTopic, recentEvents, canPostEvent, timelinePosts,
     } = usePage<ShowProps>().props;
 
     const join = () => router.post('/community/join', { id: community.id });
@@ -113,6 +115,44 @@ export default function CommunityShow() {
                     </div>
                 )}
             </Panel>
+
+            {/* Above the boards, where the Classic box sits — the plugin injected it before the
+                community's own details. Only members see it: it leads to posting. */}
+            {timelinePosts !== null && (
+                <Panel
+                    flush
+                    title={t('%Activity%')}
+                    right={
+                        <ActionLink href={`/community/${community.id}/timeline/new`} variant="outline" size="sm">
+                            <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
+                            {t('%Post_activity%')}
+                        </ActionLink>
+                    }
+                >
+                    {timelinePosts.length === 0 ? (
+                        <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No %activity% posts to show.')}</p>
+                    ) : (
+                        <List>
+                            {timelinePosts.map((post) => (
+                                <EntryRow
+                                    key={post.id}
+                                    href={`/timeline/${post.id}`}
+                                    author={post.author}
+                                    content={post.body}
+                                    contentLines={2}
+                                    date={<Timestamp at={post.createdAt} preset="relative" />}
+                                    replyCount={post.replyCount}
+                                />
+                            ))}
+                        </List>
+                    )}
+                    <div className="border-t border-border px-4 py-2.5 sm:px-5">
+                        <Link href={`/community/${community.id}/timeline`} className="text-sm text-link hover:underline">
+                            {t('See all %activity% posts')}
+                        </Link>
+                    </div>
+                </Panel>
+            )}
 
             {recentTopics !== null && (
                 <Panel
