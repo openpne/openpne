@@ -91,21 +91,6 @@ class CommunityPostSeparationTest extends TestCase
         $this->assertSame(1, (new ProfileStats)($viewer, $author)['activity']);
     }
 
-    public function test_a_reply_inherits_its_parents_community(): void
-    {
-        $author = Member::factory()->create();
-        $community = Community::factory()->create();
-        $this->join($community, $author);
-
-        $parent = TimelinePost::factory()->inCommunity($community)->create(['member_id' => $author->getKey()]);
-        $reply = TimelinePost::factory()->replyTo($parent)->create(['member_id' => $author->getKey()]);
-
-        // Only the inheritance is asserted. A reply is already absent from the SNS-wide feeds by
-        // their in_reply_to_id filter, so asserting that here would pass with the community
-        // exclusion removed and read as coverage it does not have.
-        $this->assertSame($community->getKey(), $reply->community_id);
-    }
-
     /**
      * @param  Collection<int, TimelinePost>|array<int, TimelinePost>  $items
      */

@@ -8,6 +8,7 @@ use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Models\Community;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Models\TimelinePostImage;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -53,14 +54,16 @@ class DeleteCommunityTimelineCleanupTest extends TestCase
         $this->assertDatabaseHas('timeline_posts', ['id' => $snsPost->getKey()]);
     }
 
-    public function test_replies_go_with_their_parent(): void
+    public function test_replies_and_the_images_they_carry_go_with_their_parent(): void
     {
         $community = Community::factory()->create();
         $parent = TimelinePost::factory()->inCommunity($community)->create();
         $reply = TimelinePost::factory()->replyTo($parent)->create();
+        $image = TimelinePostImage::factory()->create(['timeline_post_id' => $reply->getKey()]);
 
         app(DeleteCommunity::class)->purge($community);
 
         $this->assertDatabaseMissing('timeline_posts', ['id' => $reply->getKey()]);
+        $this->assertDatabaseMissing('files', ['id' => $image->file_id]);
     }
 }
