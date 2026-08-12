@@ -2,13 +2,17 @@
 
 namespace App\Features\Timeline\Actions;
 
+use App\Features\Timeline\CommunityTimelineAccess;
 use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Features\Timeline\Events\TimelinePostPosted;
+use App\Features\Timeline\Exceptions\NotCommunityMember;
 use App\Features\Timeline\HashtagParser;
 use App\Files\PostImages;
 use App\Jobs\SyncLinkCard;
+use App\Models\Community;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\Visibility;
 use Illuminate\Http\UploadedFile;
 
 class CreateTimelinePost
@@ -19,24 +23,38 @@ class CreateTimelinePost
     ) {}
 
     /**
-     * Post to the author's own timeline. OpenPNE 3 allows one image per post; $image is attached as
-     * slot 1, with its bytes rolled back if the transaction fails.
+     * Post to the author's own timeline, or to $community's. OpenPNE 3 allows one image per post;
+     * $image is attached as slot 1, with its bytes rolled back if the transaction fails.
+     *
+     * A community post takes the Community itself rather than an id, and the membership check and
+     * the fixed visibility live here rather than in a controller — the write is where they cannot
+     * be routed around. Everything a community post's audience needs is the community, so the
+     * per-post ladder does not apply and the caller's choice is ignored.
+     *
+     * @throws NotCommunityMember
      */
-    public function __invoke(Member $author, TimelinePostFormData $data, ?UploadedFile $image = null): TimelinePost
+    public function __invoke(Member $author, TimelinePostFormData $data, ?UploadedFile $image = null, ?Community $community = null): TimelinePost
     {
+        if ($community !== null && ! CommunityTimelineAccess::canPost($community, $author)) {
+            throw new NotCommunityMember;
+        }
+
+        $visibility = $community !== null ? Visibility::Members : $data->visibility;
+
         $post = $this->images->attach(
             'timelinePost',
             $image !== null ? [$image] : [],
             // Mentions resolve inside the transaction: resolution share-locks the mentioned
             // members, so one deleted mid-request fails resolution (row dropped, post goes
             // through) instead of failing the FK insert (post rolled back).
-            persist: function () use ($author, $data): TimelinePost {
+            persist: function () use ($author, $data, $community, $visibility): TimelinePost {
                 $post = TimelinePost::create([
                     'member_id' => $author->getKey(),
+                    'community_id' => $community?->getKey(),
                     'body' => $data->body,
-                    'visibility' => $data->visibility,
+                    'visibility' => $visibility,
                 ]);
-                $mentions = ($this->mentions)($author, $data->body, $data->mentions);
+                $mentions = ($this->mentions)($author, $data->body, $data->mentions, $community);
                 $post->mentions()->createMany($mentions);
                 // After resolution, because a mention wins any range the two would both claim.
                 $post->tags()->createMany(HashtagParser::parse($data->body, $mentions));

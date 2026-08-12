@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications;
 
+use App\Http\Requests\Member\UpdateNotificationSettingsRequest;
 use App\Models\Member;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
@@ -27,16 +28,16 @@ class NotificationSettingsPageTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/config/notifications')
                 ->has('form.groups', 6)
-                // %Activity% carries five wired kinds; the dormant community variant stays off the page.
                 ->where('form.groups.0.key', 'timeline')
                 ->where('form.groups.0.caption', __('%Activity%'))
-                ->has('form.groups.0.kinds', 5)
+                ->has('form.groups.0.kinds', 6)
                 ->where('form.groups.0.kinds.0.kind', 'timeline_new_post')
                 ->where('form.groups.0.kinds.1.dependOnNot', 'timeline_new_post')
-                ->where('form.groups.0.kinds.2.kind', 'timeline_reply_post')
-                ->where('form.groups.0.kinds.3.kind', 'timeline_related_post')
-                ->where('form.groups.0.kinds.4.kind', 'timeline_mention')
-                ->where('form.groups.0.kinds.4.caption', __('When you are mentioned in a %activity% post'))
+                ->where('form.groups.0.kinds.2.kind', 'timeline_new_post_community')
+                ->where('form.groups.0.kinds.3.kind', 'timeline_reply_post')
+                ->where('form.groups.0.kinds.4.kind', 'timeline_related_post')
+                ->where('form.groups.0.kinds.5.kind', 'timeline_mention')
+                ->where('form.groups.0.kinds.5.caption', __('When you are mentioned in a %activity% post'))
                 ->where('form.groups.1.key', 'diary')
                 ->has('form.groups.1.kinds', 4)
                 ->where('form.groups.1.kinds.0.kind', 'diary_new_post')
@@ -124,16 +125,33 @@ class NotificationSettingsPageTest extends TestCase
         $this->assertTrue($fresh->wantsNotification(NotificationKind::MessageNewOnlyFriends, NotificationChannel::Web));
     }
 
-    public function test_an_unwired_kind_is_rejected(): void
+    public function test_only_wired_kinds_are_writable(): void
     {
+        // Every registered kind is wired today, so the rule is pinned against the registry rather
+        // than against one dormant kind: an unwired kind added later must not become writable by
+        // the allowlist drifting away from wiredCases().
+        $this->assertSame(
+            array_map(fn (NotificationKind $kind): string => $kind->value, NotificationKind::wiredCases()),
+            $this->writableKinds(),
+        );
+
         $member = Member::factory()->create();
 
         $this->actingAs($member)
             ->from('/member/config/notifications')
-            ->post('/member/config/notifications', ['settings' => ['timeline_new_post_community' => ['mail' => false]]])
+            ->post('/member/config/notifications', ['settings' => ['not_a_kind' => ['mail' => false]]])
             ->assertSessionHasErrors('settings');
 
         $this->assertDatabaseCount('member_notification_settings', 0);
+    }
+
+    /** @return list<string> the kinds the form request's `array:` allowlist accepts */
+    private function writableKinds(): array
+    {
+        $rules = (new UpdateNotificationSettingsRequest)->rules()['settings'];
+        $allowlist = collect($rules)->first(fn (string $rule): bool => str_starts_with($rule, 'array:'));
+
+        return explode(',', substr((string) $allowlist, strlen('array:')));
     }
 
     public function test_an_unknown_channel_is_rejected(): void
@@ -159,7 +177,7 @@ class NotificationSettingsPageTest extends TestCase
             ->assertSee(NotificationKind::FriendLinkConfirm->caption())
             ->assertSee(NotificationKind::MessageNew->caption())
             ->assertSee(NotificationKind::TimelineNewPost->caption())
-            ->assertDontSee(NotificationKind::TimelineNewPostCommunity->caption());
+            ->assertSee(NotificationKind::TimelineNewPostCommunity->caption());
     }
 
     public function test_legacy_config_notification_url_redirects_to_the_category(): void

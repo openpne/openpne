@@ -3,6 +3,7 @@
 namespace App\Features\Timeline;
 
 use App\Features\Block\BlockLookup;
+use App\Models\Community;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
@@ -109,6 +110,31 @@ final class TimelineFeedScope
         self::excludeCommunityScoped($query);
 
         $query->where('timeline_posts.visibility', '<=', Visibility::Members->value);
+
+        BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
+    }
+
+    /**
+     * The one opt-in: a community's own timeline. No visibility tier applies — the community is the
+     * audience, and the caller has already asked CommunityTimelineAccess whether this viewer may
+     * read it at all. Authors who block the viewer drop out, as everywhere else.
+     *
+     * A post also leaves the feed when its author leaves the community, which is what OpenPNE 3 did
+     * (its community feed required the author to be a member) — so an upgraded feed never shows more
+     * than it did before. The permalink is deliberately not narrowed the same way; OpenPNE 3 served
+     * that too (see TimelineAccess).
+     *
+     * @param  Builder<TimelinePost>  $query
+     */
+    public static function applyCommunity(Builder $query, Member $viewer, Community $community): void
+    {
+        $query->where('timeline_posts.community_id', $community->getKey());
+
+        $query->whereExists(fn ($members) => $members
+            ->select(DB::raw(1))
+            ->from('community_members')
+            ->where('community_members.community_id', $community->getKey())
+            ->whereColumn('community_members.member_id', 'timeline_posts.member_id'));
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
     }
