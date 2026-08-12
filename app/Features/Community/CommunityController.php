@@ -27,6 +27,8 @@ use App\Features\CommunityTopic\Serializers\CommunityTopicSerializer;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Member\Serializers\MemberRefSerializer;
+use App\Features\Timeline\CommunityTimelineAccess;
+use App\Features\Timeline\Queries\CommunityTimeline;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Community\CommunityRequest;
@@ -52,7 +54,15 @@ class CommunityController extends Controller
 {
     use RespondsWithSurface;
 
-    public function show(Request $request, int $community, ShowCommunity $query, RecentCommunityTopics $recentTopics, RecentCommunityEvents $recentEvents): View|InertiaResponse
+    /**
+     * Rows in the community home's timeline box. OpenPNE 3's component asked for twenty, but it
+     * streamed them behind a load-more; rendered as a static block that many would bury the
+     * community's own details. Five, like the topic and event boxes beside it — the box's "show
+     * all" link carries the rest.
+     */
+    private const TIMELINE_BOX = 5;
+
+    public function show(Request $request, int $community, ShowCommunity $query, RecentCommunityTopics $recentTopics, RecentCommunityEvents $recentEvents, CommunityTimeline $communityTimeline): View|InertiaResponse
     {
         $found = $query($community);
         abort_if($found === null, 404);
@@ -74,9 +84,13 @@ class CommunityController extends Controller
         // null — and its query never runs.
         $showTopics = $canViewBoard && Feature::CommunityTopic->enabled();
         $showEvents = $canViewBoard && Feature::CommunityEvent->enabled();
+        // OpenPNE 3 injected the community timeline box here and gated it on membership: the box
+        // leads with a compose form, and a non-member cannot post. Null keeps the box off the page,
+        // the same seam the two boards use, so a switched-off unit costs no query either.
+        $showTimeline = Feature::Timeline->enabled() && CommunityTimelineAccess::canPost($found, $viewer);
 
         return $this->respondWith($request, 'community', [
-            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $showTopics, $showEvents, $recentTopics, $recentEvents) {
+            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $showTopics, $showEvents, $showTimeline, $recentTopics, $recentEvents, $communityTimeline) {
                 $this->markLocalNavCommunity($found);
 
                 // The details listBox names the admin and sub-admins; only Classic needs them, so the
@@ -97,6 +111,7 @@ class CommunityController extends Controller
                     'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
                     'recentEvents' => $showEvents ? $recentEvents($found) : null,
                     'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
+                    'timelinePosts' => $showTimeline ? $communityTimeline->take($viewer, $found, self::TIMELINE_BOX) : null,
                 ]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/show', [

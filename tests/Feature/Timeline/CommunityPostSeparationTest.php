@@ -91,6 +91,30 @@ class CommunityPostSeparationTest extends TestCase
         $this->assertSame(1, (new ProfileStats)($viewer, $author)['activity']);
     }
 
+    public function test_a_community_posts_hashtag_is_not_linked(): void
+    {
+        // The tag page is SNS-wide and excludes community posts, so linking one would open a page
+        // that does not contain the post the reader clicked it from. Both surfaces read
+        // linkableTags(), so this pins the rule for the Blade component and the serializer at once.
+        $community = Community::factory()->create();
+        $author = Member::factory()->create();
+        $this->join($community, $author);
+
+        $post = TimelinePost::factory()->inCommunity($community)->create([
+            'member_id' => $author->getKey(),
+            'body' => 'tagged #here',
+        ]);
+        $post->tags()->create(['tag' => 'here', 'offset' => 7, 'length' => 5]);
+
+        $snsPost = TimelinePost::factory()->create(['member_id' => $author->getKey(), 'body' => 'tagged #here']);
+        $snsPost->tags()->create(['tag' => 'here', 'offset' => 7, 'length' => 5]);
+
+        $this->assertCount(0, $post->fresh()->linkableTags());
+        $this->assertCount(1, $snsPost->fresh()->linkableTags());
+        // The rows are still stored — the tag is searchable data, only its link has no destination.
+        $this->assertCount(1, $post->fresh()->tags);
+    }
+
     /**
      * @param  Collection<int, TimelinePost>|array<int, TimelinePost>  $items
      */

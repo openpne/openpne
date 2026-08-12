@@ -56,6 +56,7 @@
     "(empty)": "(空)",
     "(No subject)": "(件名なし)",
     ":age years old": ":age歳",
+    ":community %activity%": ":community の%activity%",
     ":count comments": ":count件のコメント",
     ":count days ago": ":count日前",
     ":count entries": ":count件",

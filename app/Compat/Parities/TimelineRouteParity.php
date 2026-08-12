@@ -20,6 +20,8 @@ class TimelineRouteParity extends RouteParity
             // (the feed ran on mobile and as the homeAllTimeline home gadget); OpenPNE 4 unifies it
             // into a real /timeline page. The /sns/timeline URL is preserved by redirect (below).
             new RouteMap('sns_timeline', '/sns/timeline', 'timeline.index', 'GET', op3Action: 'sns'),
+            // OpenPNE 3's named route, and OpenPNE 4 serves the same URL — nothing to redirect.
+            new RouteMap('community_timeline', '/community/:id/timeline', 'community.timeline', 'GET', op3Action: 'community'),
             // OpenPNE 3 reached the single-activity page through the global /:module/:action fallback
             // (/timeline/show/id/:id), so there is no named route — a fallback-only map that still
             // derives the page_timeline_show body id.
@@ -29,9 +31,7 @@ class TimelineRouteParity extends RouteParity
 
     public function gaps(): array
     {
-        return [
-            'community_timeline' => 'Community-scoped timeline (foreign_table=community).',
-        ];
+        return [];
     }
 
     /** OpenPNE 3 keeps the global /:module/:action fallback on (no timeline_nodefaults route). */
@@ -48,6 +48,9 @@ class TimelineRouteParity extends RouteParity
             '/timeline/show/id/:id' => 'timeline.show',
             // OpenPNE 3's SNS-wide timeline URL → canonical home feed.
             '/sns/timeline' => 'timeline.index',
+            // The community timeline's own URL is unchanged; this is the global-fallback spelling
+            // of it, which OpenPNE 3 also answered.
+            '/timeline/community/id/:id' => 'community.timeline',
         ];
     }
 
