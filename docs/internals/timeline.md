@@ -143,9 +143,36 @@ preserves a member's stored choice.
 - A range with no row renders as plain text, which is what makes the member cascade safe.
 - An entity's own range is escaped but never autolinked.
 - `EntityText` and `entity-split.ts` are a lockstep pair, like `BodyText` and `linkify.ts`.
-- A reply inherits its parent's visibility; the thread is one audience — which is also what a
-  notification's viewability and its feed row's link are judged against.
+- A reply inherits its parent's visibility and community; the thread is one audience — which is also
+  what a notification's viewability and its feed row's link are judged against.
 - The events' mention snapshot is the only input to notification precedence; no path re-derives it.
+- A community-scoped post is absent from every SNS-wide read, and its access is the community's
+  question, not the author's clearance.
+
+## A community post lives in the same table and nowhere else's feed
+
+`timeline_posts.community_id` scopes a post to one community (OpenPNE 3 stored the same thing as
+`activity_data.foreign_table='community'` + `foreign_id`). Null is an ordinary SNS-wide post.
+
+Everything SNS-wide excludes those rows, and the exclusion lives in the two scopes every such read
+already goes through rather than in each query: `TimelineFeedScope` (home, all-member, friend and
+tag feeds) and `TimelineVisibilityScope` (a member's own timeline, the profile activity count).
+A community feed opts back in explicitly. Writing a new SNS-wide feed therefore inherits the
+exclusion; writing one that bypasses both scopes is what would leak, which is why the separation is
+pinned per query rather than per page.
+
+Access is answered by the community, before visibility is read at all. `TimelineAccess` sends a
+community post to `CommunityTimelineAccess`, which reads the same `topic_read_access` column the
+board and events read — so one community answers "who may read this" the same way everywhere.
+OpenPNE 3 differed here: its community feed required the *author* to be a member and never checked
+the viewer, which would leave a members-only community's timeline readable while its board is not.
+
+Posting follows membership alone. `topic_post_authority` is deliberately not consulted, so an
+admins-only board does not also silence the community's timeline; and an everyone-readable community
+is still writable only by its members.
+
+Rows carry `Members`, but that is a write-side invariant, not the gate — a legacy or corrupt `Open`
+value must not open a permalink or its image bytes to a guest, so the community branch runs first.
 
 ## A hashtag is a range too, but nobody picks it
 

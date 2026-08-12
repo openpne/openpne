@@ -65,6 +65,12 @@ class Community extends Model
         return $this->hasMany(CommunityEvent::class);
     }
 
+    /** @return HasMany<TimelinePost, $this> Posts scoped to this community's timeline, replies included. */
+    public function timelinePosts(): HasMany
+    {
+        return $this->hasMany(TimelinePost::class);
+    }
+
     /** @return BelongsTo<CommunityCategory, $this> */
     public function category(): BelongsTo
     {

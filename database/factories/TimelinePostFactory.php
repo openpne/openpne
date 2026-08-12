@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Community;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
@@ -32,12 +33,22 @@ class TimelinePostFactory extends Factory
         return $this->state(['visibility' => Visibility::Friends]);
     }
 
-    /** A reply to $parent, copying its visibility (the runtime contract). */
+    /** Scoped to a community's timeline, which fixes visibility at Members (the runtime contract). */
+    public function inCommunity(Community $community): static
+    {
+        return $this->state([
+            'community_id' => $community->getKey(),
+            'visibility' => Visibility::Members,
+        ]);
+    }
+
+    /** A reply to $parent, copying its visibility and community (the runtime contract). */
     public function replyTo(TimelinePost $parent): static
     {
         return $this->state([
             'in_reply_to_id' => $parent->getKey(),
             'visibility' => $parent->visibility,
+            'community_id' => $parent->community_id,
         ]);
     }
 }
