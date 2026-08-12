@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Console\Commands\CheckTranslationsCommand as Cmd;
+use App\Notifications\Settings\NotificationKind;
 use App\Services\TermService;
 use Tests\TestCase;
 
@@ -24,10 +25,15 @@ class I18nCoverageSourcesTest extends TestCase
         $this->assertArrayHasKey('The %community% name.', $sources);
         $this->assertArrayHasKey('%Diaries%', $sources);
 
-        // Unsurfaced → out: the dormant community-timeline kind's caption.
-        $this->assertArrayNotHasKey('New %community% %activity% posts', $sources);
-        // Its category is in all the same, because a sibling kind of it is wired — the corpus
-        // follows what renders. (No all-unwired category is left to assert the other way.)
+        // Every kind is wired today, so the rule is stated against the registry rather than against
+        // one dormant kind: the "out" half is vacuous now and re-arms the moment an unwired kind is
+        // registered, which is when it matters.
+        foreach (NotificationKind::cases() as $kind) {
+            $kind->definition()->isWired
+                ? $this->assertArrayHasKey($kind->definition()->caption, $sources)
+                : $this->assertArrayNotHasKey($kind->definition()->caption, $sources);
+        }
+
         $this->assertArrayHasKey('%Activity%', $sources);
     }
 
