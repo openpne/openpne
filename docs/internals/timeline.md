@@ -173,6 +173,29 @@ is still writable only by its members.
 
 Rows carry `Members`, but that is a write-side invariant, not the gate — a legacy or corrupt `Open`
 value must not open a permalink or its image bytes to a guest, so the community branch runs first.
+The write actions take the `Community` itself and fix the visibility there, rather than trusting a
+caller's id and choice: the reply route is the SNS-wide one, so a controller check would be a check
+in only one of the two places that reach the write.
+
+A post also leaves the community feed when its author leaves the community — OpenPNE 3's feed
+required the author to be a member, and keeping that means an upgraded feed shows no more than it
+did before. Only the feed: OpenPNE 3 served an ex-member's permalink, and so do we.
+
+Mentions narrow to the community's members on both sides — the picker and the submit — because the
+two must answer alike or the picker would offer a name the submit silently drops.
+
+### One post, one announcement
+
+A community post is announced by `BroadcastCommunityTimelinePosted`, through the same fan-out the
+topic and event broadcasts use, under `timeline_new_post_community`. `NotifyTimelinePosted` picks
+that job **or** the SNS-wide one, never both: the SNS-wide audience is the visibility ladder, which
+an everyone-readable community resolves to every member, so a post would arrive twice under two
+kinds — and the opt-out a member reached for would not be the one that sent it.
+
+Receiving anything about a community thread requires current membership, checked once in
+`TimelineNotificationEligibility` so the new-post, reply and mention kinds cannot drift apart. Read
+access is not enough: an everyone-readable community would otherwise keep mailing its bodies to
+someone who left, and the opt-out they would reach for is a community kind that is no longer theirs.
 
 ## A hashtag is a range too, but nobody picks it
 

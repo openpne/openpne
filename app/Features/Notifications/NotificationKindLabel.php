@@ -44,6 +44,7 @@ final class NotificationKindLabel
             'community_event_posted' => __(':name posted a new event.', ['name' => $name]),
             'timeline_mentioned' => __(':name mentioned you in a %activity% post.', ['name' => $name]),
             'timeline_posted' => __(':name posted to the %activity%.', ['name' => $name]),
+            'timeline_posted_community' => __(':name posted to a %community% %activity%.', ['name' => $name]),
             'timeline_replied' => $cause === CommentReason::Related
                 ? __(':name commented on a %activity% post you commented on.', ['name' => $name])
                 : __(':name commented on your %activity% post.', ['name' => $name]),

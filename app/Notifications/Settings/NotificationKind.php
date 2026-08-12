@@ -67,12 +67,11 @@ enum NotificationKind: string
                 dependOnNot: self::TimelineNewPost,
                 isWired: true,
             ),
-            // Dormant: OpenPNE 3 defined this kind but never sent it, and OpenPNE 4's timeline has
-            // no community scope to send it for. Wire it when community timelines land.
             self::TimelineNewPostCommunity => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineNewPostCommunity',
                 caption: 'New %community% %activity% posts',
+                isWired: true,
             ),
             self::TimelineReplyPost => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
