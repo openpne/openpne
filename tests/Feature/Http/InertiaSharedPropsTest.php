@@ -57,12 +57,13 @@ class InertiaSharedPropsTest extends TestCase
 
     public function test_shared_props_carry_every_feature_unit_on_a_fresh_install(): void
     {
+        // Group talk is the one unit the install switches off (docs/internals/group-talk.md).
+        $expected = array_fill_keys(array_column(Feature::cases(), 'value'), true);
+        $expected[Feature::GroupTalk->value] = false;
+
         $this->actingAs(Member::factory()->create())
             ->get('/dashboard')
-            ->assertInertia(fn ($page) => $page->where('enabledFeatures', array_fill_keys(
-                array_column(Feature::cases(), 'value'),
-                true,
-            )));
+            ->assertInertia(fn ($page) => $page->where('enabledFeatures', $expected));
     }
 
     public function test_the_shared_feature_map_resolves_dependencies(): void

@@ -28,7 +28,9 @@ use Illuminate\Support\Facades\DB;
  * Switch the feature units (App\Support\Feature) on and off site-wide; see
  * docs/internals/feature-toggles.md. `sns_settings` is authoritative; every key is stored verbatim
  * on save and resolves to enabled while no row exists, so an install that never opened this page
- * runs every unit.
+ * runs every unit — except groupTalk, whose default is disabled until the community-timeline
+ * cutover (SnsSettingKey::FeatureGroupTalkEnabled), which makes this page the way a site opts into
+ * talk early.
  *
  * @property-read Schema $form
  */

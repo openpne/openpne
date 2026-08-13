@@ -10,6 +10,7 @@ const allOn: Record<FeatureKey, boolean> = {
     group: true,
     groupTopic: true,
     groupEvent: true,
+    groupTalk: true,
     friend: true,
 };
 

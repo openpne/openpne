@@ -18,6 +18,7 @@ use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
@@ -168,6 +169,7 @@ class AppServiceProvider extends ServiceProvider
             'directMessage' => DirectMessage::class,
             'message' => DirectMessage::class,
             'timelinePost' => TimelinePost::class,
+            'groupMessage' => GroupMessage::class,
         ]);
 
         Gate::policy(File::class, FilePolicy::class);

@@ -36,6 +36,7 @@ class FeatureTest extends TestCase
     {
         $this->assertSame(Feature::Group, Feature::GroupTopic->parent());
         $this->assertSame(Feature::Group, Feature::GroupEvent->parent());
+        $this->assertSame(Feature::Group, Feature::GroupTalk->parent());
 
         foreach ([Feature::Diary, Feature::DirectMessage, Feature::Timeline, Feature::Group, Feature::Friend] as $feature) {
             $this->assertNull($feature->parent(), "{$feature->value} unexpectedly depends on another unit");
@@ -47,6 +48,7 @@ class FeatureTest extends TestCase
         $this->assertSame(['diary.'], Feature::Diary->routeNamePrefixes());
         $this->assertSame(['group.'], Feature::Group->routeNamePrefixes());
         $this->assertSame(['group.topics.'], Feature::GroupTopic->routeNamePrefixes());
+        $this->assertSame(['group.talk.'], Feature::GroupTalk->routeNamePrefixes());
     }
 
     public function test_a_route_name_resolves_to_the_unit_that_owns_it(): void
@@ -56,6 +58,7 @@ class FeatureTest extends TestCase
         // Dot-terminated prefixes: the board is its own unit, never captured by `community.`.
         $this->assertSame(Feature::GroupTopic, Feature::owningRouteName('group.topics.show'));
         $this->assertSame(Feature::GroupEvent, Feature::owningRouteName('group.events.comment.store'));
+        $this->assertSame(Feature::GroupTalk, Feature::owningRouteName('group.talk.messages'));
         $this->assertSame(Feature::DirectMessage, Feature::owningRouteName('message.index_compat'));
 
         $this->assertNull(Feature::owningRouteName('member.profile.show'));
@@ -67,6 +70,10 @@ class FeatureTest extends TestCase
     {
         // Fail-open: an availability switch must not black out a module on a malformed value.
         foreach (Feature::cases() as $feature) {
+            if ($feature === Feature::GroupTalk) {
+                continue; // Fail-closed until the cutover — pinned below.
+            }
+
             $key = $feature->settingKey();
 
             $this->assertTrue($key->decode(null), "{$key->value}: an absent row must mean enabled");
@@ -76,6 +83,23 @@ class FeatureTest extends TestCase
             $this->assertTrue($key->decode('garbage'));
             $this->assertFalse($key->decode('0'));
         }
+    }
+
+    /**
+     * Group talk alone enables only on a stored '1' (docs/internals/group-talk.md): absent and
+     * malformed both stay dark until the community-timeline cutover moves it into the fail-open
+     * family. The cutover PR deletes this test and drops the exemption above.
+     */
+    public function test_group_talk_enables_only_on_an_explicit_one(): void
+    {
+        $key = Feature::GroupTalk->settingKey();
+
+        $this->assertFalse($key->decode(null), 'an absent row must mean dark');
+        $this->assertFalse($key->default());
+        $this->assertFalse($key->decode(''));
+        $this->assertFalse($key->decode('garbage'));
+        $this->assertFalse($key->decode('0'));
+        $this->assertTrue($key->decode('1'));
     }
 
     public function test_a_flag_round_trips_through_the_codec(): void

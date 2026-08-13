@@ -13,6 +13,7 @@ use App\Features\Group\GroupController;
 use App\Features\Group\GroupMemberManageController;
 use App\Features\GroupEvent\GroupEventCommentController;
 use App\Features\GroupEvent\GroupEventController;
+use App\Features\GroupTalk\GroupTalkController;
 use App\Features\GroupTopic\GroupTopicCommentController;
 use App\Features\GroupTopic\GroupTopicController;
 use App\Features\Home\HomeController;
@@ -753,6 +754,24 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereNumber('comment')->name('group.topics.comment.delete.show.compat');
         Route::get('/{topic}', fn (Request $request, int $topic) => redirect()->route('group.topics.show', ['topic' => $topic] + $request->query()))
             ->whereNumber('topic')->name('group.topics.show.compat');
+    });
+
+    // A group's talk. Modern-only (no OpenPNE 3 equivalent), so it renders Inertia directly like
+    // /groups/recent — not a surface twin, and no compat block. The page is nested under its group
+    // like the boards; the JSON endpoints hang off the same path, so a conversation is reachable
+    // from the group id alone. The gate is the unit's own: Feature::GroupTalk resolves its parent
+    // (group) itself, so a second gate would be redundant.
+    Route::middleware(EnsureFeatureEnabled::class.':groupTalk')->controller(GroupTalkController::class)->group(function () {
+        Route::get('/groups/{group}/talk', 'show')->whereNumber('group')->name('group.talk.show');
+        // One page either side of a cursor the client was handed: `after` for the poll, `before`
+        // for "load older".
+        Route::get('/groups/{group}/talk/messages', 'messages')->whereNumber('group')->name('group.talk.messages');
+        Route::post('/groups/{group}/talk', 'store')->whereNumber('group')
+            ->middleware('throttle:posting')->name('group.talk.store');
+        // POST delete on its own URL, as the boards do; the path carries the group as well as the
+        // message so the two can be checked against each other.
+        Route::post('/groups/{group}/talk/messages/{message}/delete', 'delete')
+            ->whereNumber(['group', 'message'])->name('group.talk.delete');
     });
 
     // Group events (Classic only; Modern is none). Shaped like the topic board: the board is nested

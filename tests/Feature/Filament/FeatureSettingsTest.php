@@ -16,8 +16,9 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The feature-toggle editor. DB-authoritative; a fresh install with no row runs every unit, and the
- * page stores its whole group on save (docs/internals/feature-toggles.md).
+ * The feature-toggle editor. DB-authoritative; a fresh install with no rows runs every unit except
+ * group talk (dark by its false default until the cutover), and the page stores its whole group on
+ * save (docs/internals/feature-toggles.md).
  */
 class FeatureSettingsTest extends TestCase
 {
@@ -45,8 +46,22 @@ class FeatureSettingsTest extends TestCase
         $component = Livewire::test(FeatureSettings::class);
 
         foreach (Feature::cases() as $feature) {
-            $component->assertSet("data.{$feature->settingKey()->value}", true);
+            // Group talk is the exception: no row is written, its false default reads it off.
+            $component->assertSet("data.{$feature->settingKey()->value}", $feature !== Feature::GroupTalk);
         }
+    }
+
+    /** Switching group talk on is the per-site opt-in that reaches it before the cutover. */
+    public function test_an_operator_can_switch_group_talk_on(): void
+    {
+        Livewire::test(FeatureSettings::class)
+            ->assertSet('data.feature_group_talk_enabled', false)
+            ->fillForm(['feature_group_talk_enabled' => true])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_talk_enabled', 'value' => '1']);
+        $this->assertTrue(Feature::GroupTalk->enabled());
     }
 
     public function test_a_stored_value_round_trips_into_the_form(): void
@@ -65,10 +80,13 @@ class FeatureSettingsTest extends TestCase
             ->call('save')
             ->assertHasNoErrors();
 
+        // Group talk decodes absent as off, so an untouched form saves the '0' it loaded.
+        $off = [SnsSettingKey::FeatureDiaryEnabled, SnsSettingKey::FeatureGroupTalkEnabled];
+
         foreach (SnsSettingKey::inGroup(SettingGroup::Features) as $key) {
             $this->assertDatabaseHas('sns_settings', [
                 'key' => $key->value,
-                'value' => $key === SnsSettingKey::FeatureDiaryEnabled ? '0' : '1',
+                'value' => in_array($key, $off, true) ? '0' : '1',
             ]);
         }
     }
