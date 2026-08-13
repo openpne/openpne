@@ -116,8 +116,11 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         // Fail the join-row insert: the one step that runs after the bytes have already landed.
+        // Matched without identifier quotes — sqlite emits `"` and MySQL emits a backtick, and a
+        // grammar-bound match silently never fires on the other engine (this test then swallowed
+        // its own fail(): AssertionFailedError IS a RuntimeException, hence the exact-message check).
         DB::listen(function ($query) {
-            if (str_contains($query->sql, 'insert into "group_message_images"')) {
+            if (str_starts_with($query->sql, 'insert') && str_contains($query->sql, 'group_message_images')) {
                 throw new RuntimeException('boom');
             }
         });
@@ -125,8 +128,8 @@ class TalkImageTest extends TalkTestCase
         try {
             app(CreateGroupMessage::class)($author, $group, 'look', [], $this->upload());
             $this->fail('the write should have thrown');
-        } catch (RuntimeException) {
-            // expected
+        } catch (RuntimeException $e) {
+            $this->assertSame('boom', $e->getMessage(), 'the write failed for the wrong reason');
         }
 
         $this->assertDatabaseCount('group_messages', 0);
