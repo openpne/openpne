@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunitySummary, TopicDetail } from '../types';
+import type { CommunitySummary, TopicDetail } from '@/pages/community/types';
 
 interface EditProps extends PageProps {
     group: CommunitySummary;
@@ -20,7 +20,7 @@ interface EditProps extends PageProps {
     composeEditor: ComposeEditorPreference;
 }
 
-export default function CommunityTopicEdit() {
+export default function GroupTopicEdit() {
     const t = useT();
     const { group, topic, composeEditor } = usePage<EditProps>().props;
     const isEdit = topic !== null;

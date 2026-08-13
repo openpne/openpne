@@ -110,7 +110,7 @@ test('the dashboard action goes with the diary unit', () => {
 test('a community-scoped page is scoped to the group', () => {
     const group = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
 
-    assert.deepEqual(chrome('community/topic/index', { group, canPost: true }).scope, {
+    assert.deepEqual(chrome('group/topic/index', { group, canPost: true }).scope, {
         kind: 'group',
         id: 7,
         name: 'Cyclists',
@@ -151,7 +151,7 @@ const FORM_SCREENS: Record<string, Record<string, unknown>> = {
     'timeline/new': {},
     'timeline/community-new': { group: cyclists },
     'community/edit': { group: cyclists },
-    'community/topic/edit': { group: cyclists, topic: null },
+    'group/topic/edit': { group: cyclists, topic: null },
     'community/event/edit': { group: cyclists, event: null },
     'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},
@@ -181,7 +181,7 @@ const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
     'diary/edit': { diary: { id: 3, title: 'Draft' } },
     'timeline/new': {},
     'timeline/community-new': { group: cyclists },
-    'community/topic/edit': { group: cyclists, topic: null },
+    'group/topic/edit': { group: cyclists, topic: null },
     'community/event/edit': { group: cyclists, event: null },
     'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},

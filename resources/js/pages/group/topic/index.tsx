@@ -5,7 +5,7 @@ import { Timestamp } from '@/components/timestamp';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunitySummary, PaginatedTopics } from '../types';
+import type { CommunitySummary, PaginatedTopics } from '@/pages/community/types';
 
 interface IndexProps extends PageProps {
     group: CommunitySummary;
@@ -13,7 +13,7 @@ interface IndexProps extends PageProps {
     canPost: boolean;
 }
 
-export default function CommunityTopicIndex() {
+export default function GroupTopicIndex() {
     const t = useT();
     const { topics } = usePage<IndexProps>().props;
 

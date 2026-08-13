@@ -16,7 +16,7 @@ import { List, Panel } from '@/components/ui/surface';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunitySummary, TopicDetail, TopicThread } from '../types';
+import type { CommunitySummary, TopicDetail, TopicThread } from '@/pages/community/types';
 
 interface ShowProps extends PageProps {
     group: CommunitySummary;
@@ -26,7 +26,7 @@ interface ShowProps extends PageProps {
     canEdit: boolean;
 }
 
-export default function CommunityTopicShow() {
+export default function GroupTopicShow() {
     const t = useT();
     const confirm = useConfirm();
     const { topic, thread, canComment, canEdit } = usePage<ShowProps>().props;

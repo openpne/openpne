@@ -56,7 +56,7 @@ class GroupTopicController extends Controller
                     'canPost' => $canPost,
                 ]);
             },
-            SurfaceResolver::MODERN => fn () => Inertia::render('community/topic/index', [
+            SurfaceResolver::MODERN => fn () => Inertia::render('group/topic/index', [
                 'group' => GroupSerializer::summary($group),
                 'topics' => GroupTopicSerializer::paginator($topics),
                 'canPost' => $canPost,
@@ -92,7 +92,7 @@ class GroupTopicController extends Controller
                 // serializes an unbounded thread in one response.
                 $thread = GroupTopicCommentThread::paginate($found, $request->query('order'), $request->query('page'));
 
-                return Inertia::render('community/topic/show', [
+                return Inertia::render('group/topic/show', [
                     'group' => GroupSerializer::summary($found->group),
                     'topic' => GroupTopicSerializer::detail($found),
                     'thread' => GroupTopicSerializer::thread($thread, $viewer),
@@ -113,7 +113,7 @@ class GroupTopicController extends Controller
 
                 return view('group-topic.new', ['group' => $group]);
             },
-            SurfaceResolver::MODERN => fn () => Inertia::render('community/topic/edit', [
+            SurfaceResolver::MODERN => fn () => Inertia::render('group/topic/edit', [
                 'group' => GroupSerializer::summary($group),
                 'topic' => null,
                 'composeEditor' => $this->viewer()->composeEditor()->value,
@@ -143,7 +143,7 @@ class GroupTopicController extends Controller
 
                 return view('group-topic.edit', ['topic' => $topic]);
             },
-            SurfaceResolver::MODERN => fn () => Inertia::render('community/topic/edit', [
+            SurfaceResolver::MODERN => fn () => Inertia::render('group/topic/edit', [
                 'group' => GroupSerializer::summary($topic->group),
                 'topic' => GroupTopicSerializer::detail($topic),
                 'composeEditor' => $this->viewer()->composeEditor()->value,

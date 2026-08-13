@@ -360,7 +360,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // Community-scoped pages carry the group as context crumbs; board indexes keep a short h1
     // ("Topics" / "Events") so a long group name never wraps the heading. Detail pages add the
     // board as a second crumb (the back-to-board path they used to carry in the body).
-    'community/topic/index': (props) => {
+    'group/topic/index': (props) => {
         const { group, canPost } = props as unknown as { group: CommunityRef; canPost: boolean };
         return {
             mode: 'contextual',
@@ -384,7 +384,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                 : undefined,
         };
     },
-    'community/topic/show': (props) => {
+    'group/topic/show': (props) => {
         const { group } = props as unknown as { group: CommunityRef };
         return { context: topicBoardContext(group), scope: communityScope(group) };
     },
@@ -394,7 +394,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     },
     // Edit mode's third crumb is the topic/event being edited (the page it returns to on cancel);
     // create mode stops at the board, matching diary/edit vs diary/new.
-    'community/topic/edit': (props) => {
+    'group/topic/edit': (props) => {
         const { group, topic } = props as unknown as { group: CommunityRef; topic: { id: number; name: string } | null };
         return {
             form: true,
@@ -574,7 +574,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/config/notifications': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/withdrawal': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'community/show': { foreground: true },
-    'community/topic/show': { foreground: true },
+    'group/topic/show': { foreground: true },
     'community/event/show': { foreground: true },
     'diary/show': { foreground: true },
     'diary/new': { form: true, compose: true, context: [{ href: '/diary/list', label: DIARIES }] },

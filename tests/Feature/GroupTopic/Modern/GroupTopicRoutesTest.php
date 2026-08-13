@@ -56,7 +56,7 @@ class GroupTopicRoutesTest extends TestCase
         $this->actingAs($member)
             ->get(route('group.topics.index', $group))
             ->assertInertia(fn ($page) => $page
-                ->component('community/topic/index')
+                ->component('group/topic/index')
                 ->where('group.id', $group->getKey())
                 ->has('topics.data', 1)
                 ->has('topics.data.0.author')
@@ -78,7 +78,7 @@ class GroupTopicRoutesTest extends TestCase
         $this->actingAs($author)
             ->get(route('group.topics.show', $topic))
             ->assertInertia(fn ($page) => $page
-                ->component('community/topic/show')
+                ->component('group/topic/show')
                 ->where('topic.id', $topic->getKey())
                 ->where('thread.total', 1)
                 ->has('thread.comments', 1)
@@ -151,7 +151,7 @@ class GroupTopicRoutesTest extends TestCase
         $this->actingAs($member)
             ->get(route('group.topics.new', $group))
             ->assertInertia(fn ($page) => $page
-                ->component('community/topic/edit')
+                ->component('group/topic/edit')
                 ->where('group.id', $group->getKey())
                 ->where('topic', null)
                 ->where('composeEditor', 'rich')
@@ -194,7 +194,7 @@ class GroupTopicRoutesTest extends TestCase
         $this->actingAs($author)
             ->get(route('group.topics.edit', $topic))
             ->assertInertia(fn ($page) => $page
-                ->component('community/topic/edit')
+                ->component('group/topic/edit')
                 ->where('topic.id', $topic->getKey())
                 ->where('group.id', $group->getKey())
                 ->where('composeEditor', 'rich')
@@ -264,6 +264,6 @@ class GroupTopicRoutesTest extends TestCase
 
         $this->actingAs($member)
             ->get(route('group.topics.index', $group))
-            ->assertInertia(fn ($page) => $page->component('community/topic/index'));
+            ->assertInertia(fn ($page) => $page->component('group/topic/index'));
     }
 }
