@@ -2,8 +2,9 @@ import { router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { createRestoreQueue } from '@/lib/history-restore';
 import { clearAppBadge, reconcileSubscription, resumeRegistration, setAppBadge } from '@/lib/push';
+import { applyUnreadPayload, type UnreadPayload } from '@/lib/unread-payload';
 import { UNREAD_REFRESH_EVENT } from '@/lib/unread-refresh';
-import type { PageProps, UnreadCounts } from '@/types';
+import type { PageProps } from '@/types';
 
 /** How often a visible tab re-reads the counts. */
 const INTERVAL_MS = 60_000;
@@ -18,14 +19,16 @@ function writeBadge(count: number): void {
 }
 
 /**
- * Keeps the shared `unread` counts live while a tab sits open, and mirrors the notifications count to
- * the OS app-icon badge. Non-visual; mounted once in the app shell, which persists across SPA
- * navigations (auth pages have no layout, so nothing polls there).
+ * Keeps the shell's live state — the shared `unread` counts and the sidebar's room list — current
+ * while a tab sits open, and mirrors the notifications count to the OS app-icon badge. Non-visual;
+ * mounted once in the app shell, which persists across SPA navigations (auth pages have no layout, so
+ * nothing polls there).
  *
- * Refreshes are pushed back into the shared prop, so every consumer — the badges, and the title
- * callback reading `page.props.unread` (app.tsx) — re-renders from the one source it already reads.
- * Not Inertia's `usePoll`: that still fires on a hidden tab (every tenth interval) and does not
- * refresh on return to the tab, which is the moment a stale badge is seen.
+ * Refreshes are pushed back into the shared props (lib/unread-payload.ts, which owns the rule that
+ * they move together), so every consumer — the badges, the sidebar rooms, and the title callback
+ * reading `page.props.unread` (app.tsx) — re-renders from the one source it already reads. Not
+ * Inertia's `usePoll`: that still fires on a hidden tab (every tenth interval) and does not refresh
+ * on return to the tab, which is the moment a stale badge is seen.
  */
 export function UnreadSync() {
     const { unread, push, auth } = usePage<PageProps>().props;
@@ -62,9 +65,9 @@ export function UnreadSync() {
 
         let inFlight: AbortController | null = null;
 
-        // The authoritative counts read. Also overwrites the badge from the fresh value: a background
-        // push may have written a stale one, and if the count is unchanged the keyed effect above will
-        // not re-fire to correct it.
+        // The authoritative read of everything the shell keeps live. Also overwrites the badge from
+        // the fresh value: a background push may have written a stale one, and if the count is
+        // unchanged the keyed effect above will not re-fire to correct it.
         const fetchCounts = () => {
             inFlight?.abort();
             const controller = new AbortController();
@@ -80,11 +83,11 @@ export function UnreadSync() {
                         throw new Error(`unread counts failed: ${res.status}`);
                     }
 
-                    return res.json() as Promise<UnreadCounts>;
+                    return res.json() as Promise<UnreadPayload>;
                 })
-                .then((counts) => {
-                    router.replaceProp('unread', counts);
-                    writeBadge(counts.notifications);
+                .then((payload) => {
+                    applyUnreadPayload(payload, (key, value) => router.replaceProp(key, value));
+                    writeBadge(payload.unread.notifications);
                 })
                 .catch(() => {
                     // Keep what we have and stay quiet: a refused or dropped refresh is not news to

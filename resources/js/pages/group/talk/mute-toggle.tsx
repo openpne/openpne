@@ -3,14 +3,16 @@ import { Bell, BellOff } from 'lucide-react';
 import { useState } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
 import { useT } from '@/lib/i18n';
+import { requestUnreadRefresh } from '@/lib/unread-refresh';
 
 /**
  * Per-group quiet, sitting above the conversation as a small text action rather than in the page
  * heading — the heading is the chrome's, shared by every group subpage.
  *
  * It states the state it is moving to, not a bare flip, so a double tap settles instead of racing.
- * On success the page reloads only this prop: the nav badge is the shell's, and its own refresh is
- * what corrects it.
+ * On success the page reloads only this prop and rings the shell: the nav badge and the sidebar row
+ * for this room are the shell's, and quiet changes both — so its own refresh is what corrects them,
+ * rather than this page patching props it does not own (lib/unread-refresh.ts).
  */
 export function TalkMuteToggle({ groupId, muted }: { groupId: number; muted: boolean }) {
     const t = useT();
@@ -32,6 +34,7 @@ export function TalkMuteToggle({ groupId, muted }: { groupId: number; muted: boo
 
             if (response.ok) {
                 router.reload({ only: ['isMuted'] });
+                requestUnreadRefresh();
             }
         } finally {
             setSaving(false);

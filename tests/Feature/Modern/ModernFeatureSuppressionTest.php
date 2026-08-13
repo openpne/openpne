@@ -259,23 +259,20 @@ class ModernFeatureSuppressionTest extends TestCase
 
     /**
      * The exception to the emptying above: the faces grid's purpose outlives `friend`, so it falls
-     * back to all members instead of vanishing (docs/internals/feature-toggles.md). The grid beside
-     * it, whose purpose is its unit, still empties.
+     * back to all members instead of vanishing (docs/internals/feature-toggles.md).
      */
-    public function test_the_right_rail_falls_back_to_all_members_and_drops_the_community_grid(): void
+    public function test_the_right_rail_falls_back_to_all_members(): void
     {
         $viewer = Member::factory()->create();
         $friend = Member::factory()->create();
         $stranger = Member::factory()->create();
         $this->makeFriends($viewer, $friend);
-        $this->joinedGroup($viewer);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('rightRail.people.kind', 'friends')
                 ->has('rightRail.people.items', 1)
-                ->where('rightRail.people.items.0.id', $friend->getKey())
-                ->has('rightRail.joinedGroups', 1));
+                ->where('rightRail.people.items.0.id', $friend->getKey()));
 
         $this->switchOff(Feature::Friend);
 
@@ -285,15 +282,22 @@ class ModernFeatureSuppressionTest extends TestCase
                 // The stranger the friends grid never carried is in the fallback pool; the viewer is not.
                 ->has('rightRail.people.items', 2)
                 ->where('rightRail.people.items', fn (Collection $items) => $items->pluck('id')
-                    ->contains($friend->getKey()) && $items->pluck('id')->contains($stranger->getKey()))
-                ->has('rightRail.joinedGroups', 1));
+                    ->contains($friend->getKey()) && $items->pluck('id')->contains($stranger->getKey())));
+    }
+
+    /** The nav's room list goes with the unit that owns talk, and with the one talk lives inside. */
+    public function test_the_nav_room_list_goes_with_the_group_unit(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->joinedGroup($viewer);
+
+        $this->actingAs($viewer)->get('/dashboard')
+            ->assertInertia(fn (AssertableInertia $page) => $page->has('talkNavRooms.rooms', 1));
 
         $this->switchOff(Feature::Group);
 
         $this->actingAs($viewer)->get('/dashboard')
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('rightRail.people.items', 2)
-                ->where('rightRail.joinedGroups', []));
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('talkNavRooms', null));
     }
 
     public function test_the_member_settings_omit_the_diary_section(): void

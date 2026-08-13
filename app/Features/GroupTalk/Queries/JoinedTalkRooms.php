@@ -48,8 +48,13 @@ class JoinedTalkRooms
         return $this->rooms($this->ordered($viewer)->limit($limit)->get());
     }
 
-    /** @return EloquentBuilder<Group> */
-    private function ordered(Member $viewer): EloquentBuilder
+    /**
+     * The viewer's rooms in room order, before any page is cut — shared with the nav's lighter slice
+     * (NavTalkRooms), which takes the same rows and stops there.
+     *
+     * @return EloquentBuilder<Group>
+     */
+    public function ordered(Member $viewer): EloquentBuilder
     {
         $viewerId = (int) $viewer->getKey();
 

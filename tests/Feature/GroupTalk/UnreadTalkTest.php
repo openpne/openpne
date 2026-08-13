@@ -202,7 +202,7 @@ class UnreadTalkTest extends TalkTestCase
         $viewer = $this->memberOf($group);
         GroupMessage::factory()->create(['group_id' => $group->getKey()]);
 
-        $this->actingAs($viewer)->getJson('/unread-counts')->assertJsonPath('groupTalks', 1);
+        $this->actingAs($viewer)->getJson('/unread-counts')->assertJsonPath('unread.groupTalks', 1);
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn ($page) => $page->where('unread.groupTalks', 1));
     }

@@ -8,10 +8,12 @@ import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
 /**
- * Desktop-only (xl+) right rail: a member search box plus a faces grid and a joined-community
- * thumbnail grid. Hidden below xl and for
+ * Desktop-only (xl+) right rail: a member search box and a faces grid. Hidden below xl and for
  * guests; mobile reaches the same lists through the nav. The rail is nav chrome, so it lives in the
  * shell, not on any one page.
+ *
+ * It carries no groups: the sidebar's room list is the same memberships, ordered by what was last
+ * said and carrying their unread, so a second grid of the same names said less on both sides.
  */
 export function RightRail() {
     const t = useT();
@@ -37,12 +39,6 @@ export function RightRail() {
                     viewAllHref={friends ? '/friend/list' : '/member/search'}
                 >
                     <NineTable items={people.items} shape="round" />
-                </RailSection>
-            )}
-
-            {rightRail.joinedGroups.length > 0 && (
-                <RailSection title={t('Joined %communities%')} viewAllHref="/groups/mine">
-                    <NineTable items={rightRail.joinedGroups} shape="square" />
                 </RailSection>
             )}
         </aside>

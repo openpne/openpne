@@ -9,10 +9,11 @@ import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 
 /** Desktop (lg+) sticky sidebar: brand (home link) + member nav + account menu; a guest (a
- *  web-public profile is reachable signed out) sees only the brand and a sign-in link. */
+ *  web-public profile is reachable signed out) sees only the brand and a sign-in link. The room list
+ *  under the groups entry is this sidebar's alone — the drawer sharing NavItems does not ask for it. */
 export function LeftNav() {
     const t = useT();
-    const { auth, enabledFeatures } = usePage<PageProps>().props;
+    const { auth, enabledFeatures, talkNavRooms } = usePage<PageProps>().props;
 
     return (
         // Full-height at lg+, so on a tablet running the installed app its first and last rows would
@@ -28,7 +29,7 @@ export function LeftNav() {
             {auth.user ? (
                 <>
                     <nav className="flex-1 overflow-y-auto">
-                        <NavItems />
+                        <NavItems rooms={talkNavRooms} />
                     </nav>
                     {/* The desktop counterpart of the dashboard's action FAB — it follows the same unit. */}
                     {enabledFeatures.diary && (
