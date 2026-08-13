@@ -3,7 +3,6 @@
 namespace App\Features\Timeline\Queries;
 
 use App\Features\Block\BlockLookup;
-use App\Models\Group;
 use App\Models\Member;
 use App\Support\Feature;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,24 +38,20 @@ class MentionCandidates
     private const ESCAPE = '!';
 
     /**
-     * @param  ?Group  $group  the community being composed into, if any — its members are
-     *                         the whole candidate set there, since nobody outside it can
-     *                         read the post the mention would appear in.
-     * @return Collection<int, Member>
-     */
-    public function __invoke(Member $viewer, string $q, ?Group $group = null): Collection
+    @return Collection<int, Member> */
+    public function __invoke(Member $viewer, string $q): Collection
     {
         $pattern = '%'.$this->escapeLike(trim($q)).'%';
 
-        $friends = $this->friends($viewer, $pattern, $group);
+        $friends = $this->friends($viewer, $pattern);
 
         return $friends->concat(
-            $this->others($viewer, $pattern, $friends->modelKeys(), self::LIMIT - $friends->count(), $group)
+            $this->others($viewer, $pattern, $friends->modelKeys(), self::LIMIT - $friends->count())
         );
     }
 
     /** @return Collection<int, Member> */
-    private function friends(Member $viewer, string $pattern, ?Group $group = null): Collection
+    private function friends(Member $viewer, string $pattern): Collection
     {
         // Ranking friends first is a friend lens, so it goes with the unit; the all-member tier below
         // answers the same question without it (docs/internals/feature-toggles.md).
@@ -65,7 +60,7 @@ class MentionCandidates
         }
 
         $friends = $viewer->friendships();
-        $this->constrain($friends->getQuery(), $viewer, $pattern, $group);
+        $this->constrain($friends->getQuery(), $viewer, $pattern);
 
         return $friends->limit(self::LIMIT)->get();
     }
@@ -77,14 +72,14 @@ class MentionCandidates
      * @param  list<int>  $exclude
      * @return Collection<int, Member>
      */
-    private function others(Member $viewer, string $pattern, array $exclude, int $limit, ?Group $group = null): Collection
+    private function others(Member $viewer, string $pattern, array $exclude, int $limit): Collection
     {
         if ($limit <= 0) {
             return Collection::empty();
         }
 
         $query = Member::query()->whereNotIn('members.id', $exclude);
-        $this->constrain($query, $viewer, $pattern, $group);
+        $this->constrain($query, $viewer, $pattern);
 
         return $query->limit($limit)->get();
     }
@@ -96,14 +91,8 @@ class MentionCandidates
      *
      * @param  Builder<Member>  $query
      */
-    private function constrain(Builder $query, Member $viewer, string $pattern, ?Group $group = null): void
+    private function constrain(Builder $query, Member $viewer, string $pattern): void
     {
-        if ($group !== null) {
-            $query->whereIn('members.id', DB::table('group_members')
-                ->where('group_id', $group->getKey())
-                ->select('member_id'));
-        }
-
         // Code points, to match the body cap the name must fit into — sqlite's LENGTH counts them;
         // MySQL's counts bytes and needs CHAR_LENGTH.
         $length = DB::connection()->getDriverName() === 'sqlite' ? 'LENGTH' : 'CHAR_LENGTH';

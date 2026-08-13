@@ -56,19 +56,6 @@
 @endif
 
 @section('content')
-    {{-- OpenPNE 3's plugin view customize injected the community timeline before the communityHome
-         part (modules/community/config/view.yml, target: before), and gated the box on membership
-         — non-members cannot post into it, so an empty compose box would be an invitation to a
-         refusal. Absent when the timeline unit is off. --}}
-    @isset($timelinePosts)
-        @include('timeline._community-box', [
-            'group' => $group,
-            'posts' => $timelinePosts,
-            'canPost' => true,
-            'title' => __('%Activity%'),
-        ])
-    @endisset
-
     {{-- The OpenPNE 3 community details listBox (homeSuccess center column): a th/td table of the
          community's profile fields, followed by the member operations. --}}
     <x-classic.parts id="communityHome" name="listBox" :title="__('%Community%')">

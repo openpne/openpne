@@ -170,10 +170,13 @@ class DashboardTest extends TestCase
 
         // Bounded by the number of feeds + their eager loads, not by the number of rows: every digest
         // eager-loads its avatars, counts, and community images, so adding rows must not add queries.
-        // Kept tight (steady state 27) so dropping any single digest's eager load trips it instead of
+        // Kept tight (steady state 28) so dropping any single digest's eager load trips it instead of
         // hiding under a loose ceiling — e.g. the events feeder's community.image, whose four distinct
-        // groups turn one batched image fetch into four per-community lazy loads (+3 net → 30).
-        $this->assertLessThan(30, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
+        // groups turn one batched image fetch into four per-community lazy loads (+3 net → 31).
+        // The steady state rose by one at the group-talk cutover: the shell's talk badge is a live
+        // unit now, so its groups-with-unread EXISTS runs where the switched-off unit used to answer
+        // zero unqueried.
+        $this->assertLessThan(31, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 
     public function test_announcements_are_zeroed_when_nothing_needs_attention(): void

@@ -8,10 +8,10 @@ use App\Models\Group;
 use App\Models\Member;
 
 /**
- * The authorization chokepoint for a group's talk, succeeding CommunityTimelineAccess. Reading is
- * the group's own read column — the same one the board and events read, so one group answers "who
- * may read this" the same way everywhere, and a group whose old timeline was readable by any member
- * does not lose that audience when its history becomes talk.
+ * The authorization chokepoint for a group's talk. Reading is the group's own read column — the same
+ * one the board and events read, so one group answers "who may read this" the same way everywhere,
+ * and a group whose community timeline was readable by any member did not lose that audience when
+ * talk replaced it.
  *
  * Posting follows membership alone: topic_post_authority is deliberately not consulted, so an
  * admins-only board does not also silence the group's chat. An Everyone group is therefore readable

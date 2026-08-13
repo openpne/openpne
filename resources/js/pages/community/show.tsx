@@ -1,9 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Pencil, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Avatar } from '@/components/avatar';
 import { CommunityImage } from '@/components/community-image';
-import { useConfirm } from '@/components/confirm-dialog';
+import { CountPill } from '@/components/count-pill';
 import { EntryRow } from '@/components/entry-row';
+import { useConfirm } from '@/components/confirm-dialog';
 import { CivilDate, Timestamp } from '@/components/timestamp';
 import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
@@ -12,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { TimelinePostEntry } from '../timeline/types';
 import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
 
 interface ShowProps extends PageProps {
@@ -28,8 +28,9 @@ interface ShowProps extends PageProps {
     canPostTopic: boolean;
     recentEvents: EventSummary[] | null;
     canPostEvent: boolean;
-    timelinePosts: TimelinePostEntry[] | null; // null → not a member, or the unit is off
     canViewTalk: boolean; // the talk unit is on AND the viewer may read this group's talk
+    talkPreview: { body: string; authorName: string | null; createdAt: string } | null;
+    talkUnread: number; // the viewer's own unread here; 0 for a non-member, who holds no cursor
 }
 
 export default function CommunityShow() {
@@ -37,7 +38,7 @@ export default function CommunityShow() {
     const confirm = useConfirm();
     const {
         group, viewerRole, canManage, isPending, isTransferNominee, canJoin, canLeave, members,
-        recentTopics, canPostTopic, recentEvents, canPostEvent, timelinePosts, canViewTalk,
+        recentTopics, canPostTopic, recentEvents, canPostEvent, canViewTalk, talkPreview, talkUnread,
     } = usePage<ShowProps>().props;
 
     const join = () => router.post(`/groups/${group.id}/join`);
@@ -117,51 +118,33 @@ export default function CommunityShow() {
                 )}
             </Panel>
 
-            {/* Talk is switched off on every site until the cutover replaces the group timeline with
-                it, so this shows only where an operator has turned the unit on. The server answers
-                the unit and the read gate together: talk reads the same access column the boards do
-                but is its own unit, so the boards being switched off must not take its entrance. */}
+            {/* Where the community timeline's box used to sit — the plugin injected it before the
+                group's own details, and talk inherits the slot. The server has already answered the
+                read gate; a non-member of an Everyone group sees the preview with no unread of their
+                own, since only a membership carries a cursor. */}
             {canViewTalk && (
-                <Panel>
-                    <Link href={`/groups/${group.id}/talk`} className="text-sm text-link hover:underline">
-                        {t('Go to talk')}
-                    </Link>
-                </Panel>
-            )}
-
-            {/* Above the boards, where the Classic box sits — the plugin injected it before the
-                group's own details. Only members see it: it leads to posting. */}
-            {timelinePosts !== null && (
                 <Panel
                     flush
-                    title={t('%Activity%')}
-                    right={
-                        <ActionLink href={`/community/${group.id}/timeline/new`} variant="outline" size="sm">
-                            <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
-                            {t('%Post_activity%')}
-                        </ActionLink>
-                    }
+                    title={t('Talk')}
+                    right={<CountPill count={talkUnread} label={t(':count unread messages')} />}
                 >
-                    {timelinePosts.length === 0 ? (
-                        <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No %activity% posts to show.')}</p>
+                    {talkPreview === null ? (
+                        <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No messages yet.')}</p>
                     ) : (
-                        <List>
-                            {timelinePosts.map((post) => (
-                                <EntryRow
-                                    key={post.id}
-                                    href={`/timeline/${post.id}`}
-                                    author={post.author}
-                                    content={post.body}
-                                    contentLines={2}
-                                    date={<Timestamp at={post.createdAt} preset="relative" />}
-                                    replyCount={post.replyCount}
-                                />
-                            ))}
-                        </List>
+                        <div className="px-4 py-4 sm:px-5">
+                            <p className="truncate text-sm">
+                                <span className="text-muted-foreground">
+                                    {talkPreview.authorName ?? t('Withdrawn member')}
+                                </span>
+                                {' — '}
+                                {talkPreview.body}
+                            </p>
+                            <Timestamp at={talkPreview.createdAt} preset="relative" className="text-xs text-muted-foreground" />
+                        </div>
                     )}
                     <div className="border-t border-border px-4 py-2.5 sm:px-5">
-                        <Link href={`/groups/${group.id}/timeline`} className="text-sm text-link hover:underline">
-                            {t('See all %activity% posts')}
+                        <Link href={`/groups/${group.id}/talk`} className="text-sm text-link hover:underline">
+                            {t('Go to talk')}
                         </Link>
                     </div>
                 </Panel>

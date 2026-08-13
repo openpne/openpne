@@ -22,18 +22,14 @@ use Illuminate\Support\Facades\DB;
  * it from one place. applyFriendsOnly() carries no such check: its only callers are the two
  * friend-scoped gadgets, which the unit hides whole.
  *
- * Every method here is an SNS-wide feed, so all of them drop community-scoped posts — a community
- * timeline is reached only through applyGroup(), which is the sole opt-in. New SNS-wide feeds
- * inherit the exclusion by going through this class, as OpenPNE 3's opActivityQueryBuilder did with
- * `foreign_table IS NULL OR <> "community"`.
+ * Every method here is an SNS-wide feed, and since group talk replaced the community timeline there
+ * is no other kind: the posts table holds one audience again (docs/internals/timeline.md).
  */
 final class TimelineFeedScope
 {
     /** @param  Builder<TimelinePost>  $query */
     public static function apply(Builder $query, Member $viewer): void
     {
-        self::excludeGroupScoped($query);
-
         $viewerId = $viewer->getKey();
 
         $query->where(function (Builder $audience) use ($viewerId) {
@@ -73,8 +69,6 @@ final class TimelineFeedScope
      */
     public static function applyFriendsOnly(Builder $query, Member $viewer): void
     {
-        self::excludeGroupScoped($query);
-
         $viewerId = $viewer->getKey();
 
         $query->where(function (Builder $audience) use ($viewerId) {
@@ -107,41 +101,8 @@ final class TimelineFeedScope
      */
     public static function applyMembersOnly(Builder $query, Member $viewer): void
     {
-        self::excludeGroupScoped($query);
-
         $query->where('timeline_posts.visibility', '<=', Visibility::Members->value);
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
-    }
-
-    /**
-     * The one opt-in: a community's own timeline. No visibility tier applies — the community is the
-     * audience, and the caller has already asked CommunityTimelineAccess whether this viewer may
-     * read it at all. Authors who block the viewer drop out, as everywhere else.
-     *
-     * A post also leaves the feed when its author leaves the community, which is what OpenPNE 3 did
-     * (its community feed required the author to be a member) — so an upgraded feed never shows more
-     * than it did before. The permalink is deliberately not narrowed the same way; OpenPNE 3 served
-     * that too (see TimelineAccess).
-     *
-     * @param  Builder<TimelinePost>  $query
-     */
-    public static function applyGroup(Builder $query, Member $viewer, Group $group): void
-    {
-        $query->where('timeline_posts.community_id', $group->getKey());
-
-        $query->whereExists(fn ($members) => $members
-            ->select(DB::raw(1))
-            ->from('group_members')
-            ->where('group_members.group_id', $group->getKey())
-            ->whereColumn('group_members.member_id', 'timeline_posts.member_id'));
-
-        BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
-    }
-
-    /** @param  Builder<TimelinePost>  $query */
-    private static function excludeGroupScoped(Builder $query): void
-    {
-        $query->whereNull('timeline_posts.community_id');
     }
 }

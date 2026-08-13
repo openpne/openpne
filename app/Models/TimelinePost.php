@@ -12,10 +12,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-// One timeline post. A reply is a row whose in_reply_to_id points at its parent; top-level
-// posts leave it null. community_id set scopes the post to that community's timeline; null is
-// SNS-wide.
-#[Fillable(['member_id', 'community_id', 'in_reply_to_id', 'body', 'visibility'])]
+// One timeline post, always SNS-wide. A reply is a row whose in_reply_to_id points at its parent;
+// top-level posts leave it null.
+#[Fillable(['member_id', 'in_reply_to_id', 'body', 'visibility'])]
 class TimelinePost extends Model
 {
     /** @use HasFactory<TimelinePostFactory> */
@@ -35,12 +34,6 @@ class TimelinePost extends Model
     public function member(): BelongsTo
     {
         return $this->belongsTo(Member::class);
-    }
-
-    /** @return BelongsTo<Group, $this> The community this post is scoped to, or null for SNS-wide. */
-    public function community(): BelongsTo
-    {
-        return $this->belongsTo(Group::class);
     }
 
     /** @return BelongsTo<TimelinePost, $this> The parent this post replies to, or null. */
@@ -74,15 +67,19 @@ class TimelinePost extends Model
     }
 
     /**
-     * The tags that have somewhere to go. A community post's tags are stored and normalized like
-     * any other, but the tag page is SNS-wide and excludes community posts — linking one would
-     * hand the reader a page that does not contain the post they clicked it from. Both surfaces
-     * read this rather than tags(), so neither can start linking them alone.
+     * The tags that have somewhere to go — now all of them. It answered a real question while the
+     * community timeline existed: those posts carried tags like any other, but the tag page is
+     * SNS-wide and excluded them, so linking one handed the reader a page that did not contain the
+     * post they clicked from. Group talk replaced that scope and parses no hashtags at all
+     * (docs/internals/timeline.md), so every remaining post is SNS-wide and every tag is linkable.
+     *
+     * Kept as a method rather than folded into tags(): both surfaces read it, so it stays the one
+     * seam a future scoped surface would answer at instead of each renderer deciding again.
      *
      * @return Collection<int, TimelinePostTag>
      */
     public function linkableTags(): Collection
     {
-        return $this->community_id === null ? $this->tags : new Collection;
+        return $this->tags;
     }
 }

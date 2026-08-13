@@ -27,17 +27,17 @@ class NotificationSettingsPageTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('member/config/notifications')
-                ->has('form.groups', 6)
+                ->has('form.groups', 7)
                 ->where('form.groups.0.key', 'timeline')
                 ->where('form.groups.0.caption', __('%Activity%'))
-                ->has('form.groups.0.kinds', 6)
+                // Five, not six: timeline_new_post_community went dormant at the group-talk cutover.
+                ->has('form.groups.0.kinds', 5)
                 ->where('form.groups.0.kinds.0.kind', 'timeline_new_post')
                 ->where('form.groups.0.kinds.1.dependOnNot', 'timeline_new_post')
-                ->where('form.groups.0.kinds.2.kind', 'timeline_new_post_community')
-                ->where('form.groups.0.kinds.3.kind', 'timeline_reply_post')
-                ->where('form.groups.0.kinds.4.kind', 'timeline_related_post')
-                ->where('form.groups.0.kinds.5.kind', 'timeline_mention')
-                ->where('form.groups.0.kinds.5.caption', __('When you are mentioned in a %activity% post'))
+                ->where('form.groups.0.kinds.2.kind', 'timeline_reply_post')
+                ->where('form.groups.0.kinds.3.kind', 'timeline_related_post')
+                ->where('form.groups.0.kinds.4.kind', 'timeline_mention')
+                ->where('form.groups.0.kinds.4.caption', __('When you are mentioned in a %activity% post'))
                 ->where('form.groups.1.key', 'diary')
                 ->has('form.groups.1.kinds', 4)
                 ->where('form.groups.1.kinds.0.kind', 'diary_new_post')
@@ -49,13 +49,16 @@ class NotificationSettingsPageTest extends TestCase
                 ->where('form.groups.3.key', 'group_event')
                 ->has('form.groups.3.kinds', 4)
                 ->where('form.groups.3.kinds.0.kind', 'group_event_new_post')
-                ->where('form.groups.4.key', 'friend_link')
-                ->has('form.groups.4.kinds', 2)
-                ->where('form.groups.4.kinds.0.kind', 'friend_link_confirm')
-                ->where('form.groups.4.kinds.0.web', true)
-                ->where('form.groups.5.key', 'direct_message')
-                ->where('form.groups.5.kinds.0.mail', false)
-                ->where('form.groups.5.kinds.1.dependOnNot', 'direct_message_new'),
+                ->where('form.groups.4.key', 'group_talk')
+                ->has('form.groups.4.kinds', 1)
+                ->where('form.groups.4.kinds.0.kind', 'group_talk_mention')
+                ->where('form.groups.5.key', 'friend_link')
+                ->has('form.groups.5.kinds', 2)
+                ->where('form.groups.5.kinds.0.kind', 'friend_link_confirm')
+                ->where('form.groups.5.kinds.0.web', true)
+                ->where('form.groups.6.key', 'direct_message')
+                ->where('form.groups.6.kinds.0.mail', false)
+                ->where('form.groups.6.kinds.1.dependOnNot', 'direct_message_new'),
             );
     }
 
@@ -71,7 +74,7 @@ class NotificationSettingsPageTest extends TestCase
                 ->where('push.vapidPublicKey', config('webpush.vapid.public_key'))
                 ->where('pushSettings.enabled', true)
                 // The push section does not touch the catalog grid.
-                ->has('form.groups', 6)
+                ->has('form.groups', 7)
                 ->where('form.groups.0.kinds.0.kind', 'timeline_new_post'),
             );
     }
@@ -86,7 +89,7 @@ class NotificationSettingsPageTest extends TestCase
                 ->where('push', null)
                 // The controller still ships the pause-switch value; the UI hides on the null shared prop.
                 ->where('pushSettings.enabled', true)
-                ->has('form.groups', 6),
+                ->has('form.groups', 7),
             );
     }
 
@@ -177,7 +180,9 @@ class NotificationSettingsPageTest extends TestCase
             ->assertSee(NotificationKind::FriendLinkConfirm->caption())
             ->assertSee(NotificationKind::DirectMessageNew->caption())
             ->assertSee(NotificationKind::TimelineNewPost->caption())
-            ->assertSee(NotificationKind::TimelineNewPostCommunity->caption());
+            ->assertSee(NotificationKind::GroupTalkMention->caption())
+            // Dormant since the group-talk cutover: registered, but off the page.
+            ->assertDontSee(NotificationKind::TimelineNewPostCommunity->caption());
     }
 
     public function test_legacy_config_notification_url_redirects_to_the_category(): void
