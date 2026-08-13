@@ -37,7 +37,22 @@ export interface RightRail {
         kind: 'friends' | 'members';
         items: NineTableItem[];
     };
-    joinedGroups: NineTableItem[];
+}
+
+/** One room in the desktop nav's list. `id` is the group's: the row opens its talk. */
+export interface TalkNavRoom {
+    id: number;
+    name: string;
+    imageUrl: string | null;
+    unread: number;
+    muted: boolean;
+}
+
+/** The sidebar's slice of the joined room list — the same order, no previews. `hasMore` is what
+ *  puts a "view all" row at the foot rather than growing the sidebar. */
+export interface TalkNavRooms {
+    rooms: TalkNavRoom[];
+    hasMore: boolean;
 }
 
 /** The feature units an administrator can switch off — the cases of App\Support\Feature. */
@@ -54,6 +69,8 @@ export interface PageProps {
     enabledFeatures: Record<FeatureKey, boolean>;
     unread: UnreadCounts | null;
     rightRail: RightRail | null;
+    /** Null for a guest and while `groupTalk` is off — the sidebar draws no room list either way. */
+    talkNavRooms: TalkNavRooms | null;
     /** What this device needs to subscribe to push, or null when push is unavailable here (a guest,
      *  or a site with no VAPID keypair). Null is what the push UI hides on. */
     push: { vapidPublicKey: string } | null;

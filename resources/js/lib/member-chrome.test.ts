@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { bottomNavSections, NAV_SECTIONS, NO_CONTEXT_COMPONENTS, resolveChrome, visibleNavSections } from './member-chrome.ts';
+import {
+    bottomNavSections,
+    NAV_SECTIONS,
+    NO_CONTEXT_COMPONENTS,
+    resolveChrome,
+    TALK_ROOMS_HREF,
+    visibleNavSections,
+} from './member-chrome.ts';
 import type { FeatureKey } from '../types/index.ts';
 
 const allOn: Record<FeatureKey, boolean> = {
@@ -35,6 +42,9 @@ test('the groups section lands on the joined list, where the badge it carries is
     assert.equal(groups?.href, '/groups/mine');
     // Every group space still lights the entry up, joined list and browse alike.
     assert.deepEqual(groups?.match, ['/groups', '/topics', '/events']);
+    // The sidebar's rooms nest under that same entry: they are what its badge is counting, and the
+    // list's "view all" is the entry's own href.
+    assert.equal(TALK_ROOMS_HREF, groups?.href);
 });
 
 test('the untoggleable sections survive every unit being off', () => {

@@ -272,6 +272,12 @@ The Modern dashboard leads with the same rooms — the first five, and the same 
 the digest says and what the list says cannot drift. It reads them through `take()` rather than the
 paginator: a screen with no pager has no total to count and no page number to honour.
 
+The desktop sidebar draws the head of the same list ([`NavTalkRooms`](../../app/Features/GroupTalk/Queries/NavTalkRooms.php)),
+which shares the ordered query and stops there: no preview is drawn, so the bodies and their authors
+are not read, and the slice costs two queries — the rooms and their images — on a prop every Inertia
+page evaluates. It holds ten and hands the rest to `/groups/mine`; `hasMore` is one row read past
+that limit rather than a `count(*)` over the membership.
+
 ## Mentions
 
 Talk parses `@mentions` and nothing else: no hashtags (a chat has no tag culture, and a per-group tag
