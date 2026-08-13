@@ -10,11 +10,14 @@ use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupMember;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
+use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -123,6 +126,64 @@ class DashboardTest extends TestCase
             );
     }
 
+    /** A group the viewer has joined, with one message said in it at the given time. */
+    private function talkedIn(Member $viewer, string $at): Group
+    {
+        $group = Group::factory()->create();
+        GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
+        GroupMessage::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => Member::factory()->create()->getKey(),
+            'created_at' => Carbon::parse($at),
+            'updated_at' => Carbon::parse($at),
+        ]);
+
+        return $group;
+    }
+
+    public function test_the_talk_digest_leads_with_the_most_recently_talked_in_rooms(): void
+    {
+        $viewer = Member::factory()->create();
+        // Six rooms created in ascending talk order, so the group id — what the membership grid
+        // sorts by — is the wrong answer for both the cut and the order.
+        $rooms = array_map(
+            fn (int $minute): Group => $this->talkedIn($viewer, "2026-08-14 10:0{$minute}:00"),
+            range(1, 6),
+        );
+
+        $this->actingAs($viewer)
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page
+                ->has('talkRooms', 5)
+                ->where('talkRooms.0.id', $rooms[5]->getKey()) // last talked in
+                ->where('talkRooms.4.id', $rooms[1]->getKey()) // the oldest of the five that fit
+            );
+    }
+
+    public function test_a_member_of_nothing_gets_an_empty_talk_digest(): void
+    {
+        $this->actingAs(Member::factory()->create())
+            ->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('talkRooms', []));
+    }
+
+    public function test_the_talk_digest_empties_and_reads_no_message_when_the_unit_is_off(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->talkedIn($viewer, '2026-08-14 10:00:00');
+
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, false);
+        $this->freshRequestState();
+
+        DB::enableQueryLog();
+        $this->actingAs($viewer)->get('/dashboard')
+            ->assertInertia(fn ($page) => $page->where('talkRooms', []));
+        $messageQueries = array_filter(DB::getQueryLog(), fn (array $q): bool => str_contains($q['query'], 'group_messages'));
+        DB::disableQueryLog();
+
+        $this->assertSame([], $messageQueries, 'a switched-off unit still read its table');
+    }
+
     public function test_each_digest_is_capped_to_the_preview_size(): void
     {
         $viewer = Member::factory()->create();
@@ -163,20 +224,26 @@ class DashboardTest extends TestCase
         GroupMember::factory()->member()->create(['group_id' => $topicGroup->getKey(), 'member_id' => $viewer->getKey()]);
         GroupTopic::factory()->create(['group_id' => $topicGroup->getKey()]);
 
+        // A message in each of those groups, every one by a distinct author: the talk digest is five
+        // rooms, so its image, body and author loads must each stay a single batched query.
+        foreach (GroupMember::where('member_id', $viewer->getKey())->pluck('group_id') as $joinedId) {
+            GroupMessage::factory()->create([
+                'group_id' => $joinedId,
+                'member_id' => Member::factory()->create()->getKey(),
+            ]);
+        }
+
         DB::enableQueryLog();
         $this->actingAs($viewer)->get('/dashboard')->assertOk();
         $queries = count(DB::getQueryLog());
         DB::disableQueryLog();
 
         // Bounded by the number of feeds + their eager loads, not by the number of rows: every digest
-        // eager-loads its avatars, counts, and community images, so adding rows must not add queries.
-        // Kept tight (steady state 28) so dropping any single digest's eager load trips it instead of
-        // hiding under a loose ceiling — e.g. the events feeder's community.image, whose four distinct
-        // groups turn one batched image fetch into four per-community lazy loads (+3 net → 31).
-        // The steady state rose by one at the group-talk cutover: the shell's talk badge is a live
-        // unit now, so its groups-with-unread EXISTS runs where the switched-off unit used to answer
-        // zero unqueried.
-        $this->assertLessThan(31, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
+        // eager-loads its avatars, counts, and images, so adding rows must not add queries. Kept tight
+        // (steady state 34) so dropping any single eager load trips it instead of hiding under a loose
+        // ceiling — the events feeder's community.image turns one batched fetch into four per-community
+        // lazy loads, and either of the talk digest's two (image, author) turns one into five.
+        $this->assertLessThan(35, $queries, "dashboard ran {$queries} queries — a per-row avatar/count/image is likely lazy-loading");
     }
 
     public function test_announcements_are_zeroed_when_nothing_needs_attention(): void

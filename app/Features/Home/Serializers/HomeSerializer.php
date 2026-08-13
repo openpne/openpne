@@ -3,6 +3,8 @@
 namespace App\Features\Home\Serializers;
 
 use App\Features\Diary\Serializers\DiarySerializer;
+use App\Features\GroupTalk\Serializers\TalkRoomSerializer;
+use App\Features\GroupTalk\TalkRoom;
 use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Models\Diary;
 use App\Models\Group;
@@ -26,7 +28,8 @@ class HomeSerializer
      * @param  Collection<int, Diary>  $myDiaries  the viewer's own recent diaries
      * @param  array{friendRequests: int, unreadMessages: int}  $unread  shell attention counts
      * @param  Collection<int, Group>  $pendingApprovals  admin groups with applicants_count
-     * @return array{announcements: array, diaries: list<array>, timeline: list<array>, groupActivity: list<array>, myDiaries: list<array>}
+     * @param  Collection<int, TalkRoom>  $talkRooms  the viewer's conversations, most recent first
+     * @return array{announcements: array, talkRooms: list<array>, diaries: list<array>, timeline: list<array>, groupActivity: list<array>, myDiaries: list<array>}
      */
     public static function dashboard(
         Collection $diaries,
@@ -35,6 +38,7 @@ class HomeSerializer
         Collection $myDiaries,
         array $unread,
         Collection $pendingApprovals,
+        Collection $talkRooms,
     ): array {
         return [
             'announcements' => [
@@ -46,6 +50,9 @@ class HomeSerializer
                     'count' => $c->applicants_count,
                 ])->all(),
             ],
+            // Rows only: the digest leads the screen and its "View all" is the room list itself,
+            // so there is no pager here to feed.
+            'talkRooms' => $talkRooms->map([TalkRoomSerializer::class, 'room'])->all(),
             'diaries' => $diaries->map([DiarySerializer::class, 'summary'])->all(),
             'timeline' => $timeline->map([TimelinePostSerializer::class, 'entry'])->all(),
             'groupActivity' => $groupActivity->map([self::class, 'activityEntry'])->all(),
