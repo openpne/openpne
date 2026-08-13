@@ -21,8 +21,8 @@ the admin-user list shows which administrators have it enabled.
   minutes), which is too lax for a privileged account.
 - **No code replay.** Filament records the last accepted step per secret, so the
   login challenge, disable and regenerate reject any code that is not newer than
-  it — signing in and immediately managing the factor waits for the next code.
-  Set-up is exempt: it proves a secret that is not live yet.
+  it — a code used to sign in cannot then authorize factor management. Set-up is
+  exempt: it proves a secret that is not live yet.
 - **Lockout recovery** has two paths: recovery codes (shown once at set-up), and
   the `openpne:admin:disable-mfa <username>` CLI command — gated by server access,
   the same trust boundary as `openpne:admin:reset-password`, since an admin has
