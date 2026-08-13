@@ -57,6 +57,43 @@ class TalkImageTest extends TalkTestCase
         $this->assertSame('groupMessage', $this->attachedFile($message)->related_entity_type);
     }
 
+    /**
+     * The single-image wire this endpoint spoke before images[]: a talk tab open across the deploy
+     * keeps sending it, and its attachment must land rather than be silently dropped with a 201.
+     */
+    public function test_the_legacy_single_image_wire_still_attaches(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'from the old tab', 'image' => $this->upload()])
+            ->assertCreated()
+            ->json('id');
+
+        $message = GroupMessage::findOrFail($id);
+        $this->assertDatabaseHas('group_message_images', ['group_message_id' => $id, 'number' => 1]);
+        $this->assertNotNull($this->attachedFile($message));
+    }
+
+    /** No client speaks both wires at once; a request that does is malformed, not a bigger cap. */
+    public function test_the_two_wires_refuse_to_combine(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", [
+                'body' => 'both at once',
+                'image' => $this->upload(),
+                'images' => [$this->upload('other.png')],
+            ])
+            ->assertSessionHasErrors('image');
+
+        $this->assertDatabaseCount('group_messages', 0);
+        $this->assertDatabaseCount('files', 0);
+    }
+
     /** Slots are the pick order, not the order the storage backend happened to answer in. */
     public function test_three_images_land_in_slots_one_to_three_in_pick_order(): void
     {
