@@ -152,10 +152,10 @@ class GroupOperationsParityTest extends TestCase
         $this->assertStringContainsString('<td><a href="'.$home.'">'.$group->name.'</a></td>', $html);
     }
 
-    public function test_the_operation_labels_speak_openpne3_japanese(): void
+    public function test_the_operation_labels_render_the_default_ja_wording(): void
     {
         // English-only assertions cannot catch a drifted ja value, so the visible labels are
-        // pinned in the OpenPNE 3 wording (…に参加する / …を退会する / …を削除する).
+        // pinned in the OpenPNE 3 sentence shape with the default term (…に参加する / …を退会する / …を削除する).
         $group = Group::factory()->create();
         $stranger = Member::factory()->create();
         $ja = fn ($member) => (string) $this->actingAs($member)->withSession(['locale' => 'ja'])

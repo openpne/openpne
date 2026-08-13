@@ -104,7 +104,7 @@ class CheckTranslationsCommand extends Command
 
     /**
      * Strings exempt from the term-literal gate (exact match against a source string or ja value).
-     * Ships empty — every translatable string is expected to term-ize. A legitimate future
+     * Data-only — every translatable string is expected to term-ize; an entry records a
      * exception is a data addition here, not a code change or a weakened gate.
      */
     private const TERM_LITERAL_ALLOWLIST_FILE = 'lang/.i18n-term-literal-allowlist.json';
@@ -722,7 +722,7 @@ class CheckTranslationsCommand extends Command
      * keys, ja.json keys, and dynamic-registry captions/help that reach __() via a variable (so the
      * code scanner never sees them, {@see DYNAMIC_SOURCE_REGISTRIES}). Japanese words are matched
      * against ja.json values. `%placeholder%` and `:param` tokens are stripped before matching. The
-     * allowlist ships empty: every translatable string is expected to term-ize.
+     * allowlist is data-only (genuinely generic uses): every other string is expected to term-ize.
      *
      * @param  array<string, list<string>>  $found  extracted key => [file:line, ...]
      * @return int number of offending strings

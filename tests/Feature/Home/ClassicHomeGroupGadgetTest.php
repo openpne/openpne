@@ -173,7 +173,7 @@ class ClassicHomeGroupGadgetTest extends TestCase
             ->assertDontSee('PrivateEvent');
     }
 
-    public function test_japanese_headings_match_openpne3(): void
+    public function test_japanese_headings_render_the_default_term(): void
     {
         $viewer = Member::factory()->create(['locale' => 'ja']);
         $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
