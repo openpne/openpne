@@ -133,7 +133,7 @@ export default function GroupTalkIndex() {
             </Panel>
 
             {canPost ? (
-                <TalkComposer groupId={group.id} onSend={send} />
+                <TalkComposer groupId={group.id} groupName={group.name} onSend={send} />
             ) : (
                 <p className="text-sm text-muted-foreground">{t('Join this %community% to post.')}</p>
             )}

@@ -3,7 +3,7 @@ import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n';
 
 /** Server contract (PostImageRules): raster only, 5MB / 5000px per file — shrunk output sits far under both. */
-const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
+export const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
 const MAX_EDGE = 2048;
 const JPEG_QUALITY = 0.82;
 /** Small-enough originals are submitted as picked, avoiding a pointless re-encode. */
@@ -17,7 +17,7 @@ const PASSTHROUGH_BYTES = 2 * 1024 * 1024;
  * which is the norm for SNS uploads. Returns the original when it cannot be decoded; the
  * server validation answers those.
  */
-async function shrink(file: File): Promise<File> {
+export async function shrink(file: File): Promise<File> {
     // A GIF stays as picked: the canvas would flatten its animation. Oversized ones fail visibly.
     if (file.type === 'image/gif') {
         return file;

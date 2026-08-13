@@ -51,9 +51,19 @@ type Props = Omit<ComponentProps<'textarea'>, 'value' | 'onChange'> & {
      * the picker has no way to check it guessed the parameter name right (candidatesUrlFor).
      */
     candidatesUrl?: string;
+    /** Track the text's own height instead of standing at `rows`, for a bar that opens one line tall. */
+    autoGrow?: boolean;
 };
 
-export function MentionTextarea({ value, onChange, mentions, onMentionsChange, candidatesUrl = '/timeline/mention-candidates', ...props }: Props) {
+export function MentionTextarea({
+    value,
+    onChange,
+    mentions,
+    onMentionsChange,
+    candidatesUrl = '/timeline/mention-candidates',
+    autoGrow = false,
+    ...props
+}: Props) {
     const t = useT();
     const listId = useId();
     const field = useRef<HTMLTextAreaElement>(null);
@@ -120,6 +130,24 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, c
         field.current?.focus();
         field.current?.setSelectionRange(at, at);
     });
+
+    useLayoutEffect(() => {
+        const element = field.current;
+        if (!autoGrow || element === null) {
+            return;
+        }
+        // An empty box stands at its CSS height: the placeholder renders into scrollHeight, so
+        // measuring here would size the bar to a wrapped placeholder instead of one line.
+        if (value === '') {
+            element.style.height = '';
+
+            return;
+        }
+        // Measured from nothing: an already-set height is a floor the content can never shrink under.
+        element.style.height = 'auto';
+        // The box is border-box, so scrollHeight — the padding box — is short by the two borders.
+        element.style.height = `${element.scrollHeight + element.offsetHeight - element.clientHeight}px`;
+    }, [autoGrow, value]);
 
     const close = useCallback(() => {
         setTrigger(null);
