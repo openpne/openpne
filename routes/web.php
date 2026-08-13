@@ -766,6 +766,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // One page either side of a cursor the client was handed: `after` for the poll, `before`
         // for "load older".
         Route::get('/groups/{group}/talk/messages', 'messages')->whereNumber('group')->name('group.talk.messages');
+        // What the composer's @mention picker reads, on the keystroke-rate limiter the timeline's
+        // picker uses. The literal segment can never be read as a message id ({message} is numeric).
+        Route::get('/groups/{group}/talk/mention-candidates', 'mentionCandidates')->whereNumber('group')
+            ->middleware('throttle:mention-search')->name('group.talk.mention_candidates');
         Route::post('/groups/{group}/talk', 'store')->whereNumber('group')
             ->middleware('throttle:posting')->name('group.talk.store');
         // "Read as far as this message" and the per-group mute. Both write the membership row, which

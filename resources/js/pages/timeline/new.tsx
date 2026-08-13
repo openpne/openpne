@@ -77,7 +77,7 @@ export default function TimelineNew({
                             onChange={(body) => setData('body', body)}
                             mentions={data.mentions}
                             onMentionsChange={(mentions) => setData('mentions', mentions)}
-                            groupId={group?.id}
+                            candidatesUrl={group ? `/timeline/mention-candidates?community=${group.id}` : undefined}
                         />
                     </Field>
 

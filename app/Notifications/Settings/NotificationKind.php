@@ -41,6 +41,8 @@ enum NotificationKind: string
     case GroupEventReplyNewPost = 'group_event_reply_new_post';
     case GroupEventRelatedNewPost = 'group_event_related_new_post';
 
+    case GroupTalkMention = 'group_talk_mention';
+
     case FriendLinkConfirm = 'friend_link_confirm';
     case FriendLinkComplete = 'friend_link_complete';
 
@@ -161,6 +163,13 @@ enum NotificationKind: string
                 category: NotificationCategory::GroupEvent,
                 op3Name: 'communityEventRelatedNewPost',
                 caption: 'Comments on events you commented on',
+                isWired: true,
+            ),
+            // OpenPNE-4-native: OpenPNE 3 had no group chat, so there is no stored preference to
+            // carry over and no op3Name. The only thing talk notifies about is being named.
+            self::GroupTalkMention => new NotificationKindDefinition(
+                category: NotificationCategory::GroupTalk,
+                caption: 'When you are mentioned in a %community% talk message',
                 isWired: true,
             ),
             self::FriendLinkConfirm => new NotificationKindDefinition(

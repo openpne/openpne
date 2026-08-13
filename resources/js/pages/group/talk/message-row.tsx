@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
 import { dangerActionClass } from '@/components/ui/danger-link';
-import { UserText } from '@/components/user-text';
+import { EntityText } from '@/components/entity-text';
 import { useT } from '@/lib/i18n';
 import type { TalkMessage } from './types';
 
@@ -43,7 +43,7 @@ export function TalkMessageRow({ message, onDelete }: { message: TalkMessage; on
                 )}
             </div>
             <p className="mt-1 whitespace-pre-wrap break-words">
-                <UserText text={message.body} />
+                <EntityText text={message.body} mentions={message.mentions} />
             </p>
         </li>
     );

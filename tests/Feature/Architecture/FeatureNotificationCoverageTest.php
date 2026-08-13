@@ -27,6 +27,7 @@ class FeatureNotificationCoverageTest extends TestCase
         'Group' => Feature::Group,
         'GroupTopic' => Feature::GroupTopic,
         'GroupEvent' => Feature::GroupEvent,
+        'GroupTalk' => Feature::GroupTalk,
         'Timeline' => Feature::Timeline,
     ];
 

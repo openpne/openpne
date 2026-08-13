@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { CommunitySummary } from '@/pages/community/types';
+import type { MentionPayloadRow } from '@/lib/mention-draft';
 import type { PageProps } from '@/types';
 import { TalkComposer } from './composer';
 import { TalkMessageRow } from './message-row';
@@ -93,8 +94,8 @@ export default function GroupTalkIndex() {
 
     // Your own send always lands you on your own words. The pinned gate protects someone reading
     // back through history from being yanked by *others'* arrivals; writing is the opposite intent.
-    const send = async (body: string) => {
-        await streamSend(body);
+    const send = async (body: string, mentions: MentionPayloadRow[]) => {
+        await streamSend(body, mentions);
         pinned.current = true;
         setAtBottom(true);
     };
@@ -132,7 +133,7 @@ export default function GroupTalkIndex() {
             </Panel>
 
             {canPost ? (
-                <TalkComposer onSend={send} />
+                <TalkComposer groupId={group.id} onSend={send} />
             ) : (
                 <p className="text-sm text-muted-foreground">{t('Join this %community% to post.')}</p>
             )}
