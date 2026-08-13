@@ -53,6 +53,21 @@ export interface PaginatedCommunityMembers {
     meta: PaginationMeta;
 }
 
+/** One conversation on the joined-groups list. `id` is the group's: the row opens its talk. */
+export interface TalkRoomRow {
+    id: number;
+    name: string;
+    imageUrl: string | null;
+    unread: number;
+    muted: boolean;
+    latest: { body: string; authorName: string | null; createdAt: string } | null; // null → nothing said yet
+}
+
+export interface PaginatedTalkRooms {
+    data: TalkRoomRow[];
+    meta: PaginationMeta;
+}
+
 export interface TopicAuthor {
     id: number;
     name: string;

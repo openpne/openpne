@@ -10,7 +10,7 @@ import { Heading } from '@/components/ui/heading';
 import { UserText } from '@/components/user-text';
 import { ActionLink } from '@/components/ui/action-link';
 import { Button } from '@/components/ui/button';
-import { List, Panel } from '@/components/ui/surface';
+import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
@@ -126,27 +126,35 @@ export default function CommunityShow() {
                 <Panel
                     flush
                     title={t('Talk')}
-                    right={<CountPill count={talkUnread} label={t(':count unread messages')} />}
+                    right={<CountPill count={talkUnread} label={t(':count unread messages', { count: talkUnread })} />}
                 >
-                    {talkPreview === null ? (
-                        <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">{t('No messages yet.')}</p>
-                    ) : (
-                        <div className="px-4 py-4 sm:px-5">
-                            <p className="truncate text-sm">
-                                <span className="text-muted-foreground">
-                                    {talkPreview.authorName ?? t('Withdrawn member')}
-                                </span>
-                                {' — '}
-                                {talkPreview.body}
+                    {/* The row is the entrance, the way a topic row is: a footer link beside it would
+                        be a second way into the one screen the card is about. The empty state carries
+                        it too — a group whose conversation has not started is exactly the one that
+                        needs a way in. */}
+                    <List>
+                        <ListRow rowLink chevron>
+                            <p className="min-w-0 flex-1 truncate text-sm">
+                                <Link href={`/groups/${group.id}/talk`} className={stretchedLink}>
+                                    {talkPreview === null ? (
+                                        <span className="text-muted-foreground">{t('No messages yet.')}</span>
+                                    ) : (
+                                        <>
+                                            <span className="text-muted-foreground">
+                                                {talkPreview.authorName ?? t('Withdrawn member')}
+                                            </span>
+                                            {/* Same separator as the room list: one preview idiom. */}
+                                            {': '}
+                                            {talkPreview.body}
+                                        </>
+                                    )}
+                                </Link>
                             </p>
-                            <Timestamp at={talkPreview.createdAt} preset="relative" className="text-xs text-muted-foreground" />
-                        </div>
-                    )}
-                    <div className="border-t border-border px-4 py-2.5 sm:px-5">
-                        <Link href={`/groups/${group.id}/talk`} className="text-sm text-link hover:underline">
-                            {t('Go to talk')}
-                        </Link>
-                    </div>
+                            {talkPreview !== null && (
+                                <Timestamp at={talkPreview.createdAt} preset="relative" className="shrink-0 text-xs text-muted-foreground" />
+                            )}
+                        </ListRow>
+                    </List>
                 </Panel>
             )}
 
