@@ -83,13 +83,17 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
             {chrome.mode !== 'embedded' && chrome.tabs && (
                 <PageTabs
                     ariaLabel={chrome.tabsLabel ? label(chrome.tabsLabel) : ''}
-                    items={chrome.tabs.map((tab) => ({
-                        href: tab.href,
-                        label: label(tab.label),
-                        active: tab.active,
+                    items={chrome.tabs.map((tab) => {
                         // Same shared counts the nav badges read; a guest has none.
-                        count: tab.badge ? (props.unread?.[tab.badge.count] ?? 0) : 0,
-                    }))}
+                        const count = tab.badge ? (props.unread?.[tab.badge.count] ?? 0) : 0;
+                        return {
+                            href: tab.href,
+                            label: label(tab.label),
+                            active: tab.active,
+                            count,
+                            countLabel: tab.badge ? t(tab.badge.label.key, { count }) : undefined,
+                        };
+                    })}
                 />
             )}
             {props.flash.status && <FlashMessage>{props.flash.status}</FlashMessage>}

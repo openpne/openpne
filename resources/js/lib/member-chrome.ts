@@ -30,12 +30,20 @@ type Icon = ComponentType<{ className?: string; strokeWidth?: number; 'aria-hidd
 /** Which of the shared `unread` counts a badge draws. */
 export type BadgeCount = keyof UnreadCounts;
 
+/**
+ * A count from the shared `unread` props plus the phrase naming it — the pill's aria-label replaces
+ * the bare digits, so the carrying link announces the number exactly once, in words.
+ */
+export interface CountBadge {
+    count: BadgeCount;
+    label: ChromeLabel;
+}
+
 export interface ChromeTab {
     href: string;
     label: ChromeLabel;
     active: boolean;
-    /** Count badge after the label. No label of its own: the tab's own text names it. */
-    badge?: { count: BadgeCount };
+    badge?: CountBadge;
 }
 
 export interface ChromeAction {
@@ -99,7 +107,7 @@ export interface NavSection {
     exact?: boolean;
     icon: Icon;
     label: ChromeLabel;
-    badge?: { count: BadgeCount; label: ChromeLabel };
+    badge?: CountBadge;
     /** The unit that owns this section; absent for the ones an administrator cannot switch off. */
     feature?: FeatureKey;
 }
@@ -207,7 +215,13 @@ const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeT
 
 // Joined leads: it is where the nav lands, and browsing is the occasional errand.
 const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
-    { href: '/groups/mine', label: t('Joined'), active: active === 'joined', badge: { count: 'groupTalks' } },
+    {
+        href: '/groups/mine',
+        label: t('Joined'),
+        active: active === 'joined',
+        // The same phrase the nav badge uses, so the two announcements cannot drift apart.
+        badge: { count: 'groupTalks', label: t(':count %communities% with new messages') },
+    },
     { href: '/groups', label: t('All'), active: active === 'browse' },
     { href: '/groups/recent', label: t('Recent activity'), active: active === 'recent' },
 ];

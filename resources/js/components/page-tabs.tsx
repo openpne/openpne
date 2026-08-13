@@ -8,6 +8,8 @@ export type TabItem = {
     active: boolean;
     /** Trailing count (unread/pending); 0 or absent draws nothing. */
     count?: number;
+    /** Phrase naming the count (":count … with new messages"); required whenever count can show. */
+    countLabel?: string;
 };
 
 /**
@@ -32,9 +34,9 @@ export function PageTabs({ ariaLabel, items }: { ariaLabel: string; items: TabIt
                     }
                 >
                     {item.label}
-                    {/* No pill label: the nav entry for this section states the same count in
-                        words, at every width, so naming it again here is one number twice. */}
-                    <CountPill count={item.count ?? 0} />
+                    {/* The label replaces the bare digits, so this link reads "Joined, N … with
+                        new messages" — the count in words, once, on the link itself. */}
+                    <CountPill count={item.count ?? 0} label={item.countLabel} />
                 </Link>
             ))}
         </nav>
