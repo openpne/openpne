@@ -1,9 +1,22 @@
 import { useEffect, useRef } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
-import { nextReport, settleReport } from './mark-read';
+import { nextReport, type ReportOutcome, settleReport } from './mark-read';
 
 /** A poll burst merges several messages at once; one call covers them all. */
 const DEBOUNCE_MS = 700;
+
+/**
+ * How a response settles (mark-read.ts owns what each outcome means). 5xx and the two transient
+ * request codes are worth retrying; any other 4xx is terminal — a deleted message or a lost
+ * membership will refuse the same id forever, and hammering it every few seconds helps nobody.
+ */
+function outcomeOf(status: number): ReportOutcome {
+    if (status >= 200 && status < 300) {
+        return 'ok';
+    }
+
+    return status >= 500 || status === 408 || status === 429 ? 'retryable' : 'terminal';
+}
 
 /** How long a failed report waits before the same id is tried again. */
 const RETRY_MS = 5_000;
@@ -55,7 +68,7 @@ export function useMarkRead(groupId: number, newestRenderedId: number | undefine
             }
 
             inFlight.current = true;
-            let ok = false;
+            let outcome: ReportOutcome = 'retryable';
             try {
                 const response = await fetch(`/groups/${groupId}/talk/read`, {
                     method: 'POST',
@@ -63,18 +76,18 @@ export function useMarkRead(groupId: number, newestRenderedId: number | undefine
                     credentials: 'same-origin',
                     body: JSON.stringify({ messageId: id }),
                 });
-                ok = response.ok;
+                outcome = outcomeOf(response.status);
             } catch {
-                ok = false;
+                outcome = 'retryable'; // network reject
             } finally {
                 inFlight.current = false;
             }
 
-            const settled = settleReport({ acked: acked.current, pending: pending.current }, id, ok);
+            const settled = settleReport({ acked: acked.current, pending: pending.current }, id, outcome);
             acked.current = settled.state.acked;
             pending.current = settled.state.pending;
             if (settled.retry) {
-                arm(ok ? DEBOUNCE_MS : RETRY_MS);
+                arm(outcome === 'retryable' ? RETRY_MS : DEBOUNCE_MS);
             }
         };
 

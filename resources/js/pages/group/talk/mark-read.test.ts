@@ -29,26 +29,43 @@ test('the first report is made from a standing start', () => {
 });
 
 test('a 2xx acknowledges the position and clears the queue', () => {
-    const { state, retry } = settleReport({ acked: 0, pending: 7 }, 7, true);
+    const { state, retry } = settleReport({ acked: 0, pending: 7 }, 7, 'ok');
     assert.deepEqual(state, { acked: 7, pending: null });
     assert.equal(retry, false);
 });
 
 test('a success under a newer queued id keeps that id and asks to continue', () => {
-    const { state, retry } = settleReport({ acked: 0, pending: 9 }, 7, true);
+    const { state, retry } = settleReport({ acked: 0, pending: 9 }, 7, 'ok');
     assert.deepEqual(state, { acked: 7, pending: 9 });
     assert.equal(retry, true);
 });
 
-/** A network reject and a non-2xx settle the same way: unacknowledged, same id retryable. */
-test('a failed report keeps the id claimable and asks for a retry', () => {
-    const { state, retry } = settleReport({ acked: 3, pending: null }, 7, false);
+/** A network reject and a 5xx settle the same way: unacknowledged, same id claimable again. */
+test('a retryable failure keeps the id claimable and asks for a retry', () => {
+    const { state, retry } = settleReport({ acked: 3, pending: null }, 7, 'retryable');
     assert.deepEqual(state, { acked: 3, pending: 7 });
     assert.equal(retry, true);
 });
 
-test('a failure never overwrites a newer queued id', () => {
-    const { state, retry } = settleReport({ acked: 3, pending: 9 }, 7, false);
+test('a retryable failure never overwrites a newer queued id', () => {
+    const { state, retry } = settleReport({ acked: 3, pending: 9 }, 7, 'retryable');
     assert.deepEqual(state, { acked: 3, pending: 9 });
+    assert.equal(retry, true);
+});
+
+/**
+ * A 404 for a message deleted after rendering (the server calls that an ordinary race), a
+ * membership lost in another tab, an expired session: the same id can never succeed, so it settles
+ * as spoken-for — no timer re-arms for it, and only a different newest message reports again.
+ */
+test('a terminal refusal drops the id without a retry', () => {
+    const { state, retry } = settleReport({ acked: 3, pending: 7 }, 7, 'terminal');
+    assert.deepEqual(state, { acked: 7, pending: null });
+    assert.equal(retry, false);
+});
+
+test('a terminal refusal still continues for a newer queued id', () => {
+    const { state, retry } = settleReport({ acked: 3, pending: 9 }, 7, 'terminal');
+    assert.deepEqual(state, { acked: 7, pending: 9 });
     assert.equal(retry, true);
 });
