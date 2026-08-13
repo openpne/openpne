@@ -10,6 +10,7 @@ use App\Mail\Template\MailTemplateService;
 use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\Group;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -22,6 +23,7 @@ use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Group\GroupJoinedNotification;
+use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
 use App\Notifications\GroupTopic\TopicCommentedNotification;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Notifications\Member\EmailChangeNoticeNotification;
@@ -93,6 +95,7 @@ class MailTemplateDriftGuardTest extends TestCase
         $topicComment = $topic->comments()->create(['member_id' => $sender->getKey(), 'number' => 1, 'body' => 'a comment']);
         $group = Group::factory()->create();
         $post = TimelinePost::factory()->create(['member_id' => $sender->getKey()]);
+        $talkMessage = GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $sender->getKey()]);
 
         // One notification per sendable template; RegistrationLink carries an inviter name + message so the
         // conditional block that uses them is actually exercised.
@@ -115,6 +118,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new MfaEnabledNotification('en'), $recipient],
             [new MfaDisabledNotification('en'), $recipient],
             [new MfaResetLinkNotification('the-token', 'en'), new AnonymousNotifiable],
+            [new GroupTalkMentionedNotification($sender, $talkMessage), $recipient],
             [new TimelineMentionedNotification($sender, $post), $recipient],
             [new TimelinePostedNotification($post, $sender, ['mail']), $recipient],
         ];

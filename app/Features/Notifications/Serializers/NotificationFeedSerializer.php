@@ -4,6 +4,7 @@ namespace App\Features\Notifications\Serializers;
 
 use App\Features\Diary\DiaryAccess;
 use App\Features\GroupEvent\GroupEventAccess;
+use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Notifications\NotificationCenterCategory;
 use App\Features\Notifications\NotificationCenterRow;
@@ -15,6 +16,7 @@ use App\Models\Diary;
 use App\Models\DirectMessageRecipient;
 use App\Models\Group;
 use App\Models\GroupEvent;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -112,7 +114,7 @@ class NotificationFeedSerializer
             'group_joined' => $data['new_member_id'] ?? null,
             'group_admin_transfer_requested' => $data['requester_id'] ?? null,
             'group_sub_admin_appointed' => $data['appointer_id'] ?? null,
-            'diary_posted', 'group_topic_posted', 'group_event_posted', 'timeline_mentioned', 'timeline_posted' => $data['author_id'] ?? null,
+            'diary_posted', 'group_talk_mention', 'group_topic_posted', 'group_event_posted', 'timeline_mentioned', 'timeline_posted' => $data['author_id'] ?? null,
             default => null,
         };
     }
@@ -137,6 +139,7 @@ class NotificationFeedSerializer
             'diary_posted' => self::diaryUrl($row, $data['diary_id'] ?? null),
             'group_topic_posted' => self::topicUrl($row, $data['topic_id'] ?? null),
             'group_event_posted' => self::eventUrl($row, $data['event_id'] ?? null),
+            'group_talk_mention' => self::groupTalkUrl($row, $data['message_id'] ?? null),
             'timeline_mentioned', 'timeline_posted', 'timeline_replied' => self::timelineUrl($row, $data['post_id'] ?? null),
             default => null,
         };
@@ -249,6 +252,28 @@ class NotificationFeedSerializer
 
         return $viewer !== null && GroupEventAccess::canViewEvent($event, $viewer)
             ? '/events/'.$event->getKey()
+            : null;
+    }
+
+    /**
+     * The conversation the mentioning message sits in. Talk has no per-message permalink, so the row
+     * opens the talk itself — which is also the only screen there is to open.
+     *
+     * Re-checked at click time, not trusted from delivery: the message may have been deleted since,
+     * and the reader may have left a members-only group or lost read access with it.
+     */
+    private static function groupTalkUrl(DatabaseNotification $row, ?int $messageId): ?string
+    {
+        $message = $messageId === null ? null : GroupMessage::find($messageId);
+        if ($message === null) {
+            return null;
+        }
+
+        $viewer = Member::find($row->notifiable_id);
+        $group = $message->group;
+
+        return $viewer !== null && $group !== null && GroupTalkAccess::canView($group, $viewer)
+            ? '/groups/'.$group->getKey().'/talk'
             : null;
     }
 

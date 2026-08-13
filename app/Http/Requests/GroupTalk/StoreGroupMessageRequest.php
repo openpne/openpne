@@ -28,6 +28,18 @@ class StoreGroupMessageRequest extends FormRequest
     {
         return [
             'body' => ['required', 'string', 'max:'.self::MAX_BODY],
+            ...MentionRules::rules(self::MAX_BODY),
         ];
+    }
+
+    /**
+     * The picker's selection, not yet resolved against the body — that is the write's job
+     * (App\Features\Timeline\Actions\ResolveMentions).
+     *
+     * @return list<array{member_id: int, offset: int, length: int}>
+     */
+    public function mentions(): array
+    {
+        return MentionRules::normalize($this->validated()['mentions'] ?? []);
     }
 }

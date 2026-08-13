@@ -42,6 +42,7 @@ final class NotificationKindLabel
             'diary_posted' => __(':name posted a new %diary%.', ['name' => $name]),
             'group_topic_posted' => __(':name posted a new %topic%.', ['name' => $name]),
             'group_event_posted' => __(':name posted a new event.', ['name' => $name]),
+            'group_talk_mention' => __(':name mentioned you in a %community% talk message.', ['name' => $name]),
             'timeline_mentioned' => __(':name mentioned you in a %activity% post.', ['name' => $name]),
             'timeline_posted' => __(':name posted to the %activity%.', ['name' => $name]),
             'timeline_posted_community' => __(':name posted to a %community% %activity%.', ['name' => $name]),

@@ -15,6 +15,7 @@ use App\Notifications\Group\SubAdminAppointedNotification;
 use App\Notifications\GroupEvent\EventCommentBroadcastNotification;
 use App\Notifications\GroupEvent\EventCommentedNotification;
 use App\Notifications\GroupEvent\EventPostedNotification;
+use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
 use App\Notifications\GroupTopic\TopicCommentBroadcastNotification;
 use App\Notifications\GroupTopic\TopicCommentedNotification;
 use App\Notifications\GroupTopic\TopicPostedNotification;
@@ -43,6 +44,7 @@ final class FeatureNotificationMap
         EventCommentBroadcastNotification::class,
         EventCommentedNotification::class,
         EventPostedNotification::class,
+        GroupTalkMentionedNotification::class,
         TopicCommentBroadcastNotification::class,
         TopicCommentedNotification::class,
         TopicPostedNotification::class,

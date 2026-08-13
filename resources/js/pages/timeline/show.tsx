@@ -127,7 +127,7 @@ export default function TimelineShow() {
                             onChange={(body) => form.setData('body', body)}
                             mentions={form.data.mentions}
                             onMentionsChange={(mentions) => form.setData('mentions', mentions)}
-                            groupId={group?.id}
+                            candidatesUrl={group ? `/timeline/mention-candidates?community=${group.id}` : undefined}
                         />
                     </Field>
                     <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === '' || overBodyLimit(form.data.body)}>

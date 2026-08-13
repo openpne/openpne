@@ -1,20 +1,29 @@
 import { type FormEvent, useState } from 'react';
+import { MentionTextarea } from '@/components/compose/mention-textarea';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
+import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
 import { SendFailed } from './use-talk-stream';
 
 /**
  * The write end of the conversation, held at the foot of the page (sticky, so it stays reachable
  * while the reader scrolls back through the history and still gives its space back on a short
- * conversation). Plain text only in this pass: no mention picker, no attachments.
+ * conversation). Plain text plus @mentions; no attachments yet.
  *
- * The draft survives a refusal — the box is not cleared until the message is actually written, so a
- * rate limit or a lost connection never eats what someone typed.
+ * The draft survives a refusal — the box is not cleared until the message is actually written, and
+ * the mention drafts are kept with it, so a retry after a rate limit still carries the rows the
+ * picker produced instead of silently posting the handles as plain text.
  */
-export function TalkComposer({ onSend }: { onSend: (body: string) => Promise<void> }) {
+export function TalkComposer({
+    groupId,
+    onSend,
+}: {
+    groupId: number;
+    onSend: (body: string, mentions: MentionPayloadRow[]) => Promise<void>;
+}) {
     const t = useT();
     const [body, setBody] = useState('');
+    const [mentions, setMentions] = useState<DraftMention[]>([]);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -27,8 +36,11 @@ export function TalkComposer({ onSend }: { onSend: (body: string) => Promise<voi
         setSending(true);
         setError(null);
         try {
-            await onSend(body);
+            // Converted at submit, over the value actually being sent: the draft positions a mention
+            // by UTF-16 offset, and the server measures code points.
+            await onSend(body, toPayload(mentions, body));
             setBody('');
+            setMentions([]);
         } catch (failure) {
             setError(failure instanceof SendFailed && failure.bodyError !== null ? failure.bodyError : t('Could not send. Try again.'));
         } finally {
@@ -50,12 +62,16 @@ export function TalkComposer({ onSend }: { onSend: (body: string) => Promise<voi
                 {/* No HTML maxlength: it counts UTF-16 units while the server's cap counts code
                     points, so it would cut astral-heavy text off early (the timeline textarea pins
                     the same rule). The server's 422 reaches the reader through `error` above. */}
-                <Textarea
+                <MentionTextarea
                     aria-label={t('Message')}
                     placeholder={t('Write a message')}
                     rows={2}
                     value={body}
-                    onChange={(event) => setBody(event.target.value)}
+                    onChange={setBody}
+                    mentions={mentions}
+                    onMentionsChange={setMentions}
+                    // The room is the mentionable set, so the endpoint is the room's own.
+                    candidatesUrl={`/groups/${groupId}/talk/mention-candidates`}
                     className="min-h-0 flex-1 resize-none"
                 />
                 <Button type="submit" loading={sending} disabled={body.trim() === ''}>

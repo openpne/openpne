@@ -99,6 +99,7 @@ class NotificationKindTest extends TestCase
                 NotificationKind::GroupEventCommentNewPost,
                 NotificationKind::GroupEventReplyNewPost,
                 NotificationKind::GroupEventRelatedNewPost,
+                NotificationKind::GroupTalkMention,
                 NotificationKind::FriendLinkConfirm,
                 NotificationKind::FriendLinkComplete,
                 NotificationKind::DirectMessageNew,

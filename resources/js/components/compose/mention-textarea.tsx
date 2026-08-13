@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import { Avatar } from '@/components/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { useT } from '@/lib/i18n';
+import { candidatesUrlFor } from '@/lib/mention-candidates-url';
 import {
     applyEdit,
     applyPick,
@@ -44,11 +45,15 @@ type Props = Omit<ComponentProps<'textarea'>, 'value' | 'onChange'> & {
     onChange: (value: string) => void;
     mentions: DraftMention[];
     onMentionsChange: (mentions: DraftMention[]) => void;
-    /** Composing into a group: the offer narrows to its members, as the submit does. */
-    groupId?: number;
+    /**
+     * The endpoint that answers "who may I mention here", whole — including any scope it needs.
+     * The call site owns it, because the scope a surface composes into is the surface's own fact and
+     * the picker has no way to check it guessed the parameter name right (candidatesUrlFor).
+     */
+    candidatesUrl?: string;
 };
 
-export function MentionTextarea({ value, onChange, mentions, onMentionsChange, groupId, ...props }: Props) {
+export function MentionTextarea({ value, onChange, mentions, onMentionsChange, candidatesUrl = '/timeline/mention-candidates', ...props }: Props) {
     const t = useT();
     const listId = useId();
     const field = useRef<HTMLTextAreaElement>(null);
@@ -81,8 +86,7 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, g
 
         const controller = new AbortController();
         const timer = setTimeout(() => {
-            const scope = groupId === undefined ? '' : `&group=${groupId}`;
-            fetch(`/timeline/mention-candidates?q=${encodeURIComponent(query)}${scope}`, {
+            fetch(candidatesUrlFor(candidatesUrl, query), {
                 headers: { Accept: 'application/json' },
                 credentials: 'same-origin',
                 signal: controller.signal,
@@ -105,7 +109,7 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, g
             clearTimeout(timer);
             controller.abort();
         };
-    }, [query, groupId]);
+    }, [query, candidatesUrl]);
 
     useLayoutEffect(() => {
         const at = caret.current;

@@ -8,8 +8,10 @@ use App\Features\GroupTalk\Actions\DeleteGroupMessage;
 use App\Features\GroupTalk\Actions\MarkTalkRead;
 use App\Features\GroupTalk\Actions\SetTalkMute;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
+use App\Features\GroupTalk\Queries\GroupTalkMentionCandidates;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
+use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\GroupTalk\MarkTalkReadRequest;
 use App\Http\Requests\GroupTalk\StoreGroupMessageRequest;
@@ -69,13 +71,32 @@ class GroupTalkController extends Controller
         return response()->json(GroupMessageSerializer::page($page, GroupTalkPermissions::for($group, $viewer)));
     }
 
+    /**
+     * What the composer's @mention picker reads. Gated on posting, not reading: only someone who can
+     * write here has a mention to make, and the roster is not a non-member's to browse.
+     */
+    public function mentionCandidates(Request $request, Group $group, GroupTalkMentionCandidates $query): JsonResponse
+    {
+        $request->validate(['q' => ['nullable', 'string', 'max:100']]);
+
+        $viewer = $this->viewer();
+        abort_unless(GroupTalkAccess::canPost($group, $viewer), 404);
+
+        return response()->json([
+            'candidates' => array_map(
+                [MemberRefSerializer::class, 'ref'],
+                $query($viewer, $group, $request->string('q')->value())->all(),
+            ),
+        ]);
+    }
+
     /** Returns the message it wrote, so the composer appends it rather than re-reading the page. */
     public function store(StoreGroupMessageRequest $request, Group $group, CreateGroupMessage $action): JsonResponse
     {
         $viewer = $this->viewer();
 
         try {
-            $message = $action($viewer, $group, $request->validated('body'));
+            $message = $action($viewer, $group, $request->validated('body'), $request->mentions());
         } catch (GroupTalkActionException) {
             abort(404);
         }

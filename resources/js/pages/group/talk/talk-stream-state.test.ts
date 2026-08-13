@@ -18,6 +18,7 @@ const message = (id: number, createdAt: string, body = `m${id}`): TalkMessage =>
     createdAt,
     cursor: `${createdAt}|${id}`,
     author: null,
+    mentions: [],
     isOwn: false,
     canDelete: false,
 });

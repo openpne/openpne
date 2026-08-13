@@ -15,18 +15,23 @@ namespace App\Http\Requests\Concerns;
  */
 final class MentionRules
 {
-    /** @return array<string, mixed> */
-    public static function rules(): array
+    /**
+     * @param  int  $bodyMax  the composing surface's body cap in code points — the timeline's 140,
+     *                        talk's 5,000. Only the arithmetic below depends on it; every other rule
+     *                        is the same wherever a picker submits.
+     * @return array<string, mixed>
+     */
+    public static function rules(int $bodyMax = 140): array
     {
         return [
-            // A 140-code-point body has no room for more, and the cap bounds the id lookup
+            // More than this cannot fit a body worth reading, and the cap bounds the id lookup
             // ResolveMentions makes over the payload.
             'mentions' => ['sometimes', 'array', 'max:10'],
             'mentions.*.member_id' => ['required', 'integer'],
-            // Bounded by the body cap: a mention starts inside a 140-code-point body and is at
-            // least "@x" long. Whether it actually fits *this* body is ResolveMentions' check.
-            'mentions.*.offset' => ['required', 'integer', 'min:0', 'max:139'],
-            'mentions.*.length' => ['required', 'integer', 'min:2', 'max:140'],
+            // Bounded by the body cap: a mention starts inside the body and is at least "@x" long.
+            // Whether it actually fits *this* body is ResolveMentions' check.
+            'mentions.*.offset' => ['required', 'integer', 'min:0', 'max:'.($bodyMax - 1)],
+            'mentions.*.length' => ['required', 'integer', 'min:2', 'max:'.$bodyMax],
         ];
     }
 
