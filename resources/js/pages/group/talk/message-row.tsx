@@ -3,6 +3,7 @@ import { Avatar } from '@/components/avatar';
 import { Timestamp } from '@/components/timestamp';
 import { dangerActionClass } from '@/components/ui/danger-link';
 import { EntityText } from '@/components/entity-text';
+import { ImageGrid } from '@/components/image-grid';
 import { useT } from '@/lib/i18n';
 import type { TalkMessage } from './types';
 
@@ -45,6 +46,7 @@ export function TalkMessageRow({ message, onDelete }: { message: TalkMessage; on
             <p className="mt-1 whitespace-pre-wrap break-words">
                 <EntityText text={message.body} mentions={message.mentions} />
             </p>
+            <ImageGrid images={message.images} size="size-24" className="mt-2" />
         </li>
     );
 }
