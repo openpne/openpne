@@ -32,6 +32,8 @@ enum Feature: string
 
     case GroupEvent = 'groupEvent';
 
+    case GroupTalk = 'groupTalk';
+
     case Friend = 'friend';
 
     /** The `sns_settings` key holding this unit's flag. */
@@ -44,6 +46,7 @@ enum Feature: string
             self::Group => SnsSettingKey::FeatureGroupEnabled,
             self::GroupTopic => SnsSettingKey::FeatureGroupTopicEnabled,
             self::GroupEvent => SnsSettingKey::FeatureGroupEventEnabled,
+            self::GroupTalk => SnsSettingKey::FeatureGroupTalkEnabled,
             self::Friend => SnsSettingKey::FeatureFriendEnabled,
         };
     }
@@ -52,7 +55,7 @@ enum Feature: string
     public function parent(): ?self
     {
         return match ($this) {
-            self::GroupTopic, self::GroupEvent => self::Group,
+            self::GroupTopic, self::GroupEvent, self::GroupTalk => self::Group,
             default => null,
         };
     }
@@ -90,9 +93,10 @@ enum Feature: string
     }
 
     /**
-     * Route-name prefixes this unit owns. Dot-terminated, so `group.` never claims a
-     * `groupTalk.*` route. A child unit nests inside its parent's prefix (`group.topics.`);
-     * owningRouteName() resolves that overlap by preferring the longest match.
+     * Route-name prefixes this unit owns. Dot-terminated, so a prefix claims whole name segments
+     * and never a route that merely begins with the same letters. A child unit nests inside its
+     * parent's prefix (`group.topics.`); owningRouteName() resolves that overlap by preferring the
+     * longest match.
      *
      * @return list<string>
      */
@@ -106,6 +110,7 @@ enum Feature: string
             self::Group => ['group.'],
             self::GroupTopic => ['group.topics.'],
             self::GroupEvent => ['group.events.'],
+            self::GroupTalk => ['group.talk.'],
             self::Friend => ['friend.'],
         };
     }

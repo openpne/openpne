@@ -4,13 +4,14 @@ An administrator can switch a **feature unit** off site-wide. OpenPNE 3 did this
 plugin (`plugin.is_enabled`) or, for friends, by `sns_config.enable_friend_link`; OpenPNE 4 keeps
 the same semantics in one registry.
 
-The seven units are the cases of [`App\Support\Feature`](../../app/Support/Feature.php):
-`diary`, `directMessage`, `timeline`, `group`, `groupTopic`, `groupEvent`, `friend`. The
+The eight units are the cases of [`App\Support\Feature`](../../app/Support/Feature.php):
+`diary`, `directMessage`, `timeline`, `group`, `groupTopic`, `groupEvent`, `groupTalk`, `friend`. The
 case value is the feature vocabulary the [surface resolver](feature-modules.md#surface-selection)
-already uses, and normally the route-name prefix and the URL segment too. Two units come apart from
+already uses, and normally the route-name prefix and the URL segment too. Some units come apart from
 it: `directMessage`'s routes and URLs stay on the OpenPNE 3 `message` word until they are redesigned,
-and `groupTopic` owns `group.topics.*` — nested inside its parent's prefix, which `owningRouteName()`
-resolves by longest match. Both declare their prefixes explicitly instead of deriving them.
+and `groupTopic` / `groupEvent` / `groupTalk` own `group.topics.*` / `group.events.*` /
+`group.talk.*` — nested inside their parent's prefix, which `owningRouteName()` resolves by longest
+match. They declare their prefixes explicitly instead of deriving them.
 
 **Switching a unit off is a gate, not a data operation.** Diaries, messages, topics, files and
 friendships stay exactly as they were, and switching the unit back on restores the feature intact.
@@ -32,18 +33,26 @@ had switched off. Decoding is deliberately **fail-open** — only an explicit `'
 this is an availability switch: a malformed value must not black out a module and strand its
 content. The security keys in the same enum fail *closed*, for the opposite reason.
 
+`groupTalk` is the single exception, and it takes two declarations rather than one: its `default()`
+is **`false`** — which is what an absent row resolves to, since `decode()` returns the default before
+reaching any arm — and its `decode()` arm is **fail-closed**, so a stored blank or garbled value is
+off as well. Fail-open would expose talk beside the group timeline it replaces, and there is no
+content to strand while nothing can be written yet. The cutover deploy has to flip **both**; the
+default is the half that moves the sites with no row. See
+[group-talk.md](group-talk.md#it-ships-switched-off).
+
 ## Administration
 
 [`FeatureSettings`](../../app/Filament/Pages/FeatureSettings.php) (admin → Settings → Features)
 carries one toggle per unit and, like its sibling settings pages, stores every key of its group on
-save — so the first save materializes all seven rows, including the enabled ones. Only the settings
+save — so the first save materializes all eight rows, including the enabled ones. Only the settings
 cache is cleared; the nav and gadget row caches never embed feature state (see below).
 
 ## Dependencies
 
-`groupTopic` and `groupEvent` live inside `group`
+`groupTopic`, `groupEvent` and `groupTalk` live inside `group`
 (`Feature::parent()`). `Feature::enabled()` is the unit's own flag **and** every ancestor's, so
-switching groups off takes the topic board and events with it whatever their own rows say. The
+switching groups off takes the topic board, events and talk with it whatever their own rows say. The
 dependency is resolved in the registry, never re-stated at a call site.
 
 ## Enforcement

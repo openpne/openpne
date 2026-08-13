@@ -29,6 +29,7 @@ interface ShowProps extends PageProps {
     recentEvents: EventSummary[] | null;
     canPostEvent: boolean;
     timelinePosts: TimelinePostEntry[] | null; // null → not a member, or the unit is off
+    canViewTalk: boolean; // the talk unit is on AND the viewer may read this group's talk
 }
 
 export default function CommunityShow() {
@@ -36,7 +37,7 @@ export default function CommunityShow() {
     const confirm = useConfirm();
     const {
         group, viewerRole, canManage, isPending, isTransferNominee, canJoin, canLeave, members,
-        recentTopics, canPostTopic, recentEvents, canPostEvent, timelinePosts,
+        recentTopics, canPostTopic, recentEvents, canPostEvent, timelinePosts, canViewTalk,
     } = usePage<ShowProps>().props;
 
     const join = () => router.post(`/groups/${group.id}/join`);
@@ -115,6 +116,18 @@ export default function CommunityShow() {
                     </div>
                 )}
             </Panel>
+
+            {/* Talk is switched off on every site until the cutover replaces the group timeline with
+                it, so this shows only where an operator has turned the unit on. The server answers
+                the unit and the read gate together: talk reads the same access column the boards do
+                but is its own unit, so the boards being switched off must not take its entrance. */}
+            {canViewTalk && (
+                <Panel>
+                    <Link href={`/groups/${group.id}/talk`} className="text-sm text-link hover:underline">
+                        {t('Go to talk')}
+                    </Link>
+                </Panel>
+            )}
 
             {/* Above the boards, where the Classic box sits — the plugin injected it before the
                 group's own details. Only members see it: it leads to posting. */}

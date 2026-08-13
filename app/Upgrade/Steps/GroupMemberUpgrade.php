@@ -61,6 +61,17 @@ class GroupMemberUpgrade extends UpgradeStep
     }
 
     /**
+     * The talk columns are OpenPNE 4's own and stay at their schema defaults: an upgraded site has
+     * no talk history yet, so "read up to now, nothing muted" is the true state of every membership
+     * it creates. When history does arrive, the transfer that brings it re-establishes the cursors —
+     * the defaults are a backstop, not the initialization (docs/internals/group-talk.md).
+     */
+    public function targetDefaults(): array
+    {
+        return ['talk_read_at', 'talk_read_message_id', 'is_talk_muted'];
+    }
+
+    /**
      * community_member_position rows → the role int. A member with an `admin` position is Admin,
      * else `sub_admin` is SubAdmin, else a plain Member (OpenPNE 3 had no position row for members).
      * Built from GroupRole so a role/name change stays in one place; strongest role wins.
