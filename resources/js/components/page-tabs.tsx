@@ -1,12 +1,15 @@
 import { Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import { CountPill } from '@/components/count-pill';
 
 export type TabItem = {
     href: string;
     label: ReactNode;
     active: boolean;
-    /** Optional trailing indicator (e.g. a pending/unread count). Unused today; the API reserves it. */
-    badge?: ReactNode;
+    /** Trailing count (unread/pending); 0 or absent draws nothing. */
+    count?: number;
+    /** Phrase naming the count (":count … with new messages"); required whenever count can show. */
+    countLabel?: string;
 };
 
 /**
@@ -31,7 +34,9 @@ export function PageTabs({ ariaLabel, items }: { ariaLabel: string; items: TabIt
                     }
                 >
                     {item.label}
-                    {item.badge}
+                    {/* The label replaces the bare digits, so this link reads "Joined, N … with
+                        new messages" — the count in words, once, on the link itself. */}
+                    <CountPill count={item.count ?? 0} label={item.countLabel} />
                 </Link>
             ))}
         </nav>
