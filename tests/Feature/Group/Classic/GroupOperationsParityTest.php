@@ -25,7 +25,7 @@ class GroupOperationsParityTest extends TestCase
 
         $response = $this->actingAs($admin)->get(route('group.show', $group))->assertOk();
 
-        $response->assertSee($this->link(route('group.edit', ['id' => $group->getKey()]), 'Edit this community'), false);
+        $response->assertSee($this->link(route('group.edit', ['id' => $group->getKey()]), 'Edit this group'), false);
         $response->assertDontSee(route('group.quit.show', ['group' => $group->getKey()]), false);
         $response->assertDontSee(route('group.join.show', ['group' => $group->getKey()]), false);
     }
@@ -38,8 +38,8 @@ class GroupOperationsParityTest extends TestCase
 
         $response = $this->actingAs($subAdmin)->get(route('group.show', $group))->assertOk();
 
-        $response->assertSee($this->link(route('group.edit', ['id' => $group->getKey()]), 'Edit this community'), false);
-        $response->assertSee($this->link(route('group.quit.show', ['group' => $group->getKey()]), 'Leave this community'), false);
+        $response->assertSee($this->link(route('group.edit', ['id' => $group->getKey()]), 'Edit this group'), false);
+        $response->assertSee($this->link(route('group.quit.show', ['group' => $group->getKey()]), 'Leave this group'), false);
     }
 
     public function test_a_plain_member_may_only_leave(): void
@@ -49,7 +49,7 @@ class GroupOperationsParityTest extends TestCase
 
         $response = $this->actingAs($member)->get(route('group.show', $group))->assertOk();
 
-        $response->assertSee($this->link(route('group.quit.show', ['group' => $group->getKey()]), 'Leave this community'), false);
+        $response->assertSee($this->link(route('group.quit.show', ['group' => $group->getKey()]), 'Leave this group'), false);
         $response->assertDontSee(route('group.edit', ['id' => $group->getKey()]), false);
         $response->assertDontSee(route('group.join.show', ['group' => $group->getKey()]), false);
     }
@@ -68,7 +68,7 @@ class GroupOperationsParityTest extends TestCase
 
         $response = $this->actingAs($applicant)->get(route('group.show', $group))->assertOk();
 
-        $response->assertDontSee($this->link(route('group.join.show', ['group' => $group->getKey()]), 'Join this community'), false);
+        $response->assertDontSee($this->link(route('group.join.show', ['group' => $group->getKey()]), 'Join this group'), false);
         $response->assertSee('waiting for the participation approval', false);
     }
 
@@ -79,7 +79,7 @@ class GroupOperationsParityTest extends TestCase
         $response = $this->actingAs(Member::factory()->create())
             ->get(route('group.show', $group))->assertOk();
 
-        $response->assertSee($this->link(route('group.join.show', ['group' => $group->getKey()]), 'Join this community'), false);
+        $response->assertSee($this->link(route('group.join.show', ['group' => $group->getKey()]), 'Join this group'), false);
         $response->assertDontSee(route('group.quit.show', ['group' => $group->getKey()]), false);
         $response->assertDontSee(route('group.edit', ['id' => $group->getKey()]), false);
     }
@@ -134,7 +134,7 @@ class GroupOperationsParityTest extends TestCase
             'id="searchCommunity"',
             '</form>',
             '<div class="moreInfo">',
-            '<a href="'.route('group.edit').'">Create a new community</a>',
+            '<a href="'.route('group.edit').'">Create a new group</a>',
         ], false);
     }
 
@@ -148,26 +148,26 @@ class GroupOperationsParityTest extends TestCase
             '#<td><a href="'.preg_quote($home, '#').'"><img [^>]*76[^>]*>\s*</a> </td>#',
             $html
         );
-        $this->assertStringContainsString('<th>Community</th>', $html);
+        $this->assertStringContainsString('<th>Group</th>', $html);
         $this->assertStringContainsString('<td><a href="'.$home.'">'.$group->name.'</a></td>', $html);
     }
 
-    public function test_the_operation_labels_speak_openpne3_japanese(): void
+    public function test_the_operation_labels_render_the_default_ja_wording(): void
     {
         // English-only assertions cannot catch a drifted ja value, so the visible labels are
-        // pinned in the OpenPNE 3 wording (…に参加する / …を退会する / …を削除する).
+        // pinned in the OpenPNE 3 sentence shape with the default term (…に参加する / …を退会する / …を削除する).
         $group = Group::factory()->create();
         $stranger = Member::factory()->create();
         $ja = fn ($member) => (string) $this->actingAs($member)->withSession(['locale' => 'ja'])
             ->get(route('group.show', $group))->assertOk()->getContent();
 
-        $this->assertStringContainsString('このコミュニティに参加する', $ja($stranger));
-        $this->assertStringContainsString('このコミュニティを退会する', $ja($this->joined($group)));
+        $this->assertStringContainsString('このグループに参加する', $ja($stranger));
+        $this->assertStringContainsString('このグループを退会する', $ja($this->joined($group)));
 
         $admin = $this->joined($group, GroupRole::Admin);
         $edit = (string) $this->actingAs($admin)->withSession(['locale' => 'ja'])
             ->get(route('group.edit', ['id' => $group->getKey()]))->assertOk()->getContent();
-        $this->assertStringContainsString('コミュニティを削除する', $edit);
+        $this->assertStringContainsString('グループを削除する', $edit);
     }
 
     private function link(string $url, string $label): string

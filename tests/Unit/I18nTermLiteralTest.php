@@ -19,7 +19,7 @@ class I18nTermLiteralTest extends TestCase
     {
         $this->assertSame(['diaries'], Cmd::bareTermMatches('Latest diaries', Cmd::termLiteralWords('en'), true));
         $this->assertSame(['friends'], Cmd::bareTermMatches("A list of the member's friends.", Cmd::termLiteralWords('en'), true));
-        $this->assertSame(['communities'], Cmd::bareTermMatches('Members can create communities in this category', Cmd::termLiteralWords('en'), true));
+        $this->assertSame(['groups'], Cmd::bareTermMatches('Members can create groups in this category', Cmd::termLiteralWords('en'), true));
         // A source-only registry caption (no ja entry) — the exact class the gate would otherwise miss.
         $this->assertSame(['timeline'], Cmd::bareTermMatches('New timeline posts (everyone)', Cmd::termLiteralWords('en'), true));
     }
@@ -46,7 +46,7 @@ class I18nTermLiteralTest extends TestCase
 
     public function test_japanese_term_words_matched_as_substring(): void
     {
-        $this->assertSame(['コミュニティ'], Cmd::bareTermMatches('メンバーはコミュニティに参加できます', Cmd::termLiteralWords('ja'), false));
+        $this->assertSame(['グループ'], Cmd::bareTermMatches('メンバーはグループに参加できます', Cmd::termLiteralWords('ja'), false));
         // Placeholders strip out before matching, so a term-ized ja value is clean.
         $this->assertSame([], Cmd::bareTermMatches('%diary%コメント', Cmd::termLiteralWords('ja'), false));
         $this->assertSame([], Cmd::bareTermMatches('新しい%diaries%の初期公開範囲', Cmd::termLiteralWords('ja'), false));

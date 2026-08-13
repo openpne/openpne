@@ -215,7 +215,7 @@ every page and search in OpenPNE 3, and the account cannot use the site. Sites a
 years — abandoned signups, invitations never accepted — and nothing cleans them up.
 
 OpenPNE 4 has no equivalent state: a member row *is* a member. So the upgrade does not carry those
-rows, or anything hanging off them (their profile, their default-community memberships, the
+rows, or anything hanging off them (their profile, their default-group memberships, the
 friendship an invitation created). This is not optional, and it is the safe reading rather than the
 conservative one: OpenPNE 3's registration form saves the nickname, password and address one request
 *before* it activates the account, so an abandoned signup that reached that point would otherwise

@@ -3,7 +3,7 @@
 return [
     'friend' => 'フレンド',
     'my_friend' => 'マイフレンド',
-    'community' => 'コミュニティ',
+    'community' => 'グループ',
     'nickname' => 'ニックネーム',
     'activity' => 'タイムライン',
     'post_activity' => 'ポスト',

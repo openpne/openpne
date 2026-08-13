@@ -41,7 +41,7 @@ class ClassicInlineDeleteBoxTest extends TestCase
         $response = $this->actingAs($admin)->get(route('group.edit', ['id' => $group->getKey()]))->assertOk();
 
         $response->assertSee('<div class="dparts buttonBox" id="deleteForm">', false);
-        $response->assertSee('<h3>Delete this community</h3>', false);
+        $response->assertSee('<h3>Delete this group</h3>', false);
         $response->assertSee('Tell its members in advance');
         $response->assertSee('<form method="GET" action="'.route('group.delete.show', $group).'">', false);
     }

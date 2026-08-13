@@ -141,7 +141,7 @@ new-post kind — no friends-only variant. Their mail leg also needs the shared 
 A community comment fans out the same fan-out, but its audience additionally **excludes the author and
 every co-commenter** — they get the inline Reply / Related notification instead. That makes the
 per-comment precedence Reply > Related > Group, with one notification per member; the broadcast and
-the inline notifications share the `community_*_commented` feed kind, distinguished by the reason. The
+the inline notifications share the `group_*_commented` feed kind, distinguished by the reason. The
 excluded ids are snapshotted when the comment is posted and passed to the async job, not re-derived
 when it runs: a comment deleted in between would otherwise drop its author from the exclusion and
 notify them twice.

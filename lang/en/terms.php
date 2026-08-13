@@ -3,7 +3,7 @@
 return [
     'friend' => 'friend',
     'my_friend' => 'my friend',
-    'community' => 'community',
+    'community' => 'group',
     'nickname' => 'nickname',
     'activity' => 'timeline',
     'post_activity' => 'post',
