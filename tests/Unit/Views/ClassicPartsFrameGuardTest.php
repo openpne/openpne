@@ -29,8 +29,8 @@ class ClassicPartsFrameGuardTest extends TestCase
             'components/gadget/diary-my-list',
             // opCommunityTopicPlugin communityEvent/_eventComment{,Sns}ListBox.php and the topic pair;
             // the Sns variants take a second class from their _parts*RecentList.php body partial
-            'components/gadget/recent-community-event-comment',
-            'components/gadget/recent-community-event-comment-sns',
+            'components/gadget/recent-group-event-comment',
+            'components/gadget/recent-group-event-comment-sns',
             'components/gadget/recent-group-topic-comment',
             'components/gadget/recent-group-topic-comment-sns',
             // opTimelinePlugin _timelineAll.php / _timelineFriend.php / _timelineProfile.php

@@ -59,18 +59,18 @@ class Group extends Model
         return $this->hasMany(GroupTopic::class);
     }
 
-    /**
-     * The FK is named explicitly here and on timelinePosts(): those tables keep the
-     * `community_id` spelling, which no longer follows from this model's name.
-     *
-     * @return HasMany<CommunityEvent, $this>
-     */
+    /** @return HasMany<GroupEvent, $this> The event board. */
     public function events(): HasMany
     {
-        return $this->hasMany(CommunityEvent::class, 'community_id');
+        return $this->hasMany(GroupEvent::class);
     }
 
-    /** @return HasMany<TimelinePost, $this> Posts scoped to this group's timeline, replies included. */
+    /**
+     * The FK is named explicitly: timeline_posts keeps the `community_id` spelling, which no longer
+     * follows from this model's name.
+     *
+     * @return HasMany<TimelinePost, $this> Posts scoped to this group's timeline, replies included.
+     */
     public function timelinePosts(): HasMany
     {
         return $this->hasMany(TimelinePost::class, 'community_id');

@@ -5,7 +5,7 @@ plugin (`plugin.is_enabled`) or, for friends, by `sns_config.enable_friend_link`
 the same semantics in one registry.
 
 The seven units are the cases of [`App\Support\Feature`](../../app/Support/Feature.php):
-`diary`, `directMessage`, `timeline`, `group`, `groupTopic`, `communityEvent`, `friend`. The
+`diary`, `directMessage`, `timeline`, `group`, `groupTopic`, `groupEvent`, `friend`. The
 case value is the feature vocabulary the [surface resolver](feature-modules.md#surface-selection)
 already uses, and normally the route-name prefix and the URL segment too. Two units come apart from
 it: `directMessage`'s routes and URLs stay on the OpenPNE 3 `message` word until they are redesigned,
@@ -41,7 +41,7 @@ cache is cleared; the nav and gadget row caches never embed feature state (see b
 
 ## Dependencies
 
-`groupTopic` and `communityEvent` live inside `group`
+`groupTopic` and `groupEvent` live inside `group`
 (`Feature::parent()`). `Feature::enabled()` is the unit's own flag **and** every ancestor's, so
 switching groups off takes the topic board and events with it whatever their own rows say. The
 dependency is resolved in the registry, never re-stated at a call site.
@@ -191,7 +191,7 @@ that never disabled anything migrates with no feature row at all.
 
 `opCommunityTopicPlugin` shipped the topic board and events together; OpenPNE 4 toggles them
 separately, so that one source row becomes two rows through two steps
-(`PluginFeatureUpgrade` + `CommunityEventPluginFeatureUpgrade`). Groups themselves have no
+(`PluginFeatureUpgrade` + `GroupEventPluginFeatureUpgrade`). Groups themselves have no
 source: OpenPNE 3 could not switch the container off, so nothing is written and it stays enabled
 while its disabled children carry their own state over.
 

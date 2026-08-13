@@ -120,9 +120,9 @@ export const POLICY_TITLES: Record<PolicyKind, ChromeLabel> = {
 /** Nav order and metadata (Home is the brand row, so it is omitted). */
 export const NAV_SECTIONS: NavSection[] = [
     { href: '/diary/list', match: ['/diary'], icon: BookOpen, label: DIARIES, feature: 'diary' },
-    // The event board still lives under the OpenPNE 3 /communityEvent space, and neither board has a
-    // section of its own, so this one answers for them too and for the container unit alone.
-    { href: '/groups', match: ['/groups', '/topics', '/communityEvent'], icon: Users, label: COMMUNITIES, feature: 'group' },
+    // Neither board has a section of its own, so this one answers for them too and for the
+    // container unit alone.
+    { href: '/groups', match: ['/groups', '/topics', '/events'], icon: Users, label: COMMUNITIES, feature: 'group' },
     { href: '/timeline', match: ['/timeline'], icon: Activity, label: ACTIVITY, feature: 'timeline' },
     {
         href: '/friend/list',
@@ -230,7 +230,7 @@ const communityTimelineContext = (group: CommunityRef): Chrome['context'] => [
 
 const eventBoardContext = (group: CommunityRef): Chrome['context'] => [
     ...communityContext(group)!,
-    { href: `/communityEvent/listCommunity/${group.id}`, label: t('Events') },
+    { href: `/groups/${group.id}/events`, label: t('Events') },
 ];
 
 interface MemberRef {
@@ -372,7 +372,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                 : undefined,
         };
     },
-    'community/event/index': (props) => {
+    'group/event/index': (props) => {
         const { group, canPost } = props as unknown as { group: CommunityRef; canPost: boolean };
         return {
             mode: 'contextual',
@@ -380,7 +380,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             context: communityContext(group),
             scope: communityScope(group),
             action: canPost
-                ? { href: `/communityEvent/new/${group.id}`, label: t('Create an event'), icon: Plus }
+                ? { href: `/groups/${group.id}/events/new`, label: t('Create an event'), icon: Plus }
                 : undefined,
         };
     },
@@ -388,7 +388,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const { group } = props as unknown as { group: CommunityRef };
         return { context: topicBoardContext(group), scope: communityScope(group) };
     },
-    'community/event/show': (props) => {
+    'group/event/show': (props) => {
         const { group } = props as unknown as { group: CommunityRef };
         return { context: eventBoardContext(group), scope: communityScope(group) };
     },
@@ -404,13 +404,13 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                 : topicBoardContext(group),
         };
     },
-    'community/event/edit': (props) => {
+    'group/event/edit': (props) => {
         const { group, event } = props as unknown as { group: CommunityRef; event: { id: number; name: string } | null };
         return {
             form: true,
             compose: true,
             context: event
-                ? [...eventBoardContext(group)!, { href: `/communityEvent/${event.id}`, label: event.name }]
+                ? [...eventBoardContext(group)!, { href: `/events/${event.id}`, label: event.name }]
                 : eventBoardContext(group),
         };
     },
@@ -450,12 +450,12 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             scope: communityScope(group),
         };
     },
-    'community/event/members': (props) => {
+    'group/event/members': (props) => {
         const { group, event } = props as unknown as { group: CommunityRef; event: { id: number; name: string } };
         return {
             mode: 'contextual',
             title: t('Count of Member'),
-            context: [...eventBoardContext(group)!, { href: `/communityEvent/${event.id}`, label: event.name }],
+            context: [...eventBoardContext(group)!, { href: `/events/${event.id}`, label: event.name }],
             scope: communityScope(group),
         };
     },
@@ -575,7 +575,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/config/withdrawal': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'community/show': { foreground: true },
     'group/topic/show': { foreground: true },
-    'community/event/show': { foreground: true },
+    'group/event/show': { foreground: true },
     'diary/show': { foreground: true },
     'diary/new': { form: true, compose: true, context: [{ href: '/diary/list', label: DIARIES }] },
     'timeline/show': { foreground: true },

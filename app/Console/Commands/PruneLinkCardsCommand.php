@@ -121,7 +121,7 @@ class PruneLinkCardsCommand extends Command
      */
     private function anyReference($query): void
     {
-        $tables = ['diaries', 'group_topics', 'community_events', 'timeline_posts'];
+        $tables = ['diaries', 'group_topics', 'group_events', 'timeline_posts'];
 
         $query->select(DB::raw('1'))->from($tables[0])->whereColumn($tables[0].'.link_card_id', 'link_cards.id');
 

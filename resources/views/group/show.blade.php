@@ -141,17 +141,17 @@
                         @unless ($recentEvents->isEmpty())
                             <ul class="articleList">
                                 @foreach ($recentEvents as $event)
-                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($event->updated_at, app()->getLocale()) }}</span> <a href="{{ route('communityEvent.show', $event) }}">{{ \App\Features\Group\GroupPostTitle::withCount($event) }}</a></li>
+                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($event->updated_at, app()->getLocale()) }}</span> <a href="{{ route('group.events.show', $event) }}">{{ \App\Features\Group\GroupPostTitle::withCount($event) }}</a></li>
                                 @endforeach
                             </ul>
                         @endunless
                         <div class="moreInfo">
                             <ul class="moreInfo">
                                 @unless ($recentEvents->isEmpty())
-                                    <li><a href="{{ route('communityEvent.index', $group) }}">{{ __('More') }}</a></li>
+                                    <li><a href="{{ route('group.events.index', $group) }}">{{ __('More') }}</a></li>
                                 @endunless
                                 @if ($canPostEvent)
-                                    <li><a href="{{ route('communityEvent.new', $group) }}">{{ __('Create a new event') }}</a></li>
+                                    <li><a href="{{ route('group.events.new', $group) }}">{{ __('Create a new event') }}</a></li>
                                 @endif
                             </ul>
                         </div>

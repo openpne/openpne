@@ -6,10 +6,10 @@ use App\Features\Group\GroupNewPostFanout;
 use App\Features\Group\Queries\GroupNewPostRecipients;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
-use App\Models\CommunityEvent;
-use App\Models\CommunityEventComment;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\Member;
-use App\Notifications\CommunityEvent\EventCommentBroadcastNotification;
+use App\Notifications\GroupEvent\EventCommentBroadcastNotification;
 use App\Notifications\Settings\NotificationKind;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,24 +44,24 @@ class BroadcastEventCommentPosted implements ShouldQueue
             return;
         }
 
-        $event = CommunityEvent::with('community')->find($this->eventId);
-        $comment = CommunityEventComment::find($this->commentId);
+        $event = GroupEvent::with('group')->find($this->eventId);
+        $comment = GroupEventComment::find($this->commentId);
         $commenter = Member::find($this->commenterId);
-        if ($event === null || $event->community === null || $comment === null || $commenter === null) {
+        if ($event === null || $event->group === null || $comment === null || $commenter === null) {
             return;
         }
 
         // The author + co-commenters (who get Reply / Related) are excluded using the set captured when
         // the comment was posted, not re-read here: a comment deleted before this job ran would otherwise
         // drop its author out of the exclusion and double-notify them (Related then Group).
-        $audience = $recipients->viewers($event->community, $commenter)->whereNotIn('id', $this->excludedMemberIds);
+        $audience = $recipients->viewers($event->group, $commenter)->whereNotIn('id', $this->excludedMemberIds);
         $mailEnabled = $templates->isEnabled(MailTemplate::GroupPostingNotified);
 
         $fanout->run(
             $audience,
-            NotificationKind::CommunityEventCommentNewPost,
+            NotificationKind::GroupEventCommentNewPost,
             $mailEnabled,
-            fn (array $channels) => new EventCommentBroadcastNotification($event->community, $event, $comment, $commenter, $channels),
+            fn (array $channels) => new EventCommentBroadcastNotification($event->group, $event, $comment, $commenter, $channels),
         );
     }
 }

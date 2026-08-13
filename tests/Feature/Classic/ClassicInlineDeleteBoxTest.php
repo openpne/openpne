@@ -3,9 +3,9 @@
 namespace Tests\Feature\Classic;
 
 use App\Features\Group\GroupRole;
-use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\Member;
@@ -85,16 +85,16 @@ class ClassicInlineDeleteBoxTest extends TestCase
     {
         $group = Group::factory()->create();
         $author = $this->joined($group);
-        $event = CommunityEvent::factory()->create([
-            'community_id' => $group->getKey(),
+        $event = GroupEvent::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
         ]);
 
-        $response = $this->actingAs($author)->get(route('communityEvent.edit', $event))->assertOk();
+        $response = $this->actingAs($author)->get(route('group.events.edit', $event))->assertOk();
 
         $response->assertSee('<div class="dparts buttonBox" id="toDelete">', false);
         $response->assertSee('<h3>Delete the event and comments</h3>', false);
-        $response->assertSee('<form method="GET" action="'.route('communityEvent.delete.show', $event).'">', false);
+        $response->assertSee('<form method="GET" action="'.route('group.events.delete.show', $event).'">', false);
     }
 
     private function joined(Group $group, GroupRole $role = GroupRole::Member): Member

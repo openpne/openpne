@@ -9,7 +9,7 @@ const allOn: Record<FeatureKey, boolean> = {
     timeline: true,
     group: true,
     groupTopic: true,
-    communityEvent: true,
+    groupEvent: true,
     friend: true,
 };
 
@@ -35,7 +35,7 @@ test('the untoggleable sections survive every unit being off', () => {
 
 test('the groups section stays while only a board is off', () => {
     // Topics and events have no section of their own, so nothing here answers to them.
-    assert.equal(hrefs({ ...allOn, groupTopic: false, communityEvent: false }).includes('/groups'), true);
+    assert.equal(hrefs({ ...allOn, groupTopic: false, groupEvent: false }).includes('/groups'), true);
 });
 
 const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled).map((section) => section.href);
@@ -152,7 +152,7 @@ const FORM_SCREENS: Record<string, Record<string, unknown>> = {
     'timeline/community-new': { group: cyclists },
     'community/edit': { group: cyclists },
     'group/topic/edit': { group: cyclists, topic: null },
-    'community/event/edit': { group: cyclists, event: null },
+    'group/event/edit': { group: cyclists, event: null },
     'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},
     'member/avatar': {},
@@ -182,7 +182,7 @@ const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
     'timeline/new': {},
     'timeline/community-new': { group: cyclists },
     'group/topic/edit': { group: cyclists, topic: null },
-    'community/event/edit': { group: cyclists, event: null },
+    'group/event/edit': { group: cyclists, event: null },
     'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},
 };

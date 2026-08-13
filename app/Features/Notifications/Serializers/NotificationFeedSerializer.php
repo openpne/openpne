@@ -2,8 +2,8 @@
 
 namespace App\Features\Notifications\Serializers;
 
-use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\Diary\DiaryAccess;
+use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Notifications\NotificationCenterCategory;
 use App\Features\Notifications\NotificationCenterRow;
@@ -11,10 +11,10 @@ use App\Features\Notifications\NotificationFeedRow;
 use App\Features\Notifications\NotificationKindLabel;
 use App\Features\Notifications\Queries\ListNotificationCenterRows;
 use App\Features\Timeline\TimelineAccess;
-use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\DirectMessageRecipient;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -107,12 +107,12 @@ class NotificationFeedSerializer
             'friend_requested' => $data['requester_id'] ?? null,
             'friend_request_accepted' => $data['accepter_id'] ?? null,
             'direct_message_received' => $data['sender_id'] ?? null,
-            'diary_commented', 'group_topic_commented', 'community_event_commented' => $data['commenter_id'] ?? null,
+            'diary_commented', 'group_topic_commented', 'group_event_commented' => $data['commenter_id'] ?? null,
             'timeline_replied' => $data['replier_id'] ?? null,
             'group_joined' => $data['new_member_id'] ?? null,
             'group_admin_transfer_requested' => $data['requester_id'] ?? null,
             'group_sub_admin_appointed' => $data['appointer_id'] ?? null,
-            'diary_posted', 'group_topic_posted', 'community_event_posted', 'timeline_mentioned', 'timeline_posted' => $data['author_id'] ?? null,
+            'diary_posted', 'group_topic_posted', 'group_event_posted', 'timeline_mentioned', 'timeline_posted' => $data['author_id'] ?? null,
             default => null,
         };
     }
@@ -131,12 +131,12 @@ class NotificationFeedSerializer
             'direct_message_received' => self::directMessageUrl($row, $data['direct_message_id'] ?? null),
             'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
             'group_topic_commented' => self::topicUrl($row, $data['topic_id'] ?? null),
-            'community_event_commented' => self::eventUrl($row, $data['event_id'] ?? null),
+            'group_event_commented' => self::eventUrl($row, $data['event_id'] ?? null),
             'group_joined' => self::groupUrl($data['group_id'] ?? null),
             'group_admin_transfer_requested', 'group_sub_admin_appointed' => self::groupUrl($data['group_id'] ?? null),
             'diary_posted' => self::diaryUrl($row, $data['diary_id'] ?? null),
             'group_topic_posted' => self::topicUrl($row, $data['topic_id'] ?? null),
-            'community_event_posted' => self::eventUrl($row, $data['event_id'] ?? null),
+            'group_event_posted' => self::eventUrl($row, $data['event_id'] ?? null),
             'timeline_mentioned', 'timeline_posted', 'timeline_replied' => self::timelineUrl($row, $data['post_id'] ?? null),
             default => null,
         };
@@ -240,15 +240,15 @@ class NotificationFeedSerializer
     /** The event twin of topicUrl(). */
     private static function eventUrl(DatabaseNotification $row, ?int $eventId): ?string
     {
-        $event = $eventId === null ? null : CommunityEvent::find($eventId);
+        $event = $eventId === null ? null : GroupEvent::find($eventId);
         if ($event === null) {
             return null;
         }
 
         $viewer = Member::find($row->notifiable_id);
 
-        return $viewer !== null && CommunityEventAccess::canViewEvent($event, $viewer)
-            ? '/communityEvent/'.$event->getKey()
+        return $viewer !== null && GroupEventAccess::canViewEvent($event, $viewer)
+            ? '/events/'.$event->getKey()
             : null;
     }
 

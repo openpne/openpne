@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /** Body tables whose records may carry a card. */
-    private const TABLES = ['diaries', 'group_topics', 'community_events', 'timeline_posts'];
+    private const TABLES = ['diaries', 'group_topics', 'group_events', 'timeline_posts'];
 
     public function up(): void
     {

@@ -7,13 +7,13 @@ namespace Tests\Feature\File;
 use App\Files\FileStorage;
 use App\Models\AdminUser;
 use App\Models\BannerImage;
-use App\Models\CommunityEvent;
-use App\Models\CommunityEventComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
@@ -46,8 +46,8 @@ class FilePolicyFeatureToggleTest extends TestCase
             'group top image (write alias)' => ['group', Feature::Group],
             'community topic' => ['communityTopic', Feature::GroupTopic],
             'community topic comment' => ['communityTopicComment', Feature::GroupTopic],
-            'community event' => ['communityEvent', Feature::CommunityEvent],
-            'community event comment' => ['communityEventComment', Feature::CommunityEvent],
+            'community event' => ['communityEvent', Feature::GroupEvent],
+            'community event comment' => ['communityEventComment', Feature::GroupEvent],
         ];
     }
 
@@ -159,8 +159,8 @@ class FilePolicyFeatureToggleTest extends TestCase
             'community', 'group' => $group(),
             'communityTopic' => GroupTopic::factory()->create(['group_id' => $group()->getKey()]),
             'communityTopicComment' => GroupTopicComment::factory()->create(),
-            'communityEvent' => CommunityEvent::factory()->create(['community_id' => $group()->getKey()]),
-            'communityEventComment' => CommunityEventComment::factory()->create(),
+            'communityEvent' => GroupEvent::factory()->create(['group_id' => $group()->getKey()]),
+            'communityEventComment' => GroupEventComment::factory()->create(),
         };
 
         return File::factory()->create([

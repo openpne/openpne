@@ -25,6 +25,8 @@ class GadgetUpgrade extends UpgradeStep
         'communityJoinListBox' => 'groupJoinListBox',
         'recentCommunityTopicComment' => 'recentGroupTopicComment',
         'recentCommunityTopicCommentSns' => 'recentGroupTopicCommentSns',
+        'recentCommunityEventComment' => 'recentGroupEventComment',
+        'recentCommunityEventCommentSns' => 'recentGroupEventCommentSns',
     ];
 
     public function columns(): array

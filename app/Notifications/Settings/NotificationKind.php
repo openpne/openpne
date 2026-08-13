@@ -36,10 +36,10 @@ enum NotificationKind: string
     case GroupTopicReplyNewPost = 'group_topic_reply_new_post';
     case GroupTopicRelatedNewPost = 'group_topic_related_new_post';
 
-    case CommunityEventNewPost = 'community_event_new_post';
-    case CommunityEventCommentNewPost = 'community_event_comment_new_post';
-    case CommunityEventReplyNewPost = 'community_event_reply_new_post';
-    case CommunityEventRelatedNewPost = 'community_event_related_new_post';
+    case GroupEventNewPost = 'group_event_new_post';
+    case GroupEventCommentNewPost = 'group_event_comment_new_post';
+    case GroupEventReplyNewPost = 'group_event_reply_new_post';
+    case GroupEventRelatedNewPost = 'group_event_related_new_post';
 
     case FriendLinkConfirm = 'friend_link_confirm';
     case FriendLinkComplete = 'friend_link_complete';
@@ -139,26 +139,26 @@ enum NotificationKind: string
                 caption: 'Comments on %topics% you commented on',
                 isWired: true,
             ),
-            self::CommunityEventNewPost => new NotificationKindDefinition(
-                category: NotificationCategory::CommunityEvent,
+            self::GroupEventNewPost => new NotificationKindDefinition(
+                category: NotificationCategory::GroupEvent,
                 op3Name: 'communityEventNewPost',
                 caption: 'New events in your %communities%',
                 isWired: true,
             ),
-            self::CommunityEventCommentNewPost => new NotificationKindDefinition(
-                category: NotificationCategory::CommunityEvent,
+            self::GroupEventCommentNewPost => new NotificationKindDefinition(
+                category: NotificationCategory::GroupEvent,
                 op3Name: 'communityEventCommentNewPost',
                 caption: 'New comments on events in your %communities%',
                 isWired: true,
             ),
-            self::CommunityEventReplyNewPost => new NotificationKindDefinition(
-                category: NotificationCategory::CommunityEvent,
+            self::GroupEventReplyNewPost => new NotificationKindDefinition(
+                category: NotificationCategory::GroupEvent,
                 op3Name: 'communityEventReplyNewPost',
                 caption: 'Comments on events you created',
                 isWired: true,
             ),
-            self::CommunityEventRelatedNewPost => new NotificationKindDefinition(
-                category: NotificationCategory::CommunityEvent,
+            self::GroupEventRelatedNewPost => new NotificationKindDefinition(
+                category: NotificationCategory::GroupEvent,
                 op3Name: 'communityEventRelatedNewPost',
                 caption: 'Comments on events you commented on',
                 isWired: true,

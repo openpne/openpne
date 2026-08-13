@@ -3,8 +3,6 @@
 use App\Captcha\Captcha;
 use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
-use App\Features\CommunityEvent\CommunityEventCommentController;
-use App\Features\CommunityEvent\CommunityEventController;
 use App\Features\Compose\EditorPreferenceController;
 use App\Features\Compose\PreviewController;
 use App\Features\Diary\DiaryCommentController;
@@ -13,6 +11,8 @@ use App\Features\DirectMessage\DirectMessageController;
 use App\Features\Friend\FriendController;
 use App\Features\Group\GroupController;
 use App\Features\Group\GroupMemberManageController;
+use App\Features\GroupEvent\GroupEventCommentController;
+use App\Features\GroupEvent\GroupEventController;
 use App\Features\GroupTopic\GroupTopicCommentController;
 use App\Features\GroupTopic\GroupTopicController;
 use App\Features\Home\HomeController;
@@ -755,28 +755,53 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereNumber('topic')->name('group.topics.show.compat');
     });
 
-    // Group events (Classic only; Modern is none). Same literal-before-wildcard rule as the topic
-    // board: listCommunity/new/create take a community id, the rest an event id, and {event} is
-    // digit-constrained, so /communityEvent/memberList-style literals can never be read as an event id.
-    Route::prefix('communityEvent')->middleware(EnsureFeatureEnabled::class.':communityEvent')->controller(CommunityEventController::class)->group(function () {
-        Route::get('/listCommunity/{group}', 'index')->whereNumber('group')->name('communityEvent.index');
-        Route::get('/new/{group}', 'new')->whereNumber('group')->name('communityEvent.new');
-        Route::post('/create/{group}', 'store')->whereNumber('group')->middleware('throttle:posting')->name('communityEvent.store');
-        Route::get('/edit/{event}', 'edit')->whereNumber('event')->name('communityEvent.edit');
-        Route::post('/update/{event}', 'update')->whereNumber('event')->middleware('throttle:posting')->name('communityEvent.update');
-        Route::get('/deleteConfirm/{event}', 'showDelete')->whereNumber('event')->name('communityEvent.delete.show');
-        Route::post('/delete/{event}', 'delete')->whereNumber('event')->name('communityEvent.delete');
-        Route::get('/{event}/memberList', 'memberList')->whereNumber('event')->name('communityEvent.member_list');
-        Route::get('/{event}', 'show')->whereNumber('event')->name('communityEvent.show');
+    // Group events (Classic only; Modern is none). Shaped like the topic board: the board is nested
+    // under its group (/groups/{group}/events) and an event is flat (/events/{event}), since an
+    // event id names the group already. {event} is digit-constrained, so the literal
+    // /events/comments/* below can never be read as an event id. The gate is the board's own unit:
+    // Feature::GroupEvent resolves its parent (group) itself, so a second gate would be redundant.
+    Route::middleware(EnsureFeatureEnabled::class.':groupEvent')->controller(GroupEventController::class)->group(function () {
+        Route::get('/groups/{group}/events', 'index')->whereNumber('group')->name('group.events.index');
+        Route::get('/groups/{group}/events/new', 'new')->whereNumber('group')->name('group.events.new');
+        Route::post('/groups/{group}/events', 'store')->whereNumber('group')->middleware('throttle:posting')->name('group.events.store');
+        // edit / delete: GET confirm, POST submit on the same URL (as the group core's).
+        Route::get('/events/{event}/edit', 'edit')->whereNumber('event')->name('group.events.edit');
+        Route::post('/events/{event}/edit', 'update')->whereNumber('event')->middleware('throttle:posting')->name('group.events.update');
+        Route::get('/events/{event}/delete', 'showDelete')->whereNumber('event')->name('group.events.delete.show');
+        Route::post('/events/{event}/delete', 'delete')->whereNumber('event')->name('group.events.delete');
+        Route::get('/events/{event}/members', 'memberList')->whereNumber('event')->name('group.events.member_list');
+        Route::get('/events/{event}', 'show')->whereNumber('event')->name('group.events.show');
     });
 
-    // communityEventComment module. create keys off the event id and carries the merged RSVP form;
-    // deleteConfirm/delete key off the comment id (literal /communityEvent/comment/* never collides
-    // with the numeric event show).
-    Route::controller(CommunityEventCommentController::class)->middleware(EnsureFeatureEnabled::class.':communityEvent')->group(function () {
-        Route::post('/communityEvent/{event}/comment/create', 'store')->whereNumber('event')->middleware('throttle:posting')->name('communityEvent.comment.store');
-        Route::get('/communityEvent/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityEvent.comment.delete.show');
-        Route::post('/communityEvent/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityEvent.comment.delete');
+    // OpenPNE 3 communityEventComment module. Posting keys off the event id and carries the merged
+    // RSVP form; the delete confirm and submit key off the comment id, under the literal
+    // /events/comments/ prefix.
+    Route::controller(GroupEventCommentController::class)->middleware(EnsureFeatureEnabled::class.':groupEvent')->group(function () {
+        Route::post('/events/{event}/comments', 'store')->whereNumber('event')->middleware('throttle:posting')->name('group.events.comment.store');
+        Route::get('/events/comments/{comment}/delete', 'showDelete')->whereNumber('comment')->name('group.events.comment.delete.show');
+        Route::post('/events/comments/{comment}/delete', 'delete')->whereNumber('comment')->name('group.events.comment.delete');
+    });
+
+    // The OpenPNE 3 /communityEvent/* GET URLs, preserved by redirect onto the canonical space
+    // (GroupEventRouteParity::compatRedirects()). GET only — a POST submit is not a bookmarkable
+    // URL. The query rides along: the board paginates, so a ?page=N bookmark must not reset to
+    // page 1, and the path id wins over a stray ?group=/?event=. Declared after the canonical
+    // block so the wildcard /communityEvent/{event} cannot shadow a literal.
+    Route::prefix('communityEvent')->middleware(EnsureFeatureEnabled::class.':groupEvent')->group(function () {
+        Route::get('/listCommunity/{group}', fn (Request $request, int $group) => redirect()->route('group.events.index', ['group' => $group] + $request->query()))
+            ->whereNumber('group')->name('group.events.index.compat');
+        Route::get('/new/{group}', fn (Request $request, int $group) => redirect()->route('group.events.new', ['group' => $group] + $request->query()))
+            ->whereNumber('group')->name('group.events.new.compat');
+        Route::get('/edit/{event}', fn (Request $request, int $event) => redirect()->route('group.events.edit', ['event' => $event] + $request->query()))
+            ->whereNumber('event')->name('group.events.edit.compat');
+        Route::get('/deleteConfirm/{event}', fn (Request $request, int $event) => redirect()->route('group.events.delete.show', ['event' => $event] + $request->query()))
+            ->whereNumber('event')->name('group.events.delete.show.compat');
+        Route::get('/comment/deleteConfirm/{comment}', fn (Request $request, int $comment) => redirect()->route('group.events.comment.delete.show', ['comment' => $comment] + $request->query()))
+            ->whereNumber('comment')->name('group.events.comment.delete.show.compat');
+        Route::get('/{event}/memberList', fn (Request $request, int $event) => redirect()->route('group.events.member_list', ['event' => $event] + $request->query()))
+            ->whereNumber('event')->name('group.events.member_list.compat');
+        Route::get('/{event}', fn (Request $request, int $event) => redirect()->route('group.events.show', ['event' => $event] + $request->query()))
+            ->whereNumber('event')->name('group.events.show.compat');
     });
 
     // Private messages. The four boxes plus a per-box show page. OpenPNE 3 keyed show by message id
@@ -823,15 +848,15 @@ $mCompat = fn (string $target) => redirect()->to(
 Route::get('/m/community/joined', fn () => $mCompat('/groups/mine'));
 Route::get('/m/community/topic/{topic}', fn (int $topic) => $mCompat("/topics/{$topic}"))->whereNumber('topic');
 Route::get('/m/community/topic/{topic}/edit', fn (int $topic) => $mCompat("/topics/{$topic}/edit"))->whereNumber('topic');
-Route::get('/m/community/event/{event}', fn (int $event) => $mCompat("/communityEvent/{$event}"))->whereNumber('event');
-Route::get('/m/community/event/{event}/edit', fn (int $event) => $mCompat("/communityEvent/edit/{$event}"))->whereNumber('event');
-Route::get('/m/community/event/{event}/members', fn (int $event) => $mCompat("/communityEvent/{$event}/memberList"))->whereNumber('event');
+Route::get('/m/community/event/{event}', fn (int $event) => $mCompat("/events/{$event}"))->whereNumber('event');
+Route::get('/m/community/event/{event}/edit', fn (int $event) => $mCompat("/events/{$event}/edit"))->whereNumber('event');
+Route::get('/m/community/event/{event}/members', fn (int $event) => $mCompat("/events/{$event}/members"))->whereNumber('event');
 Route::get('/m/community/{group}/members', fn (int $group) => $mCompat("/groups/{$group}/members"))->whereNumber('group');
 Route::get('/m/community/{group}/pending', fn (int $group) => $mCompat("/groups/{$group}/members/pending"))->whereNumber('group');
 Route::get('/m/community/{group}/topic', fn (int $group) => $mCompat("/groups/{$group}/topics"))->whereNumber('group');
 Route::get('/m/community/{group}/topic/new', fn (int $group) => $mCompat("/groups/{$group}/topics/new"))->whereNumber('group');
-Route::get('/m/community/{group}/event', fn (int $group) => $mCompat("/communityEvent/listCommunity/{$group}"))->whereNumber('group');
-Route::get('/m/community/{group}/event/new', fn (int $group) => $mCompat("/communityEvent/new/{$group}"))->whereNumber('group');
+Route::get('/m/community/{group}/event', fn (int $group) => $mCompat("/groups/{$group}/events"))->whereNumber('group');
+Route::get('/m/community/{group}/event/new', fn (int $group) => $mCompat("/groups/{$group}/events/new"))->whereNumber('group');
 
 // Transition-era compat: the rest of the retired /m/ Modern URL space maps onto canonical URLs by
 // dropping the prefix — one permanent catch-all (308 keeps the method for stale in-flight forms;

@@ -33,11 +33,11 @@ class FeatureStateTest extends TestCase
         $this->setSnsSetting(Feature::Group->settingKey(), false);
         // Explicitly on, and still unreachable: the dependency wins over the unit's own row.
         $this->setSnsSetting(Feature::GroupTopic->settingKey(), true);
-        $this->setSnsSetting(Feature::CommunityEvent->settingKey(), true);
+        $this->setSnsSetting(Feature::GroupEvent->settingKey(), true);
 
         $this->assertFalse(Feature::Group->enabled());
         $this->assertFalse(Feature::GroupTopic->enabled());
-        $this->assertFalse(Feature::CommunityEvent->enabled());
+        $this->assertFalse(Feature::GroupEvent->enabled());
         $this->assertTrue(Feature::Diary->enabled());
     }
 
@@ -47,7 +47,7 @@ class FeatureStateTest extends TestCase
 
         $this->assertFalse(Feature::GroupTopic->enabled());
         $this->assertTrue(Feature::Group->enabled());
-        $this->assertTrue(Feature::CommunityEvent->enabled());
+        $this->assertTrue(Feature::GroupEvent->enabled());
     }
 
     public function test_the_enabled_map_reports_every_unit_with_dependencies_applied(): void
@@ -61,7 +61,7 @@ class FeatureStateTest extends TestCase
             'timeline' => true,
             'group' => false,
             'groupTopic' => false,
-            'communityEvent' => false,
+            'groupEvent' => false,
             'friend' => true,
         ], Feature::enabledMap());
     }

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mail;
 
-use App\Models\CommunityEvent;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\Member;
-use App\Notifications\CommunityEvent\EventPostedNotification;
+use App\Notifications\GroupEvent\EventPostedNotification;
 use App\Notifications\GroupTopic\TopicPostedNotification;
 use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,8 +65,8 @@ class GroupPostingFlattenTest extends TestCase
     {
         $group = Group::factory()->create();
         $author = Member::factory()->create();
-        $event = CommunityEvent::factory()->create([
-            'community_id' => $group->getKey(),
+        $event = GroupEvent::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'format' => BodyFormat::Markdown,
             'body' => '**bold** text',

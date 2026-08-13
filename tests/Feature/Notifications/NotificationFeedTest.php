@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Notifications;
 
 use App\Features\GroupTopic\TopicReadAccess;
-use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -244,14 +244,14 @@ class NotificationFeedTest extends TestCase
     {
         [$viewer, $author] = Member::factory()->count(2)->create()->all();
         $topic = GroupTopic::factory()->create(['member_id' => $author->getKey()]);
-        $event = CommunityEvent::factory()->create(['member_id' => $author->getKey()]);
+        $event = GroupEvent::factory()->create(['member_id' => $author->getKey()]);
         $topicRow = $this->seedRow($viewer, 'group_topic_posted', ['author_id' => $author->getKey(), 'topic_id' => $topic->getKey()]);
-        $eventRow = $this->seedRow($viewer, 'community_event_posted', ['author_id' => $author->getKey(), 'event_id' => $event->getKey()]);
+        $eventRow = $this->seedRow($viewer, 'group_event_posted', ['author_id' => $author->getKey(), 'event_id' => $event->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$topicRow->getKey()}/open")
             ->assertRedirect('/topics/'.$topic->getKey());
         $this->actingAs($viewer)->post("/notifications/{$eventRow->getKey()}/open")
-            ->assertRedirect('/communityEvent/'.$event->getKey());
+            ->assertRedirect('/events/'.$event->getKey());
     }
 
     public function test_open_falls_back_to_the_feed_when_the_board_is_gone_or_unreadable(): void
@@ -260,7 +260,7 @@ class NotificationFeedTest extends TestCase
         // A members-only board the viewer is not a member of: the topic exists but is unreadable.
         $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
         $hidden = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
-        $gone = $this->seedRow($viewer, 'community_event_commented', ['commenter_id' => $actor->getKey(), 'event_id' => 424242, 'reason' => 'reply']);
+        $gone = $this->seedRow($viewer, 'group_event_commented', ['commenter_id' => $actor->getKey(), 'event_id' => 424242, 'reason' => 'reply']);
         $unreadable = $this->seedRow($viewer, 'group_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $hidden->getKey(), 'reason' => 'related']);
 
         $this->actingAs($viewer)->post("/notifications/{$gone->getKey()}/open")

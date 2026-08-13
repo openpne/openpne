@@ -49,7 +49,7 @@ class ClassicFeatureSuppressionTest extends TestCase
         $member = Member::factory()->create();
         $group = $this->groupWithMember($member);
 
-        $this->setSnsSetting(Feature::CommunityEvent->settingKey(), false);
+        $this->setSnsSetting(Feature::GroupEvent->settingKey(), false);
 
         $this->actingAs($member)->get(route('group.show', $group))
             ->assertOk()

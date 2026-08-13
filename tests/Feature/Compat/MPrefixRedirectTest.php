@@ -71,11 +71,11 @@ class MPrefixRedirectTest extends TestCase
             '/m/community/9/topic/new' => '/groups/9/topics/new',
             '/m/community/topic/5' => '/topics/5',
             '/m/community/topic/5/edit' => '/topics/5/edit',
-            '/m/community/9/event' => '/communityEvent/listCommunity/9',
-            '/m/community/9/event/new' => '/communityEvent/new/9',
-            '/m/community/event/5' => '/communityEvent/5',
-            '/m/community/event/5/edit' => '/communityEvent/edit/5',
-            '/m/community/event/5/members' => '/communityEvent/5/memberList',
+            '/m/community/9/event' => '/groups/9/events',
+            '/m/community/9/event/new' => '/groups/9/events/new',
+            '/m/community/event/5' => '/events/5',
+            '/m/community/event/5/edit' => '/events/5/edit',
+            '/m/community/event/5/members' => '/events/5/members',
         ];
 
         foreach ($cases as $from => $to) {

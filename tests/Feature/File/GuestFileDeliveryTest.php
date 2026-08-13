@@ -3,13 +3,13 @@
 namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
-use App\Models\CommunityEvent;
-use App\Models\CommunityEventComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
@@ -106,8 +106,8 @@ class GuestFileDeliveryTest extends TestCase
             'community', 'group' => Group::factory()->create(),
             'communityTopic' => GroupTopic::factory()->create(),
             'communityTopicComment' => GroupTopicComment::factory()->create(),
-            'communityEvent' => CommunityEvent::factory()->create(),
-            'communityEventComment' => CommunityEventComment::factory()->create(),
+            'communityEvent' => GroupEvent::factory()->create(),
+            'communityEventComment' => GroupEventComment::factory()->create(),
             'directMessage' => DirectMessage::factory()->create(),
         };
 

@@ -10,13 +10,13 @@ use App\Features\GroupTopic\TopicReadAccess;
 use App\Filament\Resources\Groups\Pages\EditGroup;
 use App\Filament\Resources\Groups\Pages\ListGroups;
 use App\Models\AdminUser;
-use App\Models\CommunityEvent;
-use App\Models\CommunityEventComment;
-use App\Models\CommunityEventCommentImage;
-use App\Models\CommunityEventImage;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupCategory;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
+use App\Models\GroupEventCommentImage;
+use App\Models\GroupEventImage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\GroupTopicCommentImage;
@@ -94,10 +94,10 @@ class GroupResourceTest extends TestCase
         $topicComment = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey()]);
         $topicCommentImage = GroupTopicCommentImage::factory()->create(['post_id' => $topicComment->getKey()]);
 
-        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
-        $eventImage = CommunityEventImage::factory()->create(['post_id' => $event->getKey()]);
-        $eventComment = CommunityEventComment::factory()->create(['community_event_id' => $event->getKey()]);
-        $eventCommentImage = CommunityEventCommentImage::factory()->create(['post_id' => $eventComment->getKey()]);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey()]);
+        $eventImage = GroupEventImage::factory()->create(['post_id' => $event->getKey()]);
+        $eventComment = GroupEventComment::factory()->create(['group_event_id' => $event->getKey()]);
+        $eventCommentImage = GroupEventCommentImage::factory()->create(['post_id' => $eventComment->getKey()]);
 
         $files = [
             File::findOrFail($topicImage->file_id),

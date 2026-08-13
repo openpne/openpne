@@ -97,7 +97,7 @@ class FeatureSettingsTest extends TestCase
         // The topic/event rows stay '1'; the dependency resolves in the registry, not in storage.
         $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_topic_enabled', 'value' => '1']);
         $this->assertFalse(Feature::GroupTopic->enabled());
-        $this->assertFalse(Feature::CommunityEvent->enabled());
+        $this->assertFalse(Feature::GroupEvent->enabled());
     }
 
     public function test_nested_toggles_read_as_disabled_while_their_container_is_off(): void
@@ -106,7 +106,7 @@ class FeatureSettingsTest extends TestCase
 
         Livewire::test(FeatureSettings::class)
             ->assertFormFieldIsDisabled('feature_group_topic_enabled')
-            ->assertFormFieldIsDisabled('feature_community_event_enabled')
+            ->assertFormFieldIsDisabled('feature_group_event_enabled')
             ->assertFormFieldIsEnabled('feature_diary_enabled');
     }
 
@@ -117,7 +117,7 @@ class FeatureSettingsTest extends TestCase
             ->assertFormFieldIsEnabled('feature_group_topic_enabled')
             ->fillForm(['feature_group_enabled' => false])
             ->assertFormFieldIsDisabled('feature_group_topic_enabled')
-            ->assertFormFieldIsDisabled('feature_community_event_enabled')
+            ->assertFormFieldIsDisabled('feature_group_event_enabled')
             ->fillForm(['feature_group_enabled' => true])
             ->assertFormFieldIsEnabled('feature_group_topic_enabled');
     }
@@ -137,7 +137,7 @@ class FeatureSettingsTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_topic_enabled', 'value' => '0']);
-        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_community_event_enabled', 'value' => '1']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_event_enabled', 'value' => '1']);
     }
 
     public function test_members_and_guests_cannot_reach_the_page(): void

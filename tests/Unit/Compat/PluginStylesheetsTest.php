@@ -83,8 +83,8 @@ class PluginStylesheetsTest extends TestCase
         $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('group.topics.show'));
         $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('group.topics.index'));
         $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('group.topics.comment.delete.show'));
-        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('communityEvent.show'));
-        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('communityEvent.comment.delete.show'));
+        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('group.events.show'));
+        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('group.events.comment.delete.show'));
 
         // opMessagePlugin message/config/view.yml
         $this->assertSame('opMessagePlugin/css/message.css', PluginStylesheets::forRoute('message.receive'));

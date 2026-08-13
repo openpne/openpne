@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
-use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\Member;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\EmojiMap;
@@ -51,9 +51,9 @@ class EmojiTransformTest extends TestCase
         $member = Member::factory()->create(['name' => 'ken[i:1]']);
         $diary = Diary::factory()->create(['title' => 't[i:1]', 'body' => 'b[i:98]']);
         $message = DirectMessage::factory()->create(['subject' => null, 'body' => 'hi[i:136]']);
-        $event = CommunityEvent::factory()->create(['open_date_comment' => '[i:1]13:00', 'area' => 'Tokyo[i:98]']);
+        $event = GroupEvent::factory()->create(['open_date_comment' => '[i:1]13:00', 'area' => 'Tokyo[i:98]']);
 
-        $this->runTransform(['members', 'diaries', 'direct_messages', 'community_events']);
+        $this->runTransform(['members', 'diaries', 'direct_messages', 'group_events']);
 
         $this->assertSame('ken'.EmojiMap::convert('[i:1]'), $member->fresh()->name);
         $this->assertSame('t'.EmojiMap::convert('[i:1]'), $diary->fresh()->title);
@@ -64,7 +64,7 @@ class EmojiTransformTest extends TestCase
         $this->assertSame(EmojiMap::convert('[i:1]').'13:00', $event->fresh()->open_date_comment);
         $this->assertSame('Tokyo'.EmojiMap::convert('[i:98]'), $event->fresh()->area);
 
-        foreach (['emoji_members', 'emoji_diaries', 'emoji_direct_messages', 'emoji_community_events'] as $key) {
+        foreach (['emoji_members', 'emoji_diaries', 'emoji_direct_messages', 'emoji_group_events'] as $key) {
             $this->assertDatabaseHas('openpne4_upgrade_state', ['step_key' => $key, 'status' => UpgradeState::STATUS_COMPLETED]);
         }
     }

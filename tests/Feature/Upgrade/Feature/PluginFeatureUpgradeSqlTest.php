@@ -6,7 +6,7 @@ use App\Services\SnsSettingService;
 use App\Support\Feature;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
-use App\Upgrade\Steps\CommunityEventPluginFeatureUpgrade;
+use App\Upgrade\Steps\GroupEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\MigratesUpgradeTargetsOnce;
@@ -84,7 +84,7 @@ class PluginFeatureUpgradeSqlTest extends TestCase
         $this->runUpgrade();
 
         $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_topic_enabled', 'value' => '0']);
-        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_community_event_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_event_enabled', 'value' => '0']);
         // The container itself was not switchable in OpenPNE 3, so it keeps no row (= enabled).
         $this->assertDatabaseMissing('sns_settings', ['key' => 'feature_group_enabled']);
     }
@@ -107,7 +107,7 @@ class PluginFeatureUpgradeSqlTest extends TestCase
         app(SnsSettingService::class)->clearCache();
 
         $this->assertFalse(Feature::GroupTopic->enabled());
-        $this->assertFalse(Feature::CommunityEvent->enabled());
+        $this->assertFalse(Feature::GroupEvent->enabled());
         $this->assertTrue(Feature::Group->enabled());
         $this->assertTrue(Feature::Diary->enabled());
     }
@@ -117,7 +117,7 @@ class PluginFeatureUpgradeSqlTest extends TestCase
         $compiler = new InsertSelectCompiler;
 
         DB::statement($compiler->compile(new PluginFeatureUpgrade));
-        DB::statement($compiler->compile(new CommunityEventPluginFeatureUpgrade));
+        DB::statement($compiler->compile(new GroupEventPluginFeatureUpgrade));
     }
 
     private function seedPlugin(string $name, int $isEnabled): void

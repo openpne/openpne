@@ -110,15 +110,19 @@ class GadgetUpgradeSqlTest extends TestCase
         $this->seedGadget(3, 'top', 'somePluginBox');
         $this->seedGadget(4, 'contents', 'recentCommunityTopicComment');
         $this->seedGadget(5, 'contents', 'recentCommunityTopicCommentSns');
+        $this->seedGadget(6, 'contents', 'recentCommunityEventComment');
+        $this->seedGadget(7, 'contents', 'recentCommunityEventCommentSns');
 
         $this->runUpgrade();
 
-        $names = DB::table('gadgets')->whereIn('id', [1, 2, 3, 4, 5])->pluck('name', 'id');
+        $names = DB::table('gadgets')->whereIn('id', [1, 2, 3, 4, 5, 6, 7])->pluck('name', 'id');
         $this->assertSame('groupJoinListBox', $names[1]);
         $this->assertSame('communityJoinListBoxWide', $names[2]);
         $this->assertSame('somePluginBox', $names[3]);
         $this->assertSame('recentGroupTopicComment', $names[4]);
         $this->assertSame('recentGroupTopicCommentSns', $names[5]);
+        $this->assertSame('recentGroupEventComment', $names[6]);
+        $this->assertSame('recentGroupEventCommentSns', $names[7]);
     }
 
     private function runUpgrade(): void

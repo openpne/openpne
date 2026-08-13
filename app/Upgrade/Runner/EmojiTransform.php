@@ -44,8 +44,8 @@ final class EmojiTransform
         'groups' => ['name', 'description'],
         'group_topics' => ['name', 'body'],
         'group_topic_comments' => ['body'],
-        'community_events' => ['name', 'body', 'open_date_comment', 'area'],
-        'community_event_comments' => ['body'],
+        'group_events' => ['name', 'body', 'open_date_comment', 'area'],
+        'group_event_comments' => ['body'],
         'direct_messages' => ['subject', 'body'],
     ];
 

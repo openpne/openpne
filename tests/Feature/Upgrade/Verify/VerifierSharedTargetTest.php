@@ -6,8 +6,8 @@ use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
-use App\Upgrade\Steps\CommunityEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\FriendFeatureUpgrade;
+use App\Upgrade\Steps\GroupEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
 use App\Upgrade\Steps\SnsSettingUpgrade;
 use App\Upgrade\UpgradeStep;
@@ -65,7 +65,7 @@ class VerifierSharedTargetTest extends TestCase
         $this->assertFalse($report->failed(), $out);
         $this->assertStringContainsString('PASS SnsSettingUpgrade', $out);
         $this->assertStringContainsString('PASS PluginFeatureUpgrade', $out);
-        $this->assertStringContainsString('PASS CommunityEventPluginFeatureUpgrade', $out);
+        $this->assertStringContainsString('PASS GroupEventPluginFeatureUpgrade', $out);
         $this->assertStringContainsString('PASS FriendFeatureUpgrade', $out);
         $this->assertDatabaseHas('sns_settings', ['key' => 'surface_mode', 'value' => 'classic_default']);
     }
@@ -108,7 +108,7 @@ class VerifierSharedTargetTest extends TestCase
     /** @return list<UpgradeStep> */
     private function settingSteps(): array
     {
-        return [new SnsSettingUpgrade, new PluginFeatureUpgrade, new CommunityEventPluginFeatureUpgrade, new FriendFeatureUpgrade];
+        return [new SnsSettingUpgrade, new PluginFeatureUpgrade, new GroupEventPluginFeatureUpgrade, new FriendFeatureUpgrade];
     }
 
     private function seedSource(): void

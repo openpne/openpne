@@ -71,10 +71,10 @@ class UpgradeMatrixCommandTest extends TestCase
         // The event board, comment, RSVP-pivot and image-join steps must all appear (no silent drop).
         $this->artisan('openpne:upgrade-matrix')
             ->assertSuccessful()
-            ->expectsOutputToContain('`community_event` → `community_events`')
-            ->expectsOutputToContain('`community_event_comment` → `community_event_comments`')
-            ->expectsOutputToContain('`community_event_member` → `community_event_members`')
-            ->expectsOutputToContain('`community_event_image` → `community_event_images`')
-            ->expectsOutputToContain('`community_event_comment_image` → `community_event_comment_images`');
+            ->expectsOutputToContain('`community_event` → `group_events`')
+            ->expectsOutputToContain('`community_event_comment` → `group_event_comments`')
+            ->expectsOutputToContain('`community_event_member` → `group_event_members`')
+            ->expectsOutputToContain('`community_event_image` → `group_event_images`')
+            ->expectsOutputToContain('`community_event_comment_image` → `group_event_comment_images`');
     }
 }

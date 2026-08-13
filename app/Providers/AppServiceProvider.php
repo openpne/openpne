@@ -11,13 +11,13 @@ use App\Features\Notifications\NotificationCenterWindow;
 use App\Http\Middleware\StartSession;
 use App\Http\Middleware\UseAdminSessionStore;
 use App\Models\BannerImage;
-use App\Models\CommunityEvent;
-use App\Models\CommunityEventComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
@@ -146,9 +146,10 @@ class AppServiceProvider extends ServiceProvider
         // FilePolicy resolves the owning entity through this map.
         //
         // A class may carry more than one alias: the FIRST key mapping to it is what getMorphClass()
-        // writes, later ones stay readable. `message`, `community` and `communityTopic*` are kept
-        // behind `directMessage`, `group` and `groupTopic*` on that basis, so rows written before
-        // those renames still resolve. MorphAliasTest pins both directions.
+        // writes, later ones stay readable. `message`, `community`, `communityTopic*` and
+        // `communityEvent*` are kept behind `directMessage`, `group`, `groupTopic*` and
+        // `groupEvent*` on that basis, so rows written before those renames still resolve.
+        // MorphAliasTest pins both directions.
         Relation::morphMap([
             'member' => Member::class,
             'diary' => Diary::class,
@@ -159,8 +160,10 @@ class AppServiceProvider extends ServiceProvider
             'groupTopicComment' => GroupTopicComment::class,
             'communityTopic' => GroupTopic::class,
             'communityTopicComment' => GroupTopicComment::class,
-            'communityEvent' => CommunityEvent::class,
-            'communityEventComment' => CommunityEventComment::class,
+            'groupEvent' => GroupEvent::class,
+            'groupEventComment' => GroupEventComment::class,
+            'communityEvent' => GroupEvent::class,
+            'communityEventComment' => GroupEventComment::class,
             'bannerImage' => BannerImage::class,
             'directMessage' => DirectMessage::class,
             'message' => DirectMessage::class,

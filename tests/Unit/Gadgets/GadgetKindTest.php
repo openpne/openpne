@@ -35,9 +35,9 @@ class GadgetKindTest extends TestCase
             'diaryMemberList' => ['diaryMemberList', null],
             // The community recent lists share OpenPNE 3's homeRecentList_ id (all home-only).
             'recentGroupTopicComment' => ['recentGroupTopicComment', 'homeRecentList_7'],
-            'recentCommunityEventComment' => ['recentCommunityEventComment', 'homeRecentList_7'],
+            'recentGroupEventComment' => ['recentGroupEventComment', 'homeRecentList_7'],
             'recentGroupTopicCommentSns' => ['recentGroupTopicCommentSns', 'homeRecentList_7'],
-            'recentCommunityEventCommentSns' => ['recentCommunityEventCommentSns', 'homeRecentList_7'],
+            'recentGroupEventCommentSns' => ['recentGroupEventCommentSns', 'homeRecentList_7'],
             // The timeline gadgets each keep their own OpenPNE 3 wrapper id.
             'timelineAll' => ['timelineAll', 'homeAllTimeline_7'],
             'timelineFriend' => ['timelineFriend', 'homeFriendTimeline_7'],
@@ -84,8 +84,8 @@ class GadgetKindTest extends TestCase
             // The board / calendar lists follow their own unit (and groups through it).
             'recentGroupTopicComment' => Feature::GroupTopic,
             'recentGroupTopicCommentSns' => Feature::GroupTopic,
-            'recentCommunityEventComment' => Feature::CommunityEvent,
-            'recentCommunityEventCommentSns' => Feature::CommunityEvent,
+            'recentGroupEventComment' => Feature::GroupEvent,
+            'recentGroupEventCommentSns' => Feature::GroupEvent,
             'groupJoinListBox' => Feature::Group,
             'friendListBox' => Feature::Friend,
             // birthdayBox lists birthdays, not friendships, so friends being off does not silence it.

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\LinkCard;
 
-use App\Features\CommunityEvent\Actions\CreateEvent;
-use App\Features\CommunityEvent\Actions\UpdateEvent;
-use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Actions\UpdateDiary;
 use App\Features\Diary\Data\DiaryFormData;
+use App\Features\GroupEvent\Actions\CreateEvent;
+use App\Features\GroupEvent\Actions\UpdateEvent;
+use App\Features\GroupEvent\Data\GroupEventFormData;
 use App\Features\GroupTopic\Actions\CreateTopic;
 use App\Features\GroupTopic\Actions\UpdateTopic;
 use App\Features\GroupTopic\Data\GroupTopicFormData;
@@ -17,9 +17,9 @@ use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Files\ImageEdit;
 use App\Jobs\SyncLinkCard;
-use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\LinkCard;
@@ -237,7 +237,7 @@ class LinkCardWiringTest extends TestCase
     {
         $event = $this->event();
 
-        $this->actingAs($this->member)->get(route('communityEvent.show', $event))->assertOk();
+        $this->actingAs($this->member)->get(route('group.events.show', $event))->assertOk();
 
         Queue::assertPushed(SyncLinkCard::class);
     }
@@ -307,7 +307,7 @@ class LinkCardWiringTest extends TestCase
         );
     }
 
-    private function createEvent(): CommunityEvent
+    private function createEvent(): GroupEvent
     {
         return $this->app->make(CreateEvent::class)(
             $this->member,
@@ -344,7 +344,7 @@ class LinkCardWiringTest extends TestCase
         );
     }
 
-    private function editEventBody(CommunityEvent $event): void
+    private function editEventBody(GroupEvent $event): void
     {
         $this->app->make(UpdateEvent::class)(
             $this->member,
@@ -354,9 +354,9 @@ class LinkCardWiringTest extends TestCase
         );
     }
 
-    private function eventForm(string $body = 'See https://example.com/a'): CommunityEventFormData
+    private function eventForm(string $body = 'See https://example.com/a'): GroupEventFormData
     {
-        return new CommunityEventFormData(
+        return new GroupEventFormData(
             name: 'E',
             body: $body,
             open_date: '2027-01-01',
@@ -386,11 +386,11 @@ class LinkCardWiringTest extends TestCase
         ]);
     }
 
-    private function event(): CommunityEvent
+    private function event(): GroupEvent
     {
         $group = $this->joinedGroup();
 
-        return CommunityEvent::factory()->for($group, 'community')->for($this->member, 'member')->create([
+        return GroupEvent::factory()->for($group)->for($this->member, 'member')->create([
             'body' => 'See https://example.com/a',
             'link_card_synced_at' => null,
         ]);
