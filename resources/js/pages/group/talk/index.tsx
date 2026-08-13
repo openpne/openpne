@@ -15,7 +15,6 @@ interface TalkProps extends PageProps {
     group: CommunitySummary;
     page: TalkPage;
     canPost: boolean;
-    bodyMaxLength: number;
 }
 
 /** How close to the foot still counts as reading the newest message. */
@@ -27,9 +26,10 @@ const messageElement = (id: number): Element | null => document.querySelector(`[
 export default function GroupTalkIndex() {
     const t = useT();
     const confirm = useConfirm();
-    const { group, page, canPost, bodyMaxLength } = usePage<TalkProps>().props;
+    const { group, page, canPost } = usePage<TalkProps>().props;
     const stream = useTalkStream(group.id, page);
     const messages = stream.messages;
+    const streamSend = stream.send;
 
     // Whether the reader is at the newest message. A conversation that scrolls itself while someone
     // is reading back through it has taken the page away from them.
@@ -79,6 +79,13 @@ export default function GroupTalkIndex() {
         void stream.loadOlder();
     };
 
+    // Your own send always lands you on your own words. The pinned gate protects someone reading
+    // back through history from being yanked by *others'* arrivals; writing is the opposite intent.
+    const send = async (body: string) => {
+        await streamSend(body);
+        pinned.current = true;
+    };
+
     const remove = async (id: number) => {
         if (await confirm({ title: t('Delete this message?'), confirmLabel: t('Delete'), danger: true })) {
             void stream.remove(id);
@@ -110,7 +117,7 @@ export default function GroupTalkIndex() {
             </Panel>
 
             {canPost ? (
-                <TalkComposer maxLength={bodyMaxLength} onSend={stream.send} />
+                <TalkComposer onSend={send} />
             ) : (
                 <p className="text-sm text-muted-foreground">{t('Join this %community% to post.')}</p>
             )}

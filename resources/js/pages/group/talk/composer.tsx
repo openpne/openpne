@@ -12,7 +12,7 @@ import { SendFailed } from './use-talk-stream';
  * The draft survives a refusal — the box is not cleared until the message is actually written, so a
  * rate limit or a lost connection never eats what someone typed.
  */
-export function TalkComposer({ maxLength, onSend }: { maxLength: number; onSend: (body: string) => Promise<void> }) {
+export function TalkComposer({ onSend }: { onSend: (body: string) => Promise<void> }) {
     const t = useT();
     const [body, setBody] = useState('');
     const [sending, setSending] = useState(false);
@@ -47,11 +47,13 @@ export function TalkComposer({ maxLength, onSend }: { maxLength: number; onSend:
                 </p>
             )}
             <div className="flex items-end gap-2">
+                {/* No HTML maxlength: it counts UTF-16 units while the server's cap counts code
+                    points, so it would cut astral-heavy text off early (the timeline textarea pins
+                    the same rule). The server's 422 reaches the reader through `error` above. */}
                 <Textarea
                     aria-label={t('Message')}
                     placeholder={t('Write a message')}
                     rows={2}
-                    maxLength={maxLength}
                     value={body}
                     onChange={(event) => setBody(event.target.value)}
                     className="min-h-0 flex-1 resize-none"

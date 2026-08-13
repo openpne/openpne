@@ -38,7 +38,6 @@ class GroupTalkController extends Controller
             'group' => GroupSerializer::summary($group),
             'page' => GroupMessageSerializer::page($query->latest($group), $permissions),
             'canPost' => $permissions->canPost,
-            'bodyMaxLength' => StoreGroupMessageRequest::MAX_BODY,
         ]);
     }
 
