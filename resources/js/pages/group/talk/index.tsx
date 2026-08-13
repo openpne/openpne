@@ -46,6 +46,10 @@ export default function GroupTalkIndex() {
     const pinned = useRef(true);
     // The message "load older" was standing on, and where it sat in the viewport.
     const anchor = useRef<{ id: number; top: number } | null>(null);
+    // The newest message the pin last answered. The pin follows new content, not new array
+    // identity: merges rebuild the list for reasons that move nothing (a re-read row), and a
+    // scrollTo re-issued then shoves the sticky composer around under iOS's keyboard pan.
+    const tail = useRef<number | undefined>(undefined);
 
     useEffect(() => {
         const onScroll = () => {
@@ -66,6 +70,10 @@ export default function GroupTalkIndex() {
     }, []);
 
     useLayoutEffect(() => {
+        const newest = messages[messages.length - 1]?.id;
+        const arrived = newest !== tail.current;
+        tail.current = newest;
+
         const held = anchor.current;
         if (held !== null) {
             anchor.current = null;
@@ -79,7 +87,7 @@ export default function GroupTalkIndex() {
             }
         }
 
-        if (pinned.current) {
+        if (arrived && pinned.current) {
             window.scrollTo({ top: document.documentElement.scrollHeight });
         }
     }, [messages]);
