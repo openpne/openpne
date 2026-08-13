@@ -1,8 +1,8 @@
 import { InitialBadge } from '@/components/initial-badge';
 
 /**
- * Square community image. Renders the image when `src` is set, otherwise a neutral initial badge.
- * The rounded-square shape distinguishes a community (place) from the circular member Avatar
+ * Square group image. Renders the image when `src` is set, otherwise a neutral initial badge.
+ * The rounded-square shape distinguishes a group (place) from the circular member Avatar
  * (person).
  */
 type Props = {

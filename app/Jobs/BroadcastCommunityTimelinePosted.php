@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Features\Community\CommunityNewPostFanout;
-use App\Features\Community\Queries\CommunityNewPostRecipients;
+use App\Features\Group\GroupNewPostFanout;
+use App\Features\Group\Queries\GroupNewPostRecipients;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
 use App\Models\TimelinePost;
@@ -37,7 +37,7 @@ class BroadcastCommunityTimelinePosted implements ShouldQueue
         public readonly array $mentionedMemberIds = [],
     ) {}
 
-    public function handle(CommunityNewPostFanout $fanout, CommunityNewPostRecipients $recipients, MailTemplateService $templates): void
+    public function handle(GroupNewPostFanout $fanout, GroupNewPostRecipients $recipients, MailTemplateService $templates): void
     {
         // Saves the audience walk only; the send gate itself is the notification's shouldSend().
         if (! TimelineCommunityPostedNotification::feature()->enabled()) {

@@ -37,9 +37,9 @@ class WriteThrottleRoutesTest extends TestCase
             'message.draft.update' => ['message.draft.update', 'throttle:direct-message-send'],
             'friend.link' => ['friend.link', 'throttle:friend-request'],
             'friend.accept' => ['friend.accept', 'throttle:friend-request'],
-            'community.join' => ['community.join', 'throttle:community-join'],
-            'community.members.approve' => ['community.members.approve', 'throttle:community-join'],
-            'community.members.decline' => ['community.members.decline', 'throttle:community-join'],
+            'group.join' => ['group.join', 'throttle:group-join'],
+            'group.members.approve' => ['group.members.approve', 'throttle:group-join'],
+            'group.members.decline' => ['group.members.decline', 'throttle:group-join'],
         ];
     }
 

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Classic;
 
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\Gadget;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -91,32 +91,32 @@ class ClassicGadgetMoreInfoTest extends TestCase
 
     public function test_community_grid_counts_the_whole_list_and_links_to_the_subjects_join_list(): void
     {
-        $member = $this->memberInCommunities(10); // one past the default 3 × 3 grid
-        $this->makeGadget('home', 'communityJoinListBox');
+        $member = $this->memberInGroups(10); // one past the default 3 × 3 grid
+        $this->makeGadget('home', 'groupJoinListBox');
 
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertSee('Show all(10)')
-            ->assertSee('/community/joinList?id='.$member->getKey());
+            ->assertSee('/groups/mine?id='.$member->getKey());
     }
 
     public function test_community_grid_crowns_only_the_communities_the_subject_administers(): void
     {
         $member = Member::factory()->create();
-        $administered = Community::factory()->create(['name' => 'AdministeredCommunity']);
-        CommunityMember::factory()->admin()->create([
-            'community_id' => $administered->getKey(),
+        $administered = Group::factory()->create(['name' => 'AdministeredGroup']);
+        GroupMember::factory()->admin()->create([
+            'group_id' => $administered->getKey(),
             'member_id' => $member->getKey(),
         ]);
-        CommunityMember::factory()->create([
-            'community_id' => Community::factory()->create(['name' => 'JoinedCommunity'])->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => Group::factory()->create(['name' => 'JoinedGroup'])->getKey(),
             'member_id' => $member->getKey(),
         ]);
-        $this->makeGadget('home', 'communityJoinListBox');
+        $this->makeGadget('home', 'groupJoinListBox');
 
         $response = $this->actingAs($member)->get('/')->assertOk();
 
-        $response->assertSee('AdministeredCommunity')->assertSee('JoinedCommunity');
+        $response->assertSee('AdministeredGroup')->assertSee('JoinedGroup');
         $this->assertSame(1, substr_count($response->getContent(), '<p class="crown">'));
     }
 
@@ -124,9 +124,9 @@ class ClassicGadgetMoreInfoTest extends TestCase
     {
         $member = Member::factory()->create();
         $this->makeGadget('home', 'friendListBox');
-        $this->makeGadget('home', 'communityJoinListBox');
+        $this->makeGadget('home', 'groupJoinListBox');
 
-        // The footer must not survive the box it belongs to: no friends, no communities, no links.
+        // The footer must not survive the box it belongs to: no friends, no groups, no links.
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertDontSee('moreInfo', false);
@@ -172,12 +172,12 @@ class ClassicGadgetMoreInfoTest extends TestCase
         return $member;
     }
 
-    private function memberInCommunities(int $count): Member
+    private function memberInGroups(int $count): Member
     {
         $member = Member::factory()->create();
-        foreach (Community::factory()->count($count)->create() as $community) {
-            CommunityMember::factory()->create([
-                'community_id' => $community->getKey(),
+        foreach (Group::factory()->count($count)->create() as $group) {
+            GroupMember::factory()->create([
+                'group_id' => $group->getKey(),
                 'member_id' => $member->getKey(),
             ]);
         }

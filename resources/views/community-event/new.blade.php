@@ -5,7 +5,7 @@
 @section('content')
     {{-- OpenPNE 3 names the create and edit boxes alike (formCommunityEvent). --}}
     <x-classic.parts id="formCommunityEvent" name="form" :title="__('Post a new event')">
-        <form method="POST" action="{{ route('communityEvent.store', $community) }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('communityEvent.store', $group) }}" enctype="multipart/form-data">
             @csrf
             <table>
                 @include('community-event._fields')
@@ -14,7 +14,7 @@
             <div class="operation">
                 <ul class="moreInfo button">
                     <li><input type="submit" class="input_submit" value="{{ __('Post') }}"></li>
-                    <li><a href="{{ route('communityEvent.index', $community) }}">{{ __('Cancel') }}</a></li>
+                    <li><a href="{{ route('communityEvent.index', $group) }}">{{ __('Cancel') }}</a></li>
                 </ul>
             </div>
         </form>

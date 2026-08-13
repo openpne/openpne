@@ -3,7 +3,7 @@ import { computeInitial, pickReadableTextColor } from '@/lib/identity-mark';
 import { cn } from '@/lib/utils';
 
 /**
- * Fallback shown when a member or community has no image: the name's initial on a muted ground, or
+ * Fallback shown when a member or group has no image: the name's initial on a muted ground, or
  * on the member's chosen `color` (a hex from the server). The default stays achromatic so the badge
  * never reads as a color the user didn't pick; a chosen color is deliberate self-expression and
  * renders as a solid fill. The initial keeps entities apart in dense grids. Callers own size,

@@ -27,12 +27,37 @@ use App\Upgrade\UpgradeStep;
  * A value that matches nothing (an unported plugin's route, a custom action) is kept verbatim;
  * the renderer then treats it as unresolved and hides it. Only the five PC navigation types are
  * copied (see filter()); mobile/smartphone/backend rows are out of the Classic scope.
+ *
+ * The source type `community` lands as `group` (SOURCE_TYPES / typeExpr): the OpenPNE 3 word is
+ * what the filter and the type-aware uri CASE read, the OpenPNE 4 word is what is stored. A route
+ * whose OpenPNE 4 canonical moved with that rename is carried across by RENAMED_URLS, so an
+ * upgraded nav row links to the canonical instead of permanently through a compatibility redirect.
  */
 class NavigationUpgrade extends UpgradeStep
 {
     protected string $source = 'navigation';
 
     protected string $target = 'navigations';
+
+    /** OpenPNE 4 navigation type => the OpenPNE 3 `navigation.type` it is copied from. */
+    private const SOURCE_TYPES = ['group' => 'community'];
+
+    /**
+     * Inventory URLs whose OpenPNE 4 canonical moved. The normalization otherwise emits the
+     * OpenPNE 3 URL, which is now only a redirect. `:id` marks where the renderer threads the
+     * context id in — OpenPNE 3 spelled some of these as a bare path plus `?id=`.
+     */
+    private const RENAMED_URLS = [
+        '/community/:id' => '/groups/:id',
+        '/community/search' => '/groups',
+        '/community/joinList' => '/groups/mine',
+        '/community/edit' => '/groups/edit',
+        '/community/join' => '/groups/:id/join',
+        '/community/quit' => '/groups/:id/quit',
+        '/community/delete/:id' => '/groups/:id/delete',
+        '/community/member/list' => '/groups/:id/members',
+        '/community/member/manage/:id' => '/groups/:id/members/manage',
+    ];
 
     private readonly Openpne3Routes $routes;
 
@@ -49,7 +74,7 @@ class NavigationUpgrade extends UpgradeStep
     {
         return [
             'id' => Column::source('id'),
-            'type' => Column::source('type'),
+            'type' => Column::expr($this->typeExpr(), uses: ['type']),
             'uri' => Column::expr($this->uriExpr(), uses: ['uri', 'type']),
             'source_uri' => Column::source('uri'),
             'sort_order' => Column::source('sort_order'),
@@ -71,13 +96,30 @@ class NavigationUpgrade extends UpgradeStep
     public function gaps(): array
     {
         return [
-            'type (mobile_* / smartphone_* / backend_side rows)' => 'Out of scope: only the five PC navigation contexts ('.implode(', ', Navigation::TYPES).') are ported. The filter excludes the mobile, smartphone, and backend navigation types.',
+            'type (mobile_* / smartphone_* / backend_side rows)' => 'Out of scope: only the five PC navigation contexts ('.implode(', ', self::sourceTypes()).') are ported. The filter excludes the mobile, smartphone, and backend navigation types.',
         ];
     }
 
     private function typeList(): string
     {
-        return implode(', ', array_map(static fn (string $t): string => "'{$t}'", Navigation::TYPES));
+        return implode(', ', array_map(static fn (string $t): string => "'{$t}'", self::sourceTypes()));
+    }
+
+    /** The OpenPNE 3 `navigation.type` values this step copies, in Navigation::TYPES order. */
+    private static function sourceTypes(): array
+    {
+        return array_map(static fn (string $t): string => self::SOURCE_TYPES[$t] ?? $t, Navigation::TYPES);
+    }
+
+    /** The source type mapped onto the OpenPNE 4 vocabulary; an unrenamed type passes through. */
+    private function typeExpr(): string
+    {
+        $whens = [];
+        foreach (self::SOURCE_TYPES as $target => $source) {
+            $whens[] = sprintf("WHEN '%s' THEN '%s'", $source, $target);
+        }
+
+        return 'CASE `type` '.implode(' ', $whens).' ELSE `type` END';
     }
 
     /** The normalization CASE over the source `uri`/`type`. */
@@ -112,7 +154,7 @@ class NavigationUpgrade extends UpgradeStep
                 if ($url === null || ! $this->routes->isUrlCompatible($module, $name) || ! $this->isStaticUrl($url)) {
                     continue;
                 }
-                $map['@'.$name] = $url;
+                $map['@'.$name] = self::RENAMED_URLS[$url] ?? $url;
             }
         }
 
@@ -137,7 +179,7 @@ class NavigationUpgrade extends UpgradeStep
             }
             $url = str_starts_with($name, '/') ? $name : $this->routes->urlByName($name);
             if ($url !== null) {
-                $map[$pair] = $url;
+                $map[$pair] = self::RENAMED_URLS[$url] ?? $url;
             }
         }
 

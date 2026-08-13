@@ -7,7 +7,7 @@ import { TimelinePostCard } from './post-card';
 import type { PaginatedTimelinePosts } from './types';
 
 interface CommunityProps extends PageProps {
-    community: { id: number; name: string };
+    group: { id: number; name: string };
     viewerId: number;
     canPost: boolean;
     posts: PaginatedTimelinePosts;
@@ -16,8 +16,8 @@ interface CommunityProps extends PageProps {
 export default function TimelineCommunity() {
     const t = useT();
     // canPost is read by the chrome, which carries the compose action for every page that has one.
-    const { community, viewerId, posts } = usePage<CommunityProps>().props;
-    const title = t(':community %activity%', { community: community.name });
+    const { group, viewerId, posts } = usePage<CommunityProps>().props;
+    const title = t(':community %activity%', { group: group.name });
 
     return (
         <>

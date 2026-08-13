@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Member\Actions;
 
-use App\Features\Community\Actions\AcceptAdminTransfer;
-use App\Features\Community\Actions\JoinCommunity;
-use App\Features\Community\Actions\RequestAdminTransfer;
-use App\Features\Community\CommunityRole;
+use App\Features\Group\Actions\AcceptAdminTransfer;
+use App\Features\Group\Actions\JoinGroup;
+use App\Features\Group\Actions\RequestAdminTransfer;
+use App\Features\Group\GroupRole;
 use App\Features\Member\Actions\WithdrawMember;
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DiaryImage;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\File;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
@@ -45,7 +45,7 @@ class WithdrawMemberTest extends TestCase
     {
         $member = Member::factory()->create();
         $diary = Diary::factory()->create(['member_id' => $member->getKey()]);
-        $membership = CommunityMember::factory()->create(['member_id' => $member->getKey()]);
+        $membership = GroupMember::factory()->create(['member_id' => $member->getKey()]);
 
         $this->captureSecurityLog();
         $this->withdraw($member);
@@ -102,103 +102,103 @@ class WithdrawMemberTest extends TestCase
     public function test_sole_admin_community_with_other_members_hands_over_to_oldest(): void
     {
         $admin = Member::factory()->create();
-        $community = Community::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        $group = Group::factory()->create();
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $admin->getKey(),
-            'role' => CommunityRole::Admin,
+            'role' => GroupRole::Admin,
         ]);
         // Two ordinary members; the oldest membership row should be promoted.
-        $oldest = CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
-            'role' => CommunityRole::Member,
+        $oldest = GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
+            'role' => GroupRole::Member,
         ]);
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
-            'role' => CommunityRole::Member,
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
+            'role' => GroupRole::Member,
         ]);
 
         $this->withdraw($admin);
 
-        $this->assertModelExists($community);
+        $this->assertModelExists($group);
         $oldest->refresh();
-        $this->assertSame(CommunityRole::Admin, $oldest->role);
+        $this->assertSame(GroupRole::Admin, $oldest->role);
     }
 
     public function test_sub_admin_is_not_treated_as_admin_and_is_promoted(): void
     {
         $admin = Member::factory()->create();
-        $community = Community::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        $group = Group::factory()->create();
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $admin->getKey(),
-            'role' => CommunityRole::Admin,
+            'role' => GroupRole::Admin,
         ]);
         // A SubAdmin is not an admin: with the sole Admin leaving, it must be promoted, not skipped.
-        $subAdmin = CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
-            'role' => CommunityRole::SubAdmin,
+        $subAdmin = GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
+            'role' => GroupRole::SubAdmin,
         ]);
 
         $this->withdraw($admin);
 
-        $this->assertModelExists($community);
+        $this->assertModelExists($group);
         $subAdmin->refresh();
-        $this->assertSame(CommunityRole::Admin, $subAdmin->role);
+        $this->assertSame(GroupRole::Admin, $subAdmin->role);
     }
 
     public function test_sole_admin_community_with_no_other_members_is_deleted(): void
     {
         $admin = Member::factory()->create();
-        $community = Community::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        $group = Group::factory()->create();
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $admin->getKey(),
-            'role' => CommunityRole::Admin,
+            'role' => GroupRole::Admin,
         ]);
 
         $this->withdraw($admin);
 
-        $this->assertModelMissing($community);
+        $this->assertModelMissing($group);
     }
 
     public function test_community_with_another_admin_is_kept_without_promotion(): void
     {
         $leaving = Member::factory()->create();
-        $community = Community::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        $group = Group::factory()->create();
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $leaving->getKey(),
-            'role' => CommunityRole::Admin,
+            'role' => GroupRole::Admin,
         ]);
-        $other = CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
-            'role' => CommunityRole::Admin,
+        $other = GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
+            'role' => GroupRole::Admin,
         ]);
 
         $this->withdraw($leaving);
 
-        $this->assertModelExists($community);
+        $this->assertModelExists($group);
         $other->refresh();
-        $this->assertSame(CommunityRole::Admin, $other->role); // unchanged
+        $this->assertSame(GroupRole::Admin, $other->role); // unchanged
     }
 
     public function test_withdrawing_a_pending_nominee_clears_pending_and_removes_every_membership(): void
     {
-        // The withdrawing member is a plain member of two communities and the admin-transfer nominee of
+        // The withdrawing member is a plain member of two groups and the admin-transfer nominee of
         // one. All memberships go through the locked leave path (not the FK cascade), and the dangling
         // pending seat is cleared under the same lock.
         $leaving = Member::factory()->create();
 
-        $nominated = Community::factory()->create();
+        $nominated = Group::factory()->create();
         $admin = Member::factory()->create();
-        CommunityMember::factory()->create(['community_id' => $nominated->getKey(), 'member_id' => $admin->getKey(), 'role' => CommunityRole::Admin]);
-        $seatA = CommunityMember::factory()->create(['community_id' => $nominated->getKey(), 'member_id' => $leaving->getKey(), 'role' => CommunityRole::Member]);
+        GroupMember::factory()->create(['group_id' => $nominated->getKey(), 'member_id' => $admin->getKey(), 'role' => GroupRole::Admin]);
+        $seatA = GroupMember::factory()->create(['group_id' => $nominated->getKey(), 'member_id' => $leaving->getKey(), 'role' => GroupRole::Member]);
         $nominated->forceFill(['pending_admin_member_id' => $leaving->getKey()])->save();
 
-        $other = Community::factory()->create();
-        CommunityMember::factory()->create(['community_id' => $other->getKey(), 'role' => CommunityRole::Admin]);
-        $seatB = CommunityMember::factory()->create(['community_id' => $other->getKey(), 'member_id' => $leaving->getKey(), 'role' => CommunityRole::Member]);
+        $other = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $other->getKey(), 'role' => GroupRole::Admin]);
+        $seatB = GroupMember::factory()->create(['group_id' => $other->getKey(), 'member_id' => $leaving->getKey(), 'role' => GroupRole::Member]);
 
         $this->withdraw($leaving);
 
@@ -218,32 +218,32 @@ class WithdrawMemberTest extends TestCase
         $b = Member::factory()->create();
         Diary::factory()->create(['member_id' => $b->getKey()]);
 
-        $community = Community::factory()->create(); // Open by default
+        $group = Group::factory()->create(); // Open by default
         $a = Member::factory()->create();
-        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $a->getKey(), 'role' => CommunityRole::Admin]);
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $a->getKey(), 'role' => GroupRole::Admin]);
 
         $injected = false;
-        Diary::deleted(function () use (&$injected, $a, $b, $community): void {
+        Diary::deleted(function () use (&$injected, $a, $b, $group): void {
             if ($injected) {
                 return;
             }
             $injected = true;
 
-            (new JoinCommunity)($b, $community);
-            (new RequestAdminTransfer)($a, $community, $b);
-            (new AcceptAdminTransfer)($b, $community);
+            (new JoinGroup)($b, $group);
+            (new RequestAdminTransfer)($a, $group, $b);
+            (new AcceptAdminTransfer)($b, $group);
         });
 
         $this->withdraw($b);
 
         $this->assertTrue($injected, 'the mid-withdrawal join/transfer was never exercised');
         $this->assertDatabaseMissing('members', ['id' => $b->getKey()]);
-        $this->assertDatabaseMissing('community_members', ['member_id' => $b->getKey()]);
-        $this->assertNull($community->fresh()->pending_admin_member_id);
+        $this->assertDatabaseMissing('group_members', ['member_id' => $b->getKey()]);
+        $this->assertNull($group->fresh()->pending_admin_member_id);
 
-        $admins = CommunityMember::query()
-            ->where('community_id', $community->getKey())
-            ->where('role', CommunityRole::Admin->value)
+        $admins = GroupMember::query()
+            ->where('group_id', $group->getKey())
+            ->where('role', GroupRole::Admin->value)
             ->pluck('member_id');
         $this->assertSame([$a->getKey()], $admins->all());
     }

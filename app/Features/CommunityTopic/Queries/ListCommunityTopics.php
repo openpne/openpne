@@ -2,8 +2,8 @@
 
 namespace App\Features\CommunityTopic\Queries;
 
-use App\Models\Community;
 use App\Models\CommunityTopic;
+use App\Models\Group;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
@@ -16,9 +16,9 @@ class ListCommunityTopics
     public const PER_PAGE = 20;
 
     /** @return LengthAwarePaginator<int, CommunityTopic> */
-    public function __invoke(Community $community, int $perPage = self::PER_PAGE): LengthAwarePaginator
+    public function __invoke(Group $group, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
-        return $community->topics()
+        return $group->topics()
             ->withCount('comments')
             ->with('member.avatar.file')
             ->orderByDesc('updated_at')

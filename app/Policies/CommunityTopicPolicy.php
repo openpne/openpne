@@ -8,7 +8,7 @@ use App\Models\Member;
 
 /**
  * Topic-level gates (auto-discovered for CommunityTopic), delegating to CommunityTopicAccess. The
- * board-level gates (view a community's board, post a topic) key on Community, so the controller
+ * board-level gates (view a community's board, post a topic) key on Group, so the controller
  * calls CommunityTopicAccess directly for those — as the community adapter does for membership.
  */
 class CommunityTopicPolicy

@@ -13,14 +13,14 @@ import type { TimelinePostEntry } from './timeline/types';
 interface Announcements {
     friendRequests: number;
     unreadMessages: number;
-    communityApprovals: { communityId: number; communityName: string; count: number }[];
+    groupApprovals: { groupId: number; groupName: string; count: number }[];
 }
 
 interface DashboardProps extends PageProps {
     announcements: Announcements;
     diaries: DiarySummary[];
     timeline: TimelinePostEntry[];
-    communityActivity: CommunityActivityEntry[];
+    groupActivity: CommunityActivityEntry[];
     myDiaries: DiarySummary[];
 }
 
@@ -36,9 +36,9 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
     // Each notice links into the unit it belongs to (the server already reports it as nothing).
     const friendRequests = features.friend ? announcements.friendRequests : 0;
     const unreadMessages = features.directMessage ? announcements.unreadMessages : 0;
-    const communityApprovals = features.community ? announcements.communityApprovals : [];
+    const groupApprovals = features.group ? announcements.groupApprovals : [];
 
-    if (friendRequests === 0 && unreadMessages === 0 && communityApprovals.length === 0) {
+    if (friendRequests === 0 && unreadMessages === 0 && groupApprovals.length === 0) {
         return null;
     }
 
@@ -63,11 +63,11 @@ function AnnouncementsPanel({ announcements }: { announcements: Announcements })
                         </span>
                     </ListRow>
                 )}
-                {communityApprovals.map((approval) => (
-                    <ListRow key={approval.communityId} rowLink chevron>
+                {groupApprovals.map((approval) => (
+                    <ListRow key={approval.groupId} rowLink chevron>
                         <span className="min-w-0 flex-1 text-sm text-foreground">
-                            <Link href={`/community/member/pending?id=${approval.communityId}`} className={stretchedLink}>
-                                {t(':count join requests for :community', { count: approval.count, community: approval.communityName })}
+                            <Link href={`/groups/${approval.groupId}/members/pending`} className={stretchedLink}>
+                                {t(':count join requests for :community', { count: approval.count, community: approval.groupName })}
                             </Link>
                         </span>
                     </ListRow>
@@ -113,7 +113,7 @@ function TimelineRow({ post }: { post: TimelinePostEntry }) {
 
 export default function Dashboard() {
     const t = useT();
-    const { auth, announcements, diaries, timeline, communityActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
+    const { auth, announcements, diaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
     const user = auth.user;
 
     if (!user) {
@@ -121,7 +121,7 @@ export default function Dashboard() {
     }
 
     const everythingEmpty =
-        diaries.length === 0 && timeline.length === 0 && communityActivity.length === 0 && myDiaries.length === 0;
+        diaries.length === 0 && timeline.length === 0 && groupActivity.length === 0 && myDiaries.length === 0;
 
     return (
         <>
@@ -142,10 +142,10 @@ export default function Dashboard() {
                                     </Link>
                                 </span>
                             </ListRow>
-                            {enabledFeatures.community && (
+                            {enabledFeatures.group && (
                                 <ListRow rowLink chevron>
                                     <span className="min-w-0 flex-1 text-sm text-foreground">
-                                        <Link href="/community/search" className={stretchedLink}>
+                                        <Link href="/groups" className={stretchedLink}>
                                             {t('Search %communities%')}
                                         </Link>
                                     </span>
@@ -194,9 +194,9 @@ export default function Dashboard() {
                         </DigestSection>
                     )}
 
-                    {enabledFeatures.community && communityActivity.length > 0 && (
-                        <DigestSection title={t('Recent %community% activity')} viewAllHref="/community/recent">
-                            {communityActivity.map((entry) => (
+                    {enabledFeatures.group && groupActivity.length > 0 && (
+                        <DigestSection title={t('Recent %community% activity')} viewAllHref="/groups/recent">
+                            {groupActivity.map((entry) => (
                                 <ActivityRow key={`${entry.kind}-${entry.id}`} entry={entry} />
                             ))}
                         </DigestSection>

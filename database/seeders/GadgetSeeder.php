@@ -27,7 +27,7 @@ class GadgetSeeder extends Seeder
         ['context' => 'home', 'zone' => 'contents', 'name' => 'recentCommunityEventComment', 'sort_order' => 132],
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'memberImageBox', 'sort_order' => 10],
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'friendListBox', 'sort_order' => 20],
-        ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'communityJoinListBox', 'sort_order' => 30],
+        ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'groupJoinListBox', 'sort_order' => 30],
 
         // profile
         ['context' => 'profile', 'zone' => 'top', 'name' => 'birthdayBox', 'sort_order' => 0],
@@ -36,7 +36,7 @@ class GadgetSeeder extends Seeder
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'memberImageBox', 'sort_order' => 10],
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'profileListBox', 'sort_order' => 15],
         ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'friendListBox', 'sort_order' => 20],
-        ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'communityJoinListBox', 'sort_order' => 30],
+        ['context' => 'profile', 'zone' => 'sideMenu', 'name' => 'groupJoinListBox', 'sort_order' => 30],
 
         // login
         ['context' => 'login', 'zone' => 'contents', 'name' => 'loginForm', 'sort_order' => 10],

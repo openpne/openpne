@@ -24,7 +24,7 @@ final class MailUrlMapper
             'member/configComplete' => self::tokenUrl('/member/config/email/confirm/', $token),
             // OpenPNE 3 named-route form (@route?id=N); the id names the model, resolved to the
             // canonical (surface-agnostic) URL so the mailed link works from any client.
-            '@community_home' => route('community.show', ['community' => self::id($params)]),
+            '@community_home' => route('group.show', ['group' => self::id($params)]),
             '@member_profile' => route('member.profile.show', ['member' => self::id($params)]),
             default => throw new UnsupportedMailTemplateSyntaxException(
                 "app_url_for has no OpenPNE 4 mapping for '{$path}'",

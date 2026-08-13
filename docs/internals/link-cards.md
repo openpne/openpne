@@ -232,7 +232,7 @@ went private stays valid for its lifetime.
 The module check is the same rule [`FilePolicy`](../../app/Policies/FilePolicy.php) applies for the
 same reason: bytes fetched by URL have no page to mediate them, so switching a unit off has to stop
 its images too, or they stay readable while every screen around them is gone.
-`Feature::enabled()` resolves ancestors, so a topic's card also stops when communities are off.
+`Feature::enabled()` resolves ancestors, so a topic's card also stops when groups are off.
 
 A timeline reply is not addressable. Replies are never synced, but this does not lean on that: a
 permalink to a reply re-centers to its thread root and is authorised as the root, while

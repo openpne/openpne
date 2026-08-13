@@ -6,20 +6,20 @@
      return token. OpenPNE 3's fixed ids stay as CSS seams; two home gadgets may repeat them, so
      the script scopes by form, never by document id.
 
-     `$community` set posts into that community instead: the audience is the community, so the
+     `$group` set posts into that community instead: the audience is the community, so the
      visibility select has nothing to offer and is not rendered, and the picker asks for the
      community's members. --}}
-@php($community = $community ?? null)
+@php($group = $group ?? null)
 @once
     @push('pluginCss')
         <link rel="stylesheet" href="{{ asset('opTimelinePlugin/css/counter.css') }}">
     @endpush
 @endonce
-<form method="POST" action="{{ $community ? route('community.timeline.store', ['community' => $community]) : route('timeline.store') }}" enctype="multipart/form-data" data-timeline-compose hidden
-      data-timeline-mention data-mention-candidates-url="{{ $community ? route('timeline.mention_candidates', ['community' => $community]) : route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
+<form method="POST" action="{{ $group ? route('group.timeline.store', ['group' => $group]) : route('timeline.store') }}" enctype="multipart/form-data" data-timeline-compose hidden
+      data-timeline-mention data-mention-candidates-url="{{ $group ? route('timeline.mention_candidates', ['community' => $group]) : route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
     @csrf
     @include('timeline._mention-draft')
-    @if (! $community)
+    @if (! $group)
         <input type="hidden" name="return_to" value="{{ $returnTo }}">
     @endif
     <div class="timeline-postform well">
@@ -37,7 +37,7 @@
             <span id="timeline-upload-photo-button" class="btn"><i class="icon-camera"></i></span>
             <span id="photo-remove"><span class="icon-remove"></span></span><span id="photo-file-name"></span>
             <span id="counter"></span>
-            @unless ($community)
+            @unless ($group)
                 <select id="timeline-public-flag" name="visibility">
                     @foreach (\App\Features\Timeline\TimelineVisibility::options() as $option)
                         <option value="{{ $option->value }}" @selected(old('visibility', \App\Support\Visibility::Members->value) == $option->value)>{{ __($option->label()) }}</option>

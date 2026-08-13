@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\CommunityTopic\Modern;
 
-use App\Features\Community\CommunityRole;
-use App\Models\Community;
-use App\Models\CommunityMember;
+use App\Features\Group\GroupRole;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -21,11 +21,11 @@ class CommunityTopicCommentRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -35,8 +35,8 @@ class CommunityTopicCommentRoutesTest extends TestCase
 
     public function test_guests_are_redirected_to_login(): void
     {
-        $community = Community::factory()->create();
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
         $comment = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'number' => 1]);
 
         $this->post(route('communityTopic.comment.store', $topic))
@@ -47,9 +47,9 @@ class CommunityTopicCommentRoutesTest extends TestCase
 
     public function test_modern_comment_store_creates_a_comment_and_redirects_to_show(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $member->getKey()]);
 
         $this->actingAs($member)
             ->post(route('communityTopic.comment.store', $topic), ['body' => 'A modern reply'])
@@ -64,8 +64,8 @@ class CommunityTopicCommentRoutesTest extends TestCase
 
     public function test_modern_comment_store_returns_404_for_a_non_member(): void
     {
-        $community = Community::factory()->create();
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
@@ -76,9 +76,9 @@ class CommunityTopicCommentRoutesTest extends TestCase
 
     public function test_modern_comment_delete_removes_the_comment_and_redirects_to_show(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $member->getKey()]);
         $comment = CommunityTopicComment::factory()->create([
             'community_topic_id' => $topic->getKey(),
             'member_id' => $member->getKey(),
@@ -95,15 +95,15 @@ class CommunityTopicCommentRoutesTest extends TestCase
     public function test_modern_comment_delete_returns_404_for_an_unauthorized_member(): void
     {
         // A community member who is neither the comment's author nor a topic editor cannot delete it.
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $comment = CommunityTopicComment::factory()->create([
             'community_topic_id' => $topic->getKey(),
             'member_id' => $author->getKey(),
             'number' => 1,
         ]);
-        $other = $this->joined($community);
+        $other = $this->joined($group);
 
         $this->actingAs($other)
             ->post(route('communityTopic.comment.delete', $comment))

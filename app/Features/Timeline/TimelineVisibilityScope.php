@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
  * sees only web-public, a blocked viewer sees nothing, otherwise up to the viewer's clearance on
  * the author.
  *
- * Community-scoped posts are dropped whatever the clearance: an author's own timeline is SNS-wide,
+ * Group-scoped posts are dropped whatever the clearance: an author's own timeline is SNS-wide,
  * and a community post is reached only through that community (OpenPNE 3 read the member timeline
  * with `foreign_table IS NULL`). The community's own read gate is a different question, answered by
  * TimelineAccess / CommunityTimelineAccess rather than by the author's clearance.

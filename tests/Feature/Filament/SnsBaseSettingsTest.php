@@ -40,13 +40,13 @@ class SnsBaseSettingsTest extends TestCase
     public function test_changing_a_field_stores_the_value(): void
     {
         Livewire::test(SnsBaseSettings::class)
-            ->fillForm(['sns_name' => 'My Community'])
+            ->fillForm(['sns_name' => 'My Group'])
             ->call('save')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('sns_settings', [
             'key' => 'sns_name',
-            'value' => 'My Community',
+            'value' => 'My Group',
         ]);
     }
 
@@ -83,10 +83,10 @@ class SnsBaseSettingsTest extends TestCase
     public function test_form_reflects_persisted_override_after_save(): void
     {
         Livewire::test(SnsBaseSettings::class)
-            ->fillForm(['sns_name' => 'My Community'])
+            ->fillForm(['sns_name' => 'My Group'])
             ->call('save')
             ->assertHasNoErrors()
-            ->assertSet('data.sns_name', 'My Community');
+            ->assertSet('data.sns_name', 'My Group');
     }
 
     public function test_page_only_exposes_the_base_settings_group(): void

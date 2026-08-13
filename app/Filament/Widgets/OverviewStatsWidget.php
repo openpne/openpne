@@ -2,13 +2,13 @@
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Resources\Communities\CommunityResource;
 use App\Filament\Resources\Diaries\DiaryResource;
+use App\Filament\Resources\Groups\GroupResource;
 use App\Filament\Resources\Members\MemberResource;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\Group;
 use App\Models\Member;
 use Carbon\CarbonInterface;
 use Filament\Widgets\StatsOverviewWidget;
@@ -52,10 +52,10 @@ class OverviewStatsWidget extends StatsOverviewWidget
                 ->descriptionColor($diariesDelta >= 0 ? 'success' : 'gray')
                 ->url(DiaryResource::getUrl('index')),
 
-            Stat::make(__('%Communities%'), number_format(Community::query()->count()))
-                ->url(CommunityResource::getUrl('index')),
+            Stat::make(__('%Communities%'), number_format(Group::query()->count()))
+                ->url(GroupResource::getUrl('index')),
 
-            Stat::make(__('Active %communities% (last 30 days)'), number_format(self::activeCommunityCount($activeSince)))
+            Stat::make(__('Active %communities% (last 30 days)'), number_format(self::activeGroupCount($activeSince)))
                 ->description(__('%Topics%, events, or comments in the last 30 days'))
                 ->color('success'),
         ];
@@ -73,12 +73,12 @@ class OverviewStatsWidget extends StatsOverviewWidget
     }
 
     /**
-     * Distinct communities with topic/event activity since $since. Keyed on updated_at, not
+     * Distinct groups with topic/event activity since $since. Keyed on updated_at, not
      * created_at: a new comment bumps its parent topic/event updated_at (CreateTopicComment /
      * CreateEventComment), so a fresh comment on an old thread counts as activity too — matching how
      * the board orders threads. Public+static so it's assertable without rendering the widget.
      */
-    public static function activeCommunityCount(CarbonInterface $since): int
+    public static function activeGroupCount(CarbonInterface $since): int
     {
         return CommunityTopic::query()->where('updated_at', '>=', $since)->distinct()->pluck('community_id')
             ->merge(CommunityEvent::query()->where('updated_at', '>=', $since)->distinct()->pluck('community_id'))

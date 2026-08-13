@@ -9,10 +9,10 @@ use App\Filament\Widgets\OverviewStatsWidget;
 use App\Filament\Widgets\RecentMembersWidget;
 use App\Filament\Widgets\RegistrationModeWidget;
 use App\Models\AdminUser;
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
@@ -41,7 +41,7 @@ class DashboardWidgetsTest extends TestCase
     {
         Member::factory()->count(3)->create();
         Diary::factory()->count(2)->create();
-        Community::factory()->create();
+        Group::factory()->create();
 
         Livewire::test(OverviewStatsWidget::class)
             ->assertSuccessful()
@@ -70,28 +70,28 @@ class DashboardWidgetsTest extends TestCase
 
         // A community whose only topic is old, but just received a comment — must count as active
         // (the comment bumps the topic's updated_at).
-        $active = Community::factory()->create();
+        $active = Group::factory()->create();
         $oldTopic = CommunityTopic::factory()->create([
             'community_id' => $active->getKey(),
             'created_at' => now()->subYear(),
             'updated_at' => now()->subYear(),
         ]);
         $commenter = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $active->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $active->getKey(),
             'member_id' => $commenter->getKey(),
         ]);
         app(CreateTopicComment::class)($commenter, $oldTopic, 'A fresh reply on an old thread.');
 
         // A community with only an old, untouched topic — must not count.
-        $stale = Community::factory()->create();
+        $stale = Group::factory()->create();
         CommunityTopic::factory()->create([
             'community_id' => $stale->getKey(),
             'created_at' => now()->subYear(),
             'updated_at' => now()->subYear(),
         ]);
 
-        $this->assertSame(1, OverviewStatsWidget::activeCommunityCount($since));
+        $this->assertSame(1, OverviewStatsWidget::activeGroupCount($since));
     }
 
     public function test_recent_members_shows_latest_capped_at_ten(): void

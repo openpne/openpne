@@ -30,12 +30,12 @@ class MailTemplateServiceTest extends TestCase
 
     public function test_default_render_injects_sns_name_and_appends_signature(): void
     {
-        $this->setSnsName('My Community');
+        $this->setSnsName('My Group');
 
         $rendered = $this->service()->render(MailTemplate::FriendAccepted, 'en', ['member' => ['name' => 'Bob']]);
 
         $this->assertSame('Bob accepted your friend link request', $rendered->subject);
-        $this->assertStringContainsString('My Community', $rendered->body);
+        $this->assertStringContainsString('My Group', $rendered->body);
         $this->assertStringContainsString('Bob accepted your friend link request.', $rendered->body);
         // The appended signature carries the contact line.
         $this->assertStringContainsString('ops@example.test', $rendered->body);
@@ -43,7 +43,7 @@ class MailTemplateServiceTest extends TestCase
 
     public function test_registration_link_default_preserves_op3_wording_and_conditionals(): void
     {
-        $this->setSnsName('My Community');
+        $this->setSnsName('My Group');
 
         $invite = $this->service()->render(MailTemplate::RegistrationLink, 'ja', [
             'name' => 'アリス', 'message' => 'よろしく', 'token' => 'TOK',
@@ -65,18 +65,18 @@ class MailTemplateServiceTest extends TestCase
         // An OpenPNE 3-origin default is kept byte-exact with the extension's sample (subject
         // spacing, the author variable, the no-space ">>") so a fresh install mails what the
         // extension mailed and an imported customised body finds its variables.
-        $this->setSnsName('My Community');
+        $this->setSnsName('My Group');
 
         $rendered = $this->service()->render(MailTemplate::TimelinePostingNotified, 'ja', [
             'member_name' => 'アリス', 'author' => 'アリス', 'body' => '本文', 'url' => 'https://sns.example/timeline/1',
         ]);
-        $this->assertSame('【My Community】 アリスさんのタイムライン投稿', $rendered->subject);
+        $this->assertSame('【My Group】 アリスさんのタイムライン投稿', $rendered->subject);
         $this->assertStringStartsWith("アリス>>\n\n本文\n\nhttps://sns.example/timeline/1", $rendered->body);
     }
 
     public function test_db_override_replaces_the_default_body(): void
     {
-        $this->setSnsName('My Community');
+        $this->setSnsName('My Group');
         $id = DB::table('mail_templates')->insertGetId([
             'key' => MailTemplate::FriendAccepted->value,
             'is_enabled' => true,
@@ -96,7 +96,7 @@ class MailTemplateServiceTest extends TestCase
 
     public function test_override_is_per_locale_with_no_cross_language_fallback(): void
     {
-        $this->setSnsName('My Community');
+        $this->setSnsName('My Group');
         $id = DB::table('mail_templates')->insertGetId([
             'key' => MailTemplate::FriendAccepted->value,
             'is_enabled' => true,
@@ -116,7 +116,7 @@ class MailTemplateServiceTest extends TestCase
 
     public function test_blank_signature_override_appends_no_signature(): void
     {
-        $this->setSnsName('My Community');
+        $this->setSnsName('My Group');
         $id = DB::table('mail_templates')->insertGetId([
             'key' => MailTemplate::Signature->value,
             'is_enabled' => true,
@@ -156,7 +156,7 @@ class MailTemplateServiceTest extends TestCase
 
     public function test_clear_cache_picks_up_a_new_override(): void
     {
-        $this->setSnsName('My Community');
+        $this->setSnsName('My Group');
         $service = $this->service();
         $first = $service->render(MailTemplate::FriendAccepted, 'en', ['member' => ['name' => 'Bob']]);
         $this->assertStringContainsString('accepted your friend link request', $first->body);

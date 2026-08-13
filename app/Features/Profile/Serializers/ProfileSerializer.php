@@ -4,8 +4,8 @@ namespace App\Features\Profile\Serializers;
 
 use App\Features\Diary\Serializers\DiarySerializer;
 use App\Features\Profile\Data\ProfileFieldValue;
-use App\Models\Community;
 use App\Models\Diary;
+use App\Models\Group;
 use App\Models\Member;
 use App\Services\PresetProfileService;
 use Illuminate\Support\Collection;
@@ -51,17 +51,17 @@ class ProfileSerializer
 
     /**
      * The digest shown to an authenticated viewer: viewer-scoped counts plus a preview of the owner's
-     * recent diaries, friends, and joined communities. Grid thumbnails are 320×320 — the profile body
+     * recent diaries, friends, and joined groups. Grid thumbnails are 320×320 — the profile body
      * column is far wider than the shell's right rail, so RightRailSerializer::rail (sized for that
      * rail) is deliberately not reused.
      *
-     * @param  array{diaries: int, activity: int, friends: int, communities: int}  $stats
+     * @param  array{diaries: int, activity: int, friends: int, groups: int}  $stats
      * @param  Collection<int, Diary>  $recentDiaries  images.file eager-loaded by the caller (rich rows)
      * @param  Collection<int, Member>  $friends
-     * @param  Collection<int, Community>  $communities
-     * @return array{stats: array{diaries: int, activity: int, friends: int, communities: int}, recentDiaries: list<array>, friends: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, href: string}>, communities: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, href: string}>}
+     * @param  Collection<int, Group>  $groups
+     * @return array{stats: array{diaries: int, activity: int, friends: int, groups: int}, recentDiaries: list<array>, friends: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, href: string}>, groups: list<array{id: int, name: string, imageUrl: ?string, avatarColor: ?string, href: string}>}
      */
-    public static function digest(array $stats, Collection $recentDiaries, Collection $friends, Collection $communities): array
+    public static function digest(array $stats, Collection $recentDiaries, Collection $friends, Collection $groups): array
     {
         return [
             'stats' => $stats,
@@ -73,13 +73,13 @@ class ProfileSerializer
                 'avatarColor' => $friend->avatar_color?->hex(),
                 'href' => "/member/{$friend->getKey()}",
             ])->all(),
-            'communities' => $communities->map(fn (Community $community): array => [
-                'id' => $community->getKey(),
-                'name' => $community->name,
-                'imageUrl' => $community->image?->thumbnailUrl(320, 320, square: true),
-                // Communities carry no chosen badge color; the shared NineTableItem shape keeps the key.
+            'groups' => $groups->map(fn (Group $group): array => [
+                'id' => $group->getKey(),
+                'name' => $group->name,
+                'imageUrl' => $group->image?->thumbnailUrl(320, 320, square: true),
+                // Groups carry no chosen badge color; the shared NineTableItem shape keeps the key.
                 'avatarColor' => null,
-                'href' => "/community/{$community->getKey()}",
+                'href' => "/groups/{$group->getKey()}",
             ])->all(),
         ];
     }

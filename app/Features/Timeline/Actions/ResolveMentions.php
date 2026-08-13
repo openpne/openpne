@@ -3,7 +3,7 @@
 namespace App\Features\Timeline\Actions;
 
 use App\Features\Block\BlockLookup;
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
 
@@ -20,17 +20,17 @@ class ResolveMentions
 {
     /**
      * @param  list<array{member_id: int, offset: int, length: int}>  $payload
-     * @param  ?Community  $community  the community the post belongs to, if any — mentionability
-     *                                 narrows to its members there
+     * @param  ?Group  $group  the community the post belongs to, if any — mentionability
+     *                         narrows to its members there
      * @return list<array{member_id: int, offset: int, length: int}> ascending by offset, non-overlapping
      */
-    public function __invoke(Member $author, string $body, array $payload, ?Community $community = null): array
+    public function __invoke(Member $author, string $body, array $payload, ?Group $group = null): array
     {
         if ($payload === []) {
             return [];
         }
 
-        $names = $this->mentionableNames($author, array_column($payload, 'member_id'), $community);
+        $names = $this->mentionableNames($author, array_column($payload, 'member_id'), $group);
         $bodyLength = mb_strlen($body);
 
         usort($payload, fn (array $a, array $b): int => $a['offset'] <=> $b['offset']);
@@ -80,7 +80,7 @@ class ResolveMentions
      * @param  list<int>  $ids
      * @return array<int, string>
      */
-    private function mentionableNames(Member $author, array $ids, ?Community $community = null): array
+    private function mentionableNames(Member $author, array $ids, ?Group $group = null): array
     {
         $query = Member::query()
             ->whereIn('id', $ids)
@@ -93,9 +93,9 @@ class ResolveMentions
 
         // Inside a community, only its members are mentionable — the same set MentionCandidates
         // offers, so the picker never shows a name the submit would silently drop.
-        if ($community !== null) {
-            $query->whereIn('members.id', DB::table('community_members')
-                ->where('community_id', $community->getKey())
+        if ($group !== null) {
+            $query->whereIn('members.id', DB::table('group_members')
+                ->where('group_id', $group->getKey())
                 ->select('member_id'));
         }
 

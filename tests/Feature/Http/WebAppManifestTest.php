@@ -16,14 +16,14 @@ class WebAppManifestTest extends TestCase
 
     public function test_the_manifest_declares_a_standalone_app_scoped_to_the_site_root(): void
     {
-        $this->setSnsSetting(SnsSettingKey::SnsName, 'My Community');
+        $this->setSnsSetting(SnsSettingKey::SnsName, 'My Group');
 
         $this->get('/manifest.webmanifest')
             ->assertOk()
             ->assertHeader('Content-Type', 'application/manifest+json')
             ->assertJson([
-                'name' => 'My Community',
-                'short_name' => 'My Community',
+                'name' => 'My Group',
+                'short_name' => 'My Group',
                 'display' => 'standalone',
                 'scope' => '/',
                 'start_url' => '/',

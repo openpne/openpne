@@ -1,0 +1,169 @@
+<?php
+
+namespace App\Upgrade\Steps;
+
+use App\Features\Group\JoinPolicy;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
+use App\Upgrade\Column;
+use App\Upgrade\SourceRef;
+use App\Upgrade\UpgradeStep;
+
+/**
+ * OpenPNE 3 `community` → OpenPNE 4 `groups`.
+ *
+ * `register_policy` and `description` are not community-table columns in OpenPNE 3 — they live in
+ * the `community_config` KV table — so they are pulled in with correlated subqueries (the
+ * member_config → members treatment):
+ *
+ *  - register_policy: community_config[register_policy] ('open' | 'close') → JoinPolicy. The CASE
+ *    reads the runtime enum so it cannot drift; a missing/empty/unknown value falls to Open, which
+ *    is OpenPNE 3's own config default ("open").
+ *  - topic_read_access / topic_post_authority: community_config[public_flag] / [topic_authority]
+ *    → TopicReadAccess / TopicPostAuthority (the topic board's read/post gates), the same
+ *    KV→typed-column flatten, defaulting to the OpenPNE 3 config default ("public").
+ *  - description: community_config[description], or NULL when absent.
+ *  - pending_admin_member_id: the single community_member_position[name=admin_confirm] member (the
+ *    pending target of an admin transfer); NULL when none.
+ *  - group_category_id: from the source community_category_id, nulled when it points at a category that was not migrated — the
+ *    OpenPNE 3 root (lft=1) is dropped by GroupCategoryUpgrade — so the target FK holds.
+ *
+ * The top-image file_id is copied verbatim onto groups.file_id, preserving which file each
+ * group used (FileUpgrade keeps file.id, so the FK resolves, and assigns the file its
+ * `community` owner).
+ *
+ * The subqueries use the latest row per name where the KV table has no uniqueness, so duplicates
+ * resolve deterministically.
+ */
+class GroupUpgrade extends UpgradeStep
+{
+    protected string $source = 'community';
+
+    protected string $target = 'groups';
+
+    public function columns(): array
+    {
+        return [
+            'id' => Column::source('id'),
+            'name' => Column::source('name'),
+            'description' => Column::expr($this->configValueLatest('description'), uses: ['id']),
+            'register_policy' => Column::expr($this->registerPolicyExpr(), uses: ['id']),
+            'is_default' => Column::expr($this->isDefaultExpr(), uses: ['id']),
+            'is_join_notification_enabled' => Column::expr($this->joinNotificationExpr(), uses: ['id']),
+            'topic_read_access' => Column::expr($this->topicReadAccessExpr(), uses: ['id']),
+            'topic_post_authority' => Column::expr($this->topicPostAuthorityExpr(), uses: ['id']),
+            'group_category_id' => Column::expr($this->categoryIdExpr(), uses: ['community_category_id']),
+            'pending_admin_member_id' => Column::expr($this->pendingAdminExpr(), uses: ['id']),
+            'file_id' => Column::source('file_id'),
+            'created_at' => Column::source('created_at'),
+            'updated_at' => Column::source('updated_at'),
+        ];
+    }
+
+    /** The latest `community_config` value for a name (the KV table has no uniqueness), else NULL. */
+    private function configValueLatest(string $name): string
+    {
+        return '(SELECT `value` FROM '.SourceRef::table('community_config')." WHERE `community_id` = `community`.`id` AND `name` = '{$name}' ORDER BY `id` DESC LIMIT 1)";
+    }
+
+    /**
+     * community_config[register_policy] → JoinPolicy. 'close' = approval; 'open'/missing/empty/
+     * unknown = open (OpenPNE 3's config default). Each branch reads the runtime enum so it cannot
+     * drift.
+     */
+    private function registerPolicyExpr(): string
+    {
+        return sprintf(
+            "CASE %s WHEN 'close' THEN %d WHEN 'open' THEN %d ELSE %d END",
+            $this->configValueLatest('register_policy'),
+            JoinPolicy::Approval->value,
+            JoinPolicy::Open->value,
+            JoinPolicy::Open->value,
+        );
+    }
+
+    /**
+     * community_config[is_send_pc_joinCommunity_mail] → groups.is_join_notification_enabled.
+     * OpenPNE 3 treated an absent value as on and only '0' as off (opCommunityAction), so every
+     * other value maps to on.
+     */
+    private function joinNotificationExpr(): string
+    {
+        return sprintf("CASE WHEN %s = '0' THEN 0 ELSE 1 END", $this->configValueLatest('is_send_pc_joinCommunity_mail'));
+    }
+
+    /**
+     * community_config[is_default] → groups.is_default. OpenPNE 3 marks the default community
+     * with the KV value '1' (CommunityTable::getDefaultCommunities queries value = true); only that
+     * maps to true, everything else (missing/empty/other) to false.
+     */
+    private function isDefaultExpr(): string
+    {
+        return sprintf("CASE WHEN %s = '1' THEN 1 ELSE 0 END", $this->configValueLatest('is_default'));
+    }
+
+    /**
+     * community_config[public_flag] → TopicReadAccess. 'auth_commu_member' = members-only;
+     * 'public'/missing/empty/unknown = everyone (OpenPNE 3's config default). Runtime enum so it
+     * cannot drift.
+     */
+    private function topicReadAccessExpr(): string
+    {
+        return sprintf(
+            "CASE %s WHEN 'auth_commu_member' THEN %d WHEN 'public' THEN %d ELSE %d END",
+            $this->configValueLatest('public_flag'),
+            TopicReadAccess::MembersOnly->value,
+            TopicReadAccess::Everyone->value,
+            TopicReadAccess::Everyone->value,
+        );
+    }
+
+    /**
+     * community_config[topic_authority] → TopicPostAuthority. 'admin_only' = admins-only;
+     * 'public'/missing/empty/unknown = members (OpenPNE 3's config default). Runtime enum so it
+     * cannot drift.
+     */
+    private function topicPostAuthorityExpr(): string
+    {
+        return sprintf(
+            "CASE %s WHEN 'admin_only' THEN %d WHEN 'public' THEN %d ELSE %d END",
+            $this->configValueLatest('topic_authority'),
+            TopicPostAuthority::AdminsOnly->value,
+            TopicPostAuthority::Members->value,
+            TopicPostAuthority::Members->value,
+        );
+    }
+
+    /**
+     * SQL boolean: this `community_member_position` row is the one whose member becomes its
+     * community's pending_admin_member_id. The UNIQUE is on (community_member_id, name), not
+     * (community_id, name), so a community can hold several admin_confirm rows and only the latest
+     * counts. Public because ActiveMember's preflight must count over exactly this row and no other —
+     * an older, unread duplicate is not something to refuse a migration over.
+     */
+    public static function pendingAdminRowSelector(): string
+    {
+        return "`community_member_position`.`name` = 'admin_confirm' AND `community_member_position`.`id` = "
+            .'(SELECT MAX(`latest`.`id`) FROM '.SourceRef::table('community_member_position').' `latest`'
+            ." WHERE `latest`.`community_id` = `community_member_position`.`community_id` AND `latest`.`name` = 'admin_confirm')";
+    }
+
+    /** The pending admin-transfer target (community_member_position[name=admin_confirm]), else NULL. */
+    private function pendingAdminExpr(): string
+    {
+        return '(SELECT `community_member_position`.`member_id` FROM '.SourceRef::table('community_member_position').' `community_member_position`'
+            .' WHERE `community_member_position`.`community_id` = `community`.`id` AND '.self::pendingAdminRowSelector().' LIMIT 1)';
+    }
+
+    /**
+     * Keep community_category_id only when it references a migrated category (lft>1 in the source);
+     * the dropped root (lft=1) and any dangling reference become NULL so the target FK holds.
+     */
+    private function categoryIdExpr(): string
+    {
+        return 'CASE WHEN EXISTS ('
+            .'SELECT 1 FROM '.SourceRef::table('community_category').' `c` '
+            .'WHERE `c`.`id` = `community`.`community_category_id` AND `c`.`lft` > 1'
+            .') THEN `community_category_id` ELSE NULL END';
+    }
+}

@@ -8,11 +8,11 @@ use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
-use App\Upgrade\Steps\CommunityCategoryUpgrade;
-use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
+use App\Upgrade\Steps\GroupCategoryUpgrade;
+use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\UpgradeStep;
@@ -136,20 +136,20 @@ class InactiveMemberPreflightTest extends TestCase
 
     public function test_only_the_position_row_that_becomes_a_target_column_is_counted(): void
     {
-        // community_member_position feeds communities.pending_admin_member_id from its admin_confirm
+        // community_member_position feeds groups.pending_admin_member_id from its admin_confirm
         // row alone; the other names are read for the community role, which carries no member id.
-        $this->createCommunitySources();
+        $this->createGroupSources();
         $this->seedMember(1, isActive: 0);
-        $this->seedCommunity(100);
-        $this->seedPosition(1, communityId: 100, memberId: 1, name: 'sub_admin_confirm');
+        $this->seedGroup(100);
+        $this->seedPosition(1, groupId: 100, memberId: 1, name: 'sub_admin_confirm');
 
-        [$ok, $output] = $this->runSteps([new CommunityCategoryUpgrade, new CommunityUpgrade]);
+        [$ok, $output] = $this->runSteps([new GroupCategoryUpgrade, new GroupUpgrade]);
 
         $this->assertTrue($ok, $output);
 
-        $this->seedPosition(2, communityId: 100, memberId: 1, name: 'admin_confirm');
+        $this->seedPosition(2, groupId: 100, memberId: 1, name: 'admin_confirm');
 
-        [$ok, $output] = $this->runSteps([new CommunityCategoryUpgrade, new CommunityUpgrade]);
+        [$ok, $output] = $this->runSteps([new GroupCategoryUpgrade, new GroupUpgrade]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(
@@ -216,30 +216,30 @@ class InactiveMemberPreflightTest extends TestCase
     public function test_a_superseded_admin_confirm_row_is_not_an_abort(): void
     {
         // (community_member_id, name) is the UNIQUE, so a community can hold several admin_confirm
-        // rows; CommunityUpgrade reads the latest. An older one is never looked at.
-        $this->createCommunitySources();
+        // rows; GroupUpgrade reads the latest. An older one is never looked at.
+        $this->createGroupSources();
         $this->seedMember(1, isActive: 1);
         $this->seedMember(2, isActive: 0);
-        $this->seedCommunity(100);
-        $this->seedPosition(1, communityId: 100, memberId: 2, name: 'admin_confirm'); // superseded, inactive
-        $this->seedPosition(2, communityId: 100, memberId: 1, name: 'admin_confirm'); // latest, activated
+        $this->seedGroup(100);
+        $this->seedPosition(1, groupId: 100, memberId: 2, name: 'admin_confirm'); // superseded, inactive
+        $this->seedPosition(2, groupId: 100, memberId: 1, name: 'admin_confirm'); // latest, activated
         Member::factory()->create(['id' => 1]); // MemberUpgrade's output, which pending_admin_member_id references
 
-        [$ok, $output] = $this->runSteps([new CommunityCategoryUpgrade, new CommunityUpgrade]);
+        [$ok, $output] = $this->runSteps([new GroupCategoryUpgrade, new GroupUpgrade]);
 
         $this->assertTrue($ok, $output);
     }
 
     public function test_the_latest_admin_confirm_row_is_an_abort(): void
     {
-        $this->createCommunitySources();
+        $this->createGroupSources();
         $this->seedMember(1, isActive: 1);
         $this->seedMember(2, isActive: 0);
-        $this->seedCommunity(100);
-        $this->seedPosition(1, communityId: 100, memberId: 1, name: 'admin_confirm');
-        $this->seedPosition(2, communityId: 100, memberId: 2, name: 'admin_confirm'); // latest, inactive
+        $this->seedGroup(100);
+        $this->seedPosition(1, groupId: 100, memberId: 1, name: 'admin_confirm');
+        $this->seedPosition(2, groupId: 100, memberId: 2, name: 'admin_confirm'); // latest, inactive
 
-        [$ok, $output] = $this->runSteps([new CommunityCategoryUpgrade, new CommunityUpgrade]);
+        [$ok, $output] = $this->runSteps([new GroupCategoryUpgrade, new GroupUpgrade]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(
@@ -266,10 +266,10 @@ class InactiveMemberPreflightTest extends TestCase
     {
         // community_member_position is no step's FROM, so neither its member_id nor the `name` the
         // scope narrows by is attributed to any step's consumed columns.
-        $this->createCommunitySources();
+        $this->createGroupSources();
         DB::statement('ALTER TABLE `community_member_position` DROP COLUMN `name`');
 
-        [$ok, $output] = $this->runSteps([new CommunityCategoryUpgrade, new CommunityUpgrade]);
+        [$ok, $output] = $this->runSteps([new GroupCategoryUpgrade, new GroupUpgrade]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::missingColumnMessage('community_member_position', 'name'), $output);
@@ -324,7 +324,7 @@ class InactiveMemberPreflightTest extends TestCase
         $this->assertDatabaseCount('friendships', 0);
     }
 
-    private function createCommunitySources(): void
+    private function createGroupSources(): void
     {
         $this->createSources('member', 'community', 'community_config', 'community_category',
             'community_member', 'community_member_position');
@@ -382,15 +382,15 @@ class InactiveMemberPreflightTest extends TestCase
             'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
     }
 
-    private function seedCommunity(int $id): void
+    private function seedGroup(int $id): void
     {
         DB::table('community')->insert(['id' => $id, 'name' => 'C', 'created_at' => '2018-01-01 00:00:00',
             'updated_at' => '2018-01-01 00:00:00']);
     }
 
-    private function seedPosition(int $id, int $communityId, int $memberId, string $name): void
+    private function seedPosition(int $id, int $groupId, int $memberId, string $name): void
     {
-        DB::table('community_member_position')->insert(['id' => $id, 'community_id' => $communityId,
+        DB::table('community_member_position')->insert(['id' => $id, 'community_id' => $groupId,
             'member_id' => $memberId, 'community_member_id' => $id, 'name' => $name,
             'created_at' => '2018-01-01 00:00:00', 'updated_at' => '2018-01-01 00:00:00']);
     }

@@ -2,8 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Features\Community\Queries\RandomJoinedCommunities;
 use App\Features\Friend\Queries\RandomFriends;
+use App\Features\Group\Queries\RandomJoinedGroups;
 use App\Features\Home\Serializers\RightRailSerializer;
 use App\Features\Home\UnreadCounts;
 use App\Features\Member\Queries\RandomMembers;
@@ -55,7 +55,7 @@ class HandleInertiaRequests extends Middleware
             // Shell nav badges: attention counts for the signed-in member, memoized per request so the
             // dashboard notices reuse them. Null for a guest (a web-public profile renders signed out).
             'unread' => $user ? fn () => app(UnreadCounts::class)->for($user) : null,
-            // Right rail (xl+ only): a faces grid and the viewer's joined communities as thumbnails.
+            // Right rail (xl+ only): a faces grid and the viewer's joined groups as thumbnails.
             // Evaluated per request for a member; a plain closure (not Inertia::optional) so it is
             // present on first render, which is where the rail shows.
             'rightRail' => $user ? fn () => $this->rightRail($user) : null,
@@ -86,7 +86,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * The faces grid outlives `friend`: switched off, it samples the whole SNS rather than emptying
      * (docs/internals/feature-toggles.md) — the same rows under the same permissions, a wider pool.
-     * Communities have no such purpose apart from the unit, so they just empty, unqueried; the
+     * Groups have no such purpose apart from the unit, so they just empty, unqueried; the
      * client hides a grid on an empty list.
      *
      * @return array<string, mixed>
@@ -98,7 +98,7 @@ class HandleInertiaRequests extends Middleware
         return RightRailSerializer::rail(
             $friends ? 'friends' : 'members',
             $friends ? (new RandomFriends)($user) : (new RandomMembers)($user),
-            Feature::Community->enabled() ? (new RandomJoinedCommunities)($user) : collect(),
+            Feature::Group->enabled() ? (new RandomJoinedGroups)($user) : collect(),
         );
     }
 

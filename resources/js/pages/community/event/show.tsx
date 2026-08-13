@@ -18,7 +18,7 @@ import type { PageProps } from '@/types';
 import type { CommunitySummary, EventDetail, EventThread } from '../types';
 
 interface ShowProps extends PageProps {
-    community: CommunitySummary;
+    group: CommunitySummary;
     event: EventDetail;
     thread: EventThread;
     canComment: boolean;

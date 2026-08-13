@@ -6,7 +6,7 @@ use App\Features\CommunityTopic\Queries\RecentJoinedCommunityTopics;
 use App\Models\Member;
 use Illuminate\Contracts\View\View;
 
-/** Recent topics across the viewer's joined communities (home; subject = viewer). */
+/** Recent topics across the viewer's joined groups (home; subject = viewer). */
 class RecentCommunityTopicComment extends CommunityRecentListBox
 {
     /** @param array<string, mixed> $config */

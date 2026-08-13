@@ -12,7 +12,7 @@ use App\Upgrade\UpgradeStep;
  *
  * id is preserved verbatim: the bytes table (`file_bin`) keeps its rows and only re-points its
  * file_id FK from `file` onto `files`, and every owning row (member_images, *_images, direct_message_files,
- * banner_images, communities) carries the same file_id — so the whole graph resolves by id without a
+ * banner_images, groups) carries the same file_id — so the whole graph resolves by id without a
  * BLOB copy. `name` (the opaque storage/URL token) is likewise verbatim, keeping OpenPNE 3 image URLs
  * resolvable. `filesize` becomes `byte_size`.
  *
@@ -70,9 +70,9 @@ class FileUpgrade extends UpgradeStep
             // member. The file itself still migrates, ownerless (FilePolicy resolves that private).
             'member_image.file_id' => ['type' => 'member', 'table' => 'member_image', 'file' => 'file_id', 'id' => 'member_id',
                 'extra' => ' AND '.ActiveMember::referenceGuard('member_image', 'member_id')],
-            // The community top image is a direct column on `community` (not a join table): the owner
-            // is the community itself, so the id source is the community's own id.
-            'community.file_id' => ['type' => 'community', 'table' => 'community', 'file' => 'file_id', 'id' => 'id'],
+            // The group top image is a direct column on `community` (not a join table): the owner
+            // is the group itself, so the id source is the group's own id.
+            'community.file_id' => ['type' => 'group', 'table' => 'community', 'file' => 'file_id', 'id' => 'id'],
             'diary_image.file_id' => ['type' => 'diary', 'table' => 'diary_image', 'file' => 'file_id', 'id' => 'diary_id'],
             'diary_comment_image.file_id' => ['type' => 'diaryComment', 'table' => 'diary_comment_image', 'file' => 'file_id', 'id' => 'diary_comment_id'],
             'community_topic_image.file_id' => ['type' => 'communityTopic', 'table' => 'community_topic_image', 'file' => 'file_id', 'id' => 'post_id'],
@@ -81,7 +81,7 @@ class FileUpgrade extends UpgradeStep
             'community_event_comment_image.file_id' => ['type' => 'communityEventComment', 'table' => 'community_event_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
             // Only a personal message owns its attachment; non-personal message types are not migrated.
             'message_file.file_id' => ['type' => 'directMessage', 'table' => 'message_file', 'file' => 'file_id', 'id' => 'message_id', 'extra' => $this->personalMessageExtra()],
-            // The banner image row itself is the owner (communities/messages own by the parent id;
+            // The banner image row itself is the owner (groups/messages own by the parent id;
             // banners own through the banner_image pool, mirroring how the app stores them).
             'banner_image.file_id' => ['type' => 'bannerImage', 'table' => 'banner_image', 'file' => 'file_id', 'id' => 'id'],
         ];

@@ -5,11 +5,11 @@ namespace Tests\Feature\Support;
 use App\Features\Auth\Actions\CompleteRegistration;
 use App\Features\Auth\RegistrationTokenSource;
 use App\Features\Block\Actions\BlockMember;
-use App\Features\Community\Actions\JoinCommunity;
-use App\Features\Community\JoinPolicy;
 use App\Features\Friend\Actions\AcceptFriendRequest;
 use App\Features\Friend\Actions\SendFriendRequest;
-use App\Models\Community;
+use App\Features\Group\Actions\JoinGroup;
+use App\Features\Group\JoinPolicy;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\RegistrationToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -79,11 +79,11 @@ class SiteTimezoneTimestampTest extends TestCase
 
     public function test_a_join_request_is_stamped_by_the_application(): void
     {
-        $community = Community::factory()->create(['register_policy' => JoinPolicy::Approval]);
+        $group = Group::factory()->create(['register_policy' => JoinPolicy::Approval]);
 
-        (new JoinCommunity)(Member::factory()->create(), $community);
+        (new JoinGroup)(Member::factory()->create(), $group);
 
-        $this->assertStampedByApp('community_join_requests');
+        $this->assertStampedByApp('group_join_requests');
     }
 
     public function test_an_invite_registration_stamps_the_auto_friendship(): void

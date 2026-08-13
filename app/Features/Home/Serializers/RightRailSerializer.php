@@ -2,12 +2,12 @@
 
 namespace App\Features\Home\Serializers;
 
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Support\Collection;
 
 /**
- * The shell's right rail (xl+ only): a grid of faces and one of the viewer's joined communities.
+ * The shell's right rail (xl+ only): a grid of faces and one of the viewer's joined groups.
  * A person carries a circular avatar, a community a square image, so each item ships the URL and its
  * deep link; the client falls back to a neutral initial badge when the image is null.
  *
@@ -23,10 +23,10 @@ class RightRailSerializer
     /**
      * @param  'friends'|'members'  $peopleKind
      * @param  Collection<int, Member>  $people
-     * @param  Collection<int, Community>  $communities
-     * @return array{people: array{kind: 'friends'|'members', items: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, href: string}>}, joinedCommunities: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, href: string}>}
+     * @param  Collection<int, Group>  $groups
+     * @return array{people: array{kind: 'friends'|'members', items: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, href: string}>}, joinedGroups: list<array{id: int, name: string, imageUrl: string|null, avatarColor: string|null, href: string}>}
      */
-    public static function rail(string $peopleKind, Collection $people, Collection $communities): array
+    public static function rail(string $peopleKind, Collection $people, Collection $groups): array
     {
         return [
             'people' => [
@@ -39,13 +39,13 @@ class RightRailSerializer
                     'href' => "/member/{$m->getKey()}",
                 ])->all(),
             ],
-            'joinedCommunities' => $communities->map(fn (Community $c): array => [
+            'joinedGroups' => $groups->map(fn (Group $c): array => [
                 'id' => $c->getKey(),
                 'name' => $c->name,
                 'imageUrl' => $c->image?->thumbnailUrl(180, 180, square: true),
-                // Communities have no chosen badge color; the shared RightRailItem shape keeps the key.
+                // Groups have no chosen badge color; the shared RightRailItem shape keeps the key.
                 'avatarColor' => null,
-                'href' => "/community/{$c->getKey()}",
+                'href' => "/groups/{$c->getKey()}",
             ])->all(),
         ];
     }

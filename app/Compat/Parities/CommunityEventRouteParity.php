@@ -73,7 +73,7 @@ class CommunityEventRouteParity extends RouteParity
             // so its elements live at the end of the comment group below.
             'show' => [
                 new ScreenElement('event listBox', L::One, S::Ported, "op_include_parts('listBox', 'communityEvent')", 'the bare id communityEvent is OpenPNE 3\'s own, restored verbatim'),
-                new ScreenElement('box heading "[community] Event"', L::Three, S::Partial, "showSuccess.php '['.\$community->getName().'] '.__('Event')", 'headed with the event name, so the owning community is no longer named there'),
+                new ScreenElement('box heading "[community] Event"', L::Three, S::Partial, "showSuccess.php '['.\$group->getName().'] '.__('Event')", 'headed with the event name, so the owning community is no longer named there'),
                 new ScreenElement('writer row', L::Two, S::Ported, "\$list['Writer'] op_community_topic_link_to_member"),
                 new ScreenElement('name row', L::Two, S::Missing, "\$list['Name'] = \$communityEvent->getName()", 'the name moved into the box heading, so the detail table has no Name row'),
                 new ScreenElement('open date + supplement row', L::Two, S::Ported, "\$list['Open date'] op_format_date('D') . getOpenDateComment()"),

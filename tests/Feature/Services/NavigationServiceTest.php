@@ -177,7 +177,7 @@ class NavigationServiceTest extends TestCase
         $this->makeNav('community', '/communityTopic/listCommunity/:id', 'communityTopic/listCommunity', ['en' => 'Topics']);
 
         $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
-        $this->setSnsSetting(Feature::Community->settingKey(), false);
+        $this->setSnsSetting(Feature::Group->settingKey(), false);
 
         $this->assertSame([], $this->labels('community', 7));
     }

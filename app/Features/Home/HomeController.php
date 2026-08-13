@@ -3,14 +3,14 @@
 namespace App\Features\Home;
 
 use App\Compat\RouteParityRegistry;
-use App\Features\Community\Queries\PendingJoinRequestCounts;
 use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\RecentMemberDiaries;
-use App\Features\Home\Queries\JoinedCommunityActivity;
+use App\Features\Group\Queries\PendingJoinRequestCounts;
+use App\Features\Home\Queries\JoinedGroupActivity;
 use App\Features\Home\Serializers\HomeSerializer;
 use App\Features\Timeline\Queries\HomeFeed;
 use App\Http\Controllers\Controller;
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Support\Feature;
@@ -46,11 +46,11 @@ class HomeController extends Controller
             'zones' => $gadgets->zones('home', $viewer, $viewer),
             'layout' => $gadgets->layoutLetter('home'),
             'pageId' => RouteParityRegistry::bodyId('home'),
-            // Communities awaiting this member's admin-transfer decision: the OpenPNE 3
+            // Groups awaiting this member's admin-transfer decision: the OpenPNE 3
             // _cautionAboutChangeAdminRequest, restored as a direct link to each community's banner
             // (Modern surfaces this through the feed + bell instead). Cheap: pending_admin_member_id is indexed.
-            'adminTransferCommunities' => Feature::Community->enabled()
-                ? Community::where('pending_admin_member_id', $viewer->getKey())->get()
+            'adminTransferGroups' => Feature::Group->enabled()
+                ? Group::where('pending_admin_member_id', $viewer->getKey())->get()
                 : collect(),
             // The remaining cautions are the header badge numbers, read from the same request-scoped
             // service the shell reads, so a caution and its badge can never disagree.
@@ -65,7 +65,7 @@ class HomeController extends Controller
      */
     public function dashboard(
         Request $request,
-        JoinedCommunityActivity $communityActivity,
+        JoinedGroupActivity $groupActivity,
         UnreadCounts $unread,
         PendingJoinRequestCounts $pendingApprovals,
     ): Response {
@@ -73,18 +73,18 @@ class HomeController extends Controller
         $viewer = $request->user();
 
         // Each digest belongs to a unit, so a switched-off one contributes an empty section and runs
-        // no query — hiding it on the client would still ship the rows. JoinedCommunityActivity
+        // no query — hiding it on the client would still ship the rows. JoinedGroupActivity
         // applies its own units (topics and events independently).
         $diaryOn = Feature::Diary->enabled();
-        $communityOn = Feature::Community->enabled();
+        $groupOn = Feature::Group->enabled();
 
         return Inertia::render('dashboard', HomeSerializer::dashboard(
             $diaryOn ? (new ListRecentDiaries)->take($viewer, self::PREVIEW) : collect(),
             Feature::Timeline->enabled() ? (new HomeFeed)->take($viewer, self::PREVIEW) : collect(),
-            $communityActivity($viewer, self::PREVIEW),
+            $groupActivity($viewer, self::PREVIEW),
             $diaryOn ? (new RecentMemberDiaries)($viewer, $viewer, self::PREVIEW) : collect(),
             $unread->for($viewer),
-            $communityOn ? $pendingApprovals($viewer) : collect(),
+            $groupOn ? $pendingApprovals($viewer) : collect(),
         ));
     }
 
@@ -96,7 +96,7 @@ class HomeController extends Controller
      * viewer's joined-community topics and events, merged newest-first. Modern-only, so it renders
      * Inertia directly like the dashboard.
      */
-    public function communityActivity(Request $request, JoinedCommunityActivity $activity): Response
+    public function groupActivity(Request $request, JoinedGroupActivity $activity): Response
     {
         /** @var Member $viewer */
         $viewer = $request->user();

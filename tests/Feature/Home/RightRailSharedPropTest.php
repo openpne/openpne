@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Home;
 
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\File;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\MemberImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,8 +23,8 @@ class RightRailSharedPropTest extends TestCase
             ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
             ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
         ]);
-        $community = Community::factory()->create();
-        CommunityMember::factory()->member()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $group = Group::factory()->create();
+        GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
 
         $this->actingAs($viewer)
             ->get('/dashboard')
@@ -33,8 +33,8 @@ class RightRailSharedPropTest extends TestCase
                 ->has('rightRail.people.items', 1)
                 ->where('rightRail.people.items.0.id', $friend->getKey())
                 ->where('rightRail.people.items.0.href', "/member/{$friend->getKey()}")
-                ->has('rightRail.joinedCommunities', 1)
-                ->where('rightRail.joinedCommunities.0.href', "/community/{$community->getKey()}")
+                ->has('rightRail.joinedGroups', 1)
+                ->where('rightRail.joinedGroups.0.href', "/groups/{$group->getKey()}")
             );
     }
 
@@ -47,19 +47,19 @@ class RightRailSharedPropTest extends TestCase
             ['member_id' => $viewer->getKey(), 'friend_id' => $friend->getKey()],
             ['member_id' => $friend->getKey(), 'friend_id' => $viewer->getKey()],
         ]);
-        $community = Community::factory()->create(['file_id' => File::factory()->create()->getKey()]);
-        CommunityMember::factory()->member()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $group = Group::factory()->create(['file_id' => File::factory()->create()->getKey()]);
+        GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
 
         // The rail's tiles paint at ~90px, well above every other surface's avatar, so both grids
         // ask for 180 rather than the 120 the small avatars use.
         $expectedFace = $friend->fresh()->avatar->file->thumbnailUrl(180, 180, square: true);
-        $expectedCommunity = $community->image->thumbnailUrl(180, 180, square: true);
+        $expectedGroup = $group->image->thumbnailUrl(180, 180, square: true);
 
         $this->actingAs($viewer)
             ->get('/dashboard')
             ->assertInertia(fn ($page) => $page
                 ->where('rightRail.people.items.0.imageUrl', $expectedFace)
-                ->where('rightRail.joinedCommunities.0.imageUrl', $expectedCommunity)
+                ->where('rightRail.joinedGroups.0.imageUrl', $expectedGroup)
             );
     }
 
@@ -70,7 +70,7 @@ class RightRailSharedPropTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->where('rightRail.people.kind', 'friends')
                 ->where('rightRail.people.items', [])
-                ->where('rightRail.joinedCommunities', [])
+                ->where('rightRail.joinedGroups', [])
             );
     }
 

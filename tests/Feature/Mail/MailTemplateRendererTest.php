@@ -71,7 +71,7 @@ class MailTemplateRendererTest extends TestCase
         );
         // Named-route (@route?id=N) form: the id names the model, resolved to the canonical URL.
         $this->assertSame(
-            route('community.show', ['community' => 3]),
+            route('group.show', ['group' => 3]),
             $r->render("{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}", ['id' => '3']),
         );
         $this->assertSame(
@@ -96,7 +96,7 @@ class MailTemplateRendererTest extends TestCase
         // into the next line. The print form and a tag at end-of-body are unaffected.
         $r = $this->renderer();
         $this->assertSame(
-            "Page:\n".url('/community/3')."\nProfile:",
+            "Page:\n".url('/groups/3')."\nProfile:",
             $r->render("Page:\n{% app_url_for('pc_frontend', '@community_home?id='~id, true) %}\nProfile:", ['id' => '3']),
         );
     }
@@ -107,7 +107,7 @@ class MailTemplateRendererTest extends TestCase
         // the URL runs straight into the next content.
         $r = $this->renderer();
         $this->assertSame(
-            'Page:'.url('/community/3').'Profile',
+            'Page:'.url('/groups/3').'Profile',
             $r->render("Page:{% app_url_for('pc_frontend', '@community_home?id='~id, true) -%}\n\nProfile", ['id' => '3']),
         );
     }

@@ -7,20 +7,20 @@ import type { PageProps } from '@/types';
 import type { MemberRef, PaginatedCommunities } from './types';
 
 interface ListProps extends PageProps {
-    communities: PaginatedCommunities;
+    groups: PaginatedCommunities;
     owner: MemberRef;
     isOwner: boolean;
 }
 
 export default function CommunityList() {
     const t = useT();
-    const { communities, owner, isOwner } = usePage<ListProps>().props;
+    const { groups, owner, isOwner } = usePage<ListProps>().props;
     const title = isOwner ? t('My %communities%') : t(":name's %communities%", { name: owner.name });
 
     return (
         <>
             <Head title={title} />
-            {communities.data.length === 0 ? (
+            {groups.data.length === 0 ? (
                 <Panel>
                     <p className="text-sm text-muted-foreground">{t('No %communities% to show.')}</p>
                 </Panel>
@@ -28,17 +28,17 @@ export default function CommunityList() {
                 <>
                     <Panel>
                         <ul className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-                            {communities.data.map((community) => (
-                                <li key={community.id}>
-                                    <Link href={`/community/${community.id}`} className="flex flex-col gap-1">
-                                        <CommunityImage name={community.name} src={community.imageUrl} className="aspect-square w-full" textClassName="text-2xl" decorative />
-                                        <span className="truncate text-sm">{community.name}</span>
+                            {groups.data.map((group) => (
+                                <li key={group.id}>
+                                    <Link href={`/groups/${group.id}`} className="flex flex-col gap-1">
+                                        <CommunityImage name={group.name} src={group.imageUrl} className="aspect-square w-full" textClassName="text-2xl" decorative />
+                                        <span className="truncate text-sm">{group.name}</span>
                                     </Link>
                                 </li>
                             ))}
                         </ul>
                     </Panel>
-                    <Pagination meta={communities.meta} />
+                    <Pagination meta={groups.meta} />
                 </>
             )}
         </>

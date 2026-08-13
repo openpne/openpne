@@ -13,7 +13,7 @@ import type { PageProps } from '@/types';
 import type { CommunityCategory, PaginatedCommunities } from './types';
 
 interface SearchProps extends PageProps {
-    communities: PaginatedCommunities;
+    groups: PaginatedCommunities;
     keyword: string;
     categoryId: number | null;
     categories: CommunityCategory[];
@@ -21,7 +21,7 @@ interface SearchProps extends PageProps {
 
 export default function CommunitySearch() {
     const t = useT();
-    const { communities, keyword, categoryId, categories } = usePage<SearchProps>().props;
+    const { groups, keyword, categoryId, categories } = usePage<SearchProps>().props;
     const [form, setForm] = useState({ keyword, categoryId: categoryId ?? 0 });
     const [searching, setSearching] = useState(false);
 
@@ -29,7 +29,7 @@ export default function CommunitySearch() {
         e.preventDefault();
         // 0 / empty means "no filter" — drop them so the URL stays clean and the pager query matches.
         router.get(
-            '/community/search',
+            '/groups',
             { keyword: form.keyword || undefined, category_id: form.categoryId || undefined },
             {
                 preserveState: true,
@@ -78,7 +78,7 @@ export default function CommunitySearch() {
                 </Select>
             </form>
 
-            {communities.data.length === 0 ? (
+            {groups.data.length === 0 ? (
                 <Panel>
                     <p className="text-sm text-muted-foreground">{t('No %communities% found.')}</p>
                 </Panel>
@@ -86,37 +86,37 @@ export default function CommunitySearch() {
                 <>
                     <Panel flush>
                         <List>
-                            {communities.data.map((community) => (
-                                <ListRow key={community.id} rowLink chevron>
-                                    <CommunityImage name={community.name} src={community.imageUrl} className="size-12" decorative />
+                            {groups.data.map((group) => (
+                                <ListRow key={group.id} rowLink chevron>
+                                    <CommunityImage name={group.name} src={group.imageUrl} className="size-12" decorative />
                                     <div className="min-w-0 flex-1">
                                         <p className="text-foreground">
-                                            <Link href={`/community/${community.id}`} className={stretchedLink}>
-                                                {community.name}
+                                            <Link href={`/groups/${group.id}`} className={stretchedLink}>
+                                                {group.name}
                                             </Link>
                                         </p>
                                         <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                                            {community.category && (
+                                            {group.category && (
                                                 <>
-                                                    <span className="truncate">{community.category.name}</span>
+                                                    <span className="truncate">{group.category.name}</span>
                                                     <span aria-hidden>·</span>
                                                 </>
                                             )}
                                             <CountBadge
                                                 icon={Users}
-                                                count={community.memberCount}
-                                                srLabel={t(':count members', { count: community.memberCount })}
+                                                count={group.memberCount}
+                                                srLabel={t(':count members', { count: group.memberCount })}
                                             />
                                         </p>
-                                        {community.description && (
-                                            <p className="line-clamp-2 text-sm text-muted-foreground">{community.description}</p>
+                                        {group.description && (
+                                            <p className="line-clamp-2 text-sm text-muted-foreground">{group.description}</p>
                                         )}
                                     </div>
                                 </ListRow>
                             ))}
                         </List>
                     </Panel>
-                    <Pagination meta={communities.meta} />
+                    <Pagination meta={groups.meta} />
                 </>
             )}
         </>

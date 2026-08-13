@@ -34,10 +34,10 @@ class FeatureTest extends TestCase
 
     public function test_the_board_and_the_calendar_live_inside_communities(): void
     {
-        $this->assertSame(Feature::Community, Feature::CommunityTopic->parent());
-        $this->assertSame(Feature::Community, Feature::CommunityEvent->parent());
+        $this->assertSame(Feature::Group, Feature::CommunityTopic->parent());
+        $this->assertSame(Feature::Group, Feature::CommunityEvent->parent());
 
-        foreach ([Feature::Diary, Feature::DirectMessage, Feature::Timeline, Feature::Community, Feature::Friend] as $feature) {
+        foreach ([Feature::Diary, Feature::DirectMessage, Feature::Timeline, Feature::Group, Feature::Friend] as $feature) {
             $this->assertNull($feature->parent(), "{$feature->value} unexpectedly depends on another unit");
         }
     }
@@ -45,14 +45,14 @@ class FeatureTest extends TestCase
     public function test_route_name_prefixes_are_dot_terminated(): void
     {
         $this->assertSame(['diary.'], Feature::Diary->routeNamePrefixes());
-        $this->assertSame(['community.'], Feature::Community->routeNamePrefixes());
+        $this->assertSame(['group.'], Feature::Group->routeNamePrefixes());
         $this->assertSame(['communityTopic.'], Feature::CommunityTopic->routeNamePrefixes());
     }
 
     public function test_a_route_name_resolves_to_the_unit_that_owns_it(): void
     {
-        $this->assertSame(Feature::Community, Feature::owningRouteName('community.show'));
-        $this->assertSame(Feature::Community, Feature::owningRouteName('community.recent'));
+        $this->assertSame(Feature::Group, Feature::owningRouteName('group.show'));
+        $this->assertSame(Feature::Group, Feature::owningRouteName('group.recent'));
         // Dot-terminated prefixes: the board is its own unit, never captured by `community.`.
         $this->assertSame(Feature::CommunityTopic, Feature::owningRouteName('communityTopic.show'));
         $this->assertSame(Feature::CommunityEvent, Feature::owningRouteName('communityEvent.comment.store'));

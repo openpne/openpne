@@ -2,15 +2,15 @@
 
 namespace Tests\Feature\Timeline;
 
-use App\Features\Community\CommunityRole;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\GroupRole;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Data\TimelinePostFormData;
-use App\Features\Timeline\Exceptions\NotCommunityMember;
+use App\Features\Timeline\Exceptions\NotGroupMember;
 use App\Features\Timeline\Queries\MentionCandidates;
-use App\Models\Community;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,8 +26,8 @@ class CommunityTimelineWriteTest extends TestCase
 
     public function test_a_member_posts_into_the_community_at_members_visibility(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
 
         // Open is asked for and ignored: a community post's audience is the community, so the
         // per-post ladder has nothing left to say and must not leave a web-public row behind.
@@ -35,41 +35,41 @@ class CommunityTimelineWriteTest extends TestCase
             $author,
             new TimelinePostFormData('hello', Visibility::Open),
             null,
-            $community,
+            $group,
         );
 
-        $this->assertSame($community->getKey(), $post->community_id);
+        $this->assertSame($group->getKey(), $post->community_id);
         $this->assertSame(Visibility::Members, $post->fresh()->visibility);
     }
 
     public function test_a_non_member_cannot_post_even_when_everyone_may_read(): void
     {
-        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
 
-        $this->expectException(NotCommunityMember::class);
+        $this->expectException(NotGroupMember::class);
 
         app(CreateTimelinePost::class)(
             Member::factory()->create(),
             new TimelinePostFormData('hello', Visibility::Members),
             null,
-            $community,
+            $group,
         );
     }
 
     public function test_an_admins_only_board_does_not_stop_a_member_posting(): void
     {
         // topic_post_authority gates the board, not the timeline.
-        $community = Community::factory()->create(['topic_post_authority' => TopicPostAuthority::AdminsOnly]);
-        $author = $this->joined($community);
+        $group = Group::factory()->create(['topic_post_authority' => TopicPostAuthority::AdminsOnly]);
+        $author = $this->joined($group);
 
         $post = app(CreateTimelinePost::class)(
             $author,
             new TimelinePostFormData('hello', Visibility::Members),
             null,
-            $community,
+            $group,
         );
 
-        $this->assertSame($community->getKey(), $post->community_id);
+        $this->assertSame($group->getKey(), $post->community_id);
     }
 
     public function test_an_sns_wide_post_keeps_the_chosen_visibility(): void
@@ -84,12 +84,12 @@ class CommunityTimelineWriteTest extends TestCase
 
     public function test_mention_candidates_inside_a_community_are_its_members(): void
     {
-        $community = Community::factory()->create();
-        $viewer = $this->joined($community);
-        $fellow = $this->joined($community);
+        $group = Group::factory()->create();
+        $viewer = $this->joined($group);
+        $fellow = $this->joined($group);
         $stranger = Member::factory()->create();
 
-        $ids = (new MentionCandidates)($viewer, '', $community)->modelKeys();
+        $ids = (new MentionCandidates)($viewer, '', $group)->modelKeys();
 
         $this->assertContains($fellow->getKey(), $ids);
         $this->assertNotContains($stranger->getKey(), $ids);
@@ -101,8 +101,8 @@ class CommunityTimelineWriteTest extends TestCase
     {
         // The picker cannot offer them, but a hand-built payload can still name them; the submit
         // predicate has to agree with the candidate predicate or the row would outlive the offer.
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
         $stranger = Member::factory()->create(['name' => 'Outsider']);
 
         $post = app(CreateTimelinePost::class)(
@@ -111,19 +111,19 @@ class CommunityTimelineWriteTest extends TestCase
                 ['member_id' => $stranger->getKey(), 'offset' => 3, 'length' => 9],
             ]),
             null,
-            $community,
+            $group,
         );
 
         $this->assertCount(0, $post->fresh()->mentions);
     }
 
-    private function joined(Community $community): Member
+    private function joined(Group $group): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
-            'role' => CommunityRole::Member,
+            'role' => GroupRole::Member,
         ]);
 
         return $member;

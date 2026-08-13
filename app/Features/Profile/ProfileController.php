@@ -3,9 +3,9 @@
 namespace App\Features\Profile;
 
 use App\Features\Block\BlockLookup;
-use App\Features\Community\Queries\ListMemberCommunities;
 use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\Friend\Queries\ListFriends;
+use App\Features\Group\Queries\ListMemberGroups;
 use App\Features\Profile\Actions\SaveMemberProfile;
 use App\Features\Profile\Queries\BirthdayFieldExists;
 use App\Features\Profile\Queries\EditProfileFields;
@@ -79,7 +79,7 @@ class ProfileController extends Controller
             ]),
             SurfaceResolver::MODERN => function () use ($member, $fields, $isSelf, $lang, $age, $friendStatus, $viewer) {
                 // Digest = auth-only: its previews and stats link to routes behind the auth group, and
-                // a guest never sees another member's friends/communities. Classic/guest pay +0 queries
+                // a guest never sees another member's friends/groups. Classic/guest pay +0 queries
                 // (this closure runs only for a Modern render). images.file feeds the rich diary rows.
                 // Each preview follows its own unit: switched off, it is an empty grid nobody queried.
                 $digest = $viewer === null ? null : ProfileSerializer::digest(
@@ -87,7 +87,7 @@ class ProfileController extends Controller
                     Feature::Diary->enabled() ? (new RecentMemberDiaries)($viewer, $member, 3)->load('images.file') : collect(),
                     // 10 tiles fill the 5-column grid's two rows; NineTable trims to 9 (3×3) on mobile.
                     Feature::Friend->enabled() ? (new ListFriends)->take($viewer, $member, 10) : collect(),
-                    Feature::Community->enabled() ? (new ListMemberCommunities)->take($member, 10) : collect(),
+                    Feature::Group->enabled() ? (new ListMemberGroups)->take($member, 10) : collect(),
                 );
 
                 return Inertia::render('member/show', [

@@ -53,10 +53,10 @@ class RouteParityLayoutTest extends TestCase
         $this->assertSame('B', RouteParityRegistry::layout('diary.show'));
         $this->assertSame('B', RouteParityRegistry::layout('message.receive'));
         $this->assertSame('B', RouteParityRegistry::layout('member.config')); // category pageNav sidemenu
-        $this->assertSame('A', RouteParityRegistry::layout('community.show')); // home: top + sidemenu
+        $this->assertSame('A', RouteParityRegistry::layout('group.show')); // home: top + sidemenu
         // A screen with no non-default entry resolves to null; the shell falls back to layoutC.
         $this->assertNull(RouteParityRegistry::layout('friend.list'));
-        $this->assertNull(RouteParityRegistry::layout('community.edit'));
+        $this->assertNull(RouteParityRegistry::layout('group.edit'));
     }
 
     public function test_two_column_classic_views_are_a_locked_set(): void
@@ -84,7 +84,7 @@ class RouteParityLayoutTest extends TestCase
         // #Left only under A/B). Adding one here is the prompt to declare its layout in the
         // matching RouteParity::layouts(); otherwise it renders under the default LayoutC and breaks.
         $this->assertSame([
-            'community/show', 'diary/edit', 'diary/list', 'diary/new', 'diary/show',
+            'diary/edit', 'diary/list', 'diary/new', 'diary/show', 'group/show',
             'member/config', 'message/list', 'message/show',
         ], $found);
     }
