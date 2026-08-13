@@ -182,6 +182,8 @@ export function TalkComposer({
                         placeholder={t('Message :name', { name: groupName })}
                         rows={1}
                         autoGrow
+                        // The bar stands at the viewport's foot: below it there is only the bottom nav.
+                        popup="above"
                         value={body}
                         onChange={setBody}
                         mentions={mentions}

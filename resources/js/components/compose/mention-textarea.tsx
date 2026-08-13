@@ -53,6 +53,12 @@ type Props = Omit<ComponentProps<'textarea'>, 'value' | 'onChange'> & {
     candidatesUrl?: string;
     /** Track the text's own height instead of standing at `rows`, for a bar that opens one line tall. */
     autoGrow?: boolean;
+    /**
+     * Which side the candidate list opens on. The call site owns it the way it owns candidatesUrl:
+     * a bar sitting at the viewport's foot has room above and none below, and the field cannot
+     * know where the page put it. Chat apps uniformly open theirs upward.
+     */
+    popup?: 'below' | 'above';
 };
 
 export function MentionTextarea({
@@ -62,6 +68,7 @@ export function MentionTextarea({
     onMentionsChange,
     candidatesUrl = '/timeline/mention-candidates',
     autoGrow = false,
+    popup = 'below',
     ...props
 }: Props) {
     const t = useT();
@@ -237,7 +244,10 @@ export function MentionTextarea({
                 role="listbox"
                 aria-label={t('Mention candidates')}
                 hidden={!open}
-                className="absolute inset-x-0 top-full z-20 mt-1 rounded-xl border border-border bg-card py-1 shadow-lg"
+                className={cn(
+                    'absolute inset-x-0 z-20 rounded-xl border border-border bg-card py-1 shadow-lg',
+                    popup === 'above' ? 'bottom-full mb-1' : 'top-full mt-1',
+                )}
             >
                 {candidates.map((candidate, index) => (
                     <li
