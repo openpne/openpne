@@ -278,6 +278,12 @@ are not read, and the slice costs two queries — the rooms and their images —
 page evaluates. It holds ten and hands the rest to `/groups/mine`; `hasMore` is one row read past
 that limit rather than a `count(*)` over the membership.
 
+That list rides `GET /unread-counts` beside the badge counts, so every path that keeps the shell live
+— the minute clock, returning to the tab, the service worker, and the bell a page rings after a
+mark-read or a mute ([notifications.md](notifications.md#liveness)) — moves the badge and the rooms
+it counts from one answer. Reading them apart is what let the nav show no groups waiting above a row
+still claiming five.
+
 ## Mentions
 
 Talk parses `@mentions` and nothing else: no hashtags (a chat has no tag culture, and a per-group tag

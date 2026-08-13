@@ -10,7 +10,8 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * The JSON counts an open Modern tab polls. Same numbers as the shared `unread` prop, on their own.
+ * The JSON an open Modern tab polls: the shared `unread` counts and the sidebar's room list, read
+ * together so a refresh cannot move the groups badge without the rooms it is counting.
  */
 class UnreadCountsEndpointTest extends TestCase
 {
@@ -28,7 +29,10 @@ class UnreadCountsEndpointTest extends TestCase
         $this->actingAs($viewer)
             ->getJson('/unread-counts')
             ->assertOk()
-            ->assertExactJson(['friendRequests' => 0, 'unreadMessages' => 0, 'notifications' => 1, 'groupTalks' => 0]);
+            ->assertExactJson([
+                'unread' => ['friendRequests' => 0, 'unreadMessages' => 0, 'notifications' => 1, 'groupTalks' => 0],
+                'talkNavRooms' => ['rooms' => [], 'hasMore' => false],
+            ]);
     }
 
     public function test_a_guest_is_sent_to_the_login_page(): void
@@ -53,6 +57,6 @@ class UnreadCountsEndpointTest extends TestCase
         $this->actingAs($viewer)
             ->getJson('/unread-counts')
             ->assertOk()
-            ->assertJsonPath('friendRequests', 0);
+            ->assertJsonPath('unread.friendRequests', 0);
     }
 }

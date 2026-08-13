@@ -116,7 +116,7 @@ class TalkUnreadBoundaryTest extends TalkTestCase
         // The aggregate memoizes per request, and one test method makes several through the same
         // container; without this the badge would be answered from the render above.
         $this->freshRequestState();
-        $this->actingAs($viewer)->getJson('/unread-counts')->assertJsonPath('groupTalks', 0);
+        $this->actingAs($viewer)->getJson('/unread-counts')->assertJsonPath('unread.groupTalks', 0);
         // The response already sent is unchanged by any of it — the divider does not move under the
         // reader — while a fresh render answers from the cursor as it now stands.
         $opened->assertInertia(fn ($page) => $page->where('talkUnreadSnapshot.count', 3));

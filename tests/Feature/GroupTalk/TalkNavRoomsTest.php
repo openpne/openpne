@@ -162,6 +162,111 @@ class TalkNavRoomsTest extends TalkTestCase
         }
     }
 
+    // --- The refresh the sidebar stays live on ---
+
+    /**
+     * The badge and the rows under it come from one response, so the refresh that clears a room's
+     * pill is the same one that drops the badge. Reading them apart is what let a zeroed groups badge
+     * sit above a row still claiming two unread until the next navigation.
+     */
+    public function test_a_mark_read_leaves_the_badge_and_the_room_row_agreeing(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $messages = GroupMessage::factory()->count(2)->create(['group_id' => $group->getKey()]);
+
+        $this->actingAs($viewer)->getJson('/unread-counts')
+            ->assertJsonPath('unread.groupTalks', 1)
+            ->assertJsonPath('talkNavRooms.rooms.0.unread', 2);
+
+        $this->actingAs($viewer)
+            ->postJson("/groups/{$group->getKey()}/talk/read", ['messageId' => $messages->last()->getKey()])
+            ->assertNoContent();
+        // The counts memoize per request and one method makes several through the same container.
+        $this->freshRequestState();
+
+        $this->actingAs($viewer)->getJson('/unread-counts')
+            ->assertJsonPath('unread.groupTalks', 0)
+            ->assertJsonPath('talkNavRooms.rooms.0.unread', 0);
+    }
+
+    /** Quiet moves both too: out of the badge, and into the row's own de-emphasized state. */
+    public function test_muting_reaches_the_room_row_and_the_badge_in_one_read(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        GroupMessage::factory()->create(['group_id' => $group->getKey()]);
+
+        $this->actingAs($viewer)
+            ->postJson("/groups/{$group->getKey()}/talk/mute", ['muted' => true])
+            ->assertNoContent();
+        $this->freshRequestState();
+
+        $this->actingAs($viewer)->getJson('/unread-counts')
+            ->assertJsonPath('unread.groupTalks', 0)
+            ->assertJsonPath('talkNavRooms.rooms.0.muted', true)
+            ->assertJsonPath('talkNavRooms.rooms.0.unread', 1);
+    }
+
+    public function test_the_refresh_carries_no_room_list_while_talk_is_off(): void
+    {
+        $viewer = Member::factory()->create();
+        GroupMessage::factory()->create(['group_id' => $this->joined($viewer)->getKey()]);
+
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, false);
+        $this->freshRequestState();
+
+        $this->actingAs($viewer)->getJson('/unread-counts')
+            ->assertOk()
+            ->assertJsonPath('talkNavRooms', null);
+    }
+
+    /**
+     * The endpoint runs every minute on every open tab, so what the room list adds to it is pinned:
+     * the rooms and one batched image fetch, and nothing that scales with how many rooms there are.
+     */
+    public function test_the_refresh_pays_two_queries_for_the_room_list(): void
+    {
+        $viewer = Member::factory()->create();
+        $this->pictured($this->joined($viewer));
+
+        $one = $this->endpointQueryCount($viewer);
+
+        foreach (range(1, 12) as $ignored) {
+            $this->pictured($this->joined($viewer));
+        }
+
+        $this->assertSame($one, $this->endpointQueryCount($viewer), 'the poll grew a query per room');
+
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, false);
+        $this->freshRequestState();
+
+        // Switching talk off takes three queries with it, and only two of them are new here: the
+        // badge's groups-with-unread count was already on this endpoint before the sidebar listed
+        // anything (NavTalkRooms' own two are pinned above).
+        $this->assertSame(3, $one - $this->endpointQueryCount($viewer), 'the rooms, their images, and the badge');
+    }
+
+    /**
+     * Queries run while serving one poll. A throwaway poll runs first: the shell's own share() reads
+     * the viewer's avatar and the term overrides once and holds them past `freshRequestState`, so a
+     * cold first call would charge this endpoint for two reads no later poll makes.
+     */
+    private function endpointQueryCount(Member $viewer): int
+    {
+        $this->actingAs($viewer)->getJson('/unread-counts')->assertOk();
+        $this->freshRequestState();
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->actingAs($viewer)->getJson('/unread-counts')->assertOk();
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+        $this->freshRequestState();
+
+        return $count;
+    }
+
     /**
      * Two queries, whatever the list holds: the rooms with their numbers, and one batched fetch of
      * their images. This is the whole reason the nav has its own read — the joined list's five
