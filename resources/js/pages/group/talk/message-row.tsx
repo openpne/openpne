@@ -5,6 +5,7 @@ import { dangerActionClass } from '@/components/ui/danger-link';
 import { EntityText } from '@/components/entity-text';
 import { ImageGrid } from '@/components/image-grid';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { TalkMessage } from './types';
 
 /**
@@ -12,14 +13,37 @@ import type { TalkMessage } from './types';
  * reader already knows from topics and events, so a conversation and a thread are read the same way.
  * A withdrawn author keeps their place with the established label — the message stays, the person is
  * gone.
+ *
+ * `highlighted` is the deep link's landing: the row a `?m=` link opened on, held for a moment so the
+ * reader can see which message named them.
  */
-export function TalkMessageRow({ message, onDelete }: { message: TalkMessage; onDelete: (id: number) => void }) {
+export function TalkMessageRow({
+    message,
+    onDelete,
+    highlighted = false,
+}: {
+    message: TalkMessage;
+    onDelete: (id: number) => void;
+    highlighted?: boolean;
+}) {
     const t = useT();
     const author = message.author;
 
     return (
         // The id is the scroll anchor "load older" holds while the page grows above it.
-        <li data-talk-message-id={message.id} className="px-4 py-3 sm:px-5">
+        <li
+            data-talk-message-id={message.id}
+            className={cn(
+                'px-4 py-3 sm:px-5',
+                // The transition is not conditional on the flag: what fades is the highlight being
+                // taken away, and a transition arriving with the class would have nothing to animate
+                // from. The row mounts already highlighted, so the emphasis itself is instant.
+                'transition-colors duration-1000 motion-reduce:transition-none',
+                // 10%: enough tint to pick the row out, light enough to leave the author link's own
+                // contrast over AA (it is 4.48:1 at 15%).
+                highlighted && 'bg-selected/10',
+            )}
+        >
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Avatar
                     id={author?.id ?? 0}
