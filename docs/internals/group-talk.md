@@ -116,6 +116,12 @@ which is a fact about the conversation rather than a page of it, and the compose
 which is held to the live window instead — it belongs at the foot of any list that ends at the
 newest, including the one just re-read to get back there.
 
+The generation only moves when such a read is *applied*, so it cannot order the reads that ask for a
+move against each other. A second count does that, and its rule is **the last intent wins**: a jump
+retires the jump before it, and a send retires a jump outright. The composer stays live while a jump
+is out, so a reader can ask to be taken back through history and then write instead — and writing
+puts them at the live end, which a page fetched for the move they abandoned must not undo.
+
 ## Unread
 
 The read cursor is the `(talk_read_at, talk_read_message_id)` pair on the **membership row**, not a

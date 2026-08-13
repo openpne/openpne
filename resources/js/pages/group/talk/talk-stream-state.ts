@@ -63,6 +63,41 @@ export function applied(
 }
 
 /**
+ * The other half of the same question, for the reads that *cause* a window change rather than land
+ * in one. The generation only moves when such a read is applied, so between asking for a jump and
+ * getting its page there is nothing to tell a later decision from an earlier one — and in that gap
+ * the reader can tap another jump, or write.
+ *
+ * **The last intent wins.** A jump retires the jump before it, and a send retires a jump the reader
+ * has since thought better of: writing always puts them back at the live end, so a page fetched for
+ * a move they have moved on from must not replace the list under the message they just wrote.
+ */
+export interface TalkIntents {
+    claimed: number;
+}
+
+export function newIntents(): TalkIntents {
+    return { claimed: 0 };
+}
+
+/** Claim the newest intent, retiring every one still out. Returns the epoch to check back against. */
+export function claimIntent(intents: TalkIntents): number {
+    intents.claimed += 1;
+
+    return intents.claimed;
+}
+
+/** Retire what is out without claiming a move of your own — what writing does. */
+export function retireIntents(intents: TalkIntents): void {
+    claimIntent(intents);
+}
+
+/** Whether this navigation's answer is still the one the reader is waiting for. */
+export function isCurrentIntent(intents: TalkIntents, epoch: number): boolean {
+    return intents.claimed === epoch;
+}
+
+/**
  * The instant half of the ordering tuple, in milliseconds. An unparseable stamp sorts first rather
  * than poisoning the comparison — NaN compares false against everything, which would make the
  * ordering intransitive and the sort result arbitrary.

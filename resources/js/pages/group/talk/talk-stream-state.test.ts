@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     applied,
+    claimIntent,
     enterHistory,
     enterLatest,
     initial,
@@ -11,7 +12,10 @@ import {
     mergeLatest,
     mergeNewer,
     mergeSent,
+    newIntents,
     oldestBoundary,
+    retireIntents,
+    isCurrentIntent,
     watermark,
 } from './talk-stream-state.ts';
 import type { TalkMessage, TalkPage } from './types.ts';
@@ -346,4 +350,50 @@ test('a send is refused by a history window and taken by the live one', () => {
 
     const back = enterLatest(history, page([message(90, '2026-08-13T18:00:00+00:00')], true));
     assert.deepEqual(bodies(mergeSent(back, mine)), ['m90', 'm99']);
+});
+
+/**
+ * The composer stays live while a jump is still out, so the reader can ask to be taken back through
+ * history and then write instead. Writing is the later intent and has to win: the jump's page must
+ * not arrive afterwards and replace the list out from under their own message.
+ */
+test('a send made while a jump is still out keeps the reader at the live end', () => {
+    const intents = newIntents();
+    let state = initial(page([message(90, '2026-08-13T18:00:00+00:00')], true));
+    const at = state.generation;
+
+    // The reader taps the unread banner…
+    const jump = claimIntent(intents);
+
+    // …then writes before its page arrives, and the write is acknowledged first.
+    retireIntents(intents);
+    state = mergeSent(state, message(99, '2026-08-13T18:05:00+00:00'));
+
+    // The jump's page finally lands.
+    if (isCurrentIntent(intents, jump)) {
+        state = applied(state, at, (current) => enterHistory(current, page([message(10, '2026-08-13T09:10:00+00:00')], true, true)));
+    }
+
+    assert.deepEqual(state.window, { kind: 'latest' }, 'writing puts you back at the live end');
+    assert.deepEqual(bodies(state), ['m90', 'm99'], 'and your own words stay where you wrote them');
+});
+
+/** The control: nothing retired the jump, so its page is still the one the reader is waiting for. */
+test('a jump nobody overtook still lands', () => {
+    const intents = newIntents();
+    const state = initial(page([message(90, '2026-08-13T18:00:00+00:00')], true));
+    const jump = claimIntent(intents);
+
+    assert.equal(isCurrentIntent(intents, jump), true);
+    const jumped = applied(state, state.generation, (current) => enterHistory(current, page([message(10, '2026-08-13T09:10:00+00:00')], true, true)));
+    assert.deepEqual(bodies(jumped), ['m10']);
+});
+
+test('the later of two moves is the one waited for', () => {
+    const intents = newIntents();
+    const first = claimIntent(intents);
+    const second = claimIntent(intents);
+
+    assert.equal(isCurrentIntent(intents, first), false);
+    assert.equal(isCurrentIntent(intents, second), true);
 });

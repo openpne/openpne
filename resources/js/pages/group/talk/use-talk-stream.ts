@@ -3,16 +3,20 @@ import { xsrfHeader } from '@/lib/csrf';
 import type { MentionPayloadRow } from '@/lib/mention-draft';
 import {
     applied,
+    claimIntent,
     enterHistory,
     enterLatest,
     initial,
+    isCurrentIntent,
     markDeleted,
     mergeAfter,
     mergeBefore,
     mergeLatest,
     mergeNewer,
     mergeSent,
+    newIntents,
     oldestBoundary,
+    retireIntents,
     type TalkStreamState,
     watermark,
 } from './talk-stream-state';
@@ -54,6 +58,19 @@ export function useTalkStream(groupId: number, page: TalkPage) {
     // The poll's read, held where a window change can reach it: moving the page somewhere else makes
     // the answer already on the wire worthless, and there is no reason to wait for it.
     const polling = useRef<AbortController | null>(null);
+    // Which move to another stretch of the conversation the reader is waiting for, and the read
+    // fetching it. The last intent wins — see TalkIntents.
+    const intents = useRef(newIntents());
+    const navigating = useRef<AbortController | null>(null);
+
+    /** Claim the newest move, dropping the read any earlier one still has out. */
+    const claimMove = useCallback((): number => {
+        navigating.current?.abort();
+        // Standing somewhere else makes the poll's answer worthless too.
+        polling.current?.abort();
+
+        return claimIntent(intents.current);
+    }, []);
 
     /**
      * The one door every response comes through. `at` is the generation the read was issued against;
@@ -132,7 +149,7 @@ export function useTalkStream(groupId: number, page: TalkPage) {
         const at = stateRef.current.generation;
         setLoadingOlder(true);
         try {
-            const older = await fetchPage(`?before=${encodeURIComponent(boundary)}`);
+            const older = await fetchPage(`?before=${encodeURIComponent(boundary)}`).catch(() => null);
             if (older !== null) {
                 fold(at, (current) => mergeBefore(current, older));
             }
@@ -149,19 +166,22 @@ export function useTalkStream(groupId: number, page: TalkPage) {
      */
     const openContext = useCallback(
         async (cursor: string): Promise<boolean> => {
-            // The list is about to stand somewhere else, so the poll's read is already worthless.
-            polling.current?.abort();
+            const epoch = claimMove();
+            const controller = new AbortController();
+            navigating.current = controller;
 
             const at = stateRef.current.generation;
-            const around = await fetchPage(`?context=${encodeURIComponent(cursor)}`);
-            if (around === null) {
+            // A refusal, a dropped connection and an abort all mean the same thing to the caller: the
+            // move did not happen, so it can put back whatever it was holding for it.
+            const around = await fetchPage(`?context=${encodeURIComponent(cursor)}`, controller.signal).catch(() => null);
+            if (around === null || !isCurrentIntent(intents.current, epoch)) {
                 return false;
             }
             fold(at, (current) => enterHistory(current, around));
 
             return true;
         },
-        [fetchPage, fold],
+        [claimMove, fetchPage, fold],
     );
 
     /** "Load newer": one page forward from the foot of the history window. */
@@ -174,7 +194,7 @@ export function useTalkStream(groupId: number, page: TalkPage) {
         const at = stateRef.current.generation;
         setLoadingNewer(true);
         try {
-            const newer = await fetchPage(`?after=${encodeURIComponent(boundary)}`);
+            const newer = await fetchPage(`?after=${encodeURIComponent(boundary)}`).catch(() => null);
             if (newer !== null) {
                 fold(at, (current) => mergeNewer(current, newer));
             }
@@ -185,17 +205,19 @@ export function useTalkStream(groupId: number, page: TalkPage) {
 
     /** Back to the live end: the newest page, replacing whatever stretch was being read. */
     const returnToLatest = useCallback(async (): Promise<boolean> => {
-        polling.current?.abort();
+        const epoch = claimMove();
+        const controller = new AbortController();
+        navigating.current = controller;
 
         const at = stateRef.current.generation;
-        const latest = await fetchPage('');
-        if (latest === null) {
+        const latest = await fetchPage('', controller.signal).catch(() => null);
+        if (latest === null || !isCurrentIntent(intents.current, epoch)) {
             return false;
         }
         fold(at, (current) => enterLatest(current, latest));
 
         return true;
-    }, [fetchPage, fold]);
+    }, [claimMove, fetchPage, fold]);
 
     const send = useCallback(
         async (body: string, mentions: MentionPayloadRow[] = [], image: File | null = null) => {
@@ -228,6 +250,13 @@ export function useTalkStream(groupId: number, page: TalkPage) {
             }
 
             const message = (await response.json()) as TalkMessage;
+
+            // Writing is the newest intent, so a jump the reader asked for and then wrote instead of
+            // waiting for is retired here — its page would otherwise arrive and replace the list out
+            // from under the message just written, which is the one thing the rule below promises
+            // cannot happen.
+            retireIntents(intents.current);
+            navigating.current?.abort();
 
             // Writing puts you back at the live end. Appending it to a history window would sit your
             // words directly under a message they do not answer, so the newest page is re-read
