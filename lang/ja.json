@@ -941,6 +941,7 @@
     "Remove %friend%": "%friend%解除",
     "Remove :name": ":name を外す",
     "Remove :name from your %friends%?": ":name さんを%friends%から外しますか？",
+    "Remove image :number": ":number 枚目の画像を外す",
     "Remove link": "リンクを削除",
     "Remove the current favicon": "現在のファビコンを削除する",
     "Remove the current logo": "現在のロゴを削除する",
