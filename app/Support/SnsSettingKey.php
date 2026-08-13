@@ -101,10 +101,14 @@ enum SnsSettingKey: string
     case FeatureGroupEventEnabled = 'feature_group_event_enabled';
 
     /**
-     * The one unit that is dark unless a stored '1' switches it on — decode() below is fail-closed
-     * for this key alone. Talk replaces the community timeline rather than joining it, so it must
-     * not go live before the cutover deploy; that deploy moves this key into the fail-open family,
-     * which flips absent-row sites on while keeping every operator's stored choice. See
+     * The one unit that is dark until an operator asks for it, declared twice over: default() below
+     * is false — which is what an absent row resolves to, since decode() answers null with the
+     * default before reaching any arm — and decode()'s arm for this key is fail-closed, so a stored
+     * blank or garbled value is off too.
+     *
+     * Talk replaces the community timeline rather than joining it, so it must not go live before the
+     * cutover deploy. That deploy flips BOTH declarations; the default is the half that moves the
+     * sites with no row, which is every site that never opened the Features page. See
      * docs/internals/group-talk.md.
      */
     case FeatureGroupTalkEnabled = 'feature_group_talk_enabled';
@@ -370,9 +374,11 @@ enum SnsSettingKey: string
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
             self::FeatureFriendEnabled => $value !== '0',
-            // Fail-closed, alone among the feature flags: group talk must stay dark on an absent (or
-            // malformed) row until the community-timeline cutover moves it into the arm above. There
-            // is no content to strand behind a wrongly-off gate while nothing can be written yet.
+            // Fail-closed, alone among the feature flags: only a stored '1' switches group talk on,
+            // so a blank or garbled value stays dark like an explicit '0'. An ABSENT row never
+            // reaches here — the null check at the top answers it with default(), which is false for
+            // this key — so the cutover has to move both. There is no content to strand behind a
+            // wrongly-off gate while nothing can be written yet.
             self::FeatureGroupTalkEnabled => $value === '1',
             default => $value,
         };

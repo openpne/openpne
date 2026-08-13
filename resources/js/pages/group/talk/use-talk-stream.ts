@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
+import {
+    initial,
+    markDeleted,
+    mergeAfter,
+    mergeBefore,
+    mergeLatest,
+    mergeSent,
+    oldestBoundary,
+    type TalkStreamState,
+    watermark,
+} from './talk-stream-state';
 import type { TalkMessage, TalkPage } from './types';
 
 /** How often a visible tab asks what has arrived. */
@@ -18,18 +29,18 @@ export class SendFailed extends Error {
  * hidden tab and does not refresh on return, which is the moment a stale chat is seen), plus "load
  * older" walking back by keyset and the composer's send appending in place.
  *
- * Merging is by id, so a message can never be listed twice — a send and the poll that overlaps it
- * both produce the same row by design.
+ * This hook owns the network and nothing else: what arrives is folded in by the pure merges in
+ * talk-stream-state.ts, which is where the ordering, dedupe and tombstone rules live.
  */
-export function useTalkStream(groupId: number, initial: TalkPage) {
-    const [page, setPage] = useState<TalkPage>(initial);
+export function useTalkStream(groupId: number, page: TalkPage) {
+    const [state, setState] = useState<TalkStreamState>(() => initial(page));
     const [loadingOlder, setLoadingOlder] = useState(false);
 
-    // What the interval reads. Reading state there would capture the page the tick was created with.
-    const pageRef = useRef(page);
+    // What the interval reads. Reading state there would capture the value the tick was created with.
+    const stateRef = useRef(state);
     useEffect(() => {
-        pageRef.current = page;
-    }, [page]);
+        stateRef.current = state;
+    }, [state]);
 
     const fetchPage = useCallback(
         async (query: string, signal?: AbortSignal): Promise<TalkPage | null> => {
@@ -44,19 +55,6 @@ export function useTalkStream(groupId: number, initial: TalkPage) {
         [groupId],
     );
 
-    const append = useCallback((arriving: TalkMessage[]) => {
-        if (arriving.length === 0) {
-            return;
-        }
-
-        setPage((current) => {
-            const known = new Set(current.messages.map((message) => message.id));
-            const fresh = arriving.filter((message) => !known.has(message.id));
-
-            return fresh.length === 0 ? current : { ...current, messages: [...current.messages, ...fresh] };
-        });
-    }, []);
-
     useEffect(() => {
         let inFlight: AbortController | null = null;
 
@@ -69,14 +67,21 @@ export function useTalkStream(groupId: number, initial: TalkPage) {
             const controller = new AbortController();
             inFlight = controller;
 
-            const messages = pageRef.current.messages;
-            const watermark = messages[messages.length - 1]?.cursor;
+            const since = watermark(stateRef.current);
             // Nothing on screen means there is no position to ask after — the conversation was empty
             // when the page loaded, so ask for the newest page instead.
-            const query = watermark === undefined ? '' : `?after=${encodeURIComponent(watermark)}`;
+            const query = since === undefined ? '' : `?after=${encodeURIComponent(since)}`;
 
             void fetchPage(query, controller.signal)
-                .then((arrived) => arrived !== null && append(arrived.messages))
+                .then((arrived) => {
+                    if (arrived === null) {
+                        return;
+                    }
+                    // Which merge is decided by which question was asked, not by what came back.
+                    setState((current) =>
+                        since === undefined ? mergeLatest(current, arrived) : mergeAfter(current, arrived),
+                    );
+                })
                 .catch(() => {
                     // Keep what is on screen: a dropped refresh is not news to the reader, and the
                     // next tick or a real navigation answers an expired session.
@@ -92,10 +97,10 @@ export function useTalkStream(groupId: number, initial: TalkPage) {
             document.removeEventListener('visibilitychange', poll);
             inFlight?.abort();
         };
-    }, [append, fetchPage]);
+    }, [fetchPage]);
 
     const loadOlder = useCallback(async () => {
-        const boundary = pageRef.current.messages[0]?.cursor;
+        const boundary = oldestBoundary(stateRef.current);
         if (boundary === undefined || loadingOlder) {
             return;
         }
@@ -103,14 +108,9 @@ export function useTalkStream(groupId: number, initial: TalkPage) {
         setLoadingOlder(true);
         try {
             const older = await fetchPage(`?before=${encodeURIComponent(boundary)}`);
-            if (older === null) {
-                return;
+            if (older !== null) {
+                setState((current) => mergeBefore(current, older));
             }
-
-            setPage((current) => ({
-                messages: [...older.messages, ...current.messages],
-                hasOlder: older.hasOlder,
-            }));
         } finally {
             setLoadingOlder(false);
         }
@@ -129,9 +129,10 @@ export function useTalkStream(groupId: number, initial: TalkPage) {
                 throw new SendFailed(await bodyErrorOf(response));
             }
 
-            append([(await response.json()) as TalkMessage]);
+            const message = (await response.json()) as TalkMessage;
+            setState((current) => mergeSent(current, message));
         },
-        [append, groupId],
+        [groupId],
     );
 
     const remove = useCallback(
@@ -146,12 +147,12 @@ export function useTalkStream(groupId: number, initial: TalkPage) {
                 return;
             }
 
-            setPage((current) => ({ ...current, messages: current.messages.filter((message) => message.id !== id) }));
+            setState((current) => markDeleted(current, id));
         },
         [groupId],
     );
 
-    return { page, loadingOlder, loadOlder, send, remove };
+    return { messages: state.messages, hasOlder: state.hasOlder, loadingOlder, loadOlder, send, remove };
 }
 
 /** The `body` validation message from a 422, or null for any other refusal. */

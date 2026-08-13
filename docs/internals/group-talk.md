@@ -12,17 +12,33 @@ directly, as `/groups/recent` does.
 
 ## It ships switched off
 
-`groupTalk` is the one [feature unit](feature-toggles.md) whose flag **decodes fail-closed**: an
-absent `feature_group_talk_enabled` row means disabled, and only a stored `'1'` switches it on
-(`SnsSettingKey::decode()`). Every other unit reads absent as enabled — with that reading, talk
-would have gone live on every site the moment its schema landed, next to the group timeline it is
-meant to replace, with the same conversations in two places.
+`groupTalk` is the one [feature unit](feature-toggles.md) that is dark until an operator asks for
+it, and it takes **two** declarations in [`SnsSettingKey`](../../app/Support/SnsSettingKey.php) to
+say so:
+
+- `default()` answers **`false`** for `feature_group_talk_enabled`. This is what an absent row
+  resolves to — `decode()` returns the default for a null value *before* it reaches any arm — and an
+  absent row is the state every install starts in.
+- the `decode()` arm for the key is **fail-closed** (`$value === '1'`), so a stored blank or garbled
+  value reads as off too, where every other unit reads anything but `'0'` as on.
+
+Every other unit reads absent as enabled. With that reading talk would have gone live on every site
+the moment its schema landed, next to the group timeline it is meant to replace, with the same
+conversations in two places.
 
 Until the cutover deploy (which stops the old writes and moves the history across) an operator
 reaches talk by switching it on per site from admin → Settings → Features. Its routes 404 and its
-entrance stays off the group page until they do. The cutover itself is a pure code change: moving
-this key into the fail-open decode family turns on every site that never touched the toggle, while
-a stored `'0'` or `'1'` — an operator's explicit choice, either way — keeps meaning what it says.
+entrance stays off the group page until they do.
+
+The cutover is a pure code change, and it is **both** halves or neither:
+
+1. `default()` → `true`. This is the half that actually flips the sites in question, since a site
+   that never opened the Features page has no row at all.
+2. the `decode()` arm → the fail-open family, so a stored value reads like every other unit's.
+
+Doing only (2) would change nothing for those sites: `decode()` never reaches the arm for an absent
+row. A stored `'0'` or `'1'` is an operator's explicit choice and keeps meaning what it says either
+way.
 
 ## Schema
 
@@ -71,6 +87,15 @@ The page is capped at `GroupTalkMessages::PER_PAGE` in both directions and is no
 Live updates are a **poll** — a visible tab asks for anything after its newest message every ~8s.
 SSE or WebSockets would mean a resident process, which the single-site hosting contract does not
 have.
+
+The client keeps the same order. A send and a poll are in flight together by design and complete in
+whatever order the network gives them, so
+[`talk-stream-state.ts`](../../resources/js/pages/group/talk/talk-stream-state.ts) re-sorts by the
+tuple on **every** merge rather than trusting arrival order — appending as responses land would put
+the list out of order permanently, and the poll's next watermark would then be read off a row that
+is not the newest. A locally deleted id is a **session-lifetime tombstone** for the same reason: a
+poll already in flight answers from a snapshot that still holds the row, and nothing afterwards
+would remove it again.
 
 ## Access
 

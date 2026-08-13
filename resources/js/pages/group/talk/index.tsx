@@ -29,7 +29,7 @@ export default function GroupTalkIndex() {
     const confirm = useConfirm();
     const { group, page, canPost, bodyMaxLength } = usePage<TalkProps>().props;
     const stream = useTalkStream(group.id, page);
-    const messages = stream.page.messages;
+    const messages = stream.messages;
 
     // Whether the reader is at the newest message. A conversation that scrolls itself while someone
     // is reading back through it has taken the page away from them.
@@ -90,7 +90,7 @@ export default function GroupTalkIndex() {
             <Head title={t('Talk')} />
 
             <Panel flush>
-                {stream.page.hasOlder && (
+                {stream.hasOlder && (
                     <div className="flex justify-center border-b border-border px-4 py-2 sm:px-5">
                         <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder}>
                             {t('Load older messages')}

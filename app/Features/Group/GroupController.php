@@ -21,6 +21,7 @@ use App\Features\Group\Serializers\GroupSerializer;
 use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\Queries\RecentGroupEvents;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
+use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\GroupTopic\Queries\RecentGroupTopics;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
@@ -89,6 +90,10 @@ class GroupController extends Controller
         // leads with a compose form, and a non-member cannot post. Null keeps the box off the page,
         // the same seam the two boards use, so a switched-off unit costs no query either.
         $showTimeline = Feature::Timeline->enabled() && CommunityTimelineAccess::canPost($found, $viewer);
+        // Talk asks its own two questions rather than borrowing the board's null seam: it reads the
+        // same access column but is a separate unit, so a site running talk with the board switched
+        // off must still get its entrance.
+        $canViewTalk = Feature::GroupTalk->enabled() && GroupTalkAccess::canView($found, $viewer);
 
         return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $showTopics, $showEvents, $showTimeline, $recentTopics, $recentEvents, $communityTimeline) {
@@ -136,6 +141,7 @@ class GroupController extends Controller
                 'timelinePosts' => $showTimeline
                     ? array_map([TimelinePostSerializer::class, 'entry'], $communityTimeline->take($viewer, $found, self::TIMELINE_BOX)->all())
                     : null,
+                'canViewTalk' => $canViewTalk,
             ]),
         ]);
     }

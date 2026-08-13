@@ -33,10 +33,13 @@ had switched off. Decoding is deliberately **fail-open** — only an explicit `'
 this is an availability switch: a malformed value must not black out a module and strand its
 content. The security keys in the same enum fail *closed*, for the opposite reason.
 
-`groupTalk` is the single exception: its key alone decodes **fail-closed** (absent means disabled,
-only a stored `'1'` enables), because fail-open would expose talk beside the group timeline it
-replaces — and there is no content to strand while nothing can be written yet. The cutover deploy
-moves it into the fail-open family. See [group-talk.md](group-talk.md#it-ships-switched-off).
+`groupTalk` is the single exception, and it takes two declarations rather than one: its `default()`
+is **`false`** — which is what an absent row resolves to, since `decode()` returns the default before
+reaching any arm — and its `decode()` arm is **fail-closed**, so a stored blank or garbled value is
+off as well. Fail-open would expose talk beside the group timeline it replaces, and there is no
+content to strand while nothing can be written yet. The cutover deploy has to flip **both**; the
+default is the half that moves the sites with no row. See
+[group-talk.md](group-talk.md#it-ships-switched-off).
 
 ## Administration
 
