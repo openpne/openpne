@@ -130,7 +130,7 @@ reading, and a cursor left behind your own message would show your own words arr
 
 | where | what it counts |
 |---|---|
-| group list, per row ([`UnreadTalkCounts`](../../app/Features/GroupTalk/Queries/UnreadTalkCounts.php)) | unread **messages** in that group, one query for every membership |
+| a room's row on the joined-group list ([`JoinedTalkRooms`](../../app/Features/GroupTalk/Queries/JoinedTalkRooms.php)) and the group page's talk card ([`UnreadTalkCounts`](../../app/Features/GroupTalk/Queries/UnreadTalkCounts.php)) | unread **messages** in that group |
 | nav badge, `groupTalks` ([`CountGroupsWithUnreadTalk`](../../app/Features/GroupTalk/Queries/CountGroupsWithUnreadTalk.php)) | **groups** with anything unread, muted ones excluded |
 
 The badge counts rooms rather than messages because a message count is dominated by whichever group
@@ -138,7 +138,7 @@ is busiest, which says nothing about where to go next. It joins the shared props
 `App\Features\Home\UnreadCounts` and reports zero, unqueried, while the unit is off — like every
 other badge there.
 
-Both read the same predicate ([`UnreadTalkScope`](../../app/Features/GroupTalk/UnreadTalkScope.php)):
+All of them read the same predicate ([`UnreadTalkScope`](../../app/Features/GroupTalk/UnreadTalkScope.php)):
 newer than the cursor by the tuple, and **`member_id IS NULL OR member_id != viewer`**. That NULL arm
 is load-bearing, not defensive — `member_id != ?` is UNKNOWN for a withdrawn author's row, so without
 it the count would silently skip exactly the messages the page still shows as "Withdrawn member". The
@@ -153,6 +153,30 @@ quiet rather than to lose track of the conversation. Leaving clears it with the 
 
 Mentions **pierce mute** — a message addressed to you outranks the room's quiet — see
 [Mentions](#mentions) below.
+
+## The joined-group list is a room list
+
+`/groups/mine` serves two shapes from one component and the server names which one it sent (`view`).
+The viewer's own list under Modern with talk on is
+[`JoinedTalkRooms`](../../app/Features/GroupTalk/Queries/JoinedTalkRooms.php): rooms in the order
+they were last spoken in, each row opening the conversation rather than the group. Every other
+reading of the route — another member's memberships, Classic, talk switched off — keeps the
+membership grid (`ListMemberGroups`) and reads no message at all. A room list is the viewer's own by
+construction: the order is their conversations and the pills are their unread, neither of which
+another member's membership list can answer.
+
+The order is, all descending, *has a message* → the newest message's `created_at` → its `id` → the
+membership's `created_at` → the group id. It is **decided in SQL before the page is cut**: paging
+the groups first and then looking up their newest messages sorts the page rather than the
+membership, and a group talked in an hour ago belongs at the top whether or not it falls in the
+first twenty by id. So the newest `(created_at, id)` rides along as two correlated subselects, one
+per column — the tuple cannot be read in one statement without a row constructor or a lateral join,
+and SQLite has neither. Each is a single seek on `(group_id, created_at, id)`. Whether a room has
+anything at all is spelled as a `CASE` rather than left to where the engine collates NULL in a
+descending sort, which is not a portable answer.
+
+The bodies follow in one lookup by primary key, since the ordering has already named the exact rows.
+A page therefore costs the same whether it holds one room or twenty.
 
 ## Mentions
 
@@ -309,3 +333,5 @@ role once per request and the serializer asks it per row.
 8. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
 9. Talk is the group's conversation surface; nothing else scopes posts to a group. A second one
    would be re-creating the split the cutover removed.
+10. The room list's order is settled in SQL before the page is cut. A query that pages first and
+    then asks for the newest messages has ordered the page, not the membership.

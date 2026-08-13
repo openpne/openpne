@@ -207,7 +207,7 @@ class UnreadTalkTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('unread.groupTalks', 1));
     }
 
-    public function test_the_group_list_carries_each_group_s_own_count(): void
+    public function test_the_room_list_carries_each_group_s_own_count(): void
     {
         $group = $this->group();
         $viewer = $this->memberOf($group);
@@ -218,8 +218,9 @@ class UnreadTalkTest extends TalkTestCase
 
         $this->actingAs($viewer)->get('/groups/mine')
             ->assertInertia(fn ($page) => $page
-                ->where("talkUnread.{$group->getKey()}.count", 2)
-                ->where("talkUnread.{$group->getKey()}.muted", false));
+                ->where('rooms.data.0.id', $group->getKey())
+                ->where('rooms.data.0.unread', 2)
+                ->where('rooms.data.0.muted', false));
     }
 
     /** Another member's group list is not the viewer's unread; the prop is empty there. */

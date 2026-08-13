@@ -22,8 +22,10 @@ use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\Queries\RecentGroupEvents;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTalk\GroupTalkAccess;
+use App\Features\GroupTalk\Queries\JoinedTalkRooms;
 use App\Features\GroupTalk\Queries\LatestGroupMessage;
 use App\Features\GroupTalk\Queries\UnreadTalkCounts;
+use App\Features\GroupTalk\Serializers\TalkRoomSerializer;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\GroupTopic\Queries\RecentGroupTopics;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
@@ -189,33 +191,53 @@ class GroupController extends Controller
         ]);
     }
 
-    public function listMine(Request $request, ListMemberGroups $query, UnreadTalkCounts $talkUnread): View|InertiaResponse
+    /**
+     * The member's groups, in one of two shapes. Their own list under Modern with talk on is a list
+     * of conversations, ordered by what was last said (JoinedTalkRooms); everything else — another
+     * member's memberships, Classic, talk switched off — stays the group grid it has always been,
+     * so `view` is what the client switches on rather than the presence of a prop.
+     *
+     * The grid's query is deferred behind a closure because the two shapes read different tables:
+     * the room list must not also pay for the grid's page.
+     */
+    public function listMine(Request $request, ListMemberGroups $query, JoinedTalkRooms $talkRooms): View|InertiaResponse
     {
         $owner = $this->memberSubject($request->filled('id')
             ? Member::findOrFail($request->integer('id'))
             : null);
-        $groups = $query($owner);
+        $groups = fn () => $query($owner);
 
         return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => fn () => view('group.list', [
                 'owner' => $owner,
-                'groups' => $groups,
+                'groups' => $groups(),
             ]),
-            SurfaceResolver::MODERN => function () use ($owner, $groups, $talkUnread) {
+            SurfaceResolver::MODERN => function () use ($owner, $groups, $talkRooms) {
                 // The owner ref draws the chrome's scope avatar (Modern only, so Classic pays nothing).
                 $owner->loadMissing('avatar.file');
                 $isOwner = $this->viewer()->is($owner);
 
+                // A room list is the viewer's own conversations by construction: the order is what
+                // was last said and the pills are their unread, neither of which another member's
+                // membership list can answer.
+                if ($isOwner && Feature::GroupTalk->enabled()) {
+                    return Inertia::render('community/list', [
+                        'owner' => MemberRefSerializer::ref($owner),
+                        'isOwner' => true,
+                        'view' => 'rooms',
+                        'rooms' => TalkRoomSerializer::paginator($talkRooms($owner)),
+                    ]);
+                }
+
                 return Inertia::render('community/list', [
                     'owner' => MemberRefSerializer::ref($owner),
                     'isOwner' => $isOwner,
-                    'groups' => GroupSerializer::paginator($groups),
-                    // Viewer-specific, so a top-level prop rather than part of the group shape (the
-                    // same page lists another member's groups, where the viewer's unread means
-                    // nothing). One query for every membership; empty when there is nothing to say.
-                    // Cast so the shape is an object either way — an empty PHP array would ship as
-                    // `[]` and the client would be indexing a list by group id.
-                    'talkUnread' => (object) ($isOwner && Feature::GroupTalk->enabled() ? $talkUnread($owner) : []),
+                    'view' => 'grid',
+                    'groups' => GroupSerializer::paginator($groups()),
+                    // What is left here holds no unread of the viewer's: another member's list, or a
+                    // site with talk off. The prop keeps its shape (an object, so the client never
+                    // indexes a list by group id) rather than disappearing under one of the two.
+                    'talkUnread' => (object) [],
                 ]);
             },
         ]);
