@@ -74,7 +74,7 @@ class InertiaSharedPropsTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->where('enabledFeatures.group', false)
                 // Contained units follow their container, whatever their own rows say.
-                ->where('enabledFeatures.communityTopic', false)
+                ->where('enabledFeatures.groupTopic', false)
                 ->where('enabledFeatures.communityEvent', false)
                 ->where('enabledFeatures.diary', true));
     }

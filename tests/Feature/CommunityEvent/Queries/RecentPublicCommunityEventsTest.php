@@ -3,7 +3,7 @@
 namespace Tests\Feature\CommunityEvent\Queries;
 
 use App\Features\CommunityEvent\Queries\RecentPublicCommunityEvents;
-use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\Group;

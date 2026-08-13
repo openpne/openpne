@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Features\GroupTopic;
+
+use App\Compat\RouteParityRegistry;
+use App\Features\GroupTopic\Actions\CreateTopicComment;
+use App\Features\GroupTopic\Actions\DeleteTopicComment;
+use App\Features\GroupTopic\Exceptions\GroupTopicActionException;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\GroupTopic\StoreTopicCommentRequest;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
+use App\Support\SurfaceResolver;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+/**
+ * Topic comments, dual-surface for the write path. The action chokepoint (GroupTopicAccess)
+ * enforces who may comment and who may delete; the controller maps its refusals to 404 and redirects
+ * back to the topic on the surface the request came from. showDelete stays a Classic-only GET confirm
+ * page (page_communityTopicComment_*) — Modern confirms delete inline (Radix AlertDialog).
+ */
+class GroupTopicCommentController extends Controller
+{
+    public function store(StoreTopicCommentRequest $request, int $topic, CreateTopicComment $action): RedirectResponse
+    {
+        $found = GroupTopic::findOrFail($topic);
+
+        try {
+            $action($this->viewer(), $found, $request->validated('body'), $request->file('images', []));
+        } catch (GroupTopicActionException) {
+            abort(404);
+        }
+
+        return $this->redirectToTopic($request, $found)->with('status', __('Comment posted.'));
+    }
+
+    public function showDelete(Request $request, GroupTopicComment $comment): View|RedirectResponse
+    {
+        abort_unless(GroupTopicAccess::canDeleteComment($comment, $this->viewer()), 404);
+
+        // Modern confirms deletion inline — send a Modern viewer back to the topic.
+        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
+            return redirect()->route('group.topics.show', $comment->topic);
+        }
+
+        // The confirm keeps the group context its topic pages carry.
+        $this->markLocalNavGroup($comment->topic->group);
+
+        return view('group-topic.comment-delete', [
+            'comment' => $comment,
+            'pageId' => RouteParityRegistry::bodyId('group.topics.comment.delete.show'),
+        ]);
+    }
+
+    public function delete(Request $request, GroupTopicComment $comment, DeleteTopicComment $action): RedirectResponse
+    {
+        $topic = $comment->topic;
+
+        try {
+            $action($this->viewer(), $comment);
+        } catch (GroupTopicActionException) {
+            abort(404);
+        }
+
+        return $this->redirectToTopic($request, $topic)->with('status', __('The comment was deleted.'));
+    }
+
+    /** Redirect to the topic show page on the surface the request came from (both key off {topic}). */
+    private function redirectToTopic(Request $request, GroupTopic $topic): RedirectResponse
+    {
+        return redirect()->route('group.topics.show', $topic);
+    }
+}

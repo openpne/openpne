@@ -21,7 +21,7 @@ class ComposeSheetActionGuardTest extends TestCase
         'pages/diary/new.tsx',
         'pages/diary/edit.tsx',
         'pages/timeline/new.tsx',
-        'pages/community/topic/edit.tsx',
+        'pages/group/topic/edit.tsx',
         'pages/community/event/edit.tsx',
     ];
 

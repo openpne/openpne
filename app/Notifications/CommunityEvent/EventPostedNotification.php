@@ -19,7 +19,7 @@ use Illuminate\Notifications\Notification;
 /**
  * Announces a new event to a community member in the broadcast audience. The fan-out resolves each
  * recipient's channels once and passes them, so via() returns them verbatim (one instance per
- * recipient). Shares the community-posting mail template with the comment notifications.
+ * recipient). Shares the group-posting mail template with the comment notifications.
  */
 class EventPostedNotification extends Notification implements FeatureNotification, ShouldQueue
 {
@@ -48,7 +48,7 @@ class EventPostedNotification extends Notification implements FeatureNotificatio
 
     public function toMail(object $notifiable): MailMessage
     {
-        return $this->mailFromTemplate(MailTemplate::CommunityPostingNotified, [
+        return $this->mailFromTemplate(MailTemplate::GroupPostingNotified, [
             'community_name' => $this->community->name,
             'topic_name' => $this->event->name,
             'nickname' => $this->author->name,

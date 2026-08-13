@@ -3,8 +3,8 @@
 namespace App\Features\Notifications\Serializers;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
-use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\Diary\DiaryAccess;
+use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Notifications\NotificationCenterCategory;
 use App\Features\Notifications\NotificationCenterRow;
 use App\Features\Notifications\NotificationFeedRow;
@@ -12,10 +12,10 @@ use App\Features\Notifications\NotificationKindLabel;
 use App\Features\Notifications\Queries\ListNotificationCenterRows;
 use App\Features\Timeline\TimelineAccess;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DirectMessageRecipient;
 use App\Models\Group;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -107,12 +107,12 @@ class NotificationFeedSerializer
             'friend_requested' => $data['requester_id'] ?? null,
             'friend_request_accepted' => $data['accepter_id'] ?? null,
             'direct_message_received' => $data['sender_id'] ?? null,
-            'diary_commented', 'community_topic_commented', 'community_event_commented' => $data['commenter_id'] ?? null,
+            'diary_commented', 'group_topic_commented', 'community_event_commented' => $data['commenter_id'] ?? null,
             'timeline_replied' => $data['replier_id'] ?? null,
             'group_joined' => $data['new_member_id'] ?? null,
             'group_admin_transfer_requested' => $data['requester_id'] ?? null,
             'group_sub_admin_appointed' => $data['appointer_id'] ?? null,
-            'diary_posted', 'community_topic_posted', 'community_event_posted', 'timeline_mentioned', 'timeline_posted' => $data['author_id'] ?? null,
+            'diary_posted', 'group_topic_posted', 'community_event_posted', 'timeline_mentioned', 'timeline_posted' => $data['author_id'] ?? null,
             default => null,
         };
     }
@@ -130,12 +130,12 @@ class NotificationFeedSerializer
             'friend_request_accepted' => self::profileUrl($data['accepter_id'] ?? null),
             'direct_message_received' => self::directMessageUrl($row, $data['direct_message_id'] ?? null),
             'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
-            'community_topic_commented' => self::topicUrl($row, $data['topic_id'] ?? null),
+            'group_topic_commented' => self::topicUrl($row, $data['topic_id'] ?? null),
             'community_event_commented' => self::eventUrl($row, $data['event_id'] ?? null),
             'group_joined' => self::groupUrl($data['group_id'] ?? null),
             'group_admin_transfer_requested', 'group_sub_admin_appointed' => self::groupUrl($data['group_id'] ?? null),
             'diary_posted' => self::diaryUrl($row, $data['diary_id'] ?? null),
-            'community_topic_posted' => self::topicUrl($row, $data['topic_id'] ?? null),
+            'group_topic_posted' => self::topicUrl($row, $data['topic_id'] ?? null),
             'community_event_posted' => self::eventUrl($row, $data['event_id'] ?? null),
             'timeline_mentioned', 'timeline_posted', 'timeline_replied' => self::timelineUrl($row, $data['post_id'] ?? null),
             default => null,
@@ -225,15 +225,15 @@ class NotificationFeedSerializer
     /** A deleted topic — or one whose board the recipient can no longer read — counts as gone. */
     private static function topicUrl(DatabaseNotification $row, ?int $topicId): ?string
     {
-        $topic = $topicId === null ? null : CommunityTopic::find($topicId);
+        $topic = $topicId === null ? null : GroupTopic::find($topicId);
         if ($topic === null) {
             return null;
         }
 
         $viewer = Member::find($row->notifiable_id);
 
-        return $viewer !== null && CommunityTopicAccess::canViewTopic($topic, $viewer)
-            ? '/communityTopic/'.$topic->getKey()
+        return $viewer !== null && GroupTopicAccess::canViewTopic($topic, $viewer)
+            ? '/topics/'.$topic->getKey()
             : null;
     }
 

@@ -4,10 +4,10 @@ namespace Tests\Feature\Classic;
 
 use App\Features\Group\GroupRole;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -69,16 +69,16 @@ class ClassicInlineDeleteBoxTest extends TestCase
     {
         $group = Group::factory()->create();
         $author = $this->joined($group);
-        $topic = CommunityTopic::factory()->create([
-            'community_id' => $group->getKey(),
+        $topic = GroupTopic::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
         ]);
 
-        $response = $this->actingAs($author)->get(route('communityTopic.edit', $topic))->assertOk();
+        $response = $this->actingAs($author)->get(route('group.topics.edit', $topic))->assertOk();
 
         $response->assertSee('<div class="dparts buttonBox" id="toDelete">', false);
         $response->assertSee('<h3>Delete the topic and comments</h3>', false);
-        $response->assertSee('<form method="GET" action="'.route('communityTopic.delete.show', $topic).'">', false);
+        $response->assertSee('<form method="GET" action="'.route('group.topics.delete.show', $topic).'">', false);
     }
 
     public function test_the_event_editor_carries_the_delete_box(): void

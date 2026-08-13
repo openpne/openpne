@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Notifications;
 
-use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Group;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
@@ -233,23 +233,23 @@ class NotificationFeedTest extends TestCase
     public function test_open_redirects_a_topic_comment_to_the_topic(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
-        $topic = CommunityTopic::factory()->create(['member_id' => $viewer->getKey()]);
-        $row = $this->seedRow($viewer, 'community_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $topic->getKey(), 'reason' => 'reply']);
+        $topic = GroupTopic::factory()->create(['member_id' => $viewer->getKey()]);
+        $row = $this->seedRow($viewer, 'group_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $topic->getKey(), 'reason' => 'reply']);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/communityTopic/'.$topic->getKey());
+            ->assertRedirect('/topics/'.$topic->getKey());
     }
 
     public function test_open_redirects_a_new_topic_and_event_to_their_pages(): void
     {
         [$viewer, $author] = Member::factory()->count(2)->create()->all();
-        $topic = CommunityTopic::factory()->create(['member_id' => $author->getKey()]);
+        $topic = GroupTopic::factory()->create(['member_id' => $author->getKey()]);
         $event = CommunityEvent::factory()->create(['member_id' => $author->getKey()]);
-        $topicRow = $this->seedRow($viewer, 'community_topic_posted', ['author_id' => $author->getKey(), 'topic_id' => $topic->getKey()]);
+        $topicRow = $this->seedRow($viewer, 'group_topic_posted', ['author_id' => $author->getKey(), 'topic_id' => $topic->getKey()]);
         $eventRow = $this->seedRow($viewer, 'community_event_posted', ['author_id' => $author->getKey(), 'event_id' => $event->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$topicRow->getKey()}/open")
-            ->assertRedirect('/communityTopic/'.$topic->getKey());
+            ->assertRedirect('/topics/'.$topic->getKey());
         $this->actingAs($viewer)->post("/notifications/{$eventRow->getKey()}/open")
             ->assertRedirect('/communityEvent/'.$event->getKey());
     }
@@ -259,9 +259,9 @@ class NotificationFeedTest extends TestCase
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
         // A members-only board the viewer is not a member of: the topic exists but is unreadable.
         $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        $hidden = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
+        $hidden = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
         $gone = $this->seedRow($viewer, 'community_event_commented', ['commenter_id' => $actor->getKey(), 'event_id' => 424242, 'reason' => 'reply']);
-        $unreadable = $this->seedRow($viewer, 'community_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $hidden->getKey(), 'reason' => 'related']);
+        $unreadable = $this->seedRow($viewer, 'group_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $hidden->getKey(), 'reason' => 'related']);
 
         $this->actingAs($viewer)->post("/notifications/{$gone->getKey()}/open")
             ->assertRedirect(route('notifications.index'));

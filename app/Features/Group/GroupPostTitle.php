@@ -3,7 +3,7 @@
 namespace App\Features\Group;
 
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
+use App\Models\GroupTopic;
 
 /**
  * OpenPNE 3 sprintf('%s(%d)', op_truncate($name, 36), $count): a topic/event list label — its name
@@ -15,7 +15,7 @@ final class GroupPostTitle
 {
     private const WIDTH = 36;
 
-    public static function withCount(CommunityTopic|CommunityEvent $post): string
+    public static function withCount(GroupTopic|CommunityEvent $post): string
     {
         return mb_strimwidth($post->name, 0, self::WIDTH, '').'('.($post->comments_count ?? 0).')';
     }

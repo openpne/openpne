@@ -158,18 +158,23 @@ class NavigationUpgradeSqlTest extends TestCase
     {
         $this->seedNav(1, 'community', '@community_search');
         $this->seedNav(2, 'community', 'community/home');
+        $this->seedNav(3, 'community', 'communityTopic/listCommunity');
+        $this->seedNav(4, 'community', '@communityTopic_new');
 
         $this->runUpgrade();
 
-        $rows = DB::table('navigations')->whereIn('id', [1, 2])->get()->keyBy('id');
+        $rows = DB::table('navigations')->whereIn('id', [1, 2, 3, 4])->get()->keyBy('id');
         // Storage moves to the new vocabulary; the OpenPNE 3 original stays verbatim in source_uri.
         $this->assertSame('group', $rows[1]->type);
         $this->assertSame('group', $rows[2]->type);
         $this->assertSame('@community_search', $rows[1]->source_uri);
         $this->assertSame('community/home', $rows[2]->source_uri);
+        $this->assertSame('communityTopic/listCommunity', $rows[3]->source_uri);
         // Tokens resolve into the new canonical space, not the redirect layer.
         $this->assertSame('/groups', $rows[1]->uri);
         $this->assertSame('/groups/:id', $rows[2]->uri);
+        $this->assertSame('/groups/:id/topics', $rows[3]->uri);
+        $this->assertSame('/groups/:id/topics/new', $rows[4]->uri);
     }
 
     private function runUpgrade(): void

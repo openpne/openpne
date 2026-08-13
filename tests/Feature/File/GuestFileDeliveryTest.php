@@ -5,13 +5,13 @@ namespace Tests\Feature\File;
 use App\Files\FileStorage;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\CommunityTopic;
-use App\Models\CommunityTopicComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\SnsSettingKey;
@@ -104,8 +104,8 @@ class GuestFileDeliveryTest extends TestCase
                 'member_id' => $author->getKey(),
             ]),
             'community', 'group' => Group::factory()->create(),
-            'communityTopic' => CommunityTopic::factory()->create(),
-            'communityTopicComment' => CommunityTopicComment::factory()->create(),
+            'communityTopic' => GroupTopic::factory()->create(),
+            'communityTopicComment' => GroupTopicComment::factory()->create(),
             'communityEvent' => CommunityEvent::factory()->create(),
             'communityEventComment' => CommunityEventComment::factory()->create(),
             'directMessage' => DirectMessage::factory()->create(),

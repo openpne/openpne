@@ -160,7 +160,7 @@ export default function CommunityShow() {
                     title={t('Recent %topics%')}
                     right={
                         canPostTopic && (
-                            <ActionLink href={`/communityTopic/new/${group.id}`} variant="outline" size="sm">
+                            <ActionLink href={`/groups/${group.id}/topics/new`} variant="outline" size="sm">
                                 <Plus className="size-4" strokeWidth={2.25} aria-hidden />
                                 {t('Create a %topic%')}
                             </ActionLink>
@@ -174,7 +174,7 @@ export default function CommunityShow() {
                             {recentTopics.map((topic) => (
                                 <EntryRow
                                     key={topic.id}
-                                    href={`/communityTopic/${topic.id}`}
+                                    href={`/topics/${topic.id}`}
                                     author={topic.author}
                                     content={topic.name}
                                     date={<Timestamp at={topic.updatedAt} preset="listStamp" />}
@@ -184,7 +184,7 @@ export default function CommunityShow() {
                         </List>
                     )}
                     <div className="border-t border-border px-4 py-2.5 sm:px-5">
-                        <Link href={`/communityTopic/listCommunity/${group.id}`} className="text-sm text-link hover:underline">
+                        <Link href={`/groups/${group.id}/topics`} className="text-sm text-link hover:underline">
                             {t('See all %topics%')}
                         </Link>
                     </div>

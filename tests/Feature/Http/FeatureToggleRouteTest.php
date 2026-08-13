@@ -65,13 +65,13 @@ class FeatureToggleRouteTest extends TestCase
      */
     public function test_switching_communities_off_closes_the_board_and_the_calendar_too(): void
     {
-        $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
+        $this->setSnsSetting(Feature::GroupTopic->settingKey(), true);
         $this->setSnsSetting(Feature::CommunityEvent->settingKey(), true);
         $this->setSnsSetting(Feature::Group->settingKey(), false);
 
         $this->actingAs($this->member)->get('/groups')->assertNotFound();
         $this->actingAs($this->member)->get('/groups/recent')->assertNotFound();
-        $this->actingAs($this->member)->get("/communityTopic/listCommunity/{$this->community->getKey()}")->assertNotFound();
+        $this->actingAs($this->member)->get("/groups/{$this->community->getKey()}/topics")->assertNotFound();
         $this->actingAs($this->member)->get("/communityEvent/listCommunity/{$this->community->getKey()}")->assertNotFound();
         // Unrelated units are untouched.
         $this->actingAs($this->member)->get('/diary/list')->assertOk();
@@ -79,9 +79,9 @@ class FeatureToggleRouteTest extends TestCase
 
     public function test_switching_the_board_off_leaves_communities_and_the_calendar_open(): void
     {
-        $this->setSnsSetting(Feature::CommunityTopic->settingKey(), false);
+        $this->setSnsSetting(Feature::GroupTopic->settingKey(), false);
 
-        $this->actingAs($this->member)->get("/communityTopic/listCommunity/{$this->community->getKey()}")->assertNotFound();
+        $this->actingAs($this->member)->get("/groups/{$this->community->getKey()}/topics")->assertNotFound();
         $this->actingAs($this->member)->get('/groups')->assertOk();
         $this->actingAs($this->member)->get("/communityEvent/listCommunity/{$this->community->getKey()}")->assertOk();
     }
@@ -177,7 +177,7 @@ class FeatureToggleRouteTest extends TestCase
             'directMessage' => ['/message/receiveList', '/message/sendToFriend'],
             'timeline' => ['/timeline', '/timeline/create'],
             'group' => ['/groups', '/groups/edit'],
-            'communityTopic' => ["/communityTopic/listCommunity/{$group}", "/communityTopic/create/{$group}"],
+            'groupTopic' => ["/groups/{$group}/topics", "/groups/{$group}/topics"],
             'communityEvent' => ["/communityEvent/listCommunity/{$group}", "/communityEvent/create/{$group}"],
             'friend' => ['/friend/list', '/friend/link'],
         ];

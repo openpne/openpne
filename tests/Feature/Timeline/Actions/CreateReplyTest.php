@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Timeline\Actions;
 
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\GroupRole;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Timeline\Actions\CreateReply;
 use App\Features\Timeline\Exceptions\NotGroupMember;
 use App\Models\Group;

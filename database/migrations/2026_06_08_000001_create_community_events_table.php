@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /*
  * Group events (OpenPNE 3 opCommunityEventPlugin `community_event` table): a community's
- * scheduled gatherings. Same shape as community_topics plus the scheduling fields (open_date /
+ * scheduled gatherings. Same shape as group_topics plus the scheduling fields (open_date /
  * area / deadline / capacity) that drive the RSVP model in community_event_members.
  */
 return new class extends Migration

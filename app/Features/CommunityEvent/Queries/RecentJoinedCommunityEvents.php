@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 
 /**
  * The most recently active events across the groups a member has confirmed-joined, for the
- * home dashboard's community activity digest. The event counterpart of RecentJoinedCommunityTopics
+ * home dashboard's community activity digest. The event counterpart of RecentJoinedGroupTopics
  * (same ordering and membership scope).
  */
 class RecentJoinedCommunityEvents

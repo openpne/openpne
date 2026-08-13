@@ -122,11 +122,11 @@ class GadgetServiceTest extends TestCase
 
     public function test_a_board_kind_follows_the_communities_it_lives_inside(): void
     {
-        $this->makeGadget('home', 'contents', 'recentCommunityTopicComment');
+        $this->makeGadget('home', 'contents', 'recentGroupTopicComment');
         $viewer = Member::factory()->create();
 
         // Its own row says enabled; the unit it lives inside overrules it.
-        $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
+        $this->setSnsSetting(Feature::GroupTopic->settingKey(), true);
         $this->setSnsSetting(Feature::Group->settingKey(), false);
 
         $this->assertSame([], $this->names(app(GadgetService::class)->zones('home', null, $viewer)['contents']));

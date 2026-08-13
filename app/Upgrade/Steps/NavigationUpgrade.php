@@ -57,6 +57,8 @@ class NavigationUpgrade extends UpgradeStep
         '/community/delete/:id' => '/groups/:id/delete',
         '/community/member/list' => '/groups/:id/members',
         '/community/member/manage/:id' => '/groups/:id/members/manage',
+        '/communityTopic/listCommunity/:id' => '/groups/:id/topics',
+        '/communityTopic/new/:id' => '/groups/:id/topics/new',
     ];
 
     private readonly Openpne3Routes $routes;

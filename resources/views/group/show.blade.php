@@ -165,17 +165,17 @@
                         @unless ($recentTopics->isEmpty())
                             <ul class="articleList">
                                 @foreach ($recentTopics as $topic)
-                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($topic->updated_at, app()->getLocale()) }}</span> <a href="{{ route('communityTopic.show', $topic) }}">{{ \App\Features\Group\GroupPostTitle::withCount($topic) }}</a></li>
+                                    <li><span class="date">{{ \App\Support\LocalizedDate::monthDay($topic->updated_at, app()->getLocale()) }}</span> <a href="{{ route('group.topics.show', $topic) }}">{{ \App\Features\Group\GroupPostTitle::withCount($topic) }}</a></li>
                                 @endforeach
                             </ul>
                         @endunless
                         <div class="moreInfo">
                             <ul class="moreInfo">
                                 @unless ($recentTopics->isEmpty())
-                                    <li><a href="{{ route('communityTopic.index', $group) }}">{{ __('More') }}</a></li>
+                                    <li><a href="{{ route('group.topics.index', $group) }}">{{ __('More') }}</a></li>
                                 @endunless
                                 @if ($canPostTopic)
-                                    <li><a href="{{ route('communityTopic.new', $group) }}">{{ __('Create a new %topic%') }}</a></li>
+                                    <li><a href="{{ route('group.topics.new', $group) }}">{{ __('Create a new %topic%') }}</a></li>
                                 @endif
                             </ul>
                         </div>

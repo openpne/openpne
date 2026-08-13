@@ -21,7 +21,11 @@ class GadgetUpgrade extends UpgradeStep
     protected string $target = 'gadgets';
 
     /** OpenPNE 3 `gadget.name` => the OpenPNE 4 name for the same builtin kind. */
-    private const RENAMED_NAMES = ['communityJoinListBox' => 'groupJoinListBox'];
+    private const RENAMED_NAMES = [
+        'communityJoinListBox' => 'groupJoinListBox',
+        'recentCommunityTopicComment' => 'recentGroupTopicComment',
+        'recentCommunityTopicCommentSns' => 'recentGroupTopicCommentSns',
+    ];
 
     public function columns(): array
     {

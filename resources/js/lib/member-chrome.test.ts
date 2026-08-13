@@ -8,7 +8,7 @@ const allOn: Record<FeatureKey, boolean> = {
     directMessage: true,
     timeline: true,
     group: true,
-    communityTopic: true,
+    groupTopic: true,
     communityEvent: true,
     friend: true,
 };
@@ -35,7 +35,7 @@ test('the untoggleable sections survive every unit being off', () => {
 
 test('the groups section stays while only a board is off', () => {
     // Topics and events have no section of their own, so nothing here answers to them.
-    assert.equal(hrefs({ ...allOn, communityTopic: false, communityEvent: false }).includes('/groups'), true);
+    assert.equal(hrefs({ ...allOn, groupTopic: false, communityEvent: false }).includes('/groups'), true);
 });
 
 const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled).map((section) => section.href);
@@ -110,7 +110,7 @@ test('the dashboard action goes with the diary unit', () => {
 test('a community-scoped page is scoped to the group', () => {
     const group = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
 
-    assert.deepEqual(chrome('community/topic/index', { group, canPost: true }).scope, {
+    assert.deepEqual(chrome('group/topic/index', { group, canPost: true }).scope, {
         kind: 'group',
         id: 7,
         name: 'Cyclists',
@@ -151,7 +151,7 @@ const FORM_SCREENS: Record<string, Record<string, unknown>> = {
     'timeline/new': {},
     'timeline/community-new': { group: cyclists },
     'community/edit': { group: cyclists },
-    'community/topic/edit': { group: cyclists, topic: null },
+    'group/topic/edit': { group: cyclists, topic: null },
     'community/event/edit': { group: cyclists, event: null },
     'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},
@@ -181,7 +181,7 @@ const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
     'diary/edit': { diary: { id: 3, title: 'Draft' } },
     'timeline/new': {},
     'timeline/community-new': { group: cyclists },
-    'community/topic/edit': { group: cyclists, topic: null },
+    'group/topic/edit': { group: cyclists, topic: null },
     'community/event/edit': { group: cyclists, event: null },
     'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},

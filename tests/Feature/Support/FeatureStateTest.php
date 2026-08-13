@@ -32,20 +32,20 @@ class FeatureStateTest extends TestCase
     {
         $this->setSnsSetting(Feature::Group->settingKey(), false);
         // Explicitly on, and still unreachable: the dependency wins over the unit's own row.
-        $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
+        $this->setSnsSetting(Feature::GroupTopic->settingKey(), true);
         $this->setSnsSetting(Feature::CommunityEvent->settingKey(), true);
 
         $this->assertFalse(Feature::Group->enabled());
-        $this->assertFalse(Feature::CommunityTopic->enabled());
+        $this->assertFalse(Feature::GroupTopic->enabled());
         $this->assertFalse(Feature::CommunityEvent->enabled());
         $this->assertTrue(Feature::Diary->enabled());
     }
 
     public function test_disabling_a_contained_unit_leaves_its_siblings_alone(): void
     {
-        $this->setSnsSetting(Feature::CommunityTopic->settingKey(), false);
+        $this->setSnsSetting(Feature::GroupTopic->settingKey(), false);
 
-        $this->assertFalse(Feature::CommunityTopic->enabled());
+        $this->assertFalse(Feature::GroupTopic->enabled());
         $this->assertTrue(Feature::Group->enabled());
         $this->assertTrue(Feature::CommunityEvent->enabled());
     }
@@ -60,7 +60,7 @@ class FeatureStateTest extends TestCase
             'directMessage' => false,
             'timeline' => true,
             'group' => false,
-            'communityTopic' => false,
+            'groupTopic' => false,
             'communityEvent' => false,
             'friend' => true,
         ], Feature::enabledMap());

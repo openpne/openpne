@@ -1,0 +1,12 @@
+<?php
+
+namespace App\Features\GroupTopic\Exceptions;
+
+enum GroupTopicActionFailure: string
+{
+    case CannotPost = 'cannot_post';
+    case CannotEdit = 'cannot_edit';
+    case CannotComment = 'cannot_comment';
+    case CannotDeleteComment = 'cannot_delete_comment';
+    case TooManyImages = 'too_many_images';
+}

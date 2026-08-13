@@ -36,7 +36,7 @@ class ClassicFeatureSuppressionTest extends TestCase
         $member = Member::factory()->create();
         $group = $this->groupWithMember($member);
 
-        $this->setSnsSetting(Feature::CommunityTopic->settingKey(), false);
+        $this->setSnsSetting(Feature::GroupTopic->settingKey(), false);
 
         $this->actingAs($member)->get(route('group.show', $group))
             ->assertOk()

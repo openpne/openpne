@@ -19,7 +19,7 @@ export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
     const t = useT();
     return (
         <EntryRow
-            href={entry.kind === 'topic' ? `/communityTopic/${entry.id}` : `/communityEvent/${entry.id}`}
+            href={entry.kind === 'topic' ? `/topics/${entry.id}` : `/communityEvent/${entry.id}`}
             group={entry.group}
             content={entry.name}
             bylineNote={entry.kind === 'topic' ? t('%Topic%') : t('Event')}

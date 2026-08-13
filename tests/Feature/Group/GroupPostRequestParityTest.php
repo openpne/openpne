@@ -5,8 +5,8 @@ namespace Tests\Feature\Group;
 use App\Features\Group\GroupRole;
 use App\Http\Requests\CommunityEvent\StoreEventRequest;
 use App\Http\Requests\CommunityEvent\UpdateEventRequest;
-use App\Http\Requests\CommunityTopic\StoreTopicRequest;
-use App\Http\Requests\CommunityTopic\UpdateTopicRequest;
+use App\Http\Requests\GroupTopic\StoreTopicRequest;
+use App\Http\Requests\GroupTopic\UpdateTopicRequest;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
- * CommunityTopic and CommunityEvent are an intentional parallel hierarchy, but their form requests
+ * GroupTopic and CommunityEvent are an intentional parallel hierarchy, but their form requests
  * share a text-post contract (a required, whitespace-stripped name and body) that must not drift on
  * one side only. This pins that shared shape structurally (identical rules) and behaviorally (both
  * reject a whitespace-only name/body), so changing one request without the other fails here.

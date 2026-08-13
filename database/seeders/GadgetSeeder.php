@@ -23,7 +23,7 @@ class GadgetSeeder extends Seeder
         ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryCommentHistory', 'sort_order' => 103],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'diaryMyList', 'sort_order' => 104],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'timelineAll', 'sort_order' => 120],
-        ['context' => 'home', 'zone' => 'contents', 'name' => 'recentCommunityTopicComment', 'sort_order' => 131],
+        ['context' => 'home', 'zone' => 'contents', 'name' => 'recentGroupTopicComment', 'sort_order' => 131],
         ['context' => 'home', 'zone' => 'contents', 'name' => 'recentCommunityEventComment', 'sort_order' => 132],
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'memberImageBox', 'sort_order' => 10],
         ['context' => 'home', 'zone' => 'sideMenu', 'name' => 'friendListBox', 'sort_order' => 20],

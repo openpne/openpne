@@ -39,7 +39,7 @@ class BroadcastEventPosted implements ShouldQueue
 
         $group = $event->community;
         $author = $event->member;
-        $mailEnabled = $templates->isEnabled(MailTemplate::CommunityPostingNotified);
+        $mailEnabled = $templates->isEnabled(MailTemplate::GroupPostingNotified);
 
         $fanout->run(
             $recipients->viewers($group, $author),

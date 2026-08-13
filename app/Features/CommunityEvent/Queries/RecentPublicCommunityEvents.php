@@ -2,14 +2,14 @@
 
 namespace App\Features\CommunityEvent\Queries;
 
-use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\CommunityEvent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
  * The most recently active events across every public community (topic_read_access = Everyone), for
- * the home "latest events across the SNS" gadget. The event counterpart of RecentPublicCommunityTopics:
+ * the home "latest events across the SNS" gadget. The event counterpart of RecentPublicGroupTopics:
  * viewer-independent and applies no block filter (OpenPNE 3 parity).
  */
 class RecentPublicCommunityEvents

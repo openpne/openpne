@@ -4,7 +4,7 @@
     <div class="dparts homeRecentList"@if ($partId !== null) id="{{ $partId }}"@endif><div class="parts">
         <div class="partsHeading"><h3>{{ __('Recently Posted %Community% Events') }}</h3></div>
         <div class="block">
-            @include('components.gadget._community-recent-rows', ['entries' => $entries])
+            @include('components.gadget._group-recent-rows', ['entries' => $entries])
         </div>
     </div></div>
 @endif

@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Features\GroupTopic\Queries;
+
+use App\Models\Group;
+use App\Models\GroupTopic;
+use Illuminate\Support\Collection;
+
+/**
+ * The most recently active topics of a group, for the "recent topics" box on the group
+ * home. Same ordering as the board, capped at a few rows.
+ */
+class RecentGroupTopics
+{
+    public const LIMIT = 5;
+
+    /** @return Collection<int, GroupTopic> */
+    public function __invoke(Group $group, int $limit = self::LIMIT): Collection
+    {
+        return $group->topics()
+            ->withCount('comments')
+            ->with('member.avatar.file')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+    }
+}

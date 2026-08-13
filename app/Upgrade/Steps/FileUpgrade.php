@@ -75,8 +75,8 @@ class FileUpgrade extends UpgradeStep
             'community.file_id' => ['type' => 'group', 'table' => 'community', 'file' => 'file_id', 'id' => 'id'],
             'diary_image.file_id' => ['type' => 'diary', 'table' => 'diary_image', 'file' => 'file_id', 'id' => 'diary_id'],
             'diary_comment_image.file_id' => ['type' => 'diaryComment', 'table' => 'diary_comment_image', 'file' => 'file_id', 'id' => 'diary_comment_id'],
-            'community_topic_image.file_id' => ['type' => 'communityTopic', 'table' => 'community_topic_image', 'file' => 'file_id', 'id' => 'post_id'],
-            'community_topic_comment_image.file_id' => ['type' => 'communityTopicComment', 'table' => 'community_topic_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
+            'community_topic_image.file_id' => ['type' => 'groupTopic', 'table' => 'community_topic_image', 'file' => 'file_id', 'id' => 'post_id'],
+            'community_topic_comment_image.file_id' => ['type' => 'groupTopicComment', 'table' => 'community_topic_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
             'community_event_image.file_id' => ['type' => 'communityEvent', 'table' => 'community_event_image', 'file' => 'file_id', 'id' => 'post_id'],
             'community_event_comment_image.file_id' => ['type' => 'communityEventComment', 'table' => 'community_event_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
             // Only a personal message owns its attachment; non-personal message types are not migrated.

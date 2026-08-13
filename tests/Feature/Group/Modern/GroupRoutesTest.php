@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Group\Modern;
 
-use App\Models\CommunityTopic;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\MemberImage;
 use App\Support\AvatarColor;
@@ -94,7 +94,7 @@ class GroupRoutesTest extends TestCase
             'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
         ]);
-        CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
 
         $this->actingAs($member)
             ->get("/groups/{$group->getKey()}")

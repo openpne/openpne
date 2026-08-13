@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\JoinPolicy;
+use App\Features\GroupTopic\TopicPostAuthority;
+use App\Features\GroupTopic\TopicReadAccess;
 use Database\Factories\GroupFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -53,18 +53,18 @@ class Group extends Model
             ->withPivot('created_at');
     }
 
-    /**
-     * The topic board. The FK is named explicitly here and on events()/timelinePosts(): those
-     * tables keep the `community_id` spelling, which no longer follows from this model's name.
-     *
-     * @return HasMany<CommunityTopic, $this>
-     */
+    /** @return HasMany<GroupTopic, $this> The topic board. */
     public function topics(): HasMany
     {
-        return $this->hasMany(CommunityTopic::class, 'community_id');
+        return $this->hasMany(GroupTopic::class);
     }
 
-    /** @return HasMany<CommunityEvent, $this> */
+    /**
+     * The FK is named explicitly here and on timelinePosts(): those tables keep the
+     * `community_id` spelling, which no longer follows from this model's name.
+     *
+     * @return HasMany<CommunityEvent, $this>
+     */
     public function events(): HasMany
     {
         return $this->hasMany(CommunityEvent::class, 'community_id');

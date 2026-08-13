@@ -5,8 +5,6 @@ use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
 use App\Features\CommunityEvent\CommunityEventCommentController;
 use App\Features\CommunityEvent\CommunityEventController;
-use App\Features\CommunityTopic\CommunityTopicCommentController;
-use App\Features\CommunityTopic\CommunityTopicController;
 use App\Features\Compose\EditorPreferenceController;
 use App\Features\Compose\PreviewController;
 use App\Features\Diary\DiaryCommentController;
@@ -15,6 +13,8 @@ use App\Features\DirectMessage\DirectMessageController;
 use App\Features\Friend\FriendController;
 use App\Features\Group\GroupController;
 use App\Features\Group\GroupMemberManageController;
+use App\Features\GroupTopic\GroupTopicCommentController;
+use App\Features\GroupTopic\GroupTopicController;
 use App\Features\Home\HomeController;
 use App\Features\Home\UnreadCountsController;
 use App\Features\Member\EmailChangeLinkController;
@@ -709,27 +709,50 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereNumber('group')->name('group.show.compat');
     });
 
-    // Group topic board (Classic only; Modern is none). Literal-prefix routes precede the
-    // /{topic} wildcard, and every id is digit-constrained, so a literal like /communityTopic/new
-    // can never be captured as a topic id. listCommunity/new/create take a community id; the rest
-    // take a topic id.
-    Route::prefix('communityTopic')->middleware(EnsureFeatureEnabled::class.':communityTopic')->controller(CommunityTopicController::class)->group(function () {
-        Route::get('/listCommunity/{group}', 'index')->whereNumber('group')->name('communityTopic.index');
-        Route::get('/new/{group}', 'new')->whereNumber('group')->name('communityTopic.new');
-        Route::post('/create/{group}', 'store')->whereNumber('group')->middleware('throttle:posting')->name('communityTopic.store');
-        Route::get('/edit/{topic}', 'edit')->whereNumber('topic')->name('communityTopic.edit');
-        Route::post('/update/{topic}', 'update')->whereNumber('topic')->middleware('throttle:posting')->name('communityTopic.update');
-        Route::get('/deleteConfirm/{topic}', 'showDelete')->whereNumber('topic')->name('communityTopic.delete.show');
-        Route::post('/delete/{topic}', 'delete')->whereNumber('topic')->name('communityTopic.delete');
-        Route::get('/{topic}', 'show')->whereNumber('topic')->name('communityTopic.show');
+    // Group topic board (Classic only; Modern is none). The board is nested under its group
+    // (/groups/{group}/topics); a thread is flat (/topics/{topic}), since a topic id names the
+    // group already. The three-segment board path can never be captured by the /groups/{group}
+    // wildcard above, and {topic} is digit-constrained, so the literal /topics/comments/* below
+    // can never be read as a topic id. The gate is the board's own unit: Feature::GroupTopic
+    // resolves its parent (group) itself, so a second gate would be redundant.
+    Route::middleware(EnsureFeatureEnabled::class.':groupTopic')->controller(GroupTopicController::class)->group(function () {
+        Route::get('/groups/{group}/topics', 'index')->whereNumber('group')->name('group.topics.index');
+        Route::get('/groups/{group}/topics/new', 'new')->whereNumber('group')->name('group.topics.new');
+        Route::post('/groups/{group}/topics', 'store')->whereNumber('group')->middleware('throttle:posting')->name('group.topics.store');
+        // edit / delete: GET confirm, POST submit on the same URL (as the group core's).
+        Route::get('/topics/{topic}/edit', 'edit')->whereNumber('topic')->name('group.topics.edit');
+        Route::post('/topics/{topic}/edit', 'update')->whereNumber('topic')->middleware('throttle:posting')->name('group.topics.update');
+        Route::get('/topics/{topic}/delete', 'showDelete')->whereNumber('topic')->name('group.topics.delete.show');
+        Route::post('/topics/{topic}/delete', 'delete')->whereNumber('topic')->name('group.topics.delete');
+        Route::get('/topics/{topic}', 'show')->whereNumber('topic')->name('group.topics.show');
     });
 
-    // communityTopicComment module. create keys off the topic id; deleteConfirm/delete key off the
-    // comment id (literal /communityTopic/comment/* never collides with the numeric topic show).
-    Route::controller(CommunityTopicCommentController::class)->middleware(EnsureFeatureEnabled::class.':communityTopic')->group(function () {
-        Route::post('/communityTopic/{topic}/comment/create', 'store')->whereNumber('topic')->middleware('throttle:posting')->name('communityTopic.comment.store');
-        Route::get('/communityTopic/comment/deleteConfirm/{comment}', 'showDelete')->whereNumber('comment')->name('communityTopic.comment.delete.show');
-        Route::post('/communityTopic/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityTopic.comment.delete');
+    // OpenPNE 3 communityTopicComment module. Posting keys off the topic id; the delete confirm and
+    // submit key off the comment id, under the literal /topics/comments/ prefix.
+    Route::controller(GroupTopicCommentController::class)->middleware(EnsureFeatureEnabled::class.':groupTopic')->group(function () {
+        Route::post('/topics/{topic}/comments', 'store')->whereNumber('topic')->middleware('throttle:posting')->name('group.topics.comment.store');
+        Route::get('/topics/comments/{comment}/delete', 'showDelete')->whereNumber('comment')->name('group.topics.comment.delete.show');
+        Route::post('/topics/comments/{comment}/delete', 'delete')->whereNumber('comment')->name('group.topics.comment.delete');
+    });
+
+    // The OpenPNE 3 /communityTopic/* GET URLs, preserved by redirect onto the canonical space
+    // (GroupTopicRouteParity::compatRedirects()). GET only — a POST submit is not a bookmarkable
+    // URL. The query rides along: the board paginates, so a ?page=N bookmark must not reset to
+    // page 1, and the path id wins over a stray ?group=/?topic=. Declared after the canonical
+    // block so the wildcard /communityTopic/{topic} cannot shadow a literal.
+    Route::prefix('communityTopic')->middleware(EnsureFeatureEnabled::class.':groupTopic')->group(function () {
+        Route::get('/listCommunity/{group}', fn (Request $request, int $group) => redirect()->route('group.topics.index', ['group' => $group] + $request->query()))
+            ->whereNumber('group')->name('group.topics.index.compat');
+        Route::get('/new/{group}', fn (Request $request, int $group) => redirect()->route('group.topics.new', ['group' => $group] + $request->query()))
+            ->whereNumber('group')->name('group.topics.new.compat');
+        Route::get('/edit/{topic}', fn (Request $request, int $topic) => redirect()->route('group.topics.edit', ['topic' => $topic] + $request->query()))
+            ->whereNumber('topic')->name('group.topics.edit.compat');
+        Route::get('/deleteConfirm/{topic}', fn (Request $request, int $topic) => redirect()->route('group.topics.delete.show', ['topic' => $topic] + $request->query()))
+            ->whereNumber('topic')->name('group.topics.delete.show.compat');
+        Route::get('/comment/deleteConfirm/{comment}', fn (Request $request, int $comment) => redirect()->route('group.topics.comment.delete.show', ['comment' => $comment] + $request->query()))
+            ->whereNumber('comment')->name('group.topics.comment.delete.show.compat');
+        Route::get('/{topic}', fn (Request $request, int $topic) => redirect()->route('group.topics.show', ['topic' => $topic] + $request->query()))
+            ->whereNumber('topic')->name('group.topics.show.compat');
     });
 
     // Group events (Classic only; Modern is none). Same literal-before-wildcard rule as the topic
@@ -798,15 +821,15 @@ $mCompat = fn (string $target) => redirect()->to(
     $target.(($qs = request()->getQueryString()) === null ? '' : (str_contains($target, '?') ? '&' : '?').$qs), 308
 );
 Route::get('/m/community/joined', fn () => $mCompat('/groups/mine'));
-Route::get('/m/community/topic/{topic}', fn (int $topic) => $mCompat("/communityTopic/{$topic}"))->whereNumber('topic');
-Route::get('/m/community/topic/{topic}/edit', fn (int $topic) => $mCompat("/communityTopic/edit/{$topic}"))->whereNumber('topic');
+Route::get('/m/community/topic/{topic}', fn (int $topic) => $mCompat("/topics/{$topic}"))->whereNumber('topic');
+Route::get('/m/community/topic/{topic}/edit', fn (int $topic) => $mCompat("/topics/{$topic}/edit"))->whereNumber('topic');
 Route::get('/m/community/event/{event}', fn (int $event) => $mCompat("/communityEvent/{$event}"))->whereNumber('event');
 Route::get('/m/community/event/{event}/edit', fn (int $event) => $mCompat("/communityEvent/edit/{$event}"))->whereNumber('event');
 Route::get('/m/community/event/{event}/members', fn (int $event) => $mCompat("/communityEvent/{$event}/memberList"))->whereNumber('event');
 Route::get('/m/community/{group}/members', fn (int $group) => $mCompat("/groups/{$group}/members"))->whereNumber('group');
 Route::get('/m/community/{group}/pending', fn (int $group) => $mCompat("/groups/{$group}/members/pending"))->whereNumber('group');
-Route::get('/m/community/{group}/topic', fn (int $group) => $mCompat("/communityTopic/listCommunity/{$group}"))->whereNumber('group');
-Route::get('/m/community/{group}/topic/new', fn (int $group) => $mCompat("/communityTopic/new/{$group}"))->whereNumber('group');
+Route::get('/m/community/{group}/topic', fn (int $group) => $mCompat("/groups/{$group}/topics"))->whereNumber('group');
+Route::get('/m/community/{group}/topic/new', fn (int $group) => $mCompat("/groups/{$group}/topics/new"))->whereNumber('group');
 Route::get('/m/community/{group}/event', fn (int $group) => $mCompat("/communityEvent/listCommunity/{$group}"))->whereNumber('group');
 Route::get('/m/community/{group}/event/new', fn (int $group) => $mCompat("/communityEvent/new/{$group}"))->whereNumber('group');
 

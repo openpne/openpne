@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Timeline;
 
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\GroupRole;
+use App\Features\GroupTopic\TopicPostAuthority;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Timeline\CommunityTimelineAccess;
 use App\Features\Timeline\TimelineAccess;
 use App\Models\Group;

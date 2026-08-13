@@ -54,7 +54,7 @@
                         </td>
                     </tr>
                 @endif
-                @include('community-topic._image_fields')
+                @include('group-topic._image_fields')
             </table>
             <div class="operation">
                 <ul class="moreInfo button">

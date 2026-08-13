@@ -31,8 +31,8 @@ class ClassicPartsFrameGuardTest extends TestCase
             // the Sns variants take a second class from their _parts*RecentList.php body partial
             'components/gadget/recent-community-event-comment',
             'components/gadget/recent-community-event-comment-sns',
-            'components/gadget/recent-community-topic-comment',
-            'components/gadget/recent-community-topic-comment-sns',
+            'components/gadget/recent-group-topic-comment',
+            'components/gadget/recent-group-topic-comment-sns',
             // opTimelinePlugin _timelineAll.php / _timelineFriend.php / _timelineProfile.php
             'components/gadget/timeline-all',
             'components/gadget/timeline-friend',

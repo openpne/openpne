@@ -60,10 +60,10 @@ class UpgradeMatrixCommandTest extends TestCase
         // The topic board steps and their image-join steps must all appear (no silent drop).
         $this->artisan('openpne:upgrade-matrix')
             ->assertSuccessful()
-            ->expectsOutputToContain('`community_topic` → `community_topics`')
-            ->expectsOutputToContain('`community_topic_comment` → `community_topic_comments`')
-            ->expectsOutputToContain('`community_topic_image` → `community_topic_images`')
-            ->expectsOutputToContain('`community_topic_comment_image` → `community_topic_comment_images`');
+            ->expectsOutputToContain('`community_topic` → `group_topics`')
+            ->expectsOutputToContain('`community_topic_comment` → `group_topic_comments`')
+            ->expectsOutputToContain('`community_topic_image` → `group_topic_images`')
+            ->expectsOutputToContain('`community_topic_comment_image` → `group_topic_comment_images`');
     }
 
     public function test_renders_community_event_board_and_image_steps(): void

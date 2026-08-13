@@ -7,7 +7,7 @@ use App\Models\Member;
 use Illuminate\Contracts\View\View;
 
 /** Recent events across the viewer's joined groups (home; subject = viewer). */
-class RecentCommunityEventComment extends CommunityRecentListBox
+class RecentCommunityEventComment extends GroupRecentListBox
 {
     /** @param array<string, mixed> $config */
     public function __construct(

@@ -55,7 +55,7 @@ class BroadcastEventCommentPosted implements ShouldQueue
         // the comment was posted, not re-read here: a comment deleted before this job ran would otherwise
         // drop its author out of the exclusion and double-notify them (Related then Group).
         $audience = $recipients->viewers($event->community, $commenter)->whereNotIn('id', $this->excludedMemberIds);
-        $mailEnabled = $templates->isEnabled(MailTemplate::CommunityPostingNotified);
+        $mailEnabled = $templates->isEnabled(MailTemplate::GroupPostingNotified);
 
         $fanout->run(
             $audience,

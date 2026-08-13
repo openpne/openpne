@@ -51,7 +51,7 @@ class EventCommentBroadcastNotification extends Notification implements FeatureN
 
     public function toMail(object $notifiable): MailMessage
     {
-        return $this->mailFromTemplate(MailTemplate::CommunityPostingNotified, [
+        return $this->mailFromTemplate(MailTemplate::GroupPostingNotified, [
             'community_name' => $this->community->name,
             'topic_name' => $this->event->name,
             'nickname' => $this->commenter->name,
@@ -65,7 +65,7 @@ class EventCommentBroadcastNotification extends Notification implements FeatureN
     {
         return [
             'kind' => 'community_event_commented',
-            'reason' => CommentReason::Community->value,
+            'reason' => CommentReason::Group->value,
             'commenter_id' => $this->commenter->getKey(),
             'event_id' => $this->event->getKey(),
             'comment_id' => $this->comment->getKey(),

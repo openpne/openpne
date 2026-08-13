@@ -29,7 +29,7 @@ enum MailTemplate: string
     case DiaryPostedNotified = 'diary-posted';
     case TimelineMentionNotified = 'timeline-mention';
     case TimelinePostingNotified = 'timeline-posting';
-    case CommunityPostingNotified = 'community-posting';
+    case GroupPostingNotified = 'group-posting';
     case GroupJoinNotice = 'group-join';
     case RegistrationCompleted = 'registration-complete';
     case WithdrawalCompleted = 'withdrawal-complete';
@@ -170,7 +170,7 @@ enum MailTemplate: string
                     'url' => ['help' => 'The %activity% post URL.', 'sample' => 'https://example.test'],
                 ],
             ),
-            self::CommunityPostingNotified => new MailTemplateDefinition(
+            self::GroupPostingNotified => new MailTemplateDefinition(
                 op3SourceName: 'pc_notifyCommunityPosting',
                 isConfigurable: true,
                 // One template for every community-board notification (topic and event comments

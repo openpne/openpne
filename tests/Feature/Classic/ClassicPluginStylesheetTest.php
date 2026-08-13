@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Classic;
 
-use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\Member;

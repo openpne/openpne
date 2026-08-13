@@ -121,7 +121,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('mail_templates', ['key' => 'registration-link', 'is_enabled' => 1]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'friend-accepted', 'is_enabled' => 0]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'diary-comment', 'is_enabled' => 1]);
-        $this->assertDatabaseHas('mail_templates', ['key' => 'community-posting', 'is_enabled' => 0]);
+        $this->assertDatabaseHas('mail_templates', ['key' => 'group-posting', 'is_enabled' => 0]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'registration-complete', 'is_enabled' => 1]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'withdrawal-complete', 'is_enabled' => 1]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'group-join', 'is_enabled' => 0]);

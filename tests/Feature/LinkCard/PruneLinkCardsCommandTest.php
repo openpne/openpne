@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\LinkCard;
 
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\File;
+use App\Models\GroupTopic;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -46,7 +46,7 @@ class PruneLinkCardsCommandTest extends TestCase
 
         $referenced = [
             'diaries' => Diary::factory()->for($member)->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
-            'community_topics' => CommunityTopic::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
+            'group_topics' => GroupTopic::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
             'community_events' => CommunityEvent::factory()->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
             'timeline_posts' => TimelinePost::factory()->for($member)->create(['link_card_id' => $this->agedCard()->id])->link_card_id,
         ];

@@ -3,20 +3,20 @@
 namespace App\Policies;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
-use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\Diary\DiaryAccess;
 use App\Features\DirectMessage\DirectMessageAccess;
+use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Timeline\TimelineAccess;
 use App\Models\BannerImage;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\CommunityTopic;
-use App\Models\CommunityTopicComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
@@ -74,8 +74,8 @@ class FilePolicy extends BasePolicy
             $owner instanceof Group => $viewer !== null,
             // A topic/comment image inherits the board's read access: visible exactly to
             // whoever may read the topic it hangs on (members-only boards hide it).
-            $owner instanceof CommunityTopic => $viewer !== null && CommunityTopicAccess::canViewTopic($owner, $viewer),
-            $owner instanceof CommunityTopicComment => $viewer !== null && $owner->topic !== null && CommunityTopicAccess::canViewTopic($owner->topic, $viewer),
+            $owner instanceof GroupTopic => $viewer !== null && GroupTopicAccess::canViewTopic($owner, $viewer),
+            $owner instanceof GroupTopicComment => $viewer !== null && $owner->topic !== null && GroupTopicAccess::canViewTopic($owner->topic, $viewer),
             // An event/comment image inherits the same community read gate as the event it hangs on.
             $owner instanceof CommunityEvent => $viewer !== null && CommunityEventAccess::canViewEvent($owner, $viewer),
             $owner instanceof CommunityEventComment => $viewer !== null && $owner->event !== null && CommunityEventAccess::canViewEvent($owner->event, $viewer),
@@ -102,7 +102,7 @@ class FilePolicy extends BasePolicy
             $owner instanceof DirectMessage => Feature::DirectMessage,
             $owner instanceof TimelinePost => Feature::Timeline,
             $owner instanceof Group => Feature::Group,
-            $owner instanceof CommunityTopic, $owner instanceof CommunityTopicComment => Feature::CommunityTopic,
+            $owner instanceof GroupTopic, $owner instanceof GroupTopicComment => Feature::GroupTopic,
             $owner instanceof CommunityEvent, $owner instanceof CommunityEventComment => Feature::CommunityEvent,
             default => null,
         };

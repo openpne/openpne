@@ -101,7 +101,7 @@ class PostImages
     {
         $field = match ($relatedType) {
             'timelinePost', 'group' => 'image',
-            'diary', 'diaryComment', 'communityTopic', 'communityTopicComment',
+            'diary', 'diaryComment', 'groupTopic', 'groupTopicComment',
             'communityEvent', 'communityEventComment', 'directMessage' => 'images.'.$slot,
             default => null,
         };

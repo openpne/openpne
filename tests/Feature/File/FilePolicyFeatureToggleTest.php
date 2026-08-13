@@ -9,13 +9,13 @@ use App\Models\AdminUser;
 use App\Models\BannerImage;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\CommunityTopic;
-use App\Models\CommunityTopicComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
@@ -44,8 +44,8 @@ class FilePolicyFeatureToggleTest extends TestCase
             'timeline post' => ['timelinePost', Feature::Timeline],
             'community top image (legacy alias)' => ['community', Feature::Group],
             'group top image (write alias)' => ['group', Feature::Group],
-            'community topic' => ['communityTopic', Feature::CommunityTopic],
-            'community topic comment' => ['communityTopicComment', Feature::CommunityTopic],
+            'community topic' => ['communityTopic', Feature::GroupTopic],
+            'community topic comment' => ['communityTopicComment', Feature::GroupTopic],
             'community event' => ['communityEvent', Feature::CommunityEvent],
             'community event comment' => ['communityEventComment', Feature::CommunityEvent],
         ];
@@ -92,7 +92,7 @@ class FilePolicyFeatureToggleTest extends TestCase
 
         $this->switchOff(Feature::Group);
 
-        $this->assertDatabaseMissing('sns_settings', ['key' => Feature::CommunityTopic->settingKey()->value]);
+        $this->assertDatabaseMissing('sns_settings', ['key' => Feature::GroupTopic->settingKey()->value]);
         $this->assertFalse(Gate::forUser($viewer)->allows('view', $file));
     }
 
@@ -157,8 +157,8 @@ class FilePolicyFeatureToggleTest extends TestCase
             'directMessage' => DirectMessage::factory()->create(['sender_id' => $viewer->getKey()]),
             'timelinePost' => TimelinePost::factory()->create(['member_id' => $viewer->getKey()]),
             'community', 'group' => $group(),
-            'communityTopic' => CommunityTopic::factory()->create(['community_id' => $group()->getKey()]),
-            'communityTopicComment' => CommunityTopicComment::factory()->create(),
+            'communityTopic' => GroupTopic::factory()->create(['group_id' => $group()->getKey()]),
+            'communityTopicComment' => GroupTopicComment::factory()->create(),
             'communityEvent' => CommunityEvent::factory()->create(['community_id' => $group()->getKey()]),
             'communityEventComment' => CommunityEventComment::factory()->create(),
         };

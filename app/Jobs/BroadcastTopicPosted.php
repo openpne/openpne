@@ -6,8 +6,8 @@ use App\Features\Group\GroupNewPostFanout;
 use App\Features\Group\Queries\GroupNewPostRecipients;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
-use App\Models\CommunityTopic;
-use App\Notifications\CommunityTopic\TopicPostedNotification;
+use App\Models\GroupTopic;
+use App\Notifications\GroupTopic\TopicPostedNotification;
 use App\Notifications\Settings\NotificationKind;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,7 +15,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
-/** Fans a new topic out to its community's members off the request (see GroupNewPostFanout). */
+/** Fans a new topic out to its group's members off the request (see GroupNewPostFanout). */
 class BroadcastTopicPosted implements ShouldQueue
 {
     use Dispatchable;
@@ -32,18 +32,18 @@ class BroadcastTopicPosted implements ShouldQueue
             return;
         }
 
-        $topic = CommunityTopic::with('community', 'member')->find($this->topicId);
-        if ($topic === null || $topic->community === null || $topic->member === null) {
+        $topic = GroupTopic::with('group', 'member')->find($this->topicId);
+        if ($topic === null || $topic->group === null || $topic->member === null) {
             return;
         }
 
-        $group = $topic->community;
+        $group = $topic->group;
         $author = $topic->member;
-        $mailEnabled = $templates->isEnabled(MailTemplate::CommunityPostingNotified);
+        $mailEnabled = $templates->isEnabled(MailTemplate::GroupPostingNotified);
 
         $fanout->run(
             $recipients->viewers($group, $author),
-            NotificationKind::CommunityTopicNewPost,
+            NotificationKind::GroupTopicNewPost,
             $mailEnabled,
             fn (array $channels) => new TopicPostedNotification($group, $topic, $author, $channels),
         );

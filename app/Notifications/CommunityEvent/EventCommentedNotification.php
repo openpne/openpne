@@ -19,7 +19,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Tells the event author (Reply) or a co-commenter (Related) a new comment landed. Mail +
- * database, gated by the recipient's catalog kind for the reason. Shares the community-posting
+ * database, gated by the recipient's catalog kind for the reason. Shares the group-posting
  * template with topics, so the event title binds the template's topic_name variable.
  */
 class EventCommentedNotification extends Notification implements FeatureNotification, ShouldQueue
@@ -47,12 +47,12 @@ class EventCommentedNotification extends Notification implements FeatureNotifica
             ? NotificationKind::CommunityEventReplyNewPost
             : NotificationKind::CommunityEventRelatedNewPost;
 
-        return $this->templateChannelsFor(MailTemplate::CommunityPostingNotified, $kind, $notifiable, ['database']);
+        return $this->templateChannelsFor(MailTemplate::GroupPostingNotified, $kind, $notifiable, ['database']);
     }
 
     public function toMail(Member $notifiable): MailMessage
     {
-        return $this->mailFromTemplate(MailTemplate::CommunityPostingNotified, [
+        return $this->mailFromTemplate(MailTemplate::GroupPostingNotified, [
             'community_name' => $this->event->community->name,
             'topic_name' => $this->event->name,
             'nickname' => $this->commenter->name,

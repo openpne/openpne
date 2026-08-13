@@ -35,7 +35,7 @@
                     <p class="heading">{{ $diary->title }}</p>
                 </div>
                 <div class="body">
-                    @include('community-topic._images', ['images' => $diary->images])
+                    @include('group-topic._images', ['images' => $diary->images])
                     <x-user-text :value="$diary->body" :format="$diary->format" />
                     <x-link-card :record="$diary" />
                 </div>
@@ -105,7 +105,7 @@
                         </div>
                         {{-- diaryComment/_list.php puts the photos inside div.body, above the text. --}}
                         <div class="body">
-                            @include('community-topic._images', ['images' => $comment->images])
+                            @include('group-topic._images', ['images' => $comment->images])
                             <p class="text"><x-user-text :value="$comment->body" /></p>
                         </div>
                     </dd>
@@ -132,7 +132,7 @@
                         @error('body')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
-                @include('community-topic._image_fields')
+                @include('group-topic._image_fields')
             </table>
             <div class="operation">
                 <ul class="moreInfo button">

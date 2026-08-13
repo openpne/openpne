@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Timeline;
 
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\GroupRole;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;

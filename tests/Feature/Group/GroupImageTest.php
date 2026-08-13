@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Group;
 
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\Actions\CreateGroup;
 use App\Features\Group\Actions\DeleteGroup;
 use App\Features\Group\Actions\UpdateGroup;
 use App\Features\Group\Data\GroupFormData;
 use App\Features\Group\JoinPolicy;
+use App\Features\GroupTopic\TopicPostAuthority;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupMember;

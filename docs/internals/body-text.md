@@ -5,7 +5,7 @@ free text) renders through shared body components — never ad-hoc escaping at c
 the server that is the `BodyRenderer` dispatch; on the Modern client a plain body renders
 through the `UserText`/`linkify` pair (kept in lockstep with the server's plain renderer).
 Three formats exist, carried per record in a `format` column on `diaries`,
-`community_topics`, and `community_events` (other bodies are plain-only and carry no column):
+`group_topics`, and `community_events` (other bodies are plain-only and carry no column):
 
 | format | who writes it | renderer |
 |---|---|---|

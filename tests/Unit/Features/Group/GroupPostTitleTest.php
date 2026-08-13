@@ -4,7 +4,7 @@ namespace Tests\Unit\Features\Group;
 
 use App\Features\Group\GroupPostTitle;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
+use App\Models\GroupTopic;
 use PHPUnit\Framework\TestCase;
 
 class GroupPostTitleTest extends TestCase
@@ -16,7 +16,7 @@ class GroupPostTitleTest extends TestCase
 
     public function test_missing_count_renders_as_zero(): void
     {
-        $topic = new CommunityTopic;
+        $topic = new GroupTopic;
         $topic->name = 'No count loaded';
 
         $this->assertSame('No count loaded(0)', GroupPostTitle::withCount($topic));
@@ -46,9 +46,9 @@ class GroupPostTitleTest extends TestCase
         $this->assertSame('Meetup(2)', GroupPostTitle::withCount($event));
     }
 
-    private function topic(string $name, int $count): CommunityTopic
+    private function topic(string $name, int $count): GroupTopic
     {
-        $topic = new CommunityTopic;
+        $topic = new GroupTopic;
         $topic->name = $name;
         $topic->comments_count = $count;
 

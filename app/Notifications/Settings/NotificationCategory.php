@@ -13,7 +13,7 @@ enum NotificationCategory: string
 {
     case Timeline = 'timeline';
     case Diary = 'diary';
-    case CommunityTopic = 'community_topic';
+    case GroupTopic = 'group_topic';
     case CommunityEvent = 'community_event';
     case FriendLink = 'friend_link';
     case DirectMessage = 'direct_message';
@@ -24,7 +24,7 @@ enum NotificationCategory: string
         return match ($this) {
             self::Timeline => Feature::Timeline,
             self::Diary => Feature::Diary,
-            self::CommunityTopic => Feature::CommunityTopic,
+            self::GroupTopic => Feature::GroupTopic,
             self::CommunityEvent => Feature::CommunityEvent,
             self::FriendLink => Feature::Friend,
             self::DirectMessage => Feature::DirectMessage,
@@ -42,7 +42,7 @@ enum NotificationCategory: string
         return match ($this) {
             self::Timeline => '%Activity%',
             self::Diary => '%Diaries%',
-            self::CommunityTopic => '%Community% %topics%',
+            self::GroupTopic => '%Community% %topics%',
             self::CommunityEvent => '%Community% events',
             self::FriendLink => '%Friend% requests',
             self::DirectMessage => 'Messages',
