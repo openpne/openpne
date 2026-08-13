@@ -95,8 +95,8 @@ class FeatureSettingsTest extends TestCase
             ->assertHasNoErrors();
 
         // The topic/event rows stay '1'; the dependency resolves in the registry, not in storage.
-        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_community_topic_enabled', 'value' => '1']);
-        $this->assertFalse(Feature::CommunityTopic->enabled());
+        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_topic_enabled', 'value' => '1']);
+        $this->assertFalse(Feature::GroupTopic->enabled());
         $this->assertFalse(Feature::CommunityEvent->enabled());
     }
 
@@ -105,7 +105,7 @@ class FeatureSettingsTest extends TestCase
         $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
 
         Livewire::test(FeatureSettings::class)
-            ->assertFormFieldIsDisabled('feature_community_topic_enabled')
+            ->assertFormFieldIsDisabled('feature_group_topic_enabled')
             ->assertFormFieldIsDisabled('feature_community_event_enabled')
             ->assertFormFieldIsEnabled('feature_diary_enabled');
     }
@@ -114,12 +114,12 @@ class FeatureSettingsTest extends TestCase
     public function test_flipping_the_container_disables_the_nested_toggles_without_a_save(): void
     {
         Livewire::test(FeatureSettings::class)
-            ->assertFormFieldIsEnabled('feature_community_topic_enabled')
+            ->assertFormFieldIsEnabled('feature_group_topic_enabled')
             ->fillForm(['feature_group_enabled' => false])
-            ->assertFormFieldIsDisabled('feature_community_topic_enabled')
+            ->assertFormFieldIsDisabled('feature_group_topic_enabled')
             ->assertFormFieldIsDisabled('feature_community_event_enabled')
             ->fillForm(['feature_group_enabled' => true])
-            ->assertFormFieldIsEnabled('feature_community_topic_enabled');
+            ->assertFormFieldIsEnabled('feature_group_topic_enabled');
     }
 
     /**
@@ -130,13 +130,13 @@ class FeatureSettingsTest extends TestCase
     public function test_saving_with_the_container_off_preserves_a_disabled_childs_stored_value(): void
     {
         $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
-        $this->setSnsSetting(SnsSettingKey::FeatureCommunityTopicEnabled, false);
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupTopicEnabled, false);
 
         Livewire::test(FeatureSettings::class)
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_community_topic_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('sns_settings', ['key' => 'feature_group_topic_enabled', 'value' => '0']);
         $this->assertDatabaseHas('sns_settings', ['key' => 'feature_community_event_enabled', 'value' => '1']);
     }
 

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Group\Classic;
 
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\GroupTopic\TopicPostAuthority;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Group;
 use App\Models\GroupCategory;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -144,7 +144,7 @@ class GroupHomeDetailsTest extends TestCase
         $group = Group::factory()->create();
         $member = Member::factory()->create();
         GroupMember::factory()->member()->create(['group_id' => $group->id, 'member_id' => $member->id]);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->id, 'name' => 'Walk plans', 'member_id' => $member->id]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->id, 'name' => 'Walk plans', 'member_id' => $member->id]);
         $topic->timestamps = false;
         $topic->forceFill(['updated_at' => '2026-07-08 12:00:00'])->save();
         $event = CommunityEvent::factory()->create(['community_id' => $group->id, 'name' => 'Summer stroll', 'member_id' => $member->id]);
@@ -165,13 +165,13 @@ class GroupHomeDetailsTest extends TestCase
         // Row shape: <span class="date">{update date}</span> <a>{title}({count})</a> — no space
         // before the count, and the event's date is its update date, not its open date.
         $response->assertSee('<li><span class="date">June 11</span> <a href="'.route('communityEvent.show', $event).'">Summer stroll(0)</a></li>', false);
-        $response->assertSee('<li><span class="date">July 8</span> <a href="'.route('communityTopic.show', $topic).'">Walk plans(0)</a></li>', false);
+        $response->assertSee('<li><span class="date">July 8</span> <a href="'.route('group.topics.show', $topic).'">Walk plans(0)</a></li>', false);
         // Each row carries More (the board) and the create link in its own moreInfo list.
         $response->assertSeeInOrder([
             '<tr class="communityTopic">',
             '<div class="moreInfo">',
-            route('communityTopic.index', $group),
-            route('communityTopic.new', $group),
+            route('group.topics.index', $group),
+            route('group.topics.new', $group),
         ], false);
     }
 
@@ -189,7 +189,7 @@ class GroupHomeDetailsTest extends TestCase
         $response->assertDontSee('articleList', false);
         $response->assertDontSee('No topics to show.', false);
         $response->assertDontSee('>More<', false);
-        $response->assertSee(route('communityTopic.new', $group), false);
+        $response->assertSee(route('group.topics.new', $group), false);
     }
 
     public function test_a_viewer_without_post_authority_gets_no_create_link(): void
@@ -197,13 +197,13 @@ class GroupHomeDetailsTest extends TestCase
         $group = Group::factory()->create(['topic_post_authority' => TopicPostAuthority::AdminsOnly]);
         $member = Member::factory()->create();
         GroupMember::factory()->member()->create(['group_id' => $group->id, 'member_id' => $member->id]);
-        CommunityTopic::factory()->create(['community_id' => $group->id, 'name' => 'Members read this', 'member_id' => $member->id]);
+        GroupTopic::factory()->create(['group_id' => $group->id, 'name' => 'Members read this', 'member_id' => $member->id]);
 
         $response = $this->actingAs($member)->get(route('group.show', $group))->assertOk();
 
         $response->assertSee('<tr class="communityTopic">', false);
-        $response->assertSee(route('communityTopic.index', $group), false);
-        $response->assertDontSee(route('communityTopic.new', $group), false);
+        $response->assertSee(route('group.topics.index', $group), false);
+        $response->assertDontSee(route('group.topics.new', $group), false);
     }
 
     public function test_a_members_only_board_renders_no_rows_for_outsiders(): void
@@ -211,7 +211,7 @@ class GroupHomeDetailsTest extends TestCase
         $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
         $member = Member::factory()->create();
         GroupMember::factory()->member()->create(['group_id' => $group->id, 'member_id' => $member->id]);
-        CommunityTopic::factory()->create(['community_id' => $group->id, 'name' => 'Members read this', 'member_id' => $member->id]);
+        GroupTopic::factory()->create(['group_id' => $group->id, 'name' => 'Members read this', 'member_id' => $member->id]);
 
         // OpenPNE 3 renders the whole row inside the view ACL: an outsider gets neither row.
         $this->actingAs(Member::factory()->create())->get(route('group.show', $group))

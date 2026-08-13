@@ -63,7 +63,7 @@ final class MailTemplateDefaults
             // The OpenPNE 3 extension's sample, byte for byte — including the space after 】.
             'ja' => '【{{ op_config.sns_name }}】 {{ author }}さんのタイムライン投稿',
         ],
-        'community-posting' => [
+        'group-posting' => [
             'en' => '[{{ op_config.sns_name }}] {{ community_name }} {{ topic_name }}',
             'ja' => '【{{ op_config.sns_name }}】{{ community_name }} {{ topic_name }}',
         ],

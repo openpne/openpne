@@ -34,7 +34,7 @@ class FeatureTest extends TestCase
 
     public function test_the_board_and_the_calendar_live_inside_communities(): void
     {
-        $this->assertSame(Feature::Group, Feature::CommunityTopic->parent());
+        $this->assertSame(Feature::Group, Feature::GroupTopic->parent());
         $this->assertSame(Feature::Group, Feature::CommunityEvent->parent());
 
         foreach ([Feature::Diary, Feature::DirectMessage, Feature::Timeline, Feature::Group, Feature::Friend] as $feature) {
@@ -46,7 +46,7 @@ class FeatureTest extends TestCase
     {
         $this->assertSame(['diary.'], Feature::Diary->routeNamePrefixes());
         $this->assertSame(['group.'], Feature::Group->routeNamePrefixes());
-        $this->assertSame(['communityTopic.'], Feature::CommunityTopic->routeNamePrefixes());
+        $this->assertSame(['group.topics.'], Feature::GroupTopic->routeNamePrefixes());
     }
 
     public function test_a_route_name_resolves_to_the_unit_that_owns_it(): void
@@ -54,7 +54,7 @@ class FeatureTest extends TestCase
         $this->assertSame(Feature::Group, Feature::owningRouteName('group.show'));
         $this->assertSame(Feature::Group, Feature::owningRouteName('group.recent'));
         // Dot-terminated prefixes: the board is its own unit, never captured by `community.`.
-        $this->assertSame(Feature::CommunityTopic, Feature::owningRouteName('communityTopic.show'));
+        $this->assertSame(Feature::GroupTopic, Feature::owningRouteName('group.topics.show'));
         $this->assertSame(Feature::CommunityEvent, Feature::owningRouteName('communityEvent.comment.store'));
         $this->assertSame(Feature::DirectMessage, Feature::owningRouteName('message.index_compat'));
 

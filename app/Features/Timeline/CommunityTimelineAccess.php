@@ -2,8 +2,8 @@
 
 namespace App\Features\Timeline;
 
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\GroupMembership;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Group;
 use App\Models\Member;
 

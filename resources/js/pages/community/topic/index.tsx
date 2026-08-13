@@ -31,7 +31,7 @@ export default function CommunityTopicIndex() {
                             {topics.data.map((topic) => (
                                 <EntryRow
                                     key={topic.id}
-                                    href={`/communityTopic/${topic.id}`}
+                                    href={`/topics/${topic.id}`}
                                     author={topic.author}
                                     content={topic.name}
                                     date={<Timestamp at={topic.updatedAt} preset="listStamp" />}

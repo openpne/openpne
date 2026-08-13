@@ -44,7 +44,7 @@ class NavigationSeeder extends Seeder
 
         // group (rendered once the group localNav context is wired)
         ['type' => 'group', 'uri' => '/groups/:id', 'source_uri' => '@community_home', 'sort_order' => 0, 'ja' => '%community%トップ', 'en' => '%Community% Top'],
-        ['type' => 'group', 'uri' => '/communityTopic/listCommunity/:id', 'source_uri' => 'communityTopic/listCommunity', 'sort_order' => 5, 'ja' => 'トピックリスト', 'en' => 'Topics'],
+        ['type' => 'group', 'uri' => '/groups/:id/topics', 'source_uri' => 'communityTopic/listCommunity', 'sort_order' => 5, 'ja' => 'トピックリスト', 'en' => 'Topics'],
         ['type' => 'group', 'uri' => '/communityEvent/listCommunity/:id', 'source_uri' => 'communityEvent/listCommunity', 'sort_order' => 6, 'ja' => 'イベントリスト', 'en' => 'Events'],
         ['type' => 'group', 'uri' => '/groups/:id/join', 'source_uri' => '@community_join', 'sort_order' => 10, 'ja' => '%community%に参加', 'en' => 'Join %Community%'],
         ['type' => 'group', 'uri' => '/groups/:id/quit', 'source_uri' => '@community_quit', 'sort_order' => 20, 'ja' => '%community%を退会', 'en' => 'Leave %Community%'],

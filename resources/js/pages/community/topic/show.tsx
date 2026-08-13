@@ -37,13 +37,13 @@ export default function CommunityTopicShow() {
         if (ascending) params.set('order', 'asc');
         if (page > 1) params.set('page', String(page));
         const qs = params.toString();
-        return `/communityTopic/${topic.id}${qs ? `?${qs}` : ''}`;
+        return `/topics/${topic.id}${qs ? `?${qs}` : ''}`;
     };
 
     const form = useForm({ body: '', images: [] as File[] });
     const submitComment = (e: FormEvent) => {
         e.preventDefault();
-        form.post(`/communityTopic/${topic.id}/comment/create`, {
+        form.post(`/topics/${topic.id}/comments`, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => form.reset('body', 'images'),
@@ -52,13 +52,13 @@ export default function CommunityTopicShow() {
 
     const deleteTopic = async () => {
         if (await confirm({ title: t('Delete this %topic%?'), description: topic.name, confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/communityTopic/delete/${topic.id}`);
+            router.post(`/topics/${topic.id}/delete`);
         }
     };
 
     const deleteComment = async (commentId: number) => {
         if (await confirm({ title: t('Delete this comment?'), confirmLabel: t('Delete'), danger: true })) {
-            router.post(`/communityTopic/comment/delete/${commentId}`, {}, { preserveScroll: true });
+            router.post(`/topics/comments/${commentId}/delete`, {}, { preserveScroll: true });
         }
     };
 
@@ -87,7 +87,7 @@ export default function CommunityTopicShow() {
 
                 {canEdit && (
                     <div className="flex gap-4 text-sm">
-                        <Link href={`/communityTopic/edit/${topic.id}`} className="text-link hover:underline">
+                        <Link href={`/topics/${topic.id}/edit`} className="text-link hover:underline">
                             {t('Edit')}
                         </Link>
                         <button type="button" onClick={deleteTopic} className={dangerActionClass}>

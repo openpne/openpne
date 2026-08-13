@@ -3,9 +3,9 @@
 namespace Tests\Unit\Compat;
 
 use App\Compat\Parities\BlockRouteParity;
-use App\Compat\Parities\CommunityTopicRouteParity;
 use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\Parities\FriendRouteParity;
+use App\Compat\Parities\GroupTopicRouteParity;
 use App\Compat\Parities\MemberRouteParity;
 use PHPUnit\Framework\TestCase;
 
@@ -84,21 +84,21 @@ class RouteParityBodyIdTest extends TestCase
 
     public function test_derives_community_topic_body_ids_including_the_comment_module_override(): void
     {
-        $parity = new CommunityTopicRouteParity;
+        $parity = new GroupTopicRouteParity;
 
-        $this->assertSame('page_communityTopic_listCommunity', $parity->bodyId('communityTopic.index'));
-        $this->assertSame('page_communityTopic_show', $parity->bodyId('communityTopic.show'));
-        $this->assertSame('page_communityTopic_new', $parity->bodyId('communityTopic.new'));
-        $this->assertSame('page_communityTopic_edit', $parity->bodyId('communityTopic.edit'));
-        $this->assertSame('page_communityTopic_deleteConfirm', $parity->bodyId('communityTopic.delete.show'));
+        $this->assertSame('page_communityTopic_listCommunity', $parity->bodyId('group.topics.index'));
+        $this->assertSame('page_communityTopic_show', $parity->bodyId('group.topics.show'));
+        $this->assertSame('page_communityTopic_new', $parity->bodyId('group.topics.new'));
+        $this->assertSame('page_communityTopic_edit', $parity->bodyId('group.topics.edit'));
+        $this->assertSame('page_communityTopic_deleteConfirm', $parity->bodyId('group.topics.delete.show'));
         // The comment confirm page renders in the communityTopicComment module (op3Module override).
-        $this->assertSame('page_communityTopicComment_deleteConfirm', $parity->bodyId('communityTopic.comment.delete.show'));
+        $this->assertSame('page_communityTopicComment_deleteConfirm', $parity->bodyId('group.topics.comment.delete.show'));
         // Form submits render no <body>.
-        $this->assertNull($parity->bodyId('communityTopic.store'));
-        $this->assertNull($parity->bodyId('communityTopic.update'));
-        $this->assertNull($parity->bodyId('communityTopic.delete'));
-        $this->assertNull($parity->bodyId('communityTopic.comment.store'));
-        $this->assertNull($parity->bodyId('communityTopic.comment.delete'));
+        $this->assertNull($parity->bodyId('group.topics.store'));
+        $this->assertNull($parity->bodyId('group.topics.update'));
+        $this->assertNull($parity->bodyId('group.topics.delete'));
+        $this->assertNull($parity->bodyId('group.topics.comment.store'));
+        $this->assertNull($parity->bodyId('group.topics.comment.delete'));
     }
 
     public function test_derives_member_body_ids_keyed_on_the_openpne3_action(): void

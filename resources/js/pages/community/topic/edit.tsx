@@ -41,7 +41,7 @@ export default function CommunityTopicEdit() {
         e.preventDefault();
         // No forceFormData — a fileless save posts JSON, keeping LF byte-stable
         // (multipart normalizes LF to CRLF); Inertia auto-switches when a File is attached.
-        form.post(isEdit ? `/communityTopic/update/${topic.id}` : `/communityTopic/create/${group.id}`);
+        form.post(isEdit ? `/topics/${topic.id}/edit` : `/groups/${group.id}/topics`);
     };
 
     const toggleRemove = (imageId: number, remove: boolean) => {

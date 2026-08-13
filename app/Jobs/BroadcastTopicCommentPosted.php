@@ -6,10 +6,10 @@ use App\Features\Group\GroupNewPostFanout;
 use App\Features\Group\Queries\GroupNewPostRecipients;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
-use App\Models\CommunityTopic;
-use App\Models\CommunityTopicComment;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\Member;
-use App\Notifications\CommunityTopic\TopicCommentBroadcastNotification;
+use App\Notifications\GroupTopic\TopicCommentBroadcastNotification;
 use App\Notifications\Settings\NotificationKind;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -18,7 +18,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Fans a topic comment out to the community's other members off the request (CommentNewPost). The
+ * Fans a topic comment out to the group's other members off the request (CommentNewPost). The
  * audience excludes the topic author and everyone who already commented — they get the Reply / Related
  * notification instead — so precedence is Reply > Related > Group with one notification per member.
  */
@@ -44,24 +44,24 @@ class BroadcastTopicCommentPosted implements ShouldQueue
             return;
         }
 
-        $topic = CommunityTopic::with('community')->find($this->topicId);
-        $comment = CommunityTopicComment::find($this->commentId);
+        $topic = GroupTopic::with('group')->find($this->topicId);
+        $comment = GroupTopicComment::find($this->commentId);
         $commenter = Member::find($this->commenterId);
-        if ($topic === null || $topic->community === null || $comment === null || $commenter === null) {
+        if ($topic === null || $topic->group === null || $comment === null || $commenter === null) {
             return;
         }
 
         // The author + co-commenters (who get Reply / Related) are excluded using the set captured when
         // the comment was posted, not re-read here: a comment deleted before this job ran would otherwise
         // drop its author out of the exclusion and double-notify them (Related then Group).
-        $audience = $recipients->viewers($topic->community, $commenter)->whereNotIn('id', $this->excludedMemberIds);
-        $mailEnabled = $templates->isEnabled(MailTemplate::CommunityPostingNotified);
+        $audience = $recipients->viewers($topic->group, $commenter)->whereNotIn('id', $this->excludedMemberIds);
+        $mailEnabled = $templates->isEnabled(MailTemplate::GroupPostingNotified);
 
         $fanout->run(
             $audience,
-            NotificationKind::CommunityTopicCommentNewPost,
+            NotificationKind::GroupTopicCommentNewPost,
             $mailEnabled,
-            fn (array $channels) => new TopicCommentBroadcastNotification($topic->community, $topic, $comment, $commenter, $channels),
+            fn (array $channels) => new TopicCommentBroadcastNotification($topic->group, $topic, $comment, $commenter, $channels),
         );
     }
 }

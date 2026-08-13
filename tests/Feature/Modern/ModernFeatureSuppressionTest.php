@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature\Modern;
 
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
@@ -104,7 +104,7 @@ class ModernFeatureSuppressionTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $joined = $this->joinedGroup($viewer);
-        CommunityTopic::factory()->create(['community_id' => $joined->getKey(), 'name' => 'a-topic-row-name']);
+        GroupTopic::factory()->create(['group_id' => $joined->getKey(), 'name' => 'a-topic-row-name']);
 
         $administered = Group::factory()->create();
         GroupMember::factory()->admin()->create(['group_id' => $administered->getKey(), 'member_id' => $viewer->getKey()]);
@@ -128,10 +128,10 @@ class ModernFeatureSuppressionTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
-        CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
+        GroupTopic::factory()->create(['group_id' => $group->getKey()]);
         $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
 
-        $this->switchOff(Feature::CommunityTopic);
+        $this->switchOff(Feature::GroupTopic);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page

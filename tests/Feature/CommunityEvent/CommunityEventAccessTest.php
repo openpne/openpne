@@ -3,9 +3,9 @@
 namespace Tests\Feature\CommunityEvent;
 
 use App\Features\CommunityEvent\CommunityEventAccess;
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\GroupRole;
+use App\Features\GroupTopic\TopicPostAuthority;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\Group;

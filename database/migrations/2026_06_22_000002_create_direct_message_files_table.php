@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /*
  * Images attached to a message (successor of OpenPNE 3 opMessagePlugin `message_file`). A pure join
- * row, like community_topic_images: direct_message_id -> the message, file_id -> the stored bytes, number =
+ * row, like group_topic_images: direct_message_id -> the message, file_id -> the stored bytes, number =
  * the 1..N slot. OpenPNE 3 caps it at app_message_max_image_file_num (default 3); the cap lives in
  * the upload validation (PostImages::MAX_IMAGES), not the schema.
  */

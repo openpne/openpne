@@ -77,7 +77,7 @@ class LinkCardsTableTest extends TestCase
         // InnoDB creates a backing index for every foreign key and SQLite creates none, so the two
         // engines reach this by different routes — the migration adds one only on SQLite. Asserted
         // on both lanes, because what matters is that the column is indexed, not how.
-        foreach (['diaries', 'community_topics', 'community_events', 'timeline_posts'] as $table) {
+        foreach (['diaries', 'group_topics', 'community_events', 'timeline_posts'] as $table) {
             $this->assertTrue(
                 Schema::hasIndex($table, ['link_card_id']),
                 "{$table}.link_card_id is not indexed; the prune sweep degrades to a full scan.",

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Group;
 
-use App\Features\CommunityTopic\Actions\CreateTopicComment;
 use App\Features\Group\GroupRole;
+use App\Features\GroupTopic\Actions\CreateTopicComment;
 use App\Jobs\BroadcastTopicCommentPosted;
-use App\Models\CommunityTopic;
-use App\Models\CommunityTopicComment;
 use App\Models\Group;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\Member;
 use App\Notifications\CommentReason;
-use App\Notifications\CommunityTopic\TopicCommentBroadcastNotification;
-use App\Notifications\CommunityTopic\TopicCommentedNotification;
+use App\Notifications\GroupTopic\TopicCommentBroadcastNotification;
+use App\Notifications\GroupTopic\TopicCommentedNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,7 +39,7 @@ class BroadcastGroupCommentTest extends TestCase
         return $member;
     }
 
-    private function comment(CommunityTopic $topic, Member $author): CommunityTopicComment
+    private function comment(GroupTopic $topic, Member $author): GroupTopicComment
     {
         return $topic->comments()->create([
             'member_id' => $author->getKey(),
@@ -49,7 +49,7 @@ class BroadcastGroupCommentTest extends TestCase
     }
 
     /** The author + co-commenter ids the listener snapshots at dispatch time. @return list<int> */
-    private function excluded(CommunityTopic $topic): array
+    private function excluded(GroupTopic $topic): array
     {
         $ids = $topic->comments()->whereNotNull('member_id')->distinct()->pluck('member_id')->all();
         if ($topic->member_id !== null) {
@@ -59,7 +59,7 @@ class BroadcastGroupCommentTest extends TestCase
         return array_map('intval', $ids);
     }
 
-    private function broadcast(CommunityTopic $topic, CommunityTopicComment $comment, Member $commenter, array $excluded): void
+    private function broadcast(GroupTopic $topic, GroupTopicComment $comment, Member $commenter, array $excluded): void
     {
         app()->call([new BroadcastTopicCommentPosted((int) $topic->getKey(), (int) $comment->getKey(), (int) $commenter->getKey(), $excluded), 'handle']);
     }
@@ -72,7 +72,7 @@ class BroadcastGroupCommentTest extends TestCase
         $coCommenter = $this->member($group);
         $general = $this->member($group);
         $commenter = $this->member($group);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $this->comment($topic, $coCommenter);            // prior comment → a co-commenter
         $comment = $this->comment($topic, $commenter);   // the new comment
 
@@ -96,8 +96,8 @@ class BroadcastGroupCommentTest extends TestCase
         $author = $this->member($group);
         $commenter = $this->member($group);
         $general = $this->member($group);
-        $general->setNotificationSetting(NotificationKind::CommunityTopicCommentNewPost, NotificationChannel::Mail, false);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $general->setNotificationSetting(NotificationKind::GroupTopicCommentNewPost, NotificationChannel::Mail, false);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $comment = $this->comment($topic, $commenter);
 
         $this->broadcast($topic, $comment, $commenter, $this->excluded($topic));
@@ -117,7 +117,7 @@ class BroadcastGroupCommentTest extends TestCase
         $commenter = $this->member($group);
         $blocked = $this->member($group);
         DB::table('member_blocks')->insert(['blocker_id' => $blocked->getKey(), 'blocked_id' => $commenter->getKey()]);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $comment = $this->comment($topic, $commenter);
 
         $this->broadcast($topic, $comment, $commenter, $this->excluded($topic));
@@ -134,7 +134,7 @@ class BroadcastGroupCommentTest extends TestCase
         $author = $this->member($group);
         $coCommenter = $this->member($group);
         $commenter = $this->member($group);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $priorComment = $this->comment($topic, $coCommenter);
         $comment = $this->comment($topic, $commenter);
         $excluded = $this->excluded($topic); // captured while both comments exist
@@ -153,7 +153,7 @@ class BroadcastGroupCommentTest extends TestCase
         $group = Group::factory()->create();
         $author = $this->member($group);
         $commenter = $this->member($group);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         app(CreateTopicComment::class)($commenter, $topic, 'hello');
 

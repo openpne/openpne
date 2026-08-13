@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Upgrade\Group;
 
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\GroupRole;
 use App\Features\Group\JoinPolicy;
+use App\Features\GroupTopic\TopicPostAuthority;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;

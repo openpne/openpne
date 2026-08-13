@@ -23,8 +23,8 @@ use App\Gadgets\Kinds\MemberImageBoxGadget;
 use App\Gadgets\Kinds\ProfileListBoxGadget;
 use App\Gadgets\Kinds\RecentCommunityEventCommentGadget;
 use App\Gadgets\Kinds\RecentCommunityEventCommentSnsGadget;
-use App\Gadgets\Kinds\RecentCommunityTopicCommentGadget;
-use App\Gadgets\Kinds\RecentCommunityTopicCommentSnsGadget;
+use App\Gadgets\Kinds\RecentGroupTopicCommentGadget;
+use App\Gadgets\Kinds\RecentGroupTopicCommentSnsGadget;
 use App\Gadgets\Kinds\SearchBoxGadget;
 use App\Gadgets\Kinds\SideBannerGadget;
 use App\Gadgets\Kinds\TimelineAllGadget;
@@ -42,7 +42,11 @@ use App\Gadgets\Kinds\TimelineProfileGadget;
 final class GadgetKindRegistry
 {
     /** Superseded `gadgets.name` => the canonical name of the same kind. */
-    private const LEGACY_NAMES = ['communityJoinListBox' => 'groupJoinListBox'];
+    private const LEGACY_NAMES = [
+        'communityJoinListBox' => 'groupJoinListBox',
+        'recentCommunityTopicComment' => 'recentGroupTopicComment',
+        'recentCommunityTopicCommentSns' => 'recentGroupTopicCommentSns',
+    ];
 
     /** @var array<string, GadgetKind>|null */
     private static ?array $byName = null;
@@ -62,9 +66,9 @@ final class GadgetKindRegistry
             DiaryCommentHistoryGadget::class,
             DiaryMyListGadget::class,
             DiaryMemberListGadget::class,
-            RecentCommunityTopicCommentGadget::class,
+            RecentGroupTopicCommentGadget::class,
             RecentCommunityEventCommentGadget::class,
-            RecentCommunityTopicCommentSnsGadget::class,
+            RecentGroupTopicCommentSnsGadget::class,
             RecentCommunityEventCommentSnsGadget::class,
             TimelineAllGadget::class,
             TimelineFriendGadget::class,

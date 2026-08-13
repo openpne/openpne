@@ -120,9 +120,9 @@ export const POLICY_TITLES: Record<PolicyKind, ChromeLabel> = {
 /** Nav order and metadata (Home is the brand row, so it is omitted). */
 export const NAV_SECTIONS: NavSection[] = [
     { href: '/diary/list', match: ['/diary'], icon: BookOpen, label: DIARIES, feature: 'diary' },
-    // The boards still live under the OpenPNE 3 /communityTopic|Event space and have no section of
-    // their own, so this one answers for them too and for the container unit alone.
-    { href: '/groups', match: ['/groups', '/communityTopic', '/communityEvent'], icon: Users, label: COMMUNITIES, feature: 'group' },
+    // The event board still lives under the OpenPNE 3 /communityEvent space, and neither board has a
+    // section of its own, so this one answers for them too and for the container unit alone.
+    { href: '/groups', match: ['/groups', '/topics', '/communityEvent'], icon: Users, label: COMMUNITIES, feature: 'group' },
     { href: '/timeline', match: ['/timeline'], icon: Activity, label: ACTIVITY, feature: 'timeline' },
     {
         href: '/friend/list',
@@ -220,7 +220,7 @@ const communityScope = (group: CommunityRef): ChromeScope => ({
 // (show) and edit pages — an edit page adds the specific topic/event as a third crumb.
 const topicBoardContext = (group: CommunityRef): Chrome['context'] => [
     ...communityContext(group)!,
-    { href: `/communityTopic/listCommunity/${group.id}`, label: t('%Topics%') },
+    { href: `/groups/${group.id}/topics`, label: t('%Topics%') },
 ];
 
 const communityTimelineContext = (group: CommunityRef): Chrome['context'] => [
@@ -368,7 +368,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             context: communityContext(group),
             scope: communityScope(group),
             action: canPost
-                ? { href: `/communityTopic/new/${group.id}`, label: t('Create a %topic%'), icon: Plus }
+                ? { href: `/groups/${group.id}/topics/new`, label: t('Create a %topic%'), icon: Plus }
                 : undefined,
         };
     },
@@ -400,7 +400,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
             form: true,
             compose: true,
             context: topic
-                ? [...topicBoardContext(group)!, { href: `/communityTopic/${topic.id}`, label: topic.name }]
+                ? [...topicBoardContext(group)!, { href: `/topics/${topic.id}`, label: topic.name }]
                 : topicBoardContext(group),
         };
     },

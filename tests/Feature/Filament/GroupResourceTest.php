@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\JoinPolicy;
+use App\Features\GroupTopic\TopicPostAuthority;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Filament\Resources\Groups\Pages\EditGroup;
 use App\Filament\Resources\Groups\Pages\ListGroups;
 use App\Models\AdminUser;
@@ -14,13 +14,13 @@ use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityEventCommentImage;
 use App\Models\CommunityEventImage;
-use App\Models\CommunityTopic;
-use App\Models\CommunityTopicComment;
-use App\Models\CommunityTopicCommentImage;
-use App\Models\CommunityTopicImage;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupCategory;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
+use App\Models\GroupTopicCommentImage;
+use App\Models\GroupTopicImage;
 use App\Models\Member;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
@@ -89,10 +89,10 @@ class GroupResourceTest extends TestCase
     {
         $group = Group::factory()->create();
 
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
-        $topicImage = CommunityTopicImage::factory()->create(['post_id' => $topic->getKey()]);
-        $topicComment = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey()]);
-        $topicCommentImage = CommunityTopicCommentImage::factory()->create(['post_id' => $topicComment->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
+        $topicImage = GroupTopicImage::factory()->create(['post_id' => $topic->getKey()]);
+        $topicComment = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey()]);
+        $topicCommentImage = GroupTopicCommentImage::factory()->create(['post_id' => $topicComment->getKey()]);
 
         $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
         $eventImage = CommunityEventImage::factory()->create(['post_id' => $event->getKey()]);
