@@ -46,7 +46,7 @@ services:
       - app
 
   vite:
-    image: node:26.5.1-bookworm-slim
+    image: node:26.7.0-bookworm-slim
     user: "${OPENPNE_UID:-1000}:${OPENPNE_GID:-1000}"
     working_dir: /var/www/html
     environment:
@@ -61,6 +61,6 @@ services:
   # Dev mail sink: catches every outgoing mail instead of delivering it and shows
   # it at http://localhost:8025. The app reaches it over SMTP on the compose network.
   mailpit:
-    image: axllent/mailpit:v1.30.6
+    image: axllent/mailpit:v1.30.7
     ports:
       - "${OPENPNE_MAILPIT_PORT:-8025}:8025"
