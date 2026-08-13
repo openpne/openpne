@@ -6,6 +6,7 @@ use App\Compat\RouteParityRegistry;
 use App\Features\Diary\Queries\ListRecentDiaries;
 use App\Features\Diary\Queries\RecentMemberDiaries;
 use App\Features\Group\Queries\PendingJoinRequestCounts;
+use App\Features\GroupTalk\Queries\JoinedTalkRooms;
 use App\Features\Home\Queries\JoinedGroupActivity;
 use App\Features\Home\Serializers\HomeSerializer;
 use App\Features\Timeline\Queries\HomeFeed;
@@ -60,12 +61,13 @@ class HomeController extends Controller
 
     /**
      * The Modern-only landing (root redirects here under a Modern surface): a digest of the
-     * all-members diary feed, the timeline, the viewer's joined-community activity, and their own
-     * recent diaries.
+     * viewer's conversations, the all-members diary feed, the timeline, their joined-community
+     * activity, and their own recent diaries.
      */
     public function dashboard(
         Request $request,
         JoinedGroupActivity $groupActivity,
+        JoinedTalkRooms $talkRooms,
         UnreadCounts $unread,
         PendingJoinRequestCounts $pendingApprovals,
     ): Response {
@@ -85,6 +87,7 @@ class HomeController extends Controller
             $diaryOn ? (new RecentMemberDiaries)($viewer, $viewer, self::PREVIEW) : collect(),
             $unread->for($viewer),
             $groupOn ? $pendingApprovals($viewer) : collect(),
+            Feature::GroupTalk->enabled() ? $talkRooms->take($viewer, self::PREVIEW) : collect(),
         ));
     }
 

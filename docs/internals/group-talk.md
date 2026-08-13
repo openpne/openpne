@@ -264,6 +264,10 @@ descending sort, which is not a portable answer.
 The bodies follow in one lookup by primary key, since the ordering has already named the exact rows.
 A page therefore costs the same whether it holds one room or twenty.
 
+The Modern dashboard leads with the same rooms — the first five, and the same row component, so what
+the digest says and what the list says cannot drift. It reads them through `take()` rather than the
+paginator: a screen with no pager has no total to count and no page number to honour.
+
 ## Mentions
 
 Talk parses `@mentions` and nothing else: no hashtags (a chat has no tag culture, and a per-group tag
