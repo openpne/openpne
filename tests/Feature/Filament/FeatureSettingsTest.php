@@ -16,8 +16,9 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The feature-toggle editor. DB-authoritative; a fresh install with no row runs every unit, and the
- * page stores its whole group on save (docs/internals/feature-toggles.md).
+ * The feature-toggle editor. DB-authoritative; a fresh install with no rows runs every unit except
+ * group talk (dark by its false default until the cutover), and the page stores its whole group on
+ * save (docs/internals/feature-toggles.md).
  */
 class FeatureSettingsTest extends TestCase
 {
@@ -45,7 +46,7 @@ class FeatureSettingsTest extends TestCase
         $component = Livewire::test(FeatureSettings::class);
 
         foreach (Feature::cases() as $feature) {
-            // Group talk is the exception: the install writes its '0', so the page reads it off.
+            // Group talk is the exception: no row is written, its false default reads it off.
             $component->assertSet("data.{$feature->settingKey()->value}", $feature !== Feature::GroupTalk);
         }
     }
