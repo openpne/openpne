@@ -90,7 +90,13 @@ class TalkReadCursorSnapshotTest extends TalkTestCase
         [$group, $member] = $this->{$path}();
 
         $cursor = $this->cursorOf($group, $member);
-        $newest = GroupMessage::query()->where('group_id', $group->getKey())->orderByDesc('id')->first();
+        // Newest by the (created_at, id) tuple — the conversation's order. Expecting by id alone
+        // would let a snapshot that also orders by id alone pass against out-of-order history.
+        $newest = GroupMessage::query()
+            ->where('group_id', $group->getKey())
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
 
         $this->assertNotNull($cursor, "{$path} did not create a membership row");
         $this->assertSame(
