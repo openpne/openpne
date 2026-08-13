@@ -3,8 +3,10 @@
 namespace Tests\Feature\GroupTalk;
 
 use App\Features\GroupTopic\TopicReadAccess;
+use App\Models\GroupMessage;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
+use Illuminate\Support\Carbon;
 
 /**
  * The talk entrance on a group's top page. It asks its own two questions — the unit, and this
@@ -70,5 +72,85 @@ class GroupTalkEntranceTest extends TalkTestCase
 
         // The whole group page goes with its unit; the prop never gets the chance to be wrong.
         $this->actingAs($member)->get("/groups/{$group->getKey()}")->assertNotFound();
+    }
+
+    public function test_the_card_previews_the_newest_message(): void
+    {
+        $group = $this->group(TopicReadAccess::Everyone);
+        $author = $this->memberOf($group);
+        $author->forceFill(['name' => 'Alice'])->save();
+        GroupMessage::factory()->create([
+            'group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'body' => 'older',
+            'created_at' => Carbon::parse('2026-08-14 09:00:00'), 'updated_at' => Carbon::parse('2026-08-14 09:00:00'),
+        ]);
+        GroupMessage::factory()->create([
+            'group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'body' => 'newest',
+            'created_at' => Carbon::parse('2026-08-14 10:00:00'), 'updated_at' => Carbon::parse('2026-08-14 10:00:00'),
+        ]);
+
+        $this->actingAs($author)->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->where('talkPreview.body', 'newest')
+                ->where('talkPreview.authorName', 'Alice'));
+    }
+
+    public function test_a_withdrawn_author_previews_with_no_name(): void
+    {
+        $group = $this->group(TopicReadAccess::Everyone);
+        GroupMessage::factory()->withdrawnAuthor()->create(['group_id' => $group->getKey(), 'body' => 'still here']);
+
+        $this->actingAs($this->memberOf($group))->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->where('talkPreview.body', 'still here')
+                ->where('talkPreview.authorName', null));
+    }
+
+    public function test_an_empty_conversation_previews_nothing(): void
+    {
+        $group = $this->group();
+
+        $this->actingAs($this->memberOf($group))->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('talkPreview', null)->where('talkUnread', 0));
+    }
+
+    /** A non-member reader holds no membership row, so no cursor — zero, not "everything". */
+    public function test_a_non_member_reader_sees_the_preview_with_no_unread(): void
+    {
+        $group = $this->group(TopicReadAccess::Everyone);
+        GroupMessage::factory()->create([
+            'group_id' => $group->getKey(), 'member_id' => $this->memberOf($group)->getKey(), 'body' => 'hello',
+        ]);
+
+        $this->actingAs(Member::factory()->create())->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->where('talkPreview.body', 'hello')
+                ->where('talkUnread', 0));
+    }
+
+    /** Mute silences the nav badge, not the group's own card. */
+    public function test_a_muted_group_still_shows_its_unread_on_the_card(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        GroupMessage::factory()->count(2)->create([
+            'group_id' => $group->getKey(), 'member_id' => $this->memberOf($group)->getKey(),
+        ]);
+        $this->actingAs($viewer)->postJson("/groups/{$group->getKey()}/talk/mute", ['muted' => true])->assertNoContent();
+
+        $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('talkUnread', 2));
+    }
+
+    /** The preview carries a member's words, so the gate is asked before the conversation is read. */
+    public function test_the_conversation_is_not_read_when_the_gate_refuses(): void
+    {
+        $group = $this->group(TopicReadAccess::MembersOnly);
+        GroupMessage::factory()->create(['group_id' => $group->getKey(), 'body' => 'private']);
+
+        $this->actingAs(Member::factory()->create())->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn ($page) => $page
+                ->where('canViewTalk', false)
+                ->where('talkPreview', null)
+                ->where('talkUnread', 0));
     }
 }

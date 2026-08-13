@@ -22,7 +22,9 @@ class TimelineRouteParity extends RouteParity
             new RouteMap('sns_timeline', '/sns/timeline', 'timeline.index', 'GET', op3Action: 'sns'),
             // The group timeline. Its canonical URL moved with the Group rename, so the OpenPNE 3
             // URL is preserved by redirect (below).
-            new RouteMap('community_timeline', '/community/:id/timeline', 'group.timeline', 'GET', op3Action: 'community'),
+            // The community timeline was replaced by group talk; the OpenPNE 3 URL keeps working by
+            // landing on the conversation that took its place (docs/internals/timeline.md).
+            new RouteMap('community_timeline', '/community/:id/timeline', 'group.talk.show', 'GET', op3Action: 'community'),
             // OpenPNE 3 reached the single-activity page through the global /:module/:action fallback
             // (/timeline/show/id/:id), so there is no named route — a fallback-only map that still
             // derives the page_timeline_show body id.
@@ -51,8 +53,8 @@ class TimelineRouteParity extends RouteParity
             '/sns/timeline' => 'timeline.index',
             // The group timeline's OpenPNE 3 URL, and the global-fallback spelling of it that
             // OpenPNE 3 also answered → the canonical /groups/:id/timeline.
-            '/community/:id/timeline' => 'group.timeline',
-            '/timeline/community/id/:id' => 'group.timeline',
+            '/community/:id/timeline' => 'group.talk.show',
+            '/timeline/community/id/:id' => 'group.talk.show',
         ];
     }
 

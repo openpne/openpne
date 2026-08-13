@@ -8,10 +8,7 @@ test('a plain endpoint opens its query string', () => {
 
 /** The case the old groupId prop got wrong: a scoped endpoint must keep the scope it arrived with. */
 test('an endpoint that already carries a parameter keeps it', () => {
-    assert.equal(
-        candidatesUrlFor('/timeline/mention-candidates?community=7', 'bo'),
-        '/timeline/mention-candidates?community=7&q=bo',
-    );
+    assert.equal(candidatesUrlFor('/x?scope=7', 'bo'), '/x?scope=7&q=bo');
 });
 
 test('a talk endpoint needs no scope parameter at all', () => {

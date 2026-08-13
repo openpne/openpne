@@ -11,9 +11,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Shared setup for the talk suites. The unit ships switched OFF, so every one of these tests has to
- * turn it on first — the same opt-in an operator makes from the admin Features page before the
- * cutover. Tests\Feature\GroupTalk\GroupTalkGateTest is the one that leaves it alone.
+ * Shared setup for the talk suites. The unit is on by default since the cutover; it is still set
+ * explicitly here so a suite reads as independent of whatever an install default happens to be, and
+ * so switching it off inside a test is visibly the exception.
  */
 abstract class TalkTestCase extends TestCase
 {

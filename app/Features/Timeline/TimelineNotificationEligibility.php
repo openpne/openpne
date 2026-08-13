@@ -3,7 +3,6 @@
 namespace App\Features\Timeline;
 
 use App\Features\Block\BlockLookup;
-use App\Features\Group\GroupMembership;
 use App\Models\Member;
 use App\Models\TimelinePost;
 
@@ -26,14 +25,6 @@ final class TimelineNotificationEligibility
     {
         $root = self::threadRoot($post);
         if ($root === null) {
-            return false;
-        }
-
-        // A community thread notifies its community, not everyone who could read it. Viewability
-        // alone would keep telling an ex-member about an everyone-readable community they left,
-        // and the opt-out they would reach for is that community kind — which is not theirs to
-        // hold once they are outside it.
-        if ($root->community_id !== null && ! GroupMembership::isMember($root->community, $recipient)) {
             return false;
         }
 

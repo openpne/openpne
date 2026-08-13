@@ -233,11 +233,6 @@ const topicBoardContext = (group: CommunityRef): Chrome['context'] => [
     { href: `/groups/${group.id}/topics`, label: t('%Topics%') },
 ];
 
-const communityTimelineContext = (group: CommunityRef): Chrome['context'] => [
-    ...communityContext(group)!,
-    { href: `/groups/${group.id}/timeline`, label: ACTIVITY },
-];
-
 const eventBoardContext = (group: CommunityRef): Chrome['context'] => [
     ...communityContext(group)!,
     { href: `/groups/${group.id}/events`, label: t('Events') },
@@ -481,24 +476,6 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         };
     },
     'timeline/index': () => ({ mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }),
-    'timeline/community': (props) => {
-        const { group, canPost } = props as unknown as { group: CommunityRef; canPost: boolean };
-        return {
-            mode: 'contextual',
-            title: ACTIVITY,
-            context: communityContext(group),
-            scope: communityScope(group),
-            action: canPost
-                ? { href: `/community/${group.id}/timeline/new`, label: t('%Post_activity%'), icon: Pencil }
-                : undefined,
-        };
-    },
-    // The crumb names the group, as the topic and event compose forms do: a member in several
-    // groups has to be able to see which one they are posting into.
-    'timeline/community-new': (props) => {
-        const { group } = props as unknown as { group: CommunityRef };
-        return { context: communityTimelineContext(group) };
-    },
     'timeline/member': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
         return isOwner
@@ -514,13 +491,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // Crumb label is the bare author name, the post card right below carries the same name as
     // content; the page's h1 is a generic post label so nothing renders twice.
     'timeline/show': (props) => {
-        const { post, group } = props as unknown as { post: { author: MemberRef }; group: CommunityRef | null };
-        // A group thread is about its group: the reader arrived from inside one, and the
-        // author's timeline is not where the post lives.
-        if (group) {
-            return { context: communityTimelineContext(group), scope: communityScope(group) };
-        }
-
+        const { post } = props as unknown as { post: { author: MemberRef } };
         return {
             context: [{ href: `/member/${post.author.id}/timeline`, label: post.author.name }],
             scope: memberScope(post.author),
@@ -601,8 +572,6 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'diary/new': { form: true, compose: true, context: [{ href: '/diary/list', label: DIARIES }] },
     'timeline/show': { foreground: true },
     'timeline/new': { form: true, compose: true, context: [{ href: '/timeline', label: ACTIVITY }] },
-    // Context comes from HUB_CHROME, which knows which group is being composed into.
-    'timeline/community-new': { form: true, compose: true },
 };
 
 /**

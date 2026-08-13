@@ -70,10 +70,6 @@ class FeatureTest extends TestCase
     {
         // Fail-open: an availability switch must not black out a module on a malformed value.
         foreach (Feature::cases() as $feature) {
-            if ($feature === Feature::GroupTalk) {
-                continue; // Fail-closed until the cutover — pinned below.
-            }
-
             $key = $feature->settingKey();
 
             $this->assertTrue($key->decode(null), "{$key->value}: an absent row must mean enabled");
@@ -83,23 +79,6 @@ class FeatureTest extends TestCase
             $this->assertTrue($key->decode('garbage'));
             $this->assertFalse($key->decode('0'));
         }
-    }
-
-    /**
-     * Group talk alone enables only on a stored '1' (docs/internals/group-talk.md): absent and
-     * malformed both stay dark until the community-timeline cutover moves it into the fail-open
-     * family. The cutover PR deletes this test and drops the exemption above.
-     */
-    public function test_group_talk_enables_only_on_an_explicit_one(): void
-    {
-        $key = Feature::GroupTalk->settingKey();
-
-        $this->assertFalse($key->decode(null), 'an absent row must mean dark');
-        $this->assertFalse($key->default());
-        $this->assertFalse($key->decode(''));
-        $this->assertFalse($key->decode('garbage'));
-        $this->assertFalse($key->decode('0'));
-        $this->assertTrue($key->decode('1'));
     }
 
     public function test_a_flag_round_trips_through_the_codec(): void

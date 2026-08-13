@@ -19,7 +19,6 @@ use App\Notifications\GroupTalk\GroupTalkMentionedNotification;
 use App\Notifications\GroupTopic\TopicCommentBroadcastNotification;
 use App\Notifications\GroupTopic\TopicCommentedNotification;
 use App\Notifications\GroupTopic\TopicPostedNotification;
-use App\Notifications\Timeline\TimelineCommunityPostedNotification;
 use App\Notifications\Timeline\TimelineMentionedNotification;
 use App\Notifications\Timeline\TimelinePostedNotification;
 use App\Notifications\Timeline\TimelineRepliedNotification;
@@ -53,7 +52,6 @@ final class FeatureNotificationMap
         FriendRequestAcceptedNotification::class,
         FriendRequestedNotification::class,
         DirectMessageReceivedNotification::class,
-        TimelineCommunityPostedNotification::class,
         TimelineMentionedNotification::class,
         TimelinePostedNotification::class,
         TimelineRepliedNotification::class,

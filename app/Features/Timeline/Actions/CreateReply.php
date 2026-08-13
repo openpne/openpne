@@ -2,9 +2,7 @@
 
 namespace App\Features\Timeline\Actions;
 
-use App\Features\Timeline\CommunityTimelineAccess;
 use App\Features\Timeline\Events\TimelineReplyPosted;
-use App\Features\Timeline\Exceptions\NotGroupMember;
 use App\Features\Timeline\HashtagParser;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -17,34 +15,24 @@ class CreateReply
     /**
      * Reply to a top-level post (the controller gates viewability and re-centers to the thread
      * root, so $parent is always top-level). A reply is a post row with in_reply_to_id set; it
-     * carries no image (OpenPNE 3 parity) and inherits the parent's visibility and community so the
-     * whole thread is gated as one audience, in one place.
-     *
-     * Replying into a community needs membership, which reading it does not: an everyone-readable
-     * community admits any member to the thread but only its own to the conversation.
+     * carries no image (OpenPNE 3 parity) and inherits the parent's visibility so the whole thread
+     * is gated as one audience, in one place.
      *
      * @param  list<array{member_id: int, offset: int, length: int}>  $mentions  the picker's selection, not yet resolved against $body
-     *
-     * @throws NotGroupMember
      */
     public function __invoke(Member $author, TimelinePost $parent, string $body, array $mentions = []): TimelinePost
     {
-        if ($parent->community_id !== null && ! CommunityTimelineAccess::canPost($parent->community, $author)) {
-            throw new NotGroupMember;
-        }
-
         // Mentions resolve inside the transaction: resolution share-locks the mentioned members,
         // so one deleted mid-request fails resolution (row dropped, reply goes through) instead
         // of failing the FK insert (reply rolled back).
         return DB::transaction(function () use ($author, $parent, $body, $mentions): TimelinePost {
             $reply = TimelinePost::create([
                 'member_id' => $author->getKey(),
-                'community_id' => $parent->community_id,
                 'in_reply_to_id' => $parent->getKey(),
                 'body' => $body,
                 'visibility' => $parent->visibility,
             ]);
-            $resolved = ($this->mentions)($author, $body, $mentions, $parent->community);
+            $resolved = ($this->mentions)($author, $body, $mentions);
             $reply->mentions()->createMany($resolved);
             // After resolution, because a mention wins any range the two would both claim.
             $reply->tags()->createMany(HashtagParser::parse($body, $resolved));

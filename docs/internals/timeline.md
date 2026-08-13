@@ -129,9 +129,7 @@ the author. It is evaluated twice — when the listener or fan-out enqueues, and
 notification's `shouldSend()` immediately before a channel delivers — because these notifications
 queue, and a mail carries the post body to whoever is eligible at *delivery* time, not at post time.
 
-`timelineNewPostCommunity` stays dormant (`isWired: false`). OpenPNE 3 registered it and never sent
-it, and OpenPNE 4's timeline has no community scope; it is kept registered only so the upgrade
-preserves a member's stored choice.
+`timelineNewPostCommunity` stays dormant (`isWired: false`) — see the replacement note below.
 
 ## Key invariants
 
@@ -143,59 +141,42 @@ preserves a member's stored choice.
 - A range with no row renders as plain text, which is what makes the member cascade safe.
 - An entity's own range is escaped but never autolinked.
 - `EntityText` and `entity-split.ts` are a lockstep pair, like `BodyText` and `linkify.ts`.
-- A reply inherits its parent's visibility and community; the thread is one audience — which is also
-  what a notification's viewability and its feed row's link are judged against.
+- A reply inherits its parent's visibility; the thread is one audience — which is also what a
+  notification's viewability and its feed row's link are judged against.
 - The events' mention snapshot is the only input to notification precedence; no path re-derives it.
-- A community-scoped post is absent from every SNS-wide read, and its access is the community's
-  question, not the author's clearance.
 
-## A community post lives in the same table and nowhere else's feed
+## The community timeline was replaced by group talk
 
-`timeline_posts.community_id` scopes a post to one community (OpenPNE 3 stored the same thing as
-`activity_data.foreign_table='community'` + `foreign_id`). Null is an ordinary SNS-wide post.
+The timeline was once two audiences: SNS-wide posts, and posts scoped to one community by
+`timeline_posts.community_id` (OpenPNE 3's `activity_data.foreign_table='community'` + `foreign_id`).
+That scope is gone — [group talk](group-talk.md) took its place, and the cutover deleted the
+community-scoped rows and dropped the column. **The table holds one audience again**, which is why
+no feed here carries an exclusion any more.
 
-Everything SNS-wide excludes those rows, and the exclusion lives in the two scopes every such read
-already goes through rather than in each query: `TimelineFeedScope` (home, all-member, friend and
-tag feeds) and `TimelineVisibilityScope` (a member's own timeline, the profile activity count).
-A community feed opts back in explicitly. Writing a new SNS-wide feed therefore inherits the
-exclusion; writing one that bypasses both scopes is what would leak, which is why the separation is
-pinned per query rather than per page.
+What survives is the URL lineage, because members and OpenPNE 3 mail hold these links:
+`/community/{id}/timeline` (the OpenPNE 3 `community_timeline` route), its global-fallback spelling
+`/timeline/community/id/{id}`, and OpenPNE 4's own `/groups/{id}/timeline` all **redirect to
+`group.talk.show`**, query preserved, path id winning over a stray `?group=`. They are gated on
+`groupTalk`, not on `timeline`: the destination is a talk screen, so a site running talk with the
+timeline unit switched off must still honour them. The compose and POST routes are simply gone — a
+redirect that dropped a member's draft would be worse than a 404.
 
-Access is answered by the community, before visibility is read at all. `TimelineAccess` sends a
-community post to `CommunityTimelineAccess`, which reads the same `topic_read_access` column the
-board and events read — so one community answers "who may read this" the same way everywhere.
-OpenPNE 3 differed here: its community feed required the *author* to be a member and never checked
-the viewer, which would leave a members-only community's timeline readable while its board is not.
+`timeline_new_post_community` stays registered as a **dormant** kind (`isWired: false`). Talk sends
+no per-message broadcast at all — its unread badge does that job — so there is no successor to
+migrate the preference to, and the imported rows are kept because a member's stored choice is a
+record rather than a value to discard.
 
-Posting follows membership alone. `topic_post_authority` is deliberately not consulted, so an
-admins-only board does not also silence the community's timeline; and an everyone-readable community
-is still writable only by its members.
+### Why `linkableTags()` still exists
 
-Rows carry `Members`, but that is a write-side invariant, not the gate — a legacy or corrupt `Open`
-value must not open a permalink or its image bytes to a guest, so the community branch runs first.
-The write actions take the `Group` itself and fix the visibility there, rather than trusting a
-caller's id and choice: the reply route is the SNS-wide one, so a controller check would be a check
-in only one of the two places that reach the write.
+A community post carried hashtags like any other, but the tag page is SNS-wide and excluded those
+posts, so linking one handed the reader a page that did not contain the post they clicked from.
+`TimelinePost::linkableTags()` was the seam that answered it, and both surfaces read it rather than
+`tags()`.
 
-A post also leaves the community feed when its author leaves the community — OpenPNE 3's feed
-required the author to be a member, and keeping that means an upgraded feed shows no more than it
-did before. Only the feed: OpenPNE 3 served an ex-member's permalink, and so do we.
-
-Mentions narrow to the community's members on both sides — the picker and the submit — because the
-two must answer alike or the picker would offer a name the submit silently drops.
-
-### One post, one announcement
-
-A community post is announced by `BroadcastCommunityTimelinePosted`, through the same fan-out the
-topic and event broadcasts use, under `timeline_new_post_community`. `NotifyTimelinePosted` picks
-that job **or** the SNS-wide one, never both: the SNS-wide audience is the visibility ladder, which
-an everyone-readable community resolves to every member, so a post would arrive twice under two
-kinds — and the opt-out a member reached for would not be the one that sent it.
-
-Receiving anything about a community thread requires current membership, checked once in
-`TimelineNotificationEligibility` so the new-post, reply and mention kinds cannot drift apart. Read
-access is not enough: an everyone-readable community would otherwise keep mailing its bodies to
-someone who left, and the opt-out they would reach for is a community kind that is no longer theirs.
+Every post is SNS-wide now, so it returns them all — and talk parses no hashtags at all, so the
+question cannot come back through that door. It is kept as a method anyway: it is the one place a
+future scoped surface would answer, instead of each renderer deciding again and one of them
+forgetting.
 
 ## A hashtag is a range too, but nobody picks it
 

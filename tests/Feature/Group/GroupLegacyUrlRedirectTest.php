@@ -35,8 +35,8 @@ class GroupLegacyUrlRedirectTest extends TestCase
             "/community/member/list?id={$id}" => "/groups/{$id}/members",
             "/community/member/pending?id={$id}" => "/groups/{$id}/members/pending",
             "/community/member/manage/{$id}" => "/groups/{$id}/members/manage",
-            "/community/{$id}/timeline" => "/groups/{$id}/timeline",
-            "/timeline/community/id/{$id}" => "/groups/{$id}/timeline",
+            "/community/{$id}/timeline" => "/groups/{$id}/talk",
+            "/timeline/community/id/{$id}" => "/groups/{$id}/talk",
         ];
 
         foreach ($cases as $legacy => $canonical) {
@@ -74,8 +74,8 @@ class GroupLegacyUrlRedirectTest extends TestCase
         $member = Member::factory()->create();
 
         $cases = [
-            "/community/{$id}/timeline?page=3" => "/groups/{$id}/timeline?page=3",
-            "/timeline/community/id/{$id}?page=3" => "/groups/{$id}/timeline?page=3",
+            "/community/{$id}/timeline?page=3" => "/groups/{$id}/talk?page=3",
+            "/timeline/community/id/{$id}?page=3" => "/groups/{$id}/talk?page=3",
             "/community/member/manage/{$id}?page=2" => "/groups/{$id}/members/manage?page=2",
             // A stray ?group= is consumed by the path parameter (the real id wins), page survives.
             "/community/{$id}?group=999&page=2" => "/groups/{$id}?page=2",

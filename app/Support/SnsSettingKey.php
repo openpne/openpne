@@ -101,15 +101,9 @@ enum SnsSettingKey: string
     case FeatureGroupEventEnabled = 'feature_group_event_enabled';
 
     /**
-     * The one unit that is dark until an operator asks for it, declared twice over: default() below
-     * is false — which is what an absent row resolves to, since decode() answers null with the
-     * default before reaching any arm — and decode()'s arm for this key is fail-closed, so a stored
-     * blank or garbled value is off too.
-     *
-     * Talk replaces the community timeline rather than joining it, so it must not go live before the
-     * cutover deploy. That deploy flips BOTH declarations; the default is the half that moves the
-     * sites with no row, which is every site that never opened the Features page. See
-     * docs/internals/group-talk.md.
+     * Ordinary now. It was the one fail-closed feature flag while group talk was being built beside
+     * the community timeline it replaces — the two must never have been reachable at once — and the
+     * cutover flipped both halves (default and decode arm) into the shared family below.
      */
     case FeatureGroupTalkEnabled = 'feature_group_talk_enabled';
 
@@ -294,9 +288,7 @@ enum SnsSettingKey: string
             // On, so an absent row runs the feature until an administrator says otherwise.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
-            self::FeatureFriendEnabled => true,
-            // Dark until the cutover (see the case declaration).
-            self::FeatureGroupTalkEnabled => false,
+            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled => true,
             // Unbranded until an administrator sets it: the Modern shell keeps its built-in color and
             // both surfaces keep the shipped favicon.
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => '',
@@ -373,13 +365,7 @@ enum SnsSettingKey: string
             // strand its content — the opposite trade-off from the security keys above.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled, self::FeatureGroupEventEnabled,
-            self::FeatureFriendEnabled => $value !== '0',
-            // Fail-closed, alone among the feature flags: only a stored '1' switches group talk on,
-            // so a blank or garbled value stays dark like an explicit '0'. An ABSENT row never
-            // reaches here — the null check at the top answers it with default(), which is false for
-            // this key — so the cutover has to move both. There is no content to strand behind a
-            // wrongly-off gate while nothing can be written yet.
-            self::FeatureGroupTalkEnabled => $value === '1',
+            self::FeatureGroupTalkEnabled, self::FeatureFriendEnabled => $value !== '0',
             default => $value,
         };
     }

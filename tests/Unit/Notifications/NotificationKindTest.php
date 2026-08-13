@@ -83,7 +83,6 @@ class NotificationKindTest extends TestCase
             [
                 NotificationKind::TimelineNewPost,
                 NotificationKind::TimelineNewPostOnlyFriends,
-                NotificationKind::TimelineNewPostCommunity,
                 NotificationKind::TimelineReplyPost,
                 NotificationKind::TimelineRelatedPost,
                 NotificationKind::TimelineMention,

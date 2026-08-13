@@ -57,10 +57,6 @@ class FilePolicyFeatureToggleTest extends TestCase
     public function test_a_switched_off_unit_denies_its_own_files(string $alias, Feature $feature): void
     {
         $viewer = Member::factory()->create();
-        // Group talk is the one unit that ships switched off, so the "while it is on" half of this
-        // assertion has to put it there first (docs/internals/group-talk.md).
-        $this->setSnsSetting($feature->settingKey(), true);
-        $this->freshRequestState();
         $file = $this->fileOwnedBy($alias, $viewer);
 
         $this->assertTrue(Gate::forUser($viewer)->allows('view', $file));

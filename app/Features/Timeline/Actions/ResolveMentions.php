@@ -20,8 +20,8 @@ class ResolveMentions
 {
     /**
      * @param  list<array{member_id: int, offset: int, length: int}>  $payload
-     * @param  ?Group  $group  the community the post belongs to, if any — mentionability
-     *                         narrows to its members there
+     * @param  ?Group  $group  the group the message belongs to, if any — mentionability narrows
+     *                         to its members there (group talk; the timeline itself is SNS-wide)
      * @return list<array{member_id: int, offset: int, length: int}> ascending by offset, non-overlapping
      */
     public function __invoke(Member $author, string $body, array $payload, ?Group $group = null): array
@@ -91,8 +91,8 @@ class ResolveMentions
             // vanish before its FK insert. A no-op on sqlite, whose writes serialize anyway.
             ->sharedLock();
 
-        // Inside a community, only its members are mentionable — the same set MentionCandidates
-        // offers, so the picker never shows a name the submit would silently drop.
+        // Inside a group, only its members are mentionable — the same set
+        // GroupTalkMentionCandidates offers, so the picker never shows a name the submit would drop.
         if ($group !== null) {
             $query->whereIn('members.id', DB::table('group_members')
                 ->where('group_id', $group->getKey())

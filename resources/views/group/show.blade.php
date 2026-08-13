@@ -56,18 +56,15 @@
 @endif
 
 @section('content')
-    {{-- OpenPNE 3's plugin view customize injected the community timeline before the communityHome
-         part (modules/community/config/view.yml, target: before), and gated the box on membership
-         — non-members cannot post into it, so an empty compose box would be an invitation to a
-         refusal. Absent when the timeline unit is off. --}}
-    @isset($timelinePosts)
-        @include('timeline._community-box', [
-            'group' => $group,
-            'posts' => $timelinePosts,
-            'canPost' => true,
-            'title' => __('%Activity%'),
-        ])
-    @endisset
+    {{-- The slot the community timeline's box used to fill (OpenPNE 3's plugin view customize
+         injected it before the communityHome part). Talk inherits it as a plain link box: the talk
+         screen renders Modern for every member, so the link is Classic's whole surface. Gated on
+         the same read answer the Modern card uses. --}}
+    @if ($canViewTalk)
+        <x-classic.parts id="groupTalk" name="groupTalk" :title="__('Talk')">
+            <p><a href="{{ route('group.talk.show', ['group' => $group]) }}">{{ __('Go to talk') }}</a></p>
+        </x-classic.parts>
+    @endif
 
     {{-- The OpenPNE 3 community details listBox (homeSuccess center column): a th/td table of the
          community's profile fields, followed by the member operations. --}}

@@ -19,7 +19,7 @@
              to the reply form below. --}}
         <div class="timeline-large">
             <div id="timeline-list">
-                @include('timeline._post', ['post' => $post, 'canReply' => $canReply])
+                @include('timeline._post', ['post' => $post])
             </div>
         </div>
 
@@ -43,9 +43,8 @@
             </ul>
         @endif
 
-        @if ($canReply)
         <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-reply-form" class="timeline-reply-form"
-              data-timeline-mention data-mention-candidates-url="{{ $post->community ? route('timeline.mention_candidates', ['community' => $post->community]) : route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
+              data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
             @csrf
             @include('timeline._mention-draft')
             <textarea name="body" required>{{ old('body') }}</textarea>
@@ -55,14 +54,7 @@
             <button type="submit">{{ __('Reply') }}</button>
         </form>
         @include('timeline._mention-picker')
-        @endif
 
-        {{-- Back where the thread lives: a community post belongs to its community's timeline, not
-             to the author's. --}}
-        @if ($post->community)
-            <p><a href="{{ route('group.timeline', ['group' => $post->community]) }}">{{ __(':community %activity%', ['community' => $post->community->name]) }}</a></p>
-        @else
-            <p><a href="{{ route('timeline.member', $post->member) }}">{{ __(":name's %activity%", ['name' => $post->member->name]) }}</a></p>
-        @endif
+        <p><a href="{{ route('timeline.member', $post->member) }}">{{ __(":name's %activity%", ['name' => $post->member->name]) }}</a></p>
     </x-classic.parts>
 @endsection
