@@ -6,6 +6,7 @@ use App\Features\Group\GroupMembership;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\Member;
+use Illuminate\Support\Facades\DB;
 
 /**
  * What one member may do in one group's talk, resolved from a single membership read and then asked
@@ -25,6 +26,19 @@ final readonly class GroupTalkPermissions
         $role = GroupMembership::roleOf($group, $member);
 
         return new self($member, canPost: $role !== null, canManage: $role?->canManage() ?? false);
+    }
+
+    /**
+     * Has this member silenced the group's talk? Read on its own rather than folded into for(),
+     * because only the talk page asks and the write paths would pay for a column they never read.
+     * A non-member has no membership row and so no mute to hold.
+     */
+    public static function isMuted(Group $group, Member $member): bool
+    {
+        return (bool) DB::table('group_members')
+            ->where('group_id', $group->getKey())
+            ->where('member_id', $member->getKey())
+            ->value('is_talk_muted');
     }
 
     /** Written by this member — a withdrawn author (null) is nobody's. */

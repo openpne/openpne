@@ -30,7 +30,7 @@ class UnreadCountsTest extends TestCase
 
         $counts = app(UnreadCounts::class)->for($viewer);
 
-        $this->assertSame(['friendRequests' => 1, 'unreadMessages' => 1, 'notifications' => 1], $counts);
+        $this->assertSame(['friendRequests' => 1, 'unreadMessages' => 1, 'notifications' => 1, 'groupTalks' => 0], $counts);
     }
 
     public function test_a_switched_off_unit_reports_zero_without_querying(): void

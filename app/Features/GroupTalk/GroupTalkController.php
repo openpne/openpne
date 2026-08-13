@@ -5,10 +5,13 @@ namespace App\Features\GroupTalk;
 use App\Features\Group\Serializers\GroupSerializer;
 use App\Features\GroupTalk\Actions\CreateGroupMessage;
 use App\Features\GroupTalk\Actions\DeleteGroupMessage;
+use App\Features\GroupTalk\Actions\MarkTalkRead;
+use App\Features\GroupTalk\Actions\SetTalkMute;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\GroupTalk\MarkTalkReadRequest;
 use App\Http\Requests\GroupTalk\StoreGroupMessageRequest;
 use App\Models\Group;
 use App\Models\GroupMessage;
@@ -38,6 +41,9 @@ class GroupTalkController extends Controller
             'group' => GroupSerializer::summary($group),
             'page' => GroupMessageSerializer::page($query->latest($group), $permissions),
             'canPost' => $permissions->canPost,
+            // Only a member holds a cursor or a mute, so only a member is offered either.
+            'isMember' => $permissions->canPost,
+            'isMuted' => $permissions->canPost && GroupTalkPermissions::isMuted($group, $viewer),
         ]);
     }
 
@@ -81,6 +87,40 @@ class GroupTalkController extends Controller
             GroupMessageSerializer::message($message, GroupTalkPermissions::for($group, $viewer)),
             201,
         );
+    }
+
+    /**
+     * "I have read as far as this message." Fire-and-forget from the reader's side: it carries no
+     * body back, and the shell's own refresh is what moves the badge.
+     */
+    public function read(MarkTalkReadRequest $request, Group $group, MarkTalkRead $action): Response
+    {
+        abort_unless(GroupTalkAccess::canView($group, $this->viewer()), 404);
+
+        try {
+            $action($this->viewer(), $group, (int) $request->validated('messageId'));
+        } catch (GroupTalkActionException) {
+            // A message deleted between rendering and this call is an ordinary race, and so is a
+            // non-member trying to hold a cursor; neither is worth a distinct answer.
+            abort(404);
+        }
+
+        return response()->noContent();
+    }
+
+    /** Per-group quiet, on the membership row. Explicit state rather than a blind flip, so a double tap settles. */
+    public function mute(Request $request, Group $group, SetTalkMute $action): Response
+    {
+        abort_unless(GroupTalkAccess::canView($group, $this->viewer()), 404);
+        $muted = (bool) $request->validate(['muted' => ['required', 'boolean']])['muted'];
+
+        try {
+            $action($this->viewer(), $group, $muted);
+        } catch (GroupTalkActionException) {
+            abort(404);
+        }
+
+        return response()->noContent();
     }
 
     public function delete(Group $group, GroupMessage $message, DeleteGroupMessage $action): Response

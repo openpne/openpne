@@ -7,6 +7,7 @@ use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupMembership;
 use App\Features\Group\GroupRole;
+use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
@@ -34,9 +35,11 @@ class ApproveMember
                 throw new GroupActionException(GroupActionFailure::NotPending);
             }
 
-            $locked->members()->create([
+            $locked->members()->forceCreate([
                 'member_id' => $applicant->getKey(),
                 'role' => GroupRole::Member,
+                // Read up to the moment of approval, not the moment of applying (TalkReadCursor).
+                ...TalkReadCursor::snapshot((int) $locked->getKey()),
             ]);
 
             GroupJoined::dispatch($locked, $applicant);

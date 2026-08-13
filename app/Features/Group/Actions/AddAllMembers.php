@@ -3,6 +3,7 @@
 namespace App\Features\Group\Actions;
 
 use App\Features\Group\GroupRole;
+use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,10 @@ class AddAllMembers
         $groupId = $group->getKey();
         $now = now();
         $added = 0;
+        // One read for the whole sweep: every row added here joins the same group at the same
+        // moment, so they share a cursor. This is the one membership path with no model behind it,
+        // so the snapshot has to be written into the row literal (TalkReadCursor).
+        $cursor = TalkReadCursor::snapshot((int) $groupId);
 
         Member::query()
             ->whereNotExists(function ($query) use ($groupId): void {
@@ -32,13 +37,14 @@ class AddAllMembers
                     ->where('group_members.group_id', $groupId);
             })
             ->select('id')
-            ->chunkById(1000, function ($members) use ($groupId, $now, &$added): void {
+            ->chunkById(1000, function ($members) use ($groupId, $now, $cursor, &$added): void {
                 $rows = $members->map(fn (Member $member): array => [
                     'group_id' => $groupId,
                     'member_id' => $member->getKey(),
                     'role' => GroupRole::Member->value,
                     'created_at' => $now,
                     'updated_at' => $now,
+                    ...$cursor,
                 ])->all();
 
                 $added += DB::table('group_members')->insertOrIgnore($rows);

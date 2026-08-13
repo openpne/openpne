@@ -5,9 +5,12 @@ namespace App\Features\GroupTalk\Actions;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionFailure;
 use App\Features\GroupTalk\GroupTalkAccess;
+use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\Member;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 
 class CreateGroupMessage
 {
@@ -27,10 +30,24 @@ class CreateGroupMessage
             throw new GroupTalkActionException(GroupTalkActionFailure::CannotPost);
         }
 
-        return GroupMessage::create([
-            'group_id' => $group->getKey(),
-            'member_id' => $author->getKey(),
-            'body' => $body,
-        ]);
+        return DB::transaction(function () use ($author, $group, $body): GroupMessage {
+            $message = GroupMessage::create([
+                'group_id' => $group->getKey(),
+                'member_id' => $author->getKey(),
+                'body' => $body,
+            ]);
+
+            // Writing is reading. In the same transaction as the insert, so the cursor can never be
+            // left behind a message the member wrote themselves — which would show as their own
+            // words arriving as unread. Still forward-only, so it is safe to run unconditionally.
+            TalkReadCursor::advance(
+                (int) $group->getKey(),
+                (int) $author->getKey(),
+                CarbonImmutable::instance($message->created_at),
+                (int) $message->getKey(),
+            );
+
+            return $message;
+        });
     }
 }

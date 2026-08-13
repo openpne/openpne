@@ -4,6 +4,7 @@ namespace App\Features\Home;
 
 use App\Features\DirectMessage\Queries\CountUnreadDirectMessages;
 use App\Features\Friend\Queries\CountReceivedFriendRequests;
+use App\Features\GroupTalk\Queries\CountGroupsWithUnreadTalk;
 use App\Features\Notifications\Queries\CountUnreadNotifications;
 use App\Models\Member;
 use App\Support\Feature;
@@ -20,16 +21,17 @@ use App\Support\Feature;
  */
 class UnreadCounts
 {
-    /** @var array<int, array{friendRequests: int, unreadMessages: int, notifications: int}> */
+    /** @var array<int, array{friendRequests: int, unreadMessages: int, notifications: int, groupTalks: int}> */
     private array $cache = [];
 
     public function __construct(
         private readonly CountReceivedFriendRequests $friendRequests,
         private readonly CountUnreadDirectMessages $unreadMessages,
         private readonly CountUnreadNotifications $notifications,
+        private readonly CountGroupsWithUnreadTalk $groupTalks,
     ) {}
 
-    /** @return array{friendRequests: int, unreadMessages: int, notifications: int} */
+    /** @return array{friendRequests: int, unreadMessages: int, notifications: int, groupTalks: int} */
     public function for(Member $viewer): array
     {
         // A switched-off unit reports zero without querying: there is no screen left to send the
@@ -38,6 +40,9 @@ class UnreadCounts
             'friendRequests' => Feature::Friend->enabled() ? ($this->friendRequests)($viewer) : 0,
             'unreadMessages' => Feature::DirectMessage->enabled() ? ($this->unreadMessages)($viewer) : 0,
             'notifications' => ($this->notifications)($viewer),
+            // Groups with something new, not messages — see CountGroupsWithUnreadTalk. Layer-1 like
+            // the two above: it falls by reading the conversation, not by dismissing anything.
+            'groupTalks' => Feature::GroupTalk->enabled() ? ($this->groupTalks)($viewer) : 0,
         ];
     }
 }

@@ -15,6 +15,8 @@ export interface UnreadCounts {
     friendRequests: number;
     unreadMessages: number;
     notifications: number;
+    /** Groups whose talk has something new — rooms, not messages, and never a muted one. */
+    groupTalks: number;
 }
 
 /** One thumbnail tile in a NineTable grid (right rail, profile digest). */
