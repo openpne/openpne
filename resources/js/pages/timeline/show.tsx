@@ -23,15 +23,12 @@ interface ShowProps extends PageProps {
     post: TimelinePostEntry;
     replies: TimelinePostEntry[];
     viewerId: number;
-    canReply: boolean;
-    /** Set when the thread belongs to a group: the chrome and the mention picker follow it. */
-    group: { id: number; name: string } | null;
 }
 
 export default function TimelineShow() {
     const t = useT();
     const confirm = useConfirm();
-    const { post, replies, viewerId, canReply, group } = usePage<ShowProps>().props;
+    const { post, replies, viewerId } = usePage<ShowProps>().props;
     // The tab title keeps the author context; the on-screen h1 is generic — the author's name is
     // already in the crumb above and on the post card below.
     const headTitle = t(":name's %activity%", { name: post.author.name });
@@ -107,9 +104,6 @@ export default function TimelineShow() {
                 </Panel>
             )}
 
-            {/* Reading a group thread does not admit someone to it: an everyone-readable
-                group is open to any member, but only its own may reply. */}
-            {canReply && (
             <Panel overflow="visible">
                 <form onSubmit={submitReply} className="space-y-2">
                     <Field
@@ -127,7 +121,6 @@ export default function TimelineShow() {
                             onChange={(body) => form.setData('body', body)}
                             mentions={form.data.mentions}
                             onMentionsChange={(mentions) => form.setData('mentions', mentions)}
-                            candidatesUrl={group ? `/timeline/mention-candidates?community=${group.id}` : undefined}
                         />
                     </Field>
                     <Button type="submit" loading={form.processing} disabled={form.data.body.trim() === '' || overBodyLimit(form.data.body)}>
@@ -135,7 +128,6 @@ export default function TimelineShow() {
                     </Button>
                 </form>
             </Panel>
-            )}
         </>
     );
 }

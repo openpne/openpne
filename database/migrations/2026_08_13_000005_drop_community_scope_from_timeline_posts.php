@@ -22,8 +22,8 @@ use Illuminate\Support\Facades\Schema;
  *    community_id, so the one predicate catches the whole thread);
  *  - their `timeline_post_images` / `_mentions` / `_tags` rows, by FK cascade;
  *  - their image **File rows and bytes are NOT reclaimed** — a migration has no business deleting
- *    disk objects, and a pre-release fixture leak costs nothing. `openpne:prune-*` housekeeping and
- *    a fresh install both settle it;
+ *    disk objects, and a pre-release fixture leak costs nothing. No housekeeping command collects
+ *    orphaned Files today; only a fresh install (or deleting them by hand) settles it;
  *  - `timeline_posted_community` notification rows, which point at posts that no longer exist;
  *  - any unread/read state derived from them.
  *

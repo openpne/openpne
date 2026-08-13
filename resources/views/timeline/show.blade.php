@@ -19,7 +19,7 @@
              to the reply form below. --}}
         <div class="timeline-large">
             <div id="timeline-list">
-                @include('timeline._post', ['post' => $post, 'canReply' => $canReply])
+                @include('timeline._post', ['post' => $post])
             </div>
         </div>
 
@@ -43,7 +43,6 @@
             </ul>
         @endif
 
-        @if ($canReply)
         <form method="POST" action="{{ route('timeline.reply.store', $post) }}" id="timeline-reply-form" class="timeline-reply-form"
               data-timeline-mention data-mention-candidates-url="{{ route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
             @csrf
@@ -55,7 +54,6 @@
             <button type="submit">{{ __('Reply') }}</button>
         </form>
         @include('timeline._mention-picker')
-        @endif
 
         <p><a href="{{ route('timeline.member', $post->member) }}">{{ __(":name's %activity%", ['name' => $post->member->name]) }}</a></p>
     </x-classic.parts>

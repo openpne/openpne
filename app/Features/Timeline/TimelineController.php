@@ -128,13 +128,11 @@ class TimelineController extends Controller
             SurfaceResolver::CLASSIC => fn () => view('timeline.show', [
                 'post' => $post,
                 'viewer' => $viewer,
-                'canReply' => true,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/show', [
                 'post' => TimelinePostSerializer::entry($post),
                 'replies' => array_map([TimelinePostSerializer::class, 'entry'], $post->replies->all()),
                 'viewerId' => $viewer->getKey(),
-                'canReply' => true,
             ]),
         ]);
     }

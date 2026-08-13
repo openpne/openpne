@@ -97,7 +97,7 @@ class GroupController extends Controller
         $talkUnreadCount = $canViewTalk ? ($talkUnread($viewer)[$found->getKey()]['count'] ?? 0) : 0;
 
         return $this->respondWith($request, 'group', [
-            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $showTopics, $showEvents, $recentTopics, $recentEvents) {
+            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $showTopics, $showEvents, $recentTopics, $recentEvents, $canViewTalk) {
                 $this->markLocalNavGroup($found);
 
                 // The details listBox names the admin and sub-admins; only Classic needs them, so the
@@ -118,6 +118,9 @@ class GroupController extends Controller
                     'canPostTopic' => GroupTopicAccess::canPostTopic($found, $viewer),
                     'recentEvents' => $showEvents ? $recentEvents($found) : null,
                     'canPostEvent' => GroupEventAccess::canPostEvent($found, $viewer),
+                    // Classic gets a link box where the community timeline used to render; the talk
+                    // screen itself is Modern for every member, so a link is the whole surface here.
+                    'canViewTalk' => $canViewTalk,
                 ]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/show', [
