@@ -1,7 +1,7 @@
 # Upgrading from OpenPNE 3
 
 Migrates one OpenPNE 3 site's data into a fresh OpenPNE 4 install: members and their profiles,
-diaries, communities, messages, files, and the site's own settings.
+diaries, groups, messages, files, and the site's own settings.
 
 You will do this twice. First as a **rehearsal** against a dump, while OpenPNE 3 keeps serving — that
 is where you find out what your source needs fixed, and it costs nothing to repeat. Then as the

@@ -3,7 +3,7 @@
 namespace App\Features\Timeline\Queries;
 
 use App\Features\Block\BlockLookup;
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use App\Support\Feature;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,24 +39,24 @@ class MentionCandidates
     private const ESCAPE = '!';
 
     /**
-     * @param  ?Community  $community  the community being composed into, if any — its members are
-     *                                 the whole candidate set there, since nobody outside it can
-     *                                 read the post the mention would appear in.
+     * @param  ?Group  $group  the community being composed into, if any — its members are
+     *                         the whole candidate set there, since nobody outside it can
+     *                         read the post the mention would appear in.
      * @return Collection<int, Member>
      */
-    public function __invoke(Member $viewer, string $q, ?Community $community = null): Collection
+    public function __invoke(Member $viewer, string $q, ?Group $group = null): Collection
     {
         $pattern = '%'.$this->escapeLike(trim($q)).'%';
 
-        $friends = $this->friends($viewer, $pattern, $community);
+        $friends = $this->friends($viewer, $pattern, $group);
 
         return $friends->concat(
-            $this->others($viewer, $pattern, $friends->modelKeys(), self::LIMIT - $friends->count(), $community)
+            $this->others($viewer, $pattern, $friends->modelKeys(), self::LIMIT - $friends->count(), $group)
         );
     }
 
     /** @return Collection<int, Member> */
-    private function friends(Member $viewer, string $pattern, ?Community $community = null): Collection
+    private function friends(Member $viewer, string $pattern, ?Group $group = null): Collection
     {
         // Ranking friends first is a friend lens, so it goes with the unit; the all-member tier below
         // answers the same question without it (docs/internals/feature-toggles.md).
@@ -65,7 +65,7 @@ class MentionCandidates
         }
 
         $friends = $viewer->friendships();
-        $this->constrain($friends->getQuery(), $viewer, $pattern, $community);
+        $this->constrain($friends->getQuery(), $viewer, $pattern, $group);
 
         return $friends->limit(self::LIMIT)->get();
     }
@@ -77,14 +77,14 @@ class MentionCandidates
      * @param  list<int>  $exclude
      * @return Collection<int, Member>
      */
-    private function others(Member $viewer, string $pattern, array $exclude, int $limit, ?Community $community = null): Collection
+    private function others(Member $viewer, string $pattern, array $exclude, int $limit, ?Group $group = null): Collection
     {
         if ($limit <= 0) {
             return Collection::empty();
         }
 
         $query = Member::query()->whereNotIn('members.id', $exclude);
-        $this->constrain($query, $viewer, $pattern, $community);
+        $this->constrain($query, $viewer, $pattern, $group);
 
         return $query->limit($limit)->get();
     }
@@ -96,11 +96,11 @@ class MentionCandidates
      *
      * @param  Builder<Member>  $query
      */
-    private function constrain(Builder $query, Member $viewer, string $pattern, ?Community $community = null): void
+    private function constrain(Builder $query, Member $viewer, string $pattern, ?Group $group = null): void
     {
-        if ($community !== null) {
-            $query->whereIn('members.id', DB::table('community_members')
-                ->where('community_id', $community->getKey())
+        if ($group !== null) {
+            $query->whereIn('members.id', DB::table('group_members')
+                ->where('group_id', $group->getKey())
                 ->select('member_id'));
         }
 

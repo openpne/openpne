@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Notifications\Community\AdminTransferRequestedNotification;
-use App\Notifications\Community\CommunityJoinedNotification;
-use App\Notifications\Community\SubAdminAppointedNotification;
 use App\Notifications\CommunityEvent\EventCommentBroadcastNotification;
 use App\Notifications\CommunityEvent\EventCommentedNotification;
 use App\Notifications\CommunityEvent\EventPostedNotification;
@@ -18,6 +15,9 @@ use App\Notifications\Diary\DiaryPostedNotification;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
+use App\Notifications\Group\AdminTransferRequestedNotification;
+use App\Notifications\Group\GroupJoinedNotification;
+use App\Notifications\Group\SubAdminAppointedNotification;
 use App\Notifications\Timeline\TimelineCommunityPostedNotification;
 use App\Notifications\Timeline\TimelineMentionedNotification;
 use App\Notifications\Timeline\TimelinePostedNotification;
@@ -38,7 +38,7 @@ final class FeatureNotificationMap
     /** @var list<class-string<FeatureNotification>> */
     public const CLASSES = [
         AdminTransferRequestedNotification::class,
-        CommunityJoinedNotification::class,
+        GroupJoinedNotification::class,
         SubAdminAppointedNotification::class,
         EventCommentBroadcastNotification::class,
         EventCommentedNotification::class,

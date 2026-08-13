@@ -54,7 +54,7 @@ class NavigationResource extends Resource
             'insecure_global' => __('Global navigation (guests)'),
             'default' => __('Local navigation (own pages)'),
             'friend' => __('Local navigation (member pages)'),
-            'community' => __('Local navigation (%community% pages)'),
+            'group' => __('Local navigation (%community% pages)'),
         ];
     }
 

@@ -90,7 +90,7 @@ class FeatureSettingsTest extends TestCase
     public function test_switching_communities_off_takes_their_topics_and_events_with_them(): void
     {
         Livewire::test(FeatureSettings::class)
-            ->fillForm(['feature_community_enabled' => false])
+            ->fillForm(['feature_group_enabled' => false])
             ->call('save')
             ->assertHasNoErrors();
 
@@ -102,7 +102,7 @@ class FeatureSettingsTest extends TestCase
 
     public function test_nested_toggles_read_as_disabled_while_their_container_is_off(): void
     {
-        $this->setSnsSetting(SnsSettingKey::FeatureCommunityEnabled, false);
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
 
         Livewire::test(FeatureSettings::class)
             ->assertFormFieldIsDisabled('feature_community_topic_enabled')
@@ -115,10 +115,10 @@ class FeatureSettingsTest extends TestCase
     {
         Livewire::test(FeatureSettings::class)
             ->assertFormFieldIsEnabled('feature_community_topic_enabled')
-            ->fillForm(['feature_community_enabled' => false])
+            ->fillForm(['feature_group_enabled' => false])
             ->assertFormFieldIsDisabled('feature_community_topic_enabled')
             ->assertFormFieldIsDisabled('feature_community_event_enabled')
-            ->fillForm(['feature_community_enabled' => true])
+            ->fillForm(['feature_group_enabled' => true])
             ->assertFormFieldIsEnabled('feature_community_topic_enabled');
     }
 
@@ -129,7 +129,7 @@ class FeatureSettingsTest extends TestCase
      */
     public function test_saving_with_the_container_off_preserves_a_disabled_childs_stored_value(): void
     {
-        $this->setSnsSetting(SnsSettingKey::FeatureCommunityEnabled, false);
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
         $this->setSnsSetting(SnsSettingKey::FeatureCommunityTopicEnabled, false);
 
         Livewire::test(FeatureSettings::class)

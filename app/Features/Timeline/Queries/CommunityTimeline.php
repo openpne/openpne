@@ -3,7 +3,7 @@
 namespace App\Features\Timeline\Queries;
 
 use App\Features\Timeline\TimelineFeedScope;
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -18,9 +18,9 @@ use Illuminate\Support\Collection;
 class CommunityTimeline
 {
     /** @return LengthAwarePaginator<int, TimelinePost> */
-    public function __invoke(Member $viewer, Community $community, int $perPage = 20): LengthAwarePaginator
+    public function __invoke(Member $viewer, Group $group, int $perPage = 20): LengthAwarePaginator
     {
-        return $this->query($viewer, $community)->paginate($perPage);
+        return $this->query($viewer, $group)->paginate($perPage);
     }
 
     /**
@@ -29,20 +29,20 @@ class CommunityTimeline
      *
      * @return Collection<int, TimelinePost>
      */
-    public function take(Member $viewer, Community $community, int $limit): Collection
+    public function take(Member $viewer, Group $group, int $limit): Collection
     {
-        return $this->query($viewer, $community)->limit($limit)->get();
+        return $this->query($viewer, $group)->limit($limit)->get();
     }
 
     /** @return Builder<TimelinePost> */
-    private function query(Member $viewer, Community $community): Builder
+    private function query(Member $viewer, Group $group): Builder
     {
         $query = TimelinePost::query()
             ->whereNull('in_reply_to_id')
             ->with(['member.avatar.file', 'images.file', 'linkCard.image', 'mentions', 'tags'])
             ->withCount('replies');
 
-        TimelineFeedScope::applyCommunity($query, $viewer, $community);
+        TimelineFeedScope::applyGroup($query, $viewer, $group);
 
         // Same order as every other feed: created_at is the human-meaningful key, id DESC the
         // stable tiebreaker for same-second posts and for migrated rows sharing a timestamp.

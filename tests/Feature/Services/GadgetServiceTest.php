@@ -127,7 +127,7 @@ class GadgetServiceTest extends TestCase
 
         // Its own row says enabled; the unit it lives inside overrules it.
         $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
-        $this->setSnsSetting(Feature::Community->settingKey(), false);
+        $this->setSnsSetting(Feature::Group->settingKey(), false);
 
         $this->assertSame([], $this->names(app(GadgetService::class)->zones('home', null, $viewer)['contents']));
     }

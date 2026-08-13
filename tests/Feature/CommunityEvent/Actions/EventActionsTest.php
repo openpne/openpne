@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\CommunityEvent\Actions;
 
-use App\Features\Community\CommunityRole;
 use App\Features\CommunityEvent\Actions\CreateEvent;
 use App\Features\CommunityEvent\Actions\CreateEventComment;
 use App\Features\CommunityEvent\Actions\DeleteEvent;
@@ -13,11 +12,12 @@ use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionFailure;
 use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\Group\GroupRole;
 use App\Files\ImageEdit;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -28,11 +28,11 @@ class EventActionsTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function joined(Community $community, CommunityRole $role): Member
+    private function joined(Group $group, GroupRole $role): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -66,10 +66,10 @@ class EventActionsTest extends TestCase
 
     public function test_create_event_sets_the_author_and_activity_timestamp(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community, CommunityRole::Member);
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
 
-        $event = app(CreateEvent::class)($author, $community, new CommunityEventFormData(
+        $event = app(CreateEvent::class)($author, $group, new CommunityEventFormData(
             name: 'Meetup',
             body: 'Come along.',
             open_date: now()->addWeek()->format('Y-m-d'),
@@ -79,7 +79,7 @@ class EventActionsTest extends TestCase
             capacity: null,
         ));
 
-        $this->assertSame($community->getKey(), $event->community_id);
+        $this->assertSame($group->getKey(), $event->community_id);
         $this->assertSame($author->getKey(), $event->member_id);
         $this->assertSame('Shibuya', $event->area);
         $this->assertNotNull($event->event_updated_at);
@@ -87,11 +87,11 @@ class EventActionsTest extends TestCase
 
     public function test_create_event_is_blocked_when_posting_is_admin_only(): void
     {
-        $community = Community::factory()->create(['topic_post_authority' => TopicPostAuthority::AdminsOnly]);
-        $member = $this->joined($community, CommunityRole::Member);
+        $group = Group::factory()->create(['topic_post_authority' => TopicPostAuthority::AdminsOnly]);
+        $member = $this->joined($group, GroupRole::Member);
 
         $this->assertFails(
-            fn () => app(CreateEvent::class)($member, $community, new CommunityEventFormData(
+            fn () => app(CreateEvent::class)($member, $group, new CommunityEventFormData(
                 'No', 'Nope.', now()->addWeek()->format('Y-m-d'), '', 'Nowhere', null, null,
             )),
             CommunityEventActionFailure::CannotPost,
@@ -100,9 +100,9 @@ class EventActionsTest extends TestCase
 
     public function test_update_event_bumps_event_updated_at_only_on_a_content_change(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community, CommunityRole::Member);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         DB::table('community_events')->where('id', $event->getKey())->update([
             'updated_at' => now()->subDay(),
             'event_updated_at' => now()->subDay(),
@@ -122,10 +122,10 @@ class EventActionsTest extends TestCase
 
     public function test_update_event_cannot_change_an_op3_rows_format(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community, CommunityRole::Member);
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
         $event = CommunityEvent::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'format' => BodyFormat::Op3,
         ]);
@@ -137,9 +137,9 @@ class EventActionsTest extends TestCase
 
     public function test_update_event_scheduling_only_change_bumps_updated_at_not_event_updated_at(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community, CommunityRole::Member);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         DB::table('community_events')->where('id', $event->getKey())->update([
             'updated_at' => now()->subDay(),
             'event_updated_at' => now()->subDay(),
@@ -157,10 +157,10 @@ class EventActionsTest extends TestCase
 
     public function test_update_event_is_blocked_for_a_non_author_non_admin(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community, CommunityRole::Member);
-        $other = $this->joined($community, CommunityRole::Member);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $other = $this->joined($group, GroupRole::Member);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->assertFails(
             fn () => app(UpdateEvent::class)($other, $event, $this->formData($event, ['name' => 'Hijack']), ImageEdit::none()),
@@ -170,11 +170,11 @@ class EventActionsTest extends TestCase
 
     public function test_delete_event_removes_it_and_cascades_comments_and_participants(): void
     {
-        $community = Community::factory()->create();
-        $admin = $this->joined($community, CommunityRole::Admin);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+        $group = Group::factory()->create();
+        $admin = $this->joined($group, GroupRole::Admin);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
         CommunityEventComment::factory()->create(['community_event_id' => $event->getKey()]);
-        $event->participants()->attach($this->joined($community, CommunityRole::Member));
+        $event->participants()->attach($this->joined($group, GroupRole::Member));
 
         (new DeleteEvent)($admin, $event);
 
@@ -185,9 +185,9 @@ class EventActionsTest extends TestCase
 
     public function test_comments_are_numbered_per_event_and_lift_both_timestamps(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community, CommunityRole::Member);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         DB::table('community_events')->where('id', $event->getKey())->update([
             'updated_at' => now()->subDay(),
             'event_updated_at' => now()->subDay(),
@@ -205,9 +205,9 @@ class EventActionsTest extends TestCase
 
     public function test_commenting_is_blocked_for_a_non_member(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community, CommunityRole::Member);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group, GroupRole::Member);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->assertFails(
@@ -218,10 +218,10 @@ class EventActionsTest extends TestCase
 
     public function test_delete_comment_is_blocked_for_an_unrelated_member(): void
     {
-        $community = Community::factory()->create();
-        $commenter = $this->joined($community, CommunityRole::Member);
-        $other = $this->joined($community, CommunityRole::Member);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $commenter = $this->joined($group, GroupRole::Member);
+        $other = $this->joined($group, GroupRole::Member);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
         $comment = CommunityEventComment::factory()->create([
             'community_event_id' => $event->getKey(),
             'member_id' => $commenter->getKey(),
@@ -238,9 +238,9 @@ class EventActionsTest extends TestCase
 
     public function test_toggle_participation_joins_then_leaves(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
-        $member = $this->joined($community, CommunityRole::Member);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        $member = $this->joined($group, GroupRole::Member);
 
         $this->assertTrue(app(ToggleParticipation::class)($member, $event));
         $this->assertSame(1, $event->fresh()->participantCount());
@@ -251,10 +251,10 @@ class EventActionsTest extends TestCase
 
     public function test_toggle_join_is_blocked_at_capacity(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'capacity' => 1]);
-        $first = $this->joined($community, CommunityRole::Member);
-        $second = $this->joined($community, CommunityRole::Member);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'capacity' => 1]);
+        $first = $this->joined($group, GroupRole::Member);
+        $second = $this->joined($group, GroupRole::Member);
 
         app(ToggleParticipation::class)($first, $event);
 
@@ -268,9 +268,9 @@ class EventActionsTest extends TestCase
 
     public function test_toggle_is_blocked_in_both_directions_when_closed(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'open_date' => now()->subDays(2)]);
-        $member = $this->joined($community, CommunityRole::Member);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'open_date' => now()->subDays(2)]);
+        $member = $this->joined($group, GroupRole::Member);
 
         $this->assertFails(fn () => app(ToggleParticipation::class)($member, $event), CommunityEventActionFailure::EventClosed);
 
@@ -281,21 +281,21 @@ class EventActionsTest extends TestCase
 
     public function test_toggle_is_blocked_when_the_deadline_has_passed(): void
     {
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $event = CommunityEvent::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'open_date' => now()->addDays(5),
             'application_deadline' => now()->subDays(2),
         ]);
-        $member = $this->joined($community, CommunityRole::Member);
+        $member = $this->joined($group, GroupRole::Member);
 
         $this->assertFails(fn () => app(ToggleParticipation::class)($member, $event), CommunityEventActionFailure::EventExpired);
     }
 
     public function test_toggle_participation_requires_membership(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->assertFails(

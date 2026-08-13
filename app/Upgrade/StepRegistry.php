@@ -9,20 +9,16 @@ use App\Upgrade\Steps\AdminUserUpgrade;
 use App\Upgrade\Steps\BannerImageUpgrade;
 use App\Upgrade\Steps\BannerUpgrade;
 use App\Upgrade\Steps\BannerUseImageUpgrade;
-use App\Upgrade\Steps\CommunityCategoryUpgrade;
 use App\Upgrade\Steps\CommunityEventCommentImageUpgrade;
 use App\Upgrade\Steps\CommunityEventCommentUpgrade;
 use App\Upgrade\Steps\CommunityEventImageUpgrade;
 use App\Upgrade\Steps\CommunityEventMemberUpgrade;
 use App\Upgrade\Steps\CommunityEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\CommunityEventUpgrade;
-use App\Upgrade\Steps\CommunityJoinRequestUpgrade;
-use App\Upgrade\Steps\CommunityMemberUpgrade;
 use App\Upgrade\Steps\CommunityTopicCommentImageUpgrade;
 use App\Upgrade\Steps\CommunityTopicCommentUpgrade;
 use App\Upgrade\Steps\CommunityTopicImageUpgrade;
 use App\Upgrade\Steps\CommunityTopicUpgrade;
-use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryCommentImageUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryImageUpgrade;
@@ -36,6 +32,10 @@ use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\GadgetConfigUpgrade;
 use App\Upgrade\Steps\GadgetUpgrade;
+use App\Upgrade\Steps\GroupCategoryUpgrade;
+use App\Upgrade\Steps\GroupJoinRequestUpgrade;
+use App\Upgrade\Steps\GroupMemberUpgrade;
+use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\Steps\MailTemplateTranslationUpgrade;
 use App\Upgrade\Steps\MailTemplateUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
@@ -73,7 +73,7 @@ final class StepRegistry
     public static function classes(): array
     {
         return [
-            // files have no FK dependency and are referenced by communities.file_id and every owning
+            // files have no FK dependency and are referenced by groups.file_id and every owning
             // image/attachment table, so the file step runs before anything that points at a file.
             FileUpgrade::class,
             MemberUpgrade::class,
@@ -94,16 +94,16 @@ final class StepRegistry
             ProfileTranslationUpgrade::class,
             ProfileOptionTranslationUpgrade::class,
             MemberProfileUpgrade::class,
-            // FK order: communities reference community_categories; community_members and
-            // community_join_requests reference communities (and members, already migrated).
-            CommunityCategoryUpgrade::class,
-            CommunityUpgrade::class,
-            CommunityMemberUpgrade::class,
-            CommunityJoinRequestUpgrade::class,
-            // community_topics reference communities; their comments reference the topics.
+            // FK order: groups reference group_categories; group_members and
+            // group_join_requests reference groups (and members, already migrated).
+            GroupCategoryUpgrade::class,
+            GroupUpgrade::class,
+            GroupMemberUpgrade::class,
+            GroupJoinRequestUpgrade::class,
+            // community_topics reference groups; their comments reference the topics.
             CommunityTopicUpgrade::class,
             CommunityTopicCommentUpgrade::class,
-            // community_events reference communities; their comments and RSVP pivot reference the events.
+            // community_events reference groups; their comments and RSVP pivot reference the events.
             CommunityEventUpgrade::class,
             CommunityEventCommentUpgrade::class,
             CommunityEventMemberUpgrade::class,
@@ -167,7 +167,7 @@ final class StepRegistry
         return [
             'file_bin' => 'OpenPNE 3 file bytes. Not a copy step: the runner migrates it by an in-place ALTER that re-points the file_id FK from `file` onto `files` (the file_bin schema is frozen, and FileUpgrade keeps file.id, for exactly that), so the gigabytes of BLOBs are never rewritten.',
             'banner_translation' => 'OpenPNE 3 banner caption (I18n). Not migrated: the caption was an admin-only label, never rendered, and OpenPNE 4 labels the fixed placements in the UI.',
-            'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped: OpenPNE 4 has no nomination handshake.',
+            'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: GroupMemberUpgrade flattens admin/sub_admin onto group_members.role and GroupUpgrade reads admin_confirm into groups.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped: OpenPNE 4 has no nomination handshake.',
             'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: DirectMessageUpgrade / DirectMessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the direct_messages.sender_* / direct_message_recipients.recipient_* soft-delete columns via correlated subquery.',
             'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
             'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
@@ -301,7 +301,7 @@ final class StepRegistry
 
     /**
      * Every literal `community_config` name the upgrade recognises, for the preflight's unknown-name
-     * scan. CommunityUpgrade reads them all by subquery, so the disposition map is the only list.
+     * scan. GroupUpgrade reads them all by subquery, so the disposition map is the only list.
      *
      * @return list<string>
      */
@@ -312,7 +312,7 @@ final class StepRegistry
 
     /**
      * Disposition of each known OpenPNE 3 `community_config` name. Like member_config, this is a KV
-     * table read by subquery (CommunityUpgrade), not a source→target step, so the per-step column
+     * table read by subquery (GroupUpgrade), not a source→target step, so the per-step column
      * audit cannot show which names migrate; this is that per-name coverage. A name absent from this
      * map is an unrecognised custom/plugin config the upgrade does not migrate.
      *
@@ -321,13 +321,13 @@ final class StepRegistry
     public static function communityConfigDispositions(): array
     {
         return [
-            // Flattened onto typed communities columns.
-            'register_policy' => 'communities.register_policy (open→Open, close→Approval; missing→Open), CommunityUpgrade.',
-            'description' => 'communities.description, CommunityUpgrade.',
-            'public_flag' => 'communities.topic_read_access (public→Everyone, auth_commu_member→MembersOnly; missing→Everyone), CommunityUpgrade. Shared read gate for both the topic board and events (OpenPNE 3 reads the same config for both).',
-            'topic_authority' => 'communities.topic_post_authority (public→Members, admin_only→AdminsOnly; missing→Members), CommunityUpgrade. Shared post gate for both the topic board and events.',
-            'is_default' => 'communities.is_default (KV "1"→true, else false), CommunityUpgrade.',
-            'is_send_pc_joinCommunity_mail' => 'communities.is_join_notification_enabled (KV "0"→false, missing/else→true), CommunityUpgrade.',
+            // Flattened onto typed groups columns.
+            'register_policy' => 'groups.register_policy (open→Open, close→Approval; missing→Open), GroupUpgrade.',
+            'description' => 'groups.description, GroupUpgrade.',
+            'public_flag' => 'groups.topic_read_access (public→Everyone, auth_commu_member→MembersOnly; missing→Everyone), GroupUpgrade. Shared read gate for both the topic board and events (OpenPNE 3 reads the same config for both).',
+            'topic_authority' => 'groups.topic_post_authority (public→Members, admin_only→AdminsOnly; missing→Members), GroupUpgrade. Shared post gate for both the topic board and events.',
+            'is_default' => 'groups.is_default (KV "1"→true, else false), GroupUpgrade.',
+            'is_send_pc_joinCommunity_mail' => 'groups.is_join_notification_enabled (KV "0"→false, missing/else→true), GroupUpgrade.',
             // Dropped: the mobile (feature-phone) frontend is out of scope.
             'is_send_mobile_joinCommunity_mail' => 'Dropped: mobile join-notification opt-in — the mobile frontend is out of scope.',
         ];
@@ -357,7 +357,7 @@ final class StepRegistry
             'pc_timelineNewPost' => 'mail_templates[timeline-posting]. Configurable: is_enabled carried over. One template for the new-post broadcast and the reply notifications.',
             'pc_registerEnd' => 'mail_templates[registration-complete]. Not admin-toggleable (transactional): is_enabled forced on.',
             'pc_leave' => 'mail_templates[withdrawal-complete]. Not admin-toggleable (transactional): is_enabled forced on.',
-            'pc_joinCommunity' => 'mail_templates[community-join]. Configurable: is_enabled carried over. The per-community opt-in lands on communities.is_join_notification_enabled (CommunityUpgrade).',
+            'pc_joinCommunity' => 'mail_templates[group-join]. Configurable: is_enabled carried over. The per-community opt-in lands on groups.is_join_notification_enabled (GroupUpgrade).',
             'pc_signature' => 'mail_templates[signature]. Appended to every sendable body; not itself toggleable.',
             // Dropped: deliberately not carried.
             'pc_reissuedPassword' => 'Dropped: OpenPNE 3 mailed a new plaintext password; OpenPNE 4 sends a reset link (password-reset) instead — a different mail with no OpenPNE 3 wording to carry.',

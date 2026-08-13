@@ -2,7 +2,7 @@ import { InitialBadge } from '@/components/initial-badge';
 
 /**
  * Circular member avatar. Renders the image when `src` is set, otherwise a neutral initial badge.
- * The circle shape distinguishes it from a community image.
+ * The circle shape distinguishes it from a group image.
  *
  * Size follows the avatar's role, not the surrounding font size. `md` (40px) is for the person a
  * piece of content or a row is *about* — entry and comment authors, a message's single

@@ -15,14 +15,14 @@ import type { PageProps } from '@/types';
 import type { CommunitySummary, TopicDetail } from '../types';
 
 interface EditProps extends PageProps {
-    community: CommunitySummary;
+    group: CommunitySummary;
     topic: TopicDetail | null; // null = create mode
     composeEditor: ComposeEditorPreference;
 }
 
 export default function CommunityTopicEdit() {
     const t = useT();
-    const { community, topic, composeEditor } = usePage<EditProps>().props;
+    const { group, topic, composeEditor } = usePage<EditProps>().props;
     const isEdit = topic !== null;
     // op3 is a migration-only format with no author-facing editor: initialComposeFormat returns
     // undefined so `format` is omitted from the form, and the update preserves the stored format.
@@ -41,7 +41,7 @@ export default function CommunityTopicEdit() {
         e.preventDefault();
         // No forceFormData — a fileless save posts JSON, keeping LF byte-stable
         // (multipart normalizes LF to CRLF); Inertia auto-switches when a File is attached.
-        form.post(isEdit ? `/communityTopic/update/${topic.id}` : `/communityTopic/create/${community.id}`);
+        form.post(isEdit ? `/communityTopic/update/${topic.id}` : `/communityTopic/create/${group.id}`);
     };
 
     const toggleRemove = (imageId: number, remove: boolean) => {

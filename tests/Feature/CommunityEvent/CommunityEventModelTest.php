@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\CommunityEvent;
 
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityEventMember;
+use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -32,10 +32,10 @@ class CommunityEventModelTest extends TestCase
 
     public function test_relations_resolve(): void
     {
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $author = Member::factory()->create();
         $event = CommunityEvent::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
         ]);
         $comment = CommunityEventComment::factory()->create([
@@ -43,12 +43,12 @@ class CommunityEventModelTest extends TestCase
             'member_id' => $author->getKey(),
         ]);
 
-        $this->assertTrue($event->community->is($community));
+        $this->assertTrue($event->community->is($group));
         $this->assertTrue($event->member->is($author));
         $this->assertTrue($event->comments->first()->is($comment));
         $this->assertTrue($comment->event->is($event));
         $this->assertTrue($comment->member->is($author));
-        $this->assertTrue($community->events->first()->is($event));
+        $this->assertTrue($group->events->first()->is($event));
     }
 
     public function test_a_deleted_author_leaves_the_event_and_comment_intact(): void

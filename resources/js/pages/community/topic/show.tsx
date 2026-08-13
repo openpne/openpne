@@ -19,7 +19,7 @@ import type { PageProps } from '@/types';
 import type { CommunitySummary, TopicDetail, TopicThread } from '../types';
 
 interface ShowProps extends PageProps {
-    community: CommunitySummary;
+    group: CommunitySummary;
     topic: TopicDetail;
     thread: TopicThread;
     canComment: boolean;

@@ -8,7 +8,7 @@ use App\Models\Member;
 
 /**
  * Event-level gates (auto-discovered for CommunityEvent), delegating to CommunityEventAccess. The
- * board-level gates (view a community's events, create an event) key on Community, so the controller
+ * board-level gates (view a community's events, create an event) key on Group, so the controller
  * calls CommunityEventAccess directly for those.
  */
 class CommunityEventPolicy

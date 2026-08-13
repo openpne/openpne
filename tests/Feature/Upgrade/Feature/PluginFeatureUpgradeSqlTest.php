@@ -86,7 +86,7 @@ class PluginFeatureUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('sns_settings', ['key' => 'feature_community_topic_enabled', 'value' => '0']);
         $this->assertDatabaseHas('sns_settings', ['key' => 'feature_community_event_enabled', 'value' => '0']);
         // The container itself was not switchable in OpenPNE 3, so it keeps no row (= enabled).
-        $this->assertDatabaseMissing('sns_settings', ['key' => 'feature_community_enabled']);
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'feature_group_enabled']);
     }
 
     public function test_unknown_plugin_names_are_ignored(): void
@@ -108,7 +108,7 @@ class PluginFeatureUpgradeSqlTest extends TestCase
 
         $this->assertFalse(Feature::CommunityTopic->enabled());
         $this->assertFalse(Feature::CommunityEvent->enabled());
-        $this->assertTrue(Feature::Community->enabled());
+        $this->assertTrue(Feature::Group->enabled());
         $this->assertTrue(Feature::Diary->enabled());
     }
 

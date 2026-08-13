@@ -44,11 +44,11 @@ type Props = Omit<ComponentProps<'textarea'>, 'value' | 'onChange'> & {
     onChange: (value: string) => void;
     mentions: DraftMention[];
     onMentionsChange: (mentions: DraftMention[]) => void;
-    /** Composing into a community: the offer narrows to its members, as the submit does. */
-    communityId?: number;
+    /** Composing into a group: the offer narrows to its members, as the submit does. */
+    groupId?: number;
 };
 
-export function MentionTextarea({ value, onChange, mentions, onMentionsChange, communityId, ...props }: Props) {
+export function MentionTextarea({ value, onChange, mentions, onMentionsChange, groupId, ...props }: Props) {
     const t = useT();
     const listId = useId();
     const field = useRef<HTMLTextAreaElement>(null);
@@ -81,7 +81,7 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, c
 
         const controller = new AbortController();
         const timer = setTimeout(() => {
-            const scope = communityId === undefined ? '' : `&community=${communityId}`;
+            const scope = groupId === undefined ? '' : `&group=${groupId}`;
             fetch(`/timeline/mention-candidates?q=${encodeURIComponent(query)}${scope}`, {
                 headers: { Accept: 'application/json' },
                 credentials: 'same-origin',
@@ -105,7 +105,7 @@ export function MentionTextarea({ value, onChange, mentions, onMentionsChange, c
             clearTimeout(timer);
             controller.abort();
         };
-    }, [query, communityId]);
+    }, [query, groupId]);
 
     useLayoutEffect(() => {
         const at = caret.current;

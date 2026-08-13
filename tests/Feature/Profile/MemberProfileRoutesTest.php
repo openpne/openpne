@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Profile;
 
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\Diary;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\MemberImage;
 use App\Models\MemberProfile;
@@ -443,8 +443,8 @@ class MemberProfileRoutesTest extends TestCase
         $viewer = Member::factory()->create();
         $friend = Member::factory()->create();
         $this->makeFriends($owner, $friend);
-        $community = Community::factory()->create();
-        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $owner->getKey()]);
+        $group = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $owner->getKey()]);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -452,10 +452,10 @@ class MemberProfileRoutesTest extends TestCase
                 ->has('digest.friends', 1)
                 ->where('digest.friends.0.id', $friend->getKey())
                 ->where('digest.friends.0.href', "/member/{$friend->getKey()}")
-                ->where('digest.stats.communities', 1)
-                ->has('digest.communities', 1)
-                ->where('digest.communities.0.id', $community->getKey())
-                ->where('digest.communities.0.href', "/community/{$community->getKey()}"));
+                ->where('digest.stats.groups', 1)
+                ->has('digest.groups', 1)
+                ->where('digest.groups.0.id', $group->getKey())
+                ->where('digest.groups.0.href', "/groups/{$group->getKey()}"));
     }
 
     public function test_activity_count_excludes_replies_and_invisible_posts(): void

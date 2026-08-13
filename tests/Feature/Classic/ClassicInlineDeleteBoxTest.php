@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Classic;
 
-use App\Features\Community\CommunityRole;
-use App\Models\Community;
+use App\Features\Group\GroupRole;
 use App\Models\CommunityEvent;
-use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -35,42 +35,42 @@ class ClassicInlineDeleteBoxTest extends TestCase
 
     public function test_the_community_editor_carries_the_delete_box_for_the_administrator(): void
     {
-        $community = Community::factory()->create();
-        $admin = $this->joined($community, CommunityRole::Admin);
+        $group = Group::factory()->create();
+        $admin = $this->joined($group, GroupRole::Admin);
 
-        $response = $this->actingAs($admin)->get(route('community.edit', ['id' => $community->getKey()]))->assertOk();
+        $response = $this->actingAs($admin)->get(route('group.edit', ['id' => $group->getKey()]))->assertOk();
 
         $response->assertSee('<div class="dparts buttonBox" id="deleteForm">', false);
         $response->assertSee('<h3>Delete this community</h3>', false);
         $response->assertSee('Tell its members in advance');
-        $response->assertSee('<form method="GET" action="'.route('community.delete.show', $community).'">', false);
+        $response->assertSee('<form method="GET" action="'.route('group.delete.show', $group).'">', false);
     }
 
     public function test_the_sub_administrator_may_edit_the_community_but_not_delete_it(): void
     {
-        $community = Community::factory()->create();
-        $this->joined($community, CommunityRole::Admin);
-        $subAdmin = $this->joined($community, CommunityRole::SubAdmin);
+        $group = Group::factory()->create();
+        $this->joined($group, GroupRole::Admin);
+        $subAdmin = $this->joined($group, GroupRole::SubAdmin);
 
-        $this->actingAs($subAdmin)->get(route('community.edit', ['id' => $community->getKey()]))
+        $this->actingAs($subAdmin)->get(route('group.edit', ['id' => $group->getKey()]))
             ->assertOk()
             ->assertDontSee('id="deleteForm"', false)
-            ->assertDontSee(route('community.delete.show', $community), false);
+            ->assertDontSee(route('group.delete.show', $group), false);
     }
 
     public function test_the_create_form_has_no_delete_box(): void
     {
-        $this->actingAs(Member::factory()->create())->get(route('community.edit'))
+        $this->actingAs(Member::factory()->create())->get(route('group.edit'))
             ->assertOk()
             ->assertDontSee('id="deleteForm"', false);
     }
 
     public function test_the_topic_editor_carries_the_delete_box(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
         $topic = CommunityTopic::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
         ]);
 
@@ -83,10 +83,10 @@ class ClassicInlineDeleteBoxTest extends TestCase
 
     public function test_the_event_editor_carries_the_delete_box(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
         $event = CommunityEvent::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
         ]);
 
@@ -97,11 +97,11 @@ class ClassicInlineDeleteBoxTest extends TestCase
         $response->assertSee('<form method="GET" action="'.route('communityEvent.delete.show', $event).'">', false);
     }
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);

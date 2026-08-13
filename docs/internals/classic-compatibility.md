@@ -154,11 +154,13 @@ confirmations and the avatar upload stay free-form (no field table).
 
 `#globalNav` and `#localNav` are OpenPNE 3's primary and secondary nav bars, both driven from the
 admin-editable `navigations` table (`App\Services\NavigationService`), keyed by type:
-`secure_global` / `insecure_global` for `#globalNav`, `default` / `friend` / `community` for
-`#localNav` (secure pages only). `#localNav` renders the `community` set on a community page (its
+`secure_global` / `insecure_global` for `#globalNav`, `default` / `friend` / `group` for
+`#localNav` (secure pages only). The `group` type is emitted as OpenPNE 3's `community` word in the
+`<ul class>` and the `<li>` id prefix (`Navigation::presentationToken`), so a site's custom CSS is
+unaffected by the storage rename. `#localNav` renders the `group` set on a group page (its
 Top / Topics / Events / Join / Leave links), the `friend` set (the subject member's id-scoped links)
 on a page about another member, and the `default` set on the viewer's own pages — switching on the
-community / subject a controller records via `Controller::markLocalNavCommunity` /
+community / subject a controller records via `Controller::markLocalNavGroup` /
 `markLocalNavSubject` (OpenPNE 3 `sf_nav_type`/`sf_nav_id`), community winning as its module's
 default_nav does; guests get an empty hook. The table is seeded with OpenPNE 3's default set (an admin
 editor and the upgrade tool populate it); navigation settings are Classic-only — Modern's nav

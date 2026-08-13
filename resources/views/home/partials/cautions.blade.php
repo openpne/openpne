@@ -4,20 +4,20 @@
      here. Each line keeps its own OpenPNE 3 partial's markup, differences included. Renders
      nothing when there is none. --}}
 @php
-    $adminTransferCommunities = $adminTransferCommunities ?? [];
+    $adminTransferGroups = $adminTransferGroups ?? [];
     $friendRequests = $unread['friendRequests'] ?? 0;
     $unreadMessages = $unread['unreadMessages'] ?? 0;
 @endphp
-@if (count($adminTransferCommunities) || $friendRequests || $unreadMessages)
+@if (count($adminTransferGroups) || $friendRequests || $unreadMessages)
     <x-classic.parts name="informationBox">
         <div class="body">
             {{-- One line per community awaiting the viewer's admin-transfer decision, each linking
                  to that community's home where the accept/reject banner lives (OpenPNE 3
                  _cautionAboutChangeAdminRequest, which pointed at the removed confirmation center). --}}
-            @foreach ($adminTransferCommunities as $nominatingCommunity)
+            @foreach ($adminTransferGroups as $nominatingGroup)
                 <p class="caution">
-                    {{ __('The administrator of :name asks you to take over the administration.', ['name' => $nominatingCommunity->name]) }}
-                    <a href="{{ route('community.show', $nominatingCommunity) }}">{{ $nominatingCommunity->name }}</a>
+                    {{ __('The administrator of :name asks you to take over the administration.', ['name' => $nominatingGroup->name]) }}
+                    <a href="{{ route('group.show', $nominatingGroup) }}">{{ $nominatingGroup->name }}</a>
                 </p>
             @endforeach
 

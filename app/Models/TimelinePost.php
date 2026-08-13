@@ -37,10 +37,10 @@ class TimelinePost extends Model
         return $this->belongsTo(Member::class);
     }
 
-    /** @return BelongsTo<Community, $this> The community this post is scoped to, or null for SNS-wide. */
+    /** @return BelongsTo<Group, $this> The community this post is scoped to, or null for SNS-wide. */
     public function community(): BelongsTo
     {
-        return $this->belongsTo(Community::class);
+        return $this->belongsTo(Group::class);
     }
 
     /** @return BelongsTo<TimelinePost, $this> The parent this post replies to, or null. */

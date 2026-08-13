@@ -27,7 +27,7 @@ class WriteThrottleBehaviorTest extends TestCase
             'posting' => ['posting', 'posting_ip', '/diary/create'],
             'direct-message-send' => ['direct_message', 'direct_message_ip', '/message/sendToFriend'],
             'friend-request' => ['friend', 'friend_ip', '/friend/link'],
-            'community-join' => ['community', 'community_ip', '/community/join'],
+            'group-join' => ['group', 'group_ip', '/groups/1/join'],
         ];
     }
 

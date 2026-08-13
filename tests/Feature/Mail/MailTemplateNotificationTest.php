@@ -25,7 +25,7 @@ class MailTemplateNotificationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->setSnsSetting(SnsSettingKey::SnsName, 'My Community');
+        $this->setSnsSetting(SnsSettingKey::SnsName, 'My Group');
         $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
     }
 
@@ -33,8 +33,8 @@ class MailTemplateNotificationTest extends TestCase
     {
         $mail = (new RegistrationLinkNotification('raw-token', 'en'))->toMail(new AnonymousNotifiable);
 
-        $this->assertSame(['ops@example.test', 'My Community'], $mail->from);
-        $this->assertSame('My Community Letter of invitation', $mail->subject);
+        $this->assertSame(['ops@example.test', 'My Group'], $mail->from);
+        $this->assertSame('My Group Letter of invitation', $mail->subject);
 
         // Plain text: no HTML shell, no default Laravel notification branding leaking into the body.
         $text = $this->renderMailText($mail);

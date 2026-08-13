@@ -2,8 +2,8 @@
 
 namespace App\Features\CommunityTopic\Queries;
 
-use App\Models\Community;
 use App\Models\CommunityTopic;
+use App\Models\Group;
 use Illuminate\Support\Collection;
 
 /**
@@ -15,9 +15,9 @@ class RecentCommunityTopics
     public const LIMIT = 5;
 
     /** @return Collection<int, CommunityTopic> */
-    public function __invoke(Community $community, int $limit = self::LIMIT): Collection
+    public function __invoke(Group $group, int $limit = self::LIMIT): Collection
     {
-        return $community->topics()
+        return $group->topics()
             ->withCount('comments')
             ->with('member.avatar.file')
             ->orderByDesc('updated_at')

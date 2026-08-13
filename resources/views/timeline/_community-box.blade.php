@@ -11,13 +11,13 @@
              must reach a real form: the inline one ships hidden, so a link back to this page would
              leave a reader without script unable to post at all. --}}
         <p data-timeline-compose-fallback>
-            <a href="{{ route('community.timeline.new', ['community' => $community]) }}">{{ __('%Post_activity%') }}</a>
+            <a href="{{ route('group.timeline.new', ['group' => $group]) }}">{{ __('%Post_activity%') }}</a>
         </p>
     @endif
 
     <div class="timeline">
         @if ($canPost)
-            @include('timeline._compose', ['community' => $community])
+            @include('timeline._compose', ['group' => $group])
         @endif
         <div id="timeline-list">
             @foreach ($posts as $post)
@@ -35,7 +35,7 @@
              script hides that one the moment it swaps in the inline form. --}}
         <div class="moreInfo">
             <ul class="moreInfo">
-                <li><a href="{{ route('community.timeline', ['community' => $community]) }}">{{ __('Show all') }}</a></li>
+                <li><a href="{{ route('group.timeline', ['group' => $group]) }}">{{ __('Show all') }}</a></li>
             </ul>
         </div>
     @endif

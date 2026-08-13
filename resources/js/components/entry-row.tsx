@@ -34,12 +34,12 @@ type EntryCommunity = {
 };
 
 /** The byline subject — exactly one of a member author (circular Avatar; null renders the
- *  withdrawn-member fallback) or the community itself (square CommunityImage) for rows where
- *  the community, not a member, is the subject (cross-community activity digests, where
+ *  withdrawn-member fallback) or the group itself (square CommunityImage) for rows where
+ *  the group, not a member, is the subject (cross-community activity digests, where
  *  updated_at bumps on any comment and an author byline would misattribute). */
 type EntrySubject =
-    | { author: EntryAuthor | null; community?: never }
-    | { community: EntryCommunity; author?: never };
+    | { author: EntryAuthor | null; group?: never }
+    | { group: EntryCommunity; author?: never };
 
 type EntryRowProps = EntrySubject & {
     href: string;
@@ -73,7 +73,7 @@ type EntryRowProps = EntrySubject & {
 /**
  * The canonical content-entry list row (diary / topic / event / timeline / activity digests): an
  * author-first social card. The byline pairs the subject image — a member's circular avatar or the
- * community's square image — with its name · note · date · counts, then the content line, an
+ * group's square image — with its name · note · date · counts, then the content line, an
  * optional excerpt, and an optional photo strip. Person/action rows (friend, block, message boxes)
  * keep their own layouts — this is not for them.
  *
@@ -83,7 +83,7 @@ type EntryRowProps = EntrySubject & {
  * Author-first is about who leads the row, which the avatar and the byline still do; when the name
  * and the line below it were both 16/500/foreground, the row had two focal points and therefore none.
  */
-export function EntryRow({ href, author, community, content, contentLines = 1, bylineNote, date, commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, excerpt, thumbnails, actions }: EntryRowProps) {
+export function EntryRow({ href, author, group, content, contentLines = 1, bylineNote, date, commentCount = 0, replyCount = 0, participantCount = 0, hasImages = false, excerpt, thumbnails, actions }: EntryRowProps) {
     const t = useT();
 
     // The photo strip already shows there are photos, so the camera marker only appears without it.
@@ -108,11 +108,11 @@ export function EntryRow({ href, author, community, content, contentLines = 1, b
     }
 
     // The byline subject: a member author (falling back to the withdrawn-member label + blank
-    // avatar when null) or the community itself.
-    const subjectName = community ? community.name : (author?.name ?? t('Withdrawn member'));
-    const subjectImage = community ? (
+    // avatar when null) or the group itself.
+    const subjectName = group ? group.name : (author?.name ?? t('Withdrawn member'));
+    const subjectImage = group ? (
         // Matches the Avatar's md size — the two alternate in this one byline slot.
-        <CommunityImage name={community.name} src={community.imageUrl} className="size-10" textClassName="text-sm" decorative />
+        <CommunityImage name={group.name} src={group.imageUrl} className="size-10" textClassName="text-sm" decorative />
     ) : (
         // id === 0 renders the withdrawn blank badge, which is why the fallback passes author?.id ?? 0.
         <Avatar id={author?.id ?? 0} name={subjectName} src={author?.imageUrl ?? null} color={author?.avatarColor ?? null} size="md" decorative />

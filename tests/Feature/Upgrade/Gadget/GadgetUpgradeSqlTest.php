@@ -101,6 +101,22 @@ class GadgetUpgradeSqlTest extends TestCase
         DB::statement(SourceSchema::default()->createStatement('gadget_config', withoutForeignKeys: true));
     }
 
+    public function test_renames_builtin_names_by_exact_match_only(): void
+    {
+        $this->seedGadget(1, 'top', 'communityJoinListBox');
+        // A lookalike and an unknown plugin gadget keep their own names (and stay Unsupported):
+        // the map is an exact-match CASE, never a substring rewrite.
+        $this->seedGadget(2, 'top', 'communityJoinListBoxWide');
+        $this->seedGadget(3, 'top', 'somePluginBox');
+
+        $this->runUpgrade();
+
+        $names = DB::table('gadgets')->whereIn('id', [1, 2, 3])->pluck('name', 'id');
+        $this->assertSame('groupJoinListBox', $names[1]);
+        $this->assertSame('communityJoinListBoxWide', $names[2]);
+        $this->assertSame('somePluginBox', $names[3]);
+    }
+
     private function runUpgrade(): void
     {
         $compiler = new InsertSelectCompiler;

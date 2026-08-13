@@ -2,19 +2,19 @@
 
 namespace Tests\Feature\CommunityTopic;
 
-use App\Features\Community\CommunityRole;
 use App\Features\CommunityTopic\Actions\CreateTopic;
 use App\Features\CommunityTopic\Actions\CreateTopicComment;
 use App\Features\CommunityTopic\Actions\DeleteTopic;
 use App\Features\CommunityTopic\Actions\DeleteTopicComment;
 use App\Features\CommunityTopic\Data\CommunityTopicFormData;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\GroupRole;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\File;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -28,11 +28,11 @@ class CommunityTopicImagesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -47,10 +47,10 @@ class CommunityTopicImagesTest extends TestCase
 
     public function test_a_topic_is_created_with_numbered_images_it_owns_and_shows_them(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
-        $this->actingAs($member)->post(route('communityTopic.store', $community), [
+        $this->actingAs($member)->post(route('communityTopic.store', $group), [
             'name' => 'With pics',
             'body' => 'See attached.',
             'images' => [
@@ -74,9 +74,9 @@ class CommunityTopicImagesTest extends TestCase
 
     public function test_a_comment_is_posted_with_images_owned_by_the_comment(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
 
         $this->actingAs($member)->post(route('communityTopic.comment.store', $topic), [
             'body' => 'Reply with a pic',
@@ -91,9 +91,9 @@ class CommunityTopicImagesTest extends TestCase
 
     public function test_a_members_only_boards_topic_image_is_private_to_non_members(): void
     {
-        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        $member = $this->joined($community);
-        $topic = app(CreateTopic::class)($member, $community, $this->form(), [UploadedFile::fake()->image('x.png', 20, 20)]);
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
+        $member = $this->joined($group);
+        $topic = app(CreateTopic::class)($member, $group, $this->form(), [UploadedFile::fake()->image('x.png', 20, 20)]);
         $file = $topic->images()->with('file')->first()->file;
 
         // Inherits the board's read access: a stranger is denied (404, never 403), a member may fetch.
@@ -103,9 +103,9 @@ class CommunityTopicImagesTest extends TestCase
 
     public function test_deleting_a_topic_purges_its_and_its_comments_image_bytes(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = app(CreateTopic::class)($author, $community, $this->form(), [UploadedFile::fake()->image('t.png', 20, 20)]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = app(CreateTopic::class)($author, $group, $this->form(), [UploadedFile::fake()->image('t.png', 20, 20)]);
         app(CreateTopicComment::class)($author, $topic, 'reply', [UploadedFile::fake()->image('c.png', 20, 20)]);
 
         $topicFile = $topic->images()->with('file')->first()->file;
@@ -123,9 +123,9 @@ class CommunityTopicImagesTest extends TestCase
 
     public function test_deleting_a_comment_purges_its_image_bytes(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $comment = app(CreateTopicComment::class)($author, $topic, 'reply', [UploadedFile::fake()->image('c.png', 20, 20)]);
         $file = $comment->images()->with('file')->first()->file;
 
@@ -137,10 +137,10 @@ class CommunityTopicImagesTest extends TestCase
 
     public function test_more_than_three_images_are_rejected(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
-        $this->actingAs($member)->post(route('communityTopic.store', $community), [
+        $this->actingAs($member)->post(route('communityTopic.store', $group), [
             'name' => 'too many',
             'body' => 'b',
             'images' => [
@@ -156,10 +156,10 @@ class CommunityTopicImagesTest extends TestCase
 
     public function test_a_non_image_attachment_is_rejected(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
-        $this->actingAs($member)->post(route('communityTopic.store', $community), [
+        $this->actingAs($member)->post(route('communityTopic.store', $group), [
             'name' => 'bad file',
             'body' => 'b',
             'images' => [UploadedFile::fake()->create('notes.txt', 10, 'text/plain')],
@@ -191,11 +191,11 @@ class CommunityTopicImagesTest extends TestCase
             $mock->shouldReceive('exists')->andReturnUsing(fn ($file) => $real->exists($file));
         }));
 
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         try {
-            app(CreateTopic::class)($member, $community, $this->form(), [
+            app(CreateTopic::class)($member, $group, $this->form(), [
                 UploadedFile::fake()->image('1.png', 20, 20),
                 UploadedFile::fake()->image('2.png', 20, 20),
             ]);

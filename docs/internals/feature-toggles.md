@@ -5,7 +5,7 @@ plugin (`plugin.is_enabled`) or, for friends, by `sns_config.enable_friend_link`
 the same semantics in one registry.
 
 The seven units are the cases of [`App\Support\Feature`](../../app/Support/Feature.php):
-`diary`, `directMessage`, `timeline`, `community`, `communityTopic`, `communityEvent`, `friend`. The
+`diary`, `directMessage`, `timeline`, `group`, `communityTopic`, `communityEvent`, `friend`. The
 case value is the feature vocabulary the [surface resolver](feature-modules.md#surface-selection)
 already uses, and normally the route-name prefix and the URL segment too. `directMessage` is the one
 unit where those come apart — its routes and URLs stay on the OpenPNE 3 `message` word until they are
@@ -40,9 +40,9 @@ cache is cleared; the nav and gadget row caches never embed feature state (see b
 
 ## Dependencies
 
-`communityTopic` and `communityEvent` live inside `community`
+`communityTopic` and `communityEvent` live inside `group`
 (`Feature::parent()`). `Feature::enabled()` is the unit's own flag **and** every ancestor's, so
-switching communities off takes the topic board and events with it whatever their own rows say. The
+switching groups off takes the topic board and events with it whatever their own rows say. The
 dependency is resolved in the registry, never re-stated at a call site.
 
 ## Enforcement
@@ -90,7 +90,7 @@ empty collections, so an emptied section and a genuinely empty one are indisting
 JSON — hiding a section in React would otherwise ship the rows it hides. A feature's own queries
 carry no check (their routes already answer 404); the constraint sits in the aggregate that reaches
 across units — [`ProfileStats`](../../app/Features/Profile/Queries/ProfileStats.php) and
-[`JoinedCommunityActivity`](../../app/Features/Home/Queries/JoinedCommunityActivity.php) hold their
+[`JoinedGroupActivity`](../../app/Features/Home/Queries/JoinedGroupActivity.php) hold their
 own ([feature-modules.md](feature-modules.md#key-invariants) invariant 2), the dashboard and profile
 adapters hold the rest. `UnreadCounts` reports a switched-off unit's badge as zero, unqueried.
 
@@ -190,7 +190,7 @@ that never disabled anything migrates with no feature row at all.
 
 `opCommunityTopicPlugin` shipped the topic board and events together; OpenPNE 4 toggles them
 separately, so that one source row becomes two rows through two steps
-(`PluginFeatureUpgrade` + `CommunityEventPluginFeatureUpgrade`). Communities themselves have no
+(`PluginFeatureUpgrade` + `CommunityEventPluginFeatureUpgrade`). Groups themselves have no
 source: OpenPNE 3 could not switch the container off, so nothing is written and it stays enabled
 while its disabled children carry their own state over.
 

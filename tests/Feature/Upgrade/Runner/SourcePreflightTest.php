@@ -9,12 +9,12 @@ use App\Upgrade\Runner\RunOptions;
 use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\SourceSchema;
-use App\Upgrade\Steps\CommunityMemberUpgrade;
-use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DiaryImageUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
+use App\Upgrade\Steps\GroupMemberUpgrade;
+use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\Steps\MailTemplateUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
@@ -90,11 +90,11 @@ class SourcePreflightTest extends TestCase
         // broken/old source, not an uninstalled plugin.
         $this->createSource('community_member');
 
-        [$ok, $output] = $this->runSteps([new CommunityMemberUpgrade]);
+        [$ok, $output] = $this->runSteps([new GroupMemberUpgrade]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::missingTableMessage('community_member_position'), $output);
-        $this->assertDatabaseCount('community_members', 0);
+        $this->assertDatabaseCount('group_members', 0);
         $this->assertDatabaseCount('openpne4_upgrade_state', 0);
     }
 
@@ -127,7 +127,7 @@ class SourcePreflightTest extends TestCase
     {
         $this->createSource('community_member'); // community_member_position absent → error
 
-        [$ok, $output] = $this->runSteps([new CommunityMemberUpgrade], new RunOptions(dryRun: true));
+        [$ok, $output] = $this->runSteps([new GroupMemberUpgrade], new RunOptions(dryRun: true));
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::missingTableMessage('community_member_position'), $output);
@@ -216,15 +216,15 @@ class SourcePreflightTest extends TestCase
 
     public function test_a_subquery_config_table_without_the_name_column_aborts(): void
     {
-        // community_config is CommunityUpgrade's subquery table, not its FROM table, so its columns
+        // community_config is GroupUpgrade's subquery table, not its FROM table, so its columns
         // are outside the per-step consumed-column check — the scan must not be the thing that
-        // discovers `name` is gone (CommunityUpgrade's own subqueries read it too).
+        // discovers `name` is gone (GroupUpgrade's own subqueries read it too).
         foreach (['community', 'community_config', 'community_category', 'community_member_position'] as $table) {
             $this->createSource($table);
         }
         DB::statement('ALTER TABLE `community_config` DROP COLUMN `name`');
 
-        [$ok, $output] = $this->runSteps([new CommunityUpgrade]);
+        [$ok, $output] = $this->runSteps([new GroupUpgrade]);
 
         $this->assertFalse($ok);
         $this->assertStringContainsString(SourcePreflight::missingColumnMessage('community_config', 'name'), $output);
@@ -249,7 +249,7 @@ class SourcePreflightTest extends TestCase
     public function test_unrecognised_community_config_names_are_reported(): void
     {
         foreach (['community', 'community_config', 'community_category', 'community_member_position'] as $table) {
-            $this->createSource($table); // CommunityUpgrade reads all four
+            $this->createSource($table); // GroupUpgrade reads all four
         }
         $this->createSource('member'); // community_member_position.member_id is preflight-checked against it
         DB::table('community_config')->insert([
@@ -259,7 +259,7 @@ class SourcePreflightTest extends TestCase
                 'created_at' => '2020-01-01 00:00:00', 'updated_at' => '2020-01-01 00:00:00'],
         ]);
 
-        [$ok, $output] = $this->runSteps([new CommunityUpgrade], new RunOptions(dryRun: true));
+        [$ok, $output] = $this->runSteps([new GroupUpgrade], new RunOptions(dryRun: true));
 
         $this->assertTrue($ok);
         $this->assertStringContainsString(

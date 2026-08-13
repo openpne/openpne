@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Community;
 use App\Models\CommunityEvent;
+use App\Models\Group;
 use App\Models\Member;
 use App\Support\BodyFormat;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -16,7 +16,7 @@ class CommunityEventFactory extends Factory
     public function definition(): array
     {
         return [
-            'community_id' => Community::factory(),
+            'community_id' => Group::factory(),
             'member_id' => Member::factory(),
             'name' => fake()->sentence(4),
             'body' => fake()->paragraphs(2, true),

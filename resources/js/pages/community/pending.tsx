@@ -15,7 +15,7 @@ interface Applicant {
 }
 
 interface PendingProps extends PageProps {
-    community: CommunitySummary;
+    group: CommunitySummary;
     applicants: {
         data: Applicant[];
         meta: { currentPage: number; lastPage: number; perPage: number; total: number };
@@ -24,10 +24,10 @@ interface PendingProps extends PageProps {
 
 export default function CommunityPending() {
     const t = useT();
-    const { community, applicants } = usePage<PendingProps>().props;
+    const { group, applicants } = usePage<PendingProps>().props;
 
     const act = (path: 'approve' | 'decline', memberId: number) =>
-        router.post(`/community/member/${path}`, { id: community.id, member_id: memberId }, { preserveScroll: true });
+        router.post(`/community/member/${path}`, { id: group.id, member_id: memberId }, { preserveScroll: true });
 
     return (
         <>

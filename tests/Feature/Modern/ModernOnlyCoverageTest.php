@@ -2,10 +2,8 @@
 
 namespace Tests\Feature\Modern;
 
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Diary;
@@ -13,6 +11,8 @@ use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\EmailChangeRequest;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\MfaResetRequest;
 use App\Models\TimelinePost;
@@ -64,12 +64,12 @@ class ModernOnlyCoverageTest extends TestCase
         // Not confirms: OpenPNE 3 URLs whose Modern home is another canonical page.
         'friend.manage',
         'diary.comment.history',
-        'community.join.show',
-        'community.quit.show',
-        'community.members.appoint.show',
-        'community.members.demote.show',
-        'community.members.drop.show',
-        'community.members.transfer.show',
+        'group.join.show',
+        'group.quit.show',
+        'group.members.appoint.show',
+        'group.members.demote.show',
+        'group.members.drop.show',
+        'group.members.transfer.show',
     ];
 
     /** Canonical GET route names asserted to render Inertia above (the two data-driven tests). */
@@ -82,8 +82,8 @@ class ModernOnlyCoverageTest extends TestCase
         'member.search', 'member.config', 'member.profile.edit', 'member.avatar.edit',
         'member.config.email.edit', 'member.config.password.edit', 'member.config.withdrawal.edit',
         'member.config.mfa.edit', 'member.config.notifications.edit',
-        'community.search', 'community.list_mine', 'community.edit', 'community.members', 'community.members.pending',
-        'community.recent',
+        'group.search', 'group.list_mine', 'group.edit', 'group.members', 'group.members.pending',
+        'group.recent',
         'message.index', 'message.index_compat', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
         'member.invite',
         'notifications.index',
@@ -129,11 +129,11 @@ class ModernOnlyCoverageTest extends TestCase
             'member config' => ['/member/config'],
             'member profile edit' => ['/member/edit/profile'],
             'member avatar' => ['/member/avatar'],
-            'community search' => ['/community/search'],
-            'community joined' => ['/community/joinList'],
-            'community recent activity' => ['/community/recent'],
+            'community search' => ['/groups'],
+            'community joined' => ['/groups/mine'],
+            'community recent activity' => ['/groups/recent'],
             'notification feed' => ['/notifications'],
-            'community create form' => ['/community/edit'],
+            'community create form' => ['/groups/edit'],
             'invite' => ['/invite'],
             'message index' => ['/message'],
             'message index alias' => ['/message/index'],
@@ -165,19 +165,19 @@ class ModernOnlyCoverageTest extends TestCase
     }
 
     /**
-     * Community management pages target a community via ?id= and require the viewer to be its admin
+     * Group management pages target a community via ?id= and require the viewer to be its admin
      * (the member roster and the pending-approval queue). Both go through respondWith → Inertia.
      */
     public function test_community_management_pages_render_modern_under_modern_only(): void
     {
         $admin = Member::factory()->create();
-        $community = Community::factory()->create();
-        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $admin->getKey()]);
+        $group = Group::factory()->create();
+        GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
 
         foreach ([
-            "/community/member/list?id={$community->getKey()}",
-            "/community/member/pending?id={$community->getKey()}",
-            "/community/member/manage/{$community->getKey()}",
+            "/groups/{$group->getKey()}/members",
+            "/groups/{$group->getKey()}/members/pending",
+            "/groups/{$group->getKey()}/members/manage",
         ] as $uri) {
             $this->actingAs($admin)->get($uri)
                 ->assertOk()
@@ -195,7 +195,7 @@ class ModernOnlyCoverageTest extends TestCase
         $viewer = Member::factory()->create();
         $owner = Member::factory()->create();
         $diary = Diary::factory()->create(['visibility' => Visibility::Members]);
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
 
         $this->actingAs($viewer)->get('/timeline/tag/op4')
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('timeline/tag'));
@@ -204,7 +204,7 @@ class ModernOnlyCoverageTest extends TestCase
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('member/show'));
         $this->actingAs($viewer)->get("/diary/{$diary->getKey()}")
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('diary/show'));
-        $this->actingAs($viewer)->get("/community/{$community->getKey()}")
+        $this->actingAs($viewer)->get("/groups/{$group->getKey()}")
             ->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('community/show'));
     }
 
@@ -345,20 +345,20 @@ class ModernOnlyCoverageTest extends TestCase
     public function test_join_and_quit_confirms_redirect_under_modern_only_and_render_under_classic(): void
     {
         $member = Member::factory()->create();
-        $toJoin = Community::factory()->create();
-        $toQuit = Community::factory()->create();
-        CommunityMember::factory()->create(['community_id' => $toQuit->getKey(), 'member_id' => $member->getKey()]);
+        $toJoin = Group::factory()->create();
+        $toQuit = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $toQuit->getKey(), 'member_id' => $member->getKey()]);
 
-        $this->actingAs($member)->get("/community/join?id={$toJoin->getKey()}")
-            ->assertRedirect(route('community.show', $toJoin));
-        $this->actingAs($member)->get("/community/quit?id={$toQuit->getKey()}")
-            ->assertRedirect(route('community.show', $toQuit));
+        $this->actingAs($member)->get("/groups/{$toJoin->getKey()}/join")
+            ->assertRedirect(route('group.show', $toJoin));
+        $this->actingAs($member)->get("/groups/{$toQuit->getKey()}/quit")
+            ->assertRedirect(route('group.show', $toQuit));
 
         config()->set('openpne.surface_mode', 'classic_default');
 
-        $this->actingAs($member)->get("/community/join?id={$toJoin->getKey()}")
+        $this->actingAs($member)->get("/groups/{$toJoin->getKey()}/join")
             ->assertOk()->assertSee('id="page_community_join"', false);
-        $this->actingAs($member)->get("/community/quit?id={$toQuit->getKey()}")
+        $this->actingAs($member)->get("/groups/{$toQuit->getKey()}/quit")
             ->assertOk()->assertSee('id="page_community_quit"', false);
     }
 
@@ -382,12 +382,12 @@ class ModernOnlyCoverageTest extends TestCase
         $this->actingAs($viewer)->get(route('timeline.delete.show', ['timelinePost' => $post->getKey()]))
             ->assertRedirect(route('timeline.show', ['timelinePost' => $post->getKey()]));
 
-        $community = Community::factory()->create();
-        CommunityMember::factory()->admin()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
-        $this->actingAs($viewer)->get(route('community.delete.show', $community))
-            ->assertRedirect(route('community.show', $community));
+        $group = Group::factory()->create();
+        GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('group.delete.show', $group))
+            ->assertRedirect(route('group.show', $group));
 
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
         $this->actingAs($viewer)->get(route('communityTopic.delete.show', $topic))
             ->assertRedirect(route('communityTopic.show', $topic));
 
@@ -395,7 +395,7 @@ class ModernOnlyCoverageTest extends TestCase
         $this->actingAs($viewer)->get(route('communityTopic.comment.delete.show', ['comment' => $topicComment->getKey()]))
             ->assertRedirect(route('communityTopic.show', $topic));
 
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
         $this->actingAs($viewer)->get(route('communityEvent.delete.show', $event))
             ->assertRedirect(route('communityEvent.show', $event));
 

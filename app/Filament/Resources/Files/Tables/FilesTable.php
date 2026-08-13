@@ -88,7 +88,7 @@ class FilesTable
                     ->url(fn (File $record): string => route('admin.file.raw', ['file' => $record->name, 'download' => 1]))
                     ->openUrlInNewTab(),
                 // Default DeleteAction: $record->delete() fires the FileObserver, which purges the
-                // stored bytes; referencing *_image rows cascade and communities.file_id null on FK.
+                // stored bytes; referencing *_image rows cascade and groups.file_id null on FK.
                 DeleteAction::make(),
             ])
             ->toolbarActions([

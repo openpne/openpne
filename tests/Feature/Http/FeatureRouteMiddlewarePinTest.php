@@ -40,12 +40,14 @@ class FeatureRouteMiddlewarePinTest extends TestCase
      */
     private const DEPENDENCIES = [
         'diary.list_friend' => ['friend'],
-        // A community's timeline: community screens whose purpose is the timeline, so switching
+        // A group's timeline: group screens whose purpose is the timeline, so switching
         // either unit off has to take them away.
-        'community.timeline' => ['timeline'],
-        'community.timeline.new' => ['timeline'],
-        'community.timeline.store' => ['timeline'],
-        'community.timeline.compat' => ['timeline'],
+        'group.timeline' => ['timeline'],
+        'group.timeline.new' => ['timeline'],
+        'group.timeline.store' => ['timeline'],
+        'group.timeline.compat' => ['timeline'],
+        'group.timeline.legacy_compat' => ['timeline'],
+        'group.timeline.new.legacy_compat' => ['timeline'],
     ];
 
     /**

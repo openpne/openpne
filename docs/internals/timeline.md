@@ -173,7 +173,7 @@ is still writable only by its members.
 
 Rows carry `Members`, but that is a write-side invariant, not the gate — a legacy or corrupt `Open`
 value must not open a permalink or its image bytes to a guest, so the community branch runs first.
-The write actions take the `Community` itself and fix the visibility there, rather than trusting a
+The write actions take the `Group` itself and fix the visibility there, rather than trusting a
 caller's id and choice: the reply route is the SNS-wide one, so a controller check would be a check
 in only one of the two places that reach the write.
 

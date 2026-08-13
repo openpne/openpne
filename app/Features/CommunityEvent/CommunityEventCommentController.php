@@ -54,12 +54,12 @@ class CommunityEventCommentController extends Controller
         abort_unless(CommunityEventAccess::canDeleteComment($comment, $this->viewer()), 404);
 
         // Modern confirms deletion inline — send a Modern viewer back to the event.
-        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('communityEvent.show', $comment->event);
         }
 
         // The confirm keeps the community context its event pages carry.
-        $this->markLocalNavCommunity($comment->event->community);
+        $this->markLocalNavGroup($comment->event->community);
 
         return view('community-event.comment-delete', [
             'comment' => $comment,

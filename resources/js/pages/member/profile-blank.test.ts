@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { profileIsBlank } from './profile-blank.ts';
 
-const zeroStats = { diaries: 0, activity: 0, friends: 0, communities: 0 };
+const zeroStats = { diaries: 0, activity: 0, friends: 0, groups: 0 };
 
 test('blank when there are no details and no digest (guest view)', () => {
     assert.equal(profileIsBlank(null, null, 0, null), true);

@@ -8,7 +8,7 @@ use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use App\Support\PreferenceKey;
 use App\Upgrade\StepRegistry;
-use App\Upgrade\Steps\CommunityUpgrade;
+use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
 use App\Upgrade\UpgradeStep;
@@ -96,7 +96,7 @@ class KnownConfigNamesTest extends TestCase
     }
 
     /**
-     * The registry-derived halves cannot drift, but the names MemberUpgrade and CommunityUpgrade
+     * The registry-derived halves cannot drift, but the names MemberUpgrade and GroupUpgrade
      * pin as literals in their subqueries can — and a name a step reads but the set omits is
      * reported to the operator as unrecognised while being migrated. Read the literals back out of
      * the SQL the steps emit rather than restating them here, which would be the same second list.
@@ -105,7 +105,7 @@ class KnownConfigNamesTest extends TestCase
     {
         $sets = [
             [new MemberUpgrade, 'member_config', StepRegistry::knownMemberConfigNames()],
-            [new CommunityUpgrade, 'community_config', StepRegistry::knownCommunityConfigNames()],
+            [new GroupUpgrade, 'community_config', StepRegistry::knownCommunityConfigNames()],
         ];
 
         foreach ($sets as [$step, $table, $known]) {

@@ -9,7 +9,7 @@ import type { PageProps } from '@/types';
 import type { CommunityMemberRow, CommunityRoleSlug, CommunitySummary, PaginatedCommunityMembers } from './types';
 
 interface ManageProps extends PageProps {
-    community: CommunitySummary;
+    group: CommunitySummary;
     members: PaginatedCommunityMembers;
     viewerRole: 'admin' | 'sub_admin'; // a plain member cannot reach this screen
     pendingAdminId: number | null; // a pending transfer nominee cannot be appointed sub-admin
@@ -27,10 +27,10 @@ function RoleBadge({ role }: { role: CommunityRoleSlug }) {
 export default function CommunityManage() {
     const t = useT();
     const confirm = useConfirm();
-    const { members, community, viewerRole, pendingAdminId } = usePage<ManageProps>().props;
+    const { members, group, viewerRole, pendingAdminId } = usePage<ManageProps>().props;
 
     const post = (path: 'appointSubAdmin' | 'demoteSubAdmin' | 'drop' | 'transferAdmin', memberId: number) =>
-        router.post(`/community/member/${path}`, { id: community.id, member_id: memberId }, { preserveScroll: true });
+        router.post(`/community/member/${path}`, { id: group.id, member_id: memberId }, { preserveScroll: true });
 
     const appoint = async (member: CommunityMemberRow) => {
         if (await confirm({ title: t('Appoint :name as a sub-administrator of this %community%?', { name: member.name }), confirmLabel: t('Appoint') })) {

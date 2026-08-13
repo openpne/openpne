@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Features\Community\CommunityNewPostFanout;
-use App\Features\Community\Queries\CommunityNewPostRecipients;
+use App\Features\Group\GroupNewPostFanout;
+use App\Features\Group\Queries\GroupNewPostRecipients;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
 use App\Models\CommunityEvent;
@@ -20,7 +20,7 @@ use Illuminate\Queue\SerializesModels;
 /**
  * Fans an event comment out to the community's other members off the request (CommentNewPost). The
  * audience excludes the event author and everyone who already commented — they get the Reply / Related
- * notification instead — so precedence is Reply > Related > Community with one notification per member.
+ * notification instead — so precedence is Reply > Related > Group with one notification per member.
  */
 class BroadcastEventCommentPosted implements ShouldQueue
 {
@@ -37,7 +37,7 @@ class BroadcastEventCommentPosted implements ShouldQueue
         public readonly array $excludedMemberIds,
     ) {}
 
-    public function handle(CommunityNewPostFanout $fanout, CommunityNewPostRecipients $recipients, MailTemplateService $templates): void
+    public function handle(GroupNewPostFanout $fanout, GroupNewPostRecipients $recipients, MailTemplateService $templates): void
     {
         // Saves the audience walk only; the send gate itself is the notification's shouldSend().
         if (! EventCommentBroadcastNotification::feature()->enabled()) {
@@ -53,7 +53,7 @@ class BroadcastEventCommentPosted implements ShouldQueue
 
         // The author + co-commenters (who get Reply / Related) are excluded using the set captured when
         // the comment was posted, not re-read here: a comment deleted before this job ran would otherwise
-        // drop its author out of the exclusion and double-notify them (Related then Community).
+        // drop its author out of the exclusion and double-notify them (Related then Group).
         $audience = $recipients->viewers($event->community, $commenter)->whereNotIn('id', $this->excludedMemberIds);
         $mailEnabled = $templates->isEnabled(MailTemplate::CommunityPostingNotified);
 

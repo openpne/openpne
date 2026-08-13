@@ -28,10 +28,10 @@ class CommunityTopic extends Model
         ];
     }
 
-    /** @return BelongsTo<Community, $this> */
+    /** @return BelongsTo<Group, $this> */
     public function community(): BelongsTo
     {
-        return $this->belongsTo(Community::class);
+        return $this->belongsTo(Group::class);
     }
 
     /** @return BelongsTo<Member, $this> The author, or null once they have withdrawn. */

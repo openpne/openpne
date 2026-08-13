@@ -11,11 +11,11 @@ use App\Features\Notifications\NotificationFeedRow;
 use App\Features\Notifications\NotificationKindLabel;
 use App\Features\Notifications\Queries\ListNotificationCenterRows;
 use App\Features\Timeline\TimelineAccess;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DirectMessageRecipient;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -109,9 +109,9 @@ class NotificationFeedSerializer
             'direct_message_received' => $data['sender_id'] ?? null,
             'diary_commented', 'community_topic_commented', 'community_event_commented' => $data['commenter_id'] ?? null,
             'timeline_replied' => $data['replier_id'] ?? null,
-            'community_joined' => $data['new_member_id'] ?? null,
-            'community_admin_transfer_requested' => $data['requester_id'] ?? null,
-            'community_sub_admin_appointed' => $data['appointer_id'] ?? null,
+            'group_joined' => $data['new_member_id'] ?? null,
+            'group_admin_transfer_requested' => $data['requester_id'] ?? null,
+            'group_sub_admin_appointed' => $data['appointer_id'] ?? null,
             'diary_posted', 'community_topic_posted', 'community_event_posted', 'timeline_mentioned', 'timeline_posted' => $data['author_id'] ?? null,
             default => null,
         };
@@ -132,8 +132,8 @@ class NotificationFeedSerializer
             'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
             'community_topic_commented' => self::topicUrl($row, $data['topic_id'] ?? null),
             'community_event_commented' => self::eventUrl($row, $data['event_id'] ?? null),
-            'community_joined' => self::communityUrl($data['community_id'] ?? null),
-            'community_admin_transfer_requested', 'community_sub_admin_appointed' => self::communityUrl($data['community_id'] ?? null),
+            'group_joined' => self::groupUrl($data['group_id'] ?? null),
+            'group_admin_transfer_requested', 'group_sub_admin_appointed' => self::groupUrl($data['group_id'] ?? null),
             'diary_posted' => self::diaryUrl($row, $data['diary_id'] ?? null),
             'community_topic_posted' => self::topicUrl($row, $data['topic_id'] ?? null),
             'community_event_posted' => self::eventUrl($row, $data['event_id'] ?? null),
@@ -198,13 +198,13 @@ class NotificationFeedSerializer
     }
 
     /** A dissolved community counts as gone; the recipient is an admin, so no extra view gate. */
-    private static function communityUrl(?int $communityId): ?string
+    private static function groupUrl(?int $groupId): ?string
     {
-        if ($communityId === null || ! Community::whereKey($communityId)->exists()) {
+        if ($groupId === null || ! Group::whereKey($groupId)->exists()) {
             return null;
         }
 
-        return '/community/'.$communityId;
+        return '/groups/'.$groupId;
     }
 
     /** A deleted diary — or one the recipient can no longer view — counts as gone. */

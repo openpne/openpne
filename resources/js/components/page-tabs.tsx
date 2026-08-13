@@ -11,7 +11,7 @@ export type TabItem = {
 
 /**
  * Canonical hub tab strip: link-based navigation between a hub's views (diary all/friends, friend
- * list/requests, community browse/joined/recent, message boxes). It is navigation — not a primary
+ * list/requests, group browse/joined/recent, message boxes). It is navigation — not a primary
  * action — so it sits below the page heading, never in the heading's action slot. 44px tall to match
  * the heading row so switching tabs doesn't shift the layout.
  */

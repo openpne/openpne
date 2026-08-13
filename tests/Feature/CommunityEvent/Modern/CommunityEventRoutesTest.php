@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\CommunityEvent\Modern;
 
-use App\Features\Community\CommunityRole;
 use App\Features\CommunityTopic\TopicReadAccess;
-use App\Models\Community;
+use App\Features\Group\GroupRole;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,11 +23,11 @@ class CommunityEventRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -49,28 +49,28 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_guests_are_redirected_to_login(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
 
-        $this->get(route('communityEvent.index', $community))->assertRedirect('/login');
-        $this->get(route('communityEvent.new', $community))->assertRedirect('/login');
+        $this->get(route('communityEvent.index', $group))->assertRedirect('/login');
+        $this->get(route('communityEvent.new', $group))->assertRedirect('/login');
         $this->get(route('communityEvent.show', $event))->assertRedirect('/login');
         $this->get(route('communityEvent.member_list', $event))->assertRedirect('/login');
-        $this->post(route('communityEvent.store', $community))->assertRedirect('/login');
+        $this->post(route('communityEvent.store', $group))->assertRedirect('/login');
         $this->post(route('communityEvent.delete', $event))->assertRedirect('/login');
     }
 
     public function test_modern_index_renders_the_board(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $member->getKey()]);
 
         $this->actingAs($member)
-            ->get(route('communityEvent.index', $community))
+            ->get(route('communityEvent.index', $group))
             ->assertInertia(fn ($page) => $page
                 ->component('community/event/index')
-                ->where('community.id', $community->getKey())
+                ->where('group.id', $group->getKey())
                 ->has('events.data', 1)
                 ->has('events.data.0.openDate')
                 ->where('canPost', true)
@@ -79,9 +79,9 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_show_renders_the_event_with_rsvp_state(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         CommunityEventComment::factory()->create(['community_event_id' => $event->getKey(), 'member_id' => $author->getKey(), 'number' => 1]);
 
         $this->actingAs($author)
@@ -101,8 +101,8 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_show_returns_404_when_events_are_members_only_and_the_viewer_is_a_stranger(): void
     {
-        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)->get(route('communityEvent.show', $event))->assertNotFound();
@@ -110,14 +110,14 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_new_renders_the_form_for_a_member(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         $this->actingAs($member)
-            ->get(route('communityEvent.new', $community))
+            ->get(route('communityEvent.new', $group))
             ->assertInertia(fn ($page) => $page
                 ->component('community/event/edit')
-                ->where('community.id', $community->getKey())
+                ->where('group.id', $group->getKey())
                 ->where('event', null)
                 ->where('composeEditor', 'rich')
             );
@@ -125,24 +125,24 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_new_returns_404_for_a_non_member(): void
     {
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $stranger = Member::factory()->create();
 
-        $this->actingAs($stranger)->get(route('communityEvent.new', $community))->assertNotFound();
+        $this->actingAs($stranger)->get(route('communityEvent.new', $group))->assertNotFound();
     }
 
     public function test_modern_store_creates_an_event_and_redirects_to_show(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
-        $response = $this->actingAs($member)->post(route('communityEvent.store', $community), $this->eventPayload());
+        $response = $this->actingAs($member)->post(route('communityEvent.store', $group), $this->eventPayload());
 
         $event = CommunityEvent::where('name', 'Modern Meetup')->firstOrFail();
         $response->assertRedirect(route('communityEvent.show', $event));
         $this->assertDatabaseHas('community_events', [
             'id' => $event->getKey(),
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'area' => 'Tokyo',
         ]);
@@ -150,10 +150,10 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_edit_renders_the_form_with_ymd_dates_for_the_author(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
         $event = CommunityEvent::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'open_date' => now()->addWeek()->startOfDay(),
             'format' => BodyFormat::Markdown,
@@ -173,9 +173,9 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_edit_returns_404_for_a_non_editor(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)->get(route('communityEvent.edit', $event))->assertNotFound();
@@ -183,9 +183,9 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_update_edits_the_event_and_redirects_to_show(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
             ->post(route('communityEvent.update', $event), $this->eventPayload(['name' => 'Renamed', 'area' => 'Osaka']))
@@ -196,22 +196,22 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_delete_removes_the_event_and_redirects_to_the_community(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
             ->post(route('communityEvent.delete', $event))
-            ->assertRedirect(route('community.show', $community));
+            ->assertRedirect(route('group.show', $group));
 
         $this->assertDatabaseMissing('community_events', ['id' => $event->getKey()]);
     }
 
     public function test_modern_delete_returns_404_for_a_non_editor(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)->post(route('communityEvent.delete', $event))->assertNotFound();
@@ -220,16 +220,16 @@ class CommunityEventRoutesTest extends TestCase
 
     public function test_modern_member_list_renders_the_roster(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $member->getKey()]);
         $event->participants()->attach($member);
 
         $this->actingAs($member)
             ->get(route('communityEvent.member_list', $event))
             ->assertInertia(fn ($page) => $page
                 ->component('community/event/members')
-                ->where('community.id', $community->getKey())
+                ->where('group.id', $group->getKey())
                 ->where('event.id', $event->getKey())
                 ->where('participants.data.0.id', $member->getKey())
             );
@@ -239,11 +239,11 @@ class CommunityEventRoutesTest extends TestCase
     {
         // Date-only fields must be Y-m-d, not an ISO midnight a browser would render a day early west
         // of UTC. Assert the show, board, and community recent-events props all carry the plain date.
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
         $openDate = now()->addMonth()->startOfDay();
         $event = CommunityEvent::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'open_date' => $openDate,
             'application_deadline' => $openDate->copy()->subDay(),
@@ -259,27 +259,27 @@ class CommunityEventRoutesTest extends TestCase
             );
 
         $this->actingAs($member)
-            ->get(route('communityEvent.index', $community))
+            ->get(route('communityEvent.index', $group))
             ->assertInertia(fn ($page) => $page->where('events.data.0.openDate', $openYmd));
 
         $this->actingAs($member)
-            ->get(route('community.show', $community))
+            ->get(route('group.show', $group))
             ->assertInertia(fn ($page) => $page->where('recentEvents.0.openDate', $openYmd));
     }
 
     public function test_participant_count_is_serialized_on_the_board_and_community_show(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
-        $event->participants()->attach([$author->getKey(), $this->joined($community)->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $event->participants()->attach([$author->getKey(), $this->joined($group)->getKey()]);
 
         $this->actingAs($author)
-            ->get(route('communityEvent.index', $community))
+            ->get(route('communityEvent.index', $group))
             ->assertInertia(fn ($page) => $page->where('events.data.0.participantCount', 2));
 
         $this->actingAs($author)
-            ->get(route('community.show', $community))
+            ->get(route('group.show', $group))
             ->assertInertia(fn ($page) => $page
                 ->where('recentEvents.0.participantCount', 2)
                 ->where('recentEvents.0.author.name', $author->name)
@@ -289,11 +289,11 @@ class CommunityEventRoutesTest extends TestCase
     public function test_modern_only_serves_the_canonical_event_board_as_inertia(): void
     {
         config()->set('openpne.surface_mode', 'modern_only');
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         $this->actingAs($member)
-            ->get(route('communityEvent.index', $community))
+            ->get(route('communityEvent.index', $group))
             ->assertInertia(fn ($page) => $page->component('community/event/index'));
     }
 }

@@ -176,8 +176,8 @@ return [
         'direct_message_ip' => (int) env('OPENPNE_THROTTLE_DIRECT_MESSAGE_IP', 30),
         'friend' => (int) env('OPENPNE_THROTTLE_FRIEND', 15),
         'friend_ip' => (int) env('OPENPNE_THROTTLE_FRIEND_IP', 40),
-        'community' => (int) env('OPENPNE_THROTTLE_COMMUNITY', 15),
-        'community_ip' => (int) env('OPENPNE_THROTTLE_COMMUNITY_IP', 40),
+        'group' => (int) env('OPENPNE_THROTTLE_GROUP', 15),
+        'group_ip' => (int) env('OPENPNE_THROTTLE_GROUP_IP', 40),
     ],
 
     /*
