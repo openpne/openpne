@@ -19,6 +19,10 @@ the admin-user list shows which administrators have it enabled.
   as an AAL2 authenticator, and admins have no email column anyway.
 - **`codeWindow(1)`** (≈±30s / ±1 step) tightens Filament's default of 8 (≈±4
   minutes), which is too lax for a privileged account.
+- **No code replay.** Filament records the last accepted step per secret, so the
+  login challenge, disable and regenerate reject any code that is not newer than
+  it — a code used to sign in cannot then authorize factor management. Set-up is
+  exempt: it proves a secret that is not live yet.
 - **Lockout recovery** has two paths: recovery codes (shown once at set-up), and
   the `openpne:admin:disable-mfa <username>` CLI command — gated by server access,
   the same trust boundary as `openpne:admin:reset-password`, since an admin has
