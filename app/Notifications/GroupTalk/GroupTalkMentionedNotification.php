@@ -68,9 +68,10 @@ class GroupTalkMentionedNotification extends Notification implements FeatureNoti
             'member_name' => $this->author->name,
             'community_name' => $this->group()->name,
             'body' => $this->message->body,
-            // The conversation, not the message: talk has no per-message permalink, and inventing
-            // one would be inventing a screen.
-            'url' => route('group.talk.show', ['group' => $this->message->group_id]),
+            // The conversation, opened on the message that named them: talk has no screen for one
+            // message, so the link is a place in the conversation. A message deleted before the
+            // reader follows it lands them on the newest page instead.
+            'url' => route('group.talk.show', ['group' => $this->message->group_id, 'm' => $this->message->getKey()]),
         ]);
     }
 

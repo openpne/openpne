@@ -28,21 +28,29 @@ use Inertia\Response as InertiaResponse;
  * A group's talk: one linear conversation, Modern only (talk has no OpenPNE 3 counterpart, so there
  * is no Classic screen to be compatible with — /groups/recent takes the same shape).
  *
- * The page ships the newest slice; everything after it moves over JSON — "load older" walks back by
- * keyset and a poll asks what has arrived since. Every action resolves the read gate first and
- * answers 404 when it refuses, hiding whether the group has a conversation at all.
+ * The page ships the newest slice, or the one a `?m=` deep link lands in; everything after it moves
+ * over JSON — "load older" walks back by keyset and a poll asks what has arrived since. Every action
+ * resolves the read gate first and answers 404 when it refuses, hiding whether the group has a
+ * conversation at all.
  */
 class GroupTalkController extends Controller
 {
-    public function show(Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread): InertiaResponse
+    public function show(Request $request, Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread): InertiaResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
         $permissions = GroupTalkPermissions::for($group, $viewer);
+        // Resolved after the gate, so a link into a conversation the viewer may not read changes
+        // nothing about the refusal.
+        $anchor = $this->anchor($group, $request->query('m'));
 
         return Inertia::render('group/talk/index', [
             'group' => GroupSerializer::summary($group),
-            'page' => GroupMessageSerializer::page($query->latest($group), $permissions),
+            'page' => GroupMessageSerializer::page(
+                $anchor === null ? $query->latest($group) : $query->around($group, GroupTalkCursor::of($anchor)),
+                $permissions,
+            ),
+            'anchor' => $anchor === null ? null : ['messageId' => $anchor->getKey()],
             'canPost' => $permissions->canPost,
             // Only a member holds a cursor or a mute, so only a member is offered either.
             'isMember' => $permissions->canPost,
@@ -55,11 +63,29 @@ class GroupTalkController extends Controller
     }
 
     /**
+     * The message `?m=` asked to open on — a mention notification's deep link — or null for the
+     * ordinary newest page.
+     *
+     * Best-effort by contract: a link naming a deleted message, another group's, or nothing that
+     * parses opens the conversation as usual rather than refusing it. A stale link is a link to a
+     * conversation that has moved on, and the notification feed's own click-time re-check does not
+     * cover mail or a pasted URL.
+     */
+    private function anchor(Group $group, mixed $id): ?GroupMessage
+    {
+        if (! is_string($id) || ! ctype_digit($id)) {
+            return null;
+        }
+
+        return GroupMessage::query()->where('group_id', $group->getKey())->find((int) $id);
+    }
+
+    /**
      * One page around a cursor the client was handed: `after` for the poll, `before` for "load
-     * older", `context` for the page a position sits in (the unread boundary today, a linked-to
-     * message next), none of them for the newest page. A cursor that does not parse is simply no
-     * cursor — pagination is a position, not a permission, and the gate above already decided the
-     * audience.
+     * older", `context` for the page a position sits in (the unread boundary; a deep link's landing
+     * is the same page, resolved by `show` above), none of them for the newest page. A cursor that
+     * does not parse is simply no cursor — pagination is a position, not a permission, and the gate
+     * above already decided the audience.
      */
     public function messages(Request $request, Group $group, GroupTalkMessages $query): JsonResponse
     {

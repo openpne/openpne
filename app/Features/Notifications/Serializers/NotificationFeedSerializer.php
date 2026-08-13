@@ -256,8 +256,9 @@ class NotificationFeedSerializer
     }
 
     /**
-     * The conversation the mentioning message sits in. Talk has no per-message permalink, so the row
-     * opens the talk itself — which is also the only screen there is to open.
+     * The conversation the mentioning message sits in, opened on that message (`?m=`). Talk has no
+     * screen of its own for one message, so the anchor is a place in the conversation rather than a
+     * permalink — see group-talk.md.
      *
      * Re-checked at click time, not trusted from delivery: the message may have been deleted since,
      * and the reader may have left a members-only group or lost read access with it.
@@ -273,7 +274,7 @@ class NotificationFeedSerializer
         $group = $message->group;
 
         return $viewer !== null && $group !== null && GroupTalkAccess::canView($group, $viewer)
-            ? '/groups/'.$group->getKey().'/talk'
+            ? '/groups/'.$group->getKey().'/talk?m='.$message->getKey()
             : null;
     }
 

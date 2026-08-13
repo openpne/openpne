@@ -122,7 +122,8 @@ class TalkMentionRequestTest extends TalkTestCase
         ]);
     }
 
-    public function test_the_feed_row_opens_the_conversation(): void
+    /** On the message that named them: talk has no screen for one message, so `?m=` is the address. */
+    public function test_the_feed_row_opens_the_conversation_on_the_message(): void
     {
         $group = $this->group();
         $author = $this->memberOf($group);
@@ -131,7 +132,7 @@ class TalkMentionRequestTest extends TalkTestCase
 
         $url = NotificationFeedSerializer::targetUrl($this->feedRow($target, $group, $message, $author));
 
-        $this->assertSame("/groups/{$group->getKey()}/talk", $url);
+        $this->assertSame("/groups/{$group->getKey()}/talk?m={$message->getKey()}", $url);
     }
 
     /** Fail-closed: a message deleted since delivery resolves to nowhere, and the feed keeps the reader. */

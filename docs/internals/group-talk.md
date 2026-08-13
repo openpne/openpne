@@ -91,7 +91,11 @@ The list on screen is either of two stretches, and `talk-stream-state.ts` names 
 | window | what it is | poll |
 |---|---|---|
 | `latest` | ends at the newest message | yes |
-| `history` | the slice the unread jump opened on, somewhere behind it | no |
+| `history` | a slice behind it — what the unread jump opens on, and what a `?m=` link is rendered with | no |
+
+The window is read off the page's own `hasNewer`, including the one the server rendered: a deep
+link's landing starts in `history` and the poll never runs on it, while an ordinary visit and a link
+into the newest page alike start `latest`.
 
 A poll in the history window would append messages that do not follow the last row on screen, so it
 stops; the reader steps forward with **"load newer"** (`?after=`, the poll's own read) until the
@@ -202,9 +206,9 @@ offers to fix.
 ### `?context=` — the page a position sits in
 
 `GroupTalkMessages::around()` returns `CONTEXT` messages up to and including the cursor, then
-everything after it up to `PER_PAGE`, as one contiguous page for the history window. It is
-deliberately general: the unread boundary is only the first thing worth opening on, and a link to a
-single message wants the same window around a message's own cursor.
+everything after it up to `PER_PAGE`, as one contiguous page for the history window. Two callers ask
+for it: the unread jump, over `?context=`, and `show` when a `?m=` link names a message — the same
+window, around a cursor taken from that message rather than from the read boundary.
 
 A cursor here is a **position, not a permission** — the same trust `before` and `after` already
 carry, since the group's read gate decided the audience before any of them are read. So it takes one
@@ -297,10 +301,24 @@ a rename, a fresh block, a member who left — is dropped alone and the message 
 differ only in scale: talk's body caps at 5,000 code points, so `MentionRules::rules()` takes the cap
 rather than hardcoding the timeline's 140.
 
-**No per-message permalink.** A mention notification links to the conversation
-(`/groups/{group}/talk`), because that is the only screen talk has. The feed re-checks at click time
-that the message still exists and that the reader may still read the group, and resolves to nothing
-when either has changed.
+**No message screen, but an anchor in the conversation.** A mention notification links to
+`/groups/{group}/talk?m={message}`: talk has one screen, and the link names a place in it rather than
+a permalink to a message of its own. `show` opens on the page that message sits in — the same
+[`around()`](#context--the-page-a-position-sits-in) read the unread jump uses — and hands the client
+an `anchor` prop, which lands the scroll on the row and picks it out for a couple of seconds.
+
+The anchor is **best-effort**. `?m=` is honoured only for a live message of *this* group; a deleted
+one, another group's id, or anything that does not parse opens the newest page with no anchor at all,
+because a link that outlived its message still leads to a conversation worth arriving in. The gate is
+unmoved by it: a reader the group refuses gets the same 404 with or without an anchor. The feed keeps
+its own click-time re-check (message alive, reader may still read the group) and resolves to nowhere
+when either has changed — mail and a pasted URL never pass through that, which is why `show` validates
+in its own right.
+
+**An anchor is not a reading.** Landing on it does not clear the room's badge: mark-read still fires
+only from the foot of the *live* window, so a reader taken back into history marks nothing until they
+return to the newest message. The unread snapshot is read exactly as it is for an ordinary visit —
+where the reader had got to, not where the link sent them.
 
 ### The one notification talk sends
 
@@ -429,5 +447,8 @@ role once per request and the serializer asks it per row.
 10. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
 11. Talk is the group's conversation surface; nothing else scopes posts to a group. A second one
    would be re-creating the split the cutover removed.
-10. The room list's order is settled in SQL before the page is cut. A query that pages first and
+12. The room list's order is settled in SQL before the page is cut. A query that pages first and
     then asks for the newest messages has ordered the page, not the membership.
+13. A link may name a message (`?m=`), and naming one is neither a permission nor a reading: the
+    group's gate still answers first, an unusable id falls back to the newest page, and the cursor
+    only moves from the foot of the live window.

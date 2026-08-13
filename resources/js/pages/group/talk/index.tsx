@@ -19,6 +19,8 @@ import { useTalkStream } from './use-talk-stream';
 interface TalkProps extends PageProps {
     group: CommunitySummary;
     page: TalkPage;
+    /** The message a `?m=` link opened on; null for an ordinary visit. `page` is the slice it sits in. */
+    anchor: { messageId: number } | null;
     canPost: boolean;
     isMember: boolean;
     isMuted: boolean;
@@ -28,13 +30,19 @@ interface TalkProps extends PageProps {
 /** How close to the foot still counts as reading the newest message. */
 const NEAR_BOTTOM_PX = 96;
 
+/** How long the message a deep link landed on stays picked out. */
+const HIGHLIGHT_MS = 2_000;
+
 /** One talk list per page, so the message's own id names its row without a container ref. */
 const messageElement = (id: number): Element | null => document.querySelector(`[data-talk-message-id="${id}"]`);
+
+/** Whether the reader is standing at the foot of what is loaded. */
+const atFoot = (): boolean => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - NEAR_BOTTOM_PX;
 
 export default function GroupTalkIndex() {
     const t = useT();
     const confirm = useConfirm();
-    const { group, page, canPost, isMember, isMuted, talkUnreadSnapshot } = usePage<TalkProps>().props;
+    const { group, page, anchor, canPost, isMember, isMuted, talkUnreadSnapshot } = usePage<TalkProps>().props;
     const stream = useTalkStream(group.id, page);
     const messages = stream.messages;
     const streamSend = stream.send;
@@ -56,11 +64,17 @@ export default function GroupTalkIndex() {
     // loaded. Null when the line is on screen, or when there was nothing waiting to begin with.
     const backlog = dividerId === null && talkUnreadSnapshot !== null && talkUnreadSnapshot.count > 0 ? talkUnreadSnapshot : null;
 
+    // The message this visit opened on, and its emphasis. The landing is a ref because it describes
+    // the arrival rather than the render — the scroll it drives happens once, on mount — while the
+    // highlight is state because it expires.
+    const landing = useRef(anchor?.messageId ?? null);
+    const [highlightId, setHighlightId] = useState(landing.current);
+
     // Whether the reader is at the newest message. A conversation that scrolls itself while someone
     // is reading back through it has taken the page away from them.
     const pinned = useRef(true);
     // The message "load older" was standing on, and where it sat in the viewport.
-    const anchor = useRef<{ id: number; top: number } | null>(null);
+    const heldRow = useRef<{ id: number; top: number } | null>(null);
     // A move the reader asked for, and the list it was asked from. It is spent on the render that
     // carries its own answer — the generation moves only when a window change lands, so a poll or a
     // merge arriving in between cannot spend it and leave the jump un-made.
@@ -72,7 +86,7 @@ export default function GroupTalkIndex() {
 
     useEffect(() => {
         const onScroll = () => {
-            const foot = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - NEAR_BOTTOM_PX;
+            const foot = atFoot();
             pinned.current = foot;
             // Mirrored into state because mark-read has to re-run when it changes; the ref stays
             // because the scroll-pinning layout effect needs the value without a re-render.
@@ -83,10 +97,35 @@ export default function GroupTalkIndex() {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
-    // Open on the newest message, the way a conversation is read.
+    // Open on the newest message, the way a conversation is read — or on the message a link named.
     useLayoutEffect(() => {
-        window.scrollTo({ top: document.documentElement.scrollHeight });
+        const element = landing.current === null ? null : messageElement(landing.current);
+        if (element === null) {
+            window.scrollTo({ top: document.documentElement.scrollHeight });
+
+            return;
+        }
+
+        // Mid-viewport, so what was said around the message lands with it; a row at the top edge
+        // reads as the start of the conversation.
+        element.scrollIntoView({ block: 'center' });
+        // The scroll listener has not run to say where this left the reader, and the pin effect below
+        // is about to ask: a landing behind the newest message must not be answered as the foot.
+        pinned.current = atFoot();
+        setAtBottom(pinned.current);
     }, []);
+
+    // The emphasis is temporary; the landing is not. Nothing re-arms it, so a reader who scrolls
+    // away and back finds the message where it was rather than flashing again.
+    useEffect(() => {
+        if (highlightId === null) {
+            return;
+        }
+
+        const timer = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
+
+        return () => clearTimeout(timer);
+    }, [highlightId]);
 
     useLayoutEffect(() => {
         const newest = messages[messages.length - 1]?.id;
@@ -109,9 +148,9 @@ export default function GroupTalkIndex() {
             return;
         }
 
-        const held = anchor.current;
+        const held = heldRow.current;
         if (held !== null) {
-            anchor.current = null;
+            heldRow.current = null;
             // History was prepended: put the message the reader was on back where it was, so the
             // page grows upward instead of jumping.
             const element = messageElement(held.id);
@@ -132,7 +171,7 @@ export default function GroupTalkIndex() {
     const loadOlder = () => {
         const first = messages[0];
         const element = first === undefined ? null : messageElement(first.id);
-        anchor.current = first !== undefined && element !== null ? { id: first.id, top: element.getBoundingClientRect().top } : null;
+        heldRow.current = first !== undefined && element !== null ? { id: first.id, top: element.getBoundingClientRect().top } : null;
 
         void stream.loadOlder();
     };
@@ -235,7 +274,7 @@ export default function GroupTalkIndex() {
                                         </div>
                                     </li>
                                 )}
-                                <TalkMessageRow message={message} onDelete={remove} />
+                                <TalkMessageRow message={message} onDelete={remove} highlighted={message.id === highlightId} />
                             </Fragment>
                         ))}
                     </List>

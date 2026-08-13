@@ -171,10 +171,16 @@ function replace(state: TalkStreamState, page: TalkPage, window: TalkWindow): Ta
     return { messages, hasOlder: page.hasOlder, deleted: state.deleted, window, generation: state.generation + 1 };
 }
 
+/**
+ * The page the server rendered with. It is the newest one for an ordinary visit, but a deep link
+ * (`?m=`) opens on the page a message sits in — so the window is read off `hasNewer` exactly as a
+ * forward read's is, rather than assumed live. Standing in a history window from the first render is
+ * what stops the poll appending rows that do not follow the last one on screen.
+ */
 export function initial(page: TalkPage): TalkStreamState {
     const empty: TalkStreamState = { messages: [], hasOlder: false, deleted: new Set(), window: { kind: 'latest' }, generation: 0 };
 
-    return merge(empty, page.messages, page.hasOlder);
+    return merge(empty, page.messages, page.hasOlder, windowAfter(page));
 }
 
 /**
