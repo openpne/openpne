@@ -384,6 +384,17 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
                 : undefined,
         };
     },
+    // The conversation is the page, so no action button: its composer is always on screen.
+    'group/talk/index': (props) => {
+        const { group } = props as unknown as { group: CommunityRef };
+
+        return {
+            mode: 'contextual',
+            title: t('Talk'),
+            context: communityContext(group),
+            scope: communityScope(group),
+        };
+    },
     'group/topic/show': (props) => {
         const { group } = props as unknown as { group: CommunityRef };
         return { context: topicBoardContext(group), scope: communityScope(group) };

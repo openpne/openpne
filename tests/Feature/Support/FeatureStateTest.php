@@ -19,13 +19,43 @@ class FeatureStateTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_a_fresh_install_runs_every_unit(): void
+    public function test_a_fresh_install_runs_every_unit_except_group_talk(): void
     {
-        $this->assertSame(0, DB::table('sns_settings')->where('key', 'like', 'feature_%')->count());
+        // A fresh migration writes no feature rows at all; group talk is dark by decode, not by data.
+        $this->assertSame(
+            [],
+            DB::table('sns_settings')->where('key', 'like', 'feature_%')->pluck('key')->all(),
+        );
 
         foreach (Feature::cases() as $feature) {
+            if ($feature === Feature::GroupTalk) {
+                continue;
+            }
+
             $this->assertTrue($feature->enabled(), "{$feature->value} is off on a fresh install");
         }
+    }
+
+    /**
+     * Talk replaces the group timeline rather than joining it, so it ships dark and an operator opts
+     * in per site until the cutover (docs/internals/group-talk.md). Its key alone decodes an absent
+     * row as disabled — the cutover moves it into the fail-open family instead of migrating data.
+     */
+    public function test_group_talk_ships_switched_off_on_a_fresh_install(): void
+    {
+        $this->assertDatabaseMissing('sns_settings', ['key' => 'feature_group_talk_enabled']);
+        $this->assertFalse(Feature::GroupTalk->enabled());
+    }
+
+    public function test_group_talk_runs_once_an_operator_switches_it_on(): void
+    {
+        $this->setSnsSetting(Feature::GroupTalk->settingKey(), true);
+
+        $this->assertTrue(Feature::GroupTalk->enabled());
+
+        // Still contained by its parent, like the other group units.
+        $this->setSnsSetting(Feature::Group->settingKey(), false);
+        $this->assertFalse(Feature::GroupTalk->enabled());
     }
 
     public function test_a_disabled_community_takes_the_board_and_the_calendar_with_it(): void
@@ -62,6 +92,7 @@ class FeatureStateTest extends TestCase
             'group' => false,
             'groupTopic' => false,
             'groupEvent' => false,
+            'groupTalk' => false,
             'friend' => true,
         ], Feature::enabledMap());
     }

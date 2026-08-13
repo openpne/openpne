@@ -1,0 +1,60 @@
+<?php
+
+namespace Tests\Feature\GroupTalk;
+
+use App\Features\GroupTopic\TopicReadAccess;
+use App\Models\Group;
+use App\Models\GroupMember;
+use App\Models\Member;
+use App\Support\SnsSettingKey;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * Shared setup for the talk suites. The unit ships switched OFF, so every one of these tests has to
+ * turn it on first — the same opt-in an operator makes from the admin Features page before the
+ * cutover. Tests\Feature\GroupTalk\GroupTalkGateTest is the one that leaves it alone.
+ */
+abstract class TalkTestCase extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, true);
+        // Talk renders Inertia whatever the site's surface, but the shared Modern props the page
+        // asserts on come from a Modern session.
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
+    protected function group(TopicReadAccess $read = TopicReadAccess::Everyone): Group
+    {
+        return Group::factory()->create(['topic_read_access' => $read]);
+    }
+
+    protected function memberOf(Group $group): Member
+    {
+        $member = Member::factory()->create();
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+
+        return $member;
+    }
+
+    protected function adminOf(Group $group): Member
+    {
+        $member = Member::factory()->create();
+        GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+
+        return $member;
+    }
+
+    protected function subAdminOf(Group $group): Member
+    {
+        $member = Member::factory()->create();
+        GroupMember::factory()->subAdmin()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+
+        return $member;
+    }
+}

@@ -36,7 +36,7 @@ export default function CommunityShow() {
     const confirm = useConfirm();
     const {
         group, viewerRole, canManage, isPending, isTransferNominee, canJoin, canLeave, members,
-        recentTopics, canPostTopic, recentEvents, canPostEvent, timelinePosts,
+        recentTopics, canPostTopic, recentEvents, canPostEvent, timelinePosts, enabledFeatures,
     } = usePage<ShowProps>().props;
 
     const join = () => router.post(`/groups/${group.id}/join`);
@@ -115,6 +115,18 @@ export default function CommunityShow() {
                     </div>
                 )}
             </Panel>
+
+            {/* Talk is switched off on every site until the cutover replaces the group timeline with
+                it, so this shows only where an operator has turned the unit on. It reads the same
+                access column the boards do, which is the question `recentTopics` has already
+                answered. */}
+            {enabledFeatures.groupTalk && recentTopics !== null && (
+                <Panel>
+                    <Link href={`/groups/${group.id}/talk`} className="text-sm text-link hover:underline">
+                        {t('Go to talk')}
+                    </Link>
+                </Panel>
+            )}
 
             {/* Above the boards, where the Classic box sits — the plugin injected it before the
                 group's own details. Only members see it: it leads to posting. */}
