@@ -30,9 +30,9 @@ class SnsSettingServiceTest extends TestCase
 
     public function test_stored_row_overrides_the_default(): void
     {
-        DB::table('sns_settings')->insert(['key' => 'sns_name', 'value' => 'My Community']);
+        DB::table('sns_settings')->insert(['key' => 'sns_name', 'value' => 'My Group']);
 
-        $this->assertSame('My Community', app(SnsSettingService::class)->get(SnsSettingKey::SnsName));
+        $this->assertSame('My Group', app(SnsSettingService::class)->get(SnsSettingKey::SnsName));
     }
 
     public function test_resolved_map_is_cached_until_cleared(): void
@@ -42,14 +42,14 @@ class SnsSettingServiceTest extends TestCase
         // First read caches the (empty) override map.
         $this->assertSame((string) config('app.name'), $service->get(SnsSettingKey::SnsName));
 
-        DB::table('sns_settings')->insert(['key' => 'sns_name', 'value' => 'My Community']);
+        DB::table('sns_settings')->insert(['key' => 'sns_name', 'value' => 'My Group']);
 
         // Still the cached default until the cache is dropped.
         $this->assertSame((string) config('app.name'), $service->get(SnsSettingKey::SnsName));
 
         $service->clearCache();
 
-        $this->assertSame('My Community', $service->get(SnsSettingKey::SnsName));
+        $this->assertSame('My Group', $service->get(SnsSettingKey::SnsName));
     }
 
     public function test_captcha_enabled_decodes_fail_closed(): void

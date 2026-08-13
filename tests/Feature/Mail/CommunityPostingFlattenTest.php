@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mail;
 
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
+use App\Models\Group;
 use App\Models\Member;
 use App\Notifications\CommunityEvent\EventPostedNotification;
 use App\Notifications\CommunityTopic\TopicPostedNotification;
@@ -25,17 +25,17 @@ class CommunityPostingFlattenTest extends TestCase
 
     public function test_a_markdown_topic_body_arrives_flattened_in_the_mail_text(): void
     {
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $author = Member::factory()->create();
         $topic = CommunityTopic::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'format' => BodyFormat::Markdown,
             'body' => '**bold** text',
         ]);
 
         $text = $this->renderMailText(
-            (new TopicPostedNotification($community, $topic, $author, ['mail']))->toMail(Member::factory()->create()),
+            (new TopicPostedNotification($group, $topic, $author, ['mail']))->toMail(Member::factory()->create()),
         );
 
         $this->assertStringContainsString('bold text', $text);
@@ -44,17 +44,17 @@ class CommunityPostingFlattenTest extends TestCase
 
     public function test_an_op3_topic_body_arrives_without_decoration_tags(): void
     {
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $author = Member::factory()->create();
         $topic = CommunityTopic::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'format' => BodyFormat::Op3,
             'body' => "<op:b>hi</op:b>\nthere",
         ]);
 
         $text = $this->renderMailText(
-            (new TopicPostedNotification($community, $topic, $author, ['mail']))->toMail(Member::factory()->create()),
+            (new TopicPostedNotification($group, $topic, $author, ['mail']))->toMail(Member::factory()->create()),
         );
 
         $this->assertStringContainsString("hi\nthere", $text);
@@ -63,17 +63,17 @@ class CommunityPostingFlattenTest extends TestCase
 
     public function test_a_markdown_event_body_arrives_flattened_in_the_mail_text(): void
     {
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $author = Member::factory()->create();
         $event = CommunityEvent::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'format' => BodyFormat::Markdown,
             'body' => '**bold** text',
         ]);
 
         $text = $this->renderMailText(
-            (new EventPostedNotification($community, $event, $author, ['mail']))->toMail(Member::factory()->create()),
+            (new EventPostedNotification($group, $event, $author, ['mail']))->toMail(Member::factory()->create()),
         );
 
         $this->assertStringContainsString('bold text', $text);

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Notifications;
 
 use App\Features\Friend\Events\FriendRequested;
-use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\Group;
 use App\Models\Member;
 use App\Notifications\CommunityTopic\TopicPostedNotification;
 use App\Notifications\Diary\DiaryPostedNotification;
@@ -123,16 +123,16 @@ class FeatureNotificationSuppressionTest extends TestCase
     public function test_an_ancestor_switched_off_suppresses_a_child_units_notification(): void
     {
         $author = Member::factory()->create();
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $topic = CommunityTopic::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
         ]);
 
         // communityTopic's own flag stays on; Feature::enabled() walks up to `community`.
-        $this->switchOff(Feature::Community);
+        $this->switchOff(Feature::Group);
 
-        Member::factory()->create()->notify(new TopicPostedNotification($community, $topic, $author, ['database']));
+        Member::factory()->create()->notify(new TopicPostedNotification($group, $topic, $author, ['database']));
 
         $this->assertDatabaseCount('notifications', 0);
     }

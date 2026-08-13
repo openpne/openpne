@@ -174,11 +174,11 @@ class NavigationServiceTest extends TestCase
     /** A child unit's link goes when the unit it lives inside goes, whatever its own row says. */
     public function test_hides_a_board_item_when_communities_are_switched_off(): void
     {
-        $this->makeNav('community', '/communityTopic/listCommunity/:id', 'communityTopic/listCommunity', ['en' => 'Topics']);
+        $this->makeNav('group', '/communityTopic/listCommunity/:id', 'communityTopic/listCommunity', ['en' => 'Topics']);
 
         $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
-        $this->setSnsSetting(Feature::Community->settingKey(), false);
+        $this->setSnsSetting(Feature::Group->settingKey(), false);
 
-        $this->assertSame([], $this->labels('community', 7));
+        $this->assertSame([], $this->labels('group', 7));
     }
 }

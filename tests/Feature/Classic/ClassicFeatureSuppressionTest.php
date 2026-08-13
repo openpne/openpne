@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Classic;
 
-use App\Models\Community;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,25 +20,25 @@ class ClassicFeatureSuppressionTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function communityWithMember(Member $member): Community
+    private function groupWithMember(Member $member): Group
     {
-        $community = Community::factory()->create();
-        CommunityMember::factory()->member()->create([
-            'community_id' => $community->getKey(),
+        $group = Group::factory()->create();
+        GroupMember::factory()->member()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
         ]);
 
-        return $community;
+        return $group;
     }
 
     public function test_the_community_home_keeps_the_calendar_block_when_only_the_board_is_off(): void
     {
         $member = Member::factory()->create();
-        $community = $this->communityWithMember($member);
+        $group = $this->groupWithMember($member);
 
         $this->setSnsSetting(Feature::CommunityTopic->settingKey(), false);
 
-        $this->actingAs($member)->get(route('community.show', $community))
+        $this->actingAs($member)->get(route('group.show', $group))
             ->assertOk()
             ->assertDontSee('<tr class="communityTopic">', false)
             ->assertSee('<tr class="communityEvent">', false);
@@ -47,11 +47,11 @@ class ClassicFeatureSuppressionTest extends TestCase
     public function test_the_community_home_keeps_the_board_block_when_only_the_calendar_is_off(): void
     {
         $member = Member::factory()->create();
-        $community = $this->communityWithMember($member);
+        $group = $this->groupWithMember($member);
 
         $this->setSnsSetting(Feature::CommunityEvent->settingKey(), false);
 
-        $this->actingAs($member)->get(route('community.show', $community))
+        $this->actingAs($member)->get(route('group.show', $group))
             ->assertOk()
             ->assertDontSee('<tr class="communityEvent">', false)
             ->assertSee('<tr class="communityTopic">', false);

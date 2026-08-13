@@ -61,12 +61,12 @@ class MPrefixRedirectTest extends TestCase
     public function test_a_reshaped_modern_get_url_redirects_to_its_canonical_shape(): void
     {
         $cases = [
-            '/m/community/joined' => '/community/joinList',
-            '/m/community/joined?id=7' => '/community/joinList?id=7',
+            '/m/community/joined' => '/groups/mine',
+            '/m/community/joined?id=7' => '/groups/mine?id=7',
             '/m/community/topic/5?order=asc&page=2' => '/communityTopic/5?order=asc&page=2',
-            '/m/community/9/members' => '/community/member/list?id=9',
-            '/m/community/9/members?page=2' => '/community/member/list?id=9&page=2',
-            '/m/community/9/pending' => '/community/member/pending?id=9',
+            '/m/community/9/members' => '/groups/9/members',
+            '/m/community/9/members?page=2' => '/groups/9/members?page=2',
+            '/m/community/9/pending' => '/groups/9/members/pending',
             '/m/community/9/topic' => '/communityTopic/listCommunity/9',
             '/m/community/9/topic/new' => '/communityTopic/new/9',
             '/m/community/topic/5' => '/communityTopic/5',

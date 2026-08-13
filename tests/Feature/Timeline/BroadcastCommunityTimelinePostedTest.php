@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Timeline;
 
-use App\Features\Community\CommunityNewPostFanout;
-use App\Features\Community\CommunityRole;
-use App\Features\Community\Queries\CommunityNewPostRecipients;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\GroupNewPostFanout;
+use App\Features\Group\GroupRole;
+use App\Features\Group\Queries\GroupNewPostRecipients;
 use App\Features\Timeline\Events\TimelinePostPosted;
 use App\Jobs\BroadcastCommunityTimelinePosted;
 use App\Jobs\BroadcastTimelinePosted;
 use App\Listeners\Timeline\NotifyTimelinePosted;
 use App\Mail\Template\MailTemplateService;
-use App\Models\Community;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Notifications\Settings\NotificationChannel;
@@ -37,8 +37,8 @@ class BroadcastCommunityTimelinePostedTest extends TestCase
     public function test_a_community_post_dispatches_only_the_community_fanout(): void
     {
         Bus::fake();
-        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
-        $post = TimelinePost::factory()->inCommunity($community)->create();
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
+        $post = TimelinePost::factory()->inGroup($group)->create();
 
         (new NotifyTimelinePosted)->handle(new TimelinePostPosted($post, $post->member, []));
 
@@ -60,12 +60,12 @@ class BroadcastCommunityTimelinePostedTest extends TestCase
     public function test_the_audience_is_the_community_not_everyone_who_may_read_it(): void
     {
         Notification::fake();
-        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
-        $author = $this->joined($community);
-        $fellow = $this->joined($community);
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
+        $author = $this->joined($group);
+        $fellow = $this->joined($group);
         $outsider = Member::factory()->create();
 
-        $this->broadcast($this->postIn($community, $author));
+        $this->broadcast($this->postIn($group, $author));
 
         Notification::assertSentTo($fellow, TimelineCommunityPostedNotification::class);
         Notification::assertNotSentTo($outsider, TimelineCommunityPostedNotification::class);
@@ -75,18 +75,18 @@ class BroadcastCommunityTimelinePostedTest extends TestCase
     public function test_the_community_kind_carries_the_opt_out(): void
     {
         Notification::fake();
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $silenced = $this->joined($community);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $silenced = $this->joined($group);
         $silenced->setNotificationSetting(NotificationKind::TimelineNewPostCommunity, NotificationChannel::Web, false);
         $silenced->setNotificationSetting(NotificationKind::TimelineNewPostCommunity, NotificationChannel::Mail, false);
 
         // Silencing the SNS-wide kind must not silence this one, and vice versa.
-        $unrelated = $this->joined($community);
+        $unrelated = $this->joined($group);
         $unrelated->setNotificationSetting(NotificationKind::TimelineNewPost, NotificationChannel::Web, false);
         $unrelated->setNotificationSetting(NotificationKind::TimelineNewPost, NotificationChannel::Mail, false);
 
-        $this->broadcast($this->postIn($community, $author));
+        $this->broadcast($this->postIn($group, $author));
 
         Notification::assertNotSentTo($silenced, TimelineCommunityPostedNotification::class);
         Notification::assertSentTo($unrelated, TimelineCommunityPostedNotification::class);
@@ -95,11 +95,11 @@ class BroadcastCommunityTimelinePostedTest extends TestCase
     public function test_a_mentioned_member_is_not_told_twice(): void
     {
         Notification::fake();
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $mentioned = $this->joined($community);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $mentioned = $this->joined($group);
 
-        $this->broadcast($this->postIn($community, $author), [$mentioned->getKey()]);
+        $this->broadcast($this->postIn($group, $author), [$mentioned->getKey()]);
 
         Notification::assertNotSentTo($mentioned, TimelineCommunityPostedNotification::class);
     }
@@ -108,15 +108,15 @@ class BroadcastCommunityTimelinePostedTest extends TestCase
     {
         // The eligibility predicate is re-read at delivery, so a queued notification does not carry
         // a community's body to someone who has since left it.
-        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
-        $author = $this->joined($community);
-        $former = $this->joined($community);
-        $post = $this->postIn($community, $author);
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
+        $author = $this->joined($group);
+        $former = $this->joined($group);
+        $post = $this->postIn($group, $author);
 
         $notification = new TimelineCommunityPostedNotification($post, $author, ['database']);
         $this->assertTrue($notification->shouldSend($former, 'database'));
 
-        CommunityMember::where('community_id', $community->getKey())
+        GroupMember::where('group_id', $group->getKey())
             ->where('member_id', $former->getKey())->delete();
 
         $this->assertFalse($notification->shouldSend($former->fresh(), 'database'));
@@ -125,7 +125,7 @@ class BroadcastCommunityTimelinePostedTest extends TestCase
     private function broadcast(TimelinePost $post, array $mentionedMemberIds = []): void
     {
         (new BroadcastCommunityTimelinePosted((int) $post->getKey(), $mentionedMemberIds))
-            ->handle(app(CommunityNewPostFanout::class), app(CommunityNewPostRecipients::class), app(MailTemplateService::class));
+            ->handle(app(GroupNewPostFanout::class), app(GroupNewPostRecipients::class), app(MailTemplateService::class));
     }
 
     /**
@@ -133,18 +133,18 @@ class BroadcastCommunityTimelinePostedTest extends TestCase
      * listener runs this very job on the sync queue, and a second delivery from the run under test
      * would hide whichever exclusion it was meant to prove.
      */
-    private function postIn(Community $community, Member $author): TimelinePost
+    private function postIn(Group $group, Member $author): TimelinePost
     {
-        return TimelinePost::factory()->inCommunity($community)->create(['member_id' => $author->getKey()]);
+        return TimelinePost::factory()->inGroup($group)->create(['member_id' => $author->getKey()]);
     }
 
-    private function joined(Community $community): Member
+    private function joined(Group $group): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
-            'role' => CommunityRole::Member,
+            'role' => GroupRole::Member,
         ]);
 
         return $member;

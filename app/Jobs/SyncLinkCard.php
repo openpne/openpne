@@ -110,7 +110,7 @@ class SyncLinkCard implements ShouldBeUnique, ShouldQueue
      *    to the new text and mark it synced — and because ShouldBeUnique may still be holding the
      *    lock, the edit's own job can be dropped, leaving it that way.
      *  - **It must not touch `updated_at`.** Even saveQuietly, which only suppresses events, goes
-     *    through performUpdate and bumps the timestamp. Community topic and event lists are ordered
+     *    through performUpdate and bumps the timestamp. Group topic and event lists are ordered
      *    by `updated_at`, so a card synced from someone viewing an old post would float it back to
      *    the top of the board.
      */

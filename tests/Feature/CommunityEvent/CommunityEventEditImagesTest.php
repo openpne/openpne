@@ -2,19 +2,19 @@
 
 namespace Tests\Feature\CommunityEvent;
 
-use App\Features\Community\CommunityRole;
 use App\Features\CommunityEvent\Actions\CreateEvent;
 use App\Features\CommunityEvent\Actions\UpdateEvent;
 use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
+use App\Features\Group\GroupRole;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
 use App\Files\ImageEdit;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventImage;
-use App\Models\CommunityMember;
 use App\Models\File;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -28,11 +28,11 @@ class CommunityEventEditImagesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -66,9 +66,9 @@ class CommunityEventEditImagesTest extends TestCase
     }
 
     /** @param  array<int, UploadedFile>  $images */
-    private function eventWith(Community $community, Member $author, array $images): CommunityEvent
+    private function eventWith(Group $group, Member $author, array $images): CommunityEvent
     {
-        return app(CreateEvent::class)($author, $community, $this->form(), $images);
+        return app(CreateEvent::class)($author, $group, $this->form(), $images);
     }
 
     private function fake(string $name = 'i.png'): UploadedFile
@@ -78,9 +78,9 @@ class CommunityEventEditImagesTest extends TestCase
 
     public function test_the_edit_form_lists_current_images_with_remove_checkboxes(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake()]);
         $image = $event->images()->with('file')->first();
 
         $this->actingAs($author)->get(route('communityEvent.edit', $event))
@@ -92,9 +92,9 @@ class CommunityEventEditImagesTest extends TestCase
 
     public function test_an_added_image_fills_the_next_free_slot(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake('a.png')]); // slot 1
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake('a.png')]); // slot 1
 
         $this->actingAs($author)->post(route('communityEvent.update', $event), $this->payloadFrom($event, [
             'images' => [$this->fake('b.png')],
@@ -105,9 +105,9 @@ class CommunityEventEditImagesTest extends TestCase
 
     public function test_removing_an_image_drops_the_row_and_purges_its_bytes(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake('a.png'), $this->fake('b.png')]); // slots 1,2
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake('a.png'), $this->fake('b.png')]); // slots 1,2
         $image1 = $event->images()->where('number', 1)->with('file')->first();
         $file1 = $image1->file;
 
@@ -124,9 +124,9 @@ class CommunityEventEditImagesTest extends TestCase
 
     public function test_removing_and_adding_in_one_edit_reuses_the_freed_slot(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake('old.png')]); // slot 1
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake('old.png')]); // slot 1
         $old = $event->images()->with('file')->first();
         $oldFile = $old->file;
 
@@ -143,9 +143,9 @@ class CommunityEventEditImagesTest extends TestCase
 
     public function test_keeping_plus_adding_beyond_the_cap_is_rejected(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake('1.png'), $this->fake('2.png'), $this->fake('3.png')]); // full
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake('1.png'), $this->fake('2.png'), $this->fake('3.png')]); // full
 
         $this->actingAs($author)->post(route('communityEvent.update', $event), $this->payloadFrom($event, [
             'name' => 'Edited',
@@ -158,9 +158,9 @@ class CommunityEventEditImagesTest extends TestCase
 
     public function test_duplicate_remove_ids_cannot_bypass_the_image_cap(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake('1.png'), $this->fake('2.png'), $this->fake('3.png')]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake('1.png'), $this->fake('2.png'), $this->fake('3.png')]);
         $first = $event->images()->where('number', 1)->first();
 
         // A crafted remove_images=[id, id] must not count one image's removal twice — the cap check
@@ -175,9 +175,9 @@ class CommunityEventEditImagesTest extends TestCase
 
     public function test_the_action_refuses_more_new_images_than_free_slots(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake('a.png'), $this->fake('b.png')]); // slots 1,2; one free
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake('a.png'), $this->fake('b.png')]); // slots 1,2; one free
 
         // Backstop against a lost concurrency race: more uploads than free slots fails cleanly
         // instead of indexing past the free-slot list.
@@ -187,10 +187,10 @@ class CommunityEventEditImagesTest extends TestCase
 
     public function test_a_remove_id_from_another_event_is_ignored(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake('mine.png')]);
-        $other = $this->eventWith($community, $author, [$this->fake('theirs.png')]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake('mine.png')]);
+        $other = $this->eventWith($group, $author, [$this->fake('theirs.png')]);
         $otherImage = $other->images()->first();
 
         $this->actingAs($author)->post(route('communityEvent.update', $event), $this->payloadFrom($event, [
@@ -207,9 +207,9 @@ class CommunityEventEditImagesTest extends TestCase
         config(['openpne.files.disk' => 'local']);
         Storage::fake('local');
 
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake('keep.png')]); // slot 1, bytes on the fake disk
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake('keep.png')]); // slot 1, bytes on the fake disk
         $image1 = $event->images()->with('file')->first();
         $file1 = $image1->file;
 
@@ -246,9 +246,9 @@ class CommunityEventEditImagesTest extends TestCase
 
     public function test_a_text_only_edit_leaves_images_untouched(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = $this->eventWith($community, $author, [$this->fake('a.png')]); // slot 1
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = $this->eventWith($group, $author, [$this->fake('a.png')]); // slot 1
 
         $this->actingAs($author)->post(route('communityEvent.update', $event), $this->payloadFrom($event, [
             'name' => 'Renamed',

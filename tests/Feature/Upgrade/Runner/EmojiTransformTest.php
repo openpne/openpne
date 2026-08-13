@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Upgrade\Runner;
 
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\DirectMessage;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\UpgradeState;
 use App\Upgrade\Runner\EmojiMap;
@@ -156,20 +156,20 @@ class EmojiTransformTest extends TestCase
     public function test_a_db_error_records_failed_status_with_the_message(): void
     {
         // Seed a community already holding the converted name, then one whose code converts onto it: the
-        // second row's UPDATE violates the unique index on communities.name and aborts the pass.
+        // second row's UPDATE violates the unique index on groups.name and aborts the pass.
         $sun = EmojiMap::convert('[i:1]');
-        Community::factory()->create(['name' => "X{$sun}"]);
-        $colliding = Community::factory()->create(['name' => 'X[i:1]']);
+        Group::factory()->create(['name' => "X{$sun}"]);
+        $colliding = Group::factory()->create(['name' => 'X[i:1]']);
 
         $lines = [];
-        $ok = (new EmojiTransform)->run(['communities'], function (string $line) use (&$lines): void {
+        $ok = (new EmojiTransform)->run(['groups'], function (string $line) use (&$lines): void {
             $lines[] = $line;
         });
 
         $this->assertFalse($ok);
-        $this->assertStringContainsString('FAIL emoji_communities', implode("\n", $lines));
+        $this->assertStringContainsString('FAIL emoji_groups', implode("\n", $lines));
 
-        $state = UpgradeState::query()->where('step_key', 'emoji_communities')->first();
+        $state = UpgradeState::query()->where('step_key', 'emoji_groups')->first();
         $this->assertSame(UpgradeState::STATUS_FAILED, $state->status);
         $this->assertNotEmpty($state->error);
 

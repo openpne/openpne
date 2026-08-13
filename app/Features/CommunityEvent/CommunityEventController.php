@@ -3,7 +3,6 @@
 namespace App\Features\CommunityEvent;
 
 use App\Compat\RouteParityRegistry;
-use App\Features\Community\Serializers\CommunitySerializer;
 use App\Features\CommunityEvent\Actions\CreateEvent;
 use App\Features\CommunityEvent\Actions\DeleteEvent;
 use App\Features\CommunityEvent\Actions\UpdateEvent;
@@ -12,14 +11,15 @@ use App\Features\CommunityEvent\Queries\EventParticipants;
 use App\Features\CommunityEvent\Queries\ListCommunityEvents;
 use App\Features\CommunityEvent\Queries\ShowEvent;
 use App\Features\CommunityEvent\Serializers\CommunityEventSerializer;
+use App\Features\Group\Serializers\GroupSerializer;
 use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommunityEvent\StoreEventRequest;
 use App\Http\Requests\CommunityEvent\UpdateEventRequest;
 use App\LinkCard\LinkCardSync;
-use App\Models\Community;
 use App\Models\CommunityEvent;
+use App\Models\Group;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,8 +29,8 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Community events, dual-surface: each action serves Classic Blade or Modern Inertia per
- * SurfaceResolver. Board-level gates (view a community's events, post one) key on Community, so they
+ * Group events, dual-surface: each action serves Classic Blade or Modern Inertia per
+ * SurfaceResolver. Board-level gates (view a community's events, post one) key on Group, so they
  * call CommunityEventAccess directly; event-level gates (edit/delete) go through the auto-discovered
  * CommunityEventPolicy via Gate. Every failure is a 404. The Classic community localNav side effect
  * runs only in the Classic branch. showDelete stays a Classic-only GET confirm page — Modern confirms
@@ -40,25 +40,25 @@ class CommunityEventController extends Controller
 {
     use RespondsWithSurface;
 
-    public function index(Request $request, Community $community, ListCommunityEvents $query): View|InertiaResponse
+    public function index(Request $request, Group $group, ListCommunityEvents $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
-        abort_unless(CommunityEventAccess::canViewBoard($community, $viewer), 404);
-        $events = $query($community);
-        $canPost = CommunityEventAccess::canPostEvent($community, $viewer);
+        abort_unless(CommunityEventAccess::canViewBoard($group, $viewer), 404);
+        $events = $query($group);
+        $canPost = CommunityEventAccess::canPostEvent($group, $viewer);
 
-        return $this->respondWith($request, 'community', [
-            SurfaceResolver::CLASSIC => function () use ($community, $events, $canPost) {
-                $this->markLocalNavCommunity($community);
+        return $this->respondWith($request, 'group', [
+            SurfaceResolver::CLASSIC => function () use ($group, $events, $canPost) {
+                $this->markLocalNavGroup($group);
 
                 return view('community-event.index', [
-                    'community' => $community,
+                    'group' => $group,
                     'events' => $events,
                     'canPost' => $canPost,
                 ]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/event/index', [
-                'community' => CommunitySerializer::summary($community),
+                'group' => GroupSerializer::summary($group),
                 'events' => CommunityEventSerializer::paginator($events),
                 'canPost' => $canPost,
             ]),
@@ -73,9 +73,9 @@ class CommunityEventController extends Controller
         abort_unless(CommunityEventAccess::canViewEvent($found, $viewer), 404);
         $linkCards->ensure($found);
 
-        return $this->respondWith($request, 'community', [
+        return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer) {
-                $this->markLocalNavCommunity($found->community);
+                $this->markLocalNavGroup($found->community);
 
                 return view('community-event.show', [
                     'event' => $found,
@@ -95,7 +95,7 @@ class CommunityEventController extends Controller
                 $thread = CommunityEventCommentThread::paginate($found, $request->query('order'), $request->query('page'));
 
                 return Inertia::render('community/event/show', [
-                    'community' => CommunitySerializer::summary($found->community),
+                    'group' => GroupSerializer::summary($found->community),
                     'event' => CommunityEventSerializer::detail($found),
                     'thread' => CommunityEventSerializer::thread($thread, $viewer),
                     'canComment' => CommunityEventAccess::canComment($found, $viewer),
@@ -110,28 +110,28 @@ class CommunityEventController extends Controller
         ]);
     }
 
-    public function new(Request $request, Community $community): View|InertiaResponse
+    public function new(Request $request, Group $group): View|InertiaResponse
     {
-        abort_unless(CommunityEventAccess::canPostEvent($community, $this->viewer()), 404);
+        abort_unless(CommunityEventAccess::canPostEvent($group, $this->viewer()), 404);
 
-        return $this->respondWith($request, 'community', [
-            SurfaceResolver::CLASSIC => function () use ($community) {
-                $this->markLocalNavCommunity($community);
+        return $this->respondWith($request, 'group', [
+            SurfaceResolver::CLASSIC => function () use ($group) {
+                $this->markLocalNavGroup($group);
 
-                return view('community-event.new', ['community' => $community]);
+                return view('community-event.new', ['group' => $group]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/event/edit', [
-                'community' => CommunitySerializer::summary($community),
+                'group' => GroupSerializer::summary($group),
                 'event' => null,
                 'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);
     }
 
-    public function store(StoreEventRequest $request, Community $community, CreateEvent $action): RedirectResponse
+    public function store(StoreEventRequest $request, Group $group, CreateEvent $action): RedirectResponse
     {
         try {
-            $event = $action($this->viewer(), $community, $request->toData(), $request->file('images', []));
+            $event = $action($this->viewer(), $group, $request->toData(), $request->file('images', []));
         } catch (CommunityEventActionException) {
             abort(404);
         }
@@ -144,14 +144,14 @@ class CommunityEventController extends Controller
         abort_unless(Gate::allows('update', $event), 404);
         $event->loadMissing('community', 'images.file');
 
-        return $this->respondWith($request, 'community', [
+        return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($event) {
-                $this->markLocalNavCommunity($event->community);
+                $this->markLocalNavGroup($event->community);
 
                 return view('community-event.edit', ['event' => $event]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/event/edit', [
-                'community' => CommunitySerializer::summary($event->community),
+                'group' => GroupSerializer::summary($event->community),
                 // Form-shaped: the date widgets need Y-m-d, not the ISO datetime the detail carries.
                 'event' => [
                     'id' => $event->getKey(),
@@ -186,7 +186,7 @@ class CommunityEventController extends Controller
         abort_unless(Gate::allows('delete', $event), 404);
 
         // Modern confirms deletion inline — send a Modern viewer back to the event.
-        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('communityEvent.show', $event);
         }
 
@@ -195,7 +195,7 @@ class CommunityEventController extends Controller
 
     public function delete(Request $request, CommunityEvent $event, DeleteEvent $action): RedirectResponse
     {
-        $community = $event->community;
+        $group = $event->community;
 
         try {
             $action($this->viewer(), $event);
@@ -204,7 +204,7 @@ class CommunityEventController extends Controller
         }
 
         // OpenPNE 3 returns to the community home after deleting an event.
-        return redirect()->route('community.show', $community)
+        return redirect()->route('group.show', $group)
             ->with('status', __('Event deleted.'));
     }
 
@@ -213,9 +213,9 @@ class CommunityEventController extends Controller
         abort_unless(CommunityEventAccess::canViewEvent($event, $this->viewer()), 404);
         $participants = $query($event);
 
-        return $this->respondWith($request, 'community', [
+        return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($event, $participants) {
-                $this->markLocalNavCommunity($event->community);
+                $this->markLocalNavGroup($event->community);
 
                 return view('community-event.member-list', [
                     'event' => $event,
@@ -226,7 +226,7 @@ class CommunityEventController extends Controller
                 $event->loadMissing('community');
 
                 return Inertia::render('community/event/members', [
-                    'community' => CommunitySerializer::summary($event->community),
+                    'group' => GroupSerializer::summary($event->community),
                     'event' => CommunityEventSerializer::detail($event),
                     'participants' => CommunityEventSerializer::participantPaginator($participants),
                 ]);
@@ -243,9 +243,9 @@ class CommunityEventController extends Controller
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
     private function classic(string $view, array $data = []): View
     {
-        $community = ($data['event'] ?? null)?->community;
-        if ($community instanceof Community) {
-            $this->markLocalNavCommunity($community);
+        $group = ($data['event'] ?? null)?->community;
+        if ($group instanceof Group) {
+            $this->markLocalNavGroup($group);
         }
 
         return view($view, $data)->with('pageId', RouteParityRegistry::bodyId($this->routeName()));

@@ -60,7 +60,7 @@
         {{-- Back where the thread lives: a community post belongs to its community's timeline, not
              to the author's. --}}
         @if ($post->community)
-            <p><a href="{{ route('community.timeline', ['community' => $post->community]) }}">{{ __(':community %activity%', ['community' => $post->community->name]) }}</a></p>
+            <p><a href="{{ route('group.timeline', ['group' => $post->community]) }}">{{ __(':community %activity%', ['community' => $post->community->name]) }}</a></p>
         @else
             <p><a href="{{ route('timeline.member', $post->member) }}">{{ __(":name's %activity%", ['name' => $post->member->name]) }}</a></p>
         @endif

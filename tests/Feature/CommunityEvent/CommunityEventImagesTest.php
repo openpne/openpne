@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\CommunityEvent;
 
-use App\Features\Community\CommunityRole;
 use App\Features\CommunityEvent\Actions\CreateEvent;
 use App\Features\CommunityEvent\Actions\CreateEventComment;
 use App\Features\CommunityEvent\Actions\DeleteEvent;
@@ -10,12 +9,13 @@ use App\Features\CommunityEvent\Actions\DeleteEventComment;
 use App\Features\CommunityEvent\Actions\SubmitEventComment;
 use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\GroupRole;
 use App\Files\DiskFileStorage;
 use App\Files\FileStorage;
-use App\Models\Community;
 use App\Models\CommunityEvent;
-use App\Models\CommunityMember;
 use App\Models\File;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -29,11 +29,11 @@ class CommunityEventImagesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -73,10 +73,10 @@ class CommunityEventImagesTest extends TestCase
 
     public function test_an_event_is_created_with_numbered_images_it_owns_and_shows_them(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
-        $this->actingAs($member)->post(route('communityEvent.store', $community), $this->eventPayload([
+        $this->actingAs($member)->post(route('communityEvent.store', $group), $this->eventPayload([
             'name' => 'With pics',
             'images' => [$this->fake('a.png'), $this->fake('b.png')],
         ]))->assertRedirect();
@@ -96,9 +96,9 @@ class CommunityEventImagesTest extends TestCase
 
     public function test_a_comment_is_posted_with_images_owned_by_the_comment(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
 
         // The merged endpoint: "comment only" plus an image attachment.
         $this->actingAs($member)->post(route('communityEvent.comment.store', $event), [
@@ -115,9 +115,9 @@ class CommunityEventImagesTest extends TestCase
 
     public function test_a_members_only_communitys_event_image_is_private_to_non_members(): void
     {
-        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        $member = $this->joined($community);
-        $event = app(CreateEvent::class)($member, $community, $this->form(), [$this->fake('x.png')]);
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
+        $member = $this->joined($group);
+        $event = app(CreateEvent::class)($member, $group, $this->form(), [$this->fake('x.png')]);
         $file = $event->images()->with('file')->first()->file;
 
         // Inherits the community's read access: a stranger is denied (404, never 403), a member may fetch.
@@ -127,9 +127,9 @@ class CommunityEventImagesTest extends TestCase
 
     public function test_deleting_an_event_purges_its_and_its_comments_image_bytes(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = app(CreateEvent::class)($author, $community, $this->form(), [$this->fake('t.png')]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = app(CreateEvent::class)($author, $group, $this->form(), [$this->fake('t.png')]);
         app(CreateEventComment::class)($author, $event, 'reply', [$this->fake('c.png')]);
 
         $eventFile = $event->images()->with('file')->first()->file;
@@ -147,9 +147,9 @@ class CommunityEventImagesTest extends TestCase
 
     public function test_deleting_a_comment_purges_its_image_bytes(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $comment = app(CreateEventComment::class)($author, $event, 'reply', [$this->fake('c.png')]);
         $file = $comment->images()->with('file')->first()->file;
 
@@ -161,10 +161,10 @@ class CommunityEventImagesTest extends TestCase
 
     public function test_more_than_three_images_are_rejected(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
-        $this->actingAs($member)->post(route('communityEvent.store', $community), $this->eventPayload([
+        $this->actingAs($member)->post(route('communityEvent.store', $group), $this->eventPayload([
             'images' => [$this->fake('1.png'), $this->fake('2.png'), $this->fake('3.png'), $this->fake('4.png')],
         ]))->assertSessionHasErrors('images');
 
@@ -173,10 +173,10 @@ class CommunityEventImagesTest extends TestCase
 
     public function test_a_non_image_attachment_is_rejected(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
-        $this->actingAs($member)->post(route('communityEvent.store', $community), $this->eventPayload([
+        $this->actingAs($member)->post(route('communityEvent.store', $group), $this->eventPayload([
             'images' => [UploadedFile::fake()->create('notes.txt', 10, 'text/plain')],
         ]))->assertSessionHasErrors('images.0');
 
@@ -206,11 +206,11 @@ class CommunityEventImagesTest extends TestCase
             $mock->shouldReceive('exists')->andReturnUsing(fn ($file) => $real->exists($file));
         }));
 
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         try {
-            app(CreateEvent::class)($member, $community, $this->form(), [$this->fake('1.png'), $this->fake('2.png')]);
+            app(CreateEvent::class)($member, $group, $this->form(), [$this->fake('1.png'), $this->fake('2.png')]);
             $this->fail('expected the failed image store to throw');
         } catch (RuntimeException) {
             // expected
@@ -247,9 +247,9 @@ class CommunityEventImagesTest extends TestCase
             $mock->shouldReceive('exists')->andReturnUsing(fn ($file) => $real->exists($file));
         }));
 
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
 
         try {
             app(SubmitEventComment::class)($member, $event, 'Count me in!', [$this->fake('1.png'), $this->fake('2.png')], true);

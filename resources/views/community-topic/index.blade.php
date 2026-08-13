@@ -1,15 +1,15 @@
 @extends('layouts.classic')
 
-@section('title', $community->name)
+@section('title', $group->name)
 
 @section('content')
     {{-- OpenPNE 3 listCommunitySuccess.php lists the board in a recentList box (no id) and puts the
          create entry point in a buttonBox above it; OpenPNE 4 folds that button in here. --}}
-    <x-classic.parts id="communityTopic_board" name="recentList" :title="$community->name">
+    <x-classic.parts id="communityTopic_board" name="recentList" :title="$group->name">
         @if ($canPost)
             <div class="operation">
                 <ul class="moreInfo button">
-                    <li><a href="{{ route('communityTopic.new', $community) }}">{{ __('Post a new %topic%') }}</a></li>
+                    <li><a href="{{ route('communityTopic.new', $group) }}">{{ __('Post a new %topic%') }}</a></li>
                 </ul>
             </div>
         @endif
@@ -33,6 +33,6 @@
     </x-classic.parts>
 
     <x-classic.parts name="line">
-        <a href="{{ route('community.show', $community) }}">{{ $community->name }}</a>
+        <a href="{{ route('group.show', $group) }}">{{ $group->name }}</a>
     </x-classic.parts>
 @endsection

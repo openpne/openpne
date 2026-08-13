@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
@@ -77,8 +77,8 @@ abstract class Controller
      * viewer's `default` nav. OpenPNE 3 community module default_nav=community; the search and
      * member-community-list actions, which are not about one community, keep the default nav.
      */
-    protected function markLocalNavCommunity(Community $community): void
+    protected function markLocalNavGroup(Group $group): void
     {
-        request()->attributes->set('localNavCommunity', $community);
+        request()->attributes->set('localNavGroup', $group);
     }
 }

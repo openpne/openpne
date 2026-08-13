@@ -4,9 +4,9 @@ namespace Tests\Unit\Upgrade;
 
 use App\Upgrade\Runner\SourcePreflight;
 use App\Upgrade\StepRegistry;
-use App\Upgrade\Steps\CommunityMemberUpgrade;
 use App\Upgrade\Steps\DirectMessageRecipientUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
+use App\Upgrade\Steps\GroupMemberUpgrade;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,7 +19,7 @@ class SourcePreflightTest extends TestCase
     {
         // FROM `community_member`, the role subquery's `community_member_position`, and `member` from
         // the active-member guard — the preflight must require every table the SQL will name.
-        $this->assertSame(['community_member', 'community_member_position', 'member'], (new CommunityMemberUpgrade)->readSourceTables());
+        $this->assertSame(['community_member', 'community_member_position', 'member'], (new GroupMemberUpgrade)->readSourceTables());
     }
 
     public function test_read_source_tables_scans_the_filter_too(): void

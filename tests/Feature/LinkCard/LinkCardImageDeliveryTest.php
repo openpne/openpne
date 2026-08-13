@@ -7,12 +7,12 @@ namespace Tests\Feature\LinkCard;
 use App\Features\CommunityTopic\TopicReadAccess;
 use App\Files\FileStorage;
 use App\LinkCard\CardContext;
-use App\Models\Community;
 use App\Models\CommunityEvent;
-use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\File;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -219,13 +219,13 @@ class LinkCardImageDeliveryTest extends TestCase
         // Whatever the board admits, the card admits — including the part that is not a restriction:
         // an Everyone board is readable by any signed-in member, so its cards are too. What must not
         // happen is the endpoint inventing a rule of its own in either direction.
-        $closed = Community::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        $open = Community::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
-        CommunityMember::factory()->create(['community_id' => $closed->id, 'member_id' => $this->author->id]);
+        $closed = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
+        $open = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
+        GroupMember::factory()->create(['group_id' => $closed->id, 'member_id' => $this->author->id]);
         $stranger = Member::factory()->create();
 
-        foreach ([$closed, $open] as $community) {
-            $topic = CommunityTopic::factory()->for($community)->for($this->author, 'member')
+        foreach ([$closed, $open] as $group) {
+            $topic = CommunityTopic::factory()->for($group, 'community')->for($this->author, 'member')
                 ->create(['link_card_id' => $this->card->id]);
 
             $this->actingAs($this->author)->get($this->urlFor($topic))->assertOk();
@@ -237,19 +237,19 @@ class LinkCardImageDeliveryTest extends TestCase
             $this->get($this->urlFor($topic))->assertNotFound();
 
             $this->actingAs($stranger)->get($this->urlFor($topic))
-                ->assertStatus($community->topic_read_access === TopicReadAccess::MembersOnly ? 404 : 200);
+                ->assertStatus($group->topic_read_access === TopicReadAccess::MembersOnly ? 404 : 200);
         }
     }
 
     public function test_every_body_kind_is_served_through_its_own_rule(): void
     {
-        $community = Community::factory()->create();
-        CommunityMember::factory()->create(['community_id' => $community->id, 'member_id' => $this->author->id]);
+        $group = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $group->id, 'member_id' => $this->author->id]);
 
         $records = [
             'diary' => $this->diary(Visibility::Open),
-            'topic' => CommunityTopic::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
-            'event' => CommunityEvent::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
+            'topic' => CommunityTopic::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
+            'event' => CommunityEvent::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
             'timeline' => TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id]),
         ];
 
@@ -318,8 +318,8 @@ class LinkCardImageDeliveryTest extends TestCase
     {
         // The bytes are fetched by URL, so no page mediates them: turning a module off has to stop
         // its card images too, or they stay readable while every screen around them is gone.
-        $community = Community::factory()->create();
-        CommunityMember::factory()->create(['community_id' => $community->id, 'member_id' => $this->author->id]);
+        $group = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $group->id, 'member_id' => $this->author->id]);
 
         $urls = [
             [SnsSettingKey::FeatureDiaryEnabled, $this->urlFor($this->diary(Visibility::Open))],
@@ -327,10 +327,10 @@ class LinkCardImageDeliveryTest extends TestCase
                 TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id])
             )],
             [SnsSettingKey::FeatureCommunityTopicEnabled, $this->urlFor(
-                CommunityTopic::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
+                CommunityTopic::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
             )],
             [SnsSettingKey::FeatureCommunityEventEnabled, $this->urlFor(
-                CommunityEvent::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
+                CommunityEvent::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
             )],
         ];
 
@@ -344,14 +344,14 @@ class LinkCardImageDeliveryTest extends TestCase
 
     public function test_switching_communities_off_stops_serving_their_bodies_cards(): void
     {
-        // The parent unit, not just the board's own flag: a topic is unreachable while communities
+        // The parent unit, not just the board's own flag: a topic is unreachable while groups
         // are off whatever `communityTopic` says.
-        $community = Community::factory()->create();
-        CommunityMember::factory()->create(['community_id' => $community->id, 'member_id' => $this->author->id]);
-        $topic = CommunityTopic::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
-        $event = CommunityEvent::factory()->for($community)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
+        $group = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $group->id, 'member_id' => $this->author->id]);
+        $topic = CommunityTopic::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
+        $event = CommunityEvent::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
 
-        $this->setSnsSetting(SnsSettingKey::FeatureCommunityEnabled, false);
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
 
         $this->actingAs($this->author)->get($this->urlFor($topic))->assertNotFound();
         $this->actingAs($this->author)->get($this->urlFor($event))->assertNotFound();

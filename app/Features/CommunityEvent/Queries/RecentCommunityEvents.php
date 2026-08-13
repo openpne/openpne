@@ -2,8 +2,8 @@
 
 namespace App\Features\CommunityEvent\Queries;
 
-use App\Models\Community;
 use App\Models\CommunityEvent;
+use App\Models\Group;
 use Illuminate\Support\Collection;
 
 /**
@@ -15,9 +15,9 @@ class RecentCommunityEvents
     public const LIMIT = 5;
 
     /** @return Collection<int, CommunityEvent> */
-    public function __invoke(Community $community, int $limit = self::LIMIT): Collection
+    public function __invoke(Group $group, int $limit = self::LIMIT): Collection
     {
-        return $community->events()
+        return $group->events()
             ->withCount(['comments', 'participants'])
             ->with('member.avatar.file')
             ->orderByDesc('updated_at')

@@ -8,11 +8,11 @@ export interface CommunityActivityEntry {
     name: string;
     commentCount: number;
     participantCount: number | null; // event roster size; null on topics (no roster)
-    community: { id: number; name: string; imageUrl: string | null };
+    group: { id: number; name: string; imageUrl: string | null };
     updatedAt: string;
 }
 
-/** One row of the cross-community activity digest (dashboard + /community/recent). The community —
+/** One row of the cross-community activity digest (dashboard + /community/recent). The group —
  *  not a member — is the byline subject: updated_at bumps on any comment, so an author byline would
  *  misattribute the row. */
 export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
@@ -20,7 +20,7 @@ export function ActivityRow({ entry }: { entry: CommunityActivityEntry }) {
     return (
         <EntryRow
             href={entry.kind === 'topic' ? `/communityTopic/${entry.id}` : `/communityEvent/${entry.id}`}
-            community={entry.community}
+            group={entry.group}
             content={entry.name}
             bylineNote={entry.kind === 'topic' ? t('%Topic%') : t('Event')}
             date={<Timestamp at={entry.updatedAt} preset="listStamp" />}

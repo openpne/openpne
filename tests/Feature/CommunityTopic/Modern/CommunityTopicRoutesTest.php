@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\CommunityTopic\Modern;
 
-use App\Features\Community\CommunityRole;
 use App\Features\CommunityTopic\TopicReadAccess;
-use App\Models\Community;
-use App\Models\CommunityMember;
+use App\Features\Group\GroupRole;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,11 +22,11 @@ class CommunityTopicRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -36,28 +36,28 @@ class CommunityTopicRoutesTest extends TestCase
 
     public function test_guests_are_redirected_to_login(): void
     {
-        $community = Community::factory()->create();
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
 
-        $this->get(route('communityTopic.index', $community))->assertRedirect('/login');
-        $this->get(route('communityTopic.new', $community))->assertRedirect('/login');
+        $this->get(route('communityTopic.index', $group))->assertRedirect('/login');
+        $this->get(route('communityTopic.new', $group))->assertRedirect('/login');
         $this->get(route('communityTopic.show', $topic))->assertRedirect('/login');
-        $this->post(route('communityTopic.store', $community))->assertRedirect('/login');
+        $this->post(route('communityTopic.store', $group))->assertRedirect('/login');
         $this->get(route('communityTopic.edit', $topic))->assertRedirect('/login');
         $this->post(route('communityTopic.delete', $topic))->assertRedirect('/login');
     }
 
     public function test_modern_index_renders_the_board(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $member->getKey()]);
 
         $this->actingAs($member)
-            ->get(route('communityTopic.index', $community))
+            ->get(route('communityTopic.index', $group))
             ->assertInertia(fn ($page) => $page
                 ->component('community/topic/index')
-                ->where('community.id', $community->getKey())
+                ->where('group.id', $group->getKey())
                 ->has('topics.data', 1)
                 ->has('topics.data.0.author')
                 ->where('canPost', true)
@@ -66,9 +66,9 @@ class CommunityTopicRoutesTest extends TestCase
 
     public function test_modern_show_renders_the_topic_with_its_comments(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         CommunityTopicComment::factory()->create([
             'community_topic_id' => $topic->getKey(),
             'member_id' => $author->getKey(),
@@ -92,9 +92,9 @@ class CommunityTopicRoutesTest extends TestCase
     {
         // number is a racy label on migrated data; the thread pager orders by id, so Modern must
         // list comments in insertion order regardless of number (matching Classic).
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $first = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => 3]);
         $second = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => 1]);
         $third = CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => 2]);
@@ -111,9 +111,9 @@ class CommunityTopicRoutesTest extends TestCase
     public function test_modern_show_paginates_the_comment_thread(): void
     {
         // Large threads must not serialize every comment: the pager caps a page at 20.
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         foreach (range(1, 25) as $n) {
             CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey(), 'member_id' => $author->getKey(), 'number' => $n]);
         }
@@ -134,8 +134,8 @@ class CommunityTopicRoutesTest extends TestCase
 
     public function test_modern_show_returns_404_when_the_board_is_members_only_and_the_viewer_is_a_stranger(): void
     {
-        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
@@ -145,14 +145,14 @@ class CommunityTopicRoutesTest extends TestCase
 
     public function test_modern_new_renders_the_form_for_a_member(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         $this->actingAs($member)
-            ->get(route('communityTopic.new', $community))
+            ->get(route('communityTopic.new', $group))
             ->assertInertia(fn ($page) => $page
                 ->component('community/topic/edit')
-                ->where('community.id', $community->getKey())
+                ->where('group.id', $group->getKey())
                 ->where('topic', null)
                 ->where('composeEditor', 'rich')
             );
@@ -160,18 +160,18 @@ class CommunityTopicRoutesTest extends TestCase
 
     public function test_modern_new_returns_404_for_a_non_member(): void
     {
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $stranger = Member::factory()->create();
 
-        $this->actingAs($stranger)->get(route('communityTopic.new', $community))->assertNotFound();
+        $this->actingAs($stranger)->get(route('communityTopic.new', $group))->assertNotFound();
     }
 
     public function test_modern_store_creates_a_topic_and_redirects_to_show(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
-        $response = $this->actingAs($member)->post(route('communityTopic.store', $community), [
+        $response = $this->actingAs($member)->post(route('communityTopic.store', $group), [
             'name' => 'Modern Topic',
             'body' => 'Hello board',
         ]);
@@ -180,32 +180,32 @@ class CommunityTopicRoutesTest extends TestCase
         $response->assertRedirect(route('communityTopic.show', $topic));
         $this->assertDatabaseHas('community_topics', [
             'id' => $topic->getKey(),
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $member->getKey(),
         ]);
     }
 
     public function test_modern_edit_renders_the_form_for_the_author(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
             ->get(route('communityTopic.edit', $topic))
             ->assertInertia(fn ($page) => $page
                 ->component('community/topic/edit')
                 ->where('topic.id', $topic->getKey())
-                ->where('community.id', $community->getKey())
+                ->where('group.id', $group->getKey())
                 ->where('composeEditor', 'rich')
             );
     }
 
     public function test_modern_edit_returns_404_for_a_non_editor(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
@@ -215,9 +215,9 @@ class CommunityTopicRoutesTest extends TestCase
 
     public function test_modern_update_edits_the_topic_and_redirects_to_show(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
             ->post(route('communityTopic.update', $topic), [
@@ -231,22 +231,22 @@ class CommunityTopicRoutesTest extends TestCase
 
     public function test_modern_delete_removes_the_topic_and_redirects_to_the_community(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
             ->post(route('communityTopic.delete', $topic))
-            ->assertRedirect(route('community.show', $community));
+            ->assertRedirect(route('group.show', $group));
 
         $this->assertDatabaseMissing('community_topics', ['id' => $topic->getKey()]);
     }
 
     public function test_modern_delete_returns_404_for_a_non_editor(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
@@ -259,11 +259,11 @@ class CommunityTopicRoutesTest extends TestCase
     {
         // A modern_only install must not fall through to Classic Blade on the canonical route.
         config()->set('openpne.surface_mode', 'modern_only');
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         $this->actingAs($member)
-            ->get(route('communityTopic.index', $community))
+            ->get(route('communityTopic.index', $group))
             ->assertInertia(fn ($page) => $page->component('community/topic/index'));
     }
 }

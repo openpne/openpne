@@ -9,6 +9,10 @@ use App\Upgrade\UpgradeStep;
 /**
  * OpenPNE 3 `gadget` → OpenPNE 4 `gadgets`: splits `type` into `context` + `zone` (a pair of CASEs
  * from GadgetLayout::op3TypeMap()) and keeps only the types that map into a ported PC context.
+ *
+ * `name` is carried verbatim except for the builtin kinds OpenPNE 4 renamed (RENAMED_NAMES): an
+ * exact-match CASE, never a substring rewrite, so an unknown plugin gadget keeps its own name and
+ * stays Unsupported rather than being mangled into a kind it is not.
  */
 class GadgetUpgrade extends UpgradeStep
 {
@@ -16,13 +20,16 @@ class GadgetUpgrade extends UpgradeStep
 
     protected string $target = 'gadgets';
 
+    /** OpenPNE 3 `gadget.name` => the OpenPNE 4 name for the same builtin kind. */
+    private const RENAMED_NAMES = ['communityJoinListBox' => 'groupJoinListBox'];
+
     public function columns(): array
     {
         return [
             'id' => Column::source('id'),
             'context' => Column::expr($this->splitCase('context'), uses: ['type']),
             'zone' => Column::expr($this->splitCase('zone'), uses: ['type']),
-            'name' => Column::source('name'),
+            'name' => Column::expr($this->nameExpr(), uses: ['name']),
             'source_type' => Column::source('type'),
             'sort_order' => Column::source('sort_order'),
             'created_at' => Column::source('created_at'),
@@ -53,6 +60,17 @@ class GadgetUpgrade extends UpgradeStep
             static fn (string $type): string => "'{$type}'",
             array_keys(GadgetLayout::op3TypeMap()),
         ));
+    }
+
+    /** The renamed builtin kinds, exact-match; every other name passes through untouched. */
+    private function nameExpr(): string
+    {
+        $whens = [];
+        foreach (self::RENAMED_NAMES as $op3 => $op4) {
+            $whens[] = sprintf("WHEN '%s' THEN '%s'", $op3, $op4);
+        }
+
+        return 'CASE `name` '.implode(' ', $whens).' ELSE `name` END';
     }
 
     private function splitCase(string $field): string

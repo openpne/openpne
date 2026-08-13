@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Community topics (successor of the OpenPNE 3 opCommunityTopicPlugin `community_topic` table):
+ * Group topics (successor of the OpenPNE 3 opCommunityTopicPlugin `community_topic` table):
  * the threads of a community's bulletin board.
  */
 return new class extends Migration
@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('community_topics', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('community_id')->constrained('communities')->cascadeOnDelete();
+            $table->foreignId('community_id')->constrained('groups')->cascadeOnDelete();
             // Keep the topic when its author is deleted (OpenPNE 3 Member onDelete: set null), so
             // the board stays intact and the thread shows as a withdrawn member.
             $table->foreignId('member_id')->nullable()->constrained('members')->nullOnDelete();

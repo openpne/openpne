@@ -3,8 +3,8 @@
 namespace Tests\Feature\Classic;
 
 use App\Features\Member\Actions\SetAvatar;
-use App\Models\Community;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -74,15 +74,15 @@ class ClassicNoImageFallbackTest extends TestCase
 
     public function test_community_home_shows_the_no_image_fallback_for_the_image_box_and_member_grid(): void
     {
-        $community = Community::factory()->create(); // no top image
+        $group = Group::factory()->create(); // no top image
         $admin = Member::factory()->create();        // no avatar
-        CommunityMember::factory()->admin()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->admin()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $admin->getKey(),
         ]);
 
         // The community image box and the nineTable member grid both fall back to no_image.gif.
-        $this->actingAs($admin)->get(route('community.show', $community))
+        $this->actingAs($admin)->get(route('group.show', $group))
             ->assertOk()
             ->assertSee('images/no_image.gif', false);
     }

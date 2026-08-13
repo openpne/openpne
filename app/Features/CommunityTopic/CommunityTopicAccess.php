@@ -2,17 +2,17 @@
 
 namespace App\Features\CommunityTopic;
 
-use App\Features\Community\CommunityMembership;
-use App\Models\Community;
+use App\Features\Group\GroupMembership;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
+use App\Models\Group;
 use App\Models\Member;
 
 /**
  * The single authorization chokepoint for the community topic board, porting OpenPNE 3's
  * opCommunityTopicAclBuilder + opIsCreatableCommunityTopicBehavior. Read/post gates depend on the
  * community's two access columns; edit/delete depend on authorship and role. Every decision flows
- * through CommunityMembership so it cannot drift from "what is this member to this community".
+ * through GroupMembership so it cannot drift from "what is this member to this community".
  */
 class CommunityTopicAccess
 {
@@ -20,10 +20,10 @@ class CommunityTopicAccess
      * May the member read this community's board (list + show)? MembersOnly requires membership;
      * Everyone admits any signed-in member (OpenPNE 3 public_flag).
      */
-    public static function canViewBoard(Community $community, Member $member): bool
+    public static function canViewBoard(Group $group, Member $member): bool
     {
-        if ($community->topic_read_access === TopicReadAccess::MembersOnly) {
-            return CommunityMembership::isMember($community, $member);
+        if ($group->topic_read_access === TopicReadAccess::MembersOnly) {
+            return GroupMembership::isMember($group, $member);
         }
 
         return true;
@@ -40,13 +40,13 @@ class CommunityTopicAccess
      * (OpenPNE 3 topic_authority). Note this gates posting topics only — commenting is open to any
      * member regardless (see canComment).
      */
-    public static function canPostTopic(Community $community, Member $member): bool
+    public static function canPostTopic(Group $group, Member $member): bool
     {
-        if ($community->topic_post_authority === TopicPostAuthority::AdminsOnly) {
-            return CommunityMembership::isAdmin($community, $member);
+        if ($group->topic_post_authority === TopicPostAuthority::AdminsOnly) {
+            return GroupMembership::isAdmin($group, $member);
         }
 
-        return CommunityMembership::isMember($community, $member);
+        return GroupMembership::isMember($group, $member);
     }
 
     /**
@@ -55,20 +55,20 @@ class CommunityTopicAccess
      */
     public static function canEditTopic(CommunityTopic $topic, Member $member): bool
     {
-        $community = $topic->community;
+        $group = $topic->community;
 
-        if (! CommunityMembership::isMember($community, $member)) {
+        if (! GroupMembership::isMember($group, $member)) {
             return false;
         }
 
         return $member->getKey() === $topic->member_id
-            || CommunityMembership::isAdmin($community, $member);
+            || GroupMembership::isAdmin($group, $member);
     }
 
     /** May the member comment? Any community member may (OpenPNE 3 isCreatableCommunityTopicComment). */
     public static function canComment(CommunityTopic $topic, Member $member): bool
     {
-        return CommunityMembership::isMember($topic->community, $member);
+        return GroupMembership::isMember($topic->community, $member);
     }
 
     /**

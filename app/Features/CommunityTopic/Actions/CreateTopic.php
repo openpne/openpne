@@ -9,8 +9,8 @@ use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Features\CommunityTopic\Exceptions\CommunityTopicActionFailure;
 use App\Files\PostImages;
 use App\Jobs\SyncLinkCard;
-use App\Models\Community;
 use App\Models\CommunityTopic;
+use App\Models\Group;
 use App\Models\Member;
 use App\Support\BodyFormat;
 use Illuminate\Http\UploadedFile;
@@ -22,9 +22,9 @@ class CreateTopic
     /**
      * @param  array<int, UploadedFile>  $images  attached images (slot 1..N), at most the upload cap
      */
-    public function __invoke(Member $author, Community $community, CommunityTopicFormData $data, array $images = []): CommunityTopic
+    public function __invoke(Member $author, Group $group, CommunityTopicFormData $data, array $images = []): CommunityTopic
     {
-        if (! CommunityTopicAccess::canPostTopic($community, $author)) {
+        if (! CommunityTopicAccess::canPostTopic($group, $author)) {
             throw new CommunityTopicActionException(CommunityTopicActionFailure::CannotPost);
         }
 
@@ -33,7 +33,7 @@ class CreateTopic
         $topic = $this->images->attach(
             'communityTopic',
             $images,
-            persist: fn (): CommunityTopic => $community->topics()->create([
+            persist: fn (): CommunityTopic => $group->topics()->create([
                 'member_id' => $author->getKey(),
                 'name' => $data->name,
                 'body' => $data->body,

@@ -3,7 +3,7 @@
 namespace App\Features\Timeline;
 
 use App\Compat\RouteParityRegistry;
-use App\Features\Community\Serializers\CommunitySerializer;
+use App\Features\Group\Serializers\GroupSerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\Actions\CreateReply;
 use App\Features\Timeline\Actions\CreateTimelinePost;
@@ -21,7 +21,7 @@ use App\Http\Requests\Timeline\StoreCommunityTimelinePostRequest;
 use App\Http\Requests\Timeline\StoreReplyRequest;
 use App\Http\Requests\Timeline\StoreTimelinePostRequest;
 use App\LinkCard\LinkCardSync;
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
@@ -85,25 +85,25 @@ class TimelineController extends Controller
      * sf_nav_type to `community` on this page — the reader is inside a community here, not on
      * someone's profile.
      */
-    public function community(Request $request, Community $community, CommunityTimeline $query): View|InertiaResponse
+    public function group(Request $request, Group $group, CommunityTimeline $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
-        abort_unless(CommunityTimelineAccess::canViewTimeline($community, $viewer), 404);
+        abort_unless(CommunityTimelineAccess::canViewTimeline($group, $viewer), 404);
 
-        $posts = $query($viewer, $community);
-        $this->markLocalNavCommunity($community);
+        $posts = $query($viewer, $group);
+        $this->markLocalNavGroup($group);
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.community', [
-                'community' => $community,
+                'group' => $group,
                 'viewer' => $viewer,
                 'posts' => $posts,
-                'canPost' => CommunityTimelineAccess::canPost($community, $viewer),
+                'canPost' => CommunityTimelineAccess::canPost($group, $viewer),
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/community', [
-                'community' => CommunitySerializer::summary($community),
+                'group' => GroupSerializer::summary($group),
                 'viewerId' => $viewer->getKey(),
-                'canPost' => CommunityTimelineAccess::canPost($community, $viewer),
+                'canPost' => CommunityTimelineAccess::canPost($group, $viewer),
                 'posts' => TimelinePostSerializer::paginator($posts),
             ]),
         ]);
@@ -114,36 +114,36 @@ class TimelineController extends Controller
      * hidden and is swapped in by script, so without a real page behind the fallback link there is
      * no way to post at all with the script off.
      */
-    public function newCommunity(Request $request, Community $community): View|InertiaResponse
+    public function newGroup(Request $request, Group $group): View|InertiaResponse
     {
-        abort_unless(CommunityTimelineAccess::canPost($community, $this->viewer()), 404);
-        $this->markLocalNavCommunity($community);
+        abort_unless(CommunityTimelineAccess::canPost($group, $this->viewer()), 404);
+        $this->markLocalNavGroup($group);
 
         return $this->respondWith($request, 'timeline', [
             SurfaceResolver::CLASSIC => fn () => view('timeline.new', [
-                'community' => $community,
+                'group' => $group,
                 'visibilityOptions' => [],
                 'defaultVisibility' => Visibility::Members,
             ]),
             SurfaceResolver::MODERN => fn () => Inertia::render('timeline/community-new', [
                 'defaultVisibility' => (string) Visibility::Members->value,
                 'visibilityOptions' => [],
-                'community' => CommunitySerializer::summary($community),
+                'group' => GroupSerializer::summary($group),
             ]),
         ]);
     }
 
-    public function storeCommunity(StoreCommunityTimelinePostRequest $request, Community $community, CreateTimelinePost $action): RedirectResponse
+    public function storeGroup(StoreCommunityTimelinePostRequest $request, Group $group, CreateTimelinePost $action): RedirectResponse
     {
         $viewer = $this->viewer();
         // Reading an everyone-readable community does not admit someone to its conversation; the
         // action refuses too, which is what protects the reply route that has no such check here.
-        abort_unless(CommunityTimelineAccess::canPost($community, $viewer), 404);
+        abort_unless(CommunityTimelineAccess::canPost($group, $viewer), 404);
 
-        $action($viewer, $request->toData(), $request->file('image'), $community);
+        $action($viewer, $request->toData(), $request->file('image'), $group);
 
         return redirect()
-            ->route('community.timeline', ['community' => $community->getKey()])
+            ->route('group.timeline', ['group' => $group->getKey()])
             ->with('status', __('Posted.'));
     }
 
@@ -186,7 +186,7 @@ class TimelineController extends Controller
         // about for the Classic localNav. A community post is about its community, not its author —
         // the reader arrived from inside the community and the nav should keep them there.
         if ($post->community !== null) {
-            $this->markLocalNavCommunity($post->community);
+            $this->markLocalNavGroup($post->community);
         } else {
             $this->markLocalNavSubject($post->member);
         }
@@ -214,9 +214,9 @@ class TimelineController extends Controller
                 'replies' => array_map([TimelinePostSerializer::class, 'entry'], $post->replies->all()),
                 'viewerId' => $viewer->getKey(),
                 'canReply' => $canReply,
-                // The Modern chrome reads props, not the request attribute markLocalNavCommunity
+                // The Modern chrome reads props, not the request attribute markLocalNavGroup
                 // sets, so the community has to travel for the crumb and scope to follow the thread.
-                'community' => $post->community === null ? null : CommunitySerializer::summary($post->community),
+                'group' => $post->community === null ? null : GroupSerializer::summary($post->community),
             ]),
         ]);
     }
@@ -254,17 +254,17 @@ class TimelineController extends Controller
         ]);
 
         $viewer = $this->viewer();
-        $community = null;
+        $group = null;
 
         if ($request->filled('community')) {
             // The unit gate is checked here, not left to canPost: this endpoint is gated on the
             // timeline unit alone, and the roster is exactly what switching the community unit off
             // is meant to take away.
-            $community = Feature::Community->enabled() ? Community::find($request->integer('community')) : null;
-            abort_unless($community !== null && CommunityTimelineAccess::canPost($community, $viewer), 404);
+            $group = Feature::Group->enabled() ? Group::find($request->integer('community')) : null;
+            abort_unless($group !== null && CommunityTimelineAccess::canPost($group, $viewer), 404);
         }
 
-        $candidates = $query($viewer, $request->string('q')->value(), $community);
+        $candidates = $query($viewer, $request->string('q')->value(), $group);
 
         return response()->json([
             'candidates' => array_map([MemberRefSerializer::class, 'ref'], $candidates->all()),
@@ -320,7 +320,7 @@ class TimelineController extends Controller
         // Capture the thread root before the row is gone: deleting a reply returns to its thread,
         // deleting a top-level post returns to the author's timeline.
         $parentId = $timelinePost->in_reply_to_id;
-        $communityId = $timelinePost->community_id;
+        $groupId = $timelinePost->community_id;
         $action($timelinePost);
 
         if ($parentId !== null) {
@@ -331,9 +331,9 @@ class TimelineController extends Controller
 
         // A community post came from the community's timeline, not the author's; sending them to
         // their own would leave the page they were on for one they were not.
-        if ($communityId !== null) {
+        if ($groupId !== null) {
             return redirect()
-                ->route('community.timeline', ['community' => $communityId])
+                ->route('group.timeline', ['group' => $groupId])
                 ->with('status', __('Post deleted.'));
         }
 

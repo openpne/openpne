@@ -3,10 +3,10 @@
 namespace Tests\Feature\CommunityEvent\Queries;
 
 use App\Features\CommunityEvent\Queries\RecentJoinedCommunityEvents;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,10 +15,10 @@ class RecentJoinedCommunityEventsTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function join(Member $member, Community $community): void
+    private function join(Member $member, Group $group): void
     {
-        CommunityMember::factory()->member()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->member()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
         ]);
     }
@@ -26,8 +26,8 @@ class RecentJoinedCommunityEventsTest extends TestCase
     public function test_returns_events_only_from_communities_the_member_joined(): void
     {
         $viewer = Member::factory()->create();
-        $joined = Community::factory()->create();
-        $other = Community::factory()->create();
+        $joined = Group::factory()->create();
+        $other = Group::factory()->create();
         $this->join($viewer, $joined);
 
         $mine = CommunityEvent::factory()->create(['community_id' => $joined->getKey()]);
@@ -42,12 +42,12 @@ class RecentJoinedCommunityEventsTest extends TestCase
     public function test_orders_by_updated_at_desc_and_caps_at_the_limit(): void
     {
         $viewer = Member::factory()->create();
-        $community = Community::factory()->create();
-        $this->join($viewer, $community);
+        $group = Group::factory()->create();
+        $this->join($viewer, $group);
 
         foreach (range(1, 6) as $i) {
             CommunityEvent::factory()->create([
-                'community_id' => $community->getKey(),
+                'community_id' => $group->getKey(),
                 'updated_at' => now()->subDays(6 - $i),
             ]);
         }
@@ -61,9 +61,9 @@ class RecentJoinedCommunityEventsTest extends TestCase
     public function test_loads_the_comment_count(): void
     {
         $viewer = Member::factory()->create();
-        $community = Community::factory()->create();
-        $this->join($viewer, $community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $this->join($viewer, $group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
         CommunityEventComment::factory()->count(3)->create(['community_event_id' => $event->getKey()]);
 
         $this->assertSame(3, (int) (new RecentJoinedCommunityEvents)($viewer)->first()->comments_count);

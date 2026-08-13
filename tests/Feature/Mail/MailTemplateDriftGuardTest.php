@@ -7,22 +7,22 @@ namespace Tests\Feature\Mail;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateRenderer;
 use App\Mail\Template\MailTemplateService;
-use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DirectMessage;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
 use App\Notifications\CommentReason;
-use App\Notifications\Community\CommunityJoinedNotification;
 use App\Notifications\CommunityTopic\TopicCommentedNotification;
 use App\Notifications\Diary\DiaryCommentedNotification;
 use App\Notifications\Diary\DiaryPostedNotification;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
+use App\Notifications\Group\GroupJoinedNotification;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
 use App\Notifications\Member\EmailChangeNoticeNotification;
 use App\Notifications\Member\MfaDisabledNotification;
@@ -58,7 +58,7 @@ class MailTemplateDriftGuardTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->setSnsSetting(SnsSettingKey::SnsName, 'My Community');
+        $this->setSnsSetting(SnsSettingKey::SnsName, 'My Group');
         $this->setSnsSetting(SnsSettingKey::AdminMailAddress, 'ops@example.test');
         // Every render below goes through this strict service so an undeclared/undelivered variable throws.
         $this->app->instance(MailTemplateService::class, new MailTemplateService(new MailTemplateRenderer(strictVariables: true)));
@@ -91,7 +91,7 @@ class MailTemplateDriftGuardTest extends TestCase
         $comment = $diary->comments()->create(['member_id' => $sender->getKey(), 'number' => 1, 'body' => 'a comment']);
         $topic = CommunityTopic::factory()->create(['member_id' => $recipient->getKey()]);
         $topicComment = $topic->comments()->create(['member_id' => $sender->getKey(), 'number' => 1, 'body' => 'a comment']);
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $post = TimelinePost::factory()->create(['member_id' => $sender->getKey()]);
 
         // One notification per sendable template; RegistrationLink carries an inviter name + message so the
@@ -107,7 +107,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new DiaryCommentedNotification($sender, $diary, $comment, CommentReason::Reply), $recipient],
             [new DiaryPostedNotification($diary, $sender, ['mail']), $recipient],
             [new TopicCommentedNotification($sender, $topic, $topicComment, CommentReason::Reply), $recipient],
-            [new CommunityJoinedNotification($community, $sender), $recipient],
+            [new GroupJoinedNotification($group, $sender), $recipient],
             [new RegistrationCompletedNotification('en'), $recipient],
             [new WithdrawalCompletedNotification('Sender', 'en'), new AnonymousNotifiable],
             [new WithdrawalAdminNotification('Sender', 'sender@example.test', (int) $sender->getKey(), 'en'), new AnonymousNotifiable],

@@ -230,7 +230,7 @@ class UpgradeMatrixAuditTest extends TestCase
         // The guard/ledger split is only complete if the ledger covers the member ids that reach a
         // target column without their source table being any step's FROM — those are invisible to
         // memberRefs() by construction, so a plain "FROM table FKs" audit would pass while
-        // communities.pending_admin_member_id and direct_messages.draft_recipient_id went unchecked.
+        // groups.pending_admin_member_id and direct_messages.draft_recipient_id went unchecked.
         $fromTables = array_map(static fn ($step): string => $step->sourceTable(), StepRegistry::all());
         $ledger = ActiveMember::references();
 

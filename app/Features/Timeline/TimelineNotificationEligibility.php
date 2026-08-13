@@ -3,7 +3,7 @@
 namespace App\Features\Timeline;
 
 use App\Features\Block\BlockLookup;
-use App\Features\Community\CommunityMembership;
+use App\Features\Group\GroupMembership;
 use App\Models\Member;
 use App\Models\TimelinePost;
 
@@ -33,7 +33,7 @@ final class TimelineNotificationEligibility
         // alone would keep telling an ex-member about an everyone-readable community they left,
         // and the opt-out they would reach for is that community kind — which is not theirs to
         // hold once they are outside it.
-        if ($root->community_id !== null && ! CommunityMembership::isMember($root->community, $recipient)) {
+        if ($root->community_id !== null && ! GroupMembership::isMember($root->community, $recipient)) {
             return false;
         }
 

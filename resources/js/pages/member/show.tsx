@@ -37,7 +37,7 @@ interface ProfileDigest {
     stats: ProfileStats;
     recentDiaries: DiarySummary[];
     friends: NineTableItem[];
-    communities: NineTableItem[];
+    groups: NineTableItem[];
 }
 
 interface ShowProps extends PageProps {
@@ -56,7 +56,7 @@ function StatsRow({ ownerId, stats }: { ownerId: number; stats: ProfileStats }) 
         { key: 'diaries', feature: 'diary', label: t('%Diaries%'), count: stats.diaries, href: `/diary/listMember/${ownerId}` },
         { key: 'activity', feature: 'timeline', label: t('%Activity%'), count: stats.activity, href: `/member/${ownerId}/timeline` },
         { key: 'friends', feature: 'friend', label: t('%Friends%'), count: stats.friends, href: `/friend/list?id=${ownerId}` },
-        { key: 'communities', feature: 'community', label: t('%Communities%'), count: stats.communities, href: `/community/joinList?id=${ownerId}` },
+        { key: 'groups', feature: 'group', label: t('%Communities%'), count: stats.groups, href: `/groups/mine?id=${ownerId}` },
     ];
     const shown = items.filter((item) => features[item.feature]);
 
@@ -219,12 +219,12 @@ export default function MemberShow() {
                 </SectionPanel>
             )}
 
-            {enabledFeatures.community && digest && digest.communities.length > 0 && (
+            {enabledFeatures.group && digest && digest.groups.length > 0 && (
                 <SectionPanel
-                    title={t('Joined %communities% (:count)', { count: digest.stats.communities })}
-                    viewAllHref={`/community/joinList?id=${owner.id}`}
+                    title={t('Joined %communities% (:count)', { count: digest.stats.groups })}
+                    viewAllHref={`/groups/mine?id=${owner.id}`}
                 >
-                    <NineTable items={digest.communities} shape="square" columns={5} />
+                    <NineTable items={digest.groups} shape="square" columns={5} />
                 </SectionPanel>
             )}
 

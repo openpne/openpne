@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Home;
 
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Services\GadgetService;
 use App\Services\SnsSettingService;
@@ -78,19 +78,19 @@ class ClassicHomeGadgetTest extends TestCase
             ['member_id' => $member->id, 'friend_id' => $friend->id],
             ['member_id' => $friend->id, 'friend_id' => $member->id],
         ]);
-        $community = Community::factory()->create(['name' => 'BetaCommunity']);
-        CommunityMember::factory()->create(['community_id' => $community->id, 'member_id' => $member->id]);
+        $group = Group::factory()->create(['name' => 'BetaGroup']);
+        GroupMember::factory()->create(['group_id' => $group->id, 'member_id' => $member->id]);
 
         $friends = $this->makeGadget('home', 'sideMenu', 'friendListBox');
-        $communities = $this->makeGadget('home', 'sideMenu', 'communityJoinListBox');
+        $groups = $this->makeGadget('home', 'sideMenu', 'groupJoinListBox');
 
         $this->actingAs($member)->get('/')
             ->assertOk()
             ->assertSee('id="friendList_'.$friends->id.'"', false)
-            ->assertSee('id="communityList_'.$communities->id.'"', false)
+            ->assertSee('id="communityList_'.$groups->id.'"', false)
             ->assertSee('class="dparts nineTable"', false) // skin targets .nineTable tr.photo td
             ->assertSee('AlphaFriend')
-            ->assertSee('BetaCommunity');
+            ->assertSee('BetaGroup');
     }
 
     public function test_empty_list_box_is_dropped_like_openpne3(): void

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature\Notifications;
 
 use App\Features\CommunityTopic\TopicReadAccess;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
@@ -258,8 +258,8 @@ class NotificationFeedTest extends TestCase
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
         // A members-only board the viewer is not a member of: the topic exists but is unreadable.
-        $community = Community::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        $hidden = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
+        $hidden = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
         $gone = $this->seedRow($viewer, 'community_event_commented', ['commenter_id' => $actor->getKey(), 'event_id' => 424242, 'reason' => 'reply']);
         $unreadable = $this->seedRow($viewer, 'community_topic_commented', ['commenter_id' => $actor->getKey(), 'topic_id' => $hidden->getKey(), 'reason' => 'related']);
 
@@ -272,17 +272,17 @@ class NotificationFeedTest extends TestCase
     public function test_open_redirects_a_community_join_to_the_community(): void
     {
         [$viewer, $joiner] = Member::factory()->count(2)->create()->all();
-        $community = Community::factory()->create();
-        $row = $this->seedRow($viewer, 'community_joined', ['new_member_id' => $joiner->getKey(), 'community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $row = $this->seedRow($viewer, 'group_joined', ['new_member_id' => $joiner->getKey(), 'group_id' => $group->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
-            ->assertRedirect('/community/'.$community->getKey());
+            ->assertRedirect('/groups/'.$group->getKey());
     }
 
     public function test_open_falls_back_to_the_feed_when_the_community_is_gone(): void
     {
         [$viewer, $joiner] = Member::factory()->count(2)->create()->all();
-        $row = $this->seedRow($viewer, 'community_joined', ['new_member_id' => $joiner->getKey(), 'community_id' => 424242]);
+        $row = $this->seedRow($viewer, 'group_joined', ['new_member_id' => $joiner->getKey(), 'group_id' => 424242]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
@@ -291,29 +291,29 @@ class NotificationFeedTest extends TestCase
     public function test_admin_transfer_and_sub_admin_kinds_hydrate_their_actor_and_link_to_the_community(): void
     {
         [$viewer, $requester, $appointer] = Member::factory()->count(3)->create()->all();
-        $community = Community::factory()->create();
-        $appointed = $this->seedRow($viewer, 'community_sub_admin_appointed', ['appointer_id' => $appointer->getKey(), 'community_id' => $community->getKey()], createdAt: now()->subMinute());
-        $transfer = $this->seedRow($viewer, 'community_admin_transfer_requested', ['requester_id' => $requester->getKey(), 'community_id' => $community->getKey()], createdAt: now());
+        $group = Group::factory()->create();
+        $appointed = $this->seedRow($viewer, 'group_sub_admin_appointed', ['appointer_id' => $appointer->getKey(), 'group_id' => $group->getKey()], createdAt: now()->subMinute());
+        $transfer = $this->seedRow($viewer, 'group_admin_transfer_requested', ['requester_id' => $requester->getKey(), 'group_id' => $group->getKey()], createdAt: now());
 
         $this->actingOnModern($viewer)->get('/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('feed.data.0.kind', 'community_admin_transfer_requested')
+                ->where('feed.data.0.kind', 'group_admin_transfer_requested')
                 ->where('feed.data.0.actor.name', $requester->name)
-                ->where('feed.data.1.kind', 'community_sub_admin_appointed')
+                ->where('feed.data.1.kind', 'group_sub_admin_appointed')
                 ->where('feed.data.1.actor.name', $appointer->name),
             );
 
         $this->actingAs($viewer)->post("/notifications/{$transfer->getKey()}/open")
-            ->assertRedirect('/community/'.$community->getKey());
+            ->assertRedirect('/groups/'.$group->getKey());
         $this->actingAs($viewer)->post("/notifications/{$appointed->getKey()}/open")
-            ->assertRedirect('/community/'.$community->getKey());
+            ->assertRedirect('/groups/'.$group->getKey());
     }
 
     public function test_admin_transfer_falls_back_to_the_feed_when_the_community_is_gone(): void
     {
         [$viewer, $requester] = Member::factory()->count(2)->create()->all();
-        $row = $this->seedRow($viewer, 'community_admin_transfer_requested', ['requester_id' => $requester->getKey(), 'community_id' => 424242]);
+        $row = $this->seedRow($viewer, 'group_admin_transfer_requested', ['requester_id' => $requester->getKey(), 'group_id' => 424242]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect(route('notifications.index'));

@@ -22,12 +22,12 @@ class SnsSettingWiringTest extends TestCase
     public function test_helpers_return_stored_overrides(): void
     {
         DB::table('sns_settings')->insert([
-            ['key' => 'sns_name', 'value' => 'My Community'],
+            ['key' => 'sns_name', 'value' => 'My Group'],
             ['key' => 'sns_title', 'value' => 'Welcome'],
             ['key' => 'admin_mail_address', 'value' => 'ops@example.test'],
         ]);
 
-        $this->assertSame('My Community', sns_name());
+        $this->assertSame('My Group', sns_name());
         $this->assertSame('Welcome', sns_title());
         $this->assertSame('ops@example.test', sns_admin_mail_address());
     }
@@ -69,24 +69,24 @@ class SnsSettingWiringTest extends TestCase
     public function test_system_mail_uses_the_configured_sns_from_address(): void
     {
         DB::table('sns_settings')->insert([
-            ['key' => 'sns_name', 'value' => 'My Community'],
+            ['key' => 'sns_name', 'value' => 'My Group'],
             ['key' => 'admin_mail_address', 'value' => 'ops@example.test'],
         ]);
 
         $mail = (new RegistrationLinkNotification('raw-token', 'en'))->toMail(new AnonymousNotifiable);
 
-        $this->assertSame(['ops@example.test', 'My Community'], $mail->from);
-        $this->assertStringContainsString('My Community', $mail->subject);
+        $this->assertSame(['ops@example.test', 'My Group'], $mail->from);
+        $this->assertStringContainsString('My Group', $mail->subject);
     }
 
     public function test_classic_document_title_reflects_sns_title(): void
     {
         // The Classic <title> suffix follows OpenPNE 3's frontend rule: sns_title, or sns_name when
         // unset. (/login renders the Classic surface under the default config.)
-        DB::table('sns_settings')->insert(['key' => 'sns_title', 'value' => 'My Community Portal']);
+        DB::table('sns_settings')->insert(['key' => 'sns_title', 'value' => 'My Group Portal']);
 
         $this->get('/login')
             ->assertOk()
-            ->assertSee('| My Community Portal</title>', false);
+            ->assertSee('| My Group Portal</title>', false);
     }
 }

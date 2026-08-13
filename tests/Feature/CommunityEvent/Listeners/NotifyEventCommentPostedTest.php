@@ -7,10 +7,10 @@ namespace Tests\Feature\CommunityEvent\Listeners;
 use App\Features\CommunityEvent\Actions\SubmitEventComment;
 use App\Features\CommunityEvent\Events\EventCommentPosted;
 use App\Listeners\CommunityEvent\NotifyEventCommentPosted;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Notifications\CommentReason;
 use App\Notifications\CommunityEvent\EventCommentedNotification;
@@ -29,9 +29,9 @@ class NotifyEventCommentPostedTest extends TestCase
     public function test_notifies_the_author_as_a_reply_and_a_co_commenter_as_related(): void
     {
         Notification::fake();
-        $community = Community::factory()->create();
-        [$author, $earlier, $commenter] = $this->members($community, 3);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        [$author, $earlier, $commenter] = $this->members($group, 3);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
         $this->comment($event, $earlier);
         $comment = $this->comment($event, $commenter);
 
@@ -54,9 +54,9 @@ class NotifyEventCommentPostedTest extends TestCase
     public function test_the_merged_rsvp_comment_submit_dispatches_through_auto_discovery(): void
     {
         Notification::fake();
-        $community = Community::factory()->create();
-        [$author, $commenter] = $this->members($community, 2);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        [$author, $commenter] = $this->members($group, 2);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         app(SubmitEventComment::class)($commenter, $event, 'hello', [], toggleRoster: false);
 
@@ -64,11 +64,11 @@ class NotifyEventCommentPostedTest extends TestCase
     }
 
     /** @return list<Member> community members */
-    private function members(Community $community, int $count): array
+    private function members(Group $group, int $count): array
     {
         $members = Member::factory()->count($count)->create()->all();
         foreach ($members as $member) {
-            CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+            GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
         }
 
         return $members;

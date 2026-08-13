@@ -66,7 +66,7 @@ enum CardContext: string
      * A card image is fetched by URL, so no page mediates it — the same reason `FilePolicy` resolves
      * an owning feature. Without this a known image URL keeps returning bytes after an operator
      * switches the module off, while every screen around it is gone. `Feature::enabled()` resolves
-     * ancestors, so a topic's card stops when communities are switched off as well.
+     * ancestors, so a topic's card stops when groups are switched off as well.
      */
     public function feature(): Feature
     {

@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
  * middle one would put two ranks on the same size with only a rule between them. Weight is 600 at
  * every rank — it says "this names a region", and the rank is the size.
  *
- * `page` carries `break-words` so a long member or community name can never clip the way it did
+ * `page` carries `break-words` so a long member or group name can never clip the way it did
  * before #311 — a caller cannot forget it. Smaller ranks are left to wrap or truncate as their
  * container decides. Flex children still need their own `min-w-0`, which depends on the parent.
  */

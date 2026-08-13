@@ -76,7 +76,7 @@ class CommunityTopicRouteParity extends RouteParity
             'show' => [
                 new ScreenElement('topicDetailBox article box', L::Two, S::Ported, 'showSuccess.php <div class="dparts topicDetailBox">'),
                 new ScreenElement('article dl / dt / dd structure', L::Two, S::Missing, 'showSuccess.php dl > dt(datetime) + dd > div.title / div.name / div.body', 'rendered as p.topicMeta + div.topicBody, so opCommunityTopicPlugin\'s `.topicDetailBox dl/dt/dd` rules — the article frame and its datetime column — match nothing'),
-                new ScreenElement('box heading "[community] %topic%"', L::Three, S::Partial, "showSuccess.php <h3>'['.\$community->getName().'] '.\$topicLabel</h3>", 'headed with the topic name, so the owning community is no longer named there'),
+                new ScreenElement('box heading "[community] %topic%"', L::Three, S::Partial, "showSuccess.php <h3>'['.\$group->getName().'] '.\$topicLabel</h3>", 'headed with the topic name, so the owning community is no longer named there'),
                 new ScreenElement('author link', L::Two, S::Ported, 'op_community_topic_link_to_member($communityTopic->getMember())'),
                 new ScreenElement('created-at datetime', L::Three, S::Ported, "nl2br(op_format_date(created_at, 'XDateTimeJaBr'))", 'LocalizedDate; inline single-line'),
                 new ScreenElement('article images (ul.photo, 120×120 linking to full size)', L::Two, S::Ported, '$communityTopic->getImages() ul.photo', 'the shared _images partial; each fetch is FilePolicy-gated by the board visibility'),

@@ -8,7 +8,7 @@ import type { PageProps } from '@/types';
 import type { CommunitySummary, PaginatedEvents } from '../types';
 
 interface IndexProps extends PageProps {
-    community: CommunitySummary;
+    group: CommunitySummary;
     events: PaginatedEvents;
     canPost: boolean;
 }

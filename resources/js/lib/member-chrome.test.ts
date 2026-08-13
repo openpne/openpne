@@ -7,7 +7,7 @@ const allOn: Record<FeatureKey, boolean> = {
     diary: true,
     directMessage: true,
     timeline: true,
-    community: true,
+    group: true,
     communityTopic: true,
     communityEvent: true,
     friend: true,
@@ -24,7 +24,7 @@ test('a section goes with its unit', () => {
     assert.equal(hrefs({ ...allOn, directMessage: false }).includes('/message'), false);
     assert.equal(hrefs({ ...allOn, friend: false }).includes('/friend/list'), false);
     assert.equal(hrefs({ ...allOn, timeline: false }).includes('/timeline'), false);
-    assert.equal(hrefs({ ...allOn, community: false }).includes('/community/search'), false);
+    assert.equal(hrefs({ ...allOn, group: false }).includes('/groups'), false);
 });
 
 test('the untoggleable sections survive every unit being off', () => {
@@ -33,9 +33,9 @@ test('the untoggleable sections survive every unit being off', () => {
     assert.deepEqual(hrefs(allOff), ['/notifications', '/member/search', '/member/config']);
 });
 
-test('the communities section stays while only a board is off', () => {
+test('the groups section stays while only a board is off', () => {
     // Topics and events have no section of their own, so nothing here answers to them.
-    assert.equal(hrefs({ ...allOn, communityTopic: false, communityEvent: false }).includes('/community/search'), true);
+    assert.equal(hrefs({ ...allOn, communityTopic: false, communityEvent: false }).includes('/groups'), true);
 });
 
 const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled).map((section) => section.href);
@@ -59,7 +59,7 @@ test('the Home tab matches its own path only', () => {
     // Prefix matching would light Home up on anything nested under /dashboard.
     const home = bottomNavSections(allOn).find((section) => section.href === '/dashboard');
 
-    assert.equal(home?.match, '/dashboard');
+    assert.deepEqual(home?.match, ['/dashboard']);
     assert.equal(home?.exact, true);
 });
 
@@ -107,17 +107,17 @@ test('the dashboard action goes with the diary unit', () => {
     assert.equal(resolveChrome('dashboard', { enabledFeatures: { ...allOn, diary: false } }).action, undefined);
 });
 
-test('a community-scoped page is scoped to the community', () => {
-    const community = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
+test('a community-scoped page is scoped to the group', () => {
+    const group = { id: 7, name: 'Cyclists', imageUrl: '/f/7' };
 
-    assert.deepEqual(chrome('community/topic/index', { community, canPost: true }).scope, {
-        kind: 'community',
+    assert.deepEqual(chrome('community/topic/index', { group, canPost: true }).scope, {
+        kind: 'group',
         id: 7,
         name: 'Cyclists',
         imageUrl: '/f/7',
     });
-    // The image is optional data, not an optional field: a community without one still scopes.
-    assert.equal(chrome('community/members', { community: { ...community, imageUrl: null } }).scope?.imageUrl, null);
+    // The image is optional data, not an optional field: a group without one still scopes.
+    assert.equal(chrome('community/members', { group: { ...group, imageUrl: null } }).scope?.imageUrl, null);
 });
 
 test("another member's list is scoped to that member", () => {
@@ -149,10 +149,10 @@ const FORM_SCREENS: Record<string, Record<string, unknown>> = {
     'diary/new': {},
     'diary/edit': { diary: { id: 3, title: 'Draft' } },
     'timeline/new': {},
-    'timeline/community-new': { community: cyclists },
-    'community/edit': { community: cyclists },
-    'community/topic/edit': { community: cyclists, topic: null },
-    'community/event/edit': { community: cyclists, event: null },
+    'timeline/community-new': { group: cyclists },
+    'community/edit': { group: cyclists },
+    'community/topic/edit': { group: cyclists, topic: null },
+    'community/event/edit': { group: cyclists, event: null },
     'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},
     'member/avatar': {},
@@ -180,9 +180,9 @@ const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
     'diary/new': {},
     'diary/edit': { diary: { id: 3, title: 'Draft' } },
     'timeline/new': {},
-    'timeline/community-new': { community: cyclists },
-    'community/topic/edit': { community: cyclists, topic: null },
-    'community/event/edit': { community: cyclists, event: null },
+    'timeline/community-new': { group: cyclists },
+    'community/topic/edit': { group: cyclists, topic: null },
+    'community/event/edit': { group: cyclists, event: null },
     'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},
 };
@@ -199,7 +199,7 @@ test('a compose screen is a form with no floating action', () => {
 });
 
 test('a form outside the compose set keeps the ordinary bar', () => {
-    // community/edit is the near miss: the create/edit form shares its component with community
+    // community/edit is the near miss: the create/edit form shares its component with group
     // settings, which is a settings screen and stays on the static-trail bar.
     for (const [component, props] of Object.entries(FORM_SCREENS)) {
         if (component in COMPOSE_SCREENS) {

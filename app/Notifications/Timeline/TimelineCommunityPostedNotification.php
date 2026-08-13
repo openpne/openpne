@@ -17,11 +17,11 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Announces a new post in a community's timeline. Separate from TimelinePostedNotification because
- * the two answer to different opt-outs — a member silences their communities' timelines without
+ * the two answer to different opt-outs — a member silences their groups' timelines without
  * silencing the SNS-wide one — and a feed row that said "posted to the timeline" would send the
  * reader looking in the wrong place.
  *
- * The unit declared is Timeline, not Community: with the Community unit off the post stops being
+ * The unit declared is Timeline, not Group: with the Group unit off the post stops being
  * viewable at all, which the eligibility check already reads.
  *
  * The mail reuses the timeline-posting template. A community post is still a timeline post, and

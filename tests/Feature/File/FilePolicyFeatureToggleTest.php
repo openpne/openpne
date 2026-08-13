@@ -7,7 +7,6 @@ namespace Tests\Feature\File;
 use App\Files\FileStorage;
 use App\Models\AdminUser;
 use App\Models\BannerImage;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
@@ -16,6 +15,7 @@ use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
@@ -42,7 +42,8 @@ class FilePolicyFeatureToggleTest extends TestCase
             'diary comment' => ['diaryComment', Feature::Diary],
             'direct message attachment' => ['directMessage', Feature::DirectMessage],
             'timeline post' => ['timelinePost', Feature::Timeline],
-            'community top image' => ['community', Feature::Community],
+            'community top image (legacy alias)' => ['community', Feature::Group],
+            'group top image (write alias)' => ['group', Feature::Group],
             'community topic' => ['communityTopic', Feature::CommunityTopic],
             'community topic comment' => ['communityTopicComment', Feature::CommunityTopic],
             'community event' => ['communityEvent', Feature::CommunityEvent],
@@ -89,7 +90,7 @@ class FilePolicyFeatureToggleTest extends TestCase
         $viewer = Member::factory()->create();
         $file = $this->fileOwnedBy('communityTopic', $viewer);
 
-        $this->switchOff(Feature::Community);
+        $this->switchOff(Feature::Group);
 
         $this->assertDatabaseMissing('sns_settings', ['key' => Feature::CommunityTopic->settingKey()->value]);
         $this->assertFalse(Gate::forUser($viewer)->allows('view', $file));
@@ -142,7 +143,7 @@ class FilePolicyFeatureToggleTest extends TestCase
 
     private function fileOwnedBy(string $alias, Member $viewer): File
     {
-        $community = fn (): Community => Community::factory()->create();
+        $group = fn (): Group => Group::factory()->create();
 
         /** @var Model $owner */
         $owner = match ($alias) {
@@ -155,10 +156,10 @@ class FilePolicyFeatureToggleTest extends TestCase
             ]),
             'directMessage' => DirectMessage::factory()->create(['sender_id' => $viewer->getKey()]),
             'timelinePost' => TimelinePost::factory()->create(['member_id' => $viewer->getKey()]),
-            'community' => $community(),
-            'communityTopic' => CommunityTopic::factory()->create(['community_id' => $community()->getKey()]),
+            'community', 'group' => $group(),
+            'communityTopic' => CommunityTopic::factory()->create(['community_id' => $group()->getKey()]),
             'communityTopicComment' => CommunityTopicComment::factory()->create(),
-            'communityEvent' => CommunityEvent::factory()->create(['community_id' => $community()->getKey()]),
+            'communityEvent' => CommunityEvent::factory()->create(['community_id' => $group()->getKey()]),
             'communityEventComment' => CommunityEventComment::factory()->create(),
         };
 

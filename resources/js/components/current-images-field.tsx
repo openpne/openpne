@@ -9,7 +9,7 @@ interface CurrentImagesFieldProps {
 }
 
 /**
- * The "Current images" grid on the four post-with-images edit forms (diary, community topic/event,
+ * The "Current images" grid on the four post-with-images edit forms (diary, group topic/event,
  * message draft): a thumbnail per existing image with a controlled Delete checkbox. Controlled so the
  * caller owns the `remove_images` payload; renders nothing when there are no current images.
  */

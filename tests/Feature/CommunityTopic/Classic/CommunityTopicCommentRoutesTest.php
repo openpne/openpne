@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\CommunityTopic\Classic;
 
-use App\Features\Community\CommunityRole;
-use App\Models\Community;
-use App\Models\CommunityMember;
+use App\Features\Group\GroupRole;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -16,11 +16,11 @@ class CommunityTopicCommentRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -37,9 +37,9 @@ class CommunityTopicCommentRoutesTest extends TestCase
 
     public function test_a_member_comments_and_the_topic_rises_on_the_board(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $member->getKey()]);
         DB::table('community_topics')->where('id', $topic->getKey())->update(['updated_at' => now()->subDay()]);
 
         $response = $this->actingAs($member)->post(route('communityTopic.comment.store', $topic), ['body' => 'First reply']);
@@ -86,9 +86,9 @@ class CommunityTopicCommentRoutesTest extends TestCase
 
     public function test_a_comment_is_deletable_by_its_author_with_the_comment_body_id(): void
     {
-        $community = Community::factory()->create();
-        $commenter = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $commenter = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
         $comment = CommunityTopicComment::factory()->create([
             'community_topic_id' => $topic->getKey(),
             'member_id' => $commenter->getKey(),
@@ -105,12 +105,12 @@ class CommunityTopicCommentRoutesTest extends TestCase
 
     public function test_the_topic_author_and_admins_may_delete_others_comments(): void
     {
-        $community = Community::factory()->create();
-        $topicAuthor = $this->joined($community);
-        $admin = $this->joined($community, CommunityRole::Admin);
-        $commenter = $this->joined($community);
-        $other = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $topicAuthor->getKey()]);
+        $group = Group::factory()->create();
+        $topicAuthor = $this->joined($group);
+        $admin = $this->joined($group, GroupRole::Admin);
+        $commenter = $this->joined($group);
+        $other = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $topicAuthor->getKey()]);
         $comment = CommunityTopicComment::factory()->create([
             'community_topic_id' => $topic->getKey(),
             'member_id' => $commenter->getKey(),

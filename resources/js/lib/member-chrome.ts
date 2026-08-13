@@ -41,7 +41,7 @@ export interface ChromeAction {
 
 /** The entity a page sits inside, drawn as the mobile bar's identity block (image + name → its page). */
 export type ChromeScope =
-    | { kind: 'community'; id: number; name: string; imageUrl: string | null }
+    | { kind: 'group'; id: number; name: string; imageUrl: string | null }
     | { kind: 'member'; id: number; name: string; imageUrl: string | null; avatarColor: string | null };
 
 export interface Chrome {
@@ -61,11 +61,11 @@ export interface Chrome {
     gap: '4' | '6' | '8';
     /** Detail pages keep the text-foreground their own <main> used to set. */
     foreground?: boolean;
-    /** Scope crumbs above the heading (community, and for board content the board). */
+    /** Scope crumbs above the heading (group, and for board content the board). */
     context?: { href: string; label: string | ChromeLabel }[];
     /**
      * Who this page belongs to, for the mobile bar's identity block. Absent on a form (its bar shows
-     * the context as static text) and on a page that is its own subject (a community top, a profile).
+     * the context as static text) and on a page that is its own subject (a group top, a profile).
      */
     scope?: ChromeScope;
     /**
@@ -88,8 +88,8 @@ export interface Chrome {
 
 export interface NavSection {
     href: string;
-    /** Canonical URL prefix marking this section active. */
-    match: string;
+    /** URL prefixes marking this section active — several when a section spans more than one space. */
+    match: string[];
     /** Match the whole path instead of the prefix: Home stands for one screen, not for what nests under it. */
     exact?: boolean;
     icon: Icon;
@@ -119,14 +119,14 @@ export const POLICY_TITLES: Record<PolicyKind, ChromeLabel> = {
 
 /** Nav order and metadata (Home is the brand row, so it is omitted). */
 export const NAV_SECTIONS: NavSection[] = [
-    { href: '/diary/list', match: '/diary', icon: BookOpen, label: DIARIES, feature: 'diary' },
-    // '/community' also prefixes /communityTopic|Event, so board pages keep this section active. The
-    // boards have no section of their own, so this one answers to the container unit alone.
-    { href: '/community/search', match: '/community', icon: Users, label: COMMUNITIES, feature: 'community' },
-    { href: '/timeline', match: '/timeline', icon: Activity, label: ACTIVITY, feature: 'timeline' },
+    { href: '/diary/list', match: ['/diary'], icon: BookOpen, label: DIARIES, feature: 'diary' },
+    // The boards still live under the OpenPNE 3 /communityTopic|Event space and have no section of
+    // their own, so this one answers for them too and for the container unit alone.
+    { href: '/groups', match: ['/groups', '/communityTopic', '/communityEvent'], icon: Users, label: COMMUNITIES, feature: 'group' },
+    { href: '/timeline', match: ['/timeline'], icon: Activity, label: ACTIVITY, feature: 'timeline' },
     {
         href: '/friend/list',
-        match: '/friend',
+        match: ['/friend'],
         icon: UserCircle2,
         label: FRIENDS,
         badge: { count: 'friendRequests', label: t(':count pending %friend% requests') },
@@ -134,7 +134,7 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         href: '/message',
-        match: '/message',
+        match: ['/message'],
         icon: Mail,
         label: MESSAGES,
         badge: { count: 'unreadMessages', label: t(':count unread messages') },
@@ -142,13 +142,13 @@ export const NAV_SECTIONS: NavSection[] = [
     },
     {
         href: '/notifications',
-        match: '/notifications',
+        match: ['/notifications'],
         icon: Bell,
         label: NOTIFICATIONS,
         badge: { count: 'notifications', label: t(':count unread notifications') },
     },
-    { href: '/member/search', match: '/member/search', icon: Search, label: MEMBER_SEARCH },
-    { href: '/member/config', match: '/member/config', icon: Settings, label: SETTINGS },
+    { href: '/member/search', match: ['/member/search'], icon: Search, label: MEMBER_SEARCH },
+    { href: '/member/config', match: ['/member/config'], icon: Settings, label: SETTINGS },
 ];
 
 /** The nav an administrator's current toggles leave: a section whose unit is off answers 404. */
@@ -157,7 +157,7 @@ export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSec
 }
 
 /** Home is the brand row in the nav lists, so it exists only for the bottom bar, which has no brand. */
-const HOME_SECTION: NavSection = { href: '/dashboard', match: '/dashboard', exact: true, icon: House, label: t('Home') };
+const HOME_SECTION: NavSection = { href: '/dashboard', match: ['/dashboard'], exact: true, icon: House, label: t('Home') };
 
 /**
  * The phone bottom bar's tabs after Home, in bar order. A deliberately fixed list — one change
@@ -179,7 +179,7 @@ export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSect
 
 const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary%'), icon: Pencil };
 const POST_ACTIVITY: ChromeAction = { href: '/timeline/new', label: t('%Post_activity%'), icon: Pencil };
-const CREATE_COMMUNITY: ChromeAction = { href: '/community/edit', label: t('Create a %community%'), icon: Plus };
+const CREATE_COMMUNITY: ChromeAction = { href: '/groups/edit', label: t('Create a %community%'), icon: Plus };
 
 // The friend tab is a lens the friend unit owns, so it goes with the unit while the diary hub stays.
 const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeTab[] => [
@@ -189,9 +189,9 @@ const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeT
 ];
 
 const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
-    { href: '/community/search', label: t('All'), active: active === 'browse' },
-    { href: '/community/joinList', label: t('Joined'), active: active === 'joined' },
-    { href: '/community/recent', label: t('Recent activity'), active: active === 'recent' },
+    { href: '/groups', label: t('All'), active: active === 'browse' },
+    { href: '/groups/mine', label: t('Joined'), active: active === 'joined' },
+    { href: '/groups/recent', label: t('Recent activity'), active: active === 'recent' },
 ];
 
 const friendTabs = (active: 'list' | 'requests'): ChromeTab[] => [
@@ -205,32 +205,32 @@ interface CommunityRef {
     imageUrl: string | null;
 }
 
-const communityContext = (community: CommunityRef): Chrome['context'] => [
-    { href: `/community/${community.id}`, label: community.name },
+const communityContext = (group: CommunityRef): Chrome['context'] => [
+    { href: `/groups/${group.id}`, label: group.name },
 ];
 
-const communityScope = (community: CommunityRef): ChromeScope => ({
-    kind: 'community',
-    id: community.id,
-    name: community.name,
-    imageUrl: community.imageUrl,
+const communityScope = (group: CommunityRef): ChromeScope => ({
+    kind: 'group',
+    id: group.id,
+    name: group.name,
+    imageUrl: group.imageUrl,
 });
 
-// Board-scoped context: the community crumb plus the board itself, shared by a board's detail
+// Board-scoped context: the group crumb plus the board itself, shared by a board's detail
 // (show) and edit pages — an edit page adds the specific topic/event as a third crumb.
-const topicBoardContext = (community: CommunityRef): Chrome['context'] => [
-    ...communityContext(community)!,
-    { href: `/communityTopic/listCommunity/${community.id}`, label: t('%Topics%') },
+const topicBoardContext = (group: CommunityRef): Chrome['context'] => [
+    ...communityContext(group)!,
+    { href: `/communityTopic/listCommunity/${group.id}`, label: t('%Topics%') },
 ];
 
-const communityTimelineContext = (community: CommunityRef): Chrome['context'] => [
-    ...communityContext(community)!,
-    { href: `/community/${community.id}/timeline`, label: ACTIVITY },
+const communityTimelineContext = (group: CommunityRef): Chrome['context'] => [
+    ...communityContext(group)!,
+    { href: `/groups/${group.id}/timeline`, label: ACTIVITY },
 ];
 
-const eventBoardContext = (community: CommunityRef): Chrome['context'] => [
-    ...communityContext(community)!,
-    { href: `/communityEvent/listCommunity/${community.id}`, label: t('Events') },
+const eventBoardContext = (group: CommunityRef): Chrome['context'] => [
+    ...communityContext(group)!,
+    { href: `/communityEvent/listCommunity/${group.id}`, label: t('Events') },
 ];
 
 interface MemberRef {
@@ -240,7 +240,7 @@ interface MemberRef {
     avatarColor: string | null;
 }
 
-// A contextual page about another member (their diary archive, friends, communities): crumb back
+// A contextual page about another member (their diary archive, friends, groups): crumb back
 // to that member's profile, the closest thing those lists have to a canonical parent. The crumb is
 // the one place the chrome shows the member's name — titles stay generic (FRIENDS, not ":name's
 // %friends%") so the same string never renders twice back to back.
@@ -336,7 +336,7 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: communityTabs('browse'),
         action: CREATE_COMMUNITY,
     }),
-    // The three community tabs are one hub: same h1 (= nav label) and the create action on every
+    // The three group tabs are one hub: same h1 (= nav label) and the create action on every
     // tab, so switching tabs never shifts the header. A non-owner's list stays contextual.
     'community/list': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
@@ -357,126 +357,126 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabs: communityTabs('recent'),
         action: CREATE_COMMUNITY,
     }),
-    // Community-scoped pages carry the community as context crumbs; board indexes keep a short h1
-    // ("Topics" / "Events") so a long community name never wraps the heading. Detail pages add the
+    // Community-scoped pages carry the group as context crumbs; board indexes keep a short h1
+    // ("Topics" / "Events") so a long group name never wraps the heading. Detail pages add the
     // board as a second crumb (the back-to-board path they used to carry in the body).
     'community/topic/index': (props) => {
-        const { community, canPost } = props as unknown as { community: CommunityRef; canPost: boolean };
+        const { group, canPost } = props as unknown as { group: CommunityRef; canPost: boolean };
         return {
             mode: 'contextual',
             title: t('%Topics%'),
-            context: communityContext(community),
-            scope: communityScope(community),
+            context: communityContext(group),
+            scope: communityScope(group),
             action: canPost
-                ? { href: `/communityTopic/new/${community.id}`, label: t('Create a %topic%'), icon: Plus }
+                ? { href: `/communityTopic/new/${group.id}`, label: t('Create a %topic%'), icon: Plus }
                 : undefined,
         };
     },
     'community/event/index': (props) => {
-        const { community, canPost } = props as unknown as { community: CommunityRef; canPost: boolean };
+        const { group, canPost } = props as unknown as { group: CommunityRef; canPost: boolean };
         return {
             mode: 'contextual',
             title: t('Events'),
-            context: communityContext(community),
-            scope: communityScope(community),
+            context: communityContext(group),
+            scope: communityScope(group),
             action: canPost
-                ? { href: `/communityEvent/new/${community.id}`, label: t('Create an event'), icon: Plus }
+                ? { href: `/communityEvent/new/${group.id}`, label: t('Create an event'), icon: Plus }
                 : undefined,
         };
     },
     'community/topic/show': (props) => {
-        const { community } = props as unknown as { community: CommunityRef };
-        return { context: topicBoardContext(community), scope: communityScope(community) };
+        const { group } = props as unknown as { group: CommunityRef };
+        return { context: topicBoardContext(group), scope: communityScope(group) };
     },
     'community/event/show': (props) => {
-        const { community } = props as unknown as { community: CommunityRef };
-        return { context: eventBoardContext(community), scope: communityScope(community) };
+        const { group } = props as unknown as { group: CommunityRef };
+        return { context: eventBoardContext(group), scope: communityScope(group) };
     },
     // Edit mode's third crumb is the topic/event being edited (the page it returns to on cancel);
     // create mode stops at the board, matching diary/edit vs diary/new.
     'community/topic/edit': (props) => {
-        const { community, topic } = props as unknown as { community: CommunityRef; topic: { id: number; name: string } | null };
+        const { group, topic } = props as unknown as { group: CommunityRef; topic: { id: number; name: string } | null };
         return {
             form: true,
             compose: true,
             context: topic
-                ? [...topicBoardContext(community)!, { href: `/communityTopic/${topic.id}`, label: topic.name }]
-                : topicBoardContext(community),
+                ? [...topicBoardContext(group)!, { href: `/communityTopic/${topic.id}`, label: topic.name }]
+                : topicBoardContext(group),
         };
     },
     'community/event/edit': (props) => {
-        const { community, event } = props as unknown as { community: CommunityRef; event: { id: number; name: string } | null };
+        const { group, event } = props as unknown as { group: CommunityRef; event: { id: number; name: string } | null };
         return {
             form: true,
             compose: true,
             context: event
-                ? [...eventBoardContext(community)!, { href: `/communityEvent/${event.id}`, label: event.name }]
-                : eventBoardContext(community),
+                ? [...eventBoardContext(group)!, { href: `/communityEvent/${event.id}`, label: event.name }]
+                : eventBoardContext(group),
         };
     },
     'community/pending': (props) => {
-        const { community } = props as unknown as { community: CommunityRef };
+        const { group } = props as unknown as { group: CommunityRef };
         return {
             mode: 'contextual',
             title: t('Pending members'),
-            context: communityContext(community),
-            scope: communityScope(community),
+            context: communityContext(group),
+            scope: communityScope(group),
         };
     },
-    // Edit mode crumbs to the community; create mode to the hub the create action lives on.
+    // Edit mode crumbs to the group; create mode to the hub the create action lives on.
     'community/edit': (props) => {
-        const { community } = props as unknown as { community: CommunityRef | null };
-        return community
-            ? { form: true, context: communityContext(community) }
-            : { form: true, context: [{ href: '/community/search', label: COMMUNITIES }] };
+        const { group } = props as unknown as { group: CommunityRef | null };
+        return group
+            ? { form: true, context: communityContext(group) }
+            : { form: true, context: [{ href: '/groups', label: COMMUNITIES }] };
     },
     // The h1-as-link pattern these replaced put the community/event name in the h1 itself; the
     // crumb now carries it, so the h1 shrinks to the plain section label (existing keys reused).
     'community/members': (props) => {
-        const { community } = props as unknown as { community: CommunityRef };
+        const { group } = props as unknown as { group: CommunityRef };
         return {
             mode: 'contextual',
             title: t('Members'),
-            context: communityContext(community),
-            scope: communityScope(community),
+            context: communityContext(group),
+            scope: communityScope(group),
         };
     },
     'community/manage': (props) => {
-        const { community } = props as unknown as { community: CommunityRef };
+        const { group } = props as unknown as { group: CommunityRef };
         return {
             mode: 'contextual',
             title: t('Management member'),
-            context: communityContext(community),
-            scope: communityScope(community),
+            context: communityContext(group),
+            scope: communityScope(group),
         };
     },
     'community/event/members': (props) => {
-        const { community, event } = props as unknown as { community: CommunityRef; event: { id: number; name: string } };
+        const { group, event } = props as unknown as { group: CommunityRef; event: { id: number; name: string } };
         return {
             mode: 'contextual',
             title: t('Count of Member'),
-            context: [...eventBoardContext(community)!, { href: `/communityEvent/${event.id}`, label: event.name }],
-            scope: communityScope(community),
+            context: [...eventBoardContext(group)!, { href: `/communityEvent/${event.id}`, label: event.name }],
+            scope: communityScope(group),
         };
     },
     'timeline/index': () => ({ mode: 'section', title: ACTIVITY, action: POST_ACTIVITY }),
     'timeline/community': (props) => {
-        const { community, canPost } = props as unknown as { community: CommunityRef; canPost: boolean };
+        const { group, canPost } = props as unknown as { group: CommunityRef; canPost: boolean };
         return {
             mode: 'contextual',
             title: ACTIVITY,
-            context: communityContext(community),
-            scope: communityScope(community),
+            context: communityContext(group),
+            scope: communityScope(group),
             action: canPost
-                ? { href: `/community/${community.id}/timeline/new`, label: t('%Post_activity%'), icon: Pencil }
+                ? { href: `/community/${group.id}/timeline/new`, label: t('%Post_activity%'), icon: Pencil }
                 : undefined,
         };
     },
-    // The crumb names the community, as the topic and event compose forms do: a member in several
-    // communities has to be able to see which one they are posting into.
+    // The crumb names the group, as the topic and event compose forms do: a member in several
+    // groups has to be able to see which one they are posting into.
     'timeline/community-new': (props) => {
-        const { community } = props as unknown as { community: CommunityRef };
-        return { context: communityTimelineContext(community) };
+        const { group } = props as unknown as { group: CommunityRef };
+        return { context: communityTimelineContext(group) };
     },
     'timeline/member': (props) => {
         const { owner, isOwner } = props as unknown as OwnerScoped;
@@ -493,11 +493,11 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
     // Crumb label is the bare author name, the post card right below carries the same name as
     // content; the page's h1 is a generic post label so nothing renders twice.
     'timeline/show': (props) => {
-        const { post, community } = props as unknown as { post: { author: MemberRef }; community: CommunityRef | null };
-        // A community thread is about its community: the reader arrived from inside one, and the
+        const { post, group } = props as unknown as { post: { author: MemberRef }; group: CommunityRef | null };
+        // A group thread is about its group: the reader arrived from inside one, and the
         // author's timeline is not where the post lives.
-        if (community) {
-            return { context: communityTimelineContext(community), scope: communityScope(community) };
+        if (group) {
+            return { context: communityTimelineContext(group), scope: communityScope(group) };
         }
 
         return {
@@ -580,7 +580,7 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'diary/new': { form: true, compose: true, context: [{ href: '/diary/list', label: DIARIES }] },
     'timeline/show': { foreground: true },
     'timeline/new': { form: true, compose: true, context: [{ href: '/timeline', label: ACTIVITY }] },
-    // Context comes from HUB_CHROME, which knows which community is being composed into.
+    // Context comes from HUB_CHROME, which knows which group is being composed into.
     'timeline/community-new': { form: true, compose: true },
 };
 

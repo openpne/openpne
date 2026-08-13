@@ -25,7 +25,7 @@ class GadgetKindTest extends TestCase
             'informationBox' => ['informationBox', 'information_7'],
             'memberImageBox' => ['memberImageBox', 'memberImageBox_7'],
             'friendListBox' => ['friendListBox', 'friendList_7'],
-            'communityJoinListBox' => ['communityJoinListBox', 'communityList_7'],
+            'groupJoinListBox' => ['groupJoinListBox', 'communityList_7'],
             'profileListBox' => ['profileListBox', 'profile'],
             // The home diary lists share OpenPNE 3's homeRecentList_ id; diaryMemberList had none.
             'diaryFriendList' => ['diaryFriendList', 'homeRecentList_7'],
@@ -81,12 +81,12 @@ class GadgetKindTest extends TestCase
             'timelineProfile' => Feature::Timeline,
             'activityBox' => Feature::Timeline,
             'allMemberActivityBox' => Feature::Timeline,
-            // The board / calendar lists follow their own unit (and communities through it).
+            // The board / calendar lists follow their own unit (and groups through it).
             'recentCommunityTopicComment' => Feature::CommunityTopic,
             'recentCommunityTopicCommentSns' => Feature::CommunityTopic,
             'recentCommunityEventComment' => Feature::CommunityEvent,
             'recentCommunityEventCommentSns' => Feature::CommunityEvent,
-            'communityJoinListBox' => Feature::Community,
+            'groupJoinListBox' => Feature::Group,
             'friendListBox' => Feature::Friend,
             // birthdayBox lists birthdays, not friendships, so friends being off does not silence it.
             'birthdayBox' => null,

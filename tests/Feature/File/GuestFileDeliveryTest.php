@@ -3,7 +3,6 @@
 namespace Tests\Feature\File;
 
 use App\Files\FileStorage;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
@@ -12,6 +11,7 @@ use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\SnsSettingKey;
@@ -40,7 +40,8 @@ class GuestFileDeliveryTest extends TestCase
             'web-public diary comment' => ['diaryComment', true],
             // Members-only surfaces: a guest never had a page to reach them from.
             'members-only diary' => ['diary:members', false],
-            'community' => ['community', false],
+            'group (legacy alias)' => ['community', false],
+            'group (write alias)' => ['group', false],
             'community topic' => ['communityTopic', false],
             'community topic comment' => ['communityTopicComment', false],
             'community event' => ['communityEvent', false],
@@ -102,7 +103,7 @@ class GuestFileDeliveryTest extends TestCase
                 'diary_id' => $webPublicDiary()->getKey(),
                 'member_id' => $author->getKey(),
             ]),
-            'community' => Community::factory()->create(),
+            'community', 'group' => Group::factory()->create(),
             'communityTopic' => CommunityTopic::factory()->create(),
             'communityTopicComment' => CommunityTopicComment::factory()->create(),
             'communityEvent' => CommunityEvent::factory()->create(),

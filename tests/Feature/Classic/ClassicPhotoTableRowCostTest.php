@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Classic;
 
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\Gadget;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -36,12 +36,12 @@ class ClassicPhotoTableRowCostTest extends TestCase
     public function test_the_community_member_grid_costs_the_same_at_three_rows_and_twelve(): void
     {
         $viewer = Member::factory()->create();
-        $small = $this->communityWithMembers($viewer, 3);
-        $large = $this->communityWithMembers($viewer, 12);
+        $small = $this->groupWithMembers($viewer, 3);
+        $large = $this->groupWithMembers($viewer, 12);
 
         $this->assertSame(
-            $this->queryCountFor($viewer, "/community/member/list?id={$small->getKey()}"),
-            $this->queryCountFor($viewer, "/community/member/list?id={$large->getKey()}"),
+            $this->queryCountFor($viewer, "/groups/{$small->getKey()}/members"),
+            $this->queryCountFor($viewer, "/groups/{$large->getKey()}/members"),
         );
     }
 
@@ -68,17 +68,17 @@ class ClassicPhotoTableRowCostTest extends TestCase
 
     public function test_the_community_list_gadget_totals_with_one_aggregate_and_crowns_in_the_slice(): void
     {
-        Gadget::create(['context' => 'home', 'zone' => 'sideMenu', 'name' => 'communityJoinListBox', 'sort_order' => 0]);
+        Gadget::create(['context' => 'home', 'zone' => 'sideMenu', 'name' => 'groupJoinListBox', 'sort_order' => 0]);
         app(GadgetService::class)->clearCache();
 
-        $small = $this->memberInCommunities(3);
-        $large = $this->memberInCommunities(12);
+        $small = $this->memberInGroups(3);
+        $large = $this->memberInGroups(12);
 
         $this->assertSame($this->queryCountFor($small, '/'), $this->queryCountFor($large, '/'));
 
         // The crown flag is a correlated exists in the slice's select list, not a query per row, so
         // the aggregate for the total stays the gadget's only extra round trip.
-        $this->assertSame(1, $this->aggregateCountsOver($this->queriesFor($large, '/'), 'communities'));
+        $this->assertSame(1, $this->aggregateCountsOver($this->queriesFor($large, '/'), 'groups'));
     }
 
     private function memberWithFriends(int $count): Member
@@ -94,12 +94,12 @@ class ClassicPhotoTableRowCostTest extends TestCase
         return $member;
     }
 
-    private function memberInCommunities(int $count): Member
+    private function memberInGroups(int $count): Member
     {
         $member = Member::factory()->create();
-        foreach (Community::factory()->count($count)->create() as $community) {
-            CommunityMember::factory()->create([
-                'community_id' => $community->getKey(),
+        foreach (Group::factory()->count($count)->create() as $group) {
+            GroupMember::factory()->create([
+                'group_id' => $group->getKey(),
                 'member_id' => $member->getKey(),
             ]);
         }
@@ -122,21 +122,21 @@ class ClassicPhotoTableRowCostTest extends TestCase
         ));
     }
 
-    private function communityWithMembers(Member $viewer, int $count): Community
+    private function groupWithMembers(Member $viewer, int $count): Group
     {
-        $community = Community::factory()->create();
-        CommunityMember::factory()->admin()->create([
-            'community_id' => $community->getKey(),
+        $group = Group::factory()->create();
+        GroupMember::factory()->admin()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $viewer->getKey(),
         ]);
         foreach (Member::factory()->count($count - 1)->create() as $member) {
-            CommunityMember::factory()->create([
-                'community_id' => $community->getKey(),
+            GroupMember::factory()->create([
+                'group_id' => $group->getKey(),
                 'member_id' => $member->getKey(),
             ]);
         }
 
-        return $community;
+        return $group;
     }
 
     /** @return list<string> */

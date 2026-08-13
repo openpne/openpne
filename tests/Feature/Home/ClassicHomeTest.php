@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Home;
 
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Gadget;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,9 +51,9 @@ class ClassicHomeTest extends TestCase
     public function test_admin_transfer_nominee_sees_a_caution_linking_to_the_community(): void
     {
         $member = Member::factory()->create();
-        $community = Community::factory()->create(['name' => 'Runners Club']);
-        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
-        $community->forceFill(['pending_admin_member_id' => $member->getKey()])->save();
+        $group = Group::factory()->create(['name' => 'Runners Club']);
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+        $group->forceFill(['pending_admin_member_id' => $member->getKey()])->save();
 
         // The CI DB configures no gadgets, so this exercises the no-gadgets fallback branch (the
         // one that renders id="home_index"), where the caution must also appear.
@@ -61,15 +61,15 @@ class ClassicHomeTest extends TestCase
             ->assertOk()
             ->assertSee('id="home_index"', false)
             ->assertSee('Runners Club')
-            ->assertSee(e(route('community.show', $community)), false);
+            ->assertSee(e(route('group.show', $group)), false);
     }
 
     public function test_admin_transfer_caution_also_renders_on_a_gadget_configured_home(): void
     {
         $member = Member::factory()->create();
-        $community = Community::factory()->create(['name' => 'Runners Club']);
-        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
-        $community->forceFill(['pending_admin_member_id' => $member->getKey()])->save();
+        $group = Group::factory()->create(['name' => 'Runners Club']);
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+        $group->forceFill(['pending_admin_member_id' => $member->getKey()])->save();
 
         // With a gadget configured, home takes the gadget-sections branch (contentTop seam), not the
         // no-gadgets fallback — the caution must render there too.
@@ -80,16 +80,16 @@ class ClassicHomeTest extends TestCase
             ->assertOk()
             ->assertDontSee('id="home_index"', false)
             ->assertSee('Runners Club')
-            ->assertSee(e(route('community.show', $community)), false);
+            ->assertSee(e(route('group.show', $group)), false);
     }
 
     public function test_several_cautions_share_one_information_box(): void
     {
         $member = Member::factory()->create();
         foreach (['Runners Club', 'Cycling Club'] as $name) {
-            $community = Community::factory()->create(['name' => $name]);
-            CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $member->getKey()]);
-            $community->forceFill(['pending_admin_member_id' => $member->getKey()])->save();
+            $group = Group::factory()->create(['name' => $name]);
+            GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+            $group->forceFill(['pending_admin_member_id' => $member->getKey()])->save();
         }
 
         $content = (string) $this->actingAs($member)->get('/')->assertOk()->getContent();
@@ -103,12 +103,12 @@ class ClassicHomeTest extends TestCase
     {
         $member = Member::factory()->create();
         $nominee = Member::factory()->create();
-        $community = Community::factory()->create(['name' => 'Runners Club']);
-        $community->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
+        $group = Group::factory()->create(['name' => 'Runners Club']);
+        $group->forceFill(['pending_admin_member_id' => $nominee->getKey()])->save();
 
         $this->actingAs($member)->get('/')
             ->assertOk()
-            ->assertDontSee(e(route('community.show', $community)), false);
+            ->assertDontSee(e(route('group.show', $group)), false);
     }
 
     public function test_unread_messages_and_friend_requests_each_add_a_caution(): void
@@ -133,9 +133,9 @@ class ClassicHomeTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $sender = Member::factory()->create();
-        $community = Community::factory()->create(['name' => 'Runners Club']);
-        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
-        $community->forceFill(['pending_admin_member_id' => $viewer->getKey()])->save();
+        $group = Group::factory()->create(['name' => 'Runners Club']);
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
+        $group->forceFill(['pending_admin_member_id' => $viewer->getKey()])->save();
         DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
         $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
         DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);

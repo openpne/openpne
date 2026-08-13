@@ -17,11 +17,11 @@ use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Files\ImageEdit;
 use App\Jobs\SyncLinkCard;
-use App\Models\Community;
 use App\Models\CommunityEvent;
-use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -302,7 +302,7 @@ class LinkCardWiringTest extends TestCase
     {
         return $this->app->make(CreateTopic::class)(
             $this->member,
-            $this->joinedCommunity(),
+            $this->joinedGroup(),
             new CommunityTopicFormData(name: 'T', body: 'See https://example.com/a', format: BodyFormat::Plain),
         );
     }
@@ -311,7 +311,7 @@ class LinkCardWiringTest extends TestCase
     {
         return $this->app->make(CreateEvent::class)(
             $this->member,
-            $this->joinedCommunity(),
+            $this->joinedGroup(),
             $this->eventForm(),
         );
     }
@@ -368,19 +368,19 @@ class LinkCardWiringTest extends TestCase
         );
     }
 
-    private function joinedCommunity(): Community
+    private function joinedGroup(): Group
     {
-        $community = Community::factory()->create();
-        CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $this->member->getKey()]);
+        $group = Group::factory()->create();
+        GroupMember::factory()->create(['group_id' => $group->getKey(), 'member_id' => $this->member->getKey()]);
 
-        return $community;
+        return $group;
     }
 
     private function topic(): CommunityTopic
     {
-        $community = $this->joinedCommunity();
+        $group = $this->joinedGroup();
 
-        return CommunityTopic::factory()->for($community)->for($this->member, 'member')->create([
+        return CommunityTopic::factory()->for($group, 'community')->for($this->member, 'member')->create([
             'body' => 'See https://example.com/a',
             'link_card_synced_at' => null,
         ]);
@@ -388,9 +388,9 @@ class LinkCardWiringTest extends TestCase
 
     private function event(): CommunityEvent
     {
-        $community = $this->joinedCommunity();
+        $group = $this->joinedGroup();
 
-        return CommunityEvent::factory()->for($community)->for($this->member, 'member')->create([
+        return CommunityEvent::factory()->for($group, 'community')->for($this->member, 'member')->create([
             'body' => 'See https://example.com/a',
             'link_card_synced_at' => null,
         ]);

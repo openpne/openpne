@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http;
 
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\Diary;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Support\Feature;
@@ -27,16 +27,16 @@ class FeatureToggleRouteTest extends TestCase
 
     private Member $member;
 
-    private Community $community;
+    private Group $group;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->member = Member::factory()->create();
-        $this->community = Community::factory()->create();
-        CommunityMember::factory()->admin()->create([
-            'community_id' => $this->community->getKey(),
+        $this->community = Group::factory()->create();
+        GroupMember::factory()->admin()->create([
+            'group_id' => $this->community->getKey(),
             'member_id' => $this->member->getKey(),
         ]);
     }
@@ -60,17 +60,17 @@ class FeatureToggleRouteTest extends TestCase
     }
 
     /**
-     * The board and the calendar live inside communities, so switching communities off closes all
+     * The board and the calendar live inside groups, so switching groups off closes all
      * three — their own rows say enabled and are overruled.
      */
     public function test_switching_communities_off_closes_the_board_and_the_calendar_too(): void
     {
         $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
         $this->setSnsSetting(Feature::CommunityEvent->settingKey(), true);
-        $this->setSnsSetting(Feature::Community->settingKey(), false);
+        $this->setSnsSetting(Feature::Group->settingKey(), false);
 
-        $this->actingAs($this->member)->get('/community/search')->assertNotFound();
-        $this->actingAs($this->member)->get('/community/recent')->assertNotFound();
+        $this->actingAs($this->member)->get('/groups')->assertNotFound();
+        $this->actingAs($this->member)->get('/groups/recent')->assertNotFound();
         $this->actingAs($this->member)->get("/communityTopic/listCommunity/{$this->community->getKey()}")->assertNotFound();
         $this->actingAs($this->member)->get("/communityEvent/listCommunity/{$this->community->getKey()}")->assertNotFound();
         // Unrelated units are untouched.
@@ -82,7 +82,7 @@ class FeatureToggleRouteTest extends TestCase
         $this->setSnsSetting(Feature::CommunityTopic->settingKey(), false);
 
         $this->actingAs($this->member)->get("/communityTopic/listCommunity/{$this->community->getKey()}")->assertNotFound();
-        $this->actingAs($this->member)->get('/community/search')->assertOk();
+        $this->actingAs($this->member)->get('/groups')->assertOk();
         $this->actingAs($this->member)->get("/communityEvent/listCommunity/{$this->community->getKey()}")->assertOk();
     }
 
@@ -170,15 +170,15 @@ class FeatureToggleRouteTest extends TestCase
     /** @return array<string, array{string, string}> feature value => [representative GET, representative POST] */
     private function representativeRoutes(): array
     {
-        $community = $this->community->getKey();
+        $group = $this->community->getKey();
 
         return [
             'diary' => ['/diary/list', '/diary/create'],
             'directMessage' => ['/message/receiveList', '/message/sendToFriend'],
             'timeline' => ['/timeline', '/timeline/create'],
-            'community' => ['/community/search', '/community/edit'],
-            'communityTopic' => ["/communityTopic/listCommunity/{$community}", "/communityTopic/create/{$community}"],
-            'communityEvent' => ["/communityEvent/listCommunity/{$community}", "/communityEvent/create/{$community}"],
+            'group' => ['/groups', '/groups/edit'],
+            'communityTopic' => ["/communityTopic/listCommunity/{$group}", "/communityTopic/create/{$group}"],
+            'communityEvent' => ["/communityEvent/listCommunity/{$group}", "/communityEvent/create/{$group}"],
             'friend' => ['/friend/list', '/friend/link'],
         ];
     }

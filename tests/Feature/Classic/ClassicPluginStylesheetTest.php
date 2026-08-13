@@ -3,8 +3,8 @@
 namespace Tests\Feature\Classic;
 
 use App\Features\CommunityTopic\TopicReadAccess;
-use App\Models\Community;
 use App\Models\Diary;
+use App\Models\Group;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,10 +42,10 @@ class ClassicPluginStylesheetTest extends TestCase
         // addStylesheet, not the community module's view.yml — the screen pushes the link itself,
         // into the same cascade slot: after the skin, before the admin custom CSS.
         $this->setSnsSetting(SnsSettingKey::CustomCss, 'body{}');
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
 
         $html = $this->actingAs(Member::factory()->create())
-            ->get(route('community.show', $community))->assertOk()->getContent();
+            ->get(route('group.show', $group))->assertOk()->getContent();
 
         $skin = strpos($html, 'opSkinBasicPlugin/css/main.css');
         $plugin = strpos($html, 'opCommunityTopicPlugin/css/communityTopic.css');
@@ -60,11 +60,11 @@ class ClassicPluginStylesheetTest extends TestCase
     {
         // OpenPNE 3's list components addStylesheet inside their view ACL: an outsider to a
         // members-only board gets neither the rows nor the stylesheet.
-        $community = Community::factory()->create([
+        $group = Group::factory()->create([
             'topic_read_access' => TopicReadAccess::MembersOnly,
         ]);
 
-        $this->actingAs(Member::factory()->create())->get(route('community.show', $community))
+        $this->actingAs(Member::factory()->create())->get(route('group.show', $group))
             ->assertOk()
             ->assertDontSee('opCommunityTopicPlugin', false);
     }
@@ -73,7 +73,7 @@ class ClassicPluginStylesheetTest extends TestCase
     {
         // OpenPNE 3 loaded communityTopic.css on the community home only; the module's other
         // screens declare no stylesheet.
-        $this->actingAs(Member::factory()->create())->get(route('community.search'))
+        $this->actingAs(Member::factory()->create())->get(route('group.search'))
             ->assertOk()
             ->assertDontSee('opCommunityTopicPlugin', false);
     }

@@ -30,12 +30,12 @@ class FeatureStateTest extends TestCase
 
     public function test_a_disabled_community_takes_the_board_and_the_calendar_with_it(): void
     {
-        $this->setSnsSetting(Feature::Community->settingKey(), false);
+        $this->setSnsSetting(Feature::Group->settingKey(), false);
         // Explicitly on, and still unreachable: the dependency wins over the unit's own row.
         $this->setSnsSetting(Feature::CommunityTopic->settingKey(), true);
         $this->setSnsSetting(Feature::CommunityEvent->settingKey(), true);
 
-        $this->assertFalse(Feature::Community->enabled());
+        $this->assertFalse(Feature::Group->enabled());
         $this->assertFalse(Feature::CommunityTopic->enabled());
         $this->assertFalse(Feature::CommunityEvent->enabled());
         $this->assertTrue(Feature::Diary->enabled());
@@ -46,20 +46,20 @@ class FeatureStateTest extends TestCase
         $this->setSnsSetting(Feature::CommunityTopic->settingKey(), false);
 
         $this->assertFalse(Feature::CommunityTopic->enabled());
-        $this->assertTrue(Feature::Community->enabled());
+        $this->assertTrue(Feature::Group->enabled());
         $this->assertTrue(Feature::CommunityEvent->enabled());
     }
 
     public function test_the_enabled_map_reports_every_unit_with_dependencies_applied(): void
     {
-        $this->setSnsSetting(Feature::Community->settingKey(), false);
+        $this->setSnsSetting(Feature::Group->settingKey(), false);
         $this->setSnsSetting(Feature::DirectMessage->settingKey(), false);
 
         $this->assertSame([
             'diary' => true,
             'directMessage' => false,
             'timeline' => true,
-            'community' => false,
+            'group' => false,
             'communityTopic' => false,
             'communityEvent' => false,
             'friend' => true,

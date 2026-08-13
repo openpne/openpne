@@ -43,7 +43,7 @@ class NavigationForm
 
                                 return;
                             }
-                            if (str_contains($uri, ':id') && ! in_array($get('type'), ['friend', 'community'], true)) {
+                            if (str_contains($uri, ':id') && ! in_array($get('type'), ['friend', 'group'], true)) {
                                 $fail(__('The :id placeholder is only allowed in member and %community% navigation.'));
                             }
                         },

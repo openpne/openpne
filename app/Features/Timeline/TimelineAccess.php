@@ -25,7 +25,7 @@ final class TimelineAccess
         $owner = $post->member;
 
         if ($post->community_id !== null) {
-            return self::canViewCommunityPost($viewer, $post);
+            return self::canViewGroupPost($viewer, $post);
         }
 
         if ($viewer === null) {
@@ -52,9 +52,9 @@ final class TimelineAccess
      * author's current membership is not read here — OpenPNE 3 dropped an ex-member's posts from the
      * community feed but still served their permalink, and that split is kept.
      */
-    private static function canViewCommunityPost(?Member $viewer, TimelinePost $post): bool
+    private static function canViewGroupPost(?Member $viewer, TimelinePost $post): bool
     {
-        if ($viewer === null || ! Feature::Community->enabled()) {
+        if ($viewer === null || ! Feature::Group->enabled()) {
             return false;
         }
 

@@ -179,7 +179,7 @@ class SyncLinkCardTest extends TestCase
 
     public function test_syncing_does_not_bump_the_record_timestamp(): void
     {
-        // Community topic and event lists order by updated_at, so a card synced from someone opening
+        // Group topic and event lists order by updated_at, so a card synced from someone opening
         // an old post would float it back to the top of the board. saveQuietly does not help: it
         // suppresses events but still goes through performUpdate, which touches the timestamp.
         Queue::fake();

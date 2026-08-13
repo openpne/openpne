@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /*
- * Community events (OpenPNE 3 opCommunityEventPlugin `community_event` table): a community's
+ * Group events (OpenPNE 3 opCommunityEventPlugin `community_event` table): a community's
  * scheduled gatherings. Same shape as community_topics plus the scheduling fields (open_date /
  * area / deadline / capacity) that drive the RSVP model in community_event_members.
  */
@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('community_events', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('community_id')->constrained('communities')->cascadeOnDelete();
+            $table->foreignId('community_id')->constrained('groups')->cascadeOnDelete();
             // Keep the event when its author is deleted (OpenPNE 3 Member onDelete: set null).
             $table->foreignId('member_id')->nullable()->constrained('members')->nullOnDelete();
             // OpenPNE 3 name/body/open_date_comment/area are Doctrine `type: string` (no length) =

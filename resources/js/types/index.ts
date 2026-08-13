@@ -22,7 +22,7 @@ export interface NineTableItem {
     id: number;
     name: string;
     imageUrl: string | null;
-    /** Member rows carry the chosen badge color (hex); community rows are always null.
+    /** Member rows carry the chosen badge color (hex); group rows are always null.
      *  Required (not optional) so a serializer that forgets it fails type-check. */
     avatarColor: string | null;
     href: string;
@@ -35,11 +35,11 @@ export interface RightRail {
         kind: 'friends' | 'members';
         items: NineTableItem[];
     };
-    joinedCommunities: NineTableItem[];
+    joinedGroups: NineTableItem[];
 }
 
 /** The feature units an administrator can switch off — the cases of App\Support\Feature. */
-export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'community' | 'communityTopic' | 'communityEvent' | 'friend';
+export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'group' | 'communityTopic' | 'communityEvent' | 'friend';
 
 export interface PageProps {
     name: string;

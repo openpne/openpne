@@ -3,8 +3,8 @@ import { InitialBadge } from '@/components/initial-badge';
 import type { NineTableItem } from '@/types';
 
 /**
- * A grid of friend or community thumbnails with names. `round`
- * (friends, like the circular Avatar) vs `square` (communities, like CommunityImage) so a person and
+ * A grid of friend or group thumbnails with names. `round`
+ * (friends, like the circular Avatar) vs `square` (groups, like CommunityImage) so a person and
  * a place read differently at a glance. Missing images fall back to a neutral initial badge. Items
  * are pre-shuffled server-side; this renders in order. `columns` picks the density: 3 fits the narrow
  * right rail; 5 keeps roughly the same tile size in a full-width body column (3 on mobile either way).
@@ -33,7 +33,7 @@ export function NineTable({ items, shape, columns = 3 }: { items: NineTableItem[
                             <InitialBadge
                                 aria-hidden
                                 name={item.name}
-                                // Chosen colors are a member feature; a community tile stays neutral even
+                                // Chosen colors are a member feature; a group tile stays neutral even
                                 // if a colored item ever leaks into the square grid.
                                 color={shape === 'round' ? item.avatarColor : null}
                                 className={`aspect-square w-full text-base ${rounded}`}

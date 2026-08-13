@@ -10,7 +10,7 @@ document covers the delivery model around it.
 ## The three layers
 
 1. **Live counts** — "needs action" numbers derived from each domain's own truth (pending
-   `friend_requests` rows, unread `direct_message_recipients`, pending `community_join_requests`).
+   `friend_requests` rows, unread `direct_message_recipients`, pending `group_join_requests`).
    No notification table, no seen state: acting on the item (accept / reject / read) is what
    makes the count drop. [`App\Features\Home\UnreadCounts`](../../app/Features/Home/UnreadCounts.php).
 2. **Display surfaces over layer 1** — Modern's nav badges, its dashboard notice panel, and the
@@ -117,10 +117,10 @@ A notification belonging to a feature unit an administrator switched off is drop
 gate is orthogonal to everything above: template and opt-out channel dropping is unchanged, and the
 feed rows already written stay put. See [feature-toggles.md](feature-toggles.md#notifications).
 
-The community-join notice to admins is `['mail', 'database']` but gated differently: not a member
-catalog kind, so the opt-out is the **per-community** `communities.is_join_notification_enabled`
+The group-join notice to admins is `['mail', 'database']` but gated differently: not a member
+catalog kind, so the opt-out is the **per-community** `groups.is_join_notification_enabled`
 (applied by the recipient query — an opted-out community notifies no one), plus the admin's global
-`community-join` template toggle for the mail part.
+`group-join` template toggle for the mail part.
 
 ## Broadcast fan-out
 
@@ -133,14 +133,14 @@ The two kinds compose as a union (which realises `dependOnNot`): mailed/fed if `
 **or** the recipient is a friend and `diaryNewPostOnlyFriends` is on. Each recipient gets exactly one
 notification carrying its decided channels, so the `database` feed row is never duplicated per channel.
 
-New community topic/event postings broadcast the same way ([`CommunityNewPostFanout`](../../app/Features/Community/CommunityNewPostFanout.php)),
+New community topic/event postings broadcast the same way ([`GroupNewPostFanout`](../../app/Features/Group/GroupNewPostFanout.php)),
 but to the community's confirmed members (minus the author / banned / blocked) and gated by a single
 new-post kind — no friends-only variant. Their mail leg also needs the shared (configurable)
 `community-posting` template to be enabled, resolved once per broadcast rather than per recipient.
 
 A community comment fans out the same fan-out, but its audience additionally **excludes the author and
 every co-commenter** — they get the inline Reply / Related notification instead. That makes the
-per-comment precedence Reply > Related > Community, with one notification per member; the broadcast and
+per-comment precedence Reply > Related > Group, with one notification per member; the broadcast and
 the inline notifications share the `community_*_commented` feed kind, distinguished by the reason. The
 excluded ids are snapshotted when the comment is posted and passed to the async job, not re-derived
 when it runs: a comment deleted in between would otherwise drop its author from the exclusion and

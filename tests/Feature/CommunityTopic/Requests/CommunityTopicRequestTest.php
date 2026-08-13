@@ -2,24 +2,24 @@
 
 namespace Tests\Feature\CommunityTopic\Requests;
 
-use App\Features\Community\CommunityRole;
+use App\Features\Group\GroupRole;
 use App\Http\Requests\CommunityTopic\StoreTopicCommentRequest;
 use App\Http\Requests\CommunityTopic\StoreTopicRequest;
 use App\Http\Requests\CommunityTopic\UpdateTopicRequest;
-use App\Models\Community;
-use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
-use Tests\Feature\Community\CommunityPostRequestParityTest;
+use Tests\Feature\Group\GroupPostRequestParityTest;
 use Tests\TestCase;
 
 /**
  * Drives the topic form requests through throwaway routes (the real routes land with the Classic
  * adapter), to pin the OpenPNE 3 validation rules and the 404-on-refusal authorization. The
  * name/body rules shared with events are additionally guarded against one-sided drift by
- * {@see CommunityPostRequestParityTest}.
+ * {@see GroupPostRequestParityTest}.
  */
 class CommunityTopicRequestTest extends TestCase
 {
@@ -30,17 +30,17 @@ class CommunityTopicRequestTest extends TestCase
         parent::setUp();
 
         Route::middleware('web')->group(function () {
-            Route::post('/_t/topics/{community}', fn (Community $community, StoreTopicRequest $r) => response()->json($r->toData()))->whereNumber('community');
+            Route::post('/_t/topics/{group}', fn (Group $group, StoreTopicRequest $r) => response()->json($r->toData()))->whereNumber('group');
             Route::post('/_t/topics/{topic}/update', fn (CommunityTopic $topic, UpdateTopicRequest $r) => response()->json($r->toData()))->whereNumber('topic');
             Route::post('/_t/topics/{topic}/comment', fn (StoreTopicCommentRequest $r) => response()->json(['ok' => true]))->whereNumber('topic');
         });
     }
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -50,70 +50,70 @@ class CommunityTopicRequestTest extends TestCase
 
     public function test_a_valid_payload_creates(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         $this->actingAs($member)
-            ->post("/_t/topics/{$community->getKey()}", ['name' => 'Welcome', 'body' => 'Say hello.'])
+            ->post("/_t/topics/{$group->getKey()}", ['name' => 'Welcome', 'body' => 'Say hello.'])
             ->assertOk();
     }
 
     public function test_create_accepts_a_markdown_format(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         $this->actingAs($member)
-            ->post("/_t/topics/{$community->getKey()}", ['name' => 'MD', 'body' => '**b**', 'format' => 'markdown'])
+            ->post("/_t/topics/{$group->getKey()}", ['name' => 'MD', 'body' => '**b**', 'format' => 'markdown'])
             ->assertOk()
             ->assertJsonPath('format', 'markdown');
     }
 
     public function test_create_rejects_the_op3_format(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         $this->actingAs($member)
-            ->post("/_t/topics/{$community->getKey()}", ['name' => 'MD', 'body' => 'x', 'format' => 'op3'])
+            ->post("/_t/topics/{$group->getKey()}", ['name' => 'MD', 'body' => 'x', 'format' => 'op3'])
             ->assertSessionHasErrors('format');
     }
 
     public function test_create_requires_a_name(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         $this->actingAs($member)
-            ->post("/_t/topics/{$community->getKey()}", ['body' => 'No title.'])
+            ->post("/_t/topics/{$group->getKey()}", ['body' => 'No title.'])
             ->assertSessionHasErrors('name');
     }
 
     public function test_create_requires_a_body(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
         $this->actingAs($member)
-            ->post("/_t/topics/{$community->getKey()}", ['name' => 'No body'])
+            ->post("/_t/topics/{$group->getKey()}", ['name' => 'No body'])
             ->assertSessionHasErrors('body');
     }
 
     public function test_creating_is_404_for_a_non_member(): void
     {
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)
-            ->post("/_t/topics/{$community->getKey()}", ['name' => 'Welcome', 'body' => 'Say hello.'])
+            ->post("/_t/topics/{$group->getKey()}", ['name' => 'Welcome', 'body' => 'Say hello.'])
             ->assertNotFound();
     }
 
     public function test_the_author_may_edit(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($author)
             ->post("/_t/topics/{$topic->getKey()}/update", ['name' => 'Edited', 'body' => 'Updated body.'])
@@ -122,10 +122,10 @@ class CommunityTopicRequestTest extends TestCase
 
     public function test_editing_is_404_for_a_non_editor(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $stranger = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey(), 'member_id' => $author->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $stranger = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->actingAs($stranger)
             ->post("/_t/topics/{$topic->getKey()}/update", ['name' => 'Hijack', 'body' => 'Not mine.'])
@@ -134,9 +134,9 @@ class CommunityTopicRequestTest extends TestCase
 
     public function test_commenting_requires_a_body(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
 
         $this->actingAs($member)
             ->post("/_t/topics/{$topic->getKey()}/comment", [])
@@ -149,9 +149,9 @@ class CommunityTopicRequestTest extends TestCase
 
     public function test_commenting_is_404_for_a_non_member(): void
     {
-        $community = Community::factory()->create();
+        $group = Group::factory()->create();
         $stranger = Member::factory()->create();
-        $topic = CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
+        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
 
         $this->actingAs($stranger)
             ->post("/_t/topics/{$topic->getKey()}/comment", ['body' => 'Sneaking in'])

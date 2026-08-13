@@ -56,9 +56,9 @@ class StoreCommunityTimelinePostRequest extends FormRequest
      */
     protected function getRedirectUrl(): string
     {
-        $community = $this->route('community');
-        $route = $this->input('from') === 'new' ? 'community.timeline.new' : 'community.timeline';
+        $group = $this->route('group');
+        $route = $this->input('from') === 'new' ? 'group.timeline.new' : 'group.timeline';
 
-        return $this->redirector->getUrlGenerator()->route($route, ['community' => $community]);
+        return $this->redirector->getUrlGenerator()->route($route, ['group' => $group]);
     }
 }

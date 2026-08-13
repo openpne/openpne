@@ -72,7 +72,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('mail_templates', ['id' => 6, 'key' => 'direct-message-received']);
         $this->assertDatabaseHas('mail_templates', ['id' => 7, 'key' => 'registration-complete']);
         $this->assertDatabaseHas('mail_templates', ['id' => 8, 'key' => 'withdrawal-complete']);
-        $this->assertDatabaseHas('mail_templates', ['id' => 9, 'key' => 'community-join']);
+        $this->assertDatabaseHas('mail_templates', ['id' => 9, 'key' => 'group-join']);
         $this->assertDatabaseHas('mail_templates', ['id' => 10, 'key' => 'diary-posted']);
     }
 
@@ -124,7 +124,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('mail_templates', ['key' => 'community-posting', 'is_enabled' => 0]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'registration-complete', 'is_enabled' => 1]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'withdrawal-complete', 'is_enabled' => 1]);
-        $this->assertDatabaseHas('mail_templates', ['key' => 'community-join', 'is_enabled' => 0]);
+        $this->assertDatabaseHas('mail_templates', ['key' => 'group-join', 'is_enabled' => 0]);
         $this->assertDatabaseHas('mail_templates', ['key' => 'diary-posted', 'is_enabled' => 1]);
     }
 

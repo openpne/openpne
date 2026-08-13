@@ -100,7 +100,7 @@ class PostImages
     private function stripFailed(string $relatedType, int $slot, ImageMetadataStripException $e): Throwable
     {
         $field = match ($relatedType) {
-            'timelinePost', 'community' => 'image',
+            'timelinePost', 'group' => 'image',
             'diary', 'diaryComment', 'communityTopic', 'communityTopicComment',
             'communityEvent', 'communityEventComment', 'directMessage' => 'images.'.$slot,
             default => null,

@@ -2,7 +2,7 @@ export interface ProfileStats {
     diaries: number;
     activity: number;
     friends: number;
-    communities: number;
+    groups: number;
 }
 
 /**

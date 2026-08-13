@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\CommunityEvent\Classic;
 
-use App\Features\Community\CommunityRole;
-use App\Models\Community;
+use App\Features\Group\GroupRole;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,11 +20,11 @@ class CommunityEventCommentRoutesTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -34,9 +34,9 @@ class CommunityEventCommentRoutesTest extends TestCase
 
     public function test_comment_only_saves_a_comment_without_touching_the_roster(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        $member = $this->joined($group);
 
         $response = $this->actingAs($member)->post(route('communityEvent.comment.store', $event), [
             'body' => 'Just a note.',
@@ -50,9 +50,9 @@ class CommunityEventCommentRoutesTest extends TestCase
 
     public function test_participate_joins_the_roster_and_saves_the_comment(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        $member = $this->joined($group);
 
         $response = $this->actingAs($member)->post(route('communityEvent.comment.store', $event), [
             'body' => 'Count me in!',
@@ -67,9 +67,9 @@ class CommunityEventCommentRoutesTest extends TestCase
 
     public function test_cancel_leaves_the_roster_and_saves_the_comment(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        $member = $this->joined($group);
         $event->participants()->attach($member);
 
         $this->actingAs($member)->post(route('communityEvent.comment.store', $event), [
@@ -84,9 +84,9 @@ class CommunityEventCommentRoutesTest extends TestCase
 
     public function test_a_comment_requires_a_body(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        $member = $this->joined($group);
 
         $this->actingAs($member)->post(route('communityEvent.comment.store', $event), [
             'participate' => 'Participate in this event',
@@ -99,8 +99,8 @@ class CommunityEventCommentRoutesTest extends TestCase
 
     public function test_a_non_member_is_404_and_posts_nothing(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
         $stranger = Member::factory()->create();
 
         $this->actingAs($stranger)->post(route('communityEvent.comment.store', $event), [
@@ -114,10 +114,10 @@ class CommunityEventCommentRoutesTest extends TestCase
 
     public function test_joining_a_full_event_is_refused_and_rolls_back_the_comment(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'capacity' => 1]);
-        $event->participants()->attach($this->joined($community));
-        $latecomer = $this->joined($community);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'capacity' => 1]);
+        $event->participants()->attach($this->joined($group));
+        $latecomer = $this->joined($group);
 
         $response = $this->actingAs($latecomer)->post(route('communityEvent.comment.store', $event), [
             'body' => 'Room for one more?',
@@ -133,9 +133,9 @@ class CommunityEventCommentRoutesTest extends TestCase
 
     public function test_a_closed_event_refuses_participation_but_still_accepts_a_comment_only(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey(), 'open_date' => now()->subDays(2)]);
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'open_date' => now()->subDays(2)]);
+        $member = $this->joined($group);
 
         // Participating is blocked once closed; the button is hidden, but a crafted POST is caught
         // by the roster guard and flashes an error rather than 404ing.
@@ -156,9 +156,9 @@ class CommunityEventCommentRoutesTest extends TestCase
 
     public function test_comments_are_numbered_and_lift_the_event_on_the_board(): void
     {
-        $community = Community::factory()->create();
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        $member = $this->joined($group);
 
         $this->actingAs($member)->post(route('communityEvent.comment.store', $event), ['body' => 'first', 'comment' => '1']);
         $this->actingAs($member)->post(route('communityEvent.comment.store', $event), ['body' => 'second', 'comment' => '1']);
@@ -170,10 +170,10 @@ class CommunityEventCommentRoutesTest extends TestCase
 
     public function test_deleting_a_comment_is_limited_to_its_author_and_event_editors(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
-        $other = $this->joined($community);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $other = $this->joined($group);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
         $comment = CommunityEventComment::factory()->create([
             'community_event_id' => $event->getKey(),
             'member_id' => $author->getKey(),

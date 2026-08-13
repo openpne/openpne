@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modern;
 
-use App\Models\Community;
 use App\Models\CommunityEvent;
-use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
@@ -30,15 +30,15 @@ class ModernFeatureSuppressionTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function joinedCommunity(Member $member): Community
+    private function joinedGroup(Member $member): Group
     {
-        $community = Community::factory()->create();
-        CommunityMember::factory()->member()->create([
-            'community_id' => $community->getKey(),
+        $group = Group::factory()->create();
+        GroupMember::factory()->member()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
         ]);
 
-        return $community;
+        return $group;
     }
 
     private function makeFriends(Member $a, Member $b): void
@@ -103,43 +103,43 @@ class ModernFeatureSuppressionTest extends TestCase
     public function test_the_dashboard_drops_the_community_activity_and_the_approval_notices(): void
     {
         $viewer = Member::factory()->create();
-        $joined = $this->joinedCommunity($viewer);
+        $joined = $this->joinedGroup($viewer);
         CommunityTopic::factory()->create(['community_id' => $joined->getKey(), 'name' => 'a-topic-row-name']);
 
-        $administered = Community::factory()->create();
-        CommunityMember::factory()->admin()->create(['community_id' => $administered->getKey(), 'member_id' => $viewer->getKey()]);
+        $administered = Group::factory()->create();
+        GroupMember::factory()->admin()->create(['group_id' => $administered->getKey(), 'member_id' => $viewer->getKey()]);
         $administered->applicants()->attach(Member::factory()->create()->getKey());
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('communityActivity', 1)
-                ->has('announcements.communityApprovals', 1));
+                ->has('groupActivity', 1)
+                ->has('announcements.groupApprovals', 1));
 
-        $this->switchOff(Feature::Community);
+        $this->switchOff(Feature::Group);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('communityActivity', [])
-                ->where('announcements.communityApprovals', []))
+                ->where('groupActivity', [])
+                ->where('announcements.groupApprovals', []))
             ->assertDontSee('a-topic-row-name');
     }
 
     public function test_the_dashboard_keeps_the_events_when_only_the_board_is_off(): void
     {
         $viewer = Member::factory()->create();
-        $community = $this->joinedCommunity($viewer);
-        CommunityTopic::factory()->create(['community_id' => $community->getKey()]);
-        $event = CommunityEvent::factory()->create(['community_id' => $community->getKey()]);
+        $group = $this->joinedGroup($viewer);
+        CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
+        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
 
         $this->switchOff(Feature::CommunityTopic);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('communityActivity', 1)
-                ->where('communityActivity.0.kind', 'event')
-                ->where('communityActivity.0.id', $event->getKey()));
+                ->has('groupActivity', 1)
+                ->where('groupActivity.0.kind', 'event')
+                ->where('groupActivity.0.id', $event->getKey()));
 
-        $this->actingAs($viewer)->get('/community/recent')
+        $this->actingAs($viewer)->get('/groups/recent')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('activity', 1)
                 ->where('activity.0.kind', 'event'));
@@ -223,20 +223,20 @@ class ModernFeatureSuppressionTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
         $owner = Member::factory()->create();
         $viewer = Member::factory()->create();
-        $community = $this->joinedCommunity($owner);
+        $group = $this->joinedGroup($owner);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->has('digest.communities', 1)
-                ->where('digest.communities.0.id', $community->getKey())
-                ->where('digest.stats.communities', 1));
+                ->has('digest.groups', 1)
+                ->where('digest.groups.0.id', $group->getKey())
+                ->where('digest.stats.groups', 1));
 
-        $this->switchOff(Feature::Community);
+        $this->switchOff(Feature::Group);
 
         $this->actingAs($viewer)->get("/member/{$owner->getKey()}")
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('digest.communities', [])
-                ->where('digest.stats.communities', 0));
+                ->where('digest.groups', [])
+                ->where('digest.stats.groups', 0));
     }
 
     public function test_the_profile_zeroes_the_activity_stat_on_its_own(): void
@@ -268,14 +268,14 @@ class ModernFeatureSuppressionTest extends TestCase
         $friend = Member::factory()->create();
         $stranger = Member::factory()->create();
         $this->makeFriends($viewer, $friend);
-        $this->joinedCommunity($viewer);
+        $this->joinedGroup($viewer);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('rightRail.people.kind', 'friends')
                 ->has('rightRail.people.items', 1)
                 ->where('rightRail.people.items.0.id', $friend->getKey())
-                ->has('rightRail.joinedCommunities', 1));
+                ->has('rightRail.joinedGroups', 1));
 
         $this->switchOff(Feature::Friend);
 
@@ -286,14 +286,14 @@ class ModernFeatureSuppressionTest extends TestCase
                 ->has('rightRail.people.items', 2)
                 ->where('rightRail.people.items', fn (Collection $items) => $items->pluck('id')
                     ->contains($friend->getKey()) && $items->pluck('id')->contains($stranger->getKey()))
-                ->has('rightRail.joinedCommunities', 1));
+                ->has('rightRail.joinedGroups', 1));
 
-        $this->switchOff(Feature::Community);
+        $this->switchOff(Feature::Group);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->has('rightRail.people.items', 2)
-                ->where('rightRail.joinedCommunities', []));
+                ->where('rightRail.joinedGroups', []));
     }
 
     public function test_the_member_settings_omit_the_diary_section(): void

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Upgrade;
 
 use App\Upgrade\StepRegistry;
-use App\Upgrade\Steps\CommunityMemberUpgrade;
+use App\Upgrade\Steps\GroupMemberUpgrade;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -29,7 +29,7 @@ class NotificationSettingDispositionsTest extends TestCase
 
     public function test_is_receive_mail_pc_is_a_documented_drop(): void
     {
-        $gap = (new CommunityMemberUpgrade)->gaps()['is_receive_mail_pc'];
+        $gap = (new GroupMemberUpgrade)->gaps()['is_receive_mail_pc'];
 
         $this->assertStringStartsWith('Dropped:', $gap);
         $this->assertStringContainsString('member_notification_settings', $gap);

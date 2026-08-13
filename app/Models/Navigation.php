@@ -17,10 +17,22 @@ use Illuminate\Support\Facades\DB;
 class Navigation extends Model
 {
     /** PC navigation contexts. Mobile/smartphone/backend types are out of the Classic scope. */
-    public const TYPES = ['insecure_global', 'secure_global', 'default', 'friend', 'community'];
+    public const TYPES = ['insecure_global', 'secure_global', 'default', 'friend', 'group'];
 
     /** Global-nav contexts share the OpenPNE 3 `globalNav_` id prefix; local-nav uses the type. */
     public const GLOBAL_TYPES = ['insecure_global', 'secure_global'];
+
+    /**
+     * The token the Classic markup carries for a stored type: the local-nav `<ul class>` and the
+     * `<li>` id prefix. `group` renders as `community` — a site's custom CSS matches on the
+     * OpenPNE 3 word, so the storage rename must not reach the DOM.
+     */
+    private const PRESENTATION_TOKENS = ['group' => 'community'];
+
+    public static function presentationToken(string $type): string
+    {
+        return self::PRESENTATION_TOKENS[$type] ?? $type;
+    }
 
     /** Translation lang code (OpenPNE/Doctrine I18n) for each app locale. */
     private const TRANSLATION_LANG = ['ja' => 'ja_JP', 'en' => 'en'];

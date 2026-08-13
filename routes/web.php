@@ -3,8 +3,6 @@
 use App\Captcha\Captcha;
 use App\Features\Auth\RegistrationController;
 use App\Features\Block\BlockController;
-use App\Features\Community\CommunityController;
-use App\Features\Community\CommunityMemberManageController;
 use App\Features\CommunityEvent\CommunityEventCommentController;
 use App\Features\CommunityEvent\CommunityEventController;
 use App\Features\CommunityTopic\CommunityTopicCommentController;
@@ -15,6 +13,8 @@ use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
 use App\Features\DirectMessage\DirectMessageController;
 use App\Features\Friend\FriendController;
+use App\Features\Group\GroupController;
+use App\Features\Group\GroupMemberManageController;
 use App\Features\Home\HomeController;
 use App\Features\Home\UnreadCountsController;
 use App\Features\Member\EmailChangeLinkController;
@@ -401,10 +401,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // The member's Rich/Markdown/Plain input-method choice for the Modern compose forms, persisted by a
     // fire-and-forget fetch (204, no body). Unthrottled, matching the /member/config/* preference POSTs.
     Route::post('/compose/editor', [EditorPreferenceController::class, 'update'])->name('compose.editor');
-    // The dashboard's community activity section, expanded. Modern-only (no OpenPNE 3 equivalent),
+    // The dashboard's group activity section, expanded. Modern-only (no OpenPNE 3 equivalent),
     // so it renders Inertia directly like /dashboard — not a surface twin.
-    Route::get('/community/recent', [HomeController::class, 'communityActivity'])
-        ->middleware(EnsureFeatureEnabled::class.':community')->name('community.recent');
+    Route::get('/groups/recent', [HomeController::class, 'groupActivity'])
+        ->middleware(EnsureFeatureEnabled::class.':group')->name('group.recent');
 
     // The per-event notification feed (layer 3). Served on both surfaces, though OpenPNE 3's
     // notification center had no PC page to be compatible with.
@@ -507,26 +507,36 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // No GET delete-confirm twin — Modern confirms delete inline (Radix AlertDialog).
     });
 
-    // A community's timeline. Both units gate it: it is the timeline seen through a community, so
+    // A group's timeline. Both units gate it: it is the timeline seen through a group, so
     // switching either off takes it away. The path has three segments, so it can never be captured
-    // by the /community/{community} wildcard above.
+    // by the /groups/{group} wildcard below.
     Route::controller(TimelineController::class)
-        ->middleware([EnsureFeatureEnabled::class.':community', EnsureFeatureEnabled::class.':timeline'])
+        ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
         ->group(function () {
-            Route::get('/community/{community}/timeline', 'community')->whereNumber('community')->name('community.timeline');
+            Route::get('/groups/{group}/timeline', 'group')->whereNumber('group')->name('group.timeline');
             // Both surfaces: Classic's inline box ships hidden and is swapped in by script, so its
             // fallback link needs a real form to reach.
-            Route::get('/community/{community}/timeline/new', 'newCommunity')->whereNumber('community')->name('community.timeline.new');
-            Route::post('/community/{community}/timeline', 'storeCommunity')->whereNumber('community')
-                ->middleware('throttle:posting')->name('community.timeline.store');
+            Route::get('/groups/{group}/timeline/new', 'newGroup')->whereNumber('group')->name('group.timeline.new');
+            Route::post('/groups/{group}/timeline', 'storeGroup')->whereNumber('group')
+                ->middleware('throttle:posting')->name('group.timeline.store');
         });
 
-    // OpenPNE 3 reached the community timeline at /timeline/community/id/:id through the global
-    // /:module/:action fallback; preserve that URL by redirecting to the canonical page.
-    Route::get('/timeline/community/id/{community}', fn (int $community) => redirect()->route('community.timeline', ['community' => $community]))
-        ->whereNumber('community')
-        ->middleware([EnsureFeatureEnabled::class.':community', EnsureFeatureEnabled::class.':timeline'])
-        ->name('community.timeline.compat');
+    // OpenPNE 3 served the group timeline at /community/:id/timeline, and reached it through the
+    // global /:module/:action fallback at /timeline/community/id/:id as well; both URLs are
+    // preserved by redirecting to the canonical page. The query rides along — the target
+    // paginates, so a ?page=N bookmark must not reset to page 1.
+    Route::get('/community/{group}/timeline', fn (Request $request, int $group) => redirect()->route('group.timeline', ['group' => $group] + $request->query()))
+        ->whereNumber('group')
+        ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
+        ->name('group.timeline.legacy_compat');
+    Route::get('/community/{group}/timeline/new', fn (Request $request, int $group) => redirect()->route('group.timeline.new', ['group' => $group] + $request->query()))
+        ->whereNumber('group')
+        ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
+        ->name('group.timeline.new.legacy_compat');
+    Route::get('/timeline/community/id/{group}', fn (Request $request, int $group) => redirect()->route('group.timeline', ['group' => $group] + $request->query()))
+        ->whereNumber('group')
+        ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
+        ->name('group.timeline.compat');
 
     // OpenPNE 3 linked the single-post permalink at /timeline/show/id/:id (reached via the global
     // /:module/:action fallback); preserve that URL by redirecting to the canonical timeline.show.
@@ -609,59 +619,104 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/member/edit/profile', [ProfileController::class, 'edit'])->name('member.profile.edit');
     Route::post('/member/edit/profile', [ProfileController::class, 'update'])->name('member.profile.update');
 
-    // Community core (canonical / Classic). The literal routes precede the /{community} wildcard,
-    // and {community} is digit-constrained, so a literal like /community/search can never be
-    // captured as a community id.
-    Route::prefix('community')->middleware(EnsureFeatureEnabled::class.':community')->controller(CommunityController::class)->group(function () {
-        Route::get('/search', 'search')->name('community.search');
-        Route::get('/joinList', 'listMine')->name('community.list_mine');
+    // Group core (canonical / Classic). Nested plural: the literal routes precede the /{group}
+    // wildcard, and {group} is digit-constrained, so a literal like /groups/edit can never be
+    // captured as a group id. The OpenPNE 3 /community/* URLs are preserved by the redirects below.
+    Route::prefix('groups')->middleware(EnsureFeatureEnabled::class.':group')->controller(GroupController::class)->group(function () {
+        Route::get('/', 'search')->name('group.search');
+        Route::get('/mine', 'listMine')->name('group.list_mine');
         // Single endpoint for new+edit and create+update (?id= switches), as in OpenPNE 3.
-        Route::get('/edit', 'edit')->name('community.edit');
-        Route::post('/edit', 'save')->name('community.save');
-        // join / quit: GET confirm, POST submit (community id via ?id=).
-        Route::get('/join', 'showJoin')->name('community.join.show');
-        Route::post('/join', 'join')->middleware('throttle:community-join')->name('community.join');
-        Route::get('/quit', 'showQuit')->name('community.quit.show');
-        Route::post('/quit', 'quit')->name('community.quit');
+        Route::get('/edit', 'edit')->name('group.edit');
+        Route::post('/edit', 'save')->name('group.save');
+        // join / quit / delete: GET confirm, POST submit.
+        Route::get('/{group}/join', 'showJoin')->whereNumber('group')->name('group.join.show');
+        Route::post('/{group}/join', 'join')->whereNumber('group')->middleware('throttle:group-join')->name('group.join');
+        Route::get('/{group}/quit', 'showQuit')->whereNumber('group')->name('group.quit.show');
+        Route::post('/{group}/quit', 'quit')->whereNumber('group')->name('group.quit');
+        Route::get('/{group}/delete', 'showDelete')->whereNumber('group')->name('group.delete.show');
+        Route::post('/{group}/delete', 'delete')->whereNumber('group')->name('group.delete');
         // Member roster + pending-member approval.
-        Route::get('/member/list', 'members')->name('community.members');
-        Route::get('/member/pending', 'pendingMembers')->name('community.members.pending');
-        Route::post('/member/approve', 'approve')->middleware('throttle:community-join')->name('community.members.approve');
-        Route::post('/member/decline', 'decline')->middleware('throttle:community-join')->name('community.members.decline');
-        // delete: GET confirm, POST submit (community id in the path, as in OpenPNE 3).
-        Route::get('/delete/{community}', 'showDelete')->whereNumber('community')->name('community.delete.show');
-        Route::post('/delete/{community}', 'delete')->whereNumber('community')->name('community.delete');
+        Route::get('/{group}/members', 'members')->whereNumber('group')->name('group.members');
+        Route::get('/{group}/members/pending', 'pendingMembers')->whereNumber('group')->name('group.members.pending');
+        Route::post('/{group}/members/approve', 'approve')->whereNumber('group')->middleware('throttle:group-join')->name('group.members.approve');
+        Route::post('/{group}/members/decline', 'decline')->whereNumber('group')->middleware('throttle:group-join')->name('group.members.decline');
 
-        // Member management + immediate operations (appoint/demote sub-admin, drop member). manage
-        // keeps OpenPNE 3's /community/member/manage/:id (path param); the operation endpoints are
-        // OpenPNE 4-native (?id= + member_id, GET confirm + POST submit like join/quit).
-        Route::controller(CommunityMemberManageController::class)->group(function () {
-            Route::get('/member/manage/{community}', 'manage')->whereNumber('community')->name('community.members.manage');
-            Route::get('/member/appointSubAdmin', 'showAppoint')->name('community.members.appoint.show');
-            Route::post('/member/appointSubAdmin', 'appoint')->name('community.members.appoint');
-            Route::get('/member/demoteSubAdmin', 'showDemote')->name('community.members.demote.show');
-            Route::post('/member/demoteSubAdmin', 'demote')->name('community.members.demote');
-            Route::get('/member/drop', 'showDrop')->name('community.members.drop.show');
-            Route::post('/member/drop', 'drop')->name('community.members.drop');
+        // Member management + immediate operations (appoint/demote sub-admin, drop member). The
+        // operation endpoints name their target in member_id (GET confirm + POST submit like
+        // join/quit); OpenPNE 3 reached them through the global module/action fallback.
+        Route::controller(GroupMemberManageController::class)->group(function () {
+            Route::get('/{group}/members/manage', 'manage')->whereNumber('group')->name('group.members.manage');
+            Route::get('/{group}/members/appoint', 'showAppoint')->whereNumber('group')->name('group.members.appoint.show');
+            Route::post('/{group}/members/appoint', 'appoint')->whereNumber('group')->name('group.members.appoint');
+            Route::get('/{group}/members/demote', 'showDemote')->whereNumber('group')->name('group.members.demote.show');
+            Route::post('/{group}/members/demote', 'demote')->whereNumber('group')->name('group.members.demote');
+            Route::get('/{group}/members/drop', 'showDrop')->whereNumber('group')->name('group.members.drop.show');
+            Route::post('/{group}/members/drop', 'drop')->whereNumber('group')->name('group.members.drop');
             // Admin transfer: request (GET confirm + POST) from the roster, then the nominee
-            // accepts/rejects from a banner on the community home (POST only — no confirm page).
-            Route::get('/member/transferAdmin', 'showTransfer')->name('community.members.transfer.show');
-            Route::post('/member/transferAdmin', 'transfer')->name('community.members.transfer');
-            Route::post('/member/acceptTransfer', 'acceptTransfer')->name('community.members.transfer.accept');
-            Route::post('/member/rejectTransfer', 'rejectTransfer')->name('community.members.transfer.reject');
+            // accepts/rejects from a banner on the group home (POST only — no confirm page).
+            Route::get('/{group}/members/transfer', 'showTransfer')->whereNumber('group')->name('group.members.transfer.show');
+            Route::post('/{group}/members/transfer', 'transfer')->whereNumber('group')->name('group.members.transfer');
+            Route::post('/{group}/members/transfer/accept', 'acceptTransfer')->whereNumber('group')->name('group.members.transfer.accept');
+            Route::post('/{group}/members/transfer/reject', 'rejectTransfer')->whereNumber('group')->name('group.members.transfer.reject');
         });
 
-        Route::get('/{community}', 'show')->whereNumber('community')->name('community.show');
+        Route::get('/{group}', 'show')->whereNumber('group')->name('group.show');
     });
 
-    // Community topic board (Classic only; Modern is none). Literal-prefix routes precede the
+    // The OpenPNE 3 /community/* GET URLs, preserved by redirect onto the canonical /groups/*
+    // space (GroupRouteParity::compatRedirects()). OpenPNE 3 carried the group id as `?id=` on
+    // most of them; the canonical takes it as a path segment, so each redirect lifts it across.
+    // GET only — a POST submit is not a bookmarkable URL. Declared after the canonical block so
+    // the wildcard /community/{group} cannot shadow a literal.
+    Route::prefix('community')->middleware(EnsureFeatureEnabled::class.':group')->group(function () {
+        // ?id= names the group; without it there is nothing to redirect to. It becomes the path
+        // segment, so it is dropped from the query — the rest (member_id) rides along.
+        $byQueryId = fn (string $route) => function (Request $request) use ($route) {
+            abort_unless(ctype_digit((string) $request->query('id')), 404);
+
+            return redirect()->route($route, ['group' => $request->integer('id')]
+                + array_diff_key($request->query(), ['id' => null]));
+        };
+
+        // The OpenPNE 3 search query shape (community[name], community[community_category_id],
+        // search_query, page) rides along — GroupController still accepts it, so a bookmarked
+        // search must not degrade into the unfiltered list.
+        Route::get('/search', fn (Request $request) => redirect()->route('group.search', $request->query()))
+            ->name('group.search.compat');
+        // ?id= is the member whose list is shown here, not a group — it rides along unchanged.
+        Route::get('/joinList', fn (Request $request) => redirect()->route('group.list_mine', $request->query()))
+            ->name('group.list_mine.compat');
+        // Both surfaces' create form; ?id= switches it to edit, and group.edit keeps that shape.
+        Route::get('/edit', fn (Request $request) => redirect()->route('group.edit', $request->query()))
+            ->name('group.edit.compat');
+        Route::get('/join', $byQueryId('group.join.show'))->name('group.join.compat');
+        Route::get('/quit', $byQueryId('group.quit.show'))->name('group.quit.compat');
+        Route::get('/member/list', $byQueryId('group.members'))->name('group.members.compat');
+        Route::get('/member/pending', $byQueryId('group.members.pending'))->name('group.members.pending.compat');
+        Route::get('/member/appointSubAdmin', $byQueryId('group.members.appoint.show'))->name('group.members.appoint.compat');
+        Route::get('/member/demoteSubAdmin', $byQueryId('group.members.demote.show'))->name('group.members.demote.compat');
+        Route::get('/member/drop', $byQueryId('group.members.drop.show'))->name('group.members.drop.compat');
+        Route::get('/member/transferAdmin', $byQueryId('group.members.transfer.show'))->name('group.members.transfer.compat');
+        // Path-id redirects keep the query too (the member-manage target paginates), with the
+        // path parameter winning over a stray ?group=.
+        Route::get('/member/manage/{group}', fn (Request $request, int $group) => redirect()->route('group.members.manage', ['group' => $group] + $request->query()))
+            ->whereNumber('group')->name('group.members.manage.compat');
+        Route::get('/delete/{group}', fn (Request $request, int $group) => redirect()->route('group.delete.show', ['group' => $group] + $request->query()))
+            ->whereNumber('group')->name('group.delete.compat');
+        Route::get('/recent', fn (Request $request) => redirect()->route('group.recent', $request->query()))
+            ->name('group.recent.compat');
+        Route::get('/{group}', fn (Request $request, int $group) => redirect()->route('group.show', ['group' => $group] + $request->query()))
+            ->whereNumber('group')->name('group.show.compat');
+    });
+
+    // Group topic board (Classic only; Modern is none). Literal-prefix routes precede the
     // /{topic} wildcard, and every id is digit-constrained, so a literal like /communityTopic/new
     // can never be captured as a topic id. listCommunity/new/create take a community id; the rest
     // take a topic id.
     Route::prefix('communityTopic')->middleware(EnsureFeatureEnabled::class.':communityTopic')->controller(CommunityTopicController::class)->group(function () {
-        Route::get('/listCommunity/{community}', 'index')->whereNumber('community')->name('communityTopic.index');
-        Route::get('/new/{community}', 'new')->whereNumber('community')->name('communityTopic.new');
-        Route::post('/create/{community}', 'store')->whereNumber('community')->middleware('throttle:posting')->name('communityTopic.store');
+        Route::get('/listCommunity/{group}', 'index')->whereNumber('group')->name('communityTopic.index');
+        Route::get('/new/{group}', 'new')->whereNumber('group')->name('communityTopic.new');
+        Route::post('/create/{group}', 'store')->whereNumber('group')->middleware('throttle:posting')->name('communityTopic.store');
         Route::get('/edit/{topic}', 'edit')->whereNumber('topic')->name('communityTopic.edit');
         Route::post('/update/{topic}', 'update')->whereNumber('topic')->middleware('throttle:posting')->name('communityTopic.update');
         Route::get('/deleteConfirm/{topic}', 'showDelete')->whereNumber('topic')->name('communityTopic.delete.show');
@@ -677,13 +732,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/communityTopic/comment/delete/{comment}', 'delete')->whereNumber('comment')->name('communityTopic.comment.delete');
     });
 
-    // Community events (Classic only; Modern is none). Same literal-before-wildcard rule as the topic
+    // Group events (Classic only; Modern is none). Same literal-before-wildcard rule as the topic
     // board: listCommunity/new/create take a community id, the rest an event id, and {event} is
     // digit-constrained, so /communityEvent/memberList-style literals can never be read as an event id.
     Route::prefix('communityEvent')->middleware(EnsureFeatureEnabled::class.':communityEvent')->controller(CommunityEventController::class)->group(function () {
-        Route::get('/listCommunity/{community}', 'index')->whereNumber('community')->name('communityEvent.index');
-        Route::get('/new/{community}', 'new')->whereNumber('community')->name('communityEvent.new');
-        Route::post('/create/{community}', 'store')->whereNumber('community')->middleware('throttle:posting')->name('communityEvent.store');
+        Route::get('/listCommunity/{group}', 'index')->whereNumber('group')->name('communityEvent.index');
+        Route::get('/new/{group}', 'new')->whereNumber('group')->name('communityEvent.new');
+        Route::post('/create/{group}', 'store')->whereNumber('group')->middleware('throttle:posting')->name('communityEvent.store');
         Route::get('/edit/{event}', 'edit')->whereNumber('event')->name('communityEvent.edit');
         Route::post('/update/{event}', 'update')->whereNumber('event')->middleware('throttle:posting')->name('communityEvent.update');
         Route::get('/deleteConfirm/{event}', 'showDelete')->whereNumber('event')->name('communityEvent.delete.show');
@@ -735,25 +790,25 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 });
 
 // Retired Modern GET shapes that do not map onto their canonical URL by dropping the /m prefix:
-// the RESTful community shapes redirect to the canonical (OpenPNE 3) shapes explicitly, ahead of
-// the prefix-stripping catch-all. GET only — a retired POST shape has no path-rewritable canonical
+// the RESTful group shapes redirect to the canonical shapes explicitly, ahead of the
+// prefix-stripping catch-all. GET only — a retired POST shape has no path-rewritable canonical
 // form and 404s (never persisted, so the only sources are stale in-flight forms). The original
 // query string rides along, like the catch-all ('&' when the target already carries ?id=).
 $mCompat = fn (string $target) => redirect()->to(
     $target.(($qs = request()->getQueryString()) === null ? '' : (str_contains($target, '?') ? '&' : '?').$qs), 308
 );
-Route::get('/m/community/joined', fn () => $mCompat('/community/joinList'));
+Route::get('/m/community/joined', fn () => $mCompat('/groups/mine'));
 Route::get('/m/community/topic/{topic}', fn (int $topic) => $mCompat("/communityTopic/{$topic}"))->whereNumber('topic');
 Route::get('/m/community/topic/{topic}/edit', fn (int $topic) => $mCompat("/communityTopic/edit/{$topic}"))->whereNumber('topic');
 Route::get('/m/community/event/{event}', fn (int $event) => $mCompat("/communityEvent/{$event}"))->whereNumber('event');
 Route::get('/m/community/event/{event}/edit', fn (int $event) => $mCompat("/communityEvent/edit/{$event}"))->whereNumber('event');
 Route::get('/m/community/event/{event}/members', fn (int $event) => $mCompat("/communityEvent/{$event}/memberList"))->whereNumber('event');
-Route::get('/m/community/{community}/members', fn (int $community) => $mCompat("/community/member/list?id={$community}"))->whereNumber('community');
-Route::get('/m/community/{community}/pending', fn (int $community) => $mCompat("/community/member/pending?id={$community}"))->whereNumber('community');
-Route::get('/m/community/{community}/topic', fn (int $community) => $mCompat("/communityTopic/listCommunity/{$community}"))->whereNumber('community');
-Route::get('/m/community/{community}/topic/new', fn (int $community) => $mCompat("/communityTopic/new/{$community}"))->whereNumber('community');
-Route::get('/m/community/{community}/event', fn (int $community) => $mCompat("/communityEvent/listCommunity/{$community}"))->whereNumber('community');
-Route::get('/m/community/{community}/event/new', fn (int $community) => $mCompat("/communityEvent/new/{$community}"))->whereNumber('community');
+Route::get('/m/community/{group}/members', fn (int $group) => $mCompat("/groups/{$group}/members"))->whereNumber('group');
+Route::get('/m/community/{group}/pending', fn (int $group) => $mCompat("/groups/{$group}/members/pending"))->whereNumber('group');
+Route::get('/m/community/{group}/topic', fn (int $group) => $mCompat("/communityTopic/listCommunity/{$group}"))->whereNumber('group');
+Route::get('/m/community/{group}/topic/new', fn (int $group) => $mCompat("/communityTopic/new/{$group}"))->whereNumber('group');
+Route::get('/m/community/{group}/event', fn (int $group) => $mCompat("/communityEvent/listCommunity/{$group}"))->whereNumber('group');
+Route::get('/m/community/{group}/event/new', fn (int $group) => $mCompat("/communityEvent/new/{$group}"))->whereNumber('group');
 
 // Transition-era compat: the rest of the retired /m/ Modern URL space maps onto canonical URLs by
 // dropping the prefix — one permanent catch-all (308 keeps the method for stale in-flight forms;

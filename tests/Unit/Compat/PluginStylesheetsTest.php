@@ -95,7 +95,7 @@ class PluginStylesheetsTest extends TestCase
     {
         // The community module embeds the topic and event components on its home without loading
         // communityTopic.css — its view.yml declares no stylesheet, only the customize entries.
-        $this->assertNull(PluginStylesheets::forRoute('community.show'));
+        $this->assertNull(PluginStylesheets::forRoute('group.show'));
         $this->assertNull(PluginStylesheets::forRoute('member.profile.show'));
         $this->assertNull(PluginStylesheets::forRoute('home'));
 

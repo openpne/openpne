@@ -41,7 +41,7 @@ final class EmojiTransform
         'member_profiles' => ['value'],
         'diaries' => ['title', 'body'],
         'diary_comments' => ['body'],
-        'communities' => ['name', 'description'],
+        'groups' => ['name', 'description'],
         'community_topics' => ['name', 'body'],
         'community_topic_comments' => ['body'],
         'community_events' => ['name', 'body', 'open_date_comment', 'area'],

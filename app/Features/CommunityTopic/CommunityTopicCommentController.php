@@ -41,12 +41,12 @@ class CommunityTopicCommentController extends Controller
         abort_unless(CommunityTopicAccess::canDeleteComment($comment, $this->viewer()), 404);
 
         // Modern confirms deletion inline — send a Modern viewer back to the topic.
-        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('communityTopic.show', $comment->topic);
         }
 
         // The confirm keeps the community context its topic pages carry.
-        $this->markLocalNavCommunity($comment->topic->community);
+        $this->markLocalNavGroup($comment->topic->community);
 
         return view('community-topic.comment-delete', [
             'comment' => $comment,

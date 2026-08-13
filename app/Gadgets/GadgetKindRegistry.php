@@ -7,7 +7,6 @@ namespace App\Gadgets;
 use App\Gadgets\Kinds\ActivityBoxGadget;
 use App\Gadgets\Kinds\AllMemberActivityBoxGadget;
 use App\Gadgets\Kinds\BirthdayBoxGadget;
-use App\Gadgets\Kinds\CommunityJoinListBoxGadget;
 use App\Gadgets\Kinds\DiaryAllListGadget;
 use App\Gadgets\Kinds\DiaryCommentHistoryGadget;
 use App\Gadgets\Kinds\DiaryFriendListGadget;
@@ -15,6 +14,7 @@ use App\Gadgets\Kinds\DiaryMemberListGadget;
 use App\Gadgets\Kinds\DiaryMyListGadget;
 use App\Gadgets\Kinds\FreeAreaGadget;
 use App\Gadgets\Kinds\FriendListBoxGadget;
+use App\Gadgets\Kinds\GroupJoinListBoxGadget;
 use App\Gadgets\Kinds\InformationBoxGadget;
 use App\Gadgets\Kinds\LanguageSelecterBoxGadget;
 use App\Gadgets\Kinds\LinkListBoxGadget;
@@ -35,9 +35,15 @@ use App\Gadgets\Kinds\TimelineProfileGadget;
  * The registered gadget kinds. A `gadgets.name` not found here (an unregistered OpenPNE 3 kind,
  * e.g. a plugin gadget) is hidden at render and flagged Unsupported in admin; adding a kind is
  * registering its class here.
+ *
+ * LEGACY_NAMES resolves a name OpenPNE 4 has since renamed. It is a read-side alias only: all()
+ * stays canonical, so admin and the seeder can never write the old spelling back.
  */
 final class GadgetKindRegistry
 {
+    /** Superseded `gadgets.name` => the canonical name of the same kind. */
+    private const LEGACY_NAMES = ['communityJoinListBox' => 'groupJoinListBox'];
+
     /** @var array<string, GadgetKind>|null */
     private static ?array $byName = null;
 
@@ -49,7 +55,7 @@ final class GadgetKindRegistry
             InformationBoxGadget::class,
             MemberImageBoxGadget::class,
             FriendListBoxGadget::class,
-            CommunityJoinListBoxGadget::class,
+            GroupJoinListBoxGadget::class,
             ProfileListBoxGadget::class,
             DiaryFriendListGadget::class,
             DiaryAllListGadget::class,
@@ -91,7 +97,7 @@ final class GadgetKindRegistry
 
     public static function find(string $name): ?GadgetKind
     {
-        return self::all()[$name] ?? null;
+        return self::all()[self::LEGACY_NAMES[$name] ?? $name] ?? null;
     }
 
     /**

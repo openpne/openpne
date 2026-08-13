@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 
 /**
  * The most recently active topics across every public community (topic_read_access = Everyone,
- * which CommunityUpgrade maps OpenPNE 3's public communities to), for the home "latest topics
+ * which GroupUpgrade maps OpenPNE 3's public groups to), for the home "latest topics
  * across the SNS" gadget. Viewer-independent and applies no block filter — OpenPNE 3
  * getPublicCommunityIdList showed the same public feed to every member.
  */

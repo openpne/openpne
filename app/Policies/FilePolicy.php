@@ -8,7 +8,6 @@ use App\Features\Diary\DiaryAccess;
 use App\Features\DirectMessage\DirectMessageAccess;
 use App\Features\Timeline\TimelineAccess;
 use App\Models\BannerImage;
-use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityTopic;
@@ -17,6 +16,7 @@ use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
@@ -71,7 +71,7 @@ class FilePolicy extends BasePolicy
             $owner instanceof DiaryComment => $owner->diary !== null && DiaryAccess::canView($viewer, $owner->diary),
             // A community top image is visible to any signed-in member: a community page is browsable
             // by every member (only its boards carry a read gate), so the image on it is too.
-            $owner instanceof Community => $viewer !== null,
+            $owner instanceof Group => $viewer !== null,
             // A topic/comment image inherits the board's read access: visible exactly to
             // whoever may read the topic it hangs on (members-only boards hide it).
             $owner instanceof CommunityTopic => $viewer !== null && CommunityTopicAccess::canViewTopic($owner, $viewer),
@@ -93,7 +93,7 @@ class FilePolicy extends BasePolicy
     /**
      * The feature unit $owner belongs to, or null for the two owners no unit governs: a member's
      * avatar and a banner image. A topic/event owner names its own unit — Feature::enabled() walks
-     * to `community` from there, so switching communities off takes their files too.
+     * to `community` from there, so switching groups off takes their files too.
      */
     private function owningFeature(?Model $owner): ?Feature
     {
@@ -101,7 +101,7 @@ class FilePolicy extends BasePolicy
             $owner instanceof Diary, $owner instanceof DiaryComment => Feature::Diary,
             $owner instanceof DirectMessage => Feature::DirectMessage,
             $owner instanceof TimelinePost => Feature::Timeline,
-            $owner instanceof Community => Feature::Community,
+            $owner instanceof Group => Feature::Group,
             $owner instanceof CommunityTopic, $owner instanceof CommunityTopicComment => Feature::CommunityTopic,
             $owner instanceof CommunityEvent, $owner instanceof CommunityEventComment => Feature::CommunityEvent,
             default => null,

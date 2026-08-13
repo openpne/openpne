@@ -55,12 +55,12 @@ class ClassicPhotoTableComponentTest extends TestCase
     public function test_the_crown_precedes_the_thumbnail_link_and_only_for_crowned_items(): void
     {
         $rendered = $this->render([
-            ['url' => '/community/1', 'name' => 'Crowned', 'crown' => true],
-            ['url' => '/community/2', 'name' => 'Plain', 'crown' => false],
+            ['url' => '/groups/1', 'name' => 'Crowned', 'crown' => true],
+            ['url' => '/groups/2', 'name' => 'Plain', 'crown' => false],
         ]);
 
         $this->assertStringContainsString(
-            '<td><p class="crown"><img src="'.asset('images/icon_crown.gif').'" alt="admin"></p><a href="/community/1">',
+            '<td><p class="crown"><img src="'.asset('images/icon_crown.gif').'" alt="admin"></p><a href="/groups/1">',
             $rendered,
         );
         $this->assertSame(1, substr_count($rendered, 'class="crown"'));

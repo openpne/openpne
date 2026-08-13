@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\CommunityEvent;
 
-use App\Features\Community\CommunityRole;
-use App\Models\Community;
+use App\Features\Group\GroupRole;
 use App\Models\CommunityEvent;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Support\BodyFormat;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,11 +19,11 @@ class EventFormatAuthoringTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function joined(Community $community, CommunityRole $role = CommunityRole::Member): Member
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
     {
         $member = Member::factory()->create();
-        CommunityMember::factory()->create([
-            'community_id' => $community->getKey(),
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $member->getKey(),
             'role' => $role,
         ]);
@@ -33,10 +33,10 @@ class EventFormatAuthoringTest extends TestCase
 
     public function test_create_persists_the_markdown_format(): void
     {
-        $community = Community::factory()->create();
-        $member = $this->joined($community);
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
 
-        $this->actingAs($member)->post(route('communityEvent.store', $community), [
+        $this->actingAs($member)->post(route('communityEvent.store', $group), [
             'name' => 'MD event',
             'body' => '**bold**',
             'open_date' => now()->addWeek()->format('Y-m-d'),
@@ -49,10 +49,10 @@ class EventFormatAuthoringTest extends TestCase
 
     public function test_edit_of_an_op3_event_shows_the_note_and_no_format_input(): void
     {
-        $community = Community::factory()->create();
-        $author = $this->joined($community);
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
         $event = CommunityEvent::factory()->create([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'member_id' => $author->getKey(),
             'format' => BodyFormat::Op3,
         ]);

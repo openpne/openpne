@@ -5,7 +5,7 @@ namespace App\Http\Requests\CommunityEvent;
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityEvent\Data\CommunityEventFormData;
 use App\Http\Requests\Concerns\PostImageRules;
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use App\Rules\MaxBytes;
 use App\Support\BodyFormat;
@@ -24,10 +24,10 @@ class StoreEventRequest extends FormRequest
 
     public function authorize(): bool
     {
-        $community = $this->route('community');
+        $group = $this->route('group');
         $viewer = $this->user();
-        if (! $community instanceof Community || ! $viewer instanceof Member
-            || ! CommunityEventAccess::canPostEvent($community, $viewer)) {
+        if (! $group instanceof Group || ! $viewer instanceof Member
+            || ! CommunityEventAccess::canPostEvent($group, $viewer)) {
             abort(404);
         }
 

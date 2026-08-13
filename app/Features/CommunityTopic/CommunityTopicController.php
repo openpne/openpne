@@ -3,7 +3,6 @@
 namespace App\Features\CommunityTopic;
 
 use App\Compat\RouteParityRegistry;
-use App\Features\Community\Serializers\CommunitySerializer;
 use App\Features\CommunityTopic\Actions\CreateTopic;
 use App\Features\CommunityTopic\Actions\DeleteTopic;
 use App\Features\CommunityTopic\Actions\UpdateTopic;
@@ -11,14 +10,15 @@ use App\Features\CommunityTopic\Exceptions\CommunityTopicActionException;
 use App\Features\CommunityTopic\Queries\ListCommunityTopics;
 use App\Features\CommunityTopic\Queries\ShowTopic;
 use App\Features\CommunityTopic\Serializers\CommunityTopicSerializer;
+use App\Features\Group\Serializers\GroupSerializer;
 use App\Files\ImageEdit;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CommunityTopic\StoreTopicRequest;
 use App\Http\Requests\CommunityTopic\UpdateTopicRequest;
 use App\LinkCard\LinkCardSync;
-use App\Models\Community;
 use App\Models\CommunityTopic;
+use App\Models\Group;
 use App\Support\SurfaceResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,8 +28,8 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * Community topic board, dual-surface: each action serves Classic Blade or Modern Inertia per
- * SurfaceResolver. The board-level gates (view a community's board, post a topic) key on Community,
+ * Group topic board, dual-surface: each action serves Classic Blade or Modern Inertia per
+ * SurfaceResolver. The board-level gates (view a community's board, post a topic) key on Group,
  * so they call CommunityTopicAccess directly; the topic-level gates (edit/delete) go through the
  * auto-discovered CommunityTopicPolicy via Gate. Every failure is a 404, hiding the topic's
  * existence. The Classic community localNav side effect runs only in the Classic branch. showDelete
@@ -39,25 +39,25 @@ class CommunityTopicController extends Controller
 {
     use RespondsWithSurface;
 
-    public function index(Request $request, Community $community, ListCommunityTopics $query): View|InertiaResponse
+    public function index(Request $request, Group $group, ListCommunityTopics $query): View|InertiaResponse
     {
         $viewer = $this->viewer();
-        abort_unless(CommunityTopicAccess::canViewBoard($community, $viewer), 404);
-        $topics = $query($community);
-        $canPost = CommunityTopicAccess::canPostTopic($community, $viewer);
+        abort_unless(CommunityTopicAccess::canViewBoard($group, $viewer), 404);
+        $topics = $query($group);
+        $canPost = CommunityTopicAccess::canPostTopic($group, $viewer);
 
-        return $this->respondWith($request, 'community', [
-            SurfaceResolver::CLASSIC => function () use ($community, $topics, $canPost) {
-                $this->markLocalNavCommunity($community);
+        return $this->respondWith($request, 'group', [
+            SurfaceResolver::CLASSIC => function () use ($group, $topics, $canPost) {
+                $this->markLocalNavGroup($group);
 
                 return view('community-topic.index', [
-                    'community' => $community,
+                    'group' => $group,
                     'topics' => $topics,
                     'canPost' => $canPost,
                 ]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/topic/index', [
-                'community' => CommunitySerializer::summary($community),
+                'group' => GroupSerializer::summary($group),
                 'topics' => CommunityTopicSerializer::paginator($topics),
                 'canPost' => $canPost,
             ]),
@@ -74,9 +74,9 @@ class CommunityTopicController extends Controller
         // topics, and asking on each would queue a page's worth of jobs for someone scrolling past.
         $linkCards->ensure($found);
 
-        return $this->respondWith($request, 'community', [
+        return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($request, $found, $viewer) {
-                $this->markLocalNavCommunity($found->community);
+                $this->markLocalNavGroup($found->community);
 
                 return view('community-topic.show', [
                     'topic' => $found,
@@ -93,7 +93,7 @@ class CommunityTopicController extends Controller
                 $thread = CommunityTopicCommentThread::paginate($found, $request->query('order'), $request->query('page'));
 
                 return Inertia::render('community/topic/show', [
-                    'community' => CommunitySerializer::summary($found->community),
+                    'group' => GroupSerializer::summary($found->community),
                     'topic' => CommunityTopicSerializer::detail($found),
                     'thread' => CommunityTopicSerializer::thread($thread, $viewer),
                     'canComment' => CommunityTopicAccess::canComment($found, $viewer),
@@ -103,28 +103,28 @@ class CommunityTopicController extends Controller
         ]);
     }
 
-    public function new(Request $request, Community $community): View|InertiaResponse
+    public function new(Request $request, Group $group): View|InertiaResponse
     {
-        abort_unless(CommunityTopicAccess::canPostTopic($community, $this->viewer()), 404);
+        abort_unless(CommunityTopicAccess::canPostTopic($group, $this->viewer()), 404);
 
-        return $this->respondWith($request, 'community', [
-            SurfaceResolver::CLASSIC => function () use ($community) {
-                $this->markLocalNavCommunity($community);
+        return $this->respondWith($request, 'group', [
+            SurfaceResolver::CLASSIC => function () use ($group) {
+                $this->markLocalNavGroup($group);
 
-                return view('community-topic.new', ['community' => $community]);
+                return view('community-topic.new', ['group' => $group]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/topic/edit', [
-                'community' => CommunitySerializer::summary($community),
+                'group' => GroupSerializer::summary($group),
                 'topic' => null,
                 'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
         ]);
     }
 
-    public function store(StoreTopicRequest $request, Community $community, CreateTopic $action): RedirectResponse
+    public function store(StoreTopicRequest $request, Group $group, CreateTopic $action): RedirectResponse
     {
         try {
-            $topic = $action($this->viewer(), $community, $request->toData(), $request->file('images', []));
+            $topic = $action($this->viewer(), $group, $request->toData(), $request->file('images', []));
         } catch (CommunityTopicActionException) {
             abort(404);
         }
@@ -137,14 +137,14 @@ class CommunityTopicController extends Controller
         abort_unless(Gate::allows('update', $topic), 404);
         $topic->loadMissing('community', 'images.file');
 
-        return $this->respondWith($request, 'community', [
+        return $this->respondWith($request, 'group', [
             SurfaceResolver::CLASSIC => function () use ($topic) {
-                $this->markLocalNavCommunity($topic->community);
+                $this->markLocalNavGroup($topic->community);
 
                 return view('community-topic.edit', ['topic' => $topic]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/topic/edit', [
-                'community' => CommunitySerializer::summary($topic->community),
+                'group' => GroupSerializer::summary($topic->community),
                 'topic' => CommunityTopicSerializer::detail($topic),
                 'composeEditor' => $this->viewer()->composeEditor()->value,
             ]),
@@ -167,7 +167,7 @@ class CommunityTopicController extends Controller
         abort_unless(Gate::allows('delete', $topic), 404);
 
         // Modern confirms deletion inline — send a Modern viewer back to the topic.
-        if (SurfaceResolver::resolve($request, 'community') === SurfaceResolver::MODERN) {
+        if (SurfaceResolver::resolve($request, 'group') === SurfaceResolver::MODERN) {
             return redirect()->route('communityTopic.show', $topic);
         }
 
@@ -176,7 +176,7 @@ class CommunityTopicController extends Controller
 
     public function delete(Request $request, CommunityTopic $topic, DeleteTopic $action): RedirectResponse
     {
-        $community = $topic->community;
+        $group = $topic->community;
 
         try {
             $action($this->viewer(), $topic);
@@ -185,7 +185,7 @@ class CommunityTopicController extends Controller
         }
 
         // OpenPNE 3 returns to the community home after deleting a topic.
-        return redirect()->route('community.show', $community)
+        return redirect()->route('group.show', $group)
             ->with('status', __('%Topic% deleted.'));
     }
 
@@ -198,9 +198,9 @@ class CommunityTopicController extends Controller
     /** Render a Classic-only confirm view with the OpenPNE 3 page_{module}_{action} body id. */
     private function classic(string $view, array $data = []): View
     {
-        $community = ($data['topic'] ?? null)?->community;
-        if ($community instanceof Community) {
-            $this->markLocalNavCommunity($community);
+        $group = ($data['topic'] ?? null)?->community;
+        if ($group instanceof Group) {
+            $this->markLocalNavGroup($group);
         }
 
         return view($view, $data)->with('pageId', RouteParityRegistry::bodyId($this->routeName()));

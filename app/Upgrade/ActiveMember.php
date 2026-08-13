@@ -2,8 +2,8 @@
 
 namespace App\Upgrade;
 
-use App\Upgrade\Steps\CommunityUpgrade;
 use App\Upgrade\Steps\DirectMessageUpgrade;
+use App\Upgrade\Steps\GroupUpgrade;
 
 /**
  * OpenPNE 3's `member.is_active`, which the upgrade reads as "is this a member at all".
@@ -109,7 +109,7 @@ final class ActiveMember
             // other position names are read for the community role, which carries no member id, and an
             // older admin_confirm duplicate is never read at all.
             'community_member_position.member_id' => ['treatment' => self::REFUSE,
-                'scope' => CommunityUpgrade::pendingAdminRowSelector(), 'scopeColumns' => ['id', 'name', 'community_id']],
+                'scope' => GroupUpgrade::pendingAdminRowSelector(), 'scopeColumns' => ['id', 'name', 'community_id']],
 
             // --- UNUSED: no member id reaches a target row through these ---
             'member.invite_member_id' => ['treatment' => self::UNUSED,

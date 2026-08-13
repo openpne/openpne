@@ -31,7 +31,7 @@ interface Choice {
 }
 
 interface EditProps extends PageProps {
-    community: EditCommunity | null; // null = create mode
+    group: EditCommunity | null; // null = create mode
     categories: { id: number; name: string }[];
     policies: Choice[];
     topicReadChoices: Choice[];
@@ -42,24 +42,24 @@ interface EditProps extends PageProps {
 export default function CommunityEdit() {
     const t = useT();
     const confirm = useConfirm();
-    const { community, categories, policies, topicReadChoices, topicPostChoices, canDelete } = usePage<EditProps>().props;
-    const isEdit = community !== null;
+    const { group, categories, policies, topicReadChoices, topicPostChoices, canDelete } = usePage<EditProps>().props;
+    const isEdit = group !== null;
 
     const form = useForm({
-        name: community?.name ?? '',
-        description: community?.description ?? '',
-        register_policy: community?.registerPolicy ?? policies[0]?.slug ?? 'open',
-        community_category_id: community?.categoryId ? String(community.categoryId) : '',
-        is_join_notification_enabled: community?.isJoinNotificationEnabled ?? true,
-        topic_read_access: community?.topicReadAccess ?? topicReadChoices[0]?.slug ?? 'everyone',
-        topic_post_authority: community?.topicPostAuthority ?? topicPostChoices[0]?.slug ?? 'members',
+        name: group?.name ?? '',
+        description: group?.description ?? '',
+        register_policy: group?.registerPolicy ?? policies[0]?.slug ?? 'open',
+        community_category_id: group?.categoryId ? String(group.categoryId) : '',
+        is_join_notification_enabled: group?.isJoinNotificationEnabled ?? true,
+        topic_read_access: group?.topicReadAccess ?? topicReadChoices[0]?.slug ?? 'everyone',
+        topic_post_authority: group?.topicPostAuthority ?? topicPostChoices[0]?.slug ?? 'members',
         image: null as File | null,
         remove_image: false,
     });
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        form.post(isEdit ? `/community/edit?id=${community.id}` : '/community/edit', { forceFormData: true });
+        form.post(isEdit ? `/groups/edit?id=${group.id}` : '/groups/edit', { forceFormData: true });
     };
 
     const destroy = async () => {
@@ -72,7 +72,7 @@ export default function CommunityEdit() {
                 danger: true,
             })
         ) {
-            router.post(`/community/delete/${community.id}`);
+            router.post(`/groups/${group.id}/delete`);
         }
     };
 
@@ -182,9 +182,9 @@ export default function CommunityEdit() {
                                 className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm file:text-secondary-foreground hover:file:bg-secondary/80"
                             />
                         </Field>
-                        {community?.imageUrl && (
+                        {group?.imageUrl && (
                             <div className="flex items-center gap-3">
-                                <img src={community.imageUrl} alt="" className="size-20 rounded-md object-cover" />
+                                <img src={group.imageUrl} alt="" className="size-20 rounded-md object-cover" />
                                 <label className="flex items-center gap-1 text-sm text-foreground">
                                     <Checkbox
                                         checked={form.data.remove_image}

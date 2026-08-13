@@ -4,7 +4,7 @@ namespace App\Features\Timeline\Actions;
 
 use App\Features\Timeline\CommunityTimelineAccess;
 use App\Features\Timeline\Events\TimelineReplyPosted;
-use App\Features\Timeline\Exceptions\NotCommunityMember;
+use App\Features\Timeline\Exceptions\NotGroupMember;
 use App\Features\Timeline\HashtagParser;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -25,12 +25,12 @@ class CreateReply
      *
      * @param  list<array{member_id: int, offset: int, length: int}>  $mentions  the picker's selection, not yet resolved against $body
      *
-     * @throws NotCommunityMember
+     * @throws NotGroupMember
      */
     public function __invoke(Member $author, TimelinePost $parent, string $body, array $mentions = []): TimelinePost
     {
         if ($parent->community_id !== null && ! CommunityTimelineAccess::canPost($parent->community, $author)) {
-            throw new NotCommunityMember;
+            throw new NotGroupMember;
         }
 
         // Mentions resolve inside the transaction: resolution share-locks the mentioned members,

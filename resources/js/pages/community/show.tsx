@@ -16,7 +16,7 @@ import type { TimelinePostEntry } from '../timeline/types';
 import type { CommunityDetail, CommunityMemberRow, CommunityRoleSlug, EventSummary, TopicSummary } from './types';
 
 interface ShowProps extends PageProps {
-    community: CommunityDetail;
+    group: CommunityDetail;
     viewerRole: CommunityRoleSlug | null;
     isPending: boolean;
     isTransferNominee: boolean; // the viewer is the pending admin-transfer nominee → the accept/reject banner
@@ -35,29 +35,29 @@ export default function CommunityShow() {
     const t = useT();
     const confirm = useConfirm();
     const {
-        community, viewerRole, canManage, isPending, isTransferNominee, canJoin, canLeave, members,
+        group, viewerRole, canManage, isPending, isTransferNominee, canJoin, canLeave, members,
         recentTopics, canPostTopic, recentEvents, canPostEvent, timelinePosts,
     } = usePage<ShowProps>().props;
 
-    const join = () => router.post('/community/join', { id: community.id });
+    const join = () => router.post(`/groups/${group.id}/join`);
     const leave = async () => {
         if (await confirm({ title: t('Leave this %community%?'), confirmLabel: t('Leave'), danger: true })) {
-            router.post('/community/quit', { id: community.id });
+            router.post(`/groups/${group.id}/quit`);
         }
     };
 
     return (
         <>
-            <Head title={community.name} />
+            <Head title={group.name} />
 
             {isTransferNominee && (
                 <Panel bodyClassName="space-y-3">
                     <p className="text-sm">{t('The administrator of this %community% asks you to take over the administration.')}</p>
                     <div className="flex gap-3">
-                        <Button type="button" onClick={() => router.post('/community/member/acceptTransfer', { id: community.id })}>
+                        <Button type="button" onClick={() => router.post(`/groups/${group.id}/members/transfer/accept`)}>
                             {t('Accept')}
                         </Button>
-                        <Button type="button" variant="secondary" onClick={() => router.post('/community/member/rejectTransfer', { id: community.id })}>
+                        <Button type="button" variant="secondary" onClick={() => router.post(`/groups/${group.id}/members/transfer/reject`)}>
                             {t('Decline')}
                         </Button>
                     </div>
@@ -66,12 +66,12 @@ export default function CommunityShow() {
 
             <Panel bodyClassName="space-y-4">
                 <div className="flex items-start gap-4">
-                    <CommunityImage name={community.name} src={community.imageUrl} className="size-20" textClassName="text-2xl" />
+                    <CommunityImage name={group.name} src={group.imageUrl} className="size-20" textClassName="text-2xl" />
                     <div className="min-w-0 flex-1">
-                        <Heading variant="page">{community.name}</Heading>
-                        {community.category && <p className="text-sm text-muted-foreground">{community.category.name}</p>}
-                        <Link href={`/community/member/list?id=${community.id}`} className="text-sm text-link hover:underline">
-                            {t(':count members', { count: community.memberCount })}
+                        <Heading variant="page">{group.name}</Heading>
+                        {group.category && <p className="text-sm text-muted-foreground">{group.category.name}</p>}
+                        <Link href={`/community/member/list?id=${group.id}`} className="text-sm text-link hover:underline">
+                            {t(':count members', { count: group.memberCount })}
                         </Link>
                     </div>
                 </div>
@@ -82,7 +82,7 @@ export default function CommunityShow() {
                     <div className="flex gap-3">
                         {canJoin && (
                             <Button type="button" onClick={join}>
-                                {community.registerPolicy === 'approval' ? t('Request to join') : t('Join')}
+                                {group.registerPolicy === 'approval' ? t('Request to join') : t('Join')}
                             </Button>
                         )}
                         {canLeave && (
@@ -95,35 +95,35 @@ export default function CommunityShow() {
 
                 {canManage && (
                     <div className="flex gap-4 text-sm">
-                        <Link href={`/community/edit?id=${community.id}`} className="text-link hover:underline">
+                        <Link href={`/groups/edit?id=${group.id}`} className="text-link hover:underline">
                             {t('Edit %community%')}
                         </Link>
-                        <Link href={`/community/member/manage/${community.id}`} className="text-link hover:underline">
+                        <Link href={`/community/member/manage/${group.id}`} className="text-link hover:underline">
                             {t('Management member')}
                         </Link>
                         {viewerRole === 'admin' && (
-                            <Link href={`/community/member/pending?id=${community.id}`} className="text-link hover:underline">
+                            <Link href={`/groups/${group.id}/members/pending`} className="text-link hover:underline">
                                 {t('Pending members')}
                             </Link>
                         )}
                     </div>
                 )}
 
-                {community.description && (
+                {group.description && (
                     <div className="whitespace-pre-wrap break-words">
-                        <UserText text={community.description} />
+                        <UserText text={group.description} />
                     </div>
                 )}
             </Panel>
 
             {/* Above the boards, where the Classic box sits — the plugin injected it before the
-                community's own details. Only members see it: it leads to posting. */}
+                group's own details. Only members see it: it leads to posting. */}
             {timelinePosts !== null && (
                 <Panel
                     flush
                     title={t('%Activity%')}
                     right={
-                        <ActionLink href={`/community/${community.id}/timeline/new`} variant="outline" size="sm">
+                        <ActionLink href={`/community/${group.id}/timeline/new`} variant="outline" size="sm">
                             <Pencil className="size-4" strokeWidth={2.25} aria-hidden />
                             {t('%Post_activity%')}
                         </ActionLink>
@@ -147,7 +147,7 @@ export default function CommunityShow() {
                         </List>
                     )}
                     <div className="border-t border-border px-4 py-2.5 sm:px-5">
-                        <Link href={`/community/${community.id}/timeline`} className="text-sm text-link hover:underline">
+                        <Link href={`/groups/${group.id}/timeline`} className="text-sm text-link hover:underline">
                             {t('See all %activity% posts')}
                         </Link>
                     </div>
@@ -160,7 +160,7 @@ export default function CommunityShow() {
                     title={t('Recent %topics%')}
                     right={
                         canPostTopic && (
-                            <ActionLink href={`/communityTopic/new/${community.id}`} variant="outline" size="sm">
+                            <ActionLink href={`/communityTopic/new/${group.id}`} variant="outline" size="sm">
                                 <Plus className="size-4" strokeWidth={2.25} aria-hidden />
                                 {t('Create a %topic%')}
                             </ActionLink>
@@ -184,7 +184,7 @@ export default function CommunityShow() {
                         </List>
                     )}
                     <div className="border-t border-border px-4 py-2.5 sm:px-5">
-                        <Link href={`/communityTopic/listCommunity/${community.id}`} className="text-sm text-link hover:underline">
+                        <Link href={`/communityTopic/listCommunity/${group.id}`} className="text-sm text-link hover:underline">
                             {t('See all %topics%')}
                         </Link>
                     </div>
@@ -197,7 +197,7 @@ export default function CommunityShow() {
                     title={t('Recent events')}
                     right={
                         canPostEvent && (
-                            <ActionLink href={`/communityEvent/new/${community.id}`} variant="outline" size="sm">
+                            <ActionLink href={`/communityEvent/new/${group.id}`} variant="outline" size="sm">
                                 <Plus className="size-4" strokeWidth={2.25} aria-hidden />
                                 {t('Create an event')}
                             </ActionLink>
@@ -222,7 +222,7 @@ export default function CommunityShow() {
                         </List>
                     )}
                     <div className="border-t border-border px-4 py-2.5 sm:px-5">
-                        <Link href={`/communityEvent/listCommunity/${community.id}`} className="text-sm text-link hover:underline">
+                        <Link href={`/communityEvent/listCommunity/${group.id}`} className="text-sm text-link hover:underline">
                             {t('See all events')}
                         </Link>
                     </div>

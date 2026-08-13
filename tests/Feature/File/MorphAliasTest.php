@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\File;
 
 use App\Models\DirectMessage;
+use App\Models\Group;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Tests\TestCase;
 
@@ -24,5 +25,15 @@ class MorphAliasTest extends TestCase
     public function test_the_pre_rename_message_alias_still_resolves(): void
     {
         $this->assertSame(DirectMessage::class, Relation::getMorphedModel('message'));
+    }
+
+    public function test_a_group_writes_the_group_alias(): void
+    {
+        $this->assertSame('group', (new Group)->getMorphClass());
+    }
+
+    public function test_the_pre_rename_community_alias_still_resolves(): void
+    {
+        $this->assertSame(Group::class, Relation::getMorphedModel('community'));
     }
 }

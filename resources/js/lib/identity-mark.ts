@@ -1,6 +1,6 @@
 /**
  * Helpers for the badges that stand in for a missing image: the neutral InitialBadge (members and
- * communities) and BrandMark, whose color the admin configures.
+ * groups) and BrandMark, whose color the admin configures.
  *
  * pickReadableTextColor returns raw Tailwind color classes, which RawPaletteGuardTest bans in
  * `.tsx`. Keep it here — a `.ts` file the guard does not scan — rather than inlining at call sites.

@@ -51,7 +51,7 @@ export function BottomNav({ hidden }: { hidden?: boolean }) {
                 safe-area inset below. A tab fills the row, so the row is the tap target. */}
             <ul className="flex h-12 items-stretch">
                 {bottomNavSections(props.enabledFeatures).map(({ href, match, exact, icon: Icon, label, badge }) => {
-                    const active = exact ? path === match : path.startsWith(match);
+                    const active = exact ? match.includes(path) : match.some((prefix) => path.startsWith(prefix));
                     const count = badge ? (props.unread?.[badge.count] ?? 0) : 0;
                     return (
                         <li key={href} className="flex-1">

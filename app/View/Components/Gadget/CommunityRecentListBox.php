@@ -2,7 +2,7 @@
 
 namespace App\View\Components\Gadget;
 
-use App\Features\Community\CommunityPostTitle;
+use App\Features\Group\GroupPostTitle;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Support\LocalizedDate;
@@ -36,8 +36,8 @@ abstract class CommunityRecentListBox extends Component
         return $posts->map(fn (CommunityTopic|CommunityEvent $post): array => [
             'date' => LocalizedDate::monthDay($post->updated_at, $locale),
             'url' => route($routeName, $post),
-            'title' => CommunityPostTitle::withCount($post),
-            'community' => $post->community->name,
+            'title' => GroupPostTitle::withCount($post),
+            'group' => $post->community->name,
         ])->all();
     }
 }

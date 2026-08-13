@@ -40,9 +40,9 @@ export function RightRail() {
                 </RailSection>
             )}
 
-            {rightRail.joinedCommunities.length > 0 && (
-                <RailSection title={t('Joined %communities%')} viewAllHref="/community/joinList">
-                    <NineTable items={rightRail.joinedCommunities} shape="square" />
+            {rightRail.joinedGroups.length > 0 && (
+                <RailSection title={t('Joined %communities%')} viewAllHref="/groups/mine">
+                    <NineTable items={rightRail.joinedGroups} shape="square" />
                 </RailSection>
             )}
         </aside>

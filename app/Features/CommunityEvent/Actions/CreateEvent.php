@@ -9,8 +9,8 @@ use App\Features\CommunityEvent\Exceptions\CommunityEventActionException;
 use App\Features\CommunityEvent\Exceptions\CommunityEventActionFailure;
 use App\Files\PostImages;
 use App\Jobs\SyncLinkCard;
-use App\Models\Community;
 use App\Models\CommunityEvent;
+use App\Models\Group;
 use App\Models\Member;
 use App\Support\BodyFormat;
 use Illuminate\Http\UploadedFile;
@@ -22,9 +22,9 @@ class CreateEvent
     /**
      * @param  array<int, UploadedFile>  $images  attached images (slot 1..N), at most the upload cap
      */
-    public function __invoke(Member $author, Community $community, CommunityEventFormData $data, array $images = []): CommunityEvent
+    public function __invoke(Member $author, Group $group, CommunityEventFormData $data, array $images = []): CommunityEvent
     {
-        if (! CommunityEventAccess::canPostEvent($community, $author)) {
+        if (! CommunityEventAccess::canPostEvent($group, $author)) {
             throw new CommunityEventActionException(CommunityEventActionFailure::CannotPost);
         }
 
@@ -33,7 +33,7 @@ class CreateEvent
         $event = $this->images->attach(
             'communityEvent',
             $images,
-            persist: fn (): CommunityEvent => $community->events()->create([
+            persist: fn (): CommunityEvent => $group->events()->create([
                 'member_id' => $author->getKey(),
                 'name' => $data->name,
                 'body' => $data->body,

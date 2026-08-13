@@ -3,9 +3,9 @@
 namespace App\Notifications\CommunityTopic;
 
 use App\Mail\Template\MailTemplate;
-use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
+use App\Models\Group;
 use App\Models\Member;
 use App\Notifications\CommentReason;
 use App\Notifications\Concerns\GatedByFeature;
@@ -21,7 +21,7 @@ use Illuminate\Notifications\Notification;
  * The community-wide side of a topic comment (CommentNewPost): reaches members who are neither the
  * topic author nor a co-commenter — they get Reply / Related instead (TopicCommentedNotification). The
  * fan-out pre-resolves each recipient's channels, so via() returns them verbatim. Same feed kind and
- * mail template as the author/co-commenter notification, distinguished by the Community reason.
+ * mail template as the author/co-commenter notification, distinguished by the Group reason.
  */
 class TopicCommentBroadcastNotification extends Notification implements FeatureNotification, ShouldQueue
 {
@@ -31,7 +31,7 @@ class TopicCommentBroadcastNotification extends Notification implements FeatureN
 
     /** @param list<string> $channels the pre-resolved delivery channels (mail and/or database). */
     public function __construct(
-        public readonly Community $community,
+        public readonly Group $community,
         public readonly CommunityTopic $topic,
         public readonly CommunityTopicComment $comment,
         public readonly Member $commenter,

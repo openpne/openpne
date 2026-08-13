@@ -123,16 +123,16 @@ class FileUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('files', ['id' => 12, 'related_entity_type' => null, 'related_entity_id' => null]);
     }
 
-    public function test_resolves_community_top_image_owner(): void
+    public function test_resolves_group_top_image_owner(): void
     {
         $this->seedFile(14);
-        // The community top image is a direct column (community.file_id), so the owner is the
-        // community itself — related_entity_id is the community id, not a join-row id.
+        // The group top image is a direct column (community.file_id), so the owner is the group
+        // itself — related_entity_id is the group id, not a join-row id.
         DB::table('community')->insert(['id' => 55, 'name' => 'Photo Club', 'file_id' => 14, 'created_at' => '2017-01-01 00:00:00', 'updated_at' => '2017-01-01 00:00:00']);
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('files', ['id' => 14, 'related_entity_type' => 'community', 'related_entity_id' => 55]);
+        $this->assertDatabaseHas('files', ['id' => 14, 'related_entity_type' => 'group', 'related_entity_id' => 55]);
     }
 
     public function test_resolves_diary_image_owner(): void

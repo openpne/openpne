@@ -19,7 +19,7 @@ export function NavItems({ onNavigate }: { onNavigate?: () => void }) {
     return (
         <ul className="flex flex-col gap-1">
             {visibleNavSections(props.enabledFeatures).map(({ href, icon: Icon, label, match, badge }) => {
-                const active = url.startsWith(match);
+                const active = match.some((prefix) => url.startsWith(prefix));
                 const count = badge ? (unread?.[badge.count] ?? 0) : 0;
                 return (
                     <li key={href}>

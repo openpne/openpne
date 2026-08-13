@@ -26,7 +26,7 @@ enum Feature: string
 
     case Timeline = 'timeline';
 
-    case Community = 'community';
+    case Group = 'group';
 
     case CommunityTopic = 'communityTopic';
 
@@ -41,7 +41,7 @@ enum Feature: string
             self::Diary => SnsSettingKey::FeatureDiaryEnabled,
             self::DirectMessage => SnsSettingKey::FeatureDirectMessageEnabled,
             self::Timeline => SnsSettingKey::FeatureTimelineEnabled,
-            self::Community => SnsSettingKey::FeatureCommunityEnabled,
+            self::Group => SnsSettingKey::FeatureGroupEnabled,
             self::CommunityTopic => SnsSettingKey::FeatureCommunityTopicEnabled,
             self::CommunityEvent => SnsSettingKey::FeatureCommunityEventEnabled,
             self::Friend => SnsSettingKey::FeatureFriendEnabled,
@@ -52,13 +52,13 @@ enum Feature: string
     public function parent(): ?self
     {
         return match ($this) {
-            self::CommunityTopic, self::CommunityEvent => self::Community,
+            self::CommunityTopic, self::CommunityEvent => self::Group,
             default => null,
         };
     }
 
     /**
-     * This unit's flag AND every ancestor's: a topic board is unreachable while communities are off,
+     * This unit's flag AND every ancestor's: a topic board is unreachable while groups are off,
      * whatever its own flag says, so the dependency is resolved here rather than at each call site.
      */
     public function enabled(): bool
@@ -90,8 +90,8 @@ enum Feature: string
     }
 
     /**
-     * Route-name prefixes this unit owns. Dot-terminated, so `community.` never claims a
-     * `communityTopic.*` route.
+     * Route-name prefixes this unit owns. Dot-terminated, so `group.` never claims a
+     * `groupTalk.*` route, and `communityTopic.*` stays with its own unit.
      *
      * @return list<string>
      */
@@ -102,7 +102,7 @@ enum Feature: string
             self::DirectMessage => ['message.'],
             self::Diary => ['diary.'],
             self::Timeline => ['timeline.'],
-            self::Community => ['community.'],
+            self::Group => ['group.'],
             self::CommunityTopic => ['communityTopic.'],
             self::CommunityEvent => ['communityEvent.'],
             self::Friend => ['friend.'],

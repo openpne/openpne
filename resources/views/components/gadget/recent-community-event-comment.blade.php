@@ -1,4 +1,4 @@
-{{-- OpenPNE 3 recentCommunityEventComment: recent events across the viewer's joined communities,
+{{-- OpenPNE 3 recentCommunityEventComment: recent events across the viewer's joined groups,
      dropped entirely when empty. --}}
 @if (count($entries))
     <div class="dparts homeRecentList"@if ($partId !== null) id="{{ $partId }}"@endif><div class="parts">

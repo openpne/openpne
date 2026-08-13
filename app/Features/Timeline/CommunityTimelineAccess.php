@@ -2,9 +2,9 @@
 
 namespace App\Features\Timeline;
 
-use App\Features\Community\CommunityMembership;
 use App\Features\CommunityTopic\TopicReadAccess;
-use App\Models\Community;
+use App\Features\Group\GroupMembership;
+use App\Models\Group;
 use App\Models\Member;
 
 /**
@@ -19,10 +19,10 @@ use App\Models\Member;
 class CommunityTimelineAccess
 {
     /** May the member read this community's timeline? MembersOnly requires membership. */
-    public static function canViewTimeline(Community $community, Member $member): bool
+    public static function canViewTimeline(Group $group, Member $member): bool
     {
-        if ($community->topic_read_access === TopicReadAccess::MembersOnly) {
-            return CommunityMembership::isMember($community, $member);
+        if ($group->topic_read_access === TopicReadAccess::MembersOnly) {
+            return GroupMembership::isMember($group, $member);
         }
 
         return true;
@@ -30,10 +30,10 @@ class CommunityTimelineAccess
 
     /**
      * May the member post or reply here? Membership, whatever the read gate — an Everyone community
-     * is readable by any member but writable only by its own (OpenPNE 3 checkCommunityMember).
+     * is readable by any member but writable only by its own (OpenPNE 3 checkGroupMember).
      */
-    public static function canPost(Community $community, Member $member): bool
+    public static function canPost(Group $group, Member $member): bool
     {
-        return CommunityMembership::isMember($community, $member);
+        return GroupMembership::isMember($group, $member);
     }
 }

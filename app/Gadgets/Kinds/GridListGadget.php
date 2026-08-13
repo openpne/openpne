@@ -8,7 +8,7 @@ use App\Gadgets\GadgetConfigField;
 use App\Gadgets\GadgetKind;
 
 /**
- * Shared base for the member/community grid lists (OpenPNE 3 friendListBox / communityJoinListBox):
+ * Shared base for the member/community grid lists (OpenPNE 3 friendListBox / groupJoinListBox):
  * a row × col thumbnail grid with a full / image-only / name-only display type. Both are members-only
  * and offered on the home and profile pages.
  */

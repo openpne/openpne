@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
@@ -34,10 +34,10 @@ class TimelinePostFactory extends Factory
     }
 
     /** Scoped to a community's timeline, which fixes visibility at Members (the runtime contract). */
-    public function inCommunity(Community $community): static
+    public function inGroup(Group $group): static
     {
         return $this->state([
-            'community_id' => $community->getKey(),
+            'community_id' => $group->getKey(),
             'visibility' => Visibility::Members,
         ]);
     }

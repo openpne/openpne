@@ -59,7 +59,9 @@ class NavigationService
      */
     public function visibleEntries(string $type, string $locale, ?int $subjectId = null): array
     {
-        $prefix = in_array($type, Navigation::GLOBAL_TYPES, true) ? 'globalNav' : $type;
+        // Local-nav ids carry the presentation token, not the stored type: `group` renders as
+        // OpenPNE 3's `community` so a site's custom CSS keeps matching.
+        $prefix = in_array($type, Navigation::GLOBAL_TYPES, true) ? 'globalNav' : Navigation::presentationToken($type);
         $lang = Navigation::translationLang($locale);
         $terms = app(TermService::class);
 

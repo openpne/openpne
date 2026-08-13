@@ -3,7 +3,7 @@
 namespace App\Features\Timeline;
 
 use App\Features\Block\BlockLookup;
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Feature;
@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\DB;
  * friend-scoped gadgets, which the unit hides whole.
  *
  * Every method here is an SNS-wide feed, so all of them drop community-scoped posts — a community
- * timeline is reached only through applyCommunity(), which is the sole opt-in. New SNS-wide feeds
+ * timeline is reached only through applyGroup(), which is the sole opt-in. New SNS-wide feeds
  * inherit the exclusion by going through this class, as OpenPNE 3's opActivityQueryBuilder did with
  * `foreign_table IS NULL OR <> "community"`.
  */
@@ -32,7 +32,7 @@ final class TimelineFeedScope
     /** @param  Builder<TimelinePost>  $query */
     public static function apply(Builder $query, Member $viewer): void
     {
-        self::excludeCommunityScoped($query);
+        self::excludeGroupScoped($query);
 
         $viewerId = $viewer->getKey();
 
@@ -73,7 +73,7 @@ final class TimelineFeedScope
      */
     public static function applyFriendsOnly(Builder $query, Member $viewer): void
     {
-        self::excludeCommunityScoped($query);
+        self::excludeGroupScoped($query);
 
         $viewerId = $viewer->getKey();
 
@@ -107,7 +107,7 @@ final class TimelineFeedScope
      */
     public static function applyMembersOnly(Builder $query, Member $viewer): void
     {
-        self::excludeCommunityScoped($query);
+        self::excludeGroupScoped($query);
 
         $query->where('timeline_posts.visibility', '<=', Visibility::Members->value);
 
@@ -126,21 +126,21 @@ final class TimelineFeedScope
      *
      * @param  Builder<TimelinePost>  $query
      */
-    public static function applyCommunity(Builder $query, Member $viewer, Community $community): void
+    public static function applyGroup(Builder $query, Member $viewer, Group $group): void
     {
-        $query->where('timeline_posts.community_id', $community->getKey());
+        $query->where('timeline_posts.community_id', $group->getKey());
 
         $query->whereExists(fn ($members) => $members
             ->select(DB::raw(1))
-            ->from('community_members')
-            ->where('community_members.community_id', $community->getKey())
-            ->whereColumn('community_members.member_id', 'timeline_posts.member_id'));
+            ->from('group_members')
+            ->where('group_members.group_id', $group->getKey())
+            ->whereColumn('group_members.member_id', 'timeline_posts.member_id'));
 
         BlockLookup::excludeOwnersBlockingViewer($query, $viewer, 'timeline_posts.member_id');
     }
 
     /** @param  Builder<TimelinePost>  $query */
-    private static function excludeCommunityScoped(Builder $query): void
+    private static function excludeGroupScoped(Builder $query): void
     {
         $query->whereNull('timeline_posts.community_id');
     }

@@ -2,8 +2,8 @@
 
 namespace App\Features\CommunityEvent\Queries;
 
-use App\Models\Community;
 use App\Models\CommunityEvent;
+use App\Models\Group;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
@@ -16,9 +16,9 @@ class ListCommunityEvents
     public const PER_PAGE = 20;
 
     /** @return LengthAwarePaginator<int, CommunityEvent> */
-    public function __invoke(Community $community, int $perPage = self::PER_PAGE): LengthAwarePaginator
+    public function __invoke(Group $group, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
-        return $community->events()
+        return $group->events()
             ->withCount(['comments', 'participants'])
             ->with('member.avatar.file')
             ->orderByDesc('updated_at')

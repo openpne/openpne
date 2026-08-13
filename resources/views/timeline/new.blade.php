@@ -1,17 +1,17 @@
 @extends('layouts.classic')
 
-@php($community = $community ?? null)
+@php($group = $group ?? null)
 
 @section('title', __('%Post_activity%'))
 
 @section('content')
     {{-- OpenPNE 3 inlines the compose box in the feed itself, so there is no OpenPNE 3 form box to
          reproduce: the standalone page takes the form kind and keeps its OpenPNE 4 id. --}}
-    <x-classic.parts id="timeline_new" name="form" :title="$community ? __(':community %activity%', ['community' => $community->name]) : __('%Post_activity%')">
-        <form method="POST" action="{{ $community ? route('community.timeline.store', ['community' => $community]) : route('timeline.store') }}" enctype="multipart/form-data"
-              data-timeline-mention data-mention-candidates-url="{{ $community ? route('timeline.mention_candidates', ['community' => $community]) : route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
+    <x-classic.parts id="timeline_new" name="form" :title="$group ? __(':community %activity%', ['community' => $group->name]) : __('%Post_activity%')">
+        <form method="POST" action="{{ $group ? route('group.timeline.store', ['group' => $group]) : route('timeline.store') }}" enctype="multipart/form-data"
+              data-timeline-mention data-mention-candidates-url="{{ $group ? route('timeline.mention_candidates', ['community' => $group]) : route('timeline.mention_candidates') }}" data-mention-no-image-url="{{ asset('images/no_image.gif') }}" data-mention-label="{{ __('Mention candidates') }}">
             @csrf
-            @if ($community)
+            @if ($group)
                 <input type="hidden" name="from" value="new">
             @endif
             @include('timeline._mention-draft')
@@ -24,7 +24,7 @@
                     </td>
                 </tr>
                 {{-- A community post's audience is the community, so there is nothing to choose. --}}
-                @unless ($community)
+                @unless ($group)
                     <tr>
                         <th><label for="timeline_visibility">{{ __('Visibility') }}</label></th>
                         <td>

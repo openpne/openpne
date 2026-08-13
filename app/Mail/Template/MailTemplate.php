@@ -30,7 +30,7 @@ enum MailTemplate: string
     case TimelineMentionNotified = 'timeline-mention';
     case TimelinePostingNotified = 'timeline-posting';
     case CommunityPostingNotified = 'community-posting';
-    case CommunityJoinNotice = 'community-join';
+    case GroupJoinNotice = 'group-join';
     case RegistrationCompleted = 'registration-complete';
     case WithdrawalCompleted = 'withdrawal-complete';
     case WithdrawalAdminNotice = 'withdrawal-admin-notice';
@@ -185,7 +185,7 @@ enum MailTemplate: string
                     'url' => ['help' => 'The %topic% or event URL.', 'sample' => 'https://example.test'],
                 ],
             ),
-            self::CommunityJoinNotice => new MailTemplateDefinition(
+            self::GroupJoinNotice => new MailTemplateDefinition(
                 op3SourceName: 'pc_joinCommunity',
                 isConfigurable: true,
                 caption: 'Notification of Someone’s Joining Your %Community%',

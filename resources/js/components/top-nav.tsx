@@ -118,12 +118,12 @@ function ScopeIdentity({ scope }: { scope: ChromeScope }) {
     return (
         <div className="flex min-w-0 flex-1 items-center justify-center">
             <Link
-                href={scope.kind === 'community' ? `/community/${scope.id}` : `/member/${scope.id}`}
+                href={scope.kind === 'group' ? `/groups/${scope.id}` : `/member/${scope.id}`}
                 // Full bar height: the block paints at 32 to sit with its name, but it is a link, and
                 // the bar's targets are all 48.
                 className="flex min-h-12 min-w-0 max-w-full items-center gap-2"
             >
-                {scope.kind === 'community' ? (
+                {scope.kind === 'group' ? (
                     <CommunityImage name={scope.name} src={scope.imageUrl} className="size-8" textClassName="text-xs" decorative />
                 ) : (
                     <Avatar id={scope.id} name={scope.name} src={scope.imageUrl} color={scope.avatarColor} size="sm" decorative />

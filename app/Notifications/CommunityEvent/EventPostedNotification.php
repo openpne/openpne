@@ -3,8 +3,8 @@
 namespace App\Notifications\CommunityEvent;
 
 use App\Mail\Template\MailTemplate;
-use App\Models\Community;
 use App\Models\CommunityEvent;
+use App\Models\Group;
 use App\Models\Member;
 use App\Notifications\Concerns\GatedByFeature;
 use App\Notifications\Concerns\RendersMailTemplate;
@@ -29,7 +29,7 @@ class EventPostedNotification extends Notification implements FeatureNotificatio
 
     /** @param list<string> $channels the pre-resolved delivery channels (mail and/or database). */
     public function __construct(
-        public readonly Community $community,
+        public readonly Group $community,
         public readonly CommunityEvent $event,
         public readonly Member $author,
         public readonly array $channels,

@@ -67,12 +67,12 @@ class InertiaSharedPropsTest extends TestCase
 
     public function test_the_shared_feature_map_resolves_dependencies(): void
     {
-        $this->setSnsSetting(Feature::Community->settingKey(), false);
+        $this->setSnsSetting(Feature::Group->settingKey(), false);
 
         $this->actingAs(Member::factory()->create())
             ->get('/dashboard')
             ->assertInertia(fn ($page) => $page
-                ->where('enabledFeatures.community', false)
+                ->where('enabledFeatures.group', false)
                 // Contained units follow their container, whatever their own rows say.
                 ->where('enabledFeatures.communityTopic', false)
                 ->where('enabledFeatures.communityEvent', false)

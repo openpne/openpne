@@ -5,7 +5,7 @@ namespace App\Http\Requests\CommunityTopic;
 use App\Features\CommunityTopic\CommunityTopicAccess;
 use App\Features\CommunityTopic\Data\CommunityTopicFormData;
 use App\Http\Requests\Concerns\PostImageRules;
-use App\Models\Community;
+use App\Models\Group;
 use App\Models\Member;
 use App\Rules\MaxBytes;
 use App\Support\BodyFormat;
@@ -21,10 +21,10 @@ class StoreTopicRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $community = $this->route('community');
+        $group = $this->route('group');
         $viewer = $this->user();
-        if (! $community instanceof Community || ! $viewer instanceof Member
-            || ! CommunityTopicAccess::canPostTopic($community, $viewer)) {
+        if (! $group instanceof Group || ! $viewer instanceof Member
+            || ! CommunityTopicAccess::canPostTopic($group, $viewer)) {
             abort(404);
         }
 

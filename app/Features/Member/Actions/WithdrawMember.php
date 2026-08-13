@@ -2,13 +2,13 @@
 
 namespace App\Features\Member\Actions;
 
-use App\Features\Community\Actions\DeleteCommunity;
-use App\Features\Community\CommunityRole;
 use App\Features\Diary\Actions\DeleteDiary;
+use App\Features\Group\Actions\DeleteGroup;
+use App\Features\Group\GroupRole;
 use App\Features\Member\Events\MemberWithdrawn;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
-use App\Models\Community;
-use App\Models\CommunityMember;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\SecurityLog;
@@ -20,7 +20,7 @@ use RuntimeException;
  * no per-actor check here — only the primary-member guard.
  *
  * Most of the member's rows are removed by the `members` FK cascade (friendships, friend_requests,
- * member_blocks, community_members, community_join_requests, community_event_members,
+ * member_blocks, group_members, group_join_requests, community_event_members,
  * member_profiles, member_preferences) and the avatar File is purged by MemberObserver::deleting().
  * SET-NULL relations are deliberately retained with a null author — the member's comments on others'
  * content, authored topics/events, and sent/received messages stay so the other parties' views keep
@@ -30,7 +30,7 @@ use RuntimeException;
  *  - Image File *bytes* of cascade-deleted content (the member's own diaries + their comments, and
  *    timeline posts) — the cascade drops the *_image link rows but never the File bytes. We route
  *    each through its own delete action's purge so the bytes go too.
- *  - Sole-admin communities — flattened roles mean no implicit successor; hand over or dissolve.
+ *  - Sole-admin groups — flattened roles mean no implicit successor; hand over or dissolve.
  *
  * There is deliberately NO single wrapping transaction. The cores purge image bytes via the
  * FileObserver, which removes them irreversibly; that must stay outside any transaction that could
@@ -47,7 +47,7 @@ class WithdrawMember
     public function __construct(
         private readonly DeleteDiary $deleteDiary,
         private readonly DeleteTimelinePost $deleteTimelinePost,
-        private readonly DeleteCommunity $deleteCommunity,
+        private readonly DeleteGroup $deleteGroup,
     ) {}
 
     public function __invoke(Member $member): void
@@ -67,7 +67,7 @@ class WithdrawMember
 
         // Leave every community first (each under its own row lock), handing over sole-admin seats;
         // dissolve the leftover empty ones after their lock commits so their byte purge stays post-commit.
-        $this->drainCommunities($member);
+        $this->drainGroups($member);
 
         // Own diaries: purge each (drops the diary + its comments and all their image bytes).
         foreach ($member->diaries()->get() as $diary) {
@@ -106,10 +106,10 @@ class WithdrawMember
      * Leave every community (each under its own row lock, handing over sole-admin seats) and dissolve
      * the ones left empty. Re-runnable: deleteMemberRow() calls it again if a membership raced in.
      */
-    private function drainCommunities(Member $member): void
+    private function drainGroups(Member $member): void
     {
-        foreach ($this->handOverAdminCommunities($member) as $community) {
-            $this->deleteCommunity->purge($community);
+        foreach ($this->handOverAdminGroups($member) as $group) {
+            $this->deleteGroup->purge($group);
         }
     }
 
@@ -118,7 +118,7 @@ class WithdrawMember
      * (possibly a sole-admin one from a transfer accepted mid-withdrawal) races in after the drain and
      * would then be silently FK-cascaded away, stranding a community admin-less.
      *
-     * While the member row is X-locked, a concurrent community_members INSERT for this member blocks on
+     * While the member row is X-locked, a concurrent group_members INSERT for this member blocks on
      * InnoDB's FK parent-row share lock until we commit — after which that insert fails the FK. A
      * membership committed before we took the lock is caught by the locked count and drained again
      * (which hands over any admin seat under the community lock), then we retry.
@@ -141,7 +141,7 @@ class WithdrawMember
                     return true; // already gone
                 }
 
-                $hasMembership = CommunityMember::query()
+                $hasMembership = GroupMember::query()
                     ->where('member_id', $id)
                     ->lockForUpdate()
                     ->exists();
@@ -158,7 +158,7 @@ class WithdrawMember
                 return;
             }
 
-            $this->drainCommunities($member);
+            $this->drainGroups($member);
         }
 
         throw new RuntimeException("Member {$id} still held memberships after the withdrawal drain cap.");
@@ -172,33 +172,33 @@ class WithdrawMember
      * membership to admin, and branching on the stale role would strand the community admin-less — the
      * withdrawing nominee would become admin and then be cascade-deleted. When the departing role is
      * admin and no admin remains, the longest-tenured member is promoted (OpenPNE 3's oldest-becomes-
-     * admin); communities with no members left are returned for post-commit dissolve (their byte purge
+     * admin); groups with no members left are returned for post-commit dissolve (their byte purge
      * must run outside the lock transaction).
      *
      * All memberships are enumerated (not just admin ones) so each delete is serialized under the
      * community lock; deleteMemberRow() re-drains any that race in afterward, so the members FK cascade
      * never has to remove a membership (least of all a sole-admin one).
      *
-     * @return array<int, Community>
+     * @return array<int, Group>
      */
-    private function handOverAdminCommunities(Member $member): array
+    private function handOverAdminGroups(Member $member): array
     {
-        $memberships = CommunityMember::query()
+        $memberships = GroupMember::query()
             ->where('member_id', $member->getKey())
             ->get();
 
         $toDissolve = [];
 
         foreach ($memberships as $membership) {
-            $community = DB::transaction(function () use ($membership, $member): ?Community {
-                $community = Community::whereKey($membership->community_id)->lockForUpdate()->first();
-                if ($community === null) {
+            $group = DB::transaction(function () use ($membership, $member): ?Group {
+                $group = Group::whereKey($membership->group_id)->lockForUpdate()->first();
+                if ($group === null) {
                     return null; // already dissolved by a concurrent withdrawal
                 }
 
                 // Re-read the seat under the lock; a concurrent path may already have removed it.
-                $locked = CommunityMember::query()
-                    ->where('community_id', $community->getKey())
+                $locked = GroupMember::query()
+                    ->where('group_id', $group->getKey())
                     ->where('member_id', $member->getKey())
                     ->first();
                 if ($locked === null) {
@@ -208,41 +208,41 @@ class WithdrawMember
                 $locked->delete();
 
                 // A transfer nominating the leaving member dies with the seat.
-                if ((int) $community->pending_admin_member_id === (int) $member->getKey()) {
-                    $community->pending_admin_member_id = null;
-                    $community->save();
+                if ((int) $group->pending_admin_member_id === (int) $member->getKey()) {
+                    $group->pending_admin_member_id = null;
+                    $group->save();
                 }
 
                 // Only an admin departure needs a successor; a plain/sub-admin seat just leaves.
-                if ($locked->role !== CommunityRole::Admin) {
+                if ($locked->role !== GroupRole::Admin) {
                     return null;
                 }
 
-                $hasOtherAdmin = CommunityMember::query()
-                    ->where('community_id', $community->getKey())
-                    ->where('role', CommunityRole::Admin->value)
+                $hasOtherAdmin = GroupMember::query()
+                    ->where('group_id', $group->getKey())
+                    ->where('role', GroupRole::Admin->value)
                     ->exists();
 
                 if ($hasOtherAdmin) {
                     return null;
                 }
 
-                $successor = CommunityMember::query()
-                    ->where('community_id', $community->getKey())
+                $successor = GroupMember::query()
+                    ->where('group_id', $group->getKey())
                     ->orderBy('id') // longest-tenured remaining member
                     ->first();
 
                 if ($successor !== null) {
-                    $successor->update(['role' => CommunityRole::Admin]);
+                    $successor->update(['role' => GroupRole::Admin]);
 
                     return null;
                 }
 
-                return $community; // no members remain → dissolve after commit
+                return $group; // no members remain → dissolve after commit
             });
 
-            if ($community !== null) {
-                $toDissolve[] = $community;
+            if ($group !== null) {
+                $toDissolve[] = $group;
             }
         }
 

@@ -43,7 +43,7 @@ Key invariants:
 
 1. **The application stamps its own timestamps.** Four tables default
    `created_at` to the database clock (`useCurrent()`): `friend_requests`,
-   `friendships`, `member_blocks`, `community_join_requests`. No connection
+   `friendships`, `member_blocks`, `group_join_requests`. No connection
    timezone is configured, so that clock is UTC on SQLite and the server's zone on
    MySQL — a row the app did not stamp puts a second clock in one column. Every
    write path passes `now()` explicitly; the default remains only for raw SQL and
