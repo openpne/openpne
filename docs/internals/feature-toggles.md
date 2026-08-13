@@ -72,7 +72,7 @@ target route and drops the row when that route carries the gate of a switched-of
 and an unnamed alias or an out-of-prefix endpoint is covered for free. It also means ownership is
 per row, not per nav: the message entry inside a member's local nav goes when messages go, and stays
 when friends go. The gadgets do the same through
-[`GadgetKind::feature()`](../../app/Gadgets/GadgetKind.php), and the community home, the member
+[`GadgetKind::feature()`](../../app/Gadgets/GadgetKind.php), and the group home, the member
 settings nav and the home links ask the registry directly.
 
 Resolution is per request throughout. The nav and gadget row caches never embed feature state, so
@@ -174,7 +174,7 @@ switched friends off — because everyone there already knows everyone — still
 off it samples all members ([`RandomMembers`](../../app/Features/Member/Queries/RandomMembers.php))
 under the same block and visibility rules, and the payload names which audience it shipped
 (`people.kind`) so the heading and the view-all link follow. A section whose purpose *is* the unit —
-the joined-community grid beside it — still empties. Neither reinterprets nor widens a stored
+the joined-group grid beside it — still empties. Neither reinterprets nor widens a stored
 audience, and neither rewrites a row.
 
 ## Upgrade

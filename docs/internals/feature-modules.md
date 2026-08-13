@@ -144,7 +144,7 @@ the mobile (< lg) top bar varies with the page class: brand on the dashboard, th
 section title on a signed-in hub (its in-page h1 folds to `sr-only` there, so the
 title is announced once; a guest keeps the brand bar and the visible h1), and on a
 detail page back plus the registry's `scope` — the
-community or member the page belongs to, as one tappable identity block in the
+group or member the page belongs to, as one tappable identity block in the
 brand block's grammar. A form (and any page with no single scope) shows its context
 as static centered text instead (a compose screen shows only its close control and
 its actions — see below). The in-page breadcrumb row is therefore

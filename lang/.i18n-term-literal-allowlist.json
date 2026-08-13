@@ -1,0 +1,6 @@
+{
+    "_note": "Strings allowed to carry a term-vocabulary word as a bare literal because the word is used in its generic sense, not as the SNS term. Checked by `php artisan i18n:check` (reportLiteralTerms); keep this to genuinely generic uses only.",
+    "allow": [
+        "All countries (grouped)"
+    ]
+}

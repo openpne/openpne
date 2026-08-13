@@ -62,7 +62,7 @@ class ClassicHomeGroupGadgetTest extends TestCase
             ->assertOk()
             ->assertSee('id="homeRecentList_'.$gadget->id.'"', false)
             ->assertSee('class="dparts homeRecentList"', false)
-            ->assertSee('Recently Posted Community Topics')        // h3 (en term rendering)
+            ->assertSee('Recently Posted Group Topics')        // h3 (en term rendering)
             ->assertSee('JoinedTopic(1)')                          // title + count, no separating space
             ->assertSee('(JoinedGroup)')                       // community name follows the link
             ->assertSee('March 4')                                 // updated_at, not created_at
@@ -130,7 +130,7 @@ class ClassicHomeGroupGadgetTest extends TestCase
             ->assertOk()
             ->assertSee('id="homeRecentList_'.$gadget->id.'"', false)
             ->assertSee('class="dparts homeRecentList"', false)
-            ->assertSee('Recently Posted Community Events')     // h3
+            ->assertSee('Recently Posted Group Events')     // h3
             ->assertSee('JoinedEvent(2)')                       // comment count (2), not participant count (3)
             ->assertSee('(EventGroup)')
             ->assertSee('/events/'.$event->getKey(), false)
@@ -150,7 +150,7 @@ class ClassicHomeGroupGadgetTest extends TestCase
         $this->actingAs($viewer)->get('/')
             ->assertOk()
             ->assertSee('class="dparts topicRecentList homeRecentList"', false) // SNS-only parts-name class
-            ->assertSee('Latest community topics across the SNS')               // h3
+            ->assertSee('Latest group topics across the SNS')               // h3
             ->assertSee('PublicTopic(0)')
             ->assertSee('(PublicGroup)')
             ->assertDontSee('PrivateTopic');                                    // members-only community excluded
@@ -168,7 +168,7 @@ class ClassicHomeGroupGadgetTest extends TestCase
         $this->actingAs($viewer)->get('/')
             ->assertOk()
             ->assertSee('class="dparts eventRecentList homeRecentList"', false)
-            ->assertSee('Latest community events across the SNS')
+            ->assertSee('Latest group events across the SNS')
             ->assertSee('PublicEvent(0)')
             ->assertDontSee('PrivateEvent');
     }
@@ -183,6 +183,6 @@ class ClassicHomeGroupGadgetTest extends TestCase
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()
-            ->assertSee('コミュニティ最新書き込み');
+            ->assertSee('グループ最新書き込み');
     }
 }
