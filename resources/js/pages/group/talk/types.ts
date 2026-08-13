@@ -10,6 +10,8 @@ export interface TalkMessage {
     author: MemberRef | null; // null → the author has withdrawn from the SNS
     /** @mention ranges over the body, ascending and non-overlapping. Talk parses no hashtags. */
     mentions: MentionEntity[];
+    /** Attached images in slot order — one per message from the composer, N from migrated content. */
+    images: { id: number; url: string; thumbnailUrl: string }[];
     isOwn: boolean;
     canDelete: boolean;
 }

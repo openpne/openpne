@@ -8,11 +8,12 @@ use App\Features\GroupTalk\Exceptions\GroupTalkActionFailure;
 use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTalk\TalkReadCursor;
 use App\Features\Timeline\Actions\ResolveMentions;
+use App\Files\PostImages;
 use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\Member;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\UploadedFile;
 
 class CreateGroupMessage
 {
@@ -21,7 +22,10 @@ class CreateGroupMessage
      * group's members when handed one, and duplicating its offset/overlap invariants is how the two
      * would drift apart. The mention machinery is shared between the two surfaces by design.
      */
-    public function __construct(private readonly ResolveMentions $mentions) {}
+    public function __construct(
+        private readonly PostImages $images,
+        private readonly ResolveMentions $mentions,
+    ) {}
 
     /**
      * Say something in a group's talk. Membership is checked here rather than in the controller —
@@ -32,46 +36,66 @@ class CreateGroupMessage
      * in_reply_to_id is never written: it exists to receive what migrated content pointed at, and
      * talk has no reply UI to produce one.
      *
+     * PostImages::attach owns the transaction and everything else runs inside its persist callback.
+     * It must be the OUTERMOST layer: its compensation deletes the bytes it stored when the
+     * transaction throws, and a transaction wrapped around it would already have rolled back —
+     * committing the rollback while the bytes stayed on disk. One schema slot per image is kept
+     * (number 1..N) though the composer offers one, so migrated content with several has somewhere
+     * to land.
+     *
      * @param  list<array{member_id: int, offset: int, length: int}>  $mentions
      *
      * @throws GroupTalkActionException
      */
-    public function __invoke(Member $author, Group $group, string $body, array $mentions = []): GroupMessage
-    {
+    public function __invoke(
+        Member $author,
+        Group $group,
+        string $body,
+        array $mentions = [],
+        ?UploadedFile $image = null,
+    ): GroupMessage {
         if (! GroupTalkAccess::canPost($group, $author)) {
             throw new GroupTalkActionException(GroupTalkActionFailure::CannotPost);
         }
 
-        return DB::transaction(function () use ($author, $group, $body, $mentions): GroupMessage {
-            $message = GroupMessage::create([
-                'group_id' => $group->getKey(),
-                'member_id' => $author->getKey(),
-                'body' => $body,
-            ]);
+        return $this->images->attach(
+            'groupMessage',
+            $image !== null ? [$image] : [],
+            persist: function () use ($author, $group, $body, $mentions): GroupMessage {
+                $message = GroupMessage::create([
+                    'group_id' => $group->getKey(),
+                    'member_id' => $author->getKey(),
+                    'body' => $body,
+                ]);
 
-            // Resolved inside the transaction: resolution share-locks the members it matches, so one
-            // deleted mid-request fails resolution — the row is dropped and the message still posts —
-            // instead of failing the FK insert and rolling the message back.
-            $resolved = ($this->mentions)($author, $body, $mentions, $group);
-            // Held as the relation so the serializer that answers this write does not re-read them;
-            // createMany returns them in the order it was given, which resolution left ascending.
-            $message->setRelation('mentions', $message->mentions()->createMany($resolved));
+                // Resolved inside the transaction: resolution share-locks the members it matches, so
+                // one deleted mid-request fails resolution — the row is dropped and the message still
+                // posts — instead of failing the FK insert and rolling the message back.
+                //
+                // Held as the relation so the serializer that answers this write does not re-read
+                // them; createMany returns them in the order it was given, which resolution left
+                // ascending.
+                $resolved = ($this->mentions)($author, $body, $mentions, $group);
+                $message->setRelation('mentions', $message->mentions()->createMany($resolved));
 
-            // Writing is reading. In the same transaction as the insert, so the cursor can never be
-            // left behind a message the member wrote themselves — which would show as their own
-            // words arriving as unread. Still forward-only, so it is safe to run unconditionally.
-            TalkReadCursor::advance(
-                (int) $group->getKey(),
-                (int) $author->getKey(),
-                CarbonImmutable::instance($message->created_at),
-                (int) $message->getKey(),
-            );
+                // Writing is reading. In the same transaction as the insert, so the cursor can never
+                // be left behind a message the member wrote themselves — which would show as their
+                // own words arriving as unread. Still forward-only, so it is safe to run
+                // unconditionally.
+                TalkReadCursor::advance(
+                    (int) $group->getKey(),
+                    (int) $author->getKey(),
+                    CarbonImmutable::instance($message->created_at),
+                    (int) $message->getKey(),
+                );
 
-            // Dispatched from inside the write so the snapshot is the rows just stored; delivery
-            // waits for the commit (ShouldDispatchAfterCommit).
-            GroupMessagePosted::dispatch($message, $author, ResolveMentions::memberIds($resolved));
+                // Dispatched from inside the write so the snapshot is the rows just stored; delivery
+                // waits for the commit (ShouldDispatchAfterCommit).
+                GroupMessagePosted::dispatch($message, $author, ResolveMentions::memberIds($resolved));
 
-            return $message;
-        });
+                return $message;
+            },
+            relation: fn (GroupMessage $message) => $message->images(),
+        );
     }
 }

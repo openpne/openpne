@@ -96,13 +96,16 @@ class GroupTalkController extends Controller
         $viewer = $this->viewer();
 
         try {
-            $message = $action($viewer, $group, $request->validated('body'), $request->mentions());
+            $message = $action($viewer, $group, $request->validated('body'), $request->mentions(), $request->file('image'));
         } catch (GroupTalkActionException) {
             abort(404);
         }
 
         // The author is the viewer; hand the model over rather than re-reading the row just written.
         $message->setRelation('author', $viewer->loadMissing('avatar.file'));
+        // PostImages creates the join rows through the relation, which does not populate it — load
+        // them explicitly rather than letting the serializer lazy-load one query per attachment.
+        $message->loadMissing('images.file');
 
         return response()->json(
             GroupMessageSerializer::message($message, GroupTalkPermissions::for($group, $viewer)),

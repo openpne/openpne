@@ -76,6 +76,12 @@ class Group extends Model
         return $this->hasMany(TimelinePost::class, 'community_id');
     }
 
+    /** @return HasMany<GroupMessage, $this> The group's talk, oldest first is the query's job. */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(GroupMessage::class);
+    }
+
     /** @return BelongsTo<GroupCategory, $this> */
     public function category(): BelongsTo
     {

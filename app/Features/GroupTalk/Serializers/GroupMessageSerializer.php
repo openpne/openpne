@@ -6,6 +6,7 @@ use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\GroupTalkPage;
 use App\Features\GroupTalk\GroupTalkPermissions;
 use App\Models\GroupMessage;
+use App\Models\GroupMessageImage;
 use App\Models\GroupMessageMention;
 use App\Models\Member;
 
@@ -22,7 +23,7 @@ use App\Models\Member;
 class GroupMessageSerializer
 {
     /**
-     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, isOwn: bool, canDelete: bool}
+     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string}>, isOwn: bool, canDelete: bool}
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions): array
     {
@@ -33,6 +34,7 @@ class GroupMessageSerializer
             'cursor' => (string) GroupTalkCursor::of($message),
             'author' => self::author($message->author),
             'mentions' => self::mentions($message),
+            'images' => $message->images->map([self::class, 'image'])->values()->all(),
             'isOwn' => $permissions->owns($message),
             'canDelete' => $permissions->canDelete($message),
         ];
@@ -74,6 +76,24 @@ class GroupMessageSerializer
                 ->values()
                 ->all(),
             'hasOlder' => $page->hasOlder,
+        ];
+    }
+
+    /**
+     * A single attached image: the full-bytes url and a square thumbnail, both FilePolicy-gated
+     * behind the talk's read access. Tolerates a row whose File is gone (defensive; the join
+     * cascades with it).
+     *
+     * @return array{id: int, url: string, thumbnailUrl: string}
+     */
+    public static function image(GroupMessageImage $image): array
+    {
+        $file = $image->file;
+
+        return [
+            'id' => $image->getKey(),
+            'url' => $file?->url() ?? '',
+            'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
         ];
     }
 

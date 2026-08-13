@@ -94,8 +94,8 @@ export default function GroupTalkIndex() {
 
     // Your own send always lands you on your own words. The pinned gate protects someone reading
     // back through history from being yanked by *others'* arrivals; writing is the opposite intent.
-    const send = async (body: string, mentions: MentionPayloadRow[]) => {
-        await streamSend(body, mentions);
+    const send = async (body: string, mentions: MentionPayloadRow[], image: File | null) => {
+        await streamSend(body, mentions, image);
         pinned.current = true;
         setAtBottom(true);
     };

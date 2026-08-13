@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Features\Diary\DiaryAccess;
 use App\Features\DirectMessage\DirectMessageAccess;
 use App\Features\GroupEvent\GroupEventAccess;
+use App\Features\GroupTalk\GroupTalkAccess;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Timeline\TimelineAccess;
 use App\Models\BannerImage;
@@ -15,6 +16,7 @@ use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
@@ -86,6 +88,10 @@ class FilePolicy extends BasePolicy
             // image is guest-readable, otherwise the viewer's clearance on the author, blocked →
             // none. TimelineAccess handles the guest (null) case.
             $owner instanceof TimelinePost => TimelineAccess::canView($viewer, $owner),
+            // A talk image inherits the conversation's read gate — the group's own access column, the
+            // same one the boards read. No per-row filter here either: talk shows every surviving
+            // message to whoever may read the group, and its attachments follow.
+            $owner instanceof GroupMessage => $viewer !== null && GroupTalkAccess::canView($owner->group, $viewer),
             default => false,
         };
     }
@@ -104,6 +110,7 @@ class FilePolicy extends BasePolicy
             $owner instanceof Group => Feature::Group,
             $owner instanceof GroupTopic, $owner instanceof GroupTopicComment => Feature::GroupTopic,
             $owner instanceof GroupEvent, $owner instanceof GroupEventComment => Feature::GroupEvent,
+            $owner instanceof GroupMessage => Feature::GroupTalk,
             default => null,
         };
     }

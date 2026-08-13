@@ -3,6 +3,7 @@
 namespace App\Http\Requests\GroupTalk;
 
 use App\Http\Requests\Concerns\MentionRules;
+use App\Http\Requests\Concerns\PostImageRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreGroupMessageRequest extends FormRequest
@@ -28,6 +29,9 @@ class StoreGroupMessageRequest extends FormRequest
     {
         return [
             'body' => ['required', 'string', 'max:'.self::MAX_BODY],
+            // One image per message, as the timeline allows: the schema numbers slots so migrated
+            // content can carry more, but the composer offers one.
+            'image' => PostImageRules::single(),
             ...MentionRules::rules(self::MAX_BODY),
         ];
     }

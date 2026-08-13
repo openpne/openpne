@@ -45,13 +45,12 @@ way.
 | table | what it holds |
 |---|---|
 | `group_messages` | `group_id`, `member_id` (nullable), `in_reply_to_id` (nullable), `body`, timestamps |
-| `group_message_images` | join rows to `files`, shaped exactly like `timeline_post_images` |
+| `group_message_images` | join rows to `files`, numbered slots, shaped exactly like `timeline_post_images` — see [Images](#images) |
 | `group_message_mentions` | code-point ranges, shaped exactly like `timeline_post_mentions` |
 | `group_members.talk_read_at` / `.talk_read_message_id` / `.is_talk_muted` | the read cursor (a copied `(created_at, id)` tuple, no FK) and the per-group mute — see [Unread](#unread) |
 
-`group_message_images` has no app code behind it yet; it landed with the schema so the transfer that
-brings the old timeline across has somewhere to put what it carries. `group_message_mentions` is
-written by the composer — see [Mentions](#mentions).
+`group_message_mentions` and `group_message_images` are both written by the composer — see
+[Mentions](#mentions) and [Images](#images).
 
 **`member_id` is `nullOnDelete`.** A withdrawn author leaves the message in place and reads as
 `Withdrawn member`, matching the other group tables (`group_topics`, `group_events` and their
@@ -228,6 +227,49 @@ Two asymmetries are deliberate:
 An author who withdraws before delivery takes the queued notification with them
 (`deleteWhenMissingModels`): "Withdrawn member mentioned you" is a notification nobody can act on.
 
+## Images
+
+One image per message. The schema numbers slots (`number` 1..N) because the transfer that brings the
+old community timeline across may carry content with several, but the composer offers one — the same
+cap the timeline has, fixed for the MVP.
+
+The write goes through [`PostImages`](../../app/Files/PostImages.php), and **its `attach()` owns the
+outermost transaction**. This is not incidental. A byte write is not transactional: `compensating()`
+tracks every File it stored and deletes those bytes when the transaction throws. Wrapping another
+`DB::transaction` around it would let the inner one roll back and commit while the bytes stayed on
+disk, and the compensation would never run — which is the mistake the event-comment flow had to
+merge its way out of. So `CreateGroupMessage` puts everything else — the message insert, mention
+resolution, the cursor advance, the posted event — inside `attach`'s persist callback rather than
+around it.
+
+Validation reuses [`PostImageRules`](../../app/Http/Requests/Concerns/PostImageRules.php), so a
+refused file is a 422 on the `image` field and the composer keeps the whole draft: body, mention
+rows and the picked file. Nothing is cleared until the message is actually written.
+
+### Who may see one
+
+[`FilePolicy`](../../app/Policies/FilePolicy.php) gains a `groupMessage` arm: an attachment is
+viewable exactly when its message's group is
+([`GroupTalkAccess::canView`](../../app/Features/GroupTalk/GroupTalkAccess.php)), and the file's
+owning unit is `groupTalk`, so switching talk off takes the bytes with the screen. A file is fetched
+by URL with no page mediating it, so an unmatched morph stays unviewable — the arm has to exist or
+every talk attachment 404s.
+
+Like the conversation itself, this applies **no per-row filter**: an image posted by someone who has
+since left the group, or who is in a block relationship with the viewer, stays as visible as the
+message it hangs on.
+
+### Reclaiming the bytes
+
+A cascade drops join rows and never File bytes, so both deletion paths collect the Files first and
+purge after:
+
+- [`DeleteGroupMessage::purge()`](../../app/Features/GroupTalk/Actions/DeleteGroupMessage.php) — one
+  message, the `DeleteTimelinePost` shape.
+- [`DeleteGroup::purge()`](../../app/Features/Group/Actions/DeleteGroup.php) — every message in the
+  group, before the group row goes. Talk is flat, so there is no parent whose purge would reach the
+  rest; the arm walks them all, beside the existing topic, event and timeline arms.
+
 ## Access
 
 [`GroupTalkAccess`](../../app/Features/GroupTalk/GroupTalkAccess.php), succeeding
@@ -276,6 +318,7 @@ role once per request and the serializer asks it per row.
    read-then-write.
 6. A mention row exists only where the picker produced one; no body is ever parsed for `@`. What the
    picker may offer and what the write will accept are the same set, by construction.
-7. A mention pierces mute; a block stops it. Talk history does neither.
-8. Talk stays switched off until the cutover; a change that makes it reachable by default is a change
+7. A mention pierces mute; a block stops it. Talk history does neither, and neither do its images.
+8. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
+9. Talk stays switched off until the cutover; a change that makes it reachable by default is a change
    to that plan, not a bug fix.

@@ -15,8 +15,8 @@ class DeleteGroupMessage
      * tombstone, and the read cursor holds copied values rather than a reference, so a deleted
      * message leaves nothing dangling behind it.
      *
-     * No image purge yet: nothing can attach one, so there are no bytes to reclaim. The image PR
-     * extends this the way DeleteTopicComment already does.
+     * Collect the owned image Files before the row is gone: the FK cascade drops the join rows but
+     * never the File bytes, which a disk backend deletes irreversibly. Purge them after the delete.
      *
      * @throws GroupTalkActionException
      */
@@ -26,6 +26,21 @@ class DeleteGroupMessage
             throw new GroupTalkActionException(GroupTalkActionFailure::CannotDelete);
         }
 
+        $this->purge($message);
+    }
+
+    /**
+     * Delete the message and purge its image bytes — no authorization. Called directly where the
+     * caller has already decided (a group being torn down); frontend callers go through __invoke.
+     */
+    public function purge(GroupMessage $message): void
+    {
+        $files = $message->images()->with('file')->get()->pluck('file')->filter()->all();
+
         $message->delete();
+
+        foreach ($files as $file) {
+            $file->delete(); // deleting the File purges its bytes
+        }
     }
 }
