@@ -2,11 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
 import type { MentionPayloadRow } from '@/lib/mention-draft';
 import {
+    enterHistory,
+    enterLatest,
     initial,
     markDeleted,
     mergeAfter,
     mergeBefore,
     mergeLatest,
+    mergeNewer,
     mergeSent,
     oldestBoundary,
     type TalkStreamState,
@@ -32,11 +35,14 @@ export class SendFailed extends Error {
  * older" walking back by keyset and the composer's send appending in place.
  *
  * This hook owns the network and nothing else: what arrives is folded in by the pure merges in
- * talk-stream-state.ts, which is where the ordering, dedupe and tombstone rules live.
+ * talk-stream-state.ts, which is where the ordering, dedupe, tombstone and window rules live. The
+ * window is why the poll is conditional — reading back from the unread boundary opens a stretch that
+ * does not end at the newest message, and the reader steps forward through it instead.
  */
 export function useTalkStream(groupId: number, page: TalkPage) {
     const [state, setState] = useState<TalkStreamState>(() => initial(page));
     const [loadingOlder, setLoadingOlder] = useState(false);
+    const [loadingNewer, setLoadingNewer] = useState(false);
 
     // What the interval reads. Reading state there would capture the value the tick was created with.
     const stateRef = useRef(state);
@@ -61,7 +67,10 @@ export function useTalkStream(groupId: number, page: TalkPage) {
         let inFlight: AbortController | null = null;
 
         const poll = () => {
-            if (document.visibilityState !== 'visible') {
+            // Only the window that ends at the newest message has anything to poll for: in the
+            // history window what arrives does not follow the last row on screen, and folding it in
+            // would put a hole in the middle of the conversation.
+            if (document.visibilityState !== 'visible' || stateRef.current.window.kind !== 'latest') {
                 return;
             }
 
@@ -118,6 +127,54 @@ export function useTalkStream(groupId: number, page: TalkPage) {
         }
     }, [fetchPage, loadingOlder]);
 
+    /**
+     * Open on the page a position sits in — the unread boundary today, a linked-to message next.
+     * The cursor is one the server handed over (the unread snapshot's, a message's own), echoed back
+     * as `before` and `after` are. What comes back is a stretch of history, and it replaces the list
+     * rather than joining it.
+     */
+    const openContext = useCallback(
+        async (cursor: string): Promise<boolean> => {
+            const around = await fetchPage(`?context=${encodeURIComponent(cursor)}`);
+            if (around === null) {
+                return false;
+            }
+            setState((current) => enterHistory(current, around));
+
+            return true;
+        },
+        [fetchPage],
+    );
+
+    /** "Load newer": one page forward from the foot of the history window. */
+    const loadNewer = useCallback(async () => {
+        const boundary = watermark(stateRef.current);
+        if (boundary === undefined || loadingNewer) {
+            return;
+        }
+
+        setLoadingNewer(true);
+        try {
+            const newer = await fetchPage(`?after=${encodeURIComponent(boundary)}`);
+            if (newer !== null) {
+                setState((current) => mergeNewer(current, newer));
+            }
+        } finally {
+            setLoadingNewer(false);
+        }
+    }, [fetchPage, loadingNewer]);
+
+    /** Back to the live end: the newest page, replacing whatever stretch was being read. */
+    const returnToLatest = useCallback(async (): Promise<boolean> => {
+        const latest = await fetchPage('');
+        if (latest === null) {
+            return false;
+        }
+        setState((current) => enterLatest(current, latest));
+
+        return true;
+    }, [fetchPage]);
+
     const send = useCallback(
         async (body: string, mentions: MentionPayloadRow[] = [], image: File | null = null) => {
             // Multipart throughout, not only when a file rides along: one transport is one set of
@@ -149,9 +206,19 @@ export function useTalkStream(groupId: number, page: TalkPage) {
             }
 
             const message = (await response.json()) as TalkMessage;
+
+            // Writing puts you back at the live end. Appending it to a history window would sit your
+            // words directly under a message they do not answer, so the newest page is re-read
+            // instead — and when that read fails, the list is emptied down to your own message with
+            // everything else behind "load older", which is a conversation rather than a gap drawn
+            // as one.
+            if (stateRef.current.window.kind === 'history' && !(await returnToLatest())) {
+                setState((current) => enterLatest(current, { messages: [], hasOlder: true, hasNewer: false }));
+            }
+
             setState((current) => mergeSent(current, message));
         },
-        [groupId],
+        [groupId, returnToLatest],
     );
 
     const remove = useCallback(
@@ -171,7 +238,19 @@ export function useTalkStream(groupId: number, page: TalkPage) {
         [groupId],
     );
 
-    return { messages: state.messages, hasOlder: state.hasOlder, loadingOlder, loadOlder, send, remove };
+    return {
+        messages: state.messages,
+        hasOlder: state.hasOlder,
+        window: state.window,
+        loadingOlder,
+        loadingNewer,
+        loadOlder,
+        loadNewer,
+        openContext,
+        returnToLatest,
+        send,
+        remove,
+    };
 }
 
 /** The first validation message per field from a 422; empty for any other refusal. */

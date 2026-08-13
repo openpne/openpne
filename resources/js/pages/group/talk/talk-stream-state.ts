@@ -16,21 +16,43 @@ import type { TalkMessage, TalkPage } from './types';
  *    delete landed answers from a snapshot that still contains the row; without the tombstone it
  *    would put it back, and nothing afterwards would take it away again.
  */
+/**
+ * Which stretch of the conversation the list is showing.
+ *
+ * `latest` is the page as it has always worked: it ends at the newest message, so the poll can keep
+ * it there and reaching the foot means having read everything. `history` is the slice the unread
+ * jump opens on — somewhere behind the newest, with a "load newer" step forward and no poll, because
+ * a poll would append messages that do not follow the last row on screen.
+ *
+ * The two are never mixed. A window change replaces the list outright; only a page contiguous with
+ * what is already held is ever merged in. A list assembled from both would show a hole as if it were
+ * a conversation.
+ */
+export type TalkWindow = { kind: 'latest' } | { kind: 'history'; hasNewer: boolean };
+
 export interface TalkStreamState {
     /** Ascending by (createdAt, id). */
     messages: TalkMessage[];
     hasOlder: boolean;
     /** Ids deleted in this session. Never re-admitted, whatever a later response carries. */
     deleted: ReadonlySet<number>;
+    window: TalkWindow;
+}
+
+/**
+ * The instant half of the ordering tuple, in milliseconds. An unparseable stamp sorts first rather
+ * than poisoning the comparison — NaN compares false against everything, which would make the
+ * ordering intransitive and the sort result arbitrary.
+ */
+export function instantOf(createdAt: string): number {
+    const at = Date.parse(createdAt);
+
+    return Number.isNaN(at) ? 0 : at;
 }
 
 /** Sort key: the instant, with the id breaking a tie inside the same second. */
 function orderOf(message: TalkMessage): [number, number] {
-    const at = Date.parse(message.createdAt);
-
-    // An unparseable stamp sorts first rather than poisoning the comparison — NaN compares false
-    // against everything, which would make the ordering intransitive and the sort result arbitrary.
-    return [Number.isNaN(at) ? 0 : at, message.id];
+    return [instantOf(message.createdAt), message.id];
 }
 
 function byTuple(a: TalkMessage, b: TalkMessage): number {
@@ -40,15 +62,28 @@ function byTuple(a: TalkMessage, b: TalkMessage): number {
     return aAt === bAt ? aId - bId : aAt - bAt;
 }
 
+function sameWindow(a: TalkWindow, b: TalkWindow): boolean {
+    if (a.kind === 'latest' || b.kind === 'latest') {
+        return a.kind === b.kind;
+    }
+
+    return a.hasNewer === b.hasNewer;
+}
+
+/** The window a forward read leaves behind: still short of the newest, or caught up with it. */
+function windowAfter(page: TalkPage): TalkWindow {
+    return page.hasNewer ? { kind: 'history', hasNewer: true } : { kind: 'latest' };
+}
+
 /**
  * Fold messages into the list: later copies of an id win, tombstoned ids are dropped, and the result
  * is sorted. `hasOlder` is decided by the caller, since only it knows which end it read from.
  */
-function merge(state: TalkStreamState, arriving: readonly TalkMessage[], hasOlder: boolean): TalkStreamState {
+function merge(state: TalkStreamState, arriving: readonly TalkMessage[], hasOlder: boolean, window = state.window): TalkStreamState {
     // An idle poll answers with nothing; the state it would rebuild is the state it was given.
     // Returning the same value matters: every new `messages` reference re-runs the page's pin
     // effect, and a scroll re-issued every tick fights iOS's keyboard pan (see index.tsx).
-    if (arriving.length === 0 && hasOlder === state.hasOlder) {
+    if (arriving.length === 0 && hasOlder === state.hasOlder && sameWindow(window, state.window)) {
         return state;
     }
     const held = new Map(state.messages.map((message) => [message.id, message]));
@@ -58,11 +93,22 @@ function merge(state: TalkStreamState, arriving: readonly TalkMessage[], hasOlde
 
     const messages = [...held.values()].filter((message) => !state.deleted.has(message.id)).sort(byTuple);
 
-    return { messages, hasOlder, deleted: state.deleted };
+    return { messages, hasOlder, deleted: state.deleted, window };
+}
+
+/**
+ * Throw the list away and stand on $page instead — how every window change lands. The tombstones are
+ * the one thing carried over: a session's deletions outlive the stretch of conversation they were
+ * made in.
+ */
+function replace(state: TalkStreamState, page: TalkPage, window: TalkWindow): TalkStreamState {
+    const messages = page.messages.filter((message) => !state.deleted.has(message.id)).sort(byTuple);
+
+    return { messages, hasOlder: page.hasOlder, deleted: state.deleted, window };
 }
 
 export function initial(page: TalkPage): TalkStreamState {
-    return merge({ messages: [], hasOlder: false, deleted: new Set() }, page.messages, page.hasOlder);
+    return merge({ messages: [], hasOlder: false, deleted: new Set(), window: { kind: 'latest' } }, page.messages, page.hasOlder);
 }
 
 /**
@@ -93,6 +139,25 @@ export function mergeSent(state: TalkStreamState, message: TalkMessage): TalkStr
     return merge(state, [message], state.hasOlder);
 }
 
+/**
+ * "Load newer" in the history window: the page after the last row on screen, which is contiguous
+ * with it and so may be merged. When the server reports nothing beyond it, the list now runs to the
+ * newest message and the window is the latest one again — poll and all.
+ */
+export function mergeNewer(state: TalkStreamState, page: TalkPage): TalkStreamState {
+    return merge(state, page.messages, state.hasOlder, windowAfter(page));
+}
+
+/** The unread jump: stand on the boundary page. Contiguous through to the newest ends up as latest. */
+export function enterHistory(state: TalkStreamState, page: TalkPage): TalkStreamState {
+    return replace(state, page, windowAfter(page));
+}
+
+/** Back to the live end of the conversation, on the newest page rather than on what was held. */
+export function enterLatest(state: TalkStreamState, page: TalkPage): TalkStreamState {
+    return replace(state, page, { kind: 'latest' });
+}
+
 /** Drop a message and remember that it is gone. */
 export function markDeleted(state: TalkStreamState, id: number): TalkStreamState {
     const deleted = new Set(state.deleted);
@@ -102,6 +167,7 @@ export function markDeleted(state: TalkStreamState, id: number): TalkStreamState
         messages: state.messages.filter((message) => message.id !== id),
         hasOlder: state.hasOlder,
         deleted,
+        window: state.window,
     };
 }
 

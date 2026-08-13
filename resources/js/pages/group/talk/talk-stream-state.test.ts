@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    enterHistory,
+    enterLatest,
     initial,
     markDeleted,
     mergeAfter,
     mergeBefore,
     mergeLatest,
+    mergeNewer,
     mergeSent,
     oldestBoundary,
     watermark,
@@ -24,7 +27,7 @@ const message = (id: number, createdAt: string, body = `m${id}`): TalkMessage =>
     canDelete: false,
 });
 
-const page = (messages: TalkMessage[], hasOlder = false): TalkPage => ({ messages, hasOlder });
+const page = (messages: TalkMessage[], hasOlder = false, hasNewer = false): TalkPage => ({ messages, hasOlder, hasNewer });
 
 const bodies = (state: { messages: TalkMessage[] }) => state.messages.map((m) => m.body);
 
@@ -187,4 +190,76 @@ test('an empty page that changes hasOlder is not a no-op', () => {
 
     assert.notEqual(after, before);
     assert.equal(after.hasOlder, false);
+});
+
+test('a page opens on the live end of the conversation', () => {
+    assert.deepEqual(initial(page([message(1, '2026-08-13T09:00:00+00:00')])).window, { kind: 'latest' });
+});
+
+/**
+ * The whole point of the window: the unread jump lands somewhere behind the newest message, and what
+ * it lands on must not be stirred into what was on screen. The two stretches have a hole between
+ * them, and a merged list would draw that hole as a conversation.
+ */
+test('the unread jump replaces the list rather than merging into it', () => {
+    const held = initial(page([message(90, '2026-08-13T18:00:00+00:00'), message(91, '2026-08-13T18:01:00+00:00')], true));
+
+    const jumped = enterHistory(held, page([message(10, '2026-08-13T09:10:00+00:00'), message(11, '2026-08-13T09:11:00+00:00')], true, true));
+
+    assert.deepEqual(bodies(jumped), ['m10', 'm11'], 'nothing from the live window survives the jump');
+    assert.deepEqual(jumped.window, { kind: 'history', hasNewer: true });
+    assert.equal(jumped.hasOlder, true);
+});
+
+test('a jump whose page already runs to the newest message is the live window', () => {
+    const held = initial(page([message(9, '2026-08-13T09:09:00+00:00')], true));
+
+    assert.deepEqual(enterHistory(held, page([message(8, '2026-08-13T09:08:00+00:00')], true, false)).window, { kind: 'latest' });
+});
+
+test('load-newer folds a contiguous page in and stays behind while more remain', () => {
+    let state = enterHistory(initial(page([])), page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
+    state = mergeNewer(state, page([message(11, '2026-08-13T09:11:00+00:00')], false, true));
+
+    assert.deepEqual(bodies(state), ['m10', 'm11']);
+    assert.deepEqual(state.window, { kind: 'history', hasNewer: true });
+    assert.equal(state.hasOlder, true, 'reading forward says nothing about the far end');
+});
+
+test('load-newer that exhausts the conversation returns to the live window', () => {
+    let state = enterHistory(initial(page([])), page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
+    state = mergeNewer(state, page([message(11, '2026-08-13T09:11:00+00:00')], false, false));
+
+    assert.deepEqual(state.window, { kind: 'latest' }, 'the list now runs to the newest message');
+    assert.deepEqual(bodies(state), ['m10', 'm11']);
+});
+
+test('returning to the live end replaces the stretch being read', () => {
+    const held = enterHistory(initial(page([])), page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
+
+    const back = enterLatest(held, page([message(90, '2026-08-13T18:00:00+00:00')], true, false));
+
+    assert.deepEqual(bodies(back), ['m90']);
+    assert.deepEqual(back.window, { kind: 'latest' });
+});
+
+/** A session's deletions are the one thing a window change carries over. */
+test('a tombstone survives every window change', () => {
+    let state = initial(page([message(2, '2026-08-13T09:01:00+00:00')]));
+    state = markDeleted(state, 2);
+
+    const revenant = message(2, '2026-08-13T09:01:00+00:00');
+    state = enterHistory(state, page([revenant], true, true));
+    assert.deepEqual(bodies(state), []);
+
+    state = mergeNewer(state, page([revenant], false, true));
+    state = enterLatest(state, page([revenant]));
+
+    assert.deepEqual(bodies(state), []);
+});
+
+test('an idle poll still returns the very state it was given', () => {
+    const before = enterHistory(initial(page([])), page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
+
+    assert.equal(mergeAfter(before, page([])), before);
 });

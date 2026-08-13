@@ -16,8 +16,22 @@ export interface TalkMessage {
     canDelete: boolean;
 }
 
-/** One slice of the conversation, oldest first, and whether anything remains further back. */
+/** One slice of the conversation, oldest first, and what lies either side of it. */
 export interface TalkPage {
     messages: TalkMessage[];
     hasOlder: boolean;
+    /** Rows follow this page that the client was not given — only a forward read answers it. */
+    hasNewer: boolean;
+}
+
+/**
+ * Where the unread boundary stood when the page was rendered, for a member; null for a reader who
+ * holds no cursor. Fixed for the visit — see the divider note in index.tsx.
+ */
+export interface TalkUnreadSnapshot {
+    count: number;
+    /** The read cursor's `(created_at, id)` tuple, comparable with a message's own `createdAt`. */
+    readThrough: { at: string; id: number };
+    /** The same position as an opaque pagination cursor — what asks for the page it sits in. */
+    cursor: string;
 }
