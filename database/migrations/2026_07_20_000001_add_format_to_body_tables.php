@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /** Tables whose body carries a per-record render format (BodyFormat). */
-    private const TABLES = ['diaries', 'group_topics', 'community_events'];
+    private const TABLES = ['diaries', 'group_topics', 'group_events'];
 
     public function up(): void
     {

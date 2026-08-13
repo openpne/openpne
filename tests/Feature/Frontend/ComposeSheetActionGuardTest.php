@@ -22,7 +22,7 @@ class ComposeSheetActionGuardTest extends TestCase
         'pages/diary/edit.tsx',
         'pages/timeline/new.tsx',
         'pages/group/topic/edit.tsx',
-        'pages/community/event/edit.tsx',
+        'pages/group/event/edit.tsx',
     ];
 
     /** Compose pages whose header actions post from their own click handlers (send/draft pair). */

@@ -197,7 +197,7 @@ export default function CommunityShow() {
                     title={t('Recent events')}
                     right={
                         canPostEvent && (
-                            <ActionLink href={`/communityEvent/new/${group.id}`} variant="outline" size="sm">
+                            <ActionLink href={`/groups/${group.id}/events/new`} variant="outline" size="sm">
                                 <Plus className="size-4" strokeWidth={2.25} aria-hidden />
                                 {t('Create an event')}
                             </ActionLink>
@@ -211,7 +211,7 @@ export default function CommunityShow() {
                             {recentEvents.map((event) => (
                                 <EntryRow
                                     key={event.id}
-                                    href={`/communityEvent/${event.id}`}
+                                    href={`/events/${event.id}`}
                                     author={event.author}
                                     content={event.name}
                                     date={<>{t('Open date')}: <CivilDate value={event.openDate} weekday /></>}
@@ -222,7 +222,7 @@ export default function CommunityShow() {
                         </List>
                     )}
                     <div className="border-t border-border px-4 py-2.5 sm:px-5">
-                        <Link href={`/communityEvent/listCommunity/${group.id}`} className="text-sm text-link hover:underline">
+                        <Link href={`/groups/${group.id}/events`} className="text-sm text-link hover:underline">
                             {t('See all events')}
                         </Link>
                     </div>

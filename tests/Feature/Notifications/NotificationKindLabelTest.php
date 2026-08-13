@@ -41,15 +41,15 @@ class NotificationKindLabelTest extends TestCase
             'topic comment on mine' => ['group_topic_commented', 'reply', 'Alice commented on your topic.'],
             'topic comment on one I commented on' => ['group_topic_commented', 'related', 'Alice commented on a topic you commented on.'],
             'topic comment in my group' => ['group_topic_commented', 'group', 'Alice commented on a topic in your community.'],
-            'event comment on mine' => ['community_event_commented', 'reply', 'Alice commented on your event.'],
-            'event comment on one I commented on' => ['community_event_commented', 'related', 'Alice commented on an event you commented on.'],
-            'event comment in my group' => ['community_event_commented', 'group', 'Alice commented on an event in your community.'],
+            'event comment on mine' => ['group_event_commented', 'reply', 'Alice commented on your event.'],
+            'event comment on one I commented on' => ['group_event_commented', 'related', 'Alice commented on an event you commented on.'],
+            'event comment in my group' => ['group_event_commented', 'group', 'Alice commented on an event in your community.'],
             'community joined' => ['group_joined', null, 'Alice joined your community.'],
             'admin transfer requested' => ['group_admin_transfer_requested', null, 'Alice asked you to take over a community administration.'],
             'sub-admin appointed' => ['group_sub_admin_appointed', null, 'Alice appointed you as a community sub-administrator.'],
             'new diary' => ['diary_posted', null, 'Alice posted a new diary.'],
             'new topic' => ['group_topic_posted', null, 'Alice posted a new topic.'],
-            'new event' => ['community_event_posted', null, 'Alice posted a new event.'],
+            'new event' => ['group_event_posted', null, 'Alice posted a new event.'],
             'mention' => ['timeline_mentioned', null, 'Alice mentioned you in a timeline post.'],
             'new timeline post' => ['timeline_posted', null, 'Alice posted to the timeline.'],
             'reply on mine' => ['timeline_replied', 'reply', 'Alice commented on your timeline post.'],
@@ -62,7 +62,7 @@ class NotificationKindLabelTest extends TestCase
     {
         $this->assertSame('Alice commented on your diary.', NotificationKindLabel::for('diary_commented', null, 'Alice'));
         $this->assertSame('Alice commented on your topic.', NotificationKindLabel::for('group_topic_commented', 'whatever', 'Alice'));
-        $this->assertSame('Alice commented on your event.', NotificationKindLabel::for('community_event_commented', null, 'Alice'));
+        $this->assertSame('Alice commented on your event.', NotificationKindLabel::for('group_event_commented', null, 'Alice'));
     }
 
     /** A kind this version does not know still gets a line, so the row is never blank. */

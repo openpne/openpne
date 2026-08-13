@@ -15,14 +15,14 @@ use App\Upgrade\Column;
  * the unit supplies the target key, so there is no second list of setting keys to drift.
  *
  * The events unit rides the same opCommunityTopicPlugin row through
- * CommunityEventPluginFeatureUpgrade: OpenPNE 3 shipped the topic board and events in one plugin,
+ * GroupEventPluginFeatureUpgrade: OpenPNE 3 shipped the topic board and events in one plugin,
  * OpenPNE 4 toggles them separately.
  */
 class PluginFeatureUpgrade extends FeatureFlagUpgrade
 {
     protected string $source = 'plugin';
 
-    /** Shared with CommunityEventPluginFeatureUpgrade, the second unit this one plugin carries. */
+    /** Shared with GroupEventPluginFeatureUpgrade, the second unit this one plugin carries. */
     public const COMMUNITY_TOPIC_PLUGIN = 'opCommunityTopicPlugin';
 
     public function filter(): ?string

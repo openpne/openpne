@@ -3,9 +3,6 @@
 namespace App\Features\Group;
 
 use App\Compat\RouteParityRegistry;
-use App\Features\CommunityEvent\CommunityEventAccess;
-use App\Features\CommunityEvent\Queries\RecentCommunityEvents;
-use App\Features\CommunityEvent\Serializers\CommunityEventSerializer;
 use App\Features\Group\Actions\ApproveMember;
 use App\Features\Group\Actions\CreateGroup;
 use App\Features\Group\Actions\DeclinePendingMember;
@@ -21,6 +18,9 @@ use App\Features\Group\Queries\ListPendingMembers;
 use App\Features\Group\Queries\SearchGroups;
 use App\Features\Group\Queries\ShowGroup;
 use App\Features\Group\Serializers\GroupSerializer;
+use App\Features\GroupEvent\GroupEventAccess;
+use App\Features\GroupEvent\Queries\RecentGroupEvents;
+use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\GroupTopic\Queries\RecentGroupTopics;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
@@ -63,7 +63,7 @@ class GroupController extends Controller
      */
     private const TIMELINE_BOX = 5;
 
-    public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentCommunityEvents $recentEvents, CommunityTimeline $communityTimeline): View|InertiaResponse
+    public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentGroupEvents $recentEvents, CommunityTimeline $communityTimeline): View|InertiaResponse
     {
         $found = $query($group);
         abort_if($found === null, 404);
@@ -84,7 +84,7 @@ class GroupController extends Controller
         // A switched-off unit reuses that same null seam — both surfaces already hide the box on
         // null — and its query never runs.
         $showTopics = $canViewBoard && Feature::GroupTopic->enabled();
-        $showEvents = $canViewBoard && Feature::CommunityEvent->enabled();
+        $showEvents = $canViewBoard && Feature::GroupEvent->enabled();
         // OpenPNE 3 injected the community timeline box here and gated it on membership: the box
         // leads with a compose form, and a non-member cannot post. Null keeps the box off the page,
         // the same seam the two boards use, so a switched-off unit costs no query either.
@@ -111,7 +111,7 @@ class GroupController extends Controller
                     'recentTopics' => $showTopics ? $recentTopics($found) : null,
                     'canPostTopic' => GroupTopicAccess::canPostTopic($found, $viewer),
                     'recentEvents' => $showEvents ? $recentEvents($found) : null,
-                    'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
+                    'canPostEvent' => GroupEventAccess::canPostEvent($found, $viewer),
                     'timelinePosts' => $showTimeline ? $communityTimeline->take($viewer, $found, self::TIMELINE_BOX) : null,
                 ]);
             },
@@ -129,8 +129,8 @@ class GroupController extends Controller
                 // may not read them (events share the topic read gate), so the card is hidden.
                 'recentTopics' => $showTopics ? GroupTopicSerializer::summaries($recentTopics($found)) : null,
                 'canPostTopic' => GroupTopicAccess::canPostTopic($found, $viewer),
-                'recentEvents' => $showEvents ? CommunityEventSerializer::summaries($recentEvents($found)) : null,
-                'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
+                'recentEvents' => $showEvents ? GroupEventSerializer::summaries($recentEvents($found)) : null,
+                'canPostEvent' => GroupEventAccess::canPostEvent($found, $viewer),
                 // Members only, as the Classic box is: it leads to posting, which a non-member
                 // cannot do. Null hides the card, the same seam the two boards use.
                 'timelinePosts' => $showTimeline

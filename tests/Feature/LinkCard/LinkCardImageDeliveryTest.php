@@ -7,10 +7,10 @@ namespace Tests\Feature\LinkCard;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Files\FileStorage;
 use App\LinkCard\CardContext;
-use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\LinkCard;
@@ -249,7 +249,7 @@ class LinkCardImageDeliveryTest extends TestCase
         $records = [
             'diary' => $this->diary(Visibility::Open),
             'topic' => GroupTopic::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
-            'event' => CommunityEvent::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
+            'event' => GroupEvent::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]),
             'timeline' => TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id]),
         ];
 
@@ -329,8 +329,8 @@ class LinkCardImageDeliveryTest extends TestCase
             [SnsSettingKey::FeatureGroupTopicEnabled, $this->urlFor(
                 GroupTopic::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
             )],
-            [SnsSettingKey::FeatureCommunityEventEnabled, $this->urlFor(
-                CommunityEvent::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
+            [SnsSettingKey::FeatureGroupEventEnabled, $this->urlFor(
+                GroupEvent::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id])
             )],
         ];
 
@@ -349,7 +349,7 @@ class LinkCardImageDeliveryTest extends TestCase
         $group = Group::factory()->create();
         GroupMember::factory()->create(['group_id' => $group->id, 'member_id' => $this->author->id]);
         $topic = GroupTopic::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
-        $event = CommunityEvent::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
+        $event = GroupEvent::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id]);
 
         $this->setSnsSetting(SnsSettingKey::FeatureGroupEnabled, false);
 

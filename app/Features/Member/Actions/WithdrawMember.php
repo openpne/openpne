@@ -20,7 +20,7 @@ use RuntimeException;
  * no per-actor check here — only the primary-member guard.
  *
  * Most of the member's rows are removed by the `members` FK cascade (friendships, friend_requests,
- * member_blocks, group_members, group_join_requests, community_event_members,
+ * member_blocks, group_members, group_join_requests, group_event_members,
  * member_profiles, member_preferences) and the avatar File is purged by MemberObserver::deleting().
  * SET-NULL relations are deliberately retained with a null author — the member's comments on others'
  * content, authored topics/events, and sent/received messages stay so the other parties' views keep

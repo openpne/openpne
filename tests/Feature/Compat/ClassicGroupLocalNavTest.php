@@ -3,8 +3,8 @@
 namespace Tests\Feature\Compat;
 
 use App\Features\Group\GroupRole;
-use App\Models\CommunityEvent;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\Member;
@@ -43,7 +43,7 @@ class ClassicGroupLocalNavTest extends TestCase
             ->assertSee('<li id="community__community_join">', false)
             ->assertSee(route('group.show', $group), false) // Top → /groups/{id}
             ->assertSee(route('group.topics.index', $group), false) // Topics → /groups/{id}/topics
-            ->assertSee(route('communityEvent.index', $group), false) // Events
+            ->assertSee(route('group.events.index', $group), false) // Events
             ->assertSee(route('group.join.show', ['group' => $group->getKey()]), false); // Join → /groups/{id}/join
     }
 
@@ -77,12 +77,12 @@ class ClassicGroupLocalNavTest extends TestCase
         GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
         $topicComment = $topic->comments()->create(['member_id' => $admin->getKey(), 'body' => 'c', 'number' => 1]);
-        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
         $eventComment = $event->comments()->create(['member_id' => $admin->getKey(), 'body' => 'c', 'number' => 1]);
 
         foreach ([
             route('group.topics.comment.delete.show', $topicComment),
-            route('communityEvent.comment.delete.show', $eventComment),
+            route('group.events.comment.delete.show', $eventComment),
         ] as $url) {
             $this->actingAs($admin)->get($url)
                 ->assertOk()

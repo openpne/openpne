@@ -66,13 +66,13 @@ class FeatureToggleRouteTest extends TestCase
     public function test_switching_communities_off_closes_the_board_and_the_calendar_too(): void
     {
         $this->setSnsSetting(Feature::GroupTopic->settingKey(), true);
-        $this->setSnsSetting(Feature::CommunityEvent->settingKey(), true);
+        $this->setSnsSetting(Feature::GroupEvent->settingKey(), true);
         $this->setSnsSetting(Feature::Group->settingKey(), false);
 
         $this->actingAs($this->member)->get('/groups')->assertNotFound();
         $this->actingAs($this->member)->get('/groups/recent')->assertNotFound();
         $this->actingAs($this->member)->get("/groups/{$this->community->getKey()}/topics")->assertNotFound();
-        $this->actingAs($this->member)->get("/communityEvent/listCommunity/{$this->community->getKey()}")->assertNotFound();
+        $this->actingAs($this->member)->get("/groups/{$this->community->getKey()}/events")->assertNotFound();
         // Unrelated units are untouched.
         $this->actingAs($this->member)->get('/diary/list')->assertOk();
     }
@@ -83,7 +83,7 @@ class FeatureToggleRouteTest extends TestCase
 
         $this->actingAs($this->member)->get("/groups/{$this->community->getKey()}/topics")->assertNotFound();
         $this->actingAs($this->member)->get('/groups')->assertOk();
-        $this->actingAs($this->member)->get("/communityEvent/listCommunity/{$this->community->getKey()}")->assertOk();
+        $this->actingAs($this->member)->get("/groups/{$this->community->getKey()}/events")->assertOk();
     }
 
     public function test_a_guest_meets_a_404_not_the_login_bounce_when_diaries_are_off(): void
@@ -178,7 +178,7 @@ class FeatureToggleRouteTest extends TestCase
             'timeline' => ['/timeline', '/timeline/create'],
             'group' => ['/groups', '/groups/edit'],
             'groupTopic' => ["/groups/{$group}/topics", "/groups/{$group}/topics"],
-            'communityEvent' => ["/communityEvent/listCommunity/{$group}", "/communityEvent/create/{$group}"],
+            'groupEvent' => ["/groups/{$group}/events", "/groups/{$group}/events"],
             'friend' => ['/friend/list', '/friend/link'],
         ];
     }

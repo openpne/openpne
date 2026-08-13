@@ -31,7 +31,7 @@ final class NotificationKindLabel
                 CommentReason::Group => __(':name commented on a %topic% in your %community%.', ['name' => $name]),
                 default => __(':name commented on your %topic%.', ['name' => $name]),
             },
-            'community_event_commented' => match ($cause) {
+            'group_event_commented' => match ($cause) {
                 CommentReason::Related => __(':name commented on an event you commented on.', ['name' => $name]),
                 CommentReason::Group => __(':name commented on an event in your %community%.', ['name' => $name]),
                 default => __(':name commented on your event.', ['name' => $name]),
@@ -41,7 +41,7 @@ final class NotificationKindLabel
             'group_sub_admin_appointed' => __(':name appointed you as a %community% sub-administrator.', ['name' => $name]),
             'diary_posted' => __(':name posted a new %diary%.', ['name' => $name]),
             'group_topic_posted' => __(':name posted a new %topic%.', ['name' => $name]),
-            'community_event_posted' => __(':name posted a new event.', ['name' => $name]),
+            'group_event_posted' => __(':name posted a new event.', ['name' => $name]),
             'timeline_mentioned' => __(':name mentioned you in a %activity% post.', ['name' => $name]),
             'timeline_posted' => __(':name posted to the %activity%.', ['name' => $name]),
             'timeline_posted_community' => __(':name posted to a %community% %activity%.', ['name' => $name]),

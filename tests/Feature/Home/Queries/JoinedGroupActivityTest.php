@@ -3,8 +3,8 @@
 namespace Tests\Feature\Home\Queries;
 
 use App\Features\Home\Queries\JoinedGroupActivity;
-use App\Models\CommunityEvent;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\Member;
@@ -33,12 +33,12 @@ class JoinedGroupActivityTest extends TestCase
         $group = $this->joinedGroup($viewer);
 
         $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'updated_at' => now()->subHour()]);
-        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'updated_at' => now()]);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'updated_at' => now()]);
 
         $result = app(JoinedGroupActivity::class)($viewer);
 
         $this->assertCount(2, $result);
-        $this->assertInstanceOf(CommunityEvent::class, $result[0]); // event is newer
+        $this->assertInstanceOf(GroupEvent::class, $result[0]); // event is newer
         $this->assertInstanceOf(GroupTopic::class, $result[1]);
     }
 
@@ -51,7 +51,7 @@ class JoinedGroupActivityTest extends TestCase
         // tables, so a shared id is legal). A keyed Eloquent merge would collapse them into one;
         // toBase()->concat() keeps both. Explicit ids so it holds regardless of AUTO_INCREMENT state.
         $topic = GroupTopic::factory()->create(['id' => 4242, 'group_id' => $group->getKey()]);
-        $event = CommunityEvent::factory()->create(['id' => 4242, 'community_id' => $group->getKey()]);
+        $event = GroupEvent::factory()->create(['id' => 4242, 'group_id' => $group->getKey()]);
         $this->assertSame($topic->getKey(), $event->getKey(), 'test precondition: the ids collide');
 
         $result = app(JoinedGroupActivity::class)($viewer);
@@ -66,12 +66,12 @@ class JoinedGroupActivityTest extends TestCase
         $at = now();
 
         GroupTopic::factory()->create(['group_id' => $group->getKey(), 'updated_at' => $at]);
-        CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'updated_at' => $at]);
+        GroupEvent::factory()->create(['group_id' => $group->getKey(), 'updated_at' => $at]);
 
         $result = app(JoinedGroupActivity::class)($viewer);
 
         $this->assertInstanceOf(GroupTopic::class, $result[0]);
-        $this->assertInstanceOf(CommunityEvent::class, $result[1]);
+        $this->assertInstanceOf(GroupEvent::class, $result[1]);
     }
 
     public function test_eager_loads_the_group_image_on_every_row(): void
@@ -83,15 +83,14 @@ class JoinedGroupActivityTest extends TestCase
         $group = $this->joinedGroup($viewer);
 
         GroupTopic::factory()->create(['group_id' => $group->getKey(), 'updated_at' => now()->subHour()]);
-        CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'updated_at' => now()]);
+        GroupEvent::factory()->create(['group_id' => $group->getKey(), 'updated_at' => now()]);
 
         $result = app(JoinedGroupActivity::class)($viewer);
 
-        $this->assertInstanceOf(CommunityEvent::class, $result[0]);
+        $this->assertInstanceOf(GroupEvent::class, $result[0]);
         $this->assertInstanceOf(GroupTopic::class, $result[1]);
         foreach ($result as $row) {
-            $owner = $row instanceof GroupTopic ? $row->group : $row->community;
-            $this->assertTrue($owner->relationLoaded('image'), "the owning group's image must be eager-loaded per feeder query");
+            $this->assertTrue($row->group->relationLoaded('image'), "the owning group's image must be eager-loaded per feeder query");
         }
     }
 
@@ -101,7 +100,7 @@ class JoinedGroupActivityTest extends TestCase
         $group = $this->joinedGroup($viewer);
 
         GroupTopic::factory()->count(4)->create(['group_id' => $group->getKey()]);
-        CommunityEvent::factory()->count(4)->create(['community_id' => $group->getKey()]);
+        GroupEvent::factory()->count(4)->create(['group_id' => $group->getKey()]);
 
         $this->assertCount(5, app(JoinedGroupActivity::class)($viewer, 5));
     }
@@ -111,14 +110,14 @@ class JoinedGroupActivityTest extends TestCase
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
         GroupTopic::factory()->create(['group_id' => $group->getKey()]);
-        CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        GroupEvent::factory()->create(['group_id' => $group->getKey()]);
 
         $this->setSnsSetting(Feature::GroupTopic->settingKey(), false);
 
         $result = app(JoinedGroupActivity::class)($viewer);
 
         $this->assertCount(1, $result);
-        $this->assertInstanceOf(CommunityEvent::class, $result[0]);
+        $this->assertInstanceOf(GroupEvent::class, $result[0]);
     }
 
     public function test_a_switched_off_calendar_leaves_the_topics(): void
@@ -126,9 +125,9 @@ class JoinedGroupActivityTest extends TestCase
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
         GroupTopic::factory()->create(['group_id' => $group->getKey()]);
-        CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        GroupEvent::factory()->create(['group_id' => $group->getKey()]);
 
-        $this->setSnsSetting(Feature::CommunityEvent->settingKey(), false);
+        $this->setSnsSetting(Feature::GroupEvent->settingKey(), false);
 
         $result = app(JoinedGroupActivity::class)($viewer);
 
@@ -141,7 +140,7 @@ class JoinedGroupActivityTest extends TestCase
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
         GroupTopic::factory()->create(['group_id' => $group->getKey()]);
-        CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        GroupEvent::factory()->create(['group_id' => $group->getKey()]);
 
         $this->setSnsSetting(Feature::Group->settingKey(), false);
 

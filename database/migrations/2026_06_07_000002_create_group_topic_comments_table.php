@@ -25,7 +25,7 @@ return new class extends Migration
             $table->text('body');
             $table->timestamps();
 
-            // Non-unique, matching OpenPNE 3's group_topic_id index: its `number` is a racy
+            // Non-unique, matching OpenPNE 3's community_topic_id index: its `number` is a racy
             // max+1, so legacy data can carry duplicate (topic, number) and must import losslessly.
             // New comments are serialized by the topic-row lock in CreateTopicComment. Drives the
             // thread query: WHERE group_topic_id=? ORDER BY number.

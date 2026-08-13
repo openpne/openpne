@@ -6,6 +6,8 @@ namespace Tests\Feature\File;
 
 use App\Models\DirectMessage;
 use App\Models\Group;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -49,5 +51,17 @@ class MorphAliasTest extends TestCase
     {
         $this->assertSame(GroupTopic::class, Relation::getMorphedModel('communityTopic'));
         $this->assertSame(GroupTopicComment::class, Relation::getMorphedModel('communityTopicComment'));
+    }
+
+    public function test_a_group_event_and_its_comment_write_the_group_event_aliases(): void
+    {
+        $this->assertSame('groupEvent', (new GroupEvent)->getMorphClass());
+        $this->assertSame('groupEventComment', (new GroupEventComment)->getMorphClass());
+    }
+
+    public function test_the_pre_rename_community_event_aliases_still_resolve(): void
+    {
+        $this->assertSame(GroupEvent::class, Relation::getMorphedModel('communityEvent'));
+        $this->assertSame(GroupEventComment::class, Relation::getMorphedModel('communityEventComment'));
     }
 }

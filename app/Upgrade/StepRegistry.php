@@ -9,12 +9,6 @@ use App\Upgrade\Steps\AdminUserUpgrade;
 use App\Upgrade\Steps\BannerImageUpgrade;
 use App\Upgrade\Steps\BannerUpgrade;
 use App\Upgrade\Steps\BannerUseImageUpgrade;
-use App\Upgrade\Steps\CommunityEventCommentImageUpgrade;
-use App\Upgrade\Steps\CommunityEventCommentUpgrade;
-use App\Upgrade\Steps\CommunityEventImageUpgrade;
-use App\Upgrade\Steps\CommunityEventMemberUpgrade;
-use App\Upgrade\Steps\CommunityEventPluginFeatureUpgrade;
-use App\Upgrade\Steps\CommunityEventUpgrade;
 use App\Upgrade\Steps\DiaryCommentImageUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryImageUpgrade;
@@ -29,6 +23,12 @@ use App\Upgrade\Steps\FriendshipUpgrade;
 use App\Upgrade\Steps\GadgetConfigUpgrade;
 use App\Upgrade\Steps\GadgetUpgrade;
 use App\Upgrade\Steps\GroupCategoryUpgrade;
+use App\Upgrade\Steps\GroupEventCommentImageUpgrade;
+use App\Upgrade\Steps\GroupEventCommentUpgrade;
+use App\Upgrade\Steps\GroupEventImageUpgrade;
+use App\Upgrade\Steps\GroupEventMemberUpgrade;
+use App\Upgrade\Steps\GroupEventPluginFeatureUpgrade;
+use App\Upgrade\Steps\GroupEventUpgrade;
 use App\Upgrade\Steps\GroupJoinRequestUpgrade;
 use App\Upgrade\Steps\GroupMemberUpgrade;
 use App\Upgrade\Steps\GroupTopicCommentImageUpgrade;
@@ -103,10 +103,10 @@ final class StepRegistry
             // group_topics reference groups; their comments reference the topics.
             GroupTopicUpgrade::class,
             GroupTopicCommentUpgrade::class,
-            // community_events reference groups; their comments and RSVP pivot reference the events.
-            CommunityEventUpgrade::class,
-            CommunityEventCommentUpgrade::class,
-            CommunityEventMemberUpgrade::class,
+            // group_events reference groups; their comments and RSVP pivot reference the events.
+            GroupEventUpgrade::class,
+            GroupEventCommentUpgrade::class,
+            GroupEventMemberUpgrade::class,
             // navigation_translations.id references navigations.id, so translations run after.
             NavigationUpgrade::class,
             NavigationTranslationUpgrade::class,
@@ -120,7 +120,7 @@ final class StepRegistry
             // Same target, also FK-free: OpenPNE 3's feature availability (`plugin`, plus sns_config's
             // enable_friend_link), each writing only the units OpenPNE 3 had switched off.
             PluginFeatureUpgrade::class,
-            CommunityEventPluginFeatureUpgrade::class,
+            GroupEventPluginFeatureUpgrade::class,
             FriendFeatureUpgrade::class,
             // mail_templates is independent (no FK); mail_template_translations references it, so the
             // parent runs first.
@@ -136,8 +136,8 @@ final class StepRegistry
             DiaryCommentImageUpgrade::class,
             GroupTopicImageUpgrade::class,
             GroupTopicCommentImageUpgrade::class,
-            CommunityEventImageUpgrade::class,
-            CommunityEventCommentImageUpgrade::class,
+            GroupEventImageUpgrade::class,
+            GroupEventCommentImageUpgrade::class,
             // banner_images reference files; banner_use_images reference banners and banner_images.
             BannerUpgrade::class,
             BannerImageUpgrade::class,

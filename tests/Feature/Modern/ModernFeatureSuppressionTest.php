@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modern;
 
-use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\Member;
@@ -129,7 +129,7 @@ class ModernFeatureSuppressionTest extends TestCase
         $viewer = Member::factory()->create();
         $group = $this->joinedGroup($viewer);
         GroupTopic::factory()->create(['group_id' => $group->getKey()]);
-        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey()]);
 
         $this->switchOff(Feature::GroupTopic);
 

@@ -3,7 +3,7 @@
 namespace Tests\Unit\Features\Group;
 
 use App\Features\Group\GroupPostTitle;
-use App\Models\CommunityEvent;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use PHPUnit\Framework\TestCase;
 
@@ -39,7 +39,7 @@ class GroupPostTitleTest extends TestCase
 
     public function test_accepts_an_event(): void
     {
-        $event = new CommunityEvent;
+        $event = new GroupEvent;
         $event->name = 'Meetup';
         $event->comments_count = 2;
 

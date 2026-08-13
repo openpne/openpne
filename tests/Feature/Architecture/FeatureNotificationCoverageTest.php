@@ -26,7 +26,7 @@ class FeatureNotificationCoverageTest extends TestCase
         'Friend' => Feature::Friend,
         'Group' => Feature::Group,
         'GroupTopic' => Feature::GroupTopic,
-        'CommunityEvent' => Feature::CommunityEvent,
+        'GroupEvent' => Feature::GroupEvent,
         'Timeline' => Feature::Timeline,
     ];
 

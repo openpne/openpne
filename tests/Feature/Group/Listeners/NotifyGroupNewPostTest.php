@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Group\Listeners;
 
-use App\Features\CommunityEvent\Events\EventPosted;
 use App\Features\Group\GroupRole;
+use App\Features\GroupEvent\Events\EventPosted;
 use App\Features\GroupTopic\Actions\CreateTopic;
 use App\Features\GroupTopic\Data\GroupTopicFormData;
 use App\Features\GroupTopic\Events\TopicPosted;
 use App\Jobs\BroadcastEventPosted;
 use App\Jobs\BroadcastTopicPosted;
-use App\Listeners\CommunityEvent\NotifyEventPosted;
+use App\Listeners\GroupEvent\NotifyEventPosted;
 use App\Listeners\GroupTopic\NotifyTopicPosted;
-use App\Models\CommunityEvent;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,7 +41,7 @@ class NotifyGroupNewPostTest extends TestCase
     {
         Bus::fake([BroadcastEventPosted::class]);
         $author = Member::factory()->create();
-        $event = CommunityEvent::factory()->create(['member_id' => $author->getKey()]);
+        $event = GroupEvent::factory()->create(['member_id' => $author->getKey()]);
 
         app(NotifyEventPosted::class)->handle(new EventPosted($event, $author));
 

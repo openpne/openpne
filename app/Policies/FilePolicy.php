@@ -2,19 +2,19 @@
 
 namespace App\Policies;
 
-use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\Diary\DiaryAccess;
 use App\Features\DirectMessage\DirectMessageAccess;
+use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Timeline\TimelineAccess;
 use App\Models\BannerImage;
-use App\Models\CommunityEvent;
-use App\Models\CommunityEventComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use App\Models\Member;
@@ -77,8 +77,8 @@ class FilePolicy extends BasePolicy
             $owner instanceof GroupTopic => $viewer !== null && GroupTopicAccess::canViewTopic($owner, $viewer),
             $owner instanceof GroupTopicComment => $viewer !== null && $owner->topic !== null && GroupTopicAccess::canViewTopic($owner->topic, $viewer),
             // An event/comment image inherits the same community read gate as the event it hangs on.
-            $owner instanceof CommunityEvent => $viewer !== null && CommunityEventAccess::canViewEvent($owner, $viewer),
-            $owner instanceof CommunityEventComment => $viewer !== null && $owner->event !== null && CommunityEventAccess::canViewEvent($owner->event, $viewer),
+            $owner instanceof GroupEvent => $viewer !== null && GroupEventAccess::canViewEvent($owner, $viewer),
+            $owner instanceof GroupEventComment => $viewer !== null && $owner->event !== null && GroupEventAccess::canViewEvent($owner->event, $viewer),
             // A message attachment is private to the message's parties: the sender, and a recipient of
             // a delivered (non-draft) message. A draft's recipient is excluded (DirectMessageAccess).
             $owner instanceof DirectMessage => $viewer !== null && DirectMessageAccess::canViewMessage($owner, $viewer),
@@ -103,7 +103,7 @@ class FilePolicy extends BasePolicy
             $owner instanceof TimelinePost => Feature::Timeline,
             $owner instanceof Group => Feature::Group,
             $owner instanceof GroupTopic, $owner instanceof GroupTopicComment => Feature::GroupTopic,
-            $owner instanceof CommunityEvent, $owner instanceof CommunityEventComment => Feature::CommunityEvent,
+            $owner instanceof GroupEvent, $owner instanceof GroupEventComment => Feature::GroupEvent,
             default => null,
         };
     }

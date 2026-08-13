@@ -37,9 +37,9 @@ final class UpgradeRunner
     /**
      * Bumped whenever the upgrade's own identifiers are renamed (step class names, target tables).
      * 2 = the Message → DirectMessage rename. 3 = the Community → Group rename. 4 = the
-     * CommunityTopic → GroupTopic rename.
+     * CommunityTopic → GroupTopic rename. 5 = the CommunityEvent → GroupEvent rename.
      */
-    public const NAMING_EPOCH = 4;
+    public const NAMING_EPOCH = 5;
 
     /** The `step_key` the epoch marker occupies. Not a step: no registry entry ever bears this name. */
     private const EPOCH_KEY = 'naming_epoch';

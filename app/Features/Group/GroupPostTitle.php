@@ -2,7 +2,7 @@
 
 namespace App\Features\Group;
 
-use App\Models\CommunityEvent;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 
 /**
@@ -15,7 +15,7 @@ final class GroupPostTitle
 {
     private const WIDTH = 36;
 
-    public static function withCount(GroupTopic|CommunityEvent $post): string
+    public static function withCount(GroupTopic|GroupEvent $post): string
     {
         return mb_strimwidth($post->name, 0, self::WIDTH, '').'('.($post->comments_count ?? 0).')';
     }

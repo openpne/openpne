@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
-use App\Filament\Resources\CommunityEvents\Pages\ListCommunityEvents;
+use App\Filament\Resources\GroupEvents\Pages\ListGroupEvents;
 use App\Models\AdminUser;
-use App\Models\CommunityEvent;
+use App\Models\GroupEvent;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -35,12 +35,12 @@ class AdminDateFormatTest extends TestCase
      */
     public function test_an_instant_renders_as_sortable_digits_without_seconds(): void
     {
-        CommunityEvent::factory()->create([
+        GroupEvent::factory()->create([
             'created_at' => '2026-08-10 09:05:16',
             'open_date' => '2026-08-14',
         ]);
 
-        $rendered = Livewire::test(ListCommunityEvents::class)->assertSuccessful()->html();
+        $rendered = Livewire::test(ListGroupEvents::class)->assertSuccessful()->html();
 
         $this->assertStringContainsString('2026-08-10 09:05', $rendered);
         $this->assertStringNotContainsString('2026-08-10 09:05:16', $rendered, 'seconds reached a display');
@@ -51,12 +51,12 @@ class AdminDateFormatTest extends TestCase
     /** An event's open date is a calendar day; giving it a time would invent one. */
     public function test_a_civil_date_renders_without_a_time(): void
     {
-        CommunityEvent::factory()->create([
+        GroupEvent::factory()->create([
             'created_at' => '2026-08-10 09:05:16',
             'open_date' => '2026-08-14',
         ]);
 
-        $rendered = Livewire::test(ListCommunityEvents::class)->assertSuccessful()->html();
+        $rendered = Livewire::test(ListGroupEvents::class)->assertSuccessful()->html();
 
         $this->assertStringContainsString('2026-08-14', $rendered);
         $this->assertStringNotContainsString('2026-08-14 00:00', $rendered);

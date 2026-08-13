@@ -35,7 +35,7 @@ class FeatureTest extends TestCase
     public function test_the_board_and_the_calendar_live_inside_communities(): void
     {
         $this->assertSame(Feature::Group, Feature::GroupTopic->parent());
-        $this->assertSame(Feature::Group, Feature::CommunityEvent->parent());
+        $this->assertSame(Feature::Group, Feature::GroupEvent->parent());
 
         foreach ([Feature::Diary, Feature::DirectMessage, Feature::Timeline, Feature::Group, Feature::Friend] as $feature) {
             $this->assertNull($feature->parent(), "{$feature->value} unexpectedly depends on another unit");
@@ -55,7 +55,7 @@ class FeatureTest extends TestCase
         $this->assertSame(Feature::Group, Feature::owningRouteName('group.recent'));
         // Dot-terminated prefixes: the board is its own unit, never captured by `community.`.
         $this->assertSame(Feature::GroupTopic, Feature::owningRouteName('group.topics.show'));
-        $this->assertSame(Feature::CommunityEvent, Feature::owningRouteName('communityEvent.comment.store'));
+        $this->assertSame(Feature::GroupEvent, Feature::owningRouteName('group.events.comment.store'));
         $this->assertSame(Feature::DirectMessage, Feature::owningRouteName('message.index_compat'));
 
         $this->assertNull(Feature::owningRouteName('member.profile.show'));

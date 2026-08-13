@@ -2,14 +2,14 @@
 
 namespace Tests\Feature\Modern;
 
-use App\Models\CommunityEvent;
-use App\Models\CommunityEventComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\EmailChangeRequest;
 use App\Models\Group;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
@@ -395,13 +395,13 @@ class ModernOnlyCoverageTest extends TestCase
         $this->actingAs($viewer)->get(route('group.topics.comment.delete.show', ['comment' => $topicComment->getKey()]))
             ->assertRedirect(route('group.topics.show', $topic));
 
-        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
-        $this->actingAs($viewer)->get(route('communityEvent.delete.show', $event))
-            ->assertRedirect(route('communityEvent.show', $event));
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('group.events.delete.show', $event))
+            ->assertRedirect(route('group.events.show', $event));
 
-        $eventComment = CommunityEventComment::factory()->create(['community_event_id' => $event->getKey(), 'member_id' => $viewer->getKey()]);
-        $this->actingAs($viewer)->get(route('communityEvent.comment.delete.show', ['comment' => $eventComment->getKey()]))
-            ->assertRedirect(route('communityEvent.show', $event));
+        $eventComment = GroupEventComment::factory()->create(['group_event_id' => $event->getKey(), 'member_id' => $viewer->getKey()]);
+        $this->actingAs($viewer)->get(route('group.events.comment.delete.show', ['comment' => $eventComment->getKey()]))
+            ->assertRedirect(route('group.events.show', $event));
 
         $friend = Member::factory()->create();
         DB::table('friendships')->insert([

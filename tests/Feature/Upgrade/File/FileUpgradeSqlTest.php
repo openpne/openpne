@@ -171,8 +171,8 @@ class FileUpgradeSqlTest extends TestCase
 
         $this->assertDatabaseHas('files', ['id' => 20, 'related_entity_type' => 'groupTopic', 'related_entity_id' => 200]);
         $this->assertDatabaseHas('files', ['id' => 21, 'related_entity_type' => 'groupTopicComment', 'related_entity_id' => 201]);
-        $this->assertDatabaseHas('files', ['id' => 22, 'related_entity_type' => 'communityEvent', 'related_entity_id' => 202]);
-        $this->assertDatabaseHas('files', ['id' => 23, 'related_entity_type' => 'communityEventComment', 'related_entity_id' => 203]);
+        $this->assertDatabaseHas('files', ['id' => 22, 'related_entity_type' => 'groupEvent', 'related_entity_id' => 202]);
+        $this->assertDatabaseHas('files', ['id' => 23, 'related_entity_type' => 'groupEventComment', 'related_entity_id' => 203]);
     }
 
     public function test_resolves_banner_image_owner_as_the_image_row(): void
