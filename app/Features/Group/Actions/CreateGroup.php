@@ -6,6 +6,7 @@ use App\Features\Group\Data\GroupFormData;
 use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupRole;
+use App\Features\GroupTalk\TalkReadCursor;
 use App\Files\PostImages;
 use App\Models\Group;
 use App\Models\GroupCategory;
@@ -35,10 +36,12 @@ class CreateGroup
                 'topic_post_authority' => $data->topicPostAuthority,
             ]);
 
-            // The creator is the sole admin (one admin per group).
-            $group->members()->create([
+            // The creator is the sole admin (one admin per group). forceCreate because the talk read
+            // cursor is not mass-assignable: it is set by this app, never by a form.
+            $group->members()->forceCreate([
                 'member_id' => $creator->getKey(),
                 'role' => GroupRole::Admin,
+                ...TalkReadCursor::snapshot((int) $group->getKey()),
             ]);
 
             if ($image !== null) {
