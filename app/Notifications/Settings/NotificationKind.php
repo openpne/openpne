@@ -69,11 +69,19 @@ enum NotificationKind: string
                 dependOnNot: self::TimelineNewPost,
                 isWired: true,
             ),
+            // Dormant. The community timeline it announced is gone, replaced by group talk, which
+            // sends no per-message broadcast at all — its unread badge does that job instead. The
+            // case and the imported preference rows stay: a member's stored choice is a record of
+            // what they asked for, and throwing it away would be inventing consent if a talk digest
+            // ever wants this kind back. isWired false takes it off the settings page meanwhile.
+            //
+            // OpenPNE 3 registered this kind and never sent it; OpenPNE 4 wired it for the community
+            // timeline only, so nothing that ever reached a member is being withdrawn.
             self::TimelineNewPostCommunity => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,
                 op3Name: 'timelineNewPostCommunity',
                 caption: 'New %community% %activity% posts',
-                isWired: true,
+                isWired: false,
             ),
             self::TimelineReplyPost => new NotificationKindDefinition(
                 category: NotificationCategory::Timeline,

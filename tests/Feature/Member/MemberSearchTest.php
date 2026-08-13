@@ -404,8 +404,10 @@ class MemberSearchTest extends TestCase
 
         // The intro column resolves for the whole page in one query (plus one field lookup), so adding
         // result rows must not add queries. Bounded below the eight-member steady state + a per-row
-        // read (which would push it to 24), so a lapsed batch resolve trips this instead of hiding.
-        $this->assertLessThan(20, $queries, "member search ran {$queries} queries — the self-introduction is likely resolving per row");
+        // read (which would push it to 25), so a lapsed batch resolve trips this instead of hiding.
+        // One higher since the group-talk cutover: the shell's talk badge now runs its query on every
+        // page instead of being answered zero by a switched-off unit.
+        $this->assertLessThan(21, $queries, "member search ran {$queries} queries — the self-introduction is likely resolving per row");
     }
 
     private function selfIntroProfile(): Profile

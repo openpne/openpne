@@ -16,12 +16,9 @@ type VisibilityOption = { value: string; label: string };
 export default function TimelineNew({
     defaultVisibility,
     visibilityOptions,
-    group,
 }: {
     defaultVisibility: string;
     visibilityOptions: VisibilityOption[];
-    /** Composing into a group: its members are the audience, so no visibility is chosen. */
-    group?: { id: number; name: string };
 }) {
     const t = useT();
     const counterId = useId();
@@ -30,15 +27,12 @@ export default function TimelineNew({
         visibility: defaultVisibility,
         image: null as File | null,
         mentions: [] as DraftMention[],
-        // Names this form to the server, so a validation failure comes back here and not to the
-        // group timeline's inline box.
-        from: group ? 'new' : undefined,
     });
     const tooLong = overBodyLimit(data.body);
 
     return (
         <>
-            <Head title={group ? t(':community %activity%', { community: group.name }) : t('%Post_activity%')} />
+            <Head title={t('%Post_activity%')} />
             <ComposeSheetAction>
                 <Button type="submit" form={COMPOSE_FORM_ID} size="sm" loading={processing} disabled={tooLong}>
                     {t('%Post_activity%')}
@@ -58,7 +52,7 @@ export default function TimelineNew({
                         transform((form) => ({ ...form, mentions: toPayload(form.mentions, form.body) }));
                         // forceFormData: the upload needs a multipart body, which Inertia uses
                         // automatically once a File is present but not for an initially-null field.
-                        post(group ? `/groups/${group.id}/timeline` : '/timeline/create', { forceFormData: true });
+                        post('/timeline/create', { forceFormData: true });
                     }}
                     className="space-y-4"
                 >
@@ -77,21 +71,18 @@ export default function TimelineNew({
                             onChange={(body) => setData('body', body)}
                             mentions={data.mentions}
                             onMentionsChange={(mentions) => setData('mentions', mentions)}
-                            candidatesUrl={group ? `/timeline/mention-candidates?community=${group.id}` : undefined}
                         />
                     </Field>
 
-                    {!group && (
-                        <Field label={t('Visibility')} htmlFor="timeline_visibility" error={errors.visibility}>
-                            <Select id="timeline_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
-                                {visibilityOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {t(option.label)}
-                                    </option>
-                                ))}
-                            </Select>
-                        </Field>
-                    )}
+                    <Field label={t('Visibility')} htmlFor="timeline_visibility" error={errors.visibility}>
+                        <Select id="timeline_visibility" value={data.visibility} onChange={(e) => setData('visibility', e.target.value)}>
+                            {visibilityOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {t(option.label)}
+                                </option>
+                            ))}
+                        </Select>
+                    </Field>
 
                     <Field label={t('Image')} htmlFor="timeline_image" error={errors.image}>
                         <input

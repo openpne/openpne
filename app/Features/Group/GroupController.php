@@ -22,6 +22,7 @@ use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\Queries\RecentGroupEvents;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTalk\GroupTalkAccess;
+use App\Features\GroupTalk\Queries\LatestGroupMessage;
 use App\Features\GroupTalk\Queries\UnreadTalkCounts;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\GroupTopic\Queries\RecentGroupTopics;
@@ -29,9 +30,6 @@ use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Member\Serializers\MemberRefSerializer;
-use App\Features\Timeline\CommunityTimelineAccess;
-use App\Features\Timeline\Queries\CommunityTimeline;
-use App\Features\Timeline\Serializers\TimelinePostSerializer;
 use App\Http\Controllers\Concerns\RespondsWithSurface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Group\GroupRequest;
@@ -63,9 +61,7 @@ class GroupController extends Controller
      * group's own details. Five, like the topic and event boxes beside it — the box's "show
      * all" link carries the rest.
      */
-    private const TIMELINE_BOX = 5;
-
-    public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentGroupEvents $recentEvents, CommunityTimeline $communityTimeline): View|InertiaResponse
+    public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentGroupEvents $recentEvents, LatestGroupMessage $latestMessage, UnreadTalkCounts $talkUnread): View|InertiaResponse
     {
         $found = $query($group);
         abort_if($found === null, 404);
@@ -87,17 +83,21 @@ class GroupController extends Controller
         // null — and its query never runs.
         $showTopics = $canViewBoard && Feature::GroupTopic->enabled();
         $showEvents = $canViewBoard && Feature::GroupEvent->enabled();
-        // OpenPNE 3 injected the community timeline box here and gated it on membership: the box
-        // leads with a compose form, and a non-member cannot post. Null keeps the box off the page,
-        // the same seam the two boards use, so a switched-off unit costs no query either.
-        $showTimeline = Feature::Timeline->enabled() && CommunityTimelineAccess::canPost($found, $viewer);
         // Talk asks its own two questions rather than borrowing the board's null seam: it reads the
         // same access column but is a separate unit, so a site running talk with the board switched
         // off must still get its entrance.
         $canViewTalk = Feature::GroupTalk->enabled() && GroupTalkAccess::canView($found, $viewer);
+        // Never read the conversation before the gate says the viewer may: the preview carries a
+        // member's words, so the access question comes first and the query does not run otherwise.
+        $talkPreview = $canViewTalk ? $latestMessage($found) : null;
+        // The viewer's own unread for this group. A non-member reading an Everyone group has no
+        // membership row and so no cursor — zero, correctly, rather than "everything". A muted group
+        // still reports its count here: mute silences the nav badge, not the group's own card
+        // (UnreadTalkCounts).
+        $talkUnreadCount = $canViewTalk ? ($talkUnread($viewer)[$found->getKey()]['count'] ?? 0) : 0;
 
         return $this->respondWith($request, 'group', [
-            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $showTopics, $showEvents, $showTimeline, $recentTopics, $recentEvents, $communityTimeline) {
+            SurfaceResolver::CLASSIC => function () use ($found, $viewer, $role, $isPending, $isTransferNominee, $sidebarMembers, $showTopics, $showEvents, $recentTopics, $recentEvents, $canViewTalk) {
                 $this->markLocalNavGroup($found);
 
                 // The details listBox names the admin and sub-admins; only Classic needs them, so the
@@ -118,7 +118,9 @@ class GroupController extends Controller
                     'canPostTopic' => GroupTopicAccess::canPostTopic($found, $viewer),
                     'recentEvents' => $showEvents ? $recentEvents($found) : null,
                     'canPostEvent' => GroupEventAccess::canPostEvent($found, $viewer),
-                    'timelinePosts' => $showTimeline ? $communityTimeline->take($viewer, $found, self::TIMELINE_BOX) : null,
+                    // Classic gets a link box where the community timeline used to render; the talk
+                    // screen itself is Modern for every member, so a link is the whole surface here.
+                    'canViewTalk' => $canViewTalk,
                 ]);
             },
             SurfaceResolver::MODERN => fn () => Inertia::render('community/show', [
@@ -137,12 +139,15 @@ class GroupController extends Controller
                 'canPostTopic' => GroupTopicAccess::canPostTopic($found, $viewer),
                 'recentEvents' => $showEvents ? GroupEventSerializer::summaries($recentEvents($found)) : null,
                 'canPostEvent' => GroupEventAccess::canPostEvent($found, $viewer),
-                // Members only, as the Classic box is: it leads to posting, which a non-member
-                // cannot do. Null hides the card, the same seam the two boards use.
-                'timelinePosts' => $showTimeline
-                    ? array_map([TimelinePostSerializer::class, 'entry'], $communityTimeline->take($viewer, $found, self::TIMELINE_BOX)->all())
-                    : null,
                 'canViewTalk' => $canViewTalk,
+                // The talk card: one line of the newest message, so the group page says what is
+                // being talked about rather than only that talk exists.
+                'talkPreview' => $talkPreview === null ? null : [
+                    'body' => $talkPreview->body,
+                    'authorName' => $talkPreview->author?->name,
+                    'createdAt' => $talkPreview->created_at->toIso8601String(),
+                ],
+                'talkUnread' => $talkUnreadCount,
             ]),
         ]);
     }

@@ -508,36 +508,26 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // No GET delete-confirm twin — Modern confirms delete inline (Radix AlertDialog).
     });
 
-    // A group's timeline. Both units gate it: it is the timeline seen through a group, so
-    // switching either off takes it away. The path has three segments, so it can never be captured
-    // by the /groups/{group} wildcard below.
-    Route::controller(TimelineController::class)
-        ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
-        ->group(function () {
-            Route::get('/groups/{group}/timeline', 'group')->whereNumber('group')->name('group.timeline');
-            // Both surfaces: Classic's inline box ships hidden and is swapped in by script, so its
-            // fallback link needs a real form to reach.
-            Route::get('/groups/{group}/timeline/new', 'newGroup')->whereNumber('group')->name('group.timeline.new');
-            Route::post('/groups/{group}/timeline', 'storeGroup')->whereNumber('group')
-                ->middleware('throttle:posting')->name('group.timeline.store');
-        });
+    // The community timeline is gone; group talk replaced it (docs/internals/group-talk.md). The
+    // three URLs that reached it — the canonical one and OpenPNE 3's two spellings — redirect to the
+    // conversation instead of 404ing, because they are in members' bookmarks and in OpenPNE 3 mail.
+    //
+    // Gated on `groupTalk`, NOT on `timeline`: the destination is a talk screen, so a site running
+    // talk with the timeline unit switched off must still honour its own legacy URLs. GroupTalk
+    // resolves the parent `group` gate itself, so one gate is the whole answer — and the names sit
+    // under `group.talk.` so the unit that gates them is also the unit that owns them.
+    //
+    // The query rides along and the path id wins over a stray ?group=, as everywhere else. The
+    // compose and POST routes are simply gone: there is no community timeline to write to, and a
+    // redirect that dropped a member's draft on the floor would be worse than a 404.
+    $talkRedirect = fn (Request $request, int $group) => redirect()
+        ->route('group.talk.show', ['group' => $group] + $request->query());
 
-    // OpenPNE 3 served the group timeline at /community/:id/timeline, and reached it through the
-    // global /:module/:action fallback at /timeline/community/id/:id as well; both URLs are
-    // preserved by redirecting to the canonical page. The query rides along — the target
-    // paginates, so a ?page=N bookmark must not reset to page 1.
-    Route::get('/community/{group}/timeline', fn (Request $request, int $group) => redirect()->route('group.timeline', ['group' => $group] + $request->query()))
-        ->whereNumber('group')
-        ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
-        ->name('group.timeline.legacy_compat');
-    Route::get('/community/{group}/timeline/new', fn (Request $request, int $group) => redirect()->route('group.timeline.new', ['group' => $group] + $request->query()))
-        ->whereNumber('group')
-        ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
-        ->name('group.timeline.new.legacy_compat');
-    Route::get('/timeline/community/id/{group}', fn (Request $request, int $group) => redirect()->route('group.timeline', ['group' => $group] + $request->query()))
-        ->whereNumber('group')
-        ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
-        ->name('group.timeline.compat');
+    Route::middleware(EnsureFeatureEnabled::class.':groupTalk')->group(function () use ($talkRedirect) {
+        Route::get('/groups/{group}/timeline', $talkRedirect)->whereNumber('group')->name('group.talk.timeline_compat');
+        Route::get('/community/{group}/timeline', $talkRedirect)->whereNumber('group')->name('group.talk.legacy_compat');
+        Route::get('/timeline/community/id/{group}', $talkRedirect)->whereNumber('group')->name('group.talk.legacy_fallback_compat');
+    });
 
     // OpenPNE 3 linked the single-post permalink at /timeline/show/id/:id (reached via the global
     // /:module/:action fallback); preserve that URL by redirecting to the canonical timeline.show.

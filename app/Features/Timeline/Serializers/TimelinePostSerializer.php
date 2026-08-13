@@ -35,7 +35,7 @@ class TimelinePostSerializer
             ])->all(),
             // The #hashtag ranges, in body order; the client links each to its tag page. The tag
             // travels normalized (the body's own text is inside the range), because that is what the
-            // page is addressed by. A community post sends none — see linkableTags().
+            // page is addressed by. linkableTags() is the one seam deciding what links.
             'tags' => $post->linkableTags()->map(fn (TimelinePostTag $tag): array => [
                 'tag' => $tag->tag,
                 'offset' => $tag->offset,
