@@ -6,6 +6,8 @@ import { List, ListRow, Panel, stretchedLink } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
 import { ActivityRow, type CommunityActivityEntry } from './community/activity-row';
+import { RoomRow } from './community/room-row';
+import type { TalkRoomRow } from './community/types';
 import { DiaryRow } from './diary/diary-row';
 import type { DiarySummary } from './diary/types';
 import type { TimelinePostEntry } from './timeline/types';
@@ -18,6 +20,7 @@ interface Announcements {
 
 interface DashboardProps extends PageProps {
     announcements: Announcements;
+    talkRooms: TalkRoomRow[];
     diaries: DiarySummary[];
     timeline: TimelinePostEntry[];
     groupActivity: CommunityActivityEntry[];
@@ -113,7 +116,7 @@ function TimelineRow({ post }: { post: TimelinePostEntry }) {
 
 export default function Dashboard() {
     const t = useT();
-    const { auth, announcements, diaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
+    const { auth, announcements, talkRooms, diaries, timeline, groupActivity, myDiaries, enabledFeatures } = usePage<DashboardProps>().props;
     const user = auth.user;
 
     if (!user) {
@@ -129,6 +132,17 @@ export default function Dashboard() {
             <h1 className="sr-only">{t('Home')}</h1>
 
             <AnnouncementsPanel announcements={announcements} />
+
+            {/* Talk leads the screen: the conversations are what a member comes back for; everything
+                below them is reading. It sits outside the welcome branch and does not decide it —
+                a room is a place to talk, not the feeds and people that panel offers to go find. */}
+            {enabledFeatures.groupTalk && talkRooms.length > 0 && (
+                <DigestSection title={t('Talk')} viewAllHref="/groups/mine">
+                    {talkRooms.map((room) => (
+                        <RoomRow key={room.id} room={room} />
+                    ))}
+                </DigestSection>
+            )}
 
             {everythingEmpty ? (
                 <Panel title={t('Welcome, :name.', { name: user.name })}>

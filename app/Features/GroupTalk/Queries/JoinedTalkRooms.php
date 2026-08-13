@@ -8,6 +8,7 @@ use App\Models\Group;
 use App\Models\GroupMessage;
 use App\Models\Member;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -31,9 +32,28 @@ class JoinedTalkRooms
     /** @return LengthAwarePaginator<int, TalkRoom> */
     public function __invoke(Member $viewer, int $perPage = self::PER_PAGE): LengthAwarePaginator
     {
+        $page = $this->ordered($viewer)->paginate($perPage);
+
+        return $page->setCollection($this->rooms($page->getCollection()));
+    }
+
+    /**
+     * The leading rooms alone, for a digest that has no pager: no total to count, and no page
+     * number read off the URL of a screen that has none.
+     *
+     * @return Collection<int, TalkRoom>
+     */
+    public function take(Member $viewer, int $limit): Collection
+    {
+        return $this->rooms($this->ordered($viewer)->limit($limit)->get());
+    }
+
+    /** @return EloquentBuilder<Group> */
+    private function ordered(Member $viewer): EloquentBuilder
+    {
         $viewerId = (int) $viewer->getKey();
 
-        $page = Group::query()
+        return Group::query()
             ->join('group_members', 'group_members.group_id', '=', 'groups.id')
             ->where('group_members.member_id', $viewerId)
             ->select('groups.*', 'group_members.is_talk_muted')
@@ -56,10 +76,7 @@ class JoinedTalkRooms
             ->orderByDesc('latest_message_id')
             // Nothing said yet: the join is the only event the room has, newest first.
             ->orderByDesc('group_members.created_at')
-            ->orderByDesc('groups.id')
-            ->paginate($perPage);
-
-        return $page->setCollection($this->rooms($page->getCollection()));
+            ->orderByDesc('groups.id');
     }
 
     /**
