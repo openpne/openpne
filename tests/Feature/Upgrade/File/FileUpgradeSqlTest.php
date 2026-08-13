@@ -194,7 +194,7 @@ class FileUpgradeSqlTest extends TestCase
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('files', ['id' => 40, 'related_entity_type' => 'message', 'related_entity_id' => 500]);
+        $this->assertDatabaseHas('files', ['id' => 40, 'related_entity_type' => 'directMessage', 'related_entity_id' => 500]);
     }
 
     public function test_a_non_personal_message_attachment_is_migrated_ownerless(): void

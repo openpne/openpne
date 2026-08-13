@@ -46,7 +46,7 @@ final class EmojiTransform
         'community_topic_comments' => ['body'],
         'community_events' => ['name', 'body', 'open_date_comment', 'area'],
         'community_event_comments' => ['body'],
-        'messages' => ['subject', 'body'],
+        'direct_messages' => ['subject', 'body'],
     ];
 
     // Matches one [i|e|s:NNN] code; narrows a chunk to rows carrying at least one. Double-escaped so

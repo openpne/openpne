@@ -16,7 +16,7 @@ enum NotificationCategory: string
     case CommunityTopic = 'community_topic';
     case CommunityEvent = 'community_event';
     case FriendLink = 'friend_link';
-    case Message = 'message';
+    case DirectMessage = 'direct_message';
 
     /** The feature unit whose notifications this category configures; off means it has nothing to offer. */
     public function feature(): Feature
@@ -27,7 +27,7 @@ enum NotificationCategory: string
             self::CommunityTopic => Feature::CommunityTopic,
             self::CommunityEvent => Feature::CommunityEvent,
             self::FriendLink => Feature::Friend,
-            self::Message => Feature::Message,
+            self::DirectMessage => Feature::DirectMessage,
         };
     }
 
@@ -45,7 +45,7 @@ enum NotificationCategory: string
             self::CommunityTopic => '%Community% %topics%',
             self::CommunityEvent => '%Community% events',
             self::FriendLink => '%Friend% requests',
-            self::Message => 'Messages',
+            self::DirectMessage => 'Messages',
         };
     }
 

@@ -18,9 +18,9 @@ use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
+use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Member;
-use App\Models\Message;
 use App\Models\TimelinePost;
 use App\Observers\MemberObserver;
 use App\Policies\FilePolicy;
@@ -144,6 +144,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Stable morph alias so a file's owner is stored as `member`, not the FQCN;
         // FilePolicy resolves the owning entity through this map.
+        //
+        // A class may carry more than one alias: the FIRST key mapping to it is what getMorphClass()
+        // writes, later ones stay readable. `message` is kept behind `directMessage` on that basis, so
+        // rows written before the rename still resolve. MorphAliasTest pins both directions.
         Relation::morphMap([
             'member' => Member::class,
             'diary' => Diary::class,
@@ -154,7 +158,8 @@ class AppServiceProvider extends ServiceProvider
             'communityEvent' => CommunityEvent::class,
             'communityEventComment' => CommunityEventComment::class,
             'bannerImage' => BannerImage::class,
-            'message' => Message::class,
+            'directMessage' => DirectMessage::class,
+            'message' => DirectMessage::class,
             'timelinePost' => TimelinePost::class,
         ]);
 
@@ -176,7 +181,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('posting', $this->writeLimiter('posting', 'posting', 'posting_ip'));
         RateLimiter::for('preview', $this->writeLimiter('preview', 'preview', 'preview_ip'));
         RateLimiter::for('mention-search', $this->writeLimiter('mention-search', 'mention_search', 'mention_search_ip'));
-        RateLimiter::for('message-send', $this->writeLimiter('message', 'message', 'message_ip'));
+        RateLimiter::for('direct-message-send', $this->writeLimiter('direct-message', 'direct_message', 'direct_message_ip'));
         RateLimiter::for('friend-request', $this->writeLimiter('friend', 'friend', 'friend_ip'));
         RateLimiter::for('community-join', $this->writeLimiter('community', 'community', 'community_ip'));
     }

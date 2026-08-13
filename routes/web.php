@@ -13,6 +13,7 @@ use App\Features\Compose\EditorPreferenceController;
 use App\Features\Compose\PreviewController;
 use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
+use App\Features\DirectMessage\DirectMessageController;
 use App\Features\Friend\FriendController;
 use App\Features\Home\HomeController;
 use App\Features\Home\UnreadCountsController;
@@ -23,7 +24,6 @@ use App\Features\Member\MemberConfigController;
 use App\Features\Member\MemberMfaController;
 use App\Features\Member\MemberSearchController;
 use App\Features\Member\MfaResetLinkController;
-use App\Features\Message\MessageController;
 use App\Features\Notifications\NotificationCenterController;
 use App\Features\Notifications\NotificationFeedController;
 use App\Features\Notifications\NotificationSettingsController;
@@ -704,7 +704,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     // Private messages. The four boxes plus a per-box show page. OpenPNE 3 keyed show by message id
     // with the box in the path (/message/read|check|checkDelete/:id); those URLs are preserved.
     // /message and /message/index land on the inbox.
-    Route::prefix('message')->middleware(EnsureFeatureEnabled::class.':message')->controller(MessageController::class)->group(function () {
+    Route::prefix('message')->middleware(EnsureFeatureEnabled::class.':directMessage')->controller(DirectMessageController::class)->group(function () {
         Route::get('/', 'index')->name('message.index');
         Route::get('/index', 'index')->name('message.index_compat');
         Route::get('/receiveList', 'receive')->name('message.receive');
@@ -714,11 +714,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // Compose (sendToFriend?id=), reply, and draft edit. OpenPNE 3 reached these through the
         // module/action fallback (no named route); the path shape is preserved.
         Route::get('/sendToFriend', 'compose')->name('message.compose');
-        Route::post('/sendToFriend', 'store')->middleware('throttle:message-send')->name('message.compose.store');
+        Route::post('/sendToFriend', 'store')->middleware('throttle:direct-message-send')->name('message.compose.store');
         Route::get('/reply/{message}', 'reply')->whereNumber('message')->name('message.reply');
         Route::get('/edit/{message}', 'edit')->whereNumber('message')->name('message.draft.edit');
         // The final send passes through this POST; if compose ever gains autosave the per-member limit must be revisited.
-        Route::post('/edit/{message}', 'update')->whereNumber('message')->middleware('throttle:message-send')->name('message.draft.update');
+        Route::post('/edit/{message}', 'update')->whereNumber('message')->middleware('throttle:direct-message-send')->name('message.draft.update');
         Route::get('/read/{message}', 'showReceived')->whereNumber('message')->name('message.receive.show');
         Route::get('/check/{message}', 'showSent')->whereNumber('message')->name('message.send.show');
         Route::get('/checkDelete/{message}', 'showTrashed')->whereNumber('message')->name('message.trash.show');

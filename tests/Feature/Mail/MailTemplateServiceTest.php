@@ -151,7 +151,7 @@ class MailTemplateServiceTest extends TestCase
 
         $this->assertFalse($this->service()->isEnabled(MailTemplate::FriendRequested));
         // An absent row defaults to enabled.
-        $this->assertTrue($this->service()->isEnabled(MailTemplate::MessageReceived));
+        $this->assertTrue($this->service()->isEnabled(MailTemplate::DirectMessageReceived));
     }
 
     public function test_clear_cache_picks_up_a_new_override(): void

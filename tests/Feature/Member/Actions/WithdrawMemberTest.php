@@ -14,10 +14,10 @@ use App\Models\CommunityMember;
 use App\Models\Diary;
 use App\Models\DiaryComment;
 use App\Models\DiaryImage;
+use App\Models\DirectMessage;
+use App\Models\DirectMessageRecipient;
 use App\Models\File;
 use App\Models\Member;
-use App\Models\Message;
-use App\Models\MessageRecipient;
 use App\Models\TimelinePost;
 use App\Models\TimelinePostImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -89,13 +89,13 @@ class WithdrawMemberTest extends TestCase
         ]);
 
         // A message they sent stays for the recipient's copy.
-        $message = Message::factory()->create(['sender_id' => $member->getKey()]);
-        $receipt = MessageRecipient::factory()->create(['message_id' => $message->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $member->getKey()]);
+        $receipt = DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey()]);
 
         $this->withdraw($member);
 
         $this->assertDatabaseHas('diary_comments', ['id' => $comment->getKey(), 'member_id' => null]);
-        $this->assertDatabaseHas('messages', ['id' => $message->getKey(), 'sender_id' => null]);
+        $this->assertDatabaseHas('direct_messages', ['id' => $message->getKey(), 'sender_id' => null]);
         $this->assertModelExists($receipt);
     }
 

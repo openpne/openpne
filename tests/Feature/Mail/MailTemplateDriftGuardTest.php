@@ -10,8 +10,8 @@ use App\Mail\Template\MailTemplateService;
 use App\Models\Community;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\DirectMessage;
 use App\Models\Member;
-use App\Models\Message;
 use App\Models\TimelinePost;
 use App\Notifications\Auth\RegistrationLinkNotification;
 use App\Notifications\Auth\ResetPasswordNotification;
@@ -20,6 +20,7 @@ use App\Notifications\Community\CommunityJoinedNotification;
 use App\Notifications\CommunityTopic\TopicCommentedNotification;
 use App\Notifications\Diary\DiaryCommentedNotification;
 use App\Notifications\Diary\DiaryPostedNotification;
+use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestAcceptedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Member\EmailChangeConfirmationNotification;
@@ -31,7 +32,6 @@ use App\Notifications\Member\PasswordChangedNotification;
 use App\Notifications\Member\RegistrationCompletedNotification;
 use App\Notifications\Member\WithdrawalAdminNotification;
 use App\Notifications\Member\WithdrawalCompletedNotification;
-use App\Notifications\Message\MessageReceivedNotification;
 use App\Notifications\Timeline\TimelineMentionedNotification;
 use App\Notifications\Timeline\TimelinePostedNotification;
 use App\Support\SnsSettingKey;
@@ -86,7 +86,7 @@ class MailTemplateDriftGuardTest extends TestCase
     {
         $sender = Member::factory()->create(['name' => 'Sender']);
         $recipient = Member::factory()->create();
-        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
         $diary = Diary::factory()->create(['member_id' => $recipient->getKey()]);
         $comment = $diary->comments()->create(['member_id' => $sender->getKey(), 'number' => 1, 'body' => 'a comment']);
         $topic = CommunityTopic::factory()->create(['member_id' => $recipient->getKey()]);
@@ -103,7 +103,7 @@ class MailTemplateDriftGuardTest extends TestCase
             [new EmailChangeNoticeNotification('new@example.test', 'cancel-token', 'en'), $recipient],
             [new FriendRequestedNotification($sender), $recipient],
             [new FriendRequestAcceptedNotification($sender), $recipient],
-            [new MessageReceivedNotification($sender, $message), $recipient],
+            [new DirectMessageReceivedNotification($sender, $message), $recipient],
             [new DiaryCommentedNotification($sender, $diary, $comment, CommentReason::Reply), $recipient],
             [new DiaryPostedNotification($diary, $sender, ['mail']), $recipient],
             [new TopicCommentedNotification($sender, $topic, $topicComment, CommentReason::Reply), $recipient],

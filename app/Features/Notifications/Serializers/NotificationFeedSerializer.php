@@ -15,8 +15,8 @@ use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\DirectMessageRecipient;
 use App\Models\Member;
-use App\Models\MessageRecipient;
 use App\Models\TimelinePost;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Notifications\DatabaseNotification;
@@ -106,7 +106,7 @@ class NotificationFeedSerializer
         return match ($data['kind'] ?? null) {
             'friend_requested' => $data['requester_id'] ?? null,
             'friend_request_accepted' => $data['accepter_id'] ?? null,
-            'message_received' => $data['sender_id'] ?? null,
+            'direct_message_received' => $data['sender_id'] ?? null,
             'diary_commented', 'community_topic_commented', 'community_event_commented' => $data['commenter_id'] ?? null,
             'timeline_replied' => $data['replier_id'] ?? null,
             'community_joined' => $data['new_member_id'] ?? null,
@@ -128,7 +128,7 @@ class NotificationFeedSerializer
         return match ($data['kind'] ?? null) {
             'friend_requested' => '/friend/requests',
             'friend_request_accepted' => self::profileUrl($data['accepter_id'] ?? null),
-            'message_received' => self::messageUrl($row, $data['message_id'] ?? null),
+            'direct_message_received' => self::directMessageUrl($row, $data['direct_message_id'] ?? null),
             'diary_commented' => self::diaryUrl($row, $data['diary_id'] ?? null),
             'community_topic_commented' => self::topicUrl($row, $data['topic_id'] ?? null),
             'community_event_commented' => self::eventUrl($row, $data['event_id'] ?? null),
@@ -273,18 +273,18 @@ class NotificationFeedSerializer
     }
 
     /**
-     * The read page 404s unless the viewer still holds a live inbox receipt (ShowMessage's
+     * The read page 404s unless the viewer still holds a live inbox receipt (ShowDirectMessage's
      * Receive-box predicate), so a trashed/purged message counts as gone.
      */
-    private static function messageUrl(DatabaseNotification $row, ?int $messageId): ?string
+    private static function directMessageUrl(DatabaseNotification $row, ?int $messageId): ?string
     {
         if ($messageId === null) {
             return null;
         }
 
-        $stillInInbox = MessageRecipient::query()->ofDelivered()->recipientLive()
+        $stillInInbox = DirectMessageRecipient::query()->ofDelivered()->recipientLive()
             ->where('recipient_id', $row->notifiable_id)
-            ->where('message_id', $messageId)
+            ->where('direct_message_id', $messageId)
             ->exists();
 
         return $stillInInbox ? '/message/read/'.$messageId : null;

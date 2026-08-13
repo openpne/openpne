@@ -155,6 +155,10 @@ under — so if you update OpenPNE 4 itself partway through a migration, those r
 describe the current steps. Start over with `--force-restart`, which empties the tables the upgrade
 owns along with its records of what ran.
 
+One case of that is caught for you: when an update renames the steps or the tables they write, the
+records name things that no longer exist, and the run refuses to resume rather than copy everything
+a second time. It says so and points at `--force-restart`.
+
 That makes `--force-restart` a rehearsal tool. Once OpenPNE 4 is taking traffic, those tables are
 the live site.
 

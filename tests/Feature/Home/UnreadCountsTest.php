@@ -3,9 +3,9 @@
 namespace Tests\Feature\Home;
 
 use App\Features\Home\UnreadCounts;
+use App\Models\DirectMessage;
+use App\Models\DirectMessageRecipient;
 use App\Models\Member;
-use App\Models\Message;
-use App\Models\MessageRecipient;
 use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +20,8 @@ class UnreadCountsTest extends TestCase
     {
         [$viewer, $sender] = Member::factory()->count(2)->create()->all();
         DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
-        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
         $viewer->notifications()->create([
             'id' => (string) Str::uuid(),
             'type' => 'test',
@@ -38,11 +38,11 @@ class UnreadCountsTest extends TestCase
         // Rows that would count, so the zero proves the skip rather than an empty database.
         [$viewer, $sender] = Member::factory()->count(2)->create()->all();
         DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
-        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
 
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
-        $this->setSnsSetting(Feature::Message->settingKey(), false);
+        $this->setSnsSetting(Feature::DirectMessage->settingKey(), false);
 
         DB::enableQueryLog();
         $counts = app(UnreadCounts::class)->for($viewer);
@@ -53,7 +53,7 @@ class UnreadCountsTest extends TestCase
         $this->assertSame(0, $counts['unreadMessages']);
         foreach ($queries as $query) {
             $this->assertStringNotContainsString('friend_requests', $query['query']);
-            $this->assertStringNotContainsString('message_recipients', $query['query']);
+            $this->assertStringNotContainsString('direct_message_recipients', $query['query']);
         }
     }
 
@@ -67,7 +67,7 @@ class UnreadCountsTest extends TestCase
         ]);
 
         $this->setSnsSetting(Feature::Friend->settingKey(), false);
-        $this->setSnsSetting(Feature::Message->settingKey(), false);
+        $this->setSnsSetting(Feature::DirectMessage->settingKey(), false);
 
         $this->assertSame(1, app(UnreadCounts::class)->for($viewer)['notifications']);
     }

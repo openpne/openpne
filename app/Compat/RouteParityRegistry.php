@@ -8,9 +8,9 @@ use App\Compat\Parities\CommunityEventRouteParity;
 use App\Compat\Parities\CommunityRouteParity;
 use App\Compat\Parities\CommunityTopicRouteParity;
 use App\Compat\Parities\DiaryRouteParity;
+use App\Compat\Parities\DirectMessageRouteParity;
 use App\Compat\Parities\FriendRouteParity;
 use App\Compat\Parities\MemberRouteParity;
-use App\Compat\Parities\MessageRouteParity;
 use App\Compat\Parities\PolicyRouteParity;
 use App\Compat\Parities\TimelineRouteParity;
 
@@ -28,7 +28,7 @@ final class RouteParityRegistry
             CommunityRouteParity::class,
             CommunityTopicRouteParity::class,
             CommunityEventRouteParity::class,
-            MessageRouteParity::class,
+            DirectMessageRouteParity::class,
             TimelineRouteParity::class,
             AuthRouteParity::class,
             PolicyRouteParity::class,

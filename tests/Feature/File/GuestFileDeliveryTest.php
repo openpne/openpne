@@ -10,9 +10,9 @@ use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
+use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Member;
-use App\Models\Message;
 use App\Models\TimelinePost;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
@@ -45,7 +45,7 @@ class GuestFileDeliveryTest extends TestCase
             'community topic comment' => ['communityTopicComment', false],
             'community event' => ['communityEvent', false],
             'community event comment' => ['communityEventComment', false],
-            'message attachment' => ['message', false],
+            'direct message attachment' => ['directMessage', false],
             // Fail-closed by construction.
             'unlinked' => ['', false],
             'unknown type' => ['widget', false],
@@ -107,7 +107,7 @@ class GuestFileDeliveryTest extends TestCase
             'communityTopicComment' => CommunityTopicComment::factory()->create(),
             'communityEvent' => CommunityEvent::factory()->create(),
             'communityEventComment' => CommunityEventComment::factory()->create(),
-            'message' => Message::factory()->create(),
+            'directMessage' => DirectMessage::factory()->create(),
         };
 
         return $this->file(

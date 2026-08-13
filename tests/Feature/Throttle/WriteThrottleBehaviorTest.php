@@ -25,7 +25,7 @@ class WriteThrottleBehaviorTest extends TestCase
         // limiter => [per-member config key, per-IP config key, cheapest representative route]
         return [
             'posting' => ['posting', 'posting_ip', '/diary/create'],
-            'message-send' => ['message', 'message_ip', '/message/sendToFriend'],
+            'direct-message-send' => ['direct_message', 'direct_message_ip', '/message/sendToFriend'],
             'friend-request' => ['friend', 'friend_ip', '/friend/link'],
             'community-join' => ['community', 'community_ip', '/community/join'],
         ];

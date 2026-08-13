@@ -3,7 +3,7 @@
 namespace Tests\Unit\Compat;
 
 use App\Compat\Parities\DiaryRouteParity;
-use App\Compat\Parities\MessageRouteParity;
+use App\Compat\Parities\DirectMessageRouteParity;
 use App\Compat\RouteParityRegistry;
 use PHPUnit\Framework\TestCase;
 
@@ -34,7 +34,7 @@ class RouteParityLayoutTest extends TestCase
 
     public function test_message_boxes_and_show_are_layout_b(): void
     {
-        $parity = new MessageRouteParity;
+        $parity = new DirectMessageRouteParity;
 
         foreach ([
             'message.receive', 'message.send', 'message.draft', 'message.trash',

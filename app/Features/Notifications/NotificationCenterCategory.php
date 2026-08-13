@@ -11,14 +11,14 @@ namespace App\Features\Notifications;
  */
 enum NotificationCenterCategory: string
 {
-    case Message = 'message';
+    case DirectMessage = 'direct_message';
     case Friend = 'friend';
     case Other = 'other';
 
     public static function for(?string $kind): self
     {
         return match ($kind) {
-            'message_received' => self::Message,
+            'direct_message_received' => self::DirectMessage,
             'friend_requested' => self::Friend,
             default => self::Other,
         };
@@ -28,7 +28,7 @@ enum NotificationCenterCategory: string
     public function badgeId(): string
     {
         return match ($this) {
-            self::Message => 'nc_icon1',
+            self::DirectMessage => 'nc_icon1',
             self::Friend => 'nc_icon2',
             self::Other => 'nc_icon3',
         };
