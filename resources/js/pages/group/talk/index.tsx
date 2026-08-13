@@ -39,6 +39,7 @@ export default function GroupTalkIndex() {
     const messages = stream.messages;
     const streamSend = stream.send;
     const atLatest = stream.window.kind === 'latest';
+    const generation = stream.generation;
 
     // Reading is being at the foot of the conversation. Someone scrolled back through history has
     // not read what just arrived below them, so their cursor stays where it is — and the foot of a
@@ -60,8 +61,10 @@ export default function GroupTalkIndex() {
     const pinned = useRef(true);
     // The message "load older" was standing on, and where it sat in the viewport.
     const anchor = useRef<{ id: number; top: number } | null>(null);
-    // A deliberate move the next render has to make: the reader asked to be somewhere else.
-    const goTo = useRef<'divider' | 'bottom' | null>(null);
+    // A move the reader asked for, and the list it was asked from. It is spent on the render that
+    // carries its own answer — the generation moves only when a window change lands, so a poll or a
+    // merge arriving in between cannot spend it and leave the jump un-made.
+    const goTo = useRef<{ target: 'divider' | 'bottom'; from: number } | null>(null);
     // The newest message the pin last answered. The pin follows new content, not new array
     // identity: merges rebuild the list for reasons that move nothing (a re-read row), and a
     // scrollTo re-issued then shoves the sticky composer around under iOS's keyboard pan.
@@ -91,11 +94,11 @@ export default function GroupTalkIndex() {
         tail.current = newest;
 
         const asked = goTo.current;
-        if (asked !== null) {
+        if (asked !== null && asked.from !== generation) {
             goTo.current = null;
             // A jump outranks both rules below: the reader named the place, so neither the held
             // anchor nor the pin gets to answer for this render.
-            if (asked === 'bottom') {
+            if (asked.target === 'bottom') {
                 window.scrollTo({ top: document.documentElement.scrollHeight });
             } else {
                 // Mid-viewport, so the last of what was already read stays visible above the line —
@@ -124,7 +127,7 @@ export default function GroupTalkIndex() {
         if (arrived && pinned.current && atLatest) {
             window.scrollTo({ top: document.documentElement.scrollHeight });
         }
-    }, [messages, atLatest]);
+    }, [messages, atLatest, generation]);
 
     const loadOlder = () => {
         const first = messages[0];
@@ -138,9 +141,11 @@ export default function GroupTalkIndex() {
     // handler resumes; a read that brings nothing back gives it up again rather than leaving a jump
     // armed for whatever changes the list next.
     const jumpToContext = (cursor: string) => {
-        goTo.current = 'divider';
-        void stream.openContext(cursor).then((arrived) => {
-            if (!arrived) {
+        const asked = { target: 'divider' as const, from: generation };
+        goTo.current = asked;
+        void stream.openContext(cursor).then((moved) => {
+            // Only give up the move if it is still the one this click made.
+            if (!moved && goTo.current === asked) {
                 goTo.current = null;
             }
         });
@@ -157,9 +162,10 @@ export default function GroupTalkIndex() {
             return;
         }
 
-        goTo.current = 'bottom';
-        void stream.returnToLatest().then((arrived) => {
-            if (!arrived) {
+        const asked = { target: 'bottom' as const, from: generation };
+        goTo.current = asked;
+        void stream.returnToLatest().then((moved) => {
+            if (!moved && goTo.current === asked) {
                 goTo.current = null;
             }
         });

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    applied,
     enterHistory,
     enterLatest,
     initial,
@@ -262,4 +263,87 @@ test('an idle poll still returns the very state it was given', () => {
     const before = enterHistory(initial(page([])), page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
 
     assert.equal(mergeAfter(before, page([])), before);
+});
+
+/**
+ * The race the generation exists for. The poll is on the wire when the reader taps the unread
+ * banner, and both reads were issued against the live window — whichever lands second must not be
+ * folded into a list that has moved on.
+ */
+test('a poll answered after the jump landed is thrown away', () => {
+    const live = initial(page([message(90, '2026-08-13T18:00:00+00:00'), message(91, '2026-08-13T18:01:00+00:00')], true));
+    const at = live.generation;
+
+    // The jump answers first and the list stands on a stretch of history.
+    let state = applied(live, at, (current) =>
+        enterHistory(current, page([message(10, '2026-08-13T09:10:00+00:00'), message(11, '2026-08-13T09:11:00+00:00')], true, true)),
+    );
+    // The poll, asked of the live window before any of that, answers afterwards.
+    state = applied(state, at, (current) => mergeAfter(current, page([message(92, '2026-08-13T18:02:00+00:00')])));
+
+    assert.deepEqual(bodies(state), ['m10', 'm11'], 'no live row may be spliced across the gap');
+    assert.deepEqual(state.window, { kind: 'history', hasNewer: true });
+    assert.equal(watermark(state), '2026-08-13T09:11:00+00:00|11', 'and the watermark must not jump the gap either');
+});
+
+test('a poll answered before the jump landed still lands in the live window', () => {
+    const live = initial(page([message(90, '2026-08-13T18:00:00+00:00')], true));
+    const at = live.generation;
+
+    let state = applied(live, at, (current) => mergeAfter(current, page([message(91, '2026-08-13T18:01:00+00:00')])));
+    assert.deepEqual(bodies(state), ['m90', 'm91'], 'the live window is still the one that asked');
+
+    state = applied(state, at, (current) => enterHistory(current, page([message(10, '2026-08-13T09:10:00+00:00')], true, true)));
+
+    assert.deepEqual(bodies(state), ['m10']);
+    assert.deepEqual(state.window, { kind: 'history', hasNewer: true });
+});
+
+test('every window change retires the reads the old list had out', () => {
+    const live = initial(page([message(1, '2026-08-13T09:00:00+00:00')], true));
+    const at = live.generation;
+
+    const history = enterHistory(live, page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
+    assert.notEqual(history.generation, at);
+
+    const back = enterLatest(history, page([message(90, '2026-08-13T18:00:00+00:00')], true));
+    assert.notEqual(back.generation, history.generation);
+
+    // Catching up through "load newer" is the same kind of change, so it counts too.
+    const caughtUp = mergeNewer(history, page([message(11, '2026-08-13T09:11:00+00:00')], false, false));
+    assert.deepEqual(caughtUp.window, { kind: 'latest' });
+    assert.notEqual(caughtUp.generation, history.generation);
+});
+
+test('a load-older answered after the window moved is thrown away', () => {
+    const live = initial(page([message(90, '2026-08-13T18:00:00+00:00')], true));
+    const at = live.generation;
+
+    let state = applied(live, at, (current) => enterHistory(current, page([message(10, '2026-08-13T09:10:00+00:00')], true, true)));
+    state = applied(state, at, (current) => mergeBefore(current, page([message(89, '2026-08-13T17:59:00+00:00')], true)));
+
+    assert.deepEqual(bodies(state), ['m10']);
+});
+
+/** A read that outlived nothing is just a read; the guard must not swallow the ordinary case. */
+test('a response from the list that asked for it is folded in', () => {
+    const live = initial(page([message(1, '2026-08-13T09:00:00+00:00')]));
+
+    const state = applied(live, live.generation, (current) => mergeAfter(current, page([message(2, '2026-08-13T09:01:00+00:00')])));
+
+    assert.deepEqual(bodies(state), ['m1', 'm2']);
+});
+
+/**
+ * The sent message is held to the live window rather than to a generation: it belongs at the foot of
+ * the list the caller re-read to get back there, but never under a stretch of history.
+ */
+test('a send is refused by a history window and taken by the live one', () => {
+    const history = enterHistory(initial(page([])), page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
+    const mine = message(99, '2026-08-13T18:30:00+00:00');
+
+    assert.equal(mergeSent(history, mine), history, 'it would sit under a message it does not answer');
+
+    const back = enterLatest(history, page([message(90, '2026-08-13T18:00:00+00:00')], true));
+    assert.deepEqual(bodies(mergeSent(back, mine)), ['m90', 'm99']);
 });

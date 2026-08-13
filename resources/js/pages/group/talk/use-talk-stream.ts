@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
 import type { MentionPayloadRow } from '@/lib/mention-draft';
 import {
+    applied,
     enterHistory,
     enterLatest,
     initial,
@@ -50,6 +51,19 @@ export function useTalkStream(groupId: number, page: TalkPage) {
         stateRef.current = state;
     }, [state]);
 
+    // The poll's read, held where a window change can reach it: moving the page somewhere else makes
+    // the answer already on the wire worthless, and there is no reason to wait for it.
+    const polling = useRef<AbortController | null>(null);
+
+    /**
+     * The one door every response comes through. `at` is the generation the read was issued against;
+     * `applied` drops it when the list has since moved somewhere else, which is what keeps a poll
+     * that outlived the live window from being spliced into a slice of history.
+     */
+    const fold = useCallback((at: number, update: (current: TalkStreamState) => TalkStreamState) => {
+        setState((current) => applied(current, at, update));
+    }, []);
+
     const fetchPage = useCallback(
         async (query: string, signal?: AbortSignal): Promise<TalkPage | null> => {
             const response = await fetch(`/groups/${groupId}/talk/messages${query}`, {
@@ -64,8 +78,6 @@ export function useTalkStream(groupId: number, page: TalkPage) {
     );
 
     useEffect(() => {
-        let inFlight: AbortController | null = null;
-
         const poll = () => {
             // Only the window that ends at the newest message has anything to poll for: in the
             // history window what arrives does not follow the last row on screen, and folding it in
@@ -74,10 +86,11 @@ export function useTalkStream(groupId: number, page: TalkPage) {
                 return;
             }
 
-            inFlight?.abort();
+            polling.current?.abort();
             const controller = new AbortController();
-            inFlight = controller;
+            polling.current = controller;
 
+            const at = stateRef.current.generation;
             const since = watermark(stateRef.current);
             // Nothing on screen means there is no position to ask after — the conversation was empty
             // when the page loaded, so ask for the newest page instead.
@@ -89,7 +102,7 @@ export function useTalkStream(groupId: number, page: TalkPage) {
                         return;
                     }
                     // Which merge is decided by which question was asked, not by what came back.
-                    setState((current) =>
+                    fold(at, (current) =>
                         since === undefined ? mergeLatest(current, arrived) : mergeAfter(current, arrived),
                     );
                 })
@@ -106,9 +119,9 @@ export function useTalkStream(groupId: number, page: TalkPage) {
         return () => {
             clearInterval(timer);
             document.removeEventListener('visibilitychange', poll);
-            inFlight?.abort();
+            polling.current?.abort();
         };
-    }, [fetchPage]);
+    }, [fetchPage, fold]);
 
     const loadOlder = useCallback(async () => {
         const boundary = oldestBoundary(stateRef.current);
@@ -116,16 +129,17 @@ export function useTalkStream(groupId: number, page: TalkPage) {
             return;
         }
 
+        const at = stateRef.current.generation;
         setLoadingOlder(true);
         try {
             const older = await fetchPage(`?before=${encodeURIComponent(boundary)}`);
             if (older !== null) {
-                setState((current) => mergeBefore(current, older));
+                fold(at, (current) => mergeBefore(current, older));
             }
         } finally {
             setLoadingOlder(false);
         }
-    }, [fetchPage, loadingOlder]);
+    }, [fetchPage, fold, loadingOlder]);
 
     /**
      * Open on the page a position sits in — the unread boundary today, a linked-to message next.
@@ -135,15 +149,19 @@ export function useTalkStream(groupId: number, page: TalkPage) {
      */
     const openContext = useCallback(
         async (cursor: string): Promise<boolean> => {
+            // The list is about to stand somewhere else, so the poll's read is already worthless.
+            polling.current?.abort();
+
+            const at = stateRef.current.generation;
             const around = await fetchPage(`?context=${encodeURIComponent(cursor)}`);
             if (around === null) {
                 return false;
             }
-            setState((current) => enterHistory(current, around));
+            fold(at, (current) => enterHistory(current, around));
 
             return true;
         },
-        [fetchPage],
+        [fetchPage, fold],
     );
 
     /** "Load newer": one page forward from the foot of the history window. */
@@ -153,27 +171,31 @@ export function useTalkStream(groupId: number, page: TalkPage) {
             return;
         }
 
+        const at = stateRef.current.generation;
         setLoadingNewer(true);
         try {
             const newer = await fetchPage(`?after=${encodeURIComponent(boundary)}`);
             if (newer !== null) {
-                setState((current) => mergeNewer(current, newer));
+                fold(at, (current) => mergeNewer(current, newer));
             }
         } finally {
             setLoadingNewer(false);
         }
-    }, [fetchPage, loadingNewer]);
+    }, [fetchPage, fold, loadingNewer]);
 
     /** Back to the live end: the newest page, replacing whatever stretch was being read. */
     const returnToLatest = useCallback(async (): Promise<boolean> => {
+        polling.current?.abort();
+
+        const at = stateRef.current.generation;
         const latest = await fetchPage('');
         if (latest === null) {
             return false;
         }
-        setState((current) => enterLatest(current, latest));
+        fold(at, (current) => enterLatest(current, latest));
 
         return true;
-    }, [fetchPage]);
+    }, [fetchPage, fold]);
 
     const send = useCallback(
         async (body: string, mentions: MentionPayloadRow[] = [], image: File | null = null) => {
@@ -212,13 +234,19 @@ export function useTalkStream(groupId: number, page: TalkPage) {
             // instead — and when that read fails, the list is emptied down to your own message with
             // everything else behind "load older", which is a conversation rather than a gap drawn
             // as one.
+            //
+            // The message itself is not held to a generation, because it belongs at the foot of any
+            // live list including the one just re-read to get back there; `mergeSent` refuses a
+            // history window instead, which is the condition that actually matters and is answered
+            // against the state at the moment it lands.
             if (stateRef.current.window.kind === 'history' && !(await returnToLatest())) {
-                setState((current) => enterLatest(current, { messages: [], hasOlder: true, hasNewer: false }));
+                const at = stateRef.current.generation;
+                fold(at, (current) => enterLatest(current, { messages: [], hasOlder: true, hasNewer: false }));
             }
 
             setState((current) => mergeSent(current, message));
         },
-        [groupId, returnToLatest],
+        [fold, groupId, returnToLatest],
     );
 
     const remove = useCallback(
@@ -242,6 +270,9 @@ export function useTalkStream(groupId: number, page: TalkPage) {
         messages: state.messages,
         hasOlder: state.hasOlder,
         window: state.window,
+        // Which list the page is standing on. It moves only when a window change lands, so a caller
+        // can tell its own jump's render from the polls and merges around it (see index.tsx).
+        generation: state.generation,
         loadingOlder,
         loadingNewer,
         loadOlder,

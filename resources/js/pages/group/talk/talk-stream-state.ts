@@ -37,6 +37,29 @@ export interface TalkStreamState {
     /** Ids deleted in this session. Never re-admitted, whatever a later response carries. */
     deleted: ReadonlySet<number>;
     window: TalkWindow;
+    /** Which list a response was asked of — see {@link applied}. Moves on every window change. */
+    generation: number;
+}
+
+/**
+ * Fold a response into the list that asked for it, or throw it away.
+ *
+ * Reads are in flight while the window changes under them: the poll is on the wire when the reader
+ * taps the unread banner, and either answer can land first. Merging the poll's afterwards would
+ * splice rows from the live end into a slice of history with an unfetched stretch between them —
+ * drawn as one continuous conversation, and past healing, because the next watermark would be taken
+ * from beyond the gap and "load newer" would never ask for it.
+ *
+ * So every read is issued against the generation the list stood at, and every window change moves
+ * that generation on. A response whose generation has passed describes a page the reader is no
+ * longer on, and the only safe thing to do with it is nothing.
+ */
+export function applied(
+    state: TalkStreamState,
+    at: number,
+    fold: (current: TalkStreamState) => TalkStreamState,
+): TalkStreamState {
+    return at === state.generation ? fold(state) : state;
 }
 
 /**
@@ -79,11 +102,17 @@ function windowAfter(page: TalkPage): TalkWindow {
  * Fold messages into the list: later copies of an id win, tombstoned ids are dropped, and the result
  * is sorted. `hasOlder` is decided by the caller, since only it knows which end it read from.
  */
-function merge(state: TalkStreamState, arriving: readonly TalkMessage[], hasOlder: boolean, window = state.window): TalkStreamState {
+function merge(
+    state: TalkStreamState,
+    arriving: readonly TalkMessage[],
+    hasOlder: boolean,
+    window = state.window,
+    generation = state.generation,
+): TalkStreamState {
     // An idle poll answers with nothing; the state it would rebuild is the state it was given.
     // Returning the same value matters: every new `messages` reference re-runs the page's pin
     // effect, and a scroll re-issued every tick fights iOS's keyboard pan (see index.tsx).
-    if (arriving.length === 0 && hasOlder === state.hasOlder && sameWindow(window, state.window)) {
+    if (arriving.length === 0 && hasOlder === state.hasOlder && sameWindow(window, state.window) && generation === state.generation) {
         return state;
     }
     const held = new Map(state.messages.map((message) => [message.id, message]));
@@ -93,22 +122,24 @@ function merge(state: TalkStreamState, arriving: readonly TalkMessage[], hasOlde
 
     const messages = [...held.values()].filter((message) => !state.deleted.has(message.id)).sort(byTuple);
 
-    return { messages, hasOlder, deleted: state.deleted, window };
+    return { messages, hasOlder, deleted: state.deleted, window, generation };
 }
 
 /**
- * Throw the list away and stand on $page instead — how every window change lands. The tombstones are
- * the one thing carried over: a session's deletions outlive the stretch of conversation they were
- * made in.
+ * Throw the list away and stand on $page instead — how every window change lands. The generation
+ * moves with it, which is what retires the reads the old list had out. The tombstones are the one
+ * thing carried over: a session's deletions outlive the stretch of conversation they were made in.
  */
 function replace(state: TalkStreamState, page: TalkPage, window: TalkWindow): TalkStreamState {
     const messages = page.messages.filter((message) => !state.deleted.has(message.id)).sort(byTuple);
 
-    return { messages, hasOlder: page.hasOlder, deleted: state.deleted, window };
+    return { messages, hasOlder: page.hasOlder, deleted: state.deleted, window, generation: state.generation + 1 };
 }
 
 export function initial(page: TalkPage): TalkStreamState {
-    return merge({ messages: [], hasOlder: false, deleted: new Set(), window: { kind: 'latest' } }, page.messages, page.hasOlder);
+    const empty: TalkStreamState = { messages: [], hasOlder: false, deleted: new Set(), window: { kind: 'latest' }, generation: 0 };
+
+    return merge(empty, page.messages, page.hasOlder);
 }
 
 /**
@@ -134,8 +165,18 @@ export function mergeBefore(state: TalkStreamState, page: TalkPage): TalkStreamS
     return merge(state, page.messages, page.hasOlder);
 }
 
-/** The composer's own message, echoed back by the write. */
+/**
+ * The composer's own message, echoed back by the write.
+ *
+ * Held to the live window rather than to a generation: the message belongs at the foot of *any* list
+ * that ends at the newest one, including the one the caller re-read to get back there, but under a
+ * stretch of history it would sit beneath a message it does not answer.
+ */
 export function mergeSent(state: TalkStreamState, message: TalkMessage): TalkStreamState {
+    if (state.window.kind !== 'latest') {
+        return state;
+    }
+
     return merge(state, [message], state.hasOlder);
 }
 
@@ -145,7 +186,12 @@ export function mergeSent(state: TalkStreamState, message: TalkMessage): TalkStr
  * newest message and the window is the latest one again — poll and all.
  */
 export function mergeNewer(state: TalkStreamState, page: TalkPage): TalkStreamState {
-    return merge(state, page.messages, state.hasOlder, windowAfter(page));
+    const window = windowAfter(page);
+    // Catching up with the newest message is a window change like any other, so it retires the reads
+    // the history window had out and lets the poll start from a list it can trust.
+    const generation = window.kind === 'latest' ? state.generation + 1 : state.generation;
+
+    return merge(state, page.messages, state.hasOlder, window, generation);
 }
 
 /** The unread jump: stand on the boundary page. Contiguous through to the newest ends up as latest. */
@@ -158,7 +204,10 @@ export function enterLatest(state: TalkStreamState, page: TalkPage): TalkStreamS
     return replace(state, page, { kind: 'latest' });
 }
 
-/** Drop a message and remember that it is gone. */
+/**
+ * Drop a message and remember that it is gone. Not tied to a generation either: a deletion is a fact
+ * about the conversation rather than a page of it, and holds wherever the reader is standing.
+ */
 export function markDeleted(state: TalkStreamState, id: number): TalkStreamState {
     const deleted = new Set(state.deleted);
     deleted.add(id);
@@ -168,6 +217,7 @@ export function markDeleted(state: TalkStreamState, id: number): TalkStreamState
         hasOlder: state.hasOlder,
         deleted,
         window: state.window,
+        generation: state.generation,
     };
 }
 

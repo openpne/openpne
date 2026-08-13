@@ -106,6 +106,16 @@ between them as if it were conversation. Sending from the history window therefo
 newest page rather than appending: your own words must not land under a message they do not answer.
 The session's tombstones are the one thing carried across a replacement.
 
+Reads are in flight while that happens — the poll is on the wire when the reader taps the banner, and
+either answer can land first. So the state carries a **generation**: every read is issued against the
+one the list stood at, every window change moves it on, and `applied()` is the single door a response
+comes through. One that arrives against a generation that has passed is dropped rather than merged,
+which is what stops a live row being spliced across the gap (and the next watermark being taken from
+beyond it, where "load newer" would never ask). Two things are deliberately outside it: a deletion,
+which is a fact about the conversation rather than a page of it, and the composer's own message,
+which is held to the live window instead — it belongs at the foot of any list that ends at the
+newest, including the one just re-read to get back there.
+
 ## Unread
 
 The read cursor is the `(talk_read_at, talk_read_message_id)` pair on the **membership row**, not a
@@ -374,8 +384,9 @@ role once per request and the serializer asks it per row.
 5. The cursor only ever moves forward, and the guard is in the `WHERE` clause rather than in a
    read-then-write. What it is set to is never a value the client chose — but where a *page* is read
    from always is, and the two must not be confused.
-6. The list on screen is one contiguous stretch. A window change replaces it; only a page that
-   follows what is held is merged in.
+6. The list on screen is one contiguous stretch. A window change replaces it and moves the
+   generation on; only a page that follows what is held, and was asked for by the list it is landing
+   in, is merged.
 7. The unread divider and its jump both come from the render-time snapshot, so nothing that happens
    afterwards — mark-read included — moves either.
 8. A mention row exists only where the picker produced one; no body is ever parsed for `@`. What the
