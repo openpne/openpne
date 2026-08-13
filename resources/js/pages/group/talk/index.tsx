@@ -1,5 +1,5 @@
 import { Head, usePage } from '@inertiajs/react';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
@@ -8,13 +8,17 @@ import type { CommunitySummary } from '@/pages/community/types';
 import type { PageProps } from '@/types';
 import { TalkComposer } from './composer';
 import { TalkMessageRow } from './message-row';
+import { TalkMuteToggle } from './mute-toggle';
 import type { TalkPage } from './types';
+import { useMarkRead } from './use-mark-read';
 import { useTalkStream } from './use-talk-stream';
 
 interface TalkProps extends PageProps {
     group: CommunitySummary;
     page: TalkPage;
     canPost: boolean;
+    isMember: boolean;
+    isMuted: boolean;
 }
 
 /** How close to the foot still counts as reading the newest message. */
@@ -26,10 +30,15 @@ const messageElement = (id: number): Element | null => document.querySelector(`[
 export default function GroupTalkIndex() {
     const t = useT();
     const confirm = useConfirm();
-    const { group, page, canPost } = usePage<TalkProps>().props;
+    const { group, page, canPost, isMember, isMuted } = usePage<TalkProps>().props;
     const stream = useTalkStream(group.id, page);
     const messages = stream.messages;
     const streamSend = stream.send;
+
+    // Reading is being at the foot of the conversation. Someone scrolled back through history has
+    // not read what just arrived below them, so their cursor stays where it is.
+    const [atBottom, setAtBottom] = useState(true);
+    useMarkRead(group.id, messages[messages.length - 1]?.id, isMember && atBottom);
 
     // Whether the reader is at the newest message. A conversation that scrolls itself while someone
     // is reading back through it has taken the page away from them.
@@ -39,8 +48,11 @@ export default function GroupTalkIndex() {
 
     useEffect(() => {
         const onScroll = () => {
-            pinned.current =
-                window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - NEAR_BOTTOM_PX;
+            const foot = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - NEAR_BOTTOM_PX;
+            pinned.current = foot;
+            // Mirrored into state because mark-read has to re-run when it changes; the ref stays
+            // because the scroll-pinning layout effect needs the value without a re-render.
+            setAtBottom(foot);
         };
         window.addEventListener('scroll', onScroll, { passive: true });
 
@@ -84,6 +96,7 @@ export default function GroupTalkIndex() {
     const send = async (body: string) => {
         await streamSend(body);
         pinned.current = true;
+        setAtBottom(true);
     };
 
     const remove = async (id: number) => {
@@ -95,6 +108,8 @@ export default function GroupTalkIndex() {
     return (
         <>
             <Head title={t('Talk')} />
+
+            {isMember && <TalkMuteToggle groupId={group.id} muted={isMuted} />}
 
             <Panel flush>
                 {stream.hasOlder && (

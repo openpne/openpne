@@ -768,6 +768,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/groups/{group}/talk/messages', 'messages')->whereNumber('group')->name('group.talk.messages');
         Route::post('/groups/{group}/talk', 'store')->whereNumber('group')
             ->middleware('throttle:posting')->name('group.talk.store');
+        // "Read as far as this message" and the per-group mute. Both write the membership row, which
+        // is where a member's own talk state lives; neither is throttled as posting — one is a
+        // reading side effect and the other a preference.
+        Route::post('/groups/{group}/talk/read', 'read')->whereNumber('group')->name('group.talk.read');
+        Route::post('/groups/{group}/talk/mute', 'mute')->whereNumber('group')->name('group.talk.mute');
         // POST delete on its own URL, as the boards do; the path carries the group as well as the
         // message so the two can be checked against each other.
         Route::post('/groups/{group}/talk/messages/{message}/delete', 'delete')

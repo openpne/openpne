@@ -28,7 +28,7 @@ class UnreadCountsEndpointTest extends TestCase
         $this->actingAs($viewer)
             ->getJson('/unread-counts')
             ->assertOk()
-            ->assertExactJson(['friendRequests' => 0, 'unreadMessages' => 0, 'notifications' => 1]);
+            ->assertExactJson(['friendRequests' => 0, 'unreadMessages' => 0, 'notifications' => 1, 'groupTalks' => 0]);
     }
 
     public function test_a_guest_is_sent_to_the_login_page(): void

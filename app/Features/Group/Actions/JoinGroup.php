@@ -9,6 +9,7 @@ use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupMembership;
 use App\Features\Group\GroupRole;
 use App\Features\Group\JoinPolicy;
+use App\Features\GroupTalk\TalkReadCursor;
 use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;
@@ -44,9 +45,11 @@ class JoinGroup
         }
 
         DB::transaction(function () use ($member, $group) {
-            $group->members()->create([
+            $group->members()->forceCreate([
                 'member_id' => $member->getKey(),
                 'role' => GroupRole::Member,
+                // Everything said before joining counts as read (TalkReadCursor).
+                ...TalkReadCursor::snapshot((int) $group->getKey()),
             ]);
 
             GroupJoined::dispatch($group, $member);

@@ -47,10 +47,10 @@ way.
 | `group_messages` | `group_id`, `member_id` (nullable), `in_reply_to_id` (nullable), `body`, timestamps |
 | `group_message_images` | join rows to `files`, shaped exactly like `timeline_post_images` |
 | `group_message_mentions` | code-point ranges, shaped exactly like `timeline_post_mentions` |
-| `group_members.talk_read_at` / `.talk_read_message_id` / `.is_talk_muted` | the read cursor and the per-group mute |
+| `group_members.talk_read_at` / `.talk_read_message_id` / `.is_talk_muted` | the read cursor (a copied `(created_at, id)` tuple, no FK) and the per-group mute — see [Unread](#unread) |
 
-Only `group_messages` has app code behind it in this pass; the image and mention tables land now so
-the transfer that brings the old timeline across has somewhere to put what it carries.
+The image and mention tables have no app code behind them yet; they landed with the schema so the
+transfer that brings the old timeline across has somewhere to put what it carries.
 
 **`member_id` is `nullOnDelete`.** A withdrawn author leaves the message in place and reads as
 `Withdrawn member`, matching the other group tables (`group_topics`, `group_events` and their
@@ -97,6 +97,76 @@ is not the newest. A locally deleted id is a **session-lifetime tombstone** for 
 poll already in flight answers from a snapshot that still holds the row, and nothing afterwards
 would remove it again.
 
+## Unread
+
+The read cursor is the `(talk_read_at, talk_read_message_id)` pair on the **membership row**, not a
+table of its own. That placement is the design: **membership implies cursor** by the row's existence,
+so a non-member reader — an Everyone group is readable by anyone signed in — cannot accumulate unread
+state at all, and leaving takes the cursor with it. Rejoining creates a fresh row, which is why time
+away counts as read rather than as a backlog.
+
+The message id is a **copied value, not a foreign key**. Deleting the message a cursor names is a
+no-op; the count simply falls as the row stops existing.
+
+### The cursor is snapshotted, not defaulted
+
+[`TalkReadCursor::snapshot()`](../../app/Features/GroupTalk/TalkReadCursor.php) reads the group's
+newest live message and every membership-creating path writes it: group creation, open join,
+join-request approval, and the bulk add-all. (Registration does not auto-join default groups, so
+there is no fifth path; the OpenPNE 3 upgrade is exempt by
+[`GroupMemberUpgrade::targetDefaults()`](../../app/Upgrade/Steps/GroupMemberUpgrade.php), since an
+upgraded site has no talk yet and the history transfer re-establishes cursors afterwards.)
+
+The columns' DB defaults (`useCurrent()`, `0`) are a **backstop for paths this helper cannot reach,
+not the initialization**. `(now(), 0)` is not the same boundary as the real latest tuple: a MySQL
+timestamp is second-precise, so a message written in the same second as the join has the tuple
+`(t, id > 0)`, which compares **greater** than `(t, 0)` and would show up unread the instant someone
+joined. Reading the actual latest tuple is what closes that second, and the discriminating test says
+so.
+
+### Mark-read is client-named, server-resolved, and monotonic
+
+`POST /groups/{group}/talk/read` takes the id of the last message the client **rendered**. Three
+rules, each answering a way of getting it wrong:
+
+- the server takes the group's newest at POST time → messages that arrived between the page loading
+  and the call would be marked read unseen. So the client names the id.
+- the client sends a timestamp or a whole tuple → a bad one could erase future unread. So the server
+  resolves the tuple itself, from a **live row of this group** (anything else is refused).
+- two tabs, or a retry, report out of order → the update carries the comparison in its `WHERE`
+  (`stored < resolved`, expanded), so it can only move forward and replaying is free.
+
+Sending advances the cursor to the new row's tuple **inside the insert's transaction**: writing is
+reading, and a cursor left behind your own message would show your own words arriving as unread.
+
+### Two different numbers
+
+| where | what it counts |
+|---|---|
+| group list, per row ([`UnreadTalkCounts`](../../app/Features/GroupTalk/Queries/UnreadTalkCounts.php)) | unread **messages** in that group, one query for every membership |
+| nav badge, `groupTalks` ([`CountGroupsWithUnreadTalk`](../../app/Features/GroupTalk/Queries/CountGroupsWithUnreadTalk.php)) | **groups** with anything unread, muted ones excluded |
+
+The badge counts rooms rather than messages because a message count is dominated by whichever group
+is busiest, which says nothing about where to go next. It joins the shared props through
+`App\Features\Home\UnreadCounts` and reports zero, unqueried, while the unit is off — like every
+other badge there.
+
+Both read the same predicate ([`UnreadTalkScope`](../../app/Features/GroupTalk/UnreadTalkScope.php)):
+newer than the cursor by the tuple, and **`member_id IS NULL OR member_id != viewer`**. That NULL arm
+is load-bearing, not defensive — `member_id != ?` is UNKNOWN for a withdrawn author's row, so without
+it the count would silently skip exactly the messages the page still shows as "Withdrawn member". The
+visible set for counting is the same one the page renders, per the no-per-row-filter contract above.
+
+### Mute
+
+`group_members.is_talk_muted`, set through `POST /groups/{group}/talk/mute` with the state to move
+to (not a blind flip, so a double tap settles). Muting takes the group out of the nav badge and
+nothing else: its own per-group count keeps showing, de-emphasized, because the member asked for
+quiet rather than to lose track of the conversation. Leaving clears it with the row.
+
+Mentions are meant to **pierce mute** — a message addressed to you outranks the room's quiet — but
+mentions do not exist yet; that arrives with the mention PR.
+
 ## Access
 
 [`GroupTalkAccess`](../../app/Features/GroupTalk/GroupTalkAccess.php), succeeding
@@ -139,5 +209,9 @@ role once per request and the serializer asks it per row.
    further is answering a different question and should say so.
 2. `(created_at, id)` is the order, everywhere — reads, cursors, and the unread cursor that follows.
 3. The composer never writes `in_reply_to_id`.
-4. Talk stays switched off until the cutover; a change that makes it reachable by default is a change
+4. Every path that creates a membership row snapshots the cursor; the DB defaults are a backstop for
+   the ones that cannot, never the initialization.
+5. The cursor only ever moves forward, and the guard is in the `WHERE` clause rather than in a
+   read-then-write.
+6. Talk stays switched off until the cutover; a change that makes it reachable by default is a change
    to that plan, not a bug fix.

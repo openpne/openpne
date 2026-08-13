@@ -22,6 +22,7 @@ use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupEvent\Queries\RecentGroupEvents;
 use App\Features\GroupEvent\Serializers\GroupEventSerializer;
 use App\Features\GroupTalk\GroupTalkAccess;
+use App\Features\GroupTalk\Queries\UnreadTalkCounts;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\GroupTopic\Queries\RecentGroupTopics;
 use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
@@ -183,7 +184,7 @@ class GroupController extends Controller
         ]);
     }
 
-    public function listMine(Request $request, ListMemberGroups $query): View|InertiaResponse
+    public function listMine(Request $request, ListMemberGroups $query, UnreadTalkCounts $talkUnread): View|InertiaResponse
     {
         $owner = $this->memberSubject($request->filled('id')
             ? Member::findOrFail($request->integer('id'))
@@ -195,14 +196,21 @@ class GroupController extends Controller
                 'owner' => $owner,
                 'groups' => $groups,
             ]),
-            SurfaceResolver::MODERN => function () use ($owner, $groups) {
+            SurfaceResolver::MODERN => function () use ($owner, $groups, $talkUnread) {
                 // The owner ref draws the chrome's scope avatar (Modern only, so Classic pays nothing).
                 $owner->loadMissing('avatar.file');
+                $isOwner = $this->viewer()->is($owner);
 
                 return Inertia::render('community/list', [
                     'owner' => MemberRefSerializer::ref($owner),
-                    'isOwner' => $this->viewer()->is($owner),
+                    'isOwner' => $isOwner,
                     'groups' => GroupSerializer::paginator($groups),
+                    // Viewer-specific, so a top-level prop rather than part of the group shape (the
+                    // same page lists another member's groups, where the viewer's unread means
+                    // nothing). One query for every membership; empty when there is nothing to say.
+                    // Cast so the shape is an object either way — an empty PHP array would ship as
+                    // `[]` and the client would be indexing a list by group id.
+                    'talkUnread' => (object) ($isOwner && Feature::GroupTalk->enabled() ? $talkUnread($owner) : []),
                 ]);
             },
         ]);

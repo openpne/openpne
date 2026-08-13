@@ -94,7 +94,7 @@ export interface NavSection {
     exact?: boolean;
     icon: Icon;
     label: ChromeLabel;
-    badge?: { count: 'friendRequests' | 'unreadMessages' | 'notifications'; label: ChromeLabel };
+    badge?: { count: 'friendRequests' | 'unreadMessages' | 'notifications' | 'groupTalks'; label: ChromeLabel };
     /** The unit that owns this section; absent for the ones an administrator cannot switch off. */
     feature?: FeatureKey;
 }
@@ -122,7 +122,17 @@ export const NAV_SECTIONS: NavSection[] = [
     { href: '/diary/list', match: ['/diary'], icon: BookOpen, label: DIARIES, feature: 'diary' },
     // Neither board has a section of its own, so this one answers for them too and for the
     // container unit alone.
-    { href: '/groups', match: ['/groups', '/topics', '/events'], icon: Users, label: COMMUNITIES, feature: 'group' },
+    // The badge counts groups with something new in their talk, not messages — see
+    // CountGroupsWithUnreadTalk. It rides the container unit's entry because talk has no section of
+    // its own, the way this entry already answers for both boards.
+    {
+        href: '/groups',
+        match: ['/groups', '/topics', '/events'],
+        icon: Users,
+        label: COMMUNITIES,
+        badge: { count: 'groupTalks', label: t(':count %communities% with new messages') },
+        feature: 'group',
+    },
     { href: '/timeline', match: ['/timeline'], icon: Activity, label: ACTIVITY, feature: 'timeline' },
     {
         href: '/friend/list',
