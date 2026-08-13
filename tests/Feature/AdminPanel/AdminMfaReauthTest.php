@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use PragmaRX\Google2FA\Google2FA;
 use Tests\Concerns\CapturesSecurityLog;
 use Tests\TestCase;
 
@@ -59,6 +60,14 @@ class AdminMfaReauthTest extends TestCase
     private function currentCode(AdminUser $admin, string $secret): string
     {
         return $this->provider()->getCurrentCode($admin->fresh(), $secret);
+    }
+
+    /** The next timestep's code, so a second submission does not replay the one an earlier step spent. */
+    private function nextCode(string $secret): string
+    {
+        $google2FA = app(Google2FA::class);
+
+        return $google2FA->oathTotp($secret, $google2FA->getTimestamp() + 1);
     }
 
     private function page(AdminUser $admin): Testable
@@ -340,7 +349,7 @@ class AdminMfaReauthTest extends TestCase
         // The disable modal's Hash::check then accepts the plaintext.
         Livewire::test(SecuritySettings::class)->callAction(
             TestAction::make('disableAppAuthentication')->schemaComponent(),
-            ['current_password' => 'secret-pass-1', 'code' => $this->currentCode($admin, $secret)],
+            ['current_password' => 'secret-pass-1', 'code' => $this->nextCode($secret)],
         )->assertHasNoActionErrors();
 
         $this->assertNull($admin->fresh()->getAppAuthenticationSecret());
