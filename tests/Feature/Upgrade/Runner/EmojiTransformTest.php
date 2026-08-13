@@ -64,7 +64,7 @@ class EmojiTransformTest extends TestCase
         $this->assertSame(EmojiMap::convert('[i:1]').'13:00', $event->fresh()->open_date_comment);
         $this->assertSame('Tokyo'.EmojiMap::convert('[i:98]'), $event->fresh()->area);
 
-        foreach (['emoji_members', 'emoji_diaries', 'emoji_messages', 'emoji_community_events'] as $key) {
+        foreach (['emoji_members', 'emoji_diaries', 'emoji_direct_messages', 'emoji_community_events'] as $key) {
             $this->assertDatabaseHas('openpne4_upgrade_state', ['step_key' => $key, 'status' => UpgradeState::STATUS_COMPLETED]);
         }
     }

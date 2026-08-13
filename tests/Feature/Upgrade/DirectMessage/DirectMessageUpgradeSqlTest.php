@@ -12,7 +12,7 @@ use Tests\Concerns\MigratesUpgradeTargetsOnce;
 use Tests\TestCase;
 
 /**
- * Runs the compiled `message` → `messages` INSERT...SELECT against the real OpenPNE 3 DDL, checking
+ * Runs the compiled `message` → `direct_messages` INSERT...SELECT against the real OpenPNE 3 DDL, checking
  * the type filter, the is_send→is_draft inversion, self-reference null-normalization, the draft
  * recipient fold, and the deleted_message trash/purge fold onto the sender-side soft-delete columns.
  *

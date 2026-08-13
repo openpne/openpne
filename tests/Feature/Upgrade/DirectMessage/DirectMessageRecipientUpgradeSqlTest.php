@@ -94,7 +94,7 @@ class DirectMessageRecipientUpgradeSqlTest extends TestCase
 
     public function test_a_draft_send_list_row_creates_no_receipt(): void
     {
-        // The draft's recipient is folded onto messages.draft_recipient_id; no receipt exists (a
+        // The draft's recipient is folded onto direct_messages.draft_recipient_id; no receipt exists (a
         // receipt means delivered). The recipient-side query never reaches a draft.
         $sender = Member::factory()->create();
         $recipient = Member::factory()->create();
