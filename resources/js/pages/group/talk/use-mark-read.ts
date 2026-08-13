@@ -68,7 +68,7 @@ export function useMarkRead(groupId: number, newestRenderedId: number | undefine
             }
 
             inFlight.current = true;
-            let outcome: ReportOutcome = 'retryable';
+            let outcome: ReportOutcome;
             try {
                 const response = await fetch(`/groups/${groupId}/talk/read`, {
                     method: 'POST',
