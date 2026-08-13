@@ -10,10 +10,10 @@ use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
+use App\Models\DirectMessage;
+use App\Models\DirectMessageRecipient;
 use App\Models\EmailChangeRequest;
 use App\Models\Member;
-use App\Models\Message;
-use App\Models\MessageRecipient;
 use App\Models\MfaResetRequest;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
@@ -411,9 +411,9 @@ class ModernOnlyCoverageTest extends TestCase
         $this->actingAs($viewer)->get(route('friend.unlink.show', ['member' => $friend->getKey()]))
             ->assertRedirect(route('member.profile.show', ['member' => $friend->getKey()]));
 
-        $message = Message::factory()->create(['sender_id' => $friend->getKey()]);
-        MessageRecipient::factory()->create([
-            'message_id' => $message->getKey(),
+        $message = DirectMessage::factory()->create(['sender_id' => $friend->getKey()]);
+        DirectMessageRecipient::factory()->create([
+            'direct_message_id' => $message->getKey(),
             'recipient_id' => $viewer->getKey(),
             'recipient_deleted_at' => now(),
         ]);

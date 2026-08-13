@@ -27,6 +27,9 @@ use App\Upgrade\Steps\DiaryCommentImageUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryImageUpgrade;
 use App\Upgrade\Steps\DiaryUpgrade;
+use App\Upgrade\Steps\DirectMessageFileUpgrade;
+use App\Upgrade\Steps\DirectMessageRecipientUpgrade;
+use App\Upgrade\Steps\DirectMessageUpgrade;
 use App\Upgrade\Steps\FileUpgrade;
 use App\Upgrade\Steps\FriendFeatureUpgrade;
 use App\Upgrade\Steps\FriendRequestUpgrade;
@@ -41,9 +44,6 @@ use App\Upgrade\Steps\MemberNotificationSettingUpgrade;
 use App\Upgrade\Steps\MemberPreferenceUpgrade;
 use App\Upgrade\Steps\MemberProfileUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
-use App\Upgrade\Steps\MessageFileUpgrade;
-use App\Upgrade\Steps\MessageRecipientUpgrade;
-use App\Upgrade\Steps\MessageUpgrade;
 use App\Upgrade\Steps\NavigationTranslationUpgrade;
 use App\Upgrade\Steps\NavigationUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
@@ -126,9 +126,9 @@ final class StepRegistry
             // parent runs first.
             MailTemplateUpgrade::class,
             MailTemplateTranslationUpgrade::class,
-            // messages reference members; message_recipients reference the messages, so messages run first.
-            MessageUpgrade::class,
-            MessageRecipientUpgrade::class,
+            // direct_messages reference members; direct_message_recipients reference them, so they run first.
+            DirectMessageUpgrade::class,
+            DirectMessageRecipientUpgrade::class,
             // Image join rows: each references a file (FileUpgrade, first) plus its owning member or
             // post (all migrated above), so they run last.
             MemberImageUpgrade::class,
@@ -142,8 +142,8 @@ final class StepRegistry
             BannerUpgrade::class,
             BannerImageUpgrade::class,
             BannerUseImageUpgrade::class,
-            // message_files reference the messages (above) and the files (FileUpgrade, first).
-            MessageFileUpgrade::class,
+            // direct_message_files reference the direct messages (above) and the files (FileUpgrade, first).
+            DirectMessageFileUpgrade::class,
         ];
     }
 
@@ -168,7 +168,7 @@ final class StepRegistry
             'file_bin' => 'OpenPNE 3 file bytes. Not a copy step: the runner migrates it by an in-place ALTER that re-points the file_id FK from `file` onto `files` (the file_bin schema is frozen, and FileUpgrade keeps file.id, for exactly that), so the gigabytes of BLOBs are never rewritten.',
             'banner_translation' => 'OpenPNE 3 banner caption (I18n). Not migrated: the caption was an admin-only label, never rendered, and OpenPNE 4 labels the fixed placements in the UI.',
             'community_member_position' => 'OpenPNE 3 community role rows. Not a standalone source→target step: CommunityMemberUpgrade flattens admin/sub_admin onto community_members.role and CommunityUpgrade reads admin_confirm into communities.pending_admin_member_id, both via correlated subquery. The sub_admin_confirm / nomination-handshake rows are dropped: OpenPNE 4 has no nomination handshake.',
-            'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: MessageUpgrade / MessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the messages.sender_* / message_recipients.recipient_* soft-delete columns via correlated subquery.',
+            'deleted_message' => 'OpenPNE 3 message trash index. Not a standalone source→target step: DirectMessageUpgrade / DirectMessageRecipientUpgrade fold its is_deleted (trash) and per-pointer purge into the direct_messages.sender_* / direct_message_recipients.recipient_* soft-delete columns via correlated subquery.',
             'message_type' => 'OpenPNE 3 message-type registry. Read by subquery to select the personal-message type (type_name = `message`); not migrated as a table — OpenPNE 4 has no message-type concept (the friend/community types were a notification mechanism, carried by the notification system).',
             'message_type_translation' => 'OpenPNE 3 message-type I18n labels (the default subject/body templates per type). Not migrated: only the personal-message type is carried over and its labels are not used in OpenPNE 4.',
             // File-owning tables whose rows are not migrated. FileUpgrade still migrates their
@@ -350,7 +350,7 @@ final class StepRegistry
             'pc_changeMailAddress' => 'mail_templates[email-change-confirm]. Required mail: is_enabled forced on.',
             'pc_friendLinkComplete' => 'mail_templates[friend-accepted]. Configurable: is_enabled carried over.',
             'pc_friendLinkRequest' => 'mail_templates[friend-requested]. Configurable: is_enabled carried over.',
-            'pc_notifyNewMessage' => 'mail_templates[message-received]. Configurable: is_enabled carried over.',
+            'pc_notifyNewMessage' => 'mail_templates[direct-message-received]. Configurable: is_enabled carried over.',
             'pc_notifyNewDiaryComment' => 'mail_templates[diary-comment]. Not admin-toggleable (member opt-out lives in member_notification_settings): is_enabled forced on.',
             'pc_notifyNewDiary' => 'mail_templates[diary-posted]. Not admin-toggleable (member opt-out lives in member_notification_settings): is_enabled forced on.',
             'pc_notifyCommunityPosting' => 'mail_templates[community-posting]. Configurable: is_enabled carried over. One template for topic and event comments and the new-post broadcasts.',

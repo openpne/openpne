@@ -24,7 +24,7 @@ enum MailTemplate: string
     case EmailChangeNotice = 'email-change-notice';
     case FriendRequested = 'friend-requested';
     case FriendAccepted = 'friend-accepted';
-    case MessageReceived = 'message-received';
+    case DirectMessageReceived = 'direct-message-received';
     case DiaryCommentReceived = 'diary-comment';
     case DiaryPostedNotified = 'diary-posted';
     case TimelineMentionNotified = 'timeline-mention';
@@ -105,7 +105,7 @@ enum MailTemplate: string
                     'member.name' => ['help' => 'The name of the member who accepted.', 'sample' => 'Example'],
                 ],
             ),
-            self::MessageReceived => new MailTemplateDefinition(
+            self::DirectMessageReceived => new MailTemplateDefinition(
                 op3SourceName: 'pc_notifyNewMessage',
                 isConfigurable: true,
                 caption: 'Message received',

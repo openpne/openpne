@@ -172,8 +172,8 @@ return [
         // The @mention picker is keystroke-driven (debounced) like the preview, so it shares its cap.
         'mention_search' => (int) env('OPENPNE_THROTTLE_MENTION_SEARCH', 60),
         'mention_search_ip' => (int) env('OPENPNE_THROTTLE_MENTION_SEARCH_IP', 120),
-        'message' => (int) env('OPENPNE_THROTTLE_MESSAGE', 10),
-        'message_ip' => (int) env('OPENPNE_THROTTLE_MESSAGE_IP', 30),
+        'direct_message' => (int) env('OPENPNE_THROTTLE_DIRECT_MESSAGE', 10),
+        'direct_message_ip' => (int) env('OPENPNE_THROTTLE_DIRECT_MESSAGE_IP', 30),
         'friend' => (int) env('OPENPNE_THROTTLE_FRIEND', 15),
         'friend_ip' => (int) env('OPENPNE_THROTTLE_FRIEND_IP', 40),
         'community' => (int) env('OPENPNE_THROTTLE_COMMUNITY', 15),

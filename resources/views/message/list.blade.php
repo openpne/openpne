@@ -8,7 +8,7 @@
 
 @section('content')
     @php($openRoute = $box->openRoute())
-    @php($isTrash = $box === \App\Features\Message\MessageBox::Trash)
+    @php($isTrash = $box === \App\Features\DirectMessage\DirectMessageBox::Trash)
     @php($toggleAll = fn (string $checked): string => 'this.closest(\'form\').querySelectorAll(\'input[name="ids[]"]\').forEach(function(c){c.checked='.$checked.'});return false')
     <x-classic.parts id="message_list" name="searchResultList" :title="$box->heading()">
         @if ($messages->isEmpty())
@@ -16,7 +16,7 @@
         @else
             {{-- The band stays on every box; only the inbox fills it, since only its rows can carry
                  the replied icon. --}}
-            <div class="pagerRelativeMulti">@if ($box === \App\Features\Message\MessageBox::Receive)<p class="icons"><span><img src="{{ asset('opMessagePlugin/images/'.\App\Features\Message\MessageRowStatus::Replied->icon()) }}" alt=""> {{ __('Replied') }}</span></p>@endif</div>
+            <div class="pagerRelativeMulti">@if ($box === \App\Features\DirectMessage\DirectMessageBox::Receive)<p class="icons"><span><img src="{{ asset('opMessagePlugin/images/'.\App\Features\DirectMessage\DirectMessageRowStatus::Replied->icon()) }}" alt=""> {{ __('Replied') }}</span></p>@endif</div>
             {{-- OpenPNE 3 nests each pager inside a div.pagerRelative > p.number the template opens
                  itself, so its _pagerNavigation.php emits a second one inside — the pager stands
                  alone here instead. --}}

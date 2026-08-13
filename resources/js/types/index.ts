@@ -39,7 +39,7 @@ export interface RightRail {
 }
 
 /** The feature units an administrator can switch off — the cases of App\Support\Feature. */
-export type FeatureKey = 'diary' | 'message' | 'timeline' | 'community' | 'communityTopic' | 'communityEvent' | 'friend';
+export type FeatureKey = 'diary' | 'directMessage' | 'timeline' | 'community' | 'communityTopic' | 'communityEvent' | 'friend';
 
 export interface PageProps {
     name: string;

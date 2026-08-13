@@ -155,7 +155,7 @@ class NavigationServiceTest extends TestCase
         $this->assertSame(['Send Message'], $this->labels('friend', 42));
 
         $this->setSnsSetting(Feature::Friend->settingKey(), true);
-        $this->setSnsSetting(Feature::Message->settingKey(), false);
+        $this->setSnsSetting(Feature::DirectMessage->settingKey(), false);
         $this->assertSame(['Friends'], $this->labels('friend', 42));
     }
 
@@ -166,7 +166,7 @@ class NavigationServiceTest extends TestCase
 
         $this->assertSame(['Messages'], $this->labels('secure_global'));
 
-        $this->setSnsSetting(Feature::Message->settingKey(), false);
+        $this->setSnsSetting(Feature::DirectMessage->settingKey(), false);
 
         $this->assertSame([], $this->labels('secure_global'));
     }

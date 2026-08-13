@@ -4,10 +4,10 @@ namespace Tests\Feature\Home;
 
 use App\Models\Community;
 use App\Models\CommunityMember;
+use App\Models\DirectMessage;
+use App\Models\DirectMessageRecipient;
 use App\Models\Gadget;
 use App\Models\Member;
-use App\Models\Message;
-use App\Models\MessageRecipient;
 use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -116,8 +116,8 @@ class ClassicHomeTest extends TestCase
         $viewer = Member::factory()->create();
         $sender = Member::factory()->create();
         DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
-        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
@@ -137,8 +137,8 @@ class ClassicHomeTest extends TestCase
         CommunityMember::factory()->create(['community_id' => $community->getKey(), 'member_id' => $viewer->getKey()]);
         $community->forceFill(['pending_admin_member_id' => $viewer->getKey()])->save();
         DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
-        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
@@ -175,8 +175,8 @@ class ClassicHomeTest extends TestCase
             DB::table('friend_requests')->insert(['requester_id' => $sender->getKey(), 'target_id' => $viewer->getKey()]);
         }
         foreach ($senders->take(2) as $sender) {
-            $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
-            MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+            $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
+            DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
         }
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();

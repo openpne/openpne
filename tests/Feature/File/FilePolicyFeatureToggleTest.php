@@ -14,9 +14,9 @@ use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Diary;
 use App\Models\DiaryComment;
+use App\Models\DirectMessage;
 use App\Models\File;
 use App\Models\Member;
-use App\Models\Message;
 use App\Models\TimelinePost;
 use App\Support\Feature;
 use Illuminate\Database\Eloquent\Model;
@@ -40,7 +40,7 @@ class FilePolicyFeatureToggleTest extends TestCase
         return [
             'diary' => ['diary', Feature::Diary],
             'diary comment' => ['diaryComment', Feature::Diary],
-            'message attachment' => ['message', Feature::Message],
+            'direct message attachment' => ['directMessage', Feature::DirectMessage],
             'timeline post' => ['timelinePost', Feature::Timeline],
             'community top image' => ['community', Feature::Community],
             'community topic' => ['communityTopic', Feature::CommunityTopic],
@@ -153,7 +153,7 @@ class FilePolicyFeatureToggleTest extends TestCase
                 'diary_id' => Diary::factory()->create(['member_id' => $viewer->getKey()])->getKey(),
                 'member_id' => $viewer->getKey(),
             ]),
-            'message' => Message::factory()->create(['sender_id' => $viewer->getKey()]),
+            'directMessage' => DirectMessage::factory()->create(['sender_id' => $viewer->getKey()]),
             'timelinePost' => TimelinePost::factory()->create(['member_id' => $viewer->getKey()]),
             'community' => $community(),
             'communityTopic' => CommunityTopic::factory()->create(['community_id' => $community()->getKey()]),

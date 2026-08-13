@@ -132,7 +132,7 @@ class VerifierSharedTargetTest extends TestCase
     /** What the admin Features page does on its first save: store every key of the group, enabled ones too. */
     private function materializeEnabledFeatureRows(): void
     {
-        foreach (['feature_message_enabled', 'feature_timeline_enabled', 'feature_community_enabled'] as $key) {
+        foreach (['feature_direct_message_enabled', 'feature_timeline_enabled', 'feature_community_enabled'] as $key) {
             DB::table('sns_settings')->insert(['key' => $key, 'value' => '1']);
         }
     }

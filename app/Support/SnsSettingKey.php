@@ -90,7 +90,7 @@ enum SnsSettingKey: string
      */
     case FeatureDiaryEnabled = 'feature_diary_enabled';
 
-    case FeatureMessageEnabled = 'feature_message_enabled';
+    case FeatureDirectMessageEnabled = 'feature_direct_message_enabled';
 
     case FeatureTimelineEnabled = 'feature_timeline_enabled';
 
@@ -164,7 +164,7 @@ enum SnsSettingKey: string
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout => SettingGroup::GadgetLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => SettingGroup::Design,
-            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => SettingGroup::Features,
             self::LinkCardEnabled => SettingGroup::LinkCard,
@@ -210,7 +210,7 @@ enum SnsSettingKey: string
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => $this->value,
             // Not a copied value: the feature flags upgrade through App\Upgrade\Steps\FeatureFlagUpgrade
             // steps, which write a row only for a unit OpenPNE 3 had switched off (see above).
-            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => null,
             // OpenPNE 4-native: OpenPNE 3 had no per-site logo/color/favicon settings to copy.
@@ -279,7 +279,7 @@ enum SnsSettingKey: string
             self::PcHtmlBottom => '',
             self::FooterBefore, self::FooterAfter => self::FOOTER_DEFAULT,
             // On, so a fresh or upgraded install runs every feature until an administrator says otherwise.
-            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => true,
             // Unbranded until an administrator sets it: the Modern shell keeps its built-in color and
@@ -307,7 +307,7 @@ enum SnsSettingKey: string
         return match ($this) {
             self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic,
             self::DiaryAllowWebPublic,
-            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
             self::LinkCardEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
@@ -323,7 +323,7 @@ enum SnsSettingKey: string
         return match ($this) {
             self::CaptchaEnabled, self::AllowWebPublicAge, self::TimelineAllowWebPublic,
             self::DiaryAllowWebPublic,
-            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
             self::LinkCardEnabled => $value ? '1' : '0',
@@ -356,7 +356,7 @@ enum SnsSettingKey: string
             // Fail-OPEN, the one place that direction is right: an availability switch, so only an
             // explicit '0' takes a feature down. A malformed value must not black out a module and
             // strand its content — the opposite trade-off from the security keys above.
-            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => $value !== '0',
             default => $value,
@@ -391,7 +391,7 @@ enum SnsSettingKey: string
             self::FooterAfter => __('Footer (secure pages)'),
             // A feature toggle is labelled with the feature's own name (App\Support\Feature::label()).
             self::FeatureDiaryEnabled => __('%Diary%'),
-            self::FeatureMessageEnabled => __('Message'),
+            self::FeatureDirectMessageEnabled => __('Message'),
             self::FeatureTimelineEnabled => __('%Activity%'),
             self::FeatureCommunityEnabled => __('%Community%'),
             self::FeatureCommunityTopicEnabled => __('%Topic%'),
@@ -415,7 +415,7 @@ enum SnsSettingKey: string
             self::GadgetHomeLayout, self::GadgetProfileLayout, self::GadgetLoginLayout,
             self::CustomCss, self::PcHtmlHead, self::PcHtmlTop2, self::PcHtmlTop, self::PcHtmlBottom2,
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,
-            self::FeatureDiaryEnabled, self::FeatureMessageEnabled, self::FeatureTimelineEnabled,
+            self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureCommunityEnabled, self::FeatureCommunityTopicEnabled,
             self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,

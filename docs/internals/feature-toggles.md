@@ -5,9 +5,11 @@ plugin (`plugin.is_enabled`) or, for friends, by `sns_config.enable_friend_link`
 the same semantics in one registry.
 
 The seven units are the cases of [`App\Support\Feature`](../../app/Support/Feature.php):
-`diary`, `message`, `timeline`, `community`, `communityTopic`, `communityEvent`, `friend`. The case
-value is the feature vocabulary the [surface resolver](feature-modules.md#surface-selection)
-already uses, the route-name prefix, and the URL segment — one word per unit.
+`diary`, `directMessage`, `timeline`, `community`, `communityTopic`, `communityEvent`, `friend`. The
+case value is the feature vocabulary the [surface resolver](feature-modules.md#surface-selection)
+already uses, and normally the route-name prefix and the URL segment too. `directMessage` is the one
+unit where those come apart — its routes and URLs stay on the OpenPNE 3 `message` word until they are
+redesigned — so it declares its prefixes explicitly instead of deriving them from the value.
 
 **Switching a unit off is a gate, not a data operation.** Diaries, messages, topics, files and
 friendships stay exactly as they were, and switching the unit back on restores the feature intact.

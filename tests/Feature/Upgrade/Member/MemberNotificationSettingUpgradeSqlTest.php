@@ -60,10 +60,10 @@ class MemberNotificationSettingUpgradeSqlTest extends TestCase
         $this->runUpgrade();
 
         $this->assertDatabaseHas('member_notification_settings', [
-            'member_id' => $this->memberId, 'kind' => 'message_new', 'channel' => 'web', 'is_enabled' => 0,
+            'member_id' => $this->memberId, 'kind' => 'direct_message_new', 'channel' => 'web', 'is_enabled' => 0,
         ]);
         $this->assertDatabaseHas('member_notification_settings', [
-            'member_id' => $this->memberId, 'kind' => 'message_new', 'channel' => 'mail', 'is_enabled' => 1,
+            'member_id' => $this->memberId, 'kind' => 'direct_message_new', 'channel' => 'mail', 'is_enabled' => 1,
         ]);
     }
 

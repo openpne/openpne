@@ -37,7 +37,7 @@ class FeatureTest extends TestCase
         $this->assertSame(Feature::Community, Feature::CommunityTopic->parent());
         $this->assertSame(Feature::Community, Feature::CommunityEvent->parent());
 
-        foreach ([Feature::Diary, Feature::Message, Feature::Timeline, Feature::Community, Feature::Friend] as $feature) {
+        foreach ([Feature::Diary, Feature::DirectMessage, Feature::Timeline, Feature::Community, Feature::Friend] as $feature) {
             $this->assertNull($feature->parent(), "{$feature->value} unexpectedly depends on another unit");
         }
     }
@@ -56,7 +56,7 @@ class FeatureTest extends TestCase
         // Dot-terminated prefixes: the board is its own unit, never captured by `community.`.
         $this->assertSame(Feature::CommunityTopic, Feature::owningRouteName('communityTopic.show'));
         $this->assertSame(Feature::CommunityEvent, Feature::owningRouteName('communityEvent.comment.store'));
-        $this->assertSame(Feature::Message, Feature::owningRouteName('message.index_compat'));
+        $this->assertSame(Feature::DirectMessage, Feature::owningRouteName('message.index_compat'));
 
         $this->assertNull(Feature::owningRouteName('member.profile.show'));
         $this->assertNull(Feature::owningRouteName('community'));

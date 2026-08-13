@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Classic;
 
 use App\Features\Notifications\NotificationCenterWindow;
+use App\Models\DirectMessage;
+use App\Models\DirectMessageRecipient;
 use App\Models\Member;
 use App\Models\MemberProfile;
-use App\Models\Message;
-use App\Models\MessageRecipient;
 use App\Models\Profile;
 use App\Notifications\Diary\DiaryCommentedNotification;
+use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
-use App\Notifications\Message\MessageReceivedNotification;
 use App\Support\SnsSettingKey;
 use App\Support\Visibility;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -73,7 +73,7 @@ class NotificationCenterTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $actor = Member::factory()->create();
-        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()]);
+        $this->seedRow($viewer, DirectMessageReceivedNotification::class, ['kind' => 'direct_message_received', 'sender_id' => $actor->getKey()]);
         $this->seedRow($viewer, FriendRequestedNotification::class, ['kind' => 'friend_requested', 'requester_id' => $actor->getKey()]);
         $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented', 'commenter_id' => $actor->getKey()]);
 
@@ -114,13 +114,13 @@ class NotificationCenterTest extends TestCase
         // Older than the window by an explicit second, and unread — must not reach a badge.
         // Exactly LIMIT rows share the newer second: one more would tie them into a random-id
         // eviction, and which row loses must not decide this test.
-        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()], createdAt: now()->subSecond());
+        $this->seedRow($viewer, DirectMessageReceivedNotification::class, ['kind' => 'direct_message_received', 'sender_id' => $actor->getKey()], createdAt: now()->subSecond());
         foreach (range(1, NotificationCenterWindow::LIMIT - 2) as $ignored) {
             $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now(), createdAt: now());
         }
         // Inside the window: one unread, one read.
         $this->seedRow($viewer, DiaryCommentedNotification::class, ['kind' => 'diary_commented'], readAt: now(), createdAt: now());
-        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()], createdAt: now());
+        $this->seedRow($viewer, DirectMessageReceivedNotification::class, ['kind' => 'direct_message_received', 'sender_id' => $actor->getKey()], createdAt: now());
 
         $content = (string) $this->actingAs($viewer)->get('/')->assertOk()->getContent();
 
@@ -142,8 +142,8 @@ class NotificationCenterTest extends TestCase
         // window, nc_icon1 appears and this fails.
         $viewer->notifications()->create([
             'id' => '00000000-0000-0000-0000-000000000000',
-            'type' => MessageReceivedNotification::class,
-            'data' => ['kind' => 'message_received', 'sender_id' => $actor->getKey()],
+            'type' => DirectMessageReceivedNotification::class,
+            'data' => ['kind' => 'direct_message_received', 'sender_id' => $actor->getKey()],
             'created_at' => $moment,
         ]);
         foreach (range(1, NotificationCenterWindow::LIMIT) as $n) {
@@ -188,7 +188,7 @@ class NotificationCenterTest extends TestCase
         $viewer = Member::factory()->create();
         $actor = Member::factory()->create();
         foreach (range(1, NotificationCenterWindow::LIMIT + 30) as $ignored) {
-            $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $actor->getKey()]);
+            $this->seedRow($viewer, DirectMessageReceivedNotification::class, ['kind' => 'direct_message_received', 'sender_id' => $actor->getKey()]);
         }
 
         $this->actingAs($viewer)->get('/')
@@ -200,7 +200,7 @@ class NotificationCenterTest extends TestCase
     public function test_reading_everything_clears_the_badges(): void
     {
         $viewer = Member::factory()->create();
-        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received']);
+        $this->seedRow($viewer, DirectMessageReceivedNotification::class, ['kind' => 'direct_message_received']);
 
         $this->actingAs($viewer)->post(route('notifications.readAll'));
         $this->freshRequestState();
@@ -227,9 +227,9 @@ class NotificationCenterTest extends TestCase
     {
         $viewer = Member::factory()->create();
         $sender = Member::factory()->create();
-        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
-        $this->seedRow($viewer, MessageReceivedNotification::class, ['kind' => 'message_received', 'sender_id' => $sender->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $this->seedRow($viewer, DirectMessageReceivedNotification::class, ['kind' => 'direct_message_received', 'sender_id' => $sender->getKey()]);
 
         // The Classic error screen is the site's own shell (see ClassicErrorPageTest), so the
         // header it carries is the whole header.

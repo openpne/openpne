@@ -138,7 +138,7 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Mail,
         label: MESSAGES,
         badge: { count: 'unreadMessages', label: t(':count unread messages') },
-        feature: 'message',
+        feature: 'directMessage',
     },
     {
         href: '/notifications',

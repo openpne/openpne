@@ -18,8 +18,8 @@ class NotificationSettingsTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $this->assertTrue($member->wantsNotification(NotificationKind::MessageNew, NotificationChannel::Mail));
-        $this->assertTrue($member->wantsNotification(NotificationKind::MessageNew, NotificationChannel::Web));
+        $this->assertTrue($member->wantsNotification(NotificationKind::DirectMessageNew, NotificationChannel::Mail));
+        $this->assertTrue($member->wantsNotification(NotificationKind::DirectMessageNew, NotificationChannel::Web));
         $this->assertDatabaseCount('member_notification_settings', 0);
     }
 
@@ -27,11 +27,11 @@ class NotificationSettingsTest extends TestCase
     {
         $member = Member::factory()->create();
 
-        $member->setNotificationSetting(NotificationKind::MessageNew, NotificationChannel::Mail, false);
+        $member->setNotificationSetting(NotificationKind::DirectMessageNew, NotificationChannel::Mail, false);
 
-        $this->assertFalse($member->wantsNotification(NotificationKind::MessageNew, NotificationChannel::Mail));
+        $this->assertFalse($member->wantsNotification(NotificationKind::DirectMessageNew, NotificationChannel::Mail));
         // Channels are independent rows: the web channel keeps its default.
-        $this->assertTrue($member->wantsNotification(NotificationKind::MessageNew, NotificationChannel::Web));
+        $this->assertTrue($member->wantsNotification(NotificationKind::DirectMessageNew, NotificationChannel::Web));
     }
 
     public function test_flipping_back_updates_the_row_in_place(): void
@@ -49,16 +49,16 @@ class NotificationSettingsTest extends TestCase
     {
         [$alice, $bob] = Member::factory()->count(2)->create()->all();
 
-        $alice->setNotificationSetting(NotificationKind::MessageNew, NotificationChannel::Mail, false);
+        $alice->setNotificationSetting(NotificationKind::DirectMessageNew, NotificationChannel::Mail, false);
 
-        $this->assertFalse($alice->wantsNotification(NotificationKind::MessageNew, NotificationChannel::Mail));
-        $this->assertTrue($bob->wantsNotification(NotificationKind::MessageNew, NotificationChannel::Mail));
+        $this->assertFalse($alice->wantsNotification(NotificationKind::DirectMessageNew, NotificationChannel::Mail));
+        $this->assertTrue($bob->wantsNotification(NotificationKind::DirectMessageNew, NotificationChannel::Mail));
     }
 
     public function test_rows_cascade_on_member_delete(): void
     {
         $member = Member::factory()->create();
-        $member->setNotificationSetting(NotificationKind::MessageNew, NotificationChannel::Mail, false);
+        $member->setNotificationSetting(NotificationKind::DirectMessageNew, NotificationChannel::Mail, false);
 
         $member->delete();
 

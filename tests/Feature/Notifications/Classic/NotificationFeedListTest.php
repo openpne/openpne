@@ -7,8 +7,8 @@ namespace Tests\Feature\Notifications\Classic;
 use App\Features\Member\MemberConfigCategory;
 use App\Features\Notifications\NotificationCenterWindow;
 use App\Models\Member;
+use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
-use App\Notifications\Message\MessageReceivedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
@@ -177,9 +177,9 @@ class NotificationFeedListTest extends TestCase
     {
         $viewer = Member::factory()->create();
         foreach (Member::factory()->count($count)->create() as $index => $sender) {
-            $this->seedRow($viewer, 'message_received', [
+            $this->seedRow($viewer, 'direct_message_received', [
                 'sender_id' => $sender->getKey(),
-                'message_id' => $index + 1,
+                'direct_message_id' => $index + 1,
             ]);
         }
 
@@ -204,7 +204,7 @@ class NotificationFeedListTest extends TestCase
         /** @var DatabaseNotification $row */
         $row = $member->notifications()->create([
             'id' => (string) Str::uuid(),
-            'type' => $kind === 'message_received' ? MessageReceivedNotification::class : FriendRequestedNotification::class,
+            'type' => $kind === 'direct_message_received' ? DirectMessageReceivedNotification::class : FriendRequestedNotification::class,
             'data' => ['kind' => $kind, ...$data],
             'read_at' => $readAt,
             'created_at' => $createdAt ?? now(),

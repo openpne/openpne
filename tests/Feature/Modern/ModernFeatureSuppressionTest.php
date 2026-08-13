@@ -9,9 +9,9 @@ use App\Models\CommunityEvent;
 use App\Models\CommunityMember;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\DirectMessage;
+use App\Models\DirectMessageRecipient;
 use App\Models\Member;
-use App\Models\Message;
-use App\Models\MessageRecipient;
 use App\Models\TimelinePost;
 use App\Support\Feature;
 use App\Support\Visibility;
@@ -150,8 +150,8 @@ class ModernFeatureSuppressionTest extends TestCase
         $viewer = Member::factory()->create();
         $other = Member::factory()->create();
         DB::table('friend_requests')->insert(['requester_id' => $other->getKey(), 'target_id' => $viewer->getKey()]);
-        $message = Message::factory()->create(['sender_id' => $other->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $other->getKey()]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page
@@ -159,7 +159,7 @@ class ModernFeatureSuppressionTest extends TestCase
                 ->where('announcements.unreadMessages', 1));
 
         $this->switchOff(Feature::Friend);
-        $this->switchOff(Feature::Message);
+        $this->switchOff(Feature::DirectMessage);
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page

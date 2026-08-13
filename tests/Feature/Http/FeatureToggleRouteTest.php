@@ -174,7 +174,7 @@ class FeatureToggleRouteTest extends TestCase
 
         return [
             'diary' => ['/diary/list', '/diary/create'],
-            'message' => ['/message/receiveList', '/message/sendToFriend'],
+            'directMessage' => ['/message/receiveList', '/message/sendToFriend'],
             'timeline' => ['/timeline', '/timeline/create'],
             'community' => ['/community/search', '/community/edit'],
             'communityTopic' => ["/communityTopic/listCommunity/{$community}", "/communityTopic/create/{$community}"],

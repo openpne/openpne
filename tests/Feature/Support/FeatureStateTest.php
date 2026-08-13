@@ -53,11 +53,11 @@ class FeatureStateTest extends TestCase
     public function test_the_enabled_map_reports_every_unit_with_dependencies_applied(): void
     {
         $this->setSnsSetting(Feature::Community->settingKey(), false);
-        $this->setSnsSetting(Feature::Message->settingKey(), false);
+        $this->setSnsSetting(Feature::DirectMessage->settingKey(), false);
 
         $this->assertSame([
             'diary' => true,
-            'message' => false,
+            'directMessage' => false,
             'timeline' => true,
             'community' => false,
             'communityTopic' => false,

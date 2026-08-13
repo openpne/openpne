@@ -22,7 +22,7 @@ class FeatureNotificationCoverageTest extends TestCase
     /** The notification namespaces a feature unit owns, and the unit each one belongs to. */
     private const OWNED = [
         'Diary' => Feature::Diary,
-        'Message' => Feature::Message,
+        'DirectMessage' => Feature::DirectMessage,
         'Friend' => Feature::Friend,
         'Community' => Feature::Community,
         'CommunityTopic' => Feature::CommunityTopic,

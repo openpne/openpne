@@ -258,7 +258,7 @@ Content-posting and mail-triggering member writes carry named per-minute limiter
 | Limiter | Default (member / IP per min) | Key shape | Routes |
 |---|---|---|---|
 | `posting` | 30 / 60 | member id / client IP | diary, community topic and event create + update, their comment posts, timeline post + reply |
-| `message-send` | 10 / 30 | member id / client IP | message compose send, draft-edit send |
+| `direct-message-send` | 10 / 30 | member id / client IP | direct message compose send, draft-edit send |
 | `friend-request` | 15 / 40 | member id / client IP | friend link request, accept |
 | `community-join` | 15 / 40 | member id / client IP | community join, member approve, member decline |
 

@@ -12,7 +12,7 @@
                 <p>{{ __('Do you delete messages?') }}</p>
                 <form method="POST" action="{{ route('message.bulk') }}">
                     @csrf
-                    <input type="hidden" name="box" value="{{ \App\Features\Message\MessageBox::Trash->value }}">
+                    <input type="hidden" name="box" value="{{ \App\Features\DirectMessage\DirectMessageBox::Trash->value }}">
                     <input type="hidden" name="action" value="purge">
                     <input type="hidden" name="confirm" value="1">
                     @foreach ($ids as $id)

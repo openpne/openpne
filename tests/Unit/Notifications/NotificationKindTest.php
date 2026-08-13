@@ -48,7 +48,7 @@ class NotificationKindTest extends TestCase
     {
         $this->assertSame('is_send_diaryNewPost_web', NotificationKind::DiaryNewPost->op3ConfigName(NotificationChannel::Web));
         $this->assertSame('is_send_pc_diaryNewPost_mail', NotificationKind::DiaryNewPost->op3ConfigName(NotificationChannel::Mail));
-        $this->assertSame('is_send_messageNewOnlyFriends_web', NotificationKind::MessageNewOnlyFriends->op3ConfigName(NotificationChannel::Web));
+        $this->assertSame('is_send_messageNewOnlyFriends_web', NotificationKind::DirectMessageNewOnlyFriends->op3ConfigName(NotificationChannel::Web));
         $this->assertSame('is_send_pc_communityTopicReplyNewPost_mail', NotificationKind::CommunityTopicReplyNewPost->op3ConfigName(NotificationChannel::Mail));
     }
 
@@ -101,8 +101,8 @@ class NotificationKindTest extends TestCase
                 NotificationKind::CommunityEventRelatedNewPost,
                 NotificationKind::FriendLinkConfirm,
                 NotificationKind::FriendLinkComplete,
-                NotificationKind::MessageNew,
-                NotificationKind::MessageNewOnlyFriends,
+                NotificationKind::DirectMessageNew,
+                NotificationKind::DirectMessageNewOnlyFriends,
             ],
             NotificationKind::wiredCases(),
         );

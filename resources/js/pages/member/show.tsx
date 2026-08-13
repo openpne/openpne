@@ -104,7 +104,7 @@ export default function MemberShow() {
     // friendStatus is already null while friends are off; 'friend' is the one status with no entry
     // to offer, so listing the states keeps the row from rendering empty.
     const friendEntry = enabledFeatures.friend && ['none', 'sent', 'received'].includes(friendStatus ?? '');
-    const messageEntry = enabledFeatures.message;
+    const messageEntry = enabledFeatures.directMessage;
 
     return (
         <>

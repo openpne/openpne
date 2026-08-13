@@ -9,12 +9,12 @@ use App\Models\Community;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
 use App\Models\Diary;
+use App\Models\DirectMessage;
+use App\Models\DirectMessageRecipient;
 use App\Models\Member;
-use App\Models\Message;
-use App\Models\MessageRecipient;
 use App\Models\TimelinePost;
+use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Friend\FriendRequestedNotification;
-use App\Notifications\Message\MessageReceivedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\DB;
@@ -31,14 +31,14 @@ class NotificationFeedTest extends TestCase
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
         $older = $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()], createdAt: now()->subHour());
-        $newer = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => 12], createdAt: now());
+        $newer = $this->seedRow($viewer, 'direct_message_received', ['sender_id' => $actor->getKey(), 'direct_message_id' => 12], createdAt: now());
 
         $this->actingOnModern($viewer)->get('/notifications')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('notifications/index')
                 ->where('feed.data.0.id', $newer->getKey())
-                ->where('feed.data.0.kind', 'message_received')
+                ->where('feed.data.0.kind', 'direct_message_received')
                 // The sentence ships resolved; the client prints it rather than holding its own table.
                 ->where('feed.data.0.label', __(':name sent you a message.', ['name' => $actor->name]))
                 ->where('feed.data.0.read', false)
@@ -75,9 +75,9 @@ class NotificationFeedTest extends TestCase
     public function test_open_marks_the_row_read_and_redirects_to_its_target(): void
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
-        $message = Message::factory()->create(['sender_id' => $actor->getKey()]);
-        MessageRecipient::factory()->create(['message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
-        $row = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => $message->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $actor->getKey()]);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $viewer->getKey()]);
+        $row = $this->seedRow($viewer, 'direct_message_received', ['sender_id' => $actor->getKey(), 'direct_message_id' => $message->getKey()]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect('/message/read/'.$message->getKey());
@@ -90,7 +90,7 @@ class NotificationFeedTest extends TestCase
         // No live inbox receipt (trashed/purged/never delivered) — the read page would 404, so
         // the row is marked read and the member lands back on the feed instead.
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
-        $row = $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => 34]);
+        $row = $this->seedRow($viewer, 'direct_message_received', ['sender_id' => $actor->getKey(), 'direct_message_id' => 34]);
 
         $this->actingAs($viewer)->post("/notifications/{$row->getKey()}/open")
             ->assertRedirect(route('notifications.index'));
@@ -346,7 +346,7 @@ class NotificationFeedTest extends TestCase
     {
         [$viewer, $actor] = Member::factory()->count(2)->create()->all();
         $this->seedRow($viewer, 'friend_requested', ['requester_id' => $actor->getKey()]);
-        $this->seedRow($viewer, 'message_received', ['sender_id' => $actor->getKey(), 'message_id' => 1], readAt: now());
+        $this->seedRow($viewer, 'direct_message_received', ['sender_id' => $actor->getKey(), 'direct_message_id' => 1], readAt: now());
 
         $this->actingAs($viewer)->get('/dashboard')
             ->assertInertia(fn (AssertableInertia $page) => $page->where('unread.notifications', 1));
@@ -423,7 +423,7 @@ class NotificationFeedTest extends TestCase
         /** @var DatabaseNotification $row */
         $row = $member->notifications()->create([
             'id' => (string) Str::uuid(),
-            'type' => $kind === 'message_received' ? MessageReceivedNotification::class : FriendRequestedNotification::class,
+            'type' => $kind === 'direct_message_received' ? DirectMessageReceivedNotification::class : FriendRequestedNotification::class,
             'data' => ['kind' => $kind, ...$data],
             'read_at' => $readAt,
             'created_at' => $createdAt ?? now(),

@@ -6,9 +6,9 @@ namespace Tests\Feature\Notifications;
 
 use App\Jobs\BroadcastDiaryPosted;
 use App\Models\Diary;
+use App\Models\DirectMessage;
 use App\Models\Member;
-use App\Models\Message;
-use App\Notifications\Message\MessageReceivedNotification;
+use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
 use App\Notifications\Push\WebPushNudge;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
@@ -92,7 +92,7 @@ class WebPushNudgeTest extends TestCase
     public function test_an_opted_out_kind_writes_no_row_and_so_pushes_nothing(): void
     {
         $recipient = $this->subscribed();
-        $recipient->setNotificationSetting(NotificationKind::MessageNew, NotificationChannel::Web, false);
+        $recipient->setNotificationSetting(NotificationKind::DirectMessageNew, NotificationChannel::Web, false);
 
         $this->notifyOfMessage($recipient, Member::factory()->create());
 
@@ -126,7 +126,7 @@ class WebPushNudgeTest extends TestCase
         $goneActorId = Member::factory()->create()->getKey();
         Member::destroy($goneActorId);
 
-        $recipient->notify(new WebPushNudge('message_received', null, (int) $goneActorId));
+        $recipient->notify(new WebPushNudge('direct_message_received', null, (int) $goneActorId));
 
         $this->assertSame(
             __(':name sent you a message.', ['name' => __('Withdrawn member')]),
@@ -219,10 +219,10 @@ class WebPushNudgeTest extends TestCase
 
     private function notifyOfMessage(Member $recipient, Member $sender): void
     {
-        $message = Message::factory()->create(['sender_id' => $sender->getKey()]);
+        $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
 
         $recipient->notify(
-            (new MessageReceivedNotification($sender, $message))
+            (new DirectMessageReceivedNotification($sender, $message))
                 ->locale($recipient->locale ?? app()->getLocale()),
         );
     }

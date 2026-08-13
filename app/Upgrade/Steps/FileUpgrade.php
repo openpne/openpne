@@ -11,7 +11,7 @@ use App\Upgrade\UpgradeStep;
  * OpenPNE 3 `file` (upload metadata) → OpenPNE 4 `files`.
  *
  * id is preserved verbatim: the bytes table (`file_bin`) keeps its rows and only re-points its
- * file_id FK from `file` onto `files`, and every owning row (member_images, *_images, message_files,
+ * file_id FK from `file` onto `files`, and every owning row (member_images, *_images, direct_message_files,
  * banner_images, communities) carries the same file_id — so the whole graph resolves by id without a
  * BLOB copy. `name` (the opaque storage/URL token) is likewise verbatim, keeping OpenPNE 3 image URLs
  * resolvable. `filesize` becomes `byte_size`.
@@ -80,7 +80,7 @@ class FileUpgrade extends UpgradeStep
             'community_event_image.file_id' => ['type' => 'communityEvent', 'table' => 'community_event_image', 'file' => 'file_id', 'id' => 'post_id'],
             'community_event_comment_image.file_id' => ['type' => 'communityEventComment', 'table' => 'community_event_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
             // Only a personal message owns its attachment; non-personal message types are not migrated.
-            'message_file.file_id' => ['type' => 'message', 'table' => 'message_file', 'file' => 'file_id', 'id' => 'message_id', 'extra' => $this->personalMessageExtra()],
+            'message_file.file_id' => ['type' => 'directMessage', 'table' => 'message_file', 'file' => 'file_id', 'id' => 'message_id', 'extra' => $this->personalMessageExtra()],
             // The banner image row itself is the owner (communities/messages own by the parent id;
             // banners own through the banner_image pool, mirroring how the app stores them).
             'banner_image.file_id' => ['type' => 'bannerImage', 'table' => 'banner_image', 'file' => 'file_id', 'id' => 'id'],

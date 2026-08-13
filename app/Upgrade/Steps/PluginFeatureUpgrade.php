@@ -58,7 +58,7 @@ class PluginFeatureUpgrade extends FeatureFlagUpgrade
     {
         return [
             'opDiaryPlugin' => Feature::Diary,
-            'opMessagePlugin' => Feature::Message,
+            'opMessagePlugin' => Feature::DirectMessage,
             'opTimelinePlugin' => Feature::Timeline,
             self::COMMUNITY_TOPIC_PLUGIN => Feature::CommunityTopic,
         ];

@@ -44,8 +44,8 @@ enum NotificationKind: string
     case FriendLinkConfirm = 'friend_link_confirm';
     case FriendLinkComplete = 'friend_link_complete';
 
-    case MessageNew = 'message_new';
-    case MessageNewOnlyFriends = 'message_new_only_friends';
+    case DirectMessageNew = 'direct_message_new';
+    case DirectMessageNewOnlyFriends = 'direct_message_new_only_friends';
 
     /**
      * The full registry entry, colocated so adding/changing a kind is one arm here (same pattern
@@ -175,17 +175,17 @@ enum NotificationKind: string
                 caption: 'When your %friend% request is accepted',
                 isWired: true,
             ),
-            self::MessageNew => new NotificationKindDefinition(
-                category: NotificationCategory::Message,
+            self::DirectMessageNew => new NotificationKindDefinition(
+                category: NotificationCategory::DirectMessage,
                 op3Name: 'messageNew',
                 caption: 'New messages',
                 isWired: true,
             ),
-            self::MessageNewOnlyFriends => new NotificationKindDefinition(
-                category: NotificationCategory::Message,
+            self::DirectMessageNewOnlyFriends => new NotificationKindDefinition(
+                category: NotificationCategory::DirectMessage,
                 op3Name: 'messageNewOnlyFriends',
                 caption: 'New messages (%friends% only)',
-                dependOnNot: self::MessageNew,
+                dependOnNot: self::DirectMessageNew,
                 isWired: true,
             ),
         };

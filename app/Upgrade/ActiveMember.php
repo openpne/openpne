@@ -3,7 +3,7 @@
 namespace App\Upgrade;
 
 use App\Upgrade\Steps\CommunityUpgrade;
-use App\Upgrade\Steps\MessageUpgrade;
+use App\Upgrade\Steps\DirectMessageUpgrade;
 
 /**
  * OpenPNE 3's `member.is_active`, which the upgrade reads as "is this a member at all".
@@ -97,12 +97,12 @@ final class ActiveMember
             'community_event.member_id' => ['treatment' => self::REFUSE],
             'community_event_comment.member_id' => ['treatment' => self::REFUSE],
             'community_event_member.member_id' => ['treatment' => self::REFUSE],
-            // MessageUpgrade's own filter scopes this to the personal-message type it migrates.
+            // DirectMessageUpgrade's own filter scopes this to the personal-message type it migrates.
             'message.member_id' => ['treatment' => self::REFUSE],
             // Both paths out of this table at once — every receipt of a sent message, and the one
             // send-list row folded onto a draft's draft_recipient_id — since either can put the id in
             // a target column. The FROM step's filter would see only the sent half; counting every
-            // row of a draft would refuse over the duplicates MessageUpgrade itself discards.
+            // row of a draft would refuse over the duplicates DirectMessageUpgrade itself discards.
             'message_send_list.member_id' => ['treatment' => self::REFUSE,
                 'scope' => self::migratedSendListRow(), 'scopeColumns' => ['id', 'message_id']],
             // Only the latest admin_confirm row per community becomes pending_admin_member_id; the
@@ -128,8 +128,8 @@ final class ActiveMember
 
     /**
      * The send-list rows of a migrated personal message whose member id reaches a target column: every
-     * row of a sent one (MessageRecipientUpgrade writes a receipt per row), and only the selected row
-     * of a draft (MessageUpgrade folds one onto draft_recipient_id and drops the rest).
+     * row of a sent one (DirectMessageRecipientUpgrade writes a receipt per row), and only the selected row
+     * of a draft (DirectMessageUpgrade folds one onto draft_recipient_id and drops the rest).
      *
      * Both `is_send` values are tested, not one inferred from the other: the column is a bare
      * tinyint(1) with no CHECK, and the two steps read `= 1` and `= 0`, so a third value reaches
@@ -140,7 +140,7 @@ final class ActiveMember
     {
         return 'EXISTS (SELECT 1 FROM '.SourceRef::table('message').' `parent` '
             .'WHERE `parent`.`id` = `message_send_list`.`message_id` '
-            .'AND '.MessageUpgrade::isPersonalMessage('parent')
-            .' AND (`parent`.`is_send` = 1 OR (`parent`.`is_send` = 0 AND '.MessageUpgrade::draftRecipientRowSelector().')))';
+            .'AND '.DirectMessageUpgrade::isPersonalMessage('parent')
+            .' AND (`parent`.`is_send` = 1 OR (`parent`.`is_send` = 0 AND '.DirectMessageUpgrade::draftRecipientRowSelector().')))';
     }
 }

@@ -69,7 +69,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('mail_templates', ['id' => 3, 'key' => 'friend-accepted']);
         $this->assertDatabaseHas('mail_templates', ['id' => 4, 'key' => 'signature']);
         $this->assertDatabaseHas('mail_templates', ['id' => 5, 'key' => 'friend-requested']);
-        $this->assertDatabaseHas('mail_templates', ['id' => 6, 'key' => 'message-received']);
+        $this->assertDatabaseHas('mail_templates', ['id' => 6, 'key' => 'direct-message-received']);
         $this->assertDatabaseHas('mail_templates', ['id' => 7, 'key' => 'registration-complete']);
         $this->assertDatabaseHas('mail_templates', ['id' => 8, 'key' => 'withdrawal-complete']);
         $this->assertDatabaseHas('mail_templates', ['id' => 9, 'key' => 'community-join']);
@@ -87,7 +87,7 @@ class MailTemplateUpgradeSqlTest extends TestCase
         $this->runUpgrade();
         app(MailTemplateService::class)->clearCache();
 
-        $rendered = app(MailTemplateService::class)->render(MailTemplate::MessageReceived, 'ja', [
+        $rendered = app(MailTemplateService::class)->render(MailTemplate::DirectMessageReceived, 'ja', [
             'member_name' => 'Alice',
             'message_subject' => 'Hi',
             'message_body' => 'Hello there',
