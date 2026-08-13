@@ -39,11 +39,11 @@ class CreateGroupMessage
      * PostImages::attach owns the transaction and everything else runs inside its persist callback.
      * It must be the OUTERMOST layer: its compensation deletes the bytes it stored when the
      * transaction throws, and a transaction wrapped around it would already have rolled back —
-     * committing the rollback while the bytes stayed on disk. One schema slot per image is kept
-     * (number 1..N) though the composer offers one, so migrated content with several has somewhere
-     * to land.
+     * committing the rollback while the bytes stayed on disk. Slots are numbered in the order the
+     * member picked them (1..N), which is the order they are read back in.
      *
      * @param  list<array{member_id: int, offset: int, length: int}>  $mentions
+     * @param  array<int, UploadedFile>  $images
      *
      * @throws GroupTalkActionException
      */
@@ -52,7 +52,7 @@ class CreateGroupMessage
         Group $group,
         string $body,
         array $mentions = [],
-        ?UploadedFile $image = null,
+        array $images = [],
     ): GroupMessage {
         if (! GroupTalkAccess::canPost($group, $author)) {
             throw new GroupTalkActionException(GroupTalkActionFailure::CannotPost);
@@ -60,7 +60,7 @@ class CreateGroupMessage
 
         return $this->images->attach(
             'groupMessage',
-            $image !== null ? [$image] : [],
+            $images,
             persist: function () use ($author, $group, $body, $mentions): GroupMessage {
                 $message = GroupMessage::create([
                     'group_id' => $group->getKey(),

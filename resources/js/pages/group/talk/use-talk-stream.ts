@@ -27,7 +27,7 @@ const POLL_MS = 8_000;
 
 /** Thrown for a rejected send, carrying whatever the server said about each field. */
 export class SendFailed extends Error {
-    /** @param errors first validation message per field (`body`, `image`, …); empty for any other refusal. */
+    /** @param errors first validation message per field (`body`, `images`, `images.N`, …); empty for any other refusal. */
     constructor(public readonly errors: Record<string, string>) {
         super('send failed');
     }
@@ -220,7 +220,7 @@ export function useTalkStream(groupId: number, page: TalkPage) {
     }, [claimMove, fetchPage, fold]);
 
     const send = useCallback(
-        async (body: string, mentions: MentionPayloadRow[] = [], image: File | null = null) => {
+        async (body: string, mentions: MentionPayloadRow[] = [], images: File[] = []) => {
             // Multipart throughout, not only when a file rides along: one transport is one set of
             // encoding rules to reason about. It costs the body its LF newlines — FormData encodes
             // them as CRLF — which is exactly why StoreGroupMessageRequest re-normalizes before it
@@ -233,9 +233,8 @@ export function useTalkStream(groupId: number, page: TalkPage) {
                 form.append(`mentions[${index}][offset]`, String(mention.offset));
                 form.append(`mentions[${index}][length]`, String(mention.length));
             });
-            if (image !== null) {
-                form.append('image', image);
-            }
+            // Appended in pick order: the slot numbers the server writes are that order.
+            images.forEach((image) => form.append('images[]', image));
 
             const response = await fetch(`/groups/${groupId}/talk`, {
                 method: 'POST',

@@ -360,9 +360,12 @@ An author who withdraws before delivery takes the queued notification with them
 
 ## Images
 
-One image per message. The schema numbers slots (`number` 1..N) because the transfer that brings the
-old community timeline across may carry content with several, but the composer offers one — the same
-cap the timeline has, fixed for the MVP.
+Up to three images per message, numbered `1..N` in the order the sender picked them. The composer
+offers three rather than the timeline's one because a chat is where pictures are sent — three is the
+cap the boards, diaries and direct messages already carry (`PostImages::MAX_IMAGES`), so talk reuses
+[`PostImageRules`](../../app/Http/Requests/Concerns/PostImageRules.php)' `images[]` shape and nothing
+about the cap is talk's own. The schema's slots go past three because the transfer that brings the
+old community timeline across may carry content with more.
 
 The write goes through [`PostImages`](../../app/Files/PostImages.php), and **its `attach()` owns the
 outermost transaction**. This is not incidental. A byte write is not transactional: `compensating()`
@@ -373,9 +376,10 @@ merge its way out of. So `CreateGroupMessage` puts everything else — the messa
 resolution, the cursor advance, the posted event — inside `attach`'s persist callback rather than
 around it.
 
-Validation reuses [`PostImageRules`](../../app/Http/Requests/Concerns/PostImageRules.php), so a
-refused file is a 422 on the `image` field and the composer keeps the whole draft: body, mention
-rows and the picked file. Nothing is cleared until the message is actually written.
+A refused file — one over the cap, one of the wrong type — is a 422 on `images`/`images.N` that
+takes the **whole message** down, and the composer keeps the whole draft: body, mention rows and
+every picked file. Nothing is cleared until the message is actually written, so a retry carries what
+the first attempt had.
 
 ### Who may see one
 

@@ -1,6 +1,7 @@
 import { type ChangeEvent, useRef, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { useT } from '@/lib/i18n';
+import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
 
 /** Server contract (PostImageRules): raster only, 5MB / 5000px per file — shrunk output sits far under both. */
 export const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
@@ -74,7 +75,7 @@ interface ImagesFieldProps {
  * on every pick (nothing stale survives a reset after posting), oversized photos are shrunk
  * client-side before submit, and server errors keyed `images` and `images.N` are both surfaced.
  */
-export function ImagesField({ id, label, files, onChange, errors, name = 'images', max = 3 }: ImagesFieldProps) {
+export function ImagesField({ id, label, files, onChange, errors, name = 'images', max = MAX_POST_IMAGES }: ImagesFieldProps) {
     const t = useT();
     const [busy, setBusy] = useState(false);
     const [clientError, setClientError] = useState<string | null>(null);
@@ -99,17 +100,16 @@ export function ImagesField({ id, label, files, onChange, errors, name = 'images
         if (picked.length === 0) {
             return;
         }
-        // Cap before any decoding: a 50-photo selection must not canvas-process 50 files.
-        const room = Math.max(0, max - files.length);
-        setClientError(picked.length > room ? t('You can attach up to :max images.', { max }) : null);
-        const accepted = picked.slice(0, room);
+        const { files: next, refused } = acceptPicks(files, picked, max);
+        setClientError(refused ? t('You can attach up to :max images.', { max }) : null);
+        const accepted = next.slice(files.length);
         if (accepted.length === 0) {
             return;
         }
         // The raw files enter the form state immediately, so a submit racing the shrink sends
         // the originals (answered by the now-visible server validation) rather than silently
         // dropping the selection.
-        onChange([...files, ...accepted]);
+        onChange(next);
         setBusy(true);
         try {
             const shrunk = new Map<File, File>();

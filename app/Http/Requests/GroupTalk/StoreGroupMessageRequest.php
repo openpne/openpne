@@ -5,6 +5,7 @@ namespace App\Http\Requests\GroupTalk;
 use App\Http\Requests\Concerns\MentionRules;
 use App\Http\Requests\Concerns\PostImageRules;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 
 class StoreGroupMessageRequest extends FormRequest
 {
@@ -29,11 +30,35 @@ class StoreGroupMessageRequest extends FormRequest
     {
         return [
             'body' => ['required', 'string', 'max:'.self::MAX_BODY],
-            // One image per message, as the timeline allows: the schema numbers slots so migrated
-            // content can carry more, but the composer offers one.
-            'image' => PostImageRules::single(),
+            // The shared `images[]` shape, capped at PostImages::MAX_IMAGES like every other post
+            // with attachments. A refusal takes the whole message down, so nothing is half-sent.
+            ...PostImageRules::rules(),
+            // The single-image wire this endpoint spoke before it took three. A talk tab stays open
+            // across a deploy and keeps sending; ignoring its `image` would 201 the body and
+            // silently drop the file. Transitional: remove once no session predates images[].
+            'image' => ['prohibits:images', ...PostImageRules::single()],
             ...MentionRules::rules(self::MAX_BODY),
         ];
+    }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return [...PostImageRules::attributes(), 'image' => __('Images')];
+    }
+
+    /**
+     * The attachment set, whichever wire named it — `images[]`, or the legacy lone `image` from a
+     * pre-deploy tab (see rules()).
+     *
+     * @return array<int, UploadedFile>
+     */
+    public function pickedImages(): array
+    {
+        $images = $this->file('images', []);
+        $legacy = $this->file('image');
+
+        return $images === [] && $legacy instanceof UploadedFile ? [$legacy] : $images;
     }
 
     /**

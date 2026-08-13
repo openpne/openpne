@@ -131,7 +131,7 @@ class GroupTalkController extends Controller
         $viewer = $this->viewer();
 
         try {
-            $message = $action($viewer, $group, $request->validated('body'), $request->mentions(), $request->file('image'));
+            $message = $action($viewer, $group, $request->validated('body'), $request->mentions(), $request->pickedImages());
         } catch (GroupTalkActionException) {
             abort(404);
         }
