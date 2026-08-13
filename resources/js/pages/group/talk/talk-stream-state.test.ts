@@ -168,3 +168,23 @@ test('an unparseable stamp neither throws nor scrambles the rest', () => {
 
     assert.deepEqual(bodies(state), ['m1', 'm2', 'm3']);
 });
+
+/**
+ * The failure this identity exists for: the poll rebuilds state every tick, and each new
+ * `messages` reference re-runs the page's pin effect — a scrollTo re-issued every 8s fights
+ * iOS's keyboard pan and shoves the sticky composer out of view.
+ */
+test('an idle poll returns the very state it was given', () => {
+    const before = initial(page([message(1, '2026-08-13T09:00:00+00:00')], true));
+
+    assert.equal(mergeAfter(before, page([])), before);
+    assert.equal(mergeBefore(before, page([], true)), before);
+});
+
+test('an empty page that changes hasOlder is not a no-op', () => {
+    const before = initial(page([message(1, '2026-08-13T09:00:00+00:00')], true));
+    const after = mergeBefore(before, page([], false));
+
+    assert.notEqual(after, before);
+    assert.equal(after.hasOlder, false);
+});

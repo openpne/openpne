@@ -45,6 +45,12 @@ function byTuple(a: TalkMessage, b: TalkMessage): number {
  * is sorted. `hasOlder` is decided by the caller, since only it knows which end it read from.
  */
 function merge(state: TalkStreamState, arriving: readonly TalkMessage[], hasOlder: boolean): TalkStreamState {
+    // An idle poll answers with nothing; the state it would rebuild is the state it was given.
+    // Returning the same value matters: every new `messages` reference re-runs the page's pin
+    // effect, and a scroll re-issued every tick fights iOS's keyboard pan (see index.tsx).
+    if (arriving.length === 0 && hasOlder === state.hasOlder) {
+        return state;
+    }
     const held = new Map(state.messages.map((message) => [message.id, message]));
     for (const message of arriving) {
         held.set(message.id, message);
