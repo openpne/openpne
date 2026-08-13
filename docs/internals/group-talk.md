@@ -84,6 +84,44 @@ is not the newest. A locally deleted id is a **session-lifetime tombstone** for 
 poll already in flight answers from a snapshot that still holds the row, and nothing afterwards
 would remove it again.
 
+### Two windows, never mixed
+
+The list on screen is either of two stretches, and `talk-stream-state.ts` names which:
+
+| window | what it is | poll |
+|---|---|---|
+| `latest` | ends at the newest message | yes |
+| `history` | the slice the unread jump opened on, somewhere behind it | no |
+
+A poll in the history window would append messages that do not follow the last row on screen, so it
+stops; the reader steps forward with **"load newer"** (`?after=`, the poll's own read) until the
+server reports nothing beyond the page, at which point the list runs to the newest message and the
+window is `latest` again. `hasNewer` on a page answers exactly that — *rows follow this that you were
+not given* — so the two backwards reads say false: what follows the page "load older" returned is
+already on the client's screen.
+
+Only a page contiguous with what is held is ever merged. **Every window change replaces the list**
+(`enterHistory` / `enterLatest`), because a list assembled from both stretches would draw the hole
+between them as if it were conversation. Sending from the history window therefore re-reads the
+newest page rather than appending: your own words must not land under a message they do not answer.
+The session's tombstones are the one thing carried across a replacement.
+
+Reads are in flight while that happens — the poll is on the wire when the reader taps the banner, and
+either answer can land first. So the state carries a **generation**: every read is issued against the
+one the list stood at, every window change moves it on, and `applied()` is the single door a response
+comes through. One that arrives against a generation that has passed is dropped rather than merged,
+which is what stops a live row being spliced across the gap (and the next watermark being taken from
+beyond it, where "load newer" would never ask). Two things are deliberately outside it: a deletion,
+which is a fact about the conversation rather than a page of it, and the composer's own message,
+which is held to the live window instead — it belongs at the foot of any list that ends at the
+newest, including the one just re-read to get back there.
+
+The generation only moves when such a read is *applied*, so it cannot order the reads that ask for a
+move against each other. A second count does that, and its rule is **the last intent wins**: a jump
+retires the jump before it, and a send retires a jump outright. The composer stays live while a jump
+is out, so a reader can ask to be taken back through history and then write instead — and writing
+puts them at the live end, which a page fetched for the move they abandoned must not undo.
+
 ## Unread
 
 The read cursor is the `(talk_read_at, talk_read_message_id)` pair on the **membership row**, not a
@@ -123,8 +161,56 @@ rules, each answering a way of getting it wrong:
 - two tabs, or a retry, report out of order → the update carries the comparison in its `WHERE`
   (`stored < resolved`, expanded), so it can only move forward and replaying is free.
 
+The client reports while it is visible and at the foot of the **live** window: reading back through
+history is not reading what has arrived below, and the foot of a history window is not the foot of
+the conversation at all. Opening a room therefore clears its badge, backlog and all — the badge
+answers "is there anything here", and a room you have been into is one you have seen.
+
 Sending advances the cursor to the new row's tuple **inside the insert's transaction**: writing is
 reading, and a cursor left behind your own message would show your own words arriving as unread.
+
+An accepted report also asks the shell to re-read the shared badge counts
+([`lib/unread-refresh.ts`](../../resources/js/lib/unread-refresh.ts)) instead of leaving them on the
+minute clock, which reads as the screen the member is looking at not having counted. It rings rather
+than patches: `unread` keeps one writer, so a page's guess can never outlive the authoritative read.
+
+### The divider is a snapshot, and the banner is what it cannot draw
+
+The page ships `talkUnreadSnapshot` — the count, and the boundary in two shapes — and it is **fixed
+for the visit**. That is the whole design: mark-read fires seconds after the page opens and takes the
+stored cursor to the foot of the conversation, so a divider recomputed from it would vanish, and a
+jump that asked the server "where have I read to" would answer with the end of the group. The
+snapshot is the render-time position, held on the client, and nothing that happens afterwards moves
+it. The count is `UnreadTalkScope`, so the number that sent the reader here and the number they are
+shown cannot disagree. A non-member holds no membership row and so gets null, not zero.
+
+| field | what reads it |
+|---|---|
+| `readThrough` (`{at, id}`) | the divider — compared against each message's own `createdAt`/`id` |
+| `cursor` (opaque) | the jump — handed straight back as `?context=` |
+
+`readThrough.at` goes out through the same conversion as a message's `createdAt`
+(`GroupMessageSerializer::instant()`) because the client compares them directly to find the first row
+past the boundary. The tuple encoding still never leaves the server: `cursor` is the same position
+already encoded, so the client echoes rather than assembles.
+
+The boundary is not always on screen. When the first loaded row is itself unread **and** older rows
+remain, the true line is further back than the page reaches, and drawing one at the top would mark
+where pagination stopped rather than where reading did. That is the state the "N unread" banner
+offers to fix.
+
+### `?context=` — the page a position sits in
+
+`GroupTalkMessages::around()` returns `CONTEXT` messages up to and including the cursor, then
+everything after it up to `PER_PAGE`, as one contiguous page for the history window. It is
+deliberately general: the unread boundary is only the first thing worth opening on, and a link to a
+single message wants the same window around a message's own cursor.
+
+A cursor here is a **position, not a permission** — the same trust `before` and `after` already
+carry, since the group's read gate decided the audience before any of them are read. So it takes one
+the client hands back, an unparseable one is no cursor at all (the newest page), and one taken from
+another group names an instant rather than a row: the query is bound to this group, which is what
+keeps the answer this conversation's.
 
 ### Two different numbers
 
@@ -326,12 +412,18 @@ role once per request and the serializer asks it per row.
 4. Every path that creates a membership row snapshots the cursor; the DB defaults are a backstop for
    the ones that cannot, never the initialization.
 5. The cursor only ever moves forward, and the guard is in the `WHERE` clause rather than in a
-   read-then-write.
-6. A mention row exists only where the picker produced one; no body is ever parsed for `@`. What the
+   read-then-write. What it is set to is never a value the client chose — but where a *page* is read
+   from always is, and the two must not be confused.
+6. The list on screen is one contiguous stretch. A window change replaces it and moves the
+   generation on; only a page that follows what is held, and was asked for by the list it is landing
+   in, is merged.
+7. The unread divider and its jump both come from the render-time snapshot, so nothing that happens
+   afterwards — mark-read included — moves either.
+8. A mention row exists only where the picker produced one; no body is ever parsed for `@`. What the
    picker may offer and what the write will accept are the same set, by construction.
-7. A mention pierces mute; a block stops it. Talk history does neither, and neither do its images.
-8. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
-9. Talk is the group's conversation surface; nothing else scopes posts to a group. A second one
+9. A mention pierces mute; a block stops it. Talk history does neither, and neither do its images.
+10. `PostImages::attach()` is the outermost transaction of the write; nothing wraps it.
+11. Talk is the group's conversation surface; nothing else scopes posts to a group. A second one
    would be re-creating the split the cutover removed.
 10. The room list's order is settled in SQL before the page is cut. A query that pages first and
     then asks for the newest messages has ordered the page, not the membership.
