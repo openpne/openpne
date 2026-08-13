@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /*
  * Comments on a community event (OpenPNE 3 `community_event_comment`): the numbered replies of an
- * event's thread, identical in shape to community_topic_comments.
+ * event's thread, identical in shape to group_topic_comments.
  */
 return new class extends Migration
 {

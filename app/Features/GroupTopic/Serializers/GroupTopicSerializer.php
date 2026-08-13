@@ -1,0 +1,175 @@
+<?php
+
+namespace App\Features\GroupTopic\Serializers;
+
+use App\Features\GroupTopic\GroupTopicAccess;
+use App\Features\GroupTopic\GroupTopicCommentThread;
+use App\LinkCard\LinkCardSerializer;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
+use App\Models\GroupTopicCommentImage;
+use App\Models\GroupTopicImage;
+use App\Models\Member;
+use App\Support\BodyFormat;
+use App\Support\BodyRenderer;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+
+/**
+ * Modern surface shapes for the group topic board. author is null for a withdrawn member (the
+ * FK SET NULL); comment `deletable` is the viewer-specific permission, computed server-side so the
+ * client never re-derives authorization. Dates are ISO strings (the client formats them).
+ */
+class GroupTopicSerializer
+{
+    /**
+     * A board row / recent-topics card: the title, comment count, author, and last-activity time
+     * (updated_at, bumped by a new comment). Callers eager-load `comments_count` and `member`.
+     *
+     * @return array{id: int, name: string, commentCount: int, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, updatedAt: string}
+     */
+    public static function summary(GroupTopic $topic): array
+    {
+        return [
+            'id' => $topic->getKey(),
+            'name' => $topic->name,
+            'commentCount' => $topic->comments_count ?? $topic->loadCount('comments')->comments_count,
+            'author' => self::author($topic->member),
+            'updatedAt' => $topic->updated_at->toIso8601String(),
+        ];
+    }
+
+    /**
+     * The topic show shape: the full body and images plus the author and post time.
+     *
+     * @return array{id: int, name: string, body: string, format: string, bodyHtml: string|null, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, linkCard: array{url: string, title: string, description: string|null, siteName: string|null, domain: string, imageUrl: string|null}|null, createdAt: string}
+     */
+    public static function detail(GroupTopic $topic): array
+    {
+        return [
+            'id' => $topic->getKey(),
+            'name' => $topic->name,
+            'body' => $topic->body,
+            // See DiarySerializer::detail: bodyHtml is the server-rendered decoration HTML, null for plain.
+            'format' => $topic->format->value,
+            'bodyHtml' => $topic->format === BodyFormat::Plain ? null : BodyRenderer::render($topic->body, $topic->format)->toHtml(),
+            'images' => $topic->images->map([self::class, 'image'])->all(),
+            'author' => self::author($topic->member),
+            'linkCard' => LinkCardSerializer::card($topic),
+            'createdAt' => $topic->created_at->toIso8601String(),
+        ];
+    }
+
+    /**
+     * A single comment. `deletable` is the viewer's delete permission (its author, or anyone who may
+     * edit the topic), so the client renders the button without re-deriving the rule.
+     *
+     * @return array{id: int, number: int, body: string, images: list<array{id: int, url: string, thumbnailUrl: string}>, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, createdAt: string, deletable: bool}
+     */
+    public static function comment(GroupTopicComment $comment, Member $viewer): array
+    {
+        return [
+            'id' => $comment->getKey(),
+            'number' => $comment->number,
+            'body' => $comment->body,
+            'images' => $comment->images->map([self::class, 'image'])->all(),
+            'author' => self::author($comment->member),
+            'createdAt' => $comment->created_at->toIso8601String(),
+            'deletable' => GroupTopicAccess::canDeleteComment($comment, $viewer),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, GroupTopicComment>  $comments
+     * @return list<array>
+     */
+    public static function comments(Collection $comments, Member $viewer): array
+    {
+        return $comments->map(fn (GroupTopicComment $comment): array => self::comment($comment, $viewer))->all();
+    }
+
+    /**
+     * The paged comment thread (OpenPNE 3 pager): the current page ascending, plus the reversible
+     * paging state the React page needs to build Older/Newer/oldest-first links. Ordering is by id,
+     * not number (the pager's contract), so Modern matches Classic even on migrated data.
+     *
+     * @return array{comments: list<array>, total: int, page: int, lastPage: int, ascending: bool, hasOlder: bool, hasNewer: bool, olderPage: int|null, newerPage: int|null}
+     */
+    public static function thread(GroupTopicCommentThread $thread, Member $viewer): array
+    {
+        return [
+            'comments' => self::comments($thread->comments, $viewer),
+            'total' => $thread->total,
+            'page' => $thread->page,
+            'lastPage' => $thread->lastPage,
+            'ascending' => $thread->ascending,
+            'hasOlder' => $thread->hasOlder(),
+            'hasNewer' => $thread->hasNewer(),
+            'olderPage' => $thread->hasOlder() ? $thread->olderPage() : null,
+            'newerPage' => $thread->hasNewer() ? $thread->newerPage() : null,
+        ];
+    }
+
+    /**
+     * A single attached image: the full-bytes url and a square thumbnail, both FilePolicy-gated.
+     * Tolerates a row whose File is gone (defensive; the join cascades with it).
+     *
+     * @return array{id: int, url: string, thumbnailUrl: string}
+     */
+    public static function image(GroupTopicImage|GroupTopicCommentImage $image): array
+    {
+        $file = $image->file;
+
+        return [
+            'id' => $image->getKey(),
+            'url' => $file?->url() ?? '',
+            'thumbnailUrl' => $file?->thumbnailUrl(120, 120, square: true) ?? '',
+        ];
+    }
+
+    /**
+     * @param  iterable<GroupTopic>  $topics
+     * @return list<array>
+     */
+    public static function summaries(iterable $topics): array
+    {
+        $rows = [];
+        foreach ($topics as $topic) {
+            $rows[] = self::summary($topic);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  LengthAwarePaginator<int, GroupTopic>  $paginator
+     * @return array{data: list<array>, meta: array{currentPage: int, lastPage: int, perPage: int, total: int}}
+     */
+    public static function paginator(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'data' => array_map([self::class, 'summary'], $paginator->items()),
+            'meta' => [
+                'currentPage' => $paginator->currentPage(),
+                'lastPage' => $paginator->lastPage(),
+                'perPage' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ];
+    }
+
+    /** @return array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null */
+    private static function author(?Member $member): ?array
+    {
+        if ($member === null) {
+            return null;
+        }
+
+        return [
+            'id' => $member->getKey(),
+            'name' => $member->name,
+            'imageUrl' => $member->avatar?->file?->thumbnailUrl(120, 120, square: true),
+            'avatarColor' => $member->avatar_color?->hex(),
+        ];
+    }
+}

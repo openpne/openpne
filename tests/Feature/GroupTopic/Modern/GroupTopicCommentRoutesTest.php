@@ -1,0 +1,113 @@
+<?php
+
+namespace Tests\Feature\GroupTopic\Modern;
+
+use App\Features\Group\GroupRole;
+use App\Models\Group;
+use App\Models\GroupMember;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
+use App\Models\Member;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class GroupTopicCommentRoutesTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['openpne.surface_mode' => 'modern_default']);
+    }
+
+    private function joined(Group $group, GroupRole $role = GroupRole::Member): Member
+    {
+        $member = Member::factory()->create();
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => $member->getKey(),
+            'role' => $role,
+        ]);
+
+        return $member;
+    }
+
+    public function test_guests_are_redirected_to_login(): void
+    {
+        $group = Group::factory()->create();
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
+        $comment = GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey(), 'number' => 1]);
+
+        $this->post(route('group.topics.comment.store', $topic))
+            ->assertRedirect('/login');
+        $this->post(route('group.topics.comment.delete', $comment))
+            ->assertRedirect('/login');
+    }
+
+    public function test_modern_comment_store_creates_a_comment_and_redirects_to_show(): void
+    {
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+
+        $this->actingAs($member)
+            ->post(route('group.topics.comment.store', $topic), ['body' => 'A modern reply'])
+            ->assertRedirect(route('group.topics.show', $topic));
+
+        $this->assertDatabaseHas('group_topic_comments', [
+            'group_topic_id' => $topic->getKey(),
+            'member_id' => $member->getKey(),
+            'body' => 'A modern reply',
+        ]);
+    }
+
+    public function test_modern_comment_store_returns_404_for_a_non_member(): void
+    {
+        $group = Group::factory()->create();
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
+        $stranger = Member::factory()->create();
+
+        $this->actingAs($stranger)
+            ->post(route('group.topics.comment.store', $topic), ['body' => 'intruding'])
+            ->assertNotFound();
+        $this->assertDatabaseCount('group_topic_comments', 0);
+    }
+
+    public function test_modern_comment_delete_removes_the_comment_and_redirects_to_show(): void
+    {
+        $group = Group::factory()->create();
+        $member = $this->joined($group);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $member->getKey()]);
+        $comment = GroupTopicComment::factory()->create([
+            'group_topic_id' => $topic->getKey(),
+            'member_id' => $member->getKey(),
+            'number' => 1,
+        ]);
+
+        $this->actingAs($member)
+            ->post(route('group.topics.comment.delete', $comment))
+            ->assertRedirect(route('group.topics.show', $topic));
+
+        $this->assertDatabaseMissing('group_topic_comments', ['id' => $comment->getKey()]);
+    }
+
+    public function test_modern_comment_delete_returns_404_for_an_unauthorized_member(): void
+    {
+        // A community member who is neither the comment's author nor a topic editor cannot delete it.
+        $group = Group::factory()->create();
+        $author = $this->joined($group);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $comment = GroupTopicComment::factory()->create([
+            'group_topic_id' => $topic->getKey(),
+            'member_id' => $author->getKey(),
+            'number' => 1,
+        ]);
+        $other = $this->joined($group);
+
+        $this->actingAs($other)
+            ->post(route('group.topics.comment.delete', $comment))
+            ->assertNotFound();
+        $this->assertDatabaseHas('group_topic_comments', ['id' => $comment->getKey()]);
+    }
+}

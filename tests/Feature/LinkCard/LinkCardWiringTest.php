@@ -7,21 +7,21 @@ namespace Tests\Feature\LinkCard;
 use App\Features\CommunityEvent\Actions\CreateEvent;
 use App\Features\CommunityEvent\Actions\UpdateEvent;
 use App\Features\CommunityEvent\Data\CommunityEventFormData;
-use App\Features\CommunityTopic\Actions\CreateTopic;
-use App\Features\CommunityTopic\Actions\UpdateTopic;
-use App\Features\CommunityTopic\Data\CommunityTopicFormData;
 use App\Features\Diary\Actions\CreateDiary;
 use App\Features\Diary\Actions\UpdateDiary;
 use App\Features\Diary\Data\DiaryFormData;
+use App\Features\GroupTopic\Actions\CreateTopic;
+use App\Features\GroupTopic\Actions\UpdateTopic;
+use App\Features\GroupTopic\Data\GroupTopicFormData;
 use App\Features\Timeline\Actions\CreateTimelinePost;
 use App\Features\Timeline\Data\TimelinePostFormData;
 use App\Files\ImageEdit;
 use App\Jobs\SyncLinkCard;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -228,7 +228,7 @@ class LinkCardWiringTest extends TestCase
     {
         $topic = $this->topic();
 
-        $this->actingAs($this->member)->get(route('communityTopic.show', $topic))->assertOk();
+        $this->actingAs($this->member)->get(route('group.topics.show', $topic))->assertOk();
 
         Queue::assertPushed(SyncLinkCard::class);
     }
@@ -298,12 +298,12 @@ class LinkCardWiringTest extends TestCase
         );
     }
 
-    private function createTopic(): CommunityTopic
+    private function createTopic(): GroupTopic
     {
         return $this->app->make(CreateTopic::class)(
             $this->member,
             $this->joinedGroup(),
-            new CommunityTopicFormData(name: 'T', body: 'See https://example.com/a', format: BodyFormat::Plain),
+            new GroupTopicFormData(name: 'T', body: 'See https://example.com/a', format: BodyFormat::Plain),
         );
     }
 
@@ -334,12 +334,12 @@ class LinkCardWiringTest extends TestCase
         );
     }
 
-    private function editTopicBody(CommunityTopic $topic): void
+    private function editTopicBody(GroupTopic $topic): void
     {
         $this->app->make(UpdateTopic::class)(
             $this->member,
             $topic,
-            new CommunityTopicFormData(name: $topic->name, body: 'Rewritten https://example.com/b', format: BodyFormat::Plain),
+            new GroupTopicFormData(name: $topic->name, body: 'Rewritten https://example.com/b', format: BodyFormat::Plain),
             ImageEdit::none(),
         );
     }
@@ -376,11 +376,11 @@ class LinkCardWiringTest extends TestCase
         return $group;
     }
 
-    private function topic(): CommunityTopic
+    private function topic(): GroupTopic
     {
         $group = $this->joinedGroup();
 
-        return CommunityTopic::factory()->for($group, 'community')->for($this->member, 'member')->create([
+        return GroupTopic::factory()->for($group)->for($this->member, 'member')->create([
             'body' => 'See https://example.com/a',
             'link_card_synced_at' => null,
         ]);

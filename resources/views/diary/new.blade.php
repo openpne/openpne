@@ -38,7 +38,7 @@
                         @error('visibility')<p class="error">{{ $message }}</p>@enderror
                     </td>
                 </tr>
-                @include('community-topic._image_fields')
+                @include('group-topic._image_fields')
             </table>
             <div class="operation">
                 <ul class="moreInfo button">

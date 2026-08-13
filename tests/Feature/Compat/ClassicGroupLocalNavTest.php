@@ -4,9 +4,9 @@ namespace Tests\Feature\Compat;
 
 use App\Features\Group\GroupRole;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use Database\Seeders\NavigationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,7 +42,7 @@ class ClassicGroupLocalNavTest extends TestCase
             ->assertSee('<li id="community__community_home">', false)
             ->assertSee('<li id="community__community_join">', false)
             ->assertSee(route('group.show', $group), false) // Top → /groups/{id}
-            ->assertSee(route('communityTopic.index', $group), false) // Topics → /communityTopic/listCommunity/{id}
+            ->assertSee(route('group.topics.index', $group), false) // Topics → /groups/{id}/topics
             ->assertSee(route('communityEvent.index', $group), false) // Events
             ->assertSee(route('group.join.show', ['group' => $group->getKey()]), false); // Join → /groups/{id}/join
     }
@@ -56,9 +56,9 @@ class ClassicGroupLocalNavTest extends TestCase
             'member_id' => $viewer->getKey(),
             'role' => GroupRole::Member,
         ]);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
 
-        foreach ([route('communityTopic.index', $group), route('communityTopic.show', $topic)] as $url) {
+        foreach ([route('group.topics.index', $group), route('group.topics.show', $topic)] as $url) {
             $this->actingAs($viewer)->get($url)
                 ->assertOk()
                 ->assertSee('<ul class="community">', false)
@@ -75,13 +75,13 @@ class ClassicGroupLocalNavTest extends TestCase
         $group = Group::factory()->create();
         $admin = Member::factory()->create();
         GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
         $topicComment = $topic->comments()->create(['member_id' => $admin->getKey(), 'body' => 'c', 'number' => 1]);
         $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
         $eventComment = $event->comments()->create(['member_id' => $admin->getKey(), 'body' => 'c', 'number' => 1]);
 
         foreach ([
-            route('communityTopic.comment.delete.show', $topicComment),
+            route('group.topics.comment.delete.show', $topicComment),
             route('communityEvent.comment.delete.show', $eventComment),
         ] as $url) {
             $this->actingAs($admin)->get($url)

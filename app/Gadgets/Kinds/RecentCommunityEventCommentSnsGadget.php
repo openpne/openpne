@@ -7,7 +7,7 @@ namespace App\Gadgets\Kinds;
 use App\Support\Feature;
 
 /** Recent events across every public community (OpenPNE 3 recentCommunityEventCommentSns). */
-class RecentCommunityEventCommentSnsGadget extends CommunityRecentListGadget
+class RecentCommunityEventCommentSnsGadget extends GroupRecentListGadget
 {
     public function name(): string
     {

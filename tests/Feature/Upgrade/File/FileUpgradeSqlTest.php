@@ -156,7 +156,7 @@ class FileUpgradeSqlTest extends TestCase
         $this->assertDatabaseHas('files', ['id' => 13, 'related_entity_type' => 'diaryComment', 'related_entity_id' => 99]);
     }
 
-    public function test_resolves_community_topic_and_event_owners(): void
+    public function test_resolves_group_topic_and_event_owners(): void
     {
         $this->seedFile(20);
         $this->seedFile(21);
@@ -169,8 +169,8 @@ class FileUpgradeSqlTest extends TestCase
 
         $this->runUpgrade();
 
-        $this->assertDatabaseHas('files', ['id' => 20, 'related_entity_type' => 'communityTopic', 'related_entity_id' => 200]);
-        $this->assertDatabaseHas('files', ['id' => 21, 'related_entity_type' => 'communityTopicComment', 'related_entity_id' => 201]);
+        $this->assertDatabaseHas('files', ['id' => 20, 'related_entity_type' => 'groupTopic', 'related_entity_id' => 200]);
+        $this->assertDatabaseHas('files', ['id' => 21, 'related_entity_type' => 'groupTopicComment', 'related_entity_id' => 201]);
         $this->assertDatabaseHas('files', ['id' => 22, 'related_entity_type' => 'communityEvent', 'related_entity_id' => 202]);
         $this->assertDatabaseHas('files', ['id' => 23, 'related_entity_type' => 'communityEventComment', 'related_entity_id' => 203]);
     }

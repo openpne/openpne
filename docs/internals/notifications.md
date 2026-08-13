@@ -136,7 +136,7 @@ notification carrying its decided channels, so the `database` feed row is never 
 New community topic/event postings broadcast the same way ([`GroupNewPostFanout`](../../app/Features/Group/GroupNewPostFanout.php)),
 but to the community's confirmed members (minus the author / banned / blocked) and gated by a single
 new-post kind — no friends-only variant. Their mail leg also needs the shared (configurable)
-`community-posting` template to be enabled, resolved once per broadcast rather than per recipient.
+`group-posting` template to be enabled, resolved once per broadcast rather than per recipient.
 
 A community comment fans out the same fan-out, but its audience additionally **excludes the author and
 every co-commenter** — they get the inline Reply / Related notification instead. That makes the

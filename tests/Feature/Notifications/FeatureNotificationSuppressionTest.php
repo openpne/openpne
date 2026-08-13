@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature\Notifications;
 
 use App\Features\Friend\Events\FriendRequested;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Group;
+use App\Models\GroupTopic;
 use App\Models\Member;
-use App\Notifications\CommunityTopic\TopicPostedNotification;
 use App\Notifications\Diary\DiaryPostedNotification;
+use App\Notifications\GroupTopic\TopicPostedNotification;
 use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\ChannelManager;
@@ -124,8 +124,8 @@ class FeatureNotificationSuppressionTest extends TestCase
     {
         $author = Member::factory()->create();
         $group = Group::factory()->create();
-        $topic = CommunityTopic::factory()->create([
-            'community_id' => $group->getKey(),
+        $topic = GroupTopic::factory()->create([
+            'group_id' => $group->getKey(),
             'member_id' => $author->getKey(),
         ]);
 

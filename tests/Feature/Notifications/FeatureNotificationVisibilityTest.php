@@ -187,6 +187,6 @@ class FeatureNotificationVisibilityTest extends TestCase
             ->assertOk()
             ->viewData('notificationGroups');
 
-        $this->assertSame(['timeline', 'diary', 'community_topic', 'community_event', 'friend_link'], array_column($groups, 'key'));
+        $this->assertSame(['timeline', 'diary', 'group_topic', 'community_event', 'friend_link'], array_column($groups, 'key'));
     }
 }

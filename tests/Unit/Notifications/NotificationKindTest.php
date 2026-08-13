@@ -49,7 +49,7 @@ class NotificationKindTest extends TestCase
         $this->assertSame('is_send_diaryNewPost_web', NotificationKind::DiaryNewPost->op3ConfigName(NotificationChannel::Web));
         $this->assertSame('is_send_pc_diaryNewPost_mail', NotificationKind::DiaryNewPost->op3ConfigName(NotificationChannel::Mail));
         $this->assertSame('is_send_messageNewOnlyFriends_web', NotificationKind::DirectMessageNewOnlyFriends->op3ConfigName(NotificationChannel::Web));
-        $this->assertSame('is_send_pc_communityTopicReplyNewPost_mail', NotificationKind::CommunityTopicReplyNewPost->op3ConfigName(NotificationChannel::Mail));
+        $this->assertSame('is_send_pc_communityTopicReplyNewPost_mail', NotificationKind::GroupTopicReplyNewPost->op3ConfigName(NotificationChannel::Mail));
     }
 
     public function test_config_names_are_unique_across_kinds_and_channels(): void
@@ -91,10 +91,10 @@ class NotificationKindTest extends TestCase
                 NotificationKind::DiaryNewPostOnlyFriends,
                 NotificationKind::DiaryReplyPost,
                 NotificationKind::DiaryRelatedPost,
-                NotificationKind::CommunityTopicNewPost,
-                NotificationKind::CommunityTopicCommentNewPost,
-                NotificationKind::CommunityTopicReplyNewPost,
-                NotificationKind::CommunityTopicRelatedNewPost,
+                NotificationKind::GroupTopicNewPost,
+                NotificationKind::GroupTopicCommentNewPost,
+                NotificationKind::GroupTopicReplyNewPost,
+                NotificationKind::GroupTopicRelatedNewPost,
                 NotificationKind::CommunityEventNewPost,
                 NotificationKind::CommunityEventCommentNewPost,
                 NotificationKind::CommunityEventReplyNewPost,

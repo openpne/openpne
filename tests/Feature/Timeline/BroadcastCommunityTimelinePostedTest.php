@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Timeline;
 
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\GroupNewPostFanout;
 use App\Features\Group\GroupRole;
 use App\Features\Group\Queries\GroupNewPostRecipients;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Timeline\Events\TimelinePostPosted;
 use App\Jobs\BroadcastCommunityTimelinePosted;
 use App\Jobs\BroadcastTimelinePosted;

@@ -15,10 +15,6 @@ use App\Upgrade\Steps\CommunityEventImageUpgrade;
 use App\Upgrade\Steps\CommunityEventMemberUpgrade;
 use App\Upgrade\Steps\CommunityEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\CommunityEventUpgrade;
-use App\Upgrade\Steps\CommunityTopicCommentImageUpgrade;
-use App\Upgrade\Steps\CommunityTopicCommentUpgrade;
-use App\Upgrade\Steps\CommunityTopicImageUpgrade;
-use App\Upgrade\Steps\CommunityTopicUpgrade;
 use App\Upgrade\Steps\DiaryCommentImageUpgrade;
 use App\Upgrade\Steps\DiaryCommentUpgrade;
 use App\Upgrade\Steps\DiaryImageUpgrade;
@@ -35,6 +31,10 @@ use App\Upgrade\Steps\GadgetUpgrade;
 use App\Upgrade\Steps\GroupCategoryUpgrade;
 use App\Upgrade\Steps\GroupJoinRequestUpgrade;
 use App\Upgrade\Steps\GroupMemberUpgrade;
+use App\Upgrade\Steps\GroupTopicCommentImageUpgrade;
+use App\Upgrade\Steps\GroupTopicCommentUpgrade;
+use App\Upgrade\Steps\GroupTopicImageUpgrade;
+use App\Upgrade\Steps\GroupTopicUpgrade;
 use App\Upgrade\Steps\GroupUpgrade;
 use App\Upgrade\Steps\MailTemplateTranslationUpgrade;
 use App\Upgrade\Steps\MailTemplateUpgrade;
@@ -100,9 +100,9 @@ final class StepRegistry
             GroupUpgrade::class,
             GroupMemberUpgrade::class,
             GroupJoinRequestUpgrade::class,
-            // community_topics reference groups; their comments reference the topics.
-            CommunityTopicUpgrade::class,
-            CommunityTopicCommentUpgrade::class,
+            // group_topics reference groups; their comments reference the topics.
+            GroupTopicUpgrade::class,
+            GroupTopicCommentUpgrade::class,
             // community_events reference groups; their comments and RSVP pivot reference the events.
             CommunityEventUpgrade::class,
             CommunityEventCommentUpgrade::class,
@@ -134,8 +134,8 @@ final class StepRegistry
             MemberImageUpgrade::class,
             DiaryImageUpgrade::class,
             DiaryCommentImageUpgrade::class,
-            CommunityTopicImageUpgrade::class,
-            CommunityTopicCommentImageUpgrade::class,
+            GroupTopicImageUpgrade::class,
+            GroupTopicCommentImageUpgrade::class,
             CommunityEventImageUpgrade::class,
             CommunityEventCommentImageUpgrade::class,
             // banner_images reference files; banner_use_images reference banners and banner_images.
@@ -353,7 +353,7 @@ final class StepRegistry
             'pc_notifyNewMessage' => 'mail_templates[direct-message-received]. Configurable: is_enabled carried over.',
             'pc_notifyNewDiaryComment' => 'mail_templates[diary-comment]. Not admin-toggleable (member opt-out lives in member_notification_settings): is_enabled forced on.',
             'pc_notifyNewDiary' => 'mail_templates[diary-posted]. Not admin-toggleable (member opt-out lives in member_notification_settings): is_enabled forced on.',
-            'pc_notifyCommunityPosting' => 'mail_templates[community-posting]. Configurable: is_enabled carried over. One template for topic and event comments and the new-post broadcasts.',
+            'pc_notifyCommunityPosting' => 'mail_templates[group-posting]. Configurable: is_enabled carried over. One template for topic and event comments and the new-post broadcasts.',
             'pc_timelineNewPost' => 'mail_templates[timeline-posting]. Configurable: is_enabled carried over. One template for the new-post broadcast and the reply notifications.',
             'pc_registerEnd' => 'mail_templates[registration-complete]. Not admin-toggleable (transactional): is_enabled forced on.',
             'pc_leave' => 'mail_templates[withdrawal-complete]. Not admin-toggleable (transactional): is_enabled forced on.',

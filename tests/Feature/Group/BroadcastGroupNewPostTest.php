@@ -9,11 +9,11 @@ use App\Jobs\BroadcastEventPosted;
 use App\Jobs\BroadcastTopicPosted;
 use App\Mail\Template\MailTemplate;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Group;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Notifications\CommunityEvent\EventPostedNotification;
-use App\Notifications\CommunityTopic\TopicPostedNotification;
+use App\Notifications\GroupTopic\TopicPostedNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +23,7 @@ use Tests\TestCase;
 
 /**
  * The new-topic / new-event broadcast to a community's confirmed members, minus the author / banned /
- * blocked, gated by the single new-post kind (and the shared community-posting template for the mail
+ * blocked, gated by the single new-post kind (and the shared group-posting template for the mail
  * leg). Topic is covered thoroughly; event shares the fan-out so it gets the smoke path.
  */
 class BroadcastGroupNewPostTest extends TestCase
@@ -38,7 +38,7 @@ class BroadcastGroupNewPostTest extends TestCase
         return $member;
     }
 
-    private function broadcastTopic(CommunityTopic $topic): void
+    private function broadcastTopic(GroupTopic $topic): void
     {
         app()->call([new BroadcastTopicPosted((int) $topic->getKey()), 'handle']);
     }
@@ -50,7 +50,7 @@ class BroadcastGroupNewPostTest extends TestCase
         $author = $this->member($group, role: GroupRole::Admin);
         $reader = $this->member($group);
         $stranger = Member::factory()->create(); // not a community member
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->broadcastTopic($topic);
 
@@ -72,7 +72,7 @@ class BroadcastGroupNewPostTest extends TestCase
         $banned->forceFill(['is_login_rejected' => true])->save();
         $blocked = $this->member($group);
         DB::table('member_blocks')->insert(['blocker_id' => $author->getKey(), 'blocked_id' => $blocked->getKey()]);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->broadcastTopic($topic);
 
@@ -86,8 +86,8 @@ class BroadcastGroupNewPostTest extends TestCase
         $group = Group::factory()->create();
         $author = $this->member($group);
         $reader = $this->member($group);
-        $reader->setNotificationSetting(NotificationKind::CommunityTopicNewPost, NotificationChannel::Mail, false);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $reader->setNotificationSetting(NotificationKind::GroupTopicNewPost, NotificationChannel::Mail, false);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->broadcastTopic($topic);
 
@@ -104,9 +104,9 @@ class BroadcastGroupNewPostTest extends TestCase
         $group = Group::factory()->create();
         $author = $this->member($group);
         $reader = $this->member($group);
-        // community-posting is configurable; an admin turned it off globally.
-        DB::table('mail_templates')->insert(['key' => MailTemplate::CommunityPostingNotified->value, 'is_enabled' => false]);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        // group-posting is configurable; an admin turned it off globally.
+        DB::table('mail_templates')->insert(['key' => MailTemplate::GroupPostingNotified->value, 'is_enabled' => false]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->broadcastTopic($topic);
 
@@ -123,7 +123,7 @@ class BroadcastGroupNewPostTest extends TestCase
         $group = Group::factory()->create();
         $author = $this->member($group);
         $noAddress = $this->member($group, Member::factory()->create(['email' => null]));
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         $this->broadcastTopic($topic);
 

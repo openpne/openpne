@@ -28,7 +28,7 @@ enum Feature: string
 
     case Group = 'group';
 
-    case CommunityTopic = 'communityTopic';
+    case GroupTopic = 'groupTopic';
 
     case CommunityEvent = 'communityEvent';
 
@@ -42,7 +42,7 @@ enum Feature: string
             self::DirectMessage => SnsSettingKey::FeatureDirectMessageEnabled,
             self::Timeline => SnsSettingKey::FeatureTimelineEnabled,
             self::Group => SnsSettingKey::FeatureGroupEnabled,
-            self::CommunityTopic => SnsSettingKey::FeatureCommunityTopicEnabled,
+            self::GroupTopic => SnsSettingKey::FeatureGroupTopicEnabled,
             self::CommunityEvent => SnsSettingKey::FeatureCommunityEventEnabled,
             self::Friend => SnsSettingKey::FeatureFriendEnabled,
         };
@@ -52,7 +52,7 @@ enum Feature: string
     public function parent(): ?self
     {
         return match ($this) {
-            self::CommunityTopic, self::CommunityEvent => self::Group,
+            self::GroupTopic, self::CommunityEvent => self::Group,
             default => null,
         };
     }
@@ -91,7 +91,8 @@ enum Feature: string
 
     /**
      * Route-name prefixes this unit owns. Dot-terminated, so `group.` never claims a
-     * `groupTalk.*` route, and `communityTopic.*` stays with its own unit.
+     * `groupTalk.*` route. A child unit nests inside its parent's prefix (`group.topics.`);
+     * owningRouteName() resolves that overlap by preferring the longest match.
      *
      * @return list<string>
      */
@@ -103,24 +104,31 @@ enum Feature: string
             self::Diary => ['diary.'],
             self::Timeline => ['timeline.'],
             self::Group => ['group.'],
-            self::CommunityTopic => ['communityTopic.'],
+            self::GroupTopic => ['group.topics.'],
             self::CommunityEvent => ['communityEvent.'],
             self::Friend => ['friend.'],
         };
     }
 
-    /** The unit owning a route name, or null when no unit does. */
+    /**
+     * The unit owning a route name, or null when no unit does. The longest matching prefix wins,
+     * so `group.topics.show` belongs to the board rather than to the group it nests under.
+     */
     public static function owningRouteName(string $name): ?self
     {
+        $owner = null;
+        $matched = 0;
+
         foreach (self::cases() as $feature) {
             foreach ($feature->routeNamePrefixes() as $prefix) {
-                if (str_starts_with($name, $prefix)) {
-                    return $feature;
+                if (str_starts_with($name, $prefix) && strlen($prefix) > $matched) {
+                    $owner = $feature;
+                    $matched = strlen($prefix);
                 }
             }
         }
 
-        return null;
+        return $owner;
     }
 
     /** The unit's display name — the same string labels its admin toggle. */

@@ -7,11 +7,11 @@ namespace Tests\Feature\LinkCard;
 use App\Files\FileStorage;
 use App\LinkCard\LinkCardSerializer;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\LinkCard;
 use App\Models\Member;
 use App\Models\TimelinePost;
@@ -103,12 +103,12 @@ class LinkCardRenderingTest extends TestCase
     {
         $group = Group::factory()->create();
         GroupMember::factory()->create(['group_id' => $group->id, 'member_id' => $this->author->id]);
-        $topic = CommunityTopic::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
+        $topic = GroupTopic::factory()->for($group)->for($this->author, 'member')->create(['link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
         $event = CommunityEvent::factory()->for($group, 'community')->for($this->author, 'member')->create(['link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
         $post = TimelinePost::factory()->for($this->author)->create(['visibility' => Visibility::Open, 'link_card_id' => $this->card->id, 'link_card_synced_at' => now()]);
 
         foreach ([
-            "/communityTopic/{$topic->id}",
+            "/topics/{$topic->id}",
             "/communityEvent/{$event->id}",
             "/timeline/{$post->id}",
         ] as $url) {

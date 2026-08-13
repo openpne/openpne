@@ -2,23 +2,23 @@
 
 namespace Tests\Feature\Home;
 
-use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityEventMember;
-use App\Models\CommunityTopic;
-use App\Models\CommunityTopicComment;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
+use App\Models\GroupTopicComment;
 use App\Models\Member;
 use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The OpenPNE 3 opCommunityTopicPlugin home recent-list gadgets: recentCommunityTopicComment,
+ * The OpenPNE 3 opCommunityTopicPlugin home recent-list gadgets: recentGroupTopicComment,
  * recentCommunityEventComment, and their SNS-wide (public groups) variants.
  */
 class ClassicHomeGroupGadgetTest extends TestCase
@@ -45,18 +45,18 @@ class ClassicHomeGroupGadgetTest extends TestCase
         ]);
     }
 
-    public function test_recent_community_topic_comment_renders_the_openpne3_dom(): void
+    public function test_recent_group_topic_comment_renders_the_openpne3_dom(): void
     {
         $viewer = Member::factory()->create();
         $group = Group::factory()->create(['name' => 'JoinedGroup']);
         $this->join($viewer, $group);
-        $topic = CommunityTopic::factory()->create([
-            'community_id' => $group->getKey(),
+        $topic = GroupTopic::factory()->create([
+            'group_id' => $group->getKey(),
             'name' => 'JoinedTopic',
             'updated_at' => '2026-03-04 12:00:00',
         ]);
-        CommunityTopicComment::factory()->create(['community_topic_id' => $topic->getKey()]);
-        $gadget = $this->makeGadget('recentCommunityTopicComment');
+        GroupTopicComment::factory()->create(['group_topic_id' => $topic->getKey()]);
+        $gadget = $this->makeGadget('recentGroupTopicComment');
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()
@@ -66,19 +66,19 @@ class ClassicHomeGroupGadgetTest extends TestCase
             ->assertSee('JoinedTopic(1)')                          // title + count, no separating space
             ->assertSee('(JoinedGroup)')                       // community name follows the link
             ->assertSee('March 4')                                 // updated_at, not created_at
-            ->assertSee('/communityTopic/'.$topic->getKey(), false)
+            ->assertSee('/topics/'.$topic->getKey(), false)
             ->assertDontSee('moreInfo', false);                    // no More link (parity gap)
     }
 
-    public function test_recent_community_topic_comment_hides_topics_from_communities_the_viewer_has_not_joined(): void
+    public function test_recent_group_topic_comment_hides_topics_from_communities_the_viewer_has_not_joined(): void
     {
         $viewer = Member::factory()->create();
         $joined = Group::factory()->create();
         $other = Group::factory()->create();
         $this->join($viewer, $joined);
-        CommunityTopic::factory()->create(['community_id' => $joined->getKey(), 'name' => 'JoinedTopic']);
-        CommunityTopic::factory()->create(['community_id' => $other->getKey(), 'name' => 'StrangerTopic']);
-        $this->makeGadget('recentCommunityTopicComment');
+        GroupTopic::factory()->create(['group_id' => $joined->getKey(), 'name' => 'JoinedTopic']);
+        GroupTopic::factory()->create(['group_id' => $other->getKey(), 'name' => 'StrangerTopic']);
+        $this->makeGadget('recentGroupTopicComment');
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()
@@ -86,24 +86,24 @@ class ClassicHomeGroupGadgetTest extends TestCase
             ->assertDontSee('StrangerTopic');
     }
 
-    public function test_recent_community_topic_comment_is_dropped_when_empty(): void
+    public function test_recent_group_topic_comment_is_dropped_when_empty(): void
     {
         $viewer = Member::factory()->create();
-        $this->makeGadget('recentCommunityTopicComment');
+        $this->makeGadget('recentGroupTopicComment');
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()
             ->assertDontSee('homeRecentList', false);
     }
 
-    public function test_recent_community_topic_comment_honors_the_col_config_and_ignores_the_page_query(): void
+    public function test_recent_group_topic_comment_honors_the_col_config_and_ignores_the_page_query(): void
     {
         $viewer = Member::factory()->create();
         $group = Group::factory()->create();
         $this->join($viewer, $group);
-        CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'name' => 'OldTopic', 'updated_at' => '2026-01-01 00:00:00']);
-        CommunityTopic::factory()->create(['community_id' => $group->getKey(), 'name' => 'NewTopic', 'updated_at' => '2026-03-01 00:00:00']);
-        $this->makeGadget('recentCommunityTopicComment', ['col' => 1]);
+        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'name' => 'OldTopic', 'updated_at' => '2026-01-01 00:00:00']);
+        GroupTopic::factory()->create(['group_id' => $group->getKey(), 'name' => 'NewTopic', 'updated_at' => '2026-03-01 00:00:00']);
+        $this->makeGadget('recentGroupTopicComment', ['col' => 1]);
 
         // col=1 keeps only the newest; limit()->get() ignores the host page's ?page=.
         $this->actingAs($viewer)->get('/?page=2')
@@ -137,15 +137,15 @@ class ClassicHomeGroupGadgetTest extends TestCase
             ->assertDontSee('moreInfo', false);
     }
 
-    public function test_recent_community_topic_comment_sns_shows_public_communities_with_its_own_part_class(): void
+    public function test_recent_group_topic_comment_sns_shows_public_communities_with_its_own_part_class(): void
     {
         $viewer = Member::factory()->create();
         $public = Group::factory()->create(['name' => 'PublicGroup', 'topic_read_access' => TopicReadAccess::Everyone]);
         $membersOnly = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        CommunityTopic::factory()->create(['community_id' => $public->getKey(), 'name' => 'PublicTopic']);
-        CommunityTopic::factory()->create(['community_id' => $membersOnly->getKey(), 'name' => 'PrivateTopic']);
+        GroupTopic::factory()->create(['group_id' => $public->getKey(), 'name' => 'PublicTopic']);
+        GroupTopic::factory()->create(['group_id' => $membersOnly->getKey(), 'name' => 'PrivateTopic']);
         // The viewer joins neither: this gadget is viewer-independent.
-        $this->makeGadget('recentCommunityTopicCommentSns');
+        $this->makeGadget('recentGroupTopicCommentSns');
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()
@@ -178,8 +178,8 @@ class ClassicHomeGroupGadgetTest extends TestCase
         $viewer = Member::factory()->create(['locale' => 'ja']);
         $group = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
         $this->join($viewer, $group);
-        CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
-        $this->makeGadget('recentCommunityTopicComment');
+        GroupTopic::factory()->create(['group_id' => $group->getKey()]);
+        $this->makeGadget('recentGroupTopicComment');
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()

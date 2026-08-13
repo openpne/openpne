@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace Tests\Feature\Group\Listeners;
 
 use App\Features\CommunityEvent\Events\EventPosted;
-use App\Features\CommunityTopic\Actions\CreateTopic;
-use App\Features\CommunityTopic\Data\CommunityTopicFormData;
-use App\Features\CommunityTopic\Events\TopicPosted;
 use App\Features\Group\GroupRole;
+use App\Features\GroupTopic\Actions\CreateTopic;
+use App\Features\GroupTopic\Data\GroupTopicFormData;
+use App\Features\GroupTopic\Events\TopicPosted;
 use App\Jobs\BroadcastEventPosted;
 use App\Jobs\BroadcastTopicPosted;
 use App\Listeners\CommunityEvent\NotifyEventPosted;
-use App\Listeners\CommunityTopic\NotifyTopicPosted;
+use App\Listeners\GroupTopic\NotifyTopicPosted;
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Group;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -30,7 +30,7 @@ class NotifyGroupNewPostTest extends TestCase
     {
         Bus::fake([BroadcastTopicPosted::class]);
         $author = Member::factory()->create();
-        $topic = CommunityTopic::factory()->create(['member_id' => $author->getKey()]);
+        $topic = GroupTopic::factory()->create(['member_id' => $author->getKey()]);
 
         app(NotifyTopicPosted::class)->handle(new TopicPosted($topic, $author));
 
@@ -55,7 +55,7 @@ class NotifyGroupNewPostTest extends TestCase
         $author = Member::factory()->create();
         $group->members()->create(['member_id' => $author->getKey(), 'role' => GroupRole::Member]);
 
-        $topic = app(CreateTopic::class)($author, $group, new CommunityTopicFormData('Title', 'Body'));
+        $topic = app(CreateTopic::class)($author, $group, new GroupTopicFormData('Title', 'Body'));
 
         Event::assertDispatched(
             TopicPosted::class,

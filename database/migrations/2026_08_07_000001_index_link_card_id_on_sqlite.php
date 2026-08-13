@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
-    private const TABLES = ['diaries', 'community_topics', 'community_events', 'timeline_posts'];
+    private const TABLES = ['diaries', 'group_topics', 'community_events', 'timeline_posts'];
 
     public function up(): void
     {

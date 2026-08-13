@@ -3,10 +3,10 @@
 namespace App\Features\Group\Actions;
 
 use App\Features\CommunityEvent\Actions\DeleteEvent;
-use App\Features\CommunityTopic\Actions\DeleteTopic;
 use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupMembership;
+use App\Features\GroupTopic\Actions\DeleteTopic;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Models\File;
 use App\Models\Group;

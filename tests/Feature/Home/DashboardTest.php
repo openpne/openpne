@@ -3,7 +3,6 @@
 namespace Tests\Feature\Home;
 
 use App\Models\CommunityEvent;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\DiaryImage;
 use App\Models\DirectMessage;
@@ -11,6 +10,7 @@ use App\Models\DirectMessageRecipient;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Models\TimelinePost;
 use App\Support\Visibility;
@@ -35,7 +35,7 @@ class DashboardTest extends TestCase
         Diary::factory()->create(['member_id' => $viewer->getKey(), 'visibility' => Visibility::Private]); // own
         $group = Group::factory()->create();
         GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
-        $topic = CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
+        $topic = GroupTopic::factory()->create(['group_id' => $group->getKey()]);
 
         $this->actingAs($viewer)
             ->get('/dashboard')
@@ -93,7 +93,7 @@ class DashboardTest extends TestCase
         $viewer = Member::factory()->create();
         $group = Group::factory()->create(['file_id' => File::factory()->create()->getKey()]);
         GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
-        CommunityTopic::factory()->create(['community_id' => $group->getKey()]);
+        GroupTopic::factory()->create(['group_id' => $group->getKey()]);
 
         $expected = $group->image->thumbnailUrl(120, 120, square: true);
 
@@ -161,7 +161,7 @@ class DashboardTest extends TestCase
         }
         $topicGroup = Group::factory()->create(['file_id' => File::factory()->create()->getKey()]);
         GroupMember::factory()->member()->create(['group_id' => $topicGroup->getKey(), 'member_id' => $viewer->getKey()]);
-        CommunityTopic::factory()->create(['community_id' => $topicGroup->getKey()]);
+        GroupTopic::factory()->create(['group_id' => $topicGroup->getKey()]);
 
         DB::enableQueryLog();
         $this->actingAs($viewer)->get('/dashboard')->assertOk();

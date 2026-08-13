@@ -31,10 +31,10 @@ enum NotificationKind: string
     case DiaryReplyPost = 'diary_reply_post';
     case DiaryRelatedPost = 'diary_related_post';
 
-    case CommunityTopicNewPost = 'community_topic_new_post';
-    case CommunityTopicCommentNewPost = 'community_topic_comment_new_post';
-    case CommunityTopicReplyNewPost = 'community_topic_reply_new_post';
-    case CommunityTopicRelatedNewPost = 'community_topic_related_new_post';
+    case GroupTopicNewPost = 'group_topic_new_post';
+    case GroupTopicCommentNewPost = 'group_topic_comment_new_post';
+    case GroupTopicReplyNewPost = 'group_topic_reply_new_post';
+    case GroupTopicRelatedNewPost = 'group_topic_related_new_post';
 
     case CommunityEventNewPost = 'community_event_new_post';
     case CommunityEventCommentNewPost = 'community_event_comment_new_post';
@@ -115,26 +115,26 @@ enum NotificationKind: string
                 caption: 'Comments on %diaries% you commented on',
                 isWired: true,
             ),
-            self::CommunityTopicNewPost => new NotificationKindDefinition(
-                category: NotificationCategory::CommunityTopic,
+            self::GroupTopicNewPost => new NotificationKindDefinition(
+                category: NotificationCategory::GroupTopic,
                 op3Name: 'communityTopicNewPost',
                 caption: 'New %topics% in your %communities%',
                 isWired: true,
             ),
-            self::CommunityTopicCommentNewPost => new NotificationKindDefinition(
-                category: NotificationCategory::CommunityTopic,
+            self::GroupTopicCommentNewPost => new NotificationKindDefinition(
+                category: NotificationCategory::GroupTopic,
                 op3Name: 'communityTopicCommentNewPost',
                 caption: 'New comments on %topics% in your %communities%',
                 isWired: true,
             ),
-            self::CommunityTopicReplyNewPost => new NotificationKindDefinition(
-                category: NotificationCategory::CommunityTopic,
+            self::GroupTopicReplyNewPost => new NotificationKindDefinition(
+                category: NotificationCategory::GroupTopic,
                 op3Name: 'communityTopicReplyNewPost',
                 caption: 'Comments on %topics% you created',
                 isWired: true,
             ),
-            self::CommunityTopicRelatedNewPost => new NotificationKindDefinition(
-                category: NotificationCategory::CommunityTopic,
+            self::GroupTopicRelatedNewPost => new NotificationKindDefinition(
+                category: NotificationCategory::GroupTopic,
                 op3Name: 'communityTopicRelatedNewPost',
                 caption: 'Comments on %topics% you commented on',
                 isWired: true,

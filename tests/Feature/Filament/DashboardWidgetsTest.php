@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
-use App\Features\CommunityTopic\Actions\CreateTopicComment;
+use App\Features\GroupTopic\Actions\CreateTopicComment;
 use App\Filament\Widgets\OverviewStatsWidget;
 use App\Filament\Widgets\RecentMembersWidget;
 use App\Filament\Widgets\RegistrationModeWidget;
 use App\Models\AdminUser;
-use App\Models\CommunityTopic;
 use App\Models\Diary;
 use App\Models\Group;
 use App\Models\GroupMember;
+use App\Models\GroupTopic;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
 use Filament\Facades\Filament;
@@ -71,8 +71,8 @@ class DashboardWidgetsTest extends TestCase
         // A community whose only topic is old, but just received a comment — must count as active
         // (the comment bumps the topic's updated_at).
         $active = Group::factory()->create();
-        $oldTopic = CommunityTopic::factory()->create([
-            'community_id' => $active->getKey(),
+        $oldTopic = GroupTopic::factory()->create([
+            'group_id' => $active->getKey(),
             'created_at' => now()->subYear(),
             'updated_at' => now()->subYear(),
         ]);
@@ -85,8 +85,8 @@ class DashboardWidgetsTest extends TestCase
 
         // A community with only an old, untouched topic — must not count.
         $stale = Group::factory()->create();
-        CommunityTopic::factory()->create([
-            'community_id' => $stale->getKey(),
+        GroupTopic::factory()->create([
+            'group_id' => $stale->getKey(),
             'created_at' => now()->subYear(),
             'updated_at' => now()->subYear(),
         ]);

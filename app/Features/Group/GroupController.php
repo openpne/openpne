@@ -6,11 +6,6 @@ use App\Compat\RouteParityRegistry;
 use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\CommunityEvent\Queries\RecentCommunityEvents;
 use App\Features\CommunityEvent\Serializers\CommunityEventSerializer;
-use App\Features\CommunityTopic\CommunityTopicAccess;
-use App\Features\CommunityTopic\Queries\RecentCommunityTopics;
-use App\Features\CommunityTopic\Serializers\CommunityTopicSerializer;
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\Actions\ApproveMember;
 use App\Features\Group\Actions\CreateGroup;
 use App\Features\Group\Actions\DeclinePendingMember;
@@ -26,6 +21,11 @@ use App\Features\Group\Queries\ListPendingMembers;
 use App\Features\Group\Queries\SearchGroups;
 use App\Features\Group\Queries\ShowGroup;
 use App\Features\Group\Serializers\GroupSerializer;
+use App\Features\GroupTopic\GroupTopicAccess;
+use App\Features\GroupTopic\Queries\RecentGroupTopics;
+use App\Features\GroupTopic\Serializers\GroupTopicSerializer;
+use App\Features\GroupTopic\TopicPostAuthority;
+use App\Features\GroupTopic\TopicReadAccess;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\CommunityTimelineAccess;
 use App\Features\Timeline\Queries\CommunityTimeline;
@@ -63,7 +63,7 @@ class GroupController extends Controller
      */
     private const TIMELINE_BOX = 5;
 
-    public function show(Request $request, int $group, ShowGroup $query, RecentCommunityTopics $recentTopics, RecentCommunityEvents $recentEvents, CommunityTimeline $communityTimeline): View|InertiaResponse
+    public function show(Request $request, int $group, ShowGroup $query, RecentGroupTopics $recentTopics, RecentCommunityEvents $recentEvents, CommunityTimeline $communityTimeline): View|InertiaResponse
     {
         $found = $query($group);
         abort_if($found === null, 404);
@@ -80,10 +80,10 @@ class GroupController extends Controller
             ->orderByDesc('role')->orderBy('id')->limit(9)->get();
         // The recent-topics / recent-events boxes only show when the viewer
         // may read that board; events share the topic read gate, so one check covers both.
-        $canViewBoard = CommunityTopicAccess::canViewBoard($found, $viewer);
+        $canViewBoard = GroupTopicAccess::canViewBoard($found, $viewer);
         // A switched-off unit reuses that same null seam — both surfaces already hide the box on
         // null — and its query never runs.
-        $showTopics = $canViewBoard && Feature::CommunityTopic->enabled();
+        $showTopics = $canViewBoard && Feature::GroupTopic->enabled();
         $showEvents = $canViewBoard && Feature::CommunityEvent->enabled();
         // OpenPNE 3 injected the community timeline box here and gated it on membership: the box
         // leads with a compose form, and a non-member cannot post. Null keeps the box off the page,
@@ -109,7 +109,7 @@ class GroupController extends Controller
                     'adminMember' => $staff->firstWhere('role', GroupRole::Admin)?->member,
                     'subAdminMembers' => $staff->where('role', GroupRole::SubAdmin)->pluck('member'),
                     'recentTopics' => $showTopics ? $recentTopics($found) : null,
-                    'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
+                    'canPostTopic' => GroupTopicAccess::canPostTopic($found, $viewer),
                     'recentEvents' => $showEvents ? $recentEvents($found) : null,
                     'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
                     'timelinePosts' => $showTimeline ? $communityTimeline->take($viewer, $found, self::TIMELINE_BOX) : null,
@@ -127,8 +127,8 @@ class GroupController extends Controller
                 'members' => GroupSerializer::members($sidebarMembers),
                 // The recent-topics / recent-events boxes link into their boards; null when the viewer
                 // may not read them (events share the topic read gate), so the card is hidden.
-                'recentTopics' => $showTopics ? CommunityTopicSerializer::summaries($recentTopics($found)) : null,
-                'canPostTopic' => CommunityTopicAccess::canPostTopic($found, $viewer),
+                'recentTopics' => $showTopics ? GroupTopicSerializer::summaries($recentTopics($found)) : null,
+                'canPostTopic' => GroupTopicAccess::canPostTopic($found, $viewer),
                 'recentEvents' => $showEvents ? CommunityEventSerializer::summaries($recentEvents($found)) : null,
                 'canPostEvent' => CommunityEventAccess::canPostEvent($found, $viewer),
                 // Members only, as the Classic box is: it leads to posting, which a non-member

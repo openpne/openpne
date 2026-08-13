@@ -80,9 +80,9 @@ class PluginStylesheetsTest extends TestCase
 
         // opCommunityTopicPlugin communityTopic/ + communityTopicComment/ + communityEvent/ +
         // communityEventComment/ config/view.yml — one stylesheet across all four modules.
-        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('communityTopic.show'));
-        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('communityTopic.index'));
-        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('communityTopic.comment.delete.show'));
+        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('group.topics.show'));
+        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('group.topics.index'));
+        $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('group.topics.comment.delete.show'));
         $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('communityEvent.show'));
         $this->assertSame('opCommunityTopicPlugin/css/communityTopic.css', PluginStylesheets::forRoute('communityEvent.comment.delete.show'));
 
