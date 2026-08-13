@@ -66,6 +66,26 @@ class GroupLegacyUrlRedirectTest extends TestCase
         $this->actingAs($member)->get('/community/recent?page=2')->assertRedirect('/groups/recent?page=2');
     }
 
+    /** Path-id redirects with a paginating target keep ?page=N too (the path param wins over ?group=). */
+    public function test_the_path_id_redirects_keep_the_page_query(): void
+    {
+        $group = Group::factory()->create();
+        $id = $group->getKey();
+        $member = Member::factory()->create();
+
+        $cases = [
+            "/community/{$id}/timeline?page=3" => "/groups/{$id}/timeline?page=3",
+            "/timeline/community/id/{$id}?page=3" => "/groups/{$id}/timeline?page=3",
+            "/community/member/manage/{$id}?page=2" => "/groups/{$id}/members/manage?page=2",
+            // A stray ?group= is consumed by the path parameter (the real id wins), page survives.
+            "/community/{$id}?group=999&page=2" => "/groups/{$id}?page=2",
+        ];
+
+        foreach ($cases as $legacy => $canonical) {
+            $this->actingAs($member)->get($legacy)->assertRedirect($canonical);
+        }
+    }
+
     /** The per-member operations carried `member_id` alongside `?id=`; only the id moves. */
     public function test_a_member_operation_keeps_its_target_in_the_query(): void
     {

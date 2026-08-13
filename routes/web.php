@@ -523,16 +523,17 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
     // OpenPNE 3 served the group timeline at /community/:id/timeline, and reached it through the
     // global /:module/:action fallback at /timeline/community/id/:id as well; both URLs are
-    // preserved by redirecting to the canonical page.
-    Route::get('/community/{group}/timeline', fn (int $group) => redirect()->route('group.timeline', ['group' => $group]))
+    // preserved by redirecting to the canonical page. The query rides along — the target
+    // paginates, so a ?page=N bookmark must not reset to page 1.
+    Route::get('/community/{group}/timeline', fn (Request $request, int $group) => redirect()->route('group.timeline', ['group' => $group] + $request->query()))
         ->whereNumber('group')
         ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
         ->name('group.timeline.legacy_compat');
-    Route::get('/community/{group}/timeline/new', fn (int $group) => redirect()->route('group.timeline.new', ['group' => $group]))
+    Route::get('/community/{group}/timeline/new', fn (Request $request, int $group) => redirect()->route('group.timeline.new', ['group' => $group] + $request->query()))
         ->whereNumber('group')
         ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
         ->name('group.timeline.new.legacy_compat');
-    Route::get('/timeline/community/id/{group}', fn (int $group) => redirect()->route('group.timeline', ['group' => $group]))
+    Route::get('/timeline/community/id/{group}', fn (Request $request, int $group) => redirect()->route('group.timeline', ['group' => $group] + $request->query()))
         ->whereNumber('group')
         ->middleware([EnsureFeatureEnabled::class.':group', EnsureFeatureEnabled::class.':timeline'])
         ->name('group.timeline.compat');
@@ -696,13 +697,15 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/member/demoteSubAdmin', $byQueryId('group.members.demote.show'))->name('group.members.demote.compat');
         Route::get('/member/drop', $byQueryId('group.members.drop.show'))->name('group.members.drop.compat');
         Route::get('/member/transferAdmin', $byQueryId('group.members.transfer.show'))->name('group.members.transfer.compat');
-        Route::get('/member/manage/{group}', fn (int $group) => redirect()->route('group.members.manage', ['group' => $group]))
+        // Path-id redirects keep the query too (the member-manage target paginates), with the
+        // path parameter winning over a stray ?group=.
+        Route::get('/member/manage/{group}', fn (Request $request, int $group) => redirect()->route('group.members.manage', ['group' => $group] + $request->query()))
             ->whereNumber('group')->name('group.members.manage.compat');
-        Route::get('/delete/{group}', fn (int $group) => redirect()->route('group.delete.show', ['group' => $group]))
+        Route::get('/delete/{group}', fn (Request $request, int $group) => redirect()->route('group.delete.show', ['group' => $group] + $request->query()))
             ->whereNumber('group')->name('group.delete.compat');
         Route::get('/recent', fn (Request $request) => redirect()->route('group.recent', $request->query()))
             ->name('group.recent.compat');
-        Route::get('/{group}', fn (int $group) => redirect()->route('group.show', ['group' => $group]))
+        Route::get('/{group}', fn (Request $request, int $group) => redirect()->route('group.show', ['group' => $group] + $request->query()))
             ->whereNumber('group')->name('group.show.compat');
     });
 
