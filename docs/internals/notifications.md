@@ -58,12 +58,16 @@ The shared `unread` counts would otherwise only move on a navigation. An open Mo
 them every 60s while it is visible — and immediately on returning to it, and on a page restored from
 history, where the counts come back as they were before the member read anything and a badge would
 otherwise climb back over what they have already read — from
-[`GET /unread-counts`](../../app/Features/Home/UnreadCountsController.php), which runs the three
-count queries and nothing else, then pushes the result into the shared prop client-side
-([`unread-sync.tsx`](../../resources/js/components/unread-sync.tsx)). The document title mirrors the
-layer-3 unread-row count as a `(N) ` prefix, applied through Inertia's title callback because the
-head manager owns that DOM write. A failed refresh keeps the counts it has. There is no websocket at
-this layer; a closed tab is reached by web push instead (below).
+[`GET /unread-counts`](../../app/Features/Home/UnreadCountsController.php), which runs the count
+queries and the sidebar's room list ([group-talk.md](group-talk.md#the-joined-group-list-is-a-room-list))
+and nothing else, then pushes both into the shared props client-side
+([`unread-sync.tsx`](../../resources/js/components/unread-sync.tsx), whose applier
+[owns the rule that they move together](../../resources/js/lib/unread-payload.ts)). The rooms ride
+this response rather than one of their own because the groups badge counts exactly the rooms listed
+under it: read apart, a refresh would zero the badge above a row still claiming five. The document
+title mirrors the layer-3 unread-row count as a `(N) ` prefix, applied through Inertia's title
+callback because the head manager owns that DOM write. A failed refresh keeps what it has. There is
+no websocket at this layer; a closed tab is reached by web push instead (below).
 
 **Read-state separation is the invariant**: layer-1 counts never consume `read_at`, and reading
 the feed never mutates domain state. OpenPNE 3 kept only the per-event side — a `member_config`

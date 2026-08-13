@@ -176,6 +176,12 @@ export const NAV_SECTIONS: NavSection[] = [
     { href: '/member/config', match: ['/member/config'], icon: Settings, label: SETTINGS },
 ];
 
+/**
+ * The entry the desktop room list nests under. Talk has no section of its own, so the rooms hang
+ * under the one whose badge they explain — and the same href is where the list's "view all" goes.
+ */
+export const TALK_ROOMS_HREF = '/groups/mine';
+
 /** The nav an administrator's current toggles leave: a section whose unit is off answers 404. */
 export function visibleNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
     return NAV_SECTIONS.filter((section) => section.feature === undefined || enabled[section.feature]);
