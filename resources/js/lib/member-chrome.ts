@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { Activity, Bell, BookOpen, House, Mail, Pencil, Plus, Search, Settings, UserCircle2, Users } from 'lucide-react';
-import type { FeatureKey } from '@/types';
+import type { FeatureKey, UnreadCounts } from '@/types';
 
 /**
  * The member-surface chrome registry: the single source for what the nav and the page frame render
@@ -27,10 +27,15 @@ const t = (key: string, replacements?: Record<string, string | number>): ChromeL
 
 type Icon = ComponentType<{ className?: string; strokeWidth?: number; 'aria-hidden'?: boolean }>;
 
+/** Which of the shared `unread` counts a badge draws. */
+export type BadgeCount = keyof UnreadCounts;
+
 export interface ChromeTab {
     href: string;
     label: ChromeLabel;
     active: boolean;
+    /** Count badge after the label. No label of its own: the tab's own text names it. */
+    badge?: { count: BadgeCount };
 }
 
 export interface ChromeAction {
@@ -94,7 +99,7 @@ export interface NavSection {
     exact?: boolean;
     icon: Icon;
     label: ChromeLabel;
-    badge?: { count: 'friendRequests' | 'unreadMessages' | 'notifications' | 'groupTalks'; label: ChromeLabel };
+    badge?: { count: BadgeCount; label: ChromeLabel };
     /** The unit that owns this section; absent for the ones an administrator cannot switch off. */
     feature?: FeatureKey;
 }
@@ -124,9 +129,11 @@ export const NAV_SECTIONS: NavSection[] = [
     // container unit alone.
     // The badge counts groups with something new in their talk, not messages — see
     // CountGroupsWithUnreadTalk. It rides the container unit's entry because talk has no section of
-    // its own, the way this entry already answers for both boards.
+    // its own, the way this entry already answers for both boards. The href is the joined list
+    // rather than the browse tab: the badge sends a member here to find out which group is waiting,
+    // and only the joined rows carry that.
     {
-        href: '/groups',
+        href: '/groups/mine',
         match: ['/groups', '/topics', '/events'],
         icon: Users,
         label: COMMUNITIES,
@@ -174,7 +181,7 @@ const HOME_SECTION: NavSection = { href: '/dashboard', match: ['/dashboard'], ex
  * point for the composition — rather than something an administrator picks; per-site composition is
  * a later question, and a unit switched off still drops its tab through visibleNavSections.
  */
-const BOTTOM_NAV_HREFS = ['/diary/list', '/notifications', '/message'];
+const BOTTOM_NAV_HREFS = ['/groups/mine', '/diary/list', '/notifications', '/message'];
 
 export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSection[] {
     const visible = visibleNavSections(enabled);
@@ -198,9 +205,10 @@ const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeT
     { href: '/diary/listMember', label: t('My %diaries%'), active: active === 'mine' },
 ];
 
+// Joined leads: it is where the nav lands, and browsing is the occasional errand.
 const communityTabs = (active: 'browse' | 'joined' | 'recent'): ChromeTab[] => [
+    { href: '/groups/mine', label: t('Joined'), active: active === 'joined', badge: { count: 'groupTalks' } },
     { href: '/groups', label: t('All'), active: active === 'browse' },
-    { href: '/groups/mine', label: t('Joined'), active: active === 'joined' },
     { href: '/groups/recent', label: t('Recent activity'), active: active === 'recent' },
 ];
 

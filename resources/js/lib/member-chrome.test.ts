@@ -25,7 +25,16 @@ test('a section goes with its unit', () => {
     assert.equal(hrefs({ ...allOn, directMessage: false }).includes('/message'), false);
     assert.equal(hrefs({ ...allOn, friend: false }).includes('/friend/list'), false);
     assert.equal(hrefs({ ...allOn, timeline: false }).includes('/timeline'), false);
-    assert.equal(hrefs({ ...allOn, group: false }).includes('/groups'), false);
+    assert.equal(hrefs({ ...allOn, group: false }).includes('/groups/mine'), false);
+});
+
+test('the groups section lands on the joined list, where the badge it carries is explained', () => {
+    // The badge counts groups with unread talk; only the joined list shows which ones.
+    const groups = NAV_SECTIONS.find((section) => section.badge?.count === 'groupTalks');
+
+    assert.equal(groups?.href, '/groups/mine');
+    // Every group space still lights the entry up, joined list and browse alike.
+    assert.deepEqual(groups?.match, ['/groups', '/topics', '/events']);
 });
 
 test('the untoggleable sections survive every unit being off', () => {
@@ -36,18 +45,34 @@ test('the untoggleable sections survive every unit being off', () => {
 
 test('the groups section stays while only a board is off', () => {
     // Topics and events have no section of their own, so nothing here answers to them.
-    assert.equal(hrefs({ ...allOn, groupTopic: false, groupEvent: false }).includes('/groups'), true);
+    assert.equal(hrefs({ ...allOn, groupTopic: false, groupEvent: false }).includes('/groups/mine'), true);
 });
 
 const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled).map((section) => section.href);
 
-test('the bottom bar carries Home and its three sections in bar order', () => {
-    assert.deepEqual(bottomHrefs(allOn), ['/dashboard', '/diary/list', '/notifications', '/message']);
+test('the bottom bar carries Home and its four sections in bar order', () => {
+    assert.deepEqual(bottomHrefs(allOn), ['/dashboard', '/groups/mine', '/diary/list', '/notifications', '/message']);
 });
 
 test('a bottom tab goes with its unit', () => {
-    assert.deepEqual(bottomHrefs({ ...allOn, diary: false }), ['/dashboard', '/notifications', '/message']);
-    assert.deepEqual(bottomHrefs({ ...allOn, directMessage: false }), ['/dashboard', '/diary/list', '/notifications']);
+    assert.deepEqual(bottomHrefs({ ...allOn, group: false }), [
+        '/dashboard',
+        '/diary/list',
+        '/notifications',
+        '/message',
+    ]);
+    assert.deepEqual(bottomHrefs({ ...allOn, diary: false }), [
+        '/dashboard',
+        '/groups/mine',
+        '/notifications',
+        '/message',
+    ]);
+    assert.deepEqual(bottomHrefs({ ...allOn, directMessage: false }), [
+        '/dashboard',
+        '/groups/mine',
+        '/diary/list',
+        '/notifications',
+    ]);
 });
 
 test('Home and notifications survive every unit being off', () => {
@@ -92,8 +117,26 @@ test("the owner's diary archive carries the same tab strip", () => {
     assert.deepEqual(tabHrefs('diary/list', { ...allOn, friend: false }, props), ['/diary/list', '/diary/listMember']);
 });
 
+test('the group hub leads with the joined list on every tab', () => {
+    const joinedFirst = ['/groups/mine', '/groups', '/groups/recent'];
+
+    assert.deepEqual(tabHrefs('community/list', allOn, { owner, isOwner: true }), joinedFirst);
+    assert.deepEqual(tabHrefs('community/search', allOn, {}), joinedFirst);
+    assert.deepEqual(tabHrefs('community/recent', allOn, {}), joinedFirst);
+});
+
 const chrome = (component: string, props: Record<string, unknown>) =>
     resolveChrome(component, { enabledFeatures: allOn, ...props });
+
+test('the joined tab carries the unread-talk count', () => {
+    // The one tab whose rows explain the nav badge, so it repeats it.
+    const tabs = chrome('community/search', {}).tabs ?? [];
+
+    assert.deepEqual(
+        tabs.map((tab) => tab.badge?.count),
+        ['groupTalks', undefined, undefined],
+    );
+});
 
 test('the dashboard carries the diary action without becoming a hub', () => {
     const dashboard = chrome('dashboard', {});
