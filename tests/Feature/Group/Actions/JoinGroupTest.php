@@ -3,10 +3,10 @@
 namespace Tests\Feature\Group\Actions;
 
 use App\Features\Group\Actions\JoinGroup;
-use App\Features\Group\GroupRole;
 use App\Features\Group\Events\GroupJoined;
 use App\Features\Group\Events\GroupJoinRequested;
 use App\Features\Group\Exceptions\GroupActionFailure;
+use App\Features\Group\GroupRole;
 use App\Features\Group\JoinPolicy;
 use App\Models\Group;
 use App\Models\GroupMember;

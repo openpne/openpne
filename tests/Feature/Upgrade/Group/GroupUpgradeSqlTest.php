@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Upgrade\Group;
 
-use App\Features\Group\GroupRole;
-use App\Features\Group\JoinPolicy;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\GroupRole;
+use App\Features\Group\JoinPolicy;
 use App\Models\Member;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\SourceSchema;
@@ -215,7 +215,7 @@ class GroupUpgradeSqlTest extends TestCase
             'id' => $id,
             'name' => $name,
             'file_id' => $fileId,
-            'group_category_id' => $categoryId,
+            'community_category_id' => $categoryId,
             'created_at' => $createdAt,
             'updated_at' => $createdAt,
         ]);
@@ -236,7 +236,7 @@ class GroupUpgradeSqlTest extends TestCase
     {
         DB::table('community_member')->insert([
             'id' => $id,
-            'group_id' => $groupId,
+            'community_id' => $groupId,
             'member_id' => $memberId,
             'is_pre' => $isPre,
             'is_receive_mail_pc' => 0,

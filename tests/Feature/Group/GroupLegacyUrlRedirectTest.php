@@ -44,6 +44,28 @@ class GroupLegacyUrlRedirectTest extends TestCase
         }
     }
 
+    /**
+     * The OpenPNE 3 search query shape must survive the redirect — GroupController still accepts
+     * it, so dropping it would turn a bookmarked search into the unfiltered list.
+     */
+    public function test_the_search_and_recent_redirects_carry_the_query_along(): void
+    {
+        $member = Member::factory()->create();
+
+        $location = $this->actingAs($member)
+            ->get('/community/search?community%5Bname%5D=hiking&community%5Bcommunity_category_id%5D=2&search_query=alps&page=3')
+            ->headers->get('Location');
+        $this->assertSame('/groups', parse_url($location, PHP_URL_PATH));
+        parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+        $this->assertSame([
+            'community' => ['name' => 'hiking', 'community_category_id' => '2'],
+            'search_query' => 'alps',
+            'page' => '3',
+        ], $query);
+
+        $this->actingAs($member)->get('/community/recent?page=2')->assertRedirect('/groups/recent?page=2');
+    }
+
     /** The per-member operations carried `member_id` alongside `?id=`; only the id moves. */
     public function test_a_member_operation_keeps_its_target_in_the_query(): void
     {

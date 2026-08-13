@@ -2,9 +2,9 @@
 
 namespace App\Upgrade\Steps;
 
-use App\Features\Group\JoinPolicy;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\JoinPolicy;
 use App\Upgrade\Column;
 use App\Upgrade\SourceRef;
 use App\Upgrade\UpgradeStep;

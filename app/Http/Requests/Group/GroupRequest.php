@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests\Group;
 
-use App\Features\Group\Data\GroupFormData;
-use App\Features\Group\JoinPolicy;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\Data\GroupFormData;
+use App\Features\Group\JoinPolicy;
 use App\Http\Requests\Concerns\PostImageRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;

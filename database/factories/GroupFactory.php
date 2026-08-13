@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Features\Group\JoinPolicy;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\JoinPolicy;
 use App\Models\Group;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

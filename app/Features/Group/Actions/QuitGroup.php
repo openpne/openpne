@@ -2,9 +2,9 @@
 
 namespace App\Features\Group\Actions;
 
-use App\Features\Group\GroupRole;
 use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
+use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;

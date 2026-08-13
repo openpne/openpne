@@ -2,9 +2,9 @@
 
 namespace App\Features\Group\Data;
 
-use App\Features\Group\JoinPolicy;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\JoinPolicy;
 
 final readonly class GroupFormData
 {

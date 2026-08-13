@@ -3,10 +3,10 @@
 namespace Tests\Feature\Compat;
 
 use App\Features\Group\GroupRole;
-use App\Models\Group;
 use App\Models\CommunityEvent;
-use App\Models\GroupMember;
 use App\Models\CommunityTopic;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use Database\Seeders\NavigationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -85,6 +85,35 @@ class ClassicGroupLocalNavTest extends TestCase
             route('communityEvent.comment.delete.show', $eventComment),
         ] as $url) {
             $this->actingAs($admin)->get($url)
+                ->assertOk()
+                ->assertSee('<ul class="community">', false)
+                ->assertSee(route('group.show', $group), false);
+        }
+    }
+
+    /**
+     * The join / quit / delete confirms are pages about one concrete group too. Regression: the
+     * classic() helper read the pre-rename `community` data key, so these three dropped the nav.
+     */
+    public function test_join_quit_and_delete_confirms_render_the_community_localnav(): void
+    {
+        $group = Group::factory()->create();
+        $outsider = Member::factory()->create();
+        $member = Member::factory()->create();
+        GroupMember::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => $member->getKey(),
+            'role' => GroupRole::Member,
+        ]);
+        $admin = Member::factory()->create();
+        GroupMember::factory()->admin()->create(['group_id' => $group->getKey(), 'member_id' => $admin->getKey()]);
+
+        foreach ([
+            [$outsider, route('group.join.show', ['group' => $group->getKey()])],
+            [$member, route('group.quit.show', ['group' => $group->getKey()])],
+            [$admin, route('group.delete.show', ['group' => $group->getKey()])],
+        ] as [$viewer, $url]) {
+            $this->actingAs($viewer)->get($url)
                 ->assertOk()
                 ->assertSee('<ul class="community">', false)
                 ->assertSee(route('group.show', $group), false);

@@ -3,15 +3,15 @@
 namespace Tests\Feature\Home;
 
 use App\Features\CommunityTopic\TopicReadAccess;
-use App\Models\Group;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityEventMember;
-use App\Models\GroupMember;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Services\GadgetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;

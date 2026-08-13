@@ -677,7 +677,11 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
                 + array_diff_key($request->query(), ['id' => null]));
         };
 
-        Route::get('/search', fn () => redirect()->route('group.search'))->name('group.search.compat');
+        // The OpenPNE 3 search query shape (community[name], community[community_category_id],
+        // search_query, page) rides along — GroupController still accepts it, so a bookmarked
+        // search must not degrade into the unfiltered list.
+        Route::get('/search', fn (Request $request) => redirect()->route('group.search', $request->query()))
+            ->name('group.search.compat');
         // ?id= is the member whose list is shown here, not a group — it rides along unchanged.
         Route::get('/joinList', fn (Request $request) => redirect()->route('group.list_mine', $request->query()))
             ->name('group.list_mine.compat');
@@ -696,7 +700,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
             ->whereNumber('group')->name('group.members.manage.compat');
         Route::get('/delete/{group}', fn (int $group) => redirect()->route('group.delete.show', ['group' => $group]))
             ->whereNumber('group')->name('group.delete.compat');
-        Route::get('/recent', fn () => redirect()->route('group.recent'))->name('group.recent.compat');
+        Route::get('/recent', fn (Request $request) => redirect()->route('group.recent', $request->query()))
+            ->name('group.recent.compat');
         Route::get('/{group}', fn (int $group) => redirect()->route('group.show', ['group' => $group]))
             ->whereNumber('group')->name('group.show.compat');
     });

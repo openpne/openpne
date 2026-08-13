@@ -2,11 +2,11 @@
 
 namespace App\Features\Group\Actions;
 
-use App\Features\Group\GroupMembership;
-use App\Features\Group\GroupRole;
 use App\Features\Group\Events\GroupJoined;
 use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
+use App\Features\Group\GroupMembership;
+use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Support\Facades\DB;

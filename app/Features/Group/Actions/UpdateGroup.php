@@ -2,14 +2,14 @@
 
 namespace App\Features\Group\Actions;
 
-use App\Features\Group\GroupMembership;
 use App\Features\Group\Data\GroupFormData;
 use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
+use App\Features\Group\GroupMembership;
 use App\Files\PostImages;
+use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupCategory;
-use App\Models\File;
 use App\Models\Member;
 use Illuminate\Http\UploadedFile;
 
@@ -64,7 +64,7 @@ class UpdateGroup
             // A new upload wins over a remove flag. Capture the prior File (if any) to purge after commit.
             if ($image !== null) {
                 $previous = $locked->image()->first();
-                $file = $store($image, 'community', (int) $locked->getKey());
+                $file = $store($image, 'group', (int) $locked->getKey());
                 $locked->update(['file_id' => $file->getKey()]);
 
                 return $previous;

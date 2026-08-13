@@ -17,7 +17,7 @@ export default function TimelineCommunity() {
     const t = useT();
     // canPost is read by the chrome, which carries the compose action for every page that has one.
     const { group, viewerId, posts } = usePage<CommunityProps>().props;
-    const title = t(':community %activity%', { group: group.name });
+    const title = t(':community %activity%', { community: group.name });
 
     return (
         <>

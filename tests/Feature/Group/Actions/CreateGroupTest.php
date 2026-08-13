@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Group\Actions;
 
-use App\Features\Group\Actions\CreateGroup;
-use App\Features\Group\GroupRole;
-use App\Features\Group\Data\GroupFormData;
-use App\Features\Group\Exceptions\GroupActionFailure;
-use App\Features\Group\JoinPolicy;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\Actions\CreateGroup;
+use App\Features\Group\Data\GroupFormData;
+use App\Features\Group\Exceptions\GroupActionFailure;
+use App\Features\Group\GroupRole;
+use App\Features\Group\JoinPolicy;
 use App\Models\GroupCategory;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;

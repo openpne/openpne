@@ -154,6 +154,24 @@ class NavigationUpgradeSqlTest extends TestCase
         DB::statement(SourceSchema::default()->createStatement('navigation_translation', withoutForeignKeys: true));
     }
 
+    public function test_maps_the_community_type_and_tokens_into_the_group_space(): void
+    {
+        $this->seedNav(1, 'community', '@community_search');
+        $this->seedNav(2, 'community', 'community/home');
+
+        $this->runUpgrade();
+
+        $rows = DB::table('navigations')->whereIn('id', [1, 2])->get()->keyBy('id');
+        // Storage moves to the new vocabulary; the OpenPNE 3 original stays verbatim in source_uri.
+        $this->assertSame('group', $rows[1]->type);
+        $this->assertSame('group', $rows[2]->type);
+        $this->assertSame('@community_search', $rows[1]->source_uri);
+        $this->assertSame('community/home', $rows[2]->source_uri);
+        // Tokens resolve into the new canonical space, not the redirect layer.
+        $this->assertSame('/groups', $rows[1]->uri);
+        $this->assertSame('/groups/:id', $rows[2]->uri);
+    }
+
     private function runUpgrade(): void
     {
         $compiler = new InsertSelectCompiler;

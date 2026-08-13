@@ -2,10 +2,10 @@
 
 namespace App\Features\Group\Actions;
 
-use App\Features\Group\GroupRole;
 use App\Features\Group\Data\GroupFormData;
 use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
+use App\Features\Group\GroupRole;
 use App\Files\PostImages;
 use App\Models\Group;
 use App\Models\GroupCategory;
@@ -42,7 +42,7 @@ class CreateGroup
             ]);
 
             if ($image !== null) {
-                $file = $store($image, 'community', (int) $group->getKey());
+                $file = $store($image, 'group', (int) $group->getKey());
                 $group->update(['file_id' => $file->getKey()]);
             }
 

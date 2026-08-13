@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Groups\Schemas;
 
-use App\Features\Group\JoinPolicy;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\JoinPolicy;
 use App\Models\GroupCategory;
 use BackedEnum;
 use Filament\Forms\Components\Radio;

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Group;
 
-use App\Features\Group\GroupRole;
 use App\Features\CommunityTopic\Actions\CreateTopicComment;
+use App\Features\Group\GroupRole;
 use App\Jobs\BroadcastTopicCommentPosted;
-use App\Models\Group;
 use App\Models\CommunityTopic;
 use App\Models\CommunityTopicComment;
+use App\Models\Group;
 use App\Models\Member;
 use App\Notifications\CommentReason;
 use App\Notifications\CommunityTopic\TopicCommentBroadcastNotification;

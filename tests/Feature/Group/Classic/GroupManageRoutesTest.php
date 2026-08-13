@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Group\Classic;
 
-use App\Features\Group\GroupRole;
 use App\Features\Group\Events\AdminTransferRequested;
 use App\Features\Group\Events\SubAdminAppointed;
+use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\Member;

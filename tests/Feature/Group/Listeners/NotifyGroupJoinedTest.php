@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Group\Listeners;
 
 use App\Features\Group\Actions\JoinGroup;
-use App\Features\Group\GroupRole;
 use App\Features\Group\Events\GroupJoined;
+use App\Features\Group\GroupRole;
 use App\Features\Group\JoinPolicy;
 use App\Listeners\Group\NotifyGroupJoined;
 use App\Mail\Template\MailTemplate;

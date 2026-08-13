@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Group\Modern;
 
+use App\Models\CommunityTopic;
 use App\Models\Group;
 use App\Models\GroupMember;
-use App\Models\CommunityTopic;
 use App\Models\Member;
 use App\Models\MemberImage;
 use App\Support\AvatarColor;

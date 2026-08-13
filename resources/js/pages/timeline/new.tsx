@@ -38,7 +38,7 @@ export default function TimelineNew({
 
     return (
         <>
-            <Head title={group ? t(':community %activity%', { group: group.name }) : t('%Post_activity%')} />
+            <Head title={group ? t(':community %activity%', { community: group.name }) : t('%Post_activity%')} />
             <ComposeSheetAction>
                 <Button type="submit" form={COMPOSE_FORM_ID} size="sm" loading={processing} disabled={tooLong}>
                     {t('%Post_activity%')}

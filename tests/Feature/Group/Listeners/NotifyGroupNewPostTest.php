@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Group\Listeners;
 
-use App\Features\Group\GroupRole;
 use App\Features\CommunityEvent\Events\EventPosted;
 use App\Features\CommunityTopic\Actions\CreateTopic;
 use App\Features\CommunityTopic\Data\CommunityTopicFormData;
 use App\Features\CommunityTopic\Events\TopicPosted;
+use App\Features\Group\GroupRole;
 use App\Jobs\BroadcastEventPosted;
 use App\Jobs\BroadcastTopicPosted;
 use App\Listeners\CommunityEvent\NotifyEventPosted;
 use App\Listeners\CommunityTopic\NotifyTopicPosted;
-use App\Models\Group;
 use App\Models\CommunityEvent;
 use App\Models\CommunityTopic;
+use App\Models\Group;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;

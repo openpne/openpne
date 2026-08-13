@@ -4,11 +4,11 @@ namespace Tests\Feature\Group\Classic;
 
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Models\CommunityEvent;
+use App\Models\CommunityTopic;
 use App\Models\Group;
 use App\Models\GroupCategory;
-use App\Models\CommunityEvent;
 use App\Models\GroupMember;
-use App\Models\CommunityTopic;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

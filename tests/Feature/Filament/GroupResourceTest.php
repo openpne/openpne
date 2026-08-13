@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Filament;
 
-use App\Features\Group\JoinPolicy;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\JoinPolicy;
 use App\Filament\Resources\Groups\Pages\EditGroup;
 use App\Filament\Resources\Groups\Pages\ListGroups;
 use App\Models\AdminUser;
-use App\Models\Group;
-use App\Models\GroupCategory;
 use App\Models\CommunityEvent;
 use App\Models\CommunityEventComment;
 use App\Models\CommunityEventCommentImage;
@@ -21,6 +19,8 @@ use App\Models\CommunityTopicComment;
 use App\Models\CommunityTopicCommentImage;
 use App\Models\CommunityTopicImage;
 use App\Models\File;
+use App\Models\Group;
+use App\Models\GroupCategory;
 use App\Models\Member;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;

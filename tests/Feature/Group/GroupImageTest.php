@@ -2,16 +2,16 @@
 
 namespace Tests\Feature\Group;
 
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\Actions\CreateGroup;
 use App\Features\Group\Actions\DeleteGroup;
 use App\Features\Group\Actions\UpdateGroup;
 use App\Features\Group\Data\GroupFormData;
 use App\Features\Group\JoinPolicy;
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
+use App\Models\File;
 use App\Models\Group;
 use App\Models\GroupMember;
-use App\Models\File;
 use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -49,7 +49,7 @@ class GroupImageTest extends TestCase
 
         $file = $group->image()->first();
         $this->assertNotNull($file);
-        $this->assertSame('community', $file->related_entity_type);
+        $this->assertSame('group', $file->related_entity_type);
         $this->assertSame($group->getKey(), $file->related_entity_id);
     }
 

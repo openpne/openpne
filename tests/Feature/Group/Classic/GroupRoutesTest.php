@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Group\Classic;
 
-use App\Features\Group\GroupRole;
-use App\Features\Group\Events\GroupJoinRequested;
 use App\Features\CommunityTopic\TopicPostAuthority;
 use App\Features\CommunityTopic\TopicReadAccess;
+use App\Features\Group\Events\GroupJoinRequested;
+use App\Features\Group\GroupRole;
 use App\Models\Group;
 use App\Models\GroupCategory;
 use App\Models\GroupMember;

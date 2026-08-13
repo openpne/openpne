@@ -3,10 +3,10 @@
 namespace Tests\Feature\Home\Queries;
 
 use App\Features\Home\Queries\JoinedGroupActivity;
-use App\Models\Group;
 use App\Models\CommunityEvent;
-use App\Models\GroupMember;
 use App\Models\CommunityTopic;
+use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\Member;
 use App\Support\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;

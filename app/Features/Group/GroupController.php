@@ -3,6 +3,14 @@
 namespace App\Features\Group;
 
 use App\Compat\RouteParityRegistry;
+use App\Features\CommunityEvent\CommunityEventAccess;
+use App\Features\CommunityEvent\Queries\RecentCommunityEvents;
+use App\Features\CommunityEvent\Serializers\CommunityEventSerializer;
+use App\Features\CommunityTopic\CommunityTopicAccess;
+use App\Features\CommunityTopic\Queries\RecentCommunityTopics;
+use App\Features\CommunityTopic\Serializers\CommunityTopicSerializer;
+use App\Features\CommunityTopic\TopicPostAuthority;
+use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Group\Actions\ApproveMember;
 use App\Features\Group\Actions\CreateGroup;
 use App\Features\Group\Actions\DeclinePendingMember;
@@ -18,14 +26,6 @@ use App\Features\Group\Queries\ListPendingMembers;
 use App\Features\Group\Queries\SearchGroups;
 use App\Features\Group\Queries\ShowGroup;
 use App\Features\Group\Serializers\GroupSerializer;
-use App\Features\CommunityEvent\CommunityEventAccess;
-use App\Features\CommunityEvent\Queries\RecentCommunityEvents;
-use App\Features\CommunityEvent\Serializers\CommunityEventSerializer;
-use App\Features\CommunityTopic\CommunityTopicAccess;
-use App\Features\CommunityTopic\Queries\RecentCommunityTopics;
-use App\Features\CommunityTopic\Serializers\CommunityTopicSerializer;
-use App\Features\CommunityTopic\TopicPostAuthority;
-use App\Features\CommunityTopic\TopicReadAccess;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Features\Timeline\CommunityTimelineAccess;
 use App\Features\Timeline\Queries\CommunityTimeline;
@@ -533,8 +533,8 @@ class GroupController extends Controller
     {
         // A page about one concrete group renders the group localNav; search and the
         // member-group list (plural `groups`) keep the default nav, as OpenPNE 3 does.
-        if (($data['community'] ?? null) instanceof Group) {
-            $this->markLocalNavGroup($data['community']);
+        if (($data['group'] ?? null) instanceof Group) {
+            $this->markLocalNavGroup($data['group']);
         }
 
         return view($view, $data)->with('pageId', RouteParityRegistry::bodyId($this->routeName()));
