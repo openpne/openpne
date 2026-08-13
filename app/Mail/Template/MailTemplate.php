@@ -28,6 +28,8 @@ enum MailTemplate: string
     case DiaryCommentReceived = 'diary-comment';
     case DiaryPostedNotified = 'diary-posted';
     case TimelineMentionNotified = 'timeline-mention';
+
+    case GroupTalkMentionNotified = 'group-talk-mention';
     case TimelinePostingNotified = 'timeline-posting';
     case GroupPostingNotified = 'group-posting';
     case GroupJoinNotice = 'group-join';
@@ -154,6 +156,20 @@ enum MailTemplate: string
                     'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
                     'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
                     'url' => ['help' => 'The %activity% post URL.', 'sample' => 'https://example.test'],
+                ],
+            ),
+            self::GroupTalkMentionNotified => new MailTemplateDefinition(
+                // OpenPNE-4-only: OpenPNE 3 had no group chat, so there is no source wording to
+                // carry — the default is authored here.
+                op3SourceName: null,
+                isConfigurable: true,
+                caption: 'Mentioned in a %community% talk message',
+                variables: [
+                    'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
+                    'community_name' => ['help' => 'The %community% the message was posted in.', 'sample' => 'Example %community%'],
+                    'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
+                    // Talk has no per-message permalink; the link opens the conversation.
+                    'url' => ['help' => 'The %community% talk URL.', 'sample' => 'https://example.test'],
                 ],
             ),
             self::TimelinePostingNotified => new MailTemplateDefinition(

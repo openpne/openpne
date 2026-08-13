@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
+import type { MentionPayloadRow } from '@/lib/mention-draft';
 import {
     initial,
     markDeleted,
@@ -117,12 +118,12 @@ export function useTalkStream(groupId: number, page: TalkPage) {
     }, [fetchPage, loadingOlder]);
 
     const send = useCallback(
-        async (body: string) => {
+        async (body: string, mentions: MentionPayloadRow[] = []) => {
             const response = await fetch(`/groups/${groupId}/talk`, {
                 method: 'POST',
                 headers: { ...xsrfHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
                 credentials: 'same-origin',
-                body: JSON.stringify({ body }),
+                body: JSON.stringify({ body, mentions }),
             });
 
             if (!response.ok) {

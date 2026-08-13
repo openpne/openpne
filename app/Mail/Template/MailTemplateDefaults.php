@@ -58,6 +58,10 @@ final class MailTemplateDefaults
             'en' => '{{ member_name }} mentioned you',
             'ja' => '【{{ op_config.sns_name }}】{{ member_name }} さんからのメンション',
         ],
+        'group-talk-mention' => [
+            'en' => '{{ member_name }} mentioned you in {{ community_name }}',
+            'ja' => '【{{ op_config.sns_name }}】{{ community_name }} で {{ member_name }} さんからのメンション',
+        ],
         'timeline-posting' => [
             'en' => 'New {{ op_term.activity }} post from {{ member_name }}',
             // The OpenPNE 3 extension's sample, byte for byte — including the space after 】.

@@ -49,8 +49,9 @@ way.
 | `group_message_mentions` | code-point ranges, shaped exactly like `timeline_post_mentions` |
 | `group_members.talk_read_at` / `.talk_read_message_id` / `.is_talk_muted` | the read cursor (a copied `(created_at, id)` tuple, no FK) and the per-group mute — see [Unread](#unread) |
 
-The image and mention tables have no app code behind them yet; they landed with the schema so the
-transfer that brings the old timeline across has somewhere to put what it carries.
+`group_message_images` has no app code behind it yet; it landed with the schema so the transfer that
+brings the old timeline across has somewhere to put what it carries. `group_message_mentions` is
+written by the composer — see [Mentions](#mentions).
 
 **`member_id` is `nullOnDelete`.** A withdrawn author leaves the message in place and reads as
 `Withdrawn member`, matching the other group tables (`group_topics`, `group_events` and their
@@ -164,8 +165,68 @@ to (not a blind flip, so a double tap settles). Muting takes the group out of th
 nothing else: its own per-group count keeps showing, de-emphasized, because the member asked for
 quiet rather than to lose track of the conversation. Leaving clears it with the row.
 
-Mentions are meant to **pierce mute** — a message addressed to you outranks the room's quiet — but
-mentions do not exist yet; that arrives with the mention PR.
+Mentions **pierce mute** — a message addressed to you outranks the room's quiet — see
+[Mentions](#mentions) below.
+
+## Mentions
+
+Talk parses `@mentions` and nothing else: no hashtags (a chat has no tag culture, and a per-group tag
+index would be a screen nobody asked for) and no link cards. URLs are linkified at render, as
+everywhere.
+
+The mechanics are the timeline's, reused rather than re-implemented — the range storage, the resolver
+and the composer state machine are all shared code. [timeline.md](timeline.md#a-mention-is-a-range-not-text)
+is the reference for how a range works, how offsets are counted in code points, and why the picker's
+selection is the only thing that ever becomes a mention. What follows is only what talk does
+differently.
+
+**The room is the mentionable set.** [`GroupTalkMentionCandidates`](../../app/Features/GroupTalk/Queries/GroupTalkMentionCandidates.php)
+offers the group's own members and nobody else: a name from outside could not read the message the
+mention appears in. There is deliberately **no friend tier** — the timeline's picker ranks friends
+first because its candidate set is the whole SNS, but here the set is already the room, and ranking a
+friend above the person you are talking to would order the list by the wrong relationship.
+
+What the picker offers is exactly what [`ResolveMentions`](../../app/Features/Timeline/Actions/ResolveMentions.php)
+accepts for the same group — it takes the group and narrows mentionability to its members, which is
+why talk reuses it rather than growing a second copy of the rule. A test walks the offered set and
+resolves every name, so the two cannot drift into a picker that suggests members the submit drops.
+
+**Two layers of failure**, as the timeline has them: a payload the picker could not have produced is a
+broken client, so the whole message is refused (422); a row that merely stopped describing reality —
+a rename, a fresh block, a member who left — is dropped alone and the message still posts. The bounds
+differ only in scale: talk's body caps at 5,000 code points, so `MentionRules::rules()` takes the cap
+rather than hardcoding the timeline's 140.
+
+**No per-message permalink.** A mention notification links to the conversation
+(`/groups/{group}/talk`), because that is the only screen talk has. The feed re-checks at click time
+that the message still exists and that the reader may still read the group, and resolves to nothing
+when either has changed.
+
+### The one notification talk sends
+
+`group_talk_mention` (OpenPNE-4-native, no OpenPNE 3 ancestor) under a new `GroupTalk` category, with
+a configurable `group-talk-mention` mail template. There is deliberately **no per-message broadcast**:
+a chat that notified on every line would empty the feed of meaning, so the room's unread badge carries
+that job instead.
+
+[`GroupTalkNotificationEligibility`](../../app/Features/GroupTalk/GroupTalkNotificationEligibility.php)
+answers who may receive one: a current group member, not banned, still able to read the group, with no
+block in either direction with the author, and never the author. It is asked **twice** — when the
+listener enqueues and again in `shouldSend()` immediately before each channel — because a mention mail
+carries the message body and a queued job can outlive the facts it was enqueued under
+([notifications.md](notifications.md#delivery-time-re-checks)).
+
+Two asymmetries are deliberate:
+
+- **Mute does not gate a mention.** `is_talk_muted` silences the room's badge; being named is
+  addressed to one person and outranks having asked the room for quiet. A member who wants no mention
+  mail turns the catalog kind off, which is a different question and is honoured.
+- **Blocking does gate it**, though talk history does not filter by block at all. History is the
+  record of what was said; a notification is putting two people in front of each other, which is
+  exactly what a block refuses.
+
+An author who withdraws before delivery takes the queued notification with them
+(`deleteWhenMissingModels`): "Withdrawn member mentioned you" is a notification nobody can act on.
 
 ## Access
 
@@ -213,5 +274,8 @@ role once per request and the serializer asks it per row.
    the ones that cannot, never the initialization.
 5. The cursor only ever moves forward, and the guard is in the `WHERE` clause rather than in a
    read-then-write.
-6. Talk stays switched off until the cutover; a change that makes it reachable by default is a change
+6. A mention row exists only where the picker produced one; no body is ever parsed for `@`. What the
+   picker may offer and what the write will accept are the same set, by construction.
+7. A mention pierces mute; a block stops it. Talk history does neither.
+8. Talk stays switched off until the cutover; a change that makes it reachable by default is a change
    to that plan, not a bug fix.

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One utterance in a group's talk. Ordering is the (created_at, id) tuple everywhere — see
@@ -28,5 +29,14 @@ class GroupMessage extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(Member::class, 'member_id');
+    }
+
+    /**
+     * @return HasMany<GroupMessageMention, $this> The @mentions in the body, ascending by offset —
+     *                                             the order EntityText expects to walk them in.
+     */
+    public function mentions(): HasMany
+    {
+        return $this->hasMany(GroupMessageMention::class)->orderBy('offset');
     }
 }

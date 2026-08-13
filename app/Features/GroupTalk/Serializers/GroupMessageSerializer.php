@@ -6,6 +6,7 @@ use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\GroupTalkPage;
 use App\Features\GroupTalk\GroupTalkPermissions;
 use App\Models\GroupMessage;
+use App\Models\GroupMessageMention;
 use App\Models\Member;
 
 /**
@@ -21,7 +22,7 @@ use App\Models\Member;
 class GroupMessageSerializer
 {
     /**
-     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, isOwn: bool, canDelete: bool}
+     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, isOwn: bool, canDelete: bool}
      */
     public static function message(GroupMessage $message, GroupTalkPermissions $permissions): array
     {
@@ -31,9 +32,33 @@ class GroupMessageSerializer
             'createdAt' => $message->created_at->toIso8601String(),
             'cursor' => (string) GroupTalkCursor::of($message),
             'author' => self::author($message->author),
+            'mentions' => self::mentions($message),
             'isOwn' => $permissions->owns($message),
             'canDelete' => $permissions->canDelete($message),
         ];
+    }
+
+    /**
+     * The ranges EntityText splits the body on — ascending and non-overlapping, in the relation's own
+     * offset order. The same wire shape the timeline ships, so one client splitter serves both; talk
+     * simply has no second list, since it parses no hashtags.
+     *
+     * No display name travels with a range: the body already carries it, frozen at post time. A
+     * member whose account is gone has no row at all (the FK cascades) and the range renders as the
+     * plain text it always was — which is why no renderer needs a defensive branch.
+     *
+     * @return list<array{memberId: int, offset: int, length: int}>
+     */
+    private static function mentions(GroupMessage $message): array
+    {
+        return $message->mentions
+            ->map(fn (GroupMessageMention $mention): array => [
+                'memberId' => (int) $mention->member_id,
+                'offset' => (int) $mention->offset,
+                'length' => (int) $mention->length,
+            ])
+            ->values()
+            ->all();
     }
 
     /**

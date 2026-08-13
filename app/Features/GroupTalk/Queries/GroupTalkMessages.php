@@ -87,10 +87,10 @@ class GroupTalkMessages
     /** @return Builder<GroupMessage> */
     private function query(Group $group): Builder
     {
-        // The author and their avatar in two more queries, whatever the page size — the serializer
-        // reads both per row.
+        // The author, their avatar and the mention ranges in three more queries, whatever the page
+        // size — the serializer reads all three per row.
         return GroupMessage::query()
             ->where('group_id', $group->getKey())
-            ->with('author.avatar.file');
+            ->with('author.avatar.file', 'mentions');
     }
 }

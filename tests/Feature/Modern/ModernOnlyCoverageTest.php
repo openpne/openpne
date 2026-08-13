@@ -53,6 +53,7 @@ class ModernOnlyCoverageTest extends TestCase
         'notifications.center',
         'unread.counts',
         'timeline.mention_candidates',
+        'group.talk.mention_candidates',
     ];
 
     /**
