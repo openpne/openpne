@@ -202,6 +202,43 @@ test('a page opens on the live end of the conversation', () => {
 });
 
 /**
+ * A deep link (`?m=`) is rendered with the slice its message sits in, so the first page is not
+ * always the newest one. Reading the window off `hasNewer` is what stops the poll appending rows
+ * that do not follow the last one on screen — the same rule a jump into history obeys.
+ */
+test('a page rendered around a deep link opens in the history window', () => {
+    const landed = initial(page([message(10, '2026-08-13T09:10:00+00:00'), message(11, '2026-08-13T09:11:00+00:00')], true, true));
+
+    assert.deepEqual(landed.window, { kind: 'history', hasNewer: true });
+    assert.equal(landed.hasOlder, true);
+    assert.deepEqual(bodies(landed), ['m10', 'm11']);
+});
+
+test('a deep link whose page already runs to the newest message is the live window', () => {
+    assert.deepEqual(initial(page([message(90, '2026-08-13T18:00:00+00:00')], true, false)).window, { kind: 'latest' });
+});
+
+/**
+ * "Jump to latest" from a deep link's landing. The page holds the move until a render whose
+ * generation has moved past the one it was asked from, so a landing that starts in history has to
+ * move the generation like any other window change — otherwise the jump is never spent and the
+ * scroll never happens.
+ */
+test('leaving a deep link window moves the generation the jump was asked from', () => {
+    const landed = initial(page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
+    assert.equal(landed.window.kind, 'history', 'the landing this is about is one behind the newest message');
+    const askedFrom = landed.generation;
+
+    const back = enterLatest(landed, page([message(90, '2026-08-13T18:00:00+00:00')], true, false));
+    assert.notEqual(back.generation, askedFrom);
+
+    // And stepping forward page by page arrives at the same place.
+    const caughtUp = mergeNewer(landed, page([message(11, '2026-08-13T09:11:00+00:00')], false, false));
+    assert.deepEqual(caughtUp.window, { kind: 'latest' });
+    assert.notEqual(caughtUp.generation, askedFrom);
+});
+
+/**
  * The whole point of the window: the unread jump lands somewhere behind the newest message, and what
  * it lands on must not be stirred into what was on screen. The two stretches have a hole between
  * them, and a merged list would draw that hole as a conversation.

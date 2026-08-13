@@ -197,7 +197,9 @@ class TalkMentionNotificationTest extends TalkTestCase
         $this->assertStringContainsString($author->name, $text);
         $this->assertStringContainsString($group->name, $text);
         $this->assertStringContainsString('come and look', $text);
-        $this->assertStringContainsString("/groups/{$group->getKey()}/talk", $text);
+        // The message, not just the room: mail never passes through the feed's click-time re-check,
+        // so the anchor is the only thing that says which line named them.
+        $this->assertStringContainsString("/groups/{$group->getKey()}/talk?m={$message->getKey()}", $text);
     }
 
     public function test_the_member_can_turn_the_mail_off_and_keep_the_feed_row(): void

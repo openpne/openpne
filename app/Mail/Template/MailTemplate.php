@@ -168,7 +168,8 @@ enum MailTemplate: string
                     'member_name' => ['help' => 'The author’s name.', 'sample' => 'Example'],
                     'community_name' => ['help' => 'The %community% the message was posted in.', 'sample' => 'Example %community%'],
                     'body' => ['help' => 'The posted content.', 'sample' => 'Example body'],
-                    // Talk has no per-message permalink; the link opens the conversation.
+                    // The conversation, opened on the message that named them (group-talk.md); talk
+                    // has no screen for one message to link to instead.
                     'url' => ['help' => 'The %community% talk URL.', 'sample' => 'https://example.test'],
                 ],
             ),
