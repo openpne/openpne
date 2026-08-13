@@ -8,6 +8,7 @@ use App\Models\DirectMessage;
 use App\Models\Group;
 use App\Models\GroupEvent;
 use App\Models\GroupEventComment;
+use App\Models\GroupMessage;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -51,6 +52,12 @@ class MorphAliasTest extends TestCase
     {
         $this->assertSame(GroupTopic::class, Relation::getMorphedModel('communityTopic'));
         $this->assertSame(GroupTopicComment::class, Relation::getMorphedModel('communityTopicComment'));
+    }
+
+    /** OpenPNE-4-native, so it has no legacy alias to keep resolving — only the one it writes. */
+    public function test_a_group_message_writes_the_group_message_alias(): void
+    {
+        $this->assertSame('groupMessage', (new GroupMessage)->getMorphClass());
     }
 
     public function test_a_group_event_and_its_comment_write_the_group_event_aliases(): void

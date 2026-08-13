@@ -39,4 +39,10 @@ class GroupMessage extends Model
     {
         return $this->hasMany(GroupMessageMention::class)->orderBy('offset');
     }
+
+    /** @return HasMany<GroupMessageImage, $this> Attached images, in slot (number) order. */
+    public function images(): HasMany
+    {
+        return $this->hasMany(GroupMessageImage::class)->orderBy('number');
+    }
 }

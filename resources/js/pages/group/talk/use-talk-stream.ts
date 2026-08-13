@@ -17,9 +17,10 @@ import type { TalkMessage, TalkPage } from './types';
 /** How often a visible tab asks what has arrived. */
 const POLL_MS = 8_000;
 
-/** Thrown for a rejected send, carrying what the server said about the body. */
+/** Thrown for a rejected send, carrying whatever the server said about each field. */
 export class SendFailed extends Error {
-    constructor(public readonly bodyError: string | null) {
+    /** @param errors first validation message per field (`body`, `image`, …); empty for any other refusal. */
+    constructor(public readonly errors: Record<string, string>) {
         super('send failed');
     }
 }
@@ -118,16 +119,33 @@ export function useTalkStream(groupId: number, page: TalkPage) {
     }, [fetchPage, loadingOlder]);
 
     const send = useCallback(
-        async (body: string, mentions: MentionPayloadRow[] = []) => {
+        async (body: string, mentions: MentionPayloadRow[] = [], image: File | null = null) => {
+            // Multipart throughout, not only when a file rides along: one transport is one set of
+            // encoding rules to reason about. It costs the body its LF newlines — FormData encodes
+            // them as CRLF — which is exactly why StoreGroupMessageRequest re-normalizes before it
+            // measures anything, so the mention offsets computed over the textarea's LF value still
+            // describe the body that is stored.
+            const form = new FormData();
+            form.append('body', body);
+            mentions.forEach((mention, index) => {
+                form.append(`mentions[${index}][member_id]`, String(mention.member_id));
+                form.append(`mentions[${index}][offset]`, String(mention.offset));
+                form.append(`mentions[${index}][length]`, String(mention.length));
+            });
+            if (image !== null) {
+                form.append('image', image);
+            }
+
             const response = await fetch(`/groups/${groupId}/talk`, {
                 method: 'POST',
-                headers: { ...xsrfHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
+                // No Content-Type: the browser sets it with the multipart boundary.
+                headers: { ...xsrfHeader(), Accept: 'application/json' },
                 credentials: 'same-origin',
-                body: JSON.stringify({ body, mentions }),
+                body: form,
             });
 
             if (!response.ok) {
-                throw new SendFailed(await bodyErrorOf(response));
+                throw new SendFailed(await errorsOf(response));
             }
 
             const message = (await response.json()) as TalkMessage;
@@ -156,17 +174,24 @@ export function useTalkStream(groupId: number, page: TalkPage) {
     return { messages: state.messages, hasOlder: state.hasOlder, loadingOlder, loadOlder, send, remove };
 }
 
-/** The `body` validation message from a 422, or null for any other refusal. */
-async function bodyErrorOf(response: Response): Promise<string | null> {
+/** The first validation message per field from a 422; empty for any other refusal. */
+async function errorsOf(response: Response): Promise<Record<string, string>> {
     if (response.status !== 422) {
-        return null;
+        return {};
     }
 
     try {
         const payload = (await response.json()) as { errors?: Record<string, string[]> };
+        const errors: Record<string, string> = {};
+        for (const [field, messages] of Object.entries(payload.errors ?? {})) {
+            const first = messages[0];
+            if (first !== undefined) {
+                errors[field] = first;
+            }
+        }
 
-        return payload.errors?.body?.[0] ?? null;
+        return errors;
     } catch {
-        return null;
+        return {};
     }
 }

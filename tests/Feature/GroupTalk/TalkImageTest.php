@@ -1,0 +1,295 @@
+<?php
+
+namespace Tests\Feature\GroupTalk;
+
+use App\Features\Group\Actions\DeleteGroup;
+use App\Features\GroupTalk\Actions\CreateGroupMessage;
+use App\Features\GroupTopic\TopicReadAccess;
+use App\Files\DiskFileStorage;
+use App\Files\FileStorage;
+use App\Models\File;
+use App\Models\Group;
+use App\Models\GroupMessage;
+use App\Models\Member;
+use App\Support\SnsSettingKey;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use Mockery;
+use RuntimeException;
+
+/**
+ * One image per message. The schema numbers slots so migrated content can carry several; the
+ * composer offers one, as the timeline does.
+ */
+class TalkImageTest extends TalkTestCase
+{
+    private function upload(): UploadedFile
+    {
+        return UploadedFile::fake()->image('shot.png', 40, 40);
+    }
+
+    private function attachedFile(GroupMessage $message): ?File
+    {
+        return $message->images()->with('file')->first()?->file;
+    }
+
+    public function test_a_message_can_carry_an_image(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look at this', 'image' => $this->upload()])
+            ->assertCreated()
+            ->json('id');
+
+        $message = GroupMessage::findOrFail($id);
+        $this->assertDatabaseHas('group_message_images', ['group_message_id' => $id, 'number' => 1]);
+        $this->assertNotNull($this->attachedFile($message));
+        $this->assertSame('groupMessage', $this->attachedFile($message)->related_entity_type);
+    }
+
+    /** The attach shares the write, so the sender's cursor still passes their own message. */
+    public function test_the_cursor_still_advances_when_an_image_rides_along(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()])
+            ->assertCreated()
+            ->json('id');
+
+        $cursor = DB::table('group_members')
+            ->where('group_id', $group->getKey())->where('member_id', $author->getKey())
+            ->value('talk_read_message_id');
+
+        $this->assertSame((int) $id, (int) $cursor);
+    }
+
+    public function test_the_serializer_ships_the_image(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $this->actingAs($author)->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()]);
+
+        $this->actingAs($author)->get("/groups/{$group->getKey()}/talk")
+            ->assertInertia(fn ($page) => $page
+                ->has('page.messages.0.images', 1)
+                ->has('page.messages.0.images.0.url')
+                ->has('page.messages.0.images.0.thumbnailUrl'));
+    }
+
+    public function test_a_message_without_an_image_ships_an_empty_list(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+
+        $this->actingAs($author)->get("/groups/{$group->getKey()}/talk")
+            ->assertInertia(fn ($page) => $page->where('page.messages.0.images', []));
+    }
+
+    /**
+     * The compensating flow owns the outermost transaction, so a failure after the bytes are stored
+     * must take both the row and the bytes with it. A byte write is not transactional: without
+     * compensation the rollback would drop the `files` row and leave the bytes orphaned on disk.
+     *
+     * Driven against a real disk backend, because that is the only backend where the two can come
+     * apart — asserting over `files` rows alone would pass even with no compensation at all.
+     */
+    public function test_a_failure_after_the_bytes_are_stored_leaves_no_message_and_no_bytes(): void
+    {
+        config(['openpne.files.disk' => 'local']);
+        Storage::fake('local');
+        $real = new DiskFileStorage('local');
+        $this->instance(FileStorage::class, Mockery::mock(FileStorage::class, function ($mock) use ($real) {
+            $mock->shouldReceive('writeStream')->andReturnUsing(fn ($file, $stream) => $real->writeStream($file, $stream));
+            $mock->shouldReceive('delete')->andReturnUsing(fn ($file) => $real->delete($file));
+            $mock->shouldReceive('readStream')->andReturnUsing(fn ($file) => $real->readStream($file));
+            $mock->shouldReceive('exists')->andReturnUsing(fn ($file) => $real->exists($file));
+        }));
+
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        // Fail the join-row insert: the one step that runs after the bytes have already landed.
+        DB::listen(function ($query) {
+            if (str_contains($query->sql, 'insert into "group_message_images"')) {
+                throw new RuntimeException('boom');
+            }
+        });
+
+        try {
+            app(CreateGroupMessage::class)($author, $group, 'look', [], $this->upload());
+            $this->fail('the write should have thrown');
+        } catch (RuntimeException) {
+            // expected
+        }
+
+        $this->assertDatabaseCount('group_messages', 0);
+        $this->assertDatabaseCount('group_message_images', 0);
+        $this->assertDatabaseCount('files', 0);
+        $this->assertEmpty(Storage::disk('local')->allFiles(), 'the stored bytes must be compensated off the disk');
+    }
+
+    public function test_deleting_the_message_purges_its_bytes(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()])
+            ->json('id');
+        $file = $this->attachedFile(GroupMessage::findOrFail($id));
+        $this->assertTrue(app(FileStorage::class)->exists($file));
+
+        $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk/messages/{$id}/delete")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
+        $this->assertFalse(app(FileStorage::class)->exists($file));
+    }
+
+    /** The group cascade drops the join rows but never the bytes — DeleteGroup has to reclaim them. */
+    public function test_deleting_the_group_purges_its_talk_bytes(): void
+    {
+        $group = $this->group();
+        $author = $this->adminOf($group);
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()])
+            ->json('id');
+        $file = $this->attachedFile(GroupMessage::findOrFail($id));
+
+        app(DeleteGroup::class)->purge($group);
+
+        $this->assertDatabaseMissing('groups', ['id' => $group->getKey()]);
+        $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
+        $this->assertFalse(app(FileStorage::class)->exists($file));
+    }
+
+    // --- FilePolicy: a talk image inherits the conversation's read gate ---
+
+    private function talkImage(GroupMessage $message): File
+    {
+        return File::factory()->create([
+            'type' => 'image/png',
+            'related_entity_type' => 'groupMessage',
+            'related_entity_id' => $message->getKey(),
+        ]);
+    }
+
+    private function messageIn(Group $group): GroupMessage
+    {
+        return GroupMessage::factory()->create([
+            'group_id' => $group->getKey(),
+            'member_id' => $this->memberOf($group)->getKey(),
+        ]);
+    }
+
+    public function test_an_everyone_groups_image_is_visible_to_any_member(): void
+    {
+        $image = $this->talkImage($this->messageIn($this->group(TopicReadAccess::Everyone)));
+
+        $this->assertTrue(Gate::forUser(Member::factory()->create())->allows('view', $image));
+    }
+
+    public function test_a_members_only_groups_image_is_hidden_from_a_non_member(): void
+    {
+        $group = $this->group(TopicReadAccess::MembersOnly);
+        $image = $this->talkImage($this->messageIn($group));
+
+        $this->assertFalse(Gate::forUser(Member::factory()->create())->allows('view', $image));
+        $this->assertTrue(Gate::forUser($this->memberOf($group))->allows('view', $image));
+    }
+
+    public function test_a_guest_never_sees_a_talk_image(): void
+    {
+        $image = $this->talkImage($this->messageIn($this->group(TopicReadAccess::Everyone)));
+
+        $this->assertFalse(Gate::forUser(null)->allows('view', $image));
+    }
+
+    public function test_switching_the_unit_off_takes_the_image_with_it(): void
+    {
+        $group = $this->group(TopicReadAccess::Everyone);
+        $image = $this->talkImage($this->messageIn($group));
+        $viewer = $this->memberOf($group);
+        $this->assertTrue(Gate::forUser($viewer)->allows('view', $image));
+
+        $this->setSnsSetting(SnsSettingKey::FeatureGroupTalkEnabled, false);
+        $this->freshRequestState();
+
+        $this->assertFalse(Gate::forUser($viewer)->allows('view', $image));
+    }
+
+    public function test_the_bytes_are_served_to_a_reader_and_refused_to_an_outsider(): void
+    {
+        $group = $this->group(TopicReadAccess::MembersOnly);
+        $author = $this->memberOf($group);
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()])
+            ->json('id');
+        $url = $this->attachedFile(GroupMessage::findOrFail($id))->url();
+
+        $this->actingAs($author)->get($url)->assertOk();
+        $this->actingAs(Member::factory()->create())->get($url)->assertNotFound();
+    }
+
+    // --- validation ---
+
+    public function test_a_refused_file_is_a_422_naming_the_image_field(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $this->actingAs($author)
+            ->postJson("/groups/{$group->getKey()}/talk", [
+                'body' => 'look',
+                'image' => UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf'),
+            ])
+            ->assertJsonValidationErrorFor('image');
+
+        $this->assertDatabaseCount('group_messages', 0);
+    }
+
+    /**
+     * The multipart trap from the timeline campaign: FormData encodes the textarea's LF newlines as
+     * CRLF in transit, so a mention offset computed over the LF value would be one position short
+     * per preceding line break. The form request re-normalizes before it measures anything.
+     */
+    public function test_a_multipart_send_with_newlines_keeps_its_mention_offsets(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+        $target = Member::factory()->create(['name' => 'Bob']);
+        DB::table('group_members')->insert([
+            'group_id' => $group->getKey(), 'member_id' => $target->getKey(), 'role' => 1,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        // Offsets are the ones a browser computes over the DOM value, whose newlines are LF.
+        $lfBody = "one\ntwo\n@Bob";
+        $offset = mb_strpos($lfBody, '@Bob');
+
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", [
+                // What the wire actually carries.
+                'body' => str_replace("\n", "\r\n", $lfBody),
+                'mentions' => [['member_id' => $target->getKey(), 'offset' => $offset, 'length' => 4]],
+                'image' => $this->upload(),
+            ])
+            ->assertCreated()
+            ->json('id');
+
+        $this->assertSame($lfBody, GroupMessage::findOrFail($id)->body, 'the body is stored with LF');
+        $this->assertDatabaseHas('group_message_mentions', [
+            'group_message_id' => $id,
+            'member_id' => $target->getKey(),
+            'offset' => $offset,
+        ]);
+        $this->assertDatabaseCount('group_message_images', 1);
+    }
+}

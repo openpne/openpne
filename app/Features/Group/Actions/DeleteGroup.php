@@ -6,6 +6,7 @@ use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupMembership;
 use App\Features\GroupEvent\Actions\DeleteEvent;
+use App\Features\GroupTalk\Actions\DeleteGroupMessage;
 use App\Features\GroupTopic\Actions\DeleteTopic;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Models\File;
@@ -19,6 +20,7 @@ class DeleteGroup
         private readonly DeleteTopic $deleteTopic,
         private readonly DeleteEvent $deleteEvent,
         private readonly DeleteTimelinePost $deleteTimelinePost,
+        private readonly DeleteGroupMessage $deleteGroupMessage,
     ) {}
 
     public function __invoke(Member $actor, Group $group): void
@@ -53,6 +55,13 @@ class DeleteGroup
         // no image of their own.
         foreach ($group->timelinePosts()->whereNull('in_reply_to_id')->get() as $post) {
             ($this->deleteTimelinePost)($post);
+        }
+
+        // And the group's talk: the cascade drops group_message_images rows but not the File bytes.
+        // Every message, not only some — talk is flat, so there is no parent whose purge would reach
+        // the rest.
+        foreach ($group->messages()->get() as $message) {
+            $this->deleteGroupMessage->purge($message);
         }
 
         // The cascade removes memberships and join requests but never the top-image File bytes. Read

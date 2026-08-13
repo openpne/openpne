@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Schema;
  * group_message_id -> the message, file_id -> the stored bytes, number = the slot. No timestamps
  * (the File carries them). The FK cascade drops only this join row, never the File bytes.
  *
- * The schema holds N slots; nothing writes here yet — the composer's attach path arrives with the
- * image PR, and the timeline transfer fills these rows for migrated content.
+ * The schema holds N slots though the composer attaches one, so the timeline transfer can bring
+ * migrated content that carries several.
  */
 return new class extends Migration
 {
