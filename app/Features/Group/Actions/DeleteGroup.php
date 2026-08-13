@@ -6,12 +6,12 @@ use App\Features\Group\Exceptions\GroupActionException;
 use App\Features\Group\Exceptions\GroupActionFailure;
 use App\Features\Group\GroupMembership;
 use App\Features\GroupEvent\Actions\DeleteEvent;
-use App\Features\GroupTalk\Actions\DeleteGroupMessage;
 use App\Features\GroupTopic\Actions\DeleteTopic;
 use App\Features\Timeline\Actions\DeleteTimelinePost;
 use App\Models\File;
 use App\Models\Group;
 use App\Models\Member;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class DeleteGroup
@@ -20,7 +20,6 @@ class DeleteGroup
         private readonly DeleteTopic $deleteTopic,
         private readonly DeleteEvent $deleteEvent,
         private readonly DeleteTimelinePost $deleteTimelinePost,
-        private readonly DeleteGroupMessage $deleteGroupMessage,
     ) {}
 
     public function __invoke(Member $actor, Group $group): void
@@ -57,29 +56,39 @@ class DeleteGroup
             ($this->deleteTimelinePost)($post);
         }
 
-        // And the group's talk: the cascade drops group_message_images rows but not the File bytes.
-        // Every message, not only some — talk is flat, so there is no parent whose purge would reach
-        // the rest.
-        foreach ($group->messages()->get() as $message) {
-            $this->deleteGroupMessage->purge($message);
-        }
-
         // The cascade removes memberships and join requests but never the top-image File bytes. Read
         // the image under the same lock as the delete so a concurrent edit that just replaced it can't
         // leave the new File orphaned (file_id is a mutable self-column — a stale read would miss that
         // edit's image). Purge the bytes after commit.
-        $image = DB::transaction(function () use ($group): ?File {
+        //
+        // The talk's image Files are collected under that same lock, unlike the topic/event/timeline
+        // sweeps above: talk is written concurrently by design, and a message committed after any
+        // earlier enumeration would slip past it — its join row cascading away while the File row and
+        // bytes stay. The parent-row X-lock closes that window (a new message's FK check takes a
+        // shared lock on the group row and waits), the cascade drops the message and join rows, and
+        // the Files are purged once the delete has committed.
+        [$image, $talkImages] = DB::transaction(function () use ($group): array {
             $locked = Group::whereKey($group->getKey())->lockForUpdate()->first();
             if ($locked === null) {
-                return null; // already deleted by a concurrent request
+                return [null, new Collection]; // already deleted by a concurrent request
             }
+
+            $talkImages = File::query()
+                ->whereIn('id', DB::table('group_message_images')
+                    ->join('group_messages', 'group_messages.id', '=', 'group_message_images.group_message_id')
+                    ->where('group_messages.group_id', $locked->getKey())
+                    ->select('group_message_images.file_id'))
+                ->get();
 
             $file = $locked->image()->first();
             $locked->delete();
 
-            return $file;
+            return [$file, $talkImages];
         });
 
-        $image?->delete(); // deleting the File purges its bytes
+        $image?->delete(); // deleting a File purges its bytes
+        foreach ($talkImages as $talkImage) {
+            $talkImage->delete();
+        }
     }
 }
