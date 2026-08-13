@@ -14,7 +14,7 @@ enum NotificationCategory: string
     case Timeline = 'timeline';
     case Diary = 'diary';
     case GroupTopic = 'group_topic';
-    case CommunityEvent = 'community_event';
+    case GroupEvent = 'group_event';
     case FriendLink = 'friend_link';
     case DirectMessage = 'direct_message';
 
@@ -25,7 +25,7 @@ enum NotificationCategory: string
             self::Timeline => Feature::Timeline,
             self::Diary => Feature::Diary,
             self::GroupTopic => Feature::GroupTopic,
-            self::CommunityEvent => Feature::CommunityEvent,
+            self::GroupEvent => Feature::GroupEvent,
             self::FriendLink => Feature::Friend,
             self::DirectMessage => Feature::DirectMessage,
         };
@@ -43,7 +43,7 @@ enum NotificationCategory: string
             self::Timeline => '%Activity%',
             self::Diary => '%Diaries%',
             self::GroupTopic => '%Community% %topics%',
-            self::CommunityEvent => '%Community% events',
+            self::GroupEvent => '%Community% events',
             self::FriendLink => '%Friend% requests',
             self::DirectMessage => 'Messages',
         };

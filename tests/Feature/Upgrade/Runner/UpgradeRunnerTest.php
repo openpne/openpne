@@ -6,9 +6,9 @@ use App\Models\UpgradeState;
 use App\Upgrade\InsertSelectCompiler;
 use App\Upgrade\Runner\UpgradeRunner;
 use App\Upgrade\StepRegistry;
-use App\Upgrade\Steps\CommunityEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\FriendFeatureUpgrade;
 use App\Upgrade\Steps\FriendshipUpgrade;
+use App\Upgrade\Steps\GroupEventPluginFeatureUpgrade;
 use App\Upgrade\Steps\MemberBlockUpgrade;
 use App\Upgrade\Steps\MemberUpgrade;
 use App\Upgrade\Steps\PluginFeatureUpgrade;
@@ -169,7 +169,7 @@ class UpgradeRunnerTest extends TestCase
     {
         // The sns_settings steps all write one table; --force-restart clears it once, not per step.
         $runner = new UpgradeRunner(new InsertSelectCompiler, [
-            new SnsSettingUpgrade, new PluginFeatureUpgrade, new CommunityEventPluginFeatureUpgrade, new FriendFeatureUpgrade,
+            new SnsSettingUpgrade, new PluginFeatureUpgrade, new GroupEventPluginFeatureUpgrade, new FriendFeatureUpgrade,
         ]);
 
         $this->assertSame(['sns_settings'], $runner->targetTables());

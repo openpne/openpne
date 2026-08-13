@@ -4,9 +4,9 @@ namespace Tests\Feature\Group\Classic;
 
 use App\Features\GroupTopic\TopicPostAuthority;
 use App\Features\GroupTopic\TopicReadAccess;
-use App\Models\CommunityEvent;
 use App\Models\Group;
 use App\Models\GroupCategory;
+use App\Models\GroupEvent;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\Member;
@@ -147,7 +147,7 @@ class GroupHomeDetailsTest extends TestCase
         $topic = GroupTopic::factory()->create(['group_id' => $group->id, 'name' => 'Walk plans', 'member_id' => $member->id]);
         $topic->timestamps = false;
         $topic->forceFill(['updated_at' => '2026-07-08 12:00:00'])->save();
-        $event = CommunityEvent::factory()->create(['community_id' => $group->id, 'name' => 'Summer stroll', 'member_id' => $member->id]);
+        $event = GroupEvent::factory()->create(['group_id' => $group->id, 'name' => 'Summer stroll', 'member_id' => $member->id]);
         $event->timestamps = false;
         $event->forceFill(['updated_at' => '2026-06-11 12:00:00'])->save();
 
@@ -164,7 +164,7 @@ class GroupHomeDetailsTest extends TestCase
         ], false);
         // Row shape: <span class="date">{update date}</span> <a>{title}({count})</a> — no space
         // before the count, and the event's date is its update date, not its open date.
-        $response->assertSee('<li><span class="date">June 11</span> <a href="'.route('communityEvent.show', $event).'">Summer stroll(0)</a></li>', false);
+        $response->assertSee('<li><span class="date">June 11</span> <a href="'.route('group.events.show', $event).'">Summer stroll(0)</a></li>', false);
         $response->assertSee('<li><span class="date">July 8</span> <a href="'.route('group.topics.show', $topic).'">Walk plans(0)</a></li>', false);
         // Each row carries More (the board) and the create link in its own moreInfo list.
         $response->assertSeeInOrder([

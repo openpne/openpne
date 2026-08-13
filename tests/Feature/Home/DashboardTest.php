@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Home;
 
-use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\DiaryImage;
 use App\Models\DirectMessage;
 use App\Models\DirectMessageRecipient;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\Member;
@@ -76,7 +76,7 @@ class DashboardTest extends TestCase
         $viewer = Member::factory()->create();
         $group = Group::factory()->create();
         GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
-        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey()]);
         $event->participants()->attach([$viewer->getKey(), Member::factory()->create()->getKey()]);
 
         $this->actingAs($viewer)
@@ -111,7 +111,7 @@ class DashboardTest extends TestCase
         $viewer = Member::factory()->create();
         $group = Group::factory()->create();
         GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
-        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey()]);
         $event->participants()->attach([$viewer->getKey(), Member::factory()->create()->getKey()]);
 
         $this->actingAs($viewer)
@@ -156,7 +156,7 @@ class DashboardTest extends TestCase
         foreach (range(1, 4) as $ignored) {
             $group = Group::factory()->create(['file_id' => File::factory()->create()->getKey()]);
             GroupMember::factory()->member()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey()]);
-            $event = CommunityEvent::factory()->create(['community_id' => $group->getKey()]);
+            $event = GroupEvent::factory()->create(['group_id' => $group->getKey()]);
             $event->participants()->attach(Member::factory()->create()->getKey());
         }
         $topicGroup = Group::factory()->create(['file_id' => File::factory()->create()->getKey()]);

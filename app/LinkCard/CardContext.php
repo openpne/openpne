@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\LinkCard;
 
-use App\Features\CommunityEvent\CommunityEventAccess;
 use App\Features\Diary\DiaryAccess;
+use App\Features\GroupEvent\GroupEventAccess;
 use App\Features\GroupTopic\GroupTopicAccess;
 use App\Features\Timeline\TimelineAccess;
-use App\Models\CommunityEvent;
 use App\Models\Diary;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\LinkCard;
 use App\Models\Member;
@@ -54,7 +54,7 @@ enum CardContext: string
         return match ($record::class) {
             Diary::class => self::Diary,
             GroupTopic::class => self::Topic,
-            CommunityEvent::class => self::Event,
+            GroupEvent::class => self::Event,
             TimelinePost::class => self::TimelinePost,
             default => null,
         };
@@ -73,7 +73,7 @@ enum CardContext: string
         return match ($this) {
             self::Diary => Feature::Diary,
             self::Topic => Feature::GroupTopic,
-            self::Event => Feature::CommunityEvent,
+            self::Event => Feature::GroupEvent,
             self::TimelinePost => Feature::Timeline,
         };
     }
@@ -123,7 +123,7 @@ enum CardContext: string
         return match ($this) {
             self::Diary => Diary::with(['member', 'linkCard'])->find($id),
             self::Topic => GroupTopic::with(['group', 'linkCard'])->find($id),
-            self::Event => CommunityEvent::with(['community', 'linkCard'])->find($id),
+            self::Event => GroupEvent::with(['group', 'linkCard'])->find($id),
             // Replies are excluded in the query, not filtered after: a reply id must not resolve at
             // all, so nothing downstream can authorize against it. See carriesCard.
             self::TimelinePost => TimelinePost::with(['member', 'linkCard'])->whereNull('in_reply_to_id')->find($id),
@@ -161,7 +161,7 @@ enum CardContext: string
             self::Diary => $record instanceof Diary && DiaryAccess::canView($viewer, $record),
             self::TimelinePost => $record instanceof TimelinePost && TimelineAccess::canView($viewer, $record),
             self::Topic => $record instanceof GroupTopic && $viewer !== null && GroupTopicAccess::canViewTopic($record, $viewer),
-            self::Event => $record instanceof CommunityEvent && $viewer !== null && CommunityEventAccess::canViewEvent($record, $viewer),
+            self::Event => $record instanceof GroupEvent && $viewer !== null && GroupEventAccess::canViewEvent($record, $viewer),
         };
     }
 }

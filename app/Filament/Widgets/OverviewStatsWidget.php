@@ -5,9 +5,9 @@ namespace App\Filament\Widgets;
 use App\Filament\Resources\Diaries\DiaryResource;
 use App\Filament\Resources\Groups\GroupResource;
 use App\Filament\Resources\Members\MemberResource;
-use App\Models\CommunityEvent;
 use App\Models\Diary;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\Member;
 use Carbon\CarbonInterface;
@@ -81,7 +81,7 @@ class OverviewStatsWidget extends StatsOverviewWidget
     public static function activeGroupCount(CarbonInterface $since): int
     {
         return GroupTopic::query()->where('updated_at', '>=', $since)->distinct()->pluck('group_id')
-            ->merge(CommunityEvent::query()->where('updated_at', '>=', $since)->distinct()->pluck('community_id'))
+            ->merge(GroupEvent::query()->where('updated_at', '>=', $since)->distinct()->pluck('group_id'))
             ->unique()
             ->count();
     }

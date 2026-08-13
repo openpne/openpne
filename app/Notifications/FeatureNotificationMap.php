@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Notifications\CommunityEvent\EventCommentBroadcastNotification;
-use App\Notifications\CommunityEvent\EventCommentedNotification;
-use App\Notifications\CommunityEvent\EventPostedNotification;
 use App\Notifications\Diary\DiaryCommentedNotification;
 use App\Notifications\Diary\DiaryPostedNotification;
 use App\Notifications\DirectMessage\DirectMessageReceivedNotification;
@@ -15,6 +12,9 @@ use App\Notifications\Friend\FriendRequestedNotification;
 use App\Notifications\Group\AdminTransferRequestedNotification;
 use App\Notifications\Group\GroupJoinedNotification;
 use App\Notifications\Group\SubAdminAppointedNotification;
+use App\Notifications\GroupEvent\EventCommentBroadcastNotification;
+use App\Notifications\GroupEvent\EventCommentedNotification;
+use App\Notifications\GroupEvent\EventPostedNotification;
 use App\Notifications\GroupTopic\TopicCommentBroadcastNotification;
 use App\Notifications\GroupTopic\TopicCommentedNotification;
 use App\Notifications\GroupTopic\TopicPostedNotification;

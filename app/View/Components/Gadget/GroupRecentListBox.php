@@ -3,7 +3,7 @@
 namespace App\View\Components\Gadget;
 
 use App\Features\Group\GroupPostTitle;
-use App\Models\CommunityEvent;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Support\LocalizedDate;
 use Illuminate\Support\Collection;
@@ -26,19 +26,18 @@ abstract class GroupRecentListBox extends Component
     }
 
     /**
-     * @param  Collection<int, GroupTopic|CommunityEvent>  $posts
+     * @param  Collection<int, GroupTopic|GroupEvent>  $posts
      * @return list<array{date: string, url: string, title: string, group: string}>
      */
     protected static function toEntries(Collection $posts, string $routeName): array
     {
         $locale = app()->getLocale();
 
-        return $posts->map(fn (GroupTopic|CommunityEvent $post): array => [
+        return $posts->map(fn (GroupTopic|GroupEvent $post): array => [
             'date' => LocalizedDate::monthDay($post->updated_at, $locale),
             'url' => route($routeName, $post),
             'title' => GroupPostTitle::withCount($post),
-            // The event board still names the relation `community`; the arms merge once it is renamed.
-            'group' => ($post instanceof GroupTopic ? $post->group : $post->community)->name,
+            'group' => $post->group->name,
         ])->all();
     }
 }

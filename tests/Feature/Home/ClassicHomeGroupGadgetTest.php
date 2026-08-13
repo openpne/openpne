@@ -3,12 +3,12 @@
 namespace Tests\Feature\Home;
 
 use App\Features\GroupTopic\TopicReadAccess;
-use App\Models\CommunityEvent;
-use App\Models\CommunityEventComment;
-use App\Models\CommunityEventMember;
 use App\Models\Gadget;
 use App\Models\GadgetConfig;
 use App\Models\Group;
+use App\Models\GroupEvent;
+use App\Models\GroupEventComment;
+use App\Models\GroupEventMember;
 use App\Models\GroupMember;
 use App\Models\GroupTopic;
 use App\Models\GroupTopicComment;
@@ -19,7 +19,7 @@ use Tests\TestCase;
 
 /**
  * The OpenPNE 3 opCommunityTopicPlugin home recent-list gadgets: recentGroupTopicComment,
- * recentCommunityEventComment, and their SNS-wide (public groups) variants.
+ * recentGroupEventComment, and their SNS-wide (public groups) variants.
  */
 class ClassicHomeGroupGadgetTest extends TestCase
 {
@@ -117,14 +117,14 @@ class ClassicHomeGroupGadgetTest extends TestCase
         $viewer = Member::factory()->create();
         $group = Group::factory()->create(['name' => 'EventGroup']);
         $this->join($viewer, $group);
-        $event = CommunityEvent::factory()->create([
-            'community_id' => $group->getKey(),
+        $event = GroupEvent::factory()->create([
+            'group_id' => $group->getKey(),
             'name' => 'JoinedEvent',
             'updated_at' => '2026-03-04 12:00:00',
         ]);
-        CommunityEventComment::factory()->count(2)->create(['community_event_id' => $event->getKey()]);
-        CommunityEventMember::factory()->count(3)->create(['community_event_id' => $event->getKey()]);
-        $gadget = $this->makeGadget('recentCommunityEventComment');
+        GroupEventComment::factory()->count(2)->create(['group_event_id' => $event->getKey()]);
+        GroupEventMember::factory()->count(3)->create(['group_event_id' => $event->getKey()]);
+        $gadget = $this->makeGadget('recentGroupEventComment');
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()
@@ -133,7 +133,7 @@ class ClassicHomeGroupGadgetTest extends TestCase
             ->assertSee('Recently Posted Community Events')     // h3
             ->assertSee('JoinedEvent(2)')                       // comment count (2), not participant count (3)
             ->assertSee('(EventGroup)')
-            ->assertSee('/communityEvent/'.$event->getKey(), false)
+            ->assertSee('/events/'.$event->getKey(), false)
             ->assertDontSee('moreInfo', false);
     }
 
@@ -161,9 +161,9 @@ class ClassicHomeGroupGadgetTest extends TestCase
         $viewer = Member::factory()->create();
         $public = Group::factory()->create(['topic_read_access' => TopicReadAccess::Everyone]);
         $membersOnly = Group::factory()->create(['topic_read_access' => TopicReadAccess::MembersOnly]);
-        CommunityEvent::factory()->create(['community_id' => $public->getKey(), 'name' => 'PublicEvent']);
-        CommunityEvent::factory()->create(['community_id' => $membersOnly->getKey(), 'name' => 'PrivateEvent']);
-        $this->makeGadget('recentCommunityEventCommentSns');
+        GroupEvent::factory()->create(['group_id' => $public->getKey(), 'name' => 'PublicEvent']);
+        GroupEvent::factory()->create(['group_id' => $membersOnly->getKey(), 'name' => 'PrivateEvent']);
+        $this->makeGadget('recentGroupEventCommentSns');
 
         $this->actingAs($viewer)->get('/')
             ->assertOk()

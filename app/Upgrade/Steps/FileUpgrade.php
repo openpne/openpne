@@ -77,8 +77,8 @@ class FileUpgrade extends UpgradeStep
             'diary_comment_image.file_id' => ['type' => 'diaryComment', 'table' => 'diary_comment_image', 'file' => 'file_id', 'id' => 'diary_comment_id'],
             'community_topic_image.file_id' => ['type' => 'groupTopic', 'table' => 'community_topic_image', 'file' => 'file_id', 'id' => 'post_id'],
             'community_topic_comment_image.file_id' => ['type' => 'groupTopicComment', 'table' => 'community_topic_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
-            'community_event_image.file_id' => ['type' => 'communityEvent', 'table' => 'community_event_image', 'file' => 'file_id', 'id' => 'post_id'],
-            'community_event_comment_image.file_id' => ['type' => 'communityEventComment', 'table' => 'community_event_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
+            'community_event_image.file_id' => ['type' => 'groupEvent', 'table' => 'community_event_image', 'file' => 'file_id', 'id' => 'post_id'],
+            'community_event_comment_image.file_id' => ['type' => 'groupEventComment', 'table' => 'community_event_comment_image', 'file' => 'file_id', 'id' => 'post_id'],
             // Only a personal message owns its attachment; non-personal message types are not migrated.
             'message_file.file_id' => ['type' => 'directMessage', 'table' => 'message_file', 'file' => 'file_id', 'id' => 'message_id', 'extra' => $this->personalMessageExtra()],
             // The banner image row itself is the owner (groups/messages own by the parent id;

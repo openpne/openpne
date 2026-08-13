@@ -98,7 +98,7 @@ enum SnsSettingKey: string
 
     case FeatureGroupTopicEnabled = 'feature_group_topic_enabled';
 
-    case FeatureCommunityEventEnabled = 'feature_community_event_enabled';
+    case FeatureGroupEventEnabled = 'feature_group_event_enabled';
 
     /**
      * OpenPNE 3 kept this one in sns_config (`enable_friend_link`), not in `plugin`. It still
@@ -166,7 +166,7 @@ enum SnsSettingKey: string
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter => SettingGroup::Design,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => SettingGroup::Features,
+            self::FeatureGroupEventEnabled, self::FeatureFriendEnabled => SettingGroup::Features,
             self::LinkCardEnabled => SettingGroup::LinkCard,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => SettingGroup::Branding,
             self::LoginMessage => SettingGroup::LoginScreen,
@@ -212,7 +212,7 @@ enum SnsSettingKey: string
             // steps, which write a row only for a unit OpenPNE 3 had switched off (see above).
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => null,
+            self::FeatureGroupEventEnabled, self::FeatureFriendEnabled => null,
             // OpenPNE 4-native: OpenPNE 3 had no per-site logo/color/favicon settings to copy.
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => null,
             // OpenPNE 4-native: OpenPNE 3 put this kind of copy on the login page through the login
@@ -281,7 +281,7 @@ enum SnsSettingKey: string
             // On, so a fresh or upgraded install runs every feature until an administrator says otherwise.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => true,
+            self::FeatureGroupEventEnabled, self::FeatureFriendEnabled => true,
             // Unbranded until an administrator sets it: the Modern shell keeps its built-in color and
             // both surfaces keep the shipped favicon.
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile => '',
@@ -309,7 +309,7 @@ enum SnsSettingKey: string
             self::DiaryAllowWebPublic,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
+            self::FeatureGroupEventEnabled, self::FeatureFriendEnabled,
             self::LinkCardEnabled => (bool) $value, // PHP treats the stored '0' as false, '1' as true.
             // Normalize to the typed enum; an unknown value fails safe to the install default.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value : (SurfaceMode::tryFrom(is_string($value) ? trim($value) : (string) $value) ?? $this->default()),
@@ -325,7 +325,7 @@ enum SnsSettingKey: string
             self::DiaryAllowWebPublic,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
+            self::FeatureGroupEventEnabled, self::FeatureFriendEnabled,
             self::LinkCardEnabled => $value ? '1' : '0',
             // A backed enum cannot be cast with (string); store its backing value.
             self::SurfaceMode => $value instanceof SurfaceMode ? $value->value : (string) $value,
@@ -358,7 +358,7 @@ enum SnsSettingKey: string
             // strand its content — the opposite trade-off from the security keys above.
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled => $value !== '0',
+            self::FeatureGroupEventEnabled, self::FeatureFriendEnabled => $value !== '0',
             default => $value,
         };
     }
@@ -395,7 +395,7 @@ enum SnsSettingKey: string
             self::FeatureTimelineEnabled => __('%Activity%'),
             self::FeatureGroupEnabled => __('%Community%'),
             self::FeatureGroupTopicEnabled => __('%Topic%'),
-            self::FeatureCommunityEventEnabled => __('Event'),
+            self::FeatureGroupEventEnabled => __('Event'),
             self::FeatureFriendEnabled => __('%Friend%'),
             self::BrandColor => __('Brand color'),
             self::BrandLogoFile => __('Logo'),
@@ -417,7 +417,7 @@ enum SnsSettingKey: string
             self::PcHtmlBottom, self::FooterBefore, self::FooterAfter,
             self::FeatureDiaryEnabled, self::FeatureDirectMessageEnabled, self::FeatureTimelineEnabled,
             self::FeatureGroupEnabled, self::FeatureGroupTopicEnabled,
-            self::FeatureCommunityEventEnabled, self::FeatureFriendEnabled,
+            self::FeatureGroupEventEnabled, self::FeatureFriendEnabled,
             self::BrandColor, self::BrandLogoFile, self::BrandFaviconFile,
             self::LoginMessage, self::UserAgreement, self::PrivacyPolicy => false,
         };

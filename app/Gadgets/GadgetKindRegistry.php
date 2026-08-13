@@ -21,8 +21,8 @@ use App\Gadgets\Kinds\LinkListBoxGadget;
 use App\Gadgets\Kinds\LoginFormGadget;
 use App\Gadgets\Kinds\MemberImageBoxGadget;
 use App\Gadgets\Kinds\ProfileListBoxGadget;
-use App\Gadgets\Kinds\RecentCommunityEventCommentGadget;
-use App\Gadgets\Kinds\RecentCommunityEventCommentSnsGadget;
+use App\Gadgets\Kinds\RecentGroupEventCommentGadget;
+use App\Gadgets\Kinds\RecentGroupEventCommentSnsGadget;
 use App\Gadgets\Kinds\RecentGroupTopicCommentGadget;
 use App\Gadgets\Kinds\RecentGroupTopicCommentSnsGadget;
 use App\Gadgets\Kinds\SearchBoxGadget;
@@ -46,6 +46,8 @@ final class GadgetKindRegistry
         'communityJoinListBox' => 'groupJoinListBox',
         'recentCommunityTopicComment' => 'recentGroupTopicComment',
         'recentCommunityTopicCommentSns' => 'recentGroupTopicCommentSns',
+        'recentCommunityEventComment' => 'recentGroupEventComment',
+        'recentCommunityEventCommentSns' => 'recentGroupEventCommentSns',
     ];
 
     /** @var array<string, GadgetKind>|null */
@@ -67,9 +69,9 @@ final class GadgetKindRegistry
             DiaryMyListGadget::class,
             DiaryMemberListGadget::class,
             RecentGroupTopicCommentGadget::class,
-            RecentCommunityEventCommentGadget::class,
+            RecentGroupEventCommentGadget::class,
             RecentGroupTopicCommentSnsGadget::class,
-            RecentCommunityEventCommentSnsGadget::class,
+            RecentGroupEventCommentSnsGadget::class,
             TimelineAllGadget::class,
             TimelineFriendGadget::class,
             TimelineProfileGadget::class,

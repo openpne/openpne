@@ -4,10 +4,10 @@ namespace App\Compat;
 
 use App\Compat\Parities\AuthRouteParity;
 use App\Compat\Parities\BlockRouteParity;
-use App\Compat\Parities\CommunityEventRouteParity;
 use App\Compat\Parities\DiaryRouteParity;
 use App\Compat\Parities\DirectMessageRouteParity;
 use App\Compat\Parities\FriendRouteParity;
+use App\Compat\Parities\GroupEventRouteParity;
 use App\Compat\Parities\GroupRouteParity;
 use App\Compat\Parities\GroupTopicRouteParity;
 use App\Compat\Parities\MemberRouteParity;
@@ -27,7 +27,7 @@ final class RouteParityRegistry
             MemberRouteParity::class,
             GroupRouteParity::class,
             GroupTopicRouteParity::class,
-            CommunityEventRouteParity::class,
+            GroupEventRouteParity::class,
             DirectMessageRouteParity::class,
             TimelineRouteParity::class,
             AuthRouteParity::class,

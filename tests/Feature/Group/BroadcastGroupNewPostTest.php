@@ -8,11 +8,11 @@ use App\Features\Group\GroupRole;
 use App\Jobs\BroadcastEventPosted;
 use App\Jobs\BroadcastTopicPosted;
 use App\Mail\Template\MailTemplate;
-use App\Models\CommunityEvent;
 use App\Models\Group;
+use App\Models\GroupEvent;
 use App\Models\GroupTopic;
 use App\Models\Member;
-use App\Notifications\CommunityEvent\EventPostedNotification;
+use App\Notifications\GroupEvent\EventPostedNotification;
 use App\Notifications\GroupTopic\TopicPostedNotification;
 use App\Notifications\Settings\NotificationChannel;
 use App\Notifications\Settings\NotificationKind;
@@ -140,7 +140,7 @@ class BroadcastGroupNewPostTest extends TestCase
         $group = Group::factory()->create();
         $author = $this->member($group);
         $reader = $this->member($group);
-        $event = CommunityEvent::factory()->create(['community_id' => $group->getKey(), 'member_id' => $author->getKey()]);
+        $event = GroupEvent::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey()]);
 
         app()->call([new BroadcastEventPosted((int) $event->getKey()), 'handle']);
 

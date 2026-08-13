@@ -30,7 +30,7 @@ enum Feature: string
 
     case GroupTopic = 'groupTopic';
 
-    case CommunityEvent = 'communityEvent';
+    case GroupEvent = 'groupEvent';
 
     case Friend = 'friend';
 
@@ -43,7 +43,7 @@ enum Feature: string
             self::Timeline => SnsSettingKey::FeatureTimelineEnabled,
             self::Group => SnsSettingKey::FeatureGroupEnabled,
             self::GroupTopic => SnsSettingKey::FeatureGroupTopicEnabled,
-            self::CommunityEvent => SnsSettingKey::FeatureCommunityEventEnabled,
+            self::GroupEvent => SnsSettingKey::FeatureGroupEventEnabled,
             self::Friend => SnsSettingKey::FeatureFriendEnabled,
         };
     }
@@ -52,7 +52,7 @@ enum Feature: string
     public function parent(): ?self
     {
         return match ($this) {
-            self::GroupTopic, self::CommunityEvent => self::Group,
+            self::GroupTopic, self::GroupEvent => self::Group,
             default => null,
         };
     }
@@ -105,7 +105,7 @@ enum Feature: string
             self::Timeline => ['timeline.'],
             self::Group => ['group.'],
             self::GroupTopic => ['group.topics.'],
-            self::CommunityEvent => ['communityEvent.'],
+            self::GroupEvent => ['group.events.'],
             self::Friend => ['friend.'],
         };
     }

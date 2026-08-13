@@ -6,8 +6,8 @@ use App\Features\Group\GroupNewPostFanout;
 use App\Features\Group\Queries\GroupNewPostRecipients;
 use App\Mail\Template\MailTemplate;
 use App\Mail\Template\MailTemplateService;
-use App\Models\CommunityEvent;
-use App\Notifications\CommunityEvent\EventPostedNotification;
+use App\Models\GroupEvent;
+use App\Notifications\GroupEvent\EventPostedNotification;
 use App\Notifications\Settings\NotificationKind;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,18 +32,18 @@ class BroadcastEventPosted implements ShouldQueue
             return;
         }
 
-        $event = CommunityEvent::with('community', 'member')->find($this->eventId);
-        if ($event === null || $event->community === null || $event->member === null) {
+        $event = GroupEvent::with('group', 'member')->find($this->eventId);
+        if ($event === null || $event->group === null || $event->member === null) {
             return;
         }
 
-        $group = $event->community;
+        $group = $event->group;
         $author = $event->member;
         $mailEnabled = $templates->isEnabled(MailTemplate::GroupPostingNotified);
 
         $fanout->run(
             $recipients->viewers($group, $author),
-            NotificationKind::CommunityEventNewPost,
+            NotificationKind::GroupEventNewPost,
             $mailEnabled,
             fn (array $channels) => new EventPostedNotification($group, $event, $author, $channels),
         );
