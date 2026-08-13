@@ -9,6 +9,8 @@ use App\Models\GroupMessage;
 use App\Models\GroupMessageImage;
 use App\Models\GroupMessageMention;
 use App\Models\Member;
+use Carbon\CarbonImmutable;
+use DateTimeInterface;
 
 /**
  * Modern surface shapes for a group's talk. `author` is null for a withdrawn member (the FK SET
@@ -30,7 +32,7 @@ class GroupMessageSerializer
         return [
             'id' => $message->getKey(),
             'body' => $message->body,
-            'createdAt' => $message->created_at->toIso8601String(),
+            'createdAt' => self::instant($message->created_at),
             'cursor' => (string) GroupTalkCursor::of($message),
             'author' => self::author($message->author),
             'mentions' => self::mentions($message),
@@ -64,9 +66,9 @@ class GroupMessageSerializer
     }
 
     /**
-     * A page of the conversation, oldest first, and whether anything remains further back.
+     * A page of the conversation, oldest first, and what lies either side of it.
      *
-     * @return array{messages: list<array>, hasOlder: bool}
+     * @return array{messages: list<array>, hasOlder: bool, hasNewer: bool}
      */
     public static function page(GroupTalkPage $page, GroupTalkPermissions $permissions): array
     {
@@ -76,7 +78,40 @@ class GroupMessageSerializer
                 ->values()
                 ->all(),
             'hasOlder' => $page->hasOlder,
+            'hasNewer' => $page->hasNewer,
         ];
+    }
+
+    /**
+     * The unread boundary the page opened on: how many messages were waiting, and the position they
+     * start after, in the two shapes the client needs it in. Null for a reader with no membership
+     * row, who holds no cursor at all.
+     *
+     * `readThrough.at` goes out through {@see instant()}, the same conversion a message's `createdAt`
+     * takes, so the client can compare the two directly to find the first row past the boundary.
+     * `cursor` is that same tuple as an opaque pagination position, encoded here so the client can
+     * ask for the page it sits in without ever assembling a cursor of its own.
+     *
+     * @param  array{count: int, at: CarbonImmutable, id: int}|null  $snapshot
+     * @return array{count: int, readThrough: array{at: string, id: int}, cursor: string}|null
+     */
+    public static function unreadSnapshot(?array $snapshot): ?array
+    {
+        if ($snapshot === null) {
+            return null;
+        }
+
+        return [
+            'count' => $snapshot['count'],
+            'readThrough' => ['at' => self::instant($snapshot['at']), 'id' => $snapshot['id']],
+            'cursor' => (string) new GroupTalkCursor($snapshot['at'], $snapshot['id']),
+        ];
+    }
+
+    /** The one wire form of an instant in a talk, so every position the client compares is one shape. */
+    public static function instant(DateTimeInterface $at): string
+    {
+        return CarbonImmutable::instance($at)->toIso8601String();
     }
 
     /**

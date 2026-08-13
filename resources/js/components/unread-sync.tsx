@@ -2,6 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 import { createRestoreQueue } from '@/lib/history-restore';
 import { clearAppBadge, reconcileSubscription, resumeRegistration, setAppBadge } from '@/lib/push';
+import { UNREAD_REFRESH_EVENT } from '@/lib/unread-refresh';
 import type { PageProps, UnreadCounts } from '@/types';
 
 /** How often a visible tab re-reads the counts. */
@@ -100,6 +101,10 @@ export function UnreadSync() {
 
         const timer = setInterval(refresh, INTERVAL_MS);
         document.addEventListener('visibilitychange', refresh);
+        // A page that has just settled a count with the server (see lib/unread-refresh.ts). Without
+        // it a badge sits on its stale number until the interval comes round, which reads as the
+        // screen the member is looking at not having counted.
+        window.addEventListener(UNREAD_REFRESH_EVENT, refresh);
 
         // A restored page carries the counts it had when it was left, so a badge can climb back over
         // a notification the member has already read — which reads as new mail arriving. Inertia
@@ -144,6 +149,7 @@ export function UnreadSync() {
         return () => {
             clearInterval(timer);
             document.removeEventListener('visibilitychange', refresh);
+            window.removeEventListener(UNREAD_REFRESH_EVENT, refresh);
             window.removeEventListener('popstate', onPopstate);
             window.removeEventListener('pageshow', onPageshow);
             stopNavigate();

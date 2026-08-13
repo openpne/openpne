@@ -10,6 +10,7 @@ use App\Features\GroupTalk\Actions\SetTalkMute;
 use App\Features\GroupTalk\Exceptions\GroupTalkActionException;
 use App\Features\GroupTalk\Queries\GroupTalkMentionCandidates;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
+use App\Features\GroupTalk\Queries\TalkUnreadSnapshot;
 use App\Features\GroupTalk\Serializers\GroupMessageSerializer;
 use App\Features\Member\Serializers\MemberRefSerializer;
 use App\Http\Controllers\Controller;
@@ -33,7 +34,7 @@ use Inertia\Response as InertiaResponse;
  */
 class GroupTalkController extends Controller
 {
-    public function show(Group $group, GroupTalkMessages $query): InertiaResponse
+    public function show(Group $group, GroupTalkMessages $query, TalkUnreadSnapshot $unread): InertiaResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
@@ -46,23 +47,31 @@ class GroupTalkController extends Controller
             // Only a member holds a cursor or a mute, so only a member is offered either.
             'isMember' => $permissions->canPost,
             'isMuted' => $permissions->canPost && GroupTalkPermissions::isMuted($group, $viewer),
+            // Where the unread boundary stood at render time, and nothing later moves it: the page's
+            // "from here" divider has to keep naming the line the reader opened on, while the shared
+            // `unread` badge prop next to it goes on tracking the live count.
+            'talkUnreadSnapshot' => GroupMessageSerializer::unreadSnapshot($unread($group, $viewer)),
         ]);
     }
 
     /**
-     * One page either side of a cursor the client was handed: `after` for the poll, `before` for
-     * "load older", neither for the newest page. A cursor that does not parse is simply no cursor —
-     * pagination is a position, not a permission, and the gate above already decided the audience.
+     * One page around a cursor the client was handed: `after` for the poll, `before` for "load
+     * older", `context` for the page a position sits in (the unread boundary today, a linked-to
+     * message next), none of them for the newest page. A cursor that does not parse is simply no
+     * cursor — pagination is a position, not a permission, and the gate above already decided the
+     * audience.
      */
     public function messages(Request $request, Group $group, GroupTalkMessages $query): JsonResponse
     {
         $viewer = $this->viewer();
         abort_unless(GroupTalkAccess::canView($group, $viewer), 404);
 
+        $context = GroupTalkCursor::tryParse($request->query('context'));
         $after = GroupTalkCursor::tryParse($request->query('after'));
         $before = GroupTalkCursor::tryParse($request->query('before'));
 
         $page = match (true) {
+            $context !== null => $query->around($group, $context),
             $after !== null => $query->after($group, $after),
             $before !== null => $query->before($group, $before),
             default => $query->latest($group),

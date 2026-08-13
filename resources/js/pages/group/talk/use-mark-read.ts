@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
+import { requestUnreadRefresh } from '@/lib/unread-refresh';
 import { nextReport, type ReportOutcome, settleReport } from './mark-read';
 
 /** A poll burst merges several messages at once; one call covers them all. */
@@ -32,7 +33,8 @@ const RETRY_MS = 5_000;
  * The position only advances on a 2xx (mark-read.ts owns that rule); a failed report re-arms and
  * retries the same id, since nothing else would ever resend it. The shared badge props are
  * deliberately NOT patched here: the shell's own refresh owns them, and a second writer would make
- * a stale count look authoritative.
+ * a stale count look authoritative. An accepted report only asks the shell to re-read them now
+ * rather than on its own minute clock (lib/unread-refresh.ts).
  */
 export function useMarkRead(groupId: number, newestRenderedId: number | undefined, active: boolean) {
     const acked = useRef(0);
@@ -81,6 +83,12 @@ export function useMarkRead(groupId: number, newestRenderedId: number | undefine
                 outcome = 'retryable'; // network reject
             } finally {
                 inFlight.current = false;
+            }
+
+            // Only an accepted report: a terminal 4xx moved no cursor, so the badge has nothing new
+            // to say and asking would just be a wasted round trip on a screen that is already stuck.
+            if (outcome === 'ok') {
+                requestUnreadRefresh();
             }
 
             const settled = settleReport({ acked: acked.current, pending: pending.current }, id, outcome);
