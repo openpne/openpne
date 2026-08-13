@@ -19,7 +19,7 @@ class TermServiceTest extends TestCase
         $terms = app(TermService::class)->getTerms('ja');
 
         $this->assertSame('フレンド', $terms['friend']);
-        $this->assertSame('コミュニティ', $terms['community']);
+        $this->assertSame('グループ', $terms['community']);
     }
 
     public function test_override_replaces_default_for_one_locale(): void
@@ -55,7 +55,7 @@ class TermServiceTest extends TestCase
     {
         $output = app(TermService::class)->replace('My %communities%', 'en');
 
-        $this->assertSame('My communities', $output);
+        $this->assertSame('My groups', $output);
     }
 
     public function test_replace_handles_irregular_english_plural(): void
@@ -78,7 +78,7 @@ class TermServiceTest extends TestCase
         $output = app(TermService::class)->replace('%Communities%', 'ja');
 
         // No fronting and no pluralisation in Japanese.
-        $this->assertSame('コミュニティ', $output);
+        $this->assertSame('グループ', $output);
     }
 
     public function test_clear_cache_invalidates_resolved_lookup(): void

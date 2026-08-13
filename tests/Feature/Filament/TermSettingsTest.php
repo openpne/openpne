@@ -130,7 +130,7 @@ class TermSettingsTest extends TestCase
         DB::table('term_overrides')->insert([
             'name' => 'community',
             'locale' => 'en',
-            'value' => 'group',
+            'value' => 'club',
         ]);
 
         Livewire::test(TermSettings::class)
@@ -141,7 +141,7 @@ class TermSettingsTest extends TestCase
         $this->assertDatabaseHas('term_overrides', [
             'name' => 'community',
             'locale' => 'en',
-            'value' => 'group',
+            'value' => 'club',
         ]);
     }
 }

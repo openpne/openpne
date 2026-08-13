@@ -7,8 +7,11 @@ namespace Tests\Feature\Services;
 use App\Models\Member;
 use App\Models\Navigation;
 use App\Services\NavigationService;
+use App\Services\TermService;
 use App\Support\Feature;
+use Database\Seeders\NavigationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class NavigationServiceTest extends TestCase
@@ -180,5 +183,24 @@ class NavigationServiceTest extends TestCase
         $this->setSnsSetting(Feature::Group->settingKey(), false);
 
         $this->assertSame([], $this->labels('group', 7));
+    }
+
+    /**
+     * Seeded captions are data the i18n scanner never sees, so a bare vocabulary word there would
+     * silently ignore the term default and every admin override — the caption must carry the
+     * %placeholder% (regression: the en caption shipped as bare "Search Communities").
+     */
+    public function test_the_seeded_global_nav_caption_follows_the_community_term(): void
+    {
+        $this->seed(NavigationSeeder::class);
+        app(NavigationService::class)->clearCache();
+
+        $this->assertContains('Search Groups', $this->labels('secure_global', 7));
+        $this->assertNotContains('Search Communities', $this->labels('secure_global', 7));
+
+        DB::table('term_overrides')->insert(['name' => 'community', 'locale' => 'en', 'value' => 'club']);
+        app(TermService::class)->clearCache();
+
+        $this->assertContains('Search Clubs', $this->labels('secure_global', 7));
     }
 }

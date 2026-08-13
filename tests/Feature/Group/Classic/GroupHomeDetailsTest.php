@@ -70,10 +70,10 @@ class GroupHomeDetailsTest extends TestCase
         // rendered order. The config rows (topic access, register policy, description) come from
         // OpenPNE 3's community-config registry, so the order is pinned from a live render, not
         // the template source.
-        $response->assertSeeInOrder(['id="communityHome"', '<h3>Community</h3>'], false);
+        $response->assertSeeInOrder(['id="communityHome"', '<h3>Group</h3>'], false);
         $response->assertSeeInOrder([
-            '<th>Community Name</th>',
-            '<th>Community Category</th>',
+            '<th>Group Name</th>',
+            '<th>Group Category</th>',
             '<th>Date Created</th>',
             '<th>Administrator</th>',
             '<th>Sub Administrator</th>',
@@ -81,7 +81,7 @@ class GroupHomeDetailsTest extends TestCase
             '<th>Authority to Read Topic</th>',
             '<th>Authority to Create Topic</th>',
             '<th>Register policy</th>',
-            '<th>Community Description</th>',
+            '<th>Group Description</th>',
         ], false);
 
         // The Date Created row renders the localized date (en LL format).
@@ -155,11 +155,11 @@ class GroupHomeDetailsTest extends TestCase
 
         // Events first, after the description row, inside the same table.
         $response->assertSeeInOrder([
-            '<th>Community Description</th>',
+            '<th>Group Description</th>',
             '<tr class="communityEvent">',
-            '<th>Community Events</th>',
+            '<th>Group Events</th>',
             '<tr class="communityTopic">',
-            '<th>Community Topics</th>',
+            '<th>Group Topics</th>',
             '</table>',
         ], false);
         // Row shape: <span class="date">{update date}</span> <a>{title}({count})</a> — no space

@@ -22,7 +22,7 @@ class NavigationSeeder extends Seeder
         // secure_global (members)
         ['type' => 'secure_global', 'uri' => '/', 'source_uri' => '@homepage', 'sort_order' => 0, 'ja' => 'マイホーム', 'en' => 'My Home'],
         ['type' => 'secure_global', 'uri' => '/member/search', 'source_uri' => '@member_search', 'sort_order' => 10, 'ja' => 'メンバー検索', 'en' => 'Search Members'],
-        ['type' => 'secure_global', 'uri' => '/groups', 'source_uri' => '@community_search', 'sort_order' => 20, 'ja' => '%community%検索', 'en' => 'Search Communities'],
+        ['type' => 'secure_global', 'uri' => '/groups', 'source_uri' => '@community_search', 'sort_order' => 20, 'ja' => '%community%検索', 'en' => 'Search %Communities%'],
         ['type' => 'secure_global', 'uri' => '/diary', 'source_uri' => 'diary/index', 'sort_order' => 25, 'ja' => '日記', 'en' => 'Diary'],
         ['type' => 'secure_global', 'uri' => '/member/config', 'source_uri' => '@member_config', 'sort_order' => 30, 'ja' => '設定変更', 'en' => 'Settings'],
         ['type' => 'secure_global', 'uri' => '/invite', 'source_uri' => '@member_invite', 'sort_order' => 40, 'ja' => '%friend%を招待する', 'en' => 'Invite'],
