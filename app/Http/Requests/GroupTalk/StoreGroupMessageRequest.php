@@ -29,11 +29,17 @@ class StoreGroupMessageRequest extends FormRequest
     {
         return [
             'body' => ['required', 'string', 'max:'.self::MAX_BODY],
-            // One image per message, as the timeline allows: the schema numbers slots so migrated
-            // content can carry more, but the composer offers one.
-            'image' => PostImageRules::single(),
+            // The shared `images[]` shape, capped at PostImages::MAX_IMAGES like every other post
+            // with attachments. A refusal takes the whole message down, so nothing is half-sent.
+            ...PostImageRules::rules(),
             ...MentionRules::rules(self::MAX_BODY),
         ];
+    }
+
+    /** @return array<string, string> */
+    public function attributes(): array
+    {
+        return PostImageRules::attributes();
     }
 
     /**

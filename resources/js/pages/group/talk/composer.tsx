@@ -5,13 +5,14 @@ import { ACCEPT, shrink } from '@/components/images-field';
 import { Spinner } from '@/components/spinner';
 import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
+import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
 import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
 import { SendFailed } from './use-talk-stream';
 
-/** The bag's verdict on the attachment: per-file rules come back keyed `image.N`, not `image`. */
+/** The bag's verdict on the attachments: per-file rules come back keyed `images.N`, not `images`. */
 function imageErrorIn(errors: Record<string, string>): string {
     return Object.entries(errors)
-        .filter(([key, message]) => message && (key === 'image' || key.startsWith('image.')))
+        .filter(([key, message]) => message && (key === 'images' || key.startsWith('images.')))
         .map(([, message]) => message)
         .join(' ');
 }
@@ -19,12 +20,15 @@ function imageErrorIn(errors: Record<string, string>): string {
 /**
  * The write end of the conversation, held at the foot of the page (sticky, so it stays reachable
  * while the reader scrolls back through the history and still gives its space back on a short
- * conversation). Plain text, @mentions and one image.
+ * conversation). Plain text, @mentions and up to MAX_POST_IMAGES images.
+ *
+ * The bar is one line at rest and every accessory on it is an icon; the thumbnails appear as a strip
+ * above the input row only while something is picked, so the idle shape never changes.
  *
  * The draft survives a refusal — nothing is cleared until the message is actually written, and the
- * mention drafts and the picked image are kept with the body, so a retry after a rate limit or a
+ * mention drafts and the picked files are kept with the body, so a retry after a rate limit or a
  * rejected file still carries everything the composer had instead of silently posting the handles as
- * plain text or dropping the attachment.
+ * plain text or dropping the attachments.
  */
 export function TalkComposer({
     groupId,
@@ -33,66 +37,72 @@ export function TalkComposer({
 }: {
     groupId: number;
     groupName: string;
-    onSend: (body: string, mentions: MentionPayloadRow[], image: File | null) => Promise<void>;
+    onSend: (body: string, mentions: MentionPayloadRow[], images: File[]) => Promise<void>;
 }) {
     const t = useT();
     const [body, setBody] = useState('');
     const [mentions, setMentions] = useState<DraftMention[]>([]);
-    const [image, setImage] = useState<File | null>(null);
-    const [preview, setPreview] = useState<string | null>(null);
+    const [images, setImages] = useState<File[]>([]);
+    const [previews, setPreviews] = useState<string[]>([]);
     const [shrinking, setShrinking] = useState(false);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    // Keyed by field, so the attachment shows the server's verdict on the file rather than the
+    // The cap's own note, cleared by anything that changes the selection. The server's verdict
+    // outranks it below: a stale count message must not mask why the message was refused.
+    const [capNote, setCapNote] = useState<string | null>(null);
+    // Keyed by field, so the attachments show the server's verdict on the files rather than the
     // composer showing one message for everything that can go wrong.
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const fileInput = useRef<HTMLInputElement>(null);
-    // Names the pick a running shrink belongs to, so one that lands after a removal or a later pick
-    // does not resurrect its file.
-    const picked = useRef<File | null>(null);
+    // Mirrors the selection for the shrinks running over it: one that lands after a removal, a send
+    // or a later pick re-applies against what is held now instead of resurrecting what it started
+    // from. Written through select() rather than on render, so an await resuming before the next
+    // render still reads the current selection.
+    const held = useRef<File[]>([]);
+
+    const select = (next: File[]) => {
+        held.current = next;
+        setImages(next);
+    };
 
     useEffect(() => {
-        if (image === null) {
-            setPreview(null);
+        const urls = images.map((image) => URL.createObjectURL(image));
+        setPreviews(urls);
 
-            return;
-        }
-
-        const url = URL.createObjectURL(image);
-        setPreview(url);
-
-        return () => URL.revokeObjectURL(url);
-    }, [image]);
+        return () => urls.forEach((url) => URL.revokeObjectURL(url));
+    }, [images]);
 
     const attach = async (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        // The thumbnail below is the visible selection; the input itself must never retain one.
+        const picked = Array.from(event.target.files ?? []);
+        // The strip below is the visible selection; the input itself must never retain one.
         event.target.value = '';
-        if (file === undefined) {
+        if (picked.length === 0) {
             return;
         }
-        // The raw file enters the state immediately, so a submit racing the shrink sends the
-        // original (answered by the now-visible server validation) rather than dropping it.
-        picked.current = file;
-        setImage(file);
+        const { files: next, refused } = acceptPicks(held.current, picked, MAX_POST_IMAGES);
+        setCapNote(refused ? t('You can attach up to :max images.', { max: MAX_POST_IMAGES }) : null);
+        const accepted = next.slice(held.current.length);
+        if (accepted.length === 0) {
+            return;
+        }
+        // The raw files enter the state immediately, so a submit racing the shrink sends the
+        // originals (answered by the now-visible server validation) rather than dropping them.
+        select(next);
         setShrinking(true);
         try {
-            const shrunk = await shrink(file);
-            if (picked.current === file) {
-                setImage(shrunk);
+            const shrunk = new Map<File, File>();
+            for (const raw of accepted) {
+                shrunk.set(raw, await shrink(raw));
             }
+            select(held.current.map((image) => shrunk.get(image) ?? image));
         } finally {
-            if (picked.current === file) {
-                setShrinking(false);
-            }
+            setShrinking(false);
         }
     };
 
-    const remove = () => {
-        // Gives up on a shrink still running for it as well; the next pick re-arms both.
-        picked.current = null;
-        setImage(null);
-        setShrinking(false);
+    const remove = (index: number) => {
+        setCapNote(null);
+        select(held.current.filter((_, i) => i !== index));
     };
 
     const submit = async (event: FormEvent) => {
@@ -103,21 +113,21 @@ export function TalkComposer({
 
         setSending(true);
         setError(null);
+        setCapNote(null);
         setFieldErrors({});
         try {
             // Converted at submit, over the value actually being sent: the draft positions a mention
             // by UTF-16 offset, and the server measures code points.
-            await onSend(body, toPayload(mentions, body), image);
+            await onSend(body, toPayload(mentions, body), images);
             setBody('');
             setMentions([]);
-            // Disowns a shrink still running for the sent file, the same way remove() does.
-            picked.current = null;
-            setImage(null);
+            // Disowns any shrink still running for the sent files, the same way remove() does.
+            select([]);
             setShrinking(false);
         } catch (failure) {
             const errors = failure instanceof SendFailed ? failure.errors : {};
             setFieldErrors(errors);
-            // The attachment renders its own message; anything else surfaces here.
+            // The attachments render their own message; anything else surfaces here.
             setError(errors.body ?? (imageErrorIn(errors) === '' ? t('Could not send. Try again.') : null));
         } finally {
             setSending(false);
@@ -125,6 +135,8 @@ export function TalkComposer({
     };
 
     const imageError = imageErrorIn(fieldErrors);
+    // The server's verdict first: it explains why the message was refused, which a cap note does not.
+    const attachmentNote = imageError || capNote;
 
     return (
         <form
@@ -136,38 +148,47 @@ export function TalkComposer({
                     {error}
                 </p>
             )}
-            {image !== null && (
+            {(images.length > 0 || attachmentNote !== null) && (
                 <div className="pb-2">
-                    <div className="relative w-16">
-                        {/* Alt-less: the remove button beside it is what names the file. */}
-                        {preview !== null && <img src={preview} alt="" className="size-16 rounded-lg border border-border object-cover" />}
-                        <button
-                            type="button"
-                            onClick={remove}
-                            aria-label={t('Remove :name', { name: image.name })}
-                            className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                            <svg viewBox="0 0 16 16" className="size-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                                <path d="M3 3l10 10M13 3L3 13" />
-                            </svg>
-                        </button>
-                    </div>
+                    {images.length > 0 && (
+                        <ul className="flex gap-2">
+                            {images.map((image, index) => (
+                                <li key={`${image.name}-${index}`} className="relative w-16">
+                                    {/* Alt-less: the remove button beside it is what names the picture. */}
+                                    {previews[index] !== undefined && (
+                                        <img src={previews[index]} alt="" className="size-16 rounded-lg border border-border object-cover" />
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => remove(index)}
+                                        disabled={sending}
+                                        aria-label={t('Remove image :number', { number: index + 1 })}
+                                        className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                    >
+                                        <svg viewBox="0 0 16 16" className="size-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                                            <path d="M3 3l10 10M13 3L3 13" />
+                                        </svg>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                     {shrinking && <p className="mt-1 text-xs text-muted-foreground">{t('Processing images…')}</p>}
-                    {imageError !== '' && (
+                    {attachmentNote !== null && (
                         <p role="alert" className="mt-1 text-xs text-destructive">
-                            {imageError}
+                            {attachmentNote}
                         </p>
                     )}
                 </div>
             )}
             <div className="flex items-end gap-2">
                 {/* The button is the whole control: the input carries no label and no tab stop of its own. */}
-                <input ref={fileInput} type="file" accept={ACCEPT} onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
+                <input ref={fileInput} type="file" accept={ACCEPT} multiple onChange={attach} tabIndex={-1} aria-hidden className="sr-only" />
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => fileInput.current?.click()}
-                    disabled={image !== null}
+                    disabled={sending || images.length >= MAX_POST_IMAGES}
                     aria-label={t('Attach an image')}
                     className="shrink-0 text-muted-foreground"
                 >

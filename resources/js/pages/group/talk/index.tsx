@@ -214,9 +214,9 @@ export default function GroupTalkIndex() {
     // back through history from being yanked by *others'* arrivals; writing is the opposite intent —
     // and it is claimed before the write, because what the write commits may be rendered before this
     // handler is resumed to say so.
-    const send = async (body: string, mentions: MentionPayloadRow[], image: File | null) => {
+    const send = async (body: string, mentions: MentionPayloadRow[], images: File[]) => {
         pinned.current = true;
-        await streamSend(body, mentions, image);
+        await streamSend(body, mentions, images);
         setAtBottom(true);
     };
 

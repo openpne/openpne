@@ -20,19 +20,25 @@ use Mockery;
 use RuntimeException;
 
 /**
- * One image per message. The schema numbers slots so migrated content can carry several; the
- * composer offers one, as the timeline does.
+ * Up to PostImages::MAX_IMAGES per message, numbered in pick order. The schema numbers slots past
+ * that so migrated content can carry more.
  */
 class TalkImageTest extends TalkTestCase
 {
-    private function upload(): UploadedFile
+    private function upload(string $name = 'shot.png'): UploadedFile
     {
-        return UploadedFile::fake()->image('shot.png', 40, 40);
+        return UploadedFile::fake()->image($name, 40, 40);
     }
 
     private function attachedFile(GroupMessage $message): ?File
     {
         return $message->images()->with('file')->first()?->file;
+    }
+
+    /** @return list<File> */
+    private function attachedFiles(GroupMessage $message): array
+    {
+        return $message->images()->with('file')->orderBy('number')->get()->pluck('file')->filter()->values()->all();
     }
 
     public function test_a_message_can_carry_an_image(): void
@@ -41,7 +47,7 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look at this', 'image' => $this->upload()])
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look at this', 'images' => [$this->upload()]])
             ->assertCreated()
             ->json('id');
 
@@ -51,6 +57,46 @@ class TalkImageTest extends TalkTestCase
         $this->assertSame('groupMessage', $this->attachedFile($message)->related_entity_type);
     }
 
+    /** Slots are the pick order, not the order the storage backend happened to answer in. */
+    public function test_three_images_land_in_slots_one_to_three_in_pick_order(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $id = $this->actingAs($author)
+            ->post("/groups/{$group->getKey()}/talk", [
+                'body' => 'look at these',
+                'images' => [$this->upload('first.png'), $this->upload('second.png'), $this->upload('third.png')],
+            ])
+            ->assertCreated()
+            ->json('id');
+
+        $names = GroupMessage::findOrFail($id)->images()->with('file')->orderBy('number')->get()
+            ->map(fn ($image) => $image->file?->original_filename)
+            ->all();
+
+        $this->assertSame(['first.png', 'second.png', 'third.png'], $names);
+        $this->assertSame([1, 2, 3], GroupMessage::findOrFail($id)->images()->orderBy('number')->pluck('number')->all());
+    }
+
+    /** Over the cap the whole message is refused — nothing half-posts and the composer keeps its draft. */
+    public function test_a_fourth_image_takes_the_whole_message_down(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $this->actingAs($author)
+            ->postJson("/groups/{$group->getKey()}/talk", [
+                'body' => 'look',
+                'images' => [$this->upload(), $this->upload(), $this->upload(), $this->upload()],
+            ])
+            ->assertJsonValidationErrorFor('images');
+
+        $this->assertDatabaseCount('group_messages', 0);
+        $this->assertDatabaseCount('group_message_images', 0);
+        $this->assertDatabaseCount('files', 0);
+    }
+
     /** The attach shares the write, so the sender's cursor still passes their own message. */
     public function test_the_cursor_still_advances_when_an_image_rides_along(): void
     {
@@ -58,7 +104,7 @@ class TalkImageTest extends TalkTestCase
         $author = $this->memberOf($group);
 
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()])
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]])
             ->assertCreated()
             ->json('id');
 
@@ -73,13 +119,35 @@ class TalkImageTest extends TalkTestCase
     {
         $group = $this->group();
         $author = $this->memberOf($group);
-        $this->actingAs($author)->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()]);
+        $this->actingAs($author)->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]]);
 
         $this->actingAs($author)->get("/groups/{$group->getKey()}/talk")
             ->assertInertia(fn ($page) => $page
                 ->has('page.messages.0.images', 1)
                 ->has('page.messages.0.images.0.url')
                 ->has('page.messages.0.images.0.thumbnailUrl'));
+    }
+
+    /** The write's own response is what the composer appends, so it has to carry the same list. */
+    public function test_the_write_response_ships_all_three_in_slot_order(): void
+    {
+        $group = $this->group();
+        $author = $this->memberOf($group);
+
+        $response = $this->actingAs($author)
+            ->postJson("/groups/{$group->getKey()}/talk", [
+                'body' => 'look',
+                'images' => [$this->upload('a.png'), $this->upload('b.png'), $this->upload('c.png')],
+            ])
+            ->assertCreated();
+
+        $response->assertJsonCount(3, 'images');
+        $ids = $response->json('images.*.id');
+        $this->assertSame($ids, array_values(array_unique($ids)));
+        $this->assertSame(
+            $this->attachedFiles(GroupMessage::findOrFail($response->json('id')))[0]->url(),
+            $response->json('images.0.url'),
+        );
     }
 
     public function test_a_message_without_an_image_ships_an_empty_list(): void
@@ -126,7 +194,7 @@ class TalkImageTest extends TalkTestCase
         });
 
         try {
-            app(CreateGroupMessage::class)($author, $group, 'look', [], $this->upload());
+            app(CreateGroupMessage::class)($author, $group, 'look', [], [$this->upload()]);
             $this->fail('the write should have thrown');
         } catch (RuntimeException $e) {
             $this->assertSame('boom', $e->getMessage(), 'the write failed for the wrong reason');
@@ -138,39 +206,51 @@ class TalkImageTest extends TalkTestCase
         $this->assertEmpty(Storage::disk('local')->allFiles(), 'the stored bytes must be compensated off the disk');
     }
 
-    public function test_deleting_the_message_purges_its_bytes(): void
+    /** Every slot, not just the first: a purge that stopped at one would strand two files' bytes. */
+    public function test_deleting_the_message_purges_every_slots_bytes(): void
     {
         $group = $this->group();
         $author = $this->memberOf($group);
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()])
+            ->post("/groups/{$group->getKey()}/talk", [
+                'body' => 'look',
+                'images' => [$this->upload('a.png'), $this->upload('b.png'), $this->upload('c.png')],
+            ])
             ->json('id');
-        $file = $this->attachedFile(GroupMessage::findOrFail($id));
-        $this->assertTrue(app(FileStorage::class)->exists($file));
+        $files = $this->attachedFiles(GroupMessage::findOrFail($id));
+        $this->assertCount(3, $files);
 
         $this->actingAs($author)
             ->post("/groups/{$group->getKey()}/talk/messages/{$id}/delete")
             ->assertNoContent();
 
-        $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
-        $this->assertFalse(app(FileStorage::class)->exists($file));
+        foreach ($files as $file) {
+            $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
+            $this->assertFalse(app(FileStorage::class)->exists($file));
+        }
     }
 
-    /** The group cascade drops the join rows but never the bytes — DeleteGroup has to reclaim them. */
-    public function test_deleting_the_group_purges_its_talk_bytes(): void
+    /** The group cascade drops the join rows but never the bytes — DeleteGroup has to reclaim them all. */
+    public function test_deleting_the_group_purges_every_slots_talk_bytes(): void
     {
         $group = $this->group();
         $author = $this->adminOf($group);
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()])
+            ->post("/groups/{$group->getKey()}/talk", [
+                'body' => 'look',
+                'images' => [$this->upload('a.png'), $this->upload('b.png'), $this->upload('c.png')],
+            ])
             ->json('id');
-        $file = $this->attachedFile(GroupMessage::findOrFail($id));
+        $files = $this->attachedFiles(GroupMessage::findOrFail($id));
+        $this->assertCount(3, $files);
 
         app(DeleteGroup::class)->purge($group);
 
         $this->assertDatabaseMissing('groups', ['id' => $group->getKey()]);
-        $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
-        $this->assertFalse(app(FileStorage::class)->exists($file));
+        foreach ($files as $file) {
+            $this->assertDatabaseMissing('files', ['id' => $file->getKey()]);
+            $this->assertFalse(app(FileStorage::class)->exists($file));
+        }
     }
 
     // --- FilePolicy: a talk image inherits the conversation's read gate ---
@@ -233,7 +313,7 @@ class TalkImageTest extends TalkTestCase
         $group = $this->group(TopicReadAccess::MembersOnly);
         $author = $this->memberOf($group);
         $id = $this->actingAs($author)
-            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'image' => $this->upload()])
+            ->post("/groups/{$group->getKey()}/talk", ['body' => 'look', 'images' => [$this->upload()]])
             ->json('id');
         $url = $this->attachedFile(GroupMessage::findOrFail($id))->url();
 
@@ -243,7 +323,8 @@ class TalkImageTest extends TalkTestCase
 
     // --- validation ---
 
-    public function test_a_refused_file_is_a_422_naming_the_image_field(): void
+    /** Keyed by slot, so the composer can put the message under the picture it belongs to. */
+    public function test_a_refused_file_is_a_422_naming_its_slot(): void
     {
         $group = $this->group();
         $author = $this->memberOf($group);
@@ -251,11 +332,12 @@ class TalkImageTest extends TalkTestCase
         $this->actingAs($author)
             ->postJson("/groups/{$group->getKey()}/talk", [
                 'body' => 'look',
-                'image' => UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf'),
+                'images' => [$this->upload(), UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf')],
             ])
-            ->assertJsonValidationErrorFor('image');
+            ->assertJsonValidationErrorFor('images.1');
 
         $this->assertDatabaseCount('group_messages', 0);
+        $this->assertDatabaseCount('files', 0);
     }
 
     /**
@@ -282,7 +364,7 @@ class TalkImageTest extends TalkTestCase
                 // What the wire actually carries.
                 'body' => str_replace("\n", "\r\n", $lfBody),
                 'mentions' => [['member_id' => $target->getKey(), 'offset' => $offset, 'length' => 4]],
-                'image' => $this->upload(),
+                'images' => [$this->upload()],
             ])
             ->assertCreated()
             ->json('id');
