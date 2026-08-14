@@ -119,7 +119,7 @@ export default function GroupEventShow() {
 
                 <RichBody body={event.body} bodyHtml={event.bodyHtml} />
                 <LinkCard card={event.linkCard} />
-                    <ImageGrid images={event.images} size="size-24" className="mt-2" />
+                <ImageGrid images={event.images} variant="post" className="mt-2" />
 
                 {canEdit && (
                     <div className="flex gap-4 text-sm">
@@ -182,7 +182,7 @@ export default function GroupEventShow() {
                                 <p className="mt-1 whitespace-pre-wrap break-words">
                                     <UserText text={comment.body} />
                                 </p>
-                                <ImageGrid images={comment.images} size="size-24" className="mt-2" />
+                                <ImageGrid images={comment.images} variant="boxed" className="mt-2" />
                             </li>
                         ))}
                     </List>

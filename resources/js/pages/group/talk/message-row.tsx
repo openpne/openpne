@@ -70,7 +70,7 @@ export function TalkMessageRow({
             <p className="mt-1 whitespace-pre-wrap break-words">
                 <EntityText text={message.body} mentions={message.mentions} />
             </p>
-            <ImageGrid images={message.images} size="size-24" className="mt-2" />
+            <ImageGrid images={message.images} variant="boxed" className="mt-2" />
         </li>
     );
 }

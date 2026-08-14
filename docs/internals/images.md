@@ -27,7 +27,8 @@ instead of being asserted by the server.
 | `cropSources` | centre-crops to fill the cell ratio exactly, upscaling a smaller source | 300 / 600 wide, per ratio | a fixed-shape grid cell |
 
 `cropSources` is keyed by cell ratio — `tall` is 3:4 (the two-image cells and the three-image left
-cell), `wide` is 3:2 (the three-image right cells). The crop happens **once, on the server, at the
+cell), `wide` is 3:2 (the three-image right cells, and every cell of a set past three, which only a
+migrated post has). The crop happens **once, on the server, at the
 ratio the cell actually is**. Cropping to a square and letting CSS `object-fit: cover` finish the
 job is not the same picture: cover scales until the shorter side fills, so a square source in a 3:2
 cell is zoomed 1.33x past what a 3:2 crop would show and loses the top and bottom of the frame.
