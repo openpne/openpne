@@ -1,3 +1,4 @@
+import type { GridImage } from '@/components/image-grid';
 import type { LinkCardData } from '@/components/link-card';
 
 export interface CommunityCategory {
@@ -75,12 +76,6 @@ export interface TopicAuthor {
     avatarColor: string | null;
 }
 
-export interface TopicImage {
-    id: number;
-    url: string; // full-bytes (opens in a new tab)
-    thumbnailUrl: string; // 120px square
-}
-
 export interface TopicSummary {
     id: number;
     name: string;
@@ -95,7 +90,7 @@ export interface TopicDetail {
     body: string;
     format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
-    images: TopicImage[];
+    images: GridImage[];
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TopicAuthor | null;
     createdAt: string;
@@ -105,7 +100,7 @@ export interface TopicComment {
     id: number;
     number: number;
     body: string;
-    images: TopicImage[];
+    images: GridImage[];
     author: TopicAuthor | null;
     createdAt: string;
     deletable: boolean; // viewer-specific, computed server-side
@@ -150,7 +145,7 @@ export interface EventDetail {
     body: string;
     format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
-    images: TopicImage[];
+    images: GridImage[];
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
     author: TopicAuthor | null;
     createdAt: string; // ISO 8601 datetime

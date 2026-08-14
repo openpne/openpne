@@ -71,7 +71,7 @@ export default function TimelineShow() {
                     <EntityText text={post.body} mentions={post.mentions} tags={post.tags} />
                 </p>
                 <LinkCard card={post.linkCard} />
-                <ImageGrid images={post.images} />
+                <ImageGrid images={post.images} variant="post" />
                 {post.author.id === viewerId && (
                     <button type="button" onClick={deletePost} className={cn(dangerActionClass, 'text-sm')}>
                         {t('Delete')}

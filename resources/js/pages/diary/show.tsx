@@ -72,7 +72,7 @@ export default function DiaryShow() {
 
                 <LinkCard card={diary.linkCard} />
 
-                    <ImageGrid images={diary.images} size="size-28" className="mt-1" />
+                <ImageGrid images={diary.images} variant="post" className="mt-1" />
 
                 {isOwner && (
                     <div className="flex gap-4 text-sm">
@@ -141,7 +141,7 @@ export default function DiaryShow() {
                                 <p className="whitespace-pre-wrap break-words">
                                     <UserText text={comment.body} />
                                 </p>
-                                <ImageGrid images={comment.images} size="size-20" className="mt-1" />
+                                <ImageGrid images={comment.images} variant="boxed" className="mt-1" />
                             </li>
                         ))}
                     </List>

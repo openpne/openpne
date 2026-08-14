@@ -4,6 +4,7 @@ import { BodyField } from '@/components/compose/body-field';
 import { COMPOSE_FORM_ID, ComposeSheetAction } from '@/components/compose/compose-sheet-action';
 import { initialComposeFormat, type ComposeEditorPreference, type RecordFormat } from '@/components/compose/editor-mode';
 import { CurrentImagesField } from '@/components/current-images-field';
+import type { GridImage } from '@/components/image-grid';
 import { ImagesField } from '@/components/images-field';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -12,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Panel } from '@/components/ui/surface';
 import { useT } from '@/lib/i18n';
 import type { PageProps } from '@/types';
-import type { CommunitySummary, TopicImage } from '@/pages/community/types';
+import type { CommunitySummary } from '@/pages/community/types';
 
 interface EditEvent {
     id: number;
@@ -24,7 +25,7 @@ interface EditEvent {
     area: string;
     applicationDeadline: string | null; // Y-m-d
     capacity: number | null;
-    images: TopicImage[];
+    images: GridImage[];
 }
 
 interface EditProps extends PageProps {

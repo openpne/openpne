@@ -1,3 +1,4 @@
+import type { GridImage } from '@/components/image-grid';
 import type { ChatPage, ChatStreamRow, ChatUnreadSnapshot } from '@/lib/chat/types';
 import type { MentionEntity } from '@/lib/entity-split';
 import type { MemberRef } from '@/pages/community/types';
@@ -8,7 +9,7 @@ export interface TalkMessage extends ChatStreamRow {
     /** @mention ranges over the body, ascending and non-overlapping. Talk parses no hashtags. */
     mentions: MentionEntity[];
     /** Attached images in slot order — up to MAX_POST_IMAGES from the composer, N from migrated content. */
-    images: { id: number; url: string; thumbnailUrl: string }[];
+    images: GridImage[];
     isOwn: boolean;
     canDelete: boolean;
 }
