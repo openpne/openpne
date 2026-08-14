@@ -132,7 +132,10 @@ export function ConversationComposer({ counterpartName, onSend }: { counterpartN
     return (
         <form
             onSubmit={submit}
-            className="sticky bottom-[var(--modern-bottom-offset)] z-10 -mx-3 border-t border-border bg-background px-3 py-2 sm:-mx-4 sm:px-4"
+            // Flush with the screen's foot, with the home-indicator strip taken as the last of its own
+            // padding rather than left below it: stuck at that strip's height instead, the bar would
+            // have the conversation scrolling through the band under it.
+            className="sticky bottom-0 z-10 -mx-3 border-t border-border bg-background px-3 pt-2 pb-[calc(0.5rem+var(--modern-bottom-offset))] sm:-mx-4 sm:px-4"
         >
             {error !== null && (
                 <p role="alert" className="pb-2 text-sm text-destructive">

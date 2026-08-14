@@ -359,7 +359,7 @@ export default function GroupTalkIndex() {
 
             {/* Zero-height and sticky rather than fixed: the pill belongs over the conversation, and
                 the viewport it would otherwise be centred in is wider than the column at lg. Its foot
-                sits one line above the composer, which stands on the same bottom offset. */}
+                sits one line above the composer, whose height ends in that same bottom offset. */}
             {!atBottom && (
                 <div className="pointer-events-none sticky bottom-[calc(var(--modern-bottom-offset)+4.25rem)] z-20 flex h-0 items-end justify-center">
                     <Button size="sm" variant="secondary" onClick={jumpToLatest} className="pointer-events-auto shadow-md">
@@ -376,10 +376,12 @@ export default function GroupTalkIndex() {
             {canPost ? (
                 <TalkComposer groupId={group.id} groupName={group.name} onSend={send} />
             ) : (
-                // The frame gives its bottom padding up to the composer standing on the screen's foot;
-                // with no composer to stand there, this line takes the rhythm back rather than ending
-                // the page on the screen's edge.
-                <p className="text-sm text-muted-foreground max-lg:pb-8">{t('Join this %community% to post.')}</p>
+                // The frame gives its bottom padding up to the composer standing on the screen's foot,
+                // and the shell leaves it the home-indicator strip; with no composer to stand there,
+                // this line takes both back rather than ending the page on the screen's edge.
+                <p className="text-sm text-muted-foreground max-lg:pb-[calc(2rem+var(--modern-bottom-offset))]">
+                    {t('Join this %community% to post.')}
+                </p>
             )}
         </>
     );

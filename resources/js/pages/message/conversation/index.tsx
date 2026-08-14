@@ -251,9 +251,10 @@ export default function MessageConversation() {
                 </div>
             )}
 
-            {/* With no composer standing on the page's foot, the list takes that rhythm back rather
-                than ending the page on the screen's edge. */}
-            <Panel flush className={composer === null ? 'max-lg:mb-8' : undefined}>
+            {/* With no composer standing on the page's foot, the list takes back both that rhythm and
+                the home-indicator strip the shell leaves the composer, rather than ending the page on
+                the screen's edge. */}
+            <Panel flush className={composer === null ? 'max-lg:mb-[calc(2rem+var(--modern-bottom-offset))]' : undefined}>
                 {stream.hasOlder && (
                     <div className="flex justify-center border-b border-border px-4 py-2 sm:px-5">
                         <Button variant="ghost" size="sm" loading={stream.loadingOlder} onClick={loadOlder}>
@@ -300,7 +301,7 @@ export default function MessageConversation() {
 
             {/* Zero-height and sticky rather than fixed: the pill belongs over the conversation, and
                 the viewport it would otherwise be centred in is wider than the column at lg. Its foot
-                sits one line above the composer, which stands on the same bottom offset. */}
+                sits one line above the composer, whose height ends in that same bottom offset. */}
             {!atBottom && (
                 <div
                     className={cn(
