@@ -1,3 +1,4 @@
+import type { GridImage } from '@/components/image-grid';
 import type { LinkCardData } from '@/components/link-card';
 
 export type DiaryVisibility = 'open' | 'members' | 'friends' | 'private';
@@ -21,12 +22,6 @@ export interface DiaryAvatarAuthor extends DiaryAuthor {
     avatarColor: string | null;
 }
 
-export interface DiaryImage {
-    id: number;
-    url: string; // full bytes (FilePolicy-gated)
-    thumbnailUrl: string; // 120×120 square
-}
-
 export interface DiarySummary {
     id: number;
     title: string;
@@ -44,7 +39,7 @@ export interface DiaryDetail extends DiarySummary {
     format: string; // BodyFormat: 'plain' | 'op3' | 'markdown'
     bodyHtml: string | null; // server-rendered decoration HTML; null when the body is plain
     linkCard: LinkCardData | null; // first URL in the body, previewed; null when there is none
-    images: DiaryImage[];
+    images: GridImage[];
 }
 
 /** The older/newer pager target: identity + title + createdAt as an offset-bearing ISO instant. */
@@ -58,7 +53,7 @@ export interface DiaryComment {
     id: number;
     number: number;
     body: string;
-    images: DiaryImage[];
+    images: GridImage[];
     author: DiaryAvatarAuthor | null; // null once the author has withdrawn
     createdAt: string;
     deletable: boolean; // viewer-specific, computed server-side

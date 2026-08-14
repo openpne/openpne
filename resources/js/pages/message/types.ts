@@ -1,3 +1,5 @@
+import type { GridImage } from '@/components/image-grid';
+
 interface PaginationMeta {
     currentPage: number;
     lastPage: number;
@@ -40,16 +42,10 @@ export interface PaginatedConversations {
     meta: PaginationMeta;
 }
 
-export interface MessageImage {
-    id: number;
-    url: string; // full-bytes (opens in a new tab)
-    thumbnailUrl: string; // 120px square
-}
-
 export interface MessageDraftForm {
     id: number;
     subject: string;
     body: string;
     recipient: MessageMember | null; // fixed when the draft was created; null → withdrawn
-    images: MessageImage[]; // current attachments, each removable by id
+    images: GridImage[]; // current attachments, each removable by id
 }
