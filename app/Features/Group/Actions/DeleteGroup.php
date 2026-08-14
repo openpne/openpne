@@ -9,6 +9,7 @@ use App\Features\GroupEvent\Actions\DeleteEvent;
 use App\Features\GroupTopic\Actions\DeleteTopic;
 use App\Models\File;
 use App\Models\Group;
+use App\Models\GroupMessage;
 use App\Models\Member;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -70,6 +71,16 @@ class DeleteGroup
                     ->where('group_messages.group_id', $locked->getKey())
                     ->select('group_message_images.file_id'))
                 ->get();
+
+            // `reactions.reactable_id` is polymorphic and so carries no foreign key: the cascade that
+            // takes the messages away would leave every reaction on them behind, pointing at ids that
+            // no longer exist. Under the same lock, for the same reason the image sweep is — and in
+            // the order every reaction write takes it (App\Features\GroupTalk\TalkWriteLock), so a
+            // teardown and a reaction queue rather than deadlock.
+            DB::table('reactions')
+                ->where('reactable_type', (new GroupMessage)->getMorphClass())
+                ->whereIn('reactable_id', DB::table('group_messages')->where('group_id', $locked->getKey())->select('id'))
+                ->delete();
 
             $file = $locked->image()->first();
             $locked->delete();
