@@ -1,3 +1,10 @@
+/** One emoji on a message: how many hold it, and whether the viewer is one of them. */
+export interface ChatReactionChip {
+    emoji: string;
+    count: number;
+    mine: boolean;
+}
+
 /**
  * The part of a chat message the stream machinery reads: its identity and its place in the keyset
  * order. Everything else a conversation shows — bodies, authors, attachments — is the page's own.
@@ -7,6 +14,8 @@ export interface ChatStreamRow {
     createdAt: string;
     /** This message's position in the keyset order — handed back to ask for the pages around it. */
     cursor: string;
+    /** Optional because a surface may have no reactions at all: a direct message never carries them. */
+    reactions?: ChatReactionChip[];
 }
 
 /** One slice of the conversation, oldest first, and what lies either side of it. */
@@ -15,6 +24,13 @@ export interface ChatPage<M extends ChatStreamRow> {
     hasOlder: boolean;
     /** Rows follow this page that the client was not given — only a forward read answers it. */
     hasNewer: boolean;
+    /**
+     * Messages whose reactions changed since the watermark the read carried, in version order.
+     * Present only when one was sent, so a poll that asks nothing is answered as it always was.
+     */
+    touched?: M[];
+    /** The reaction watermark to come back with — see the poll in use-chat-stream.ts. */
+    reactionsVersion?: number;
 }
 
 /**

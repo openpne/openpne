@@ -14,12 +14,15 @@ import {
     mergeLatest,
     mergeNewer,
     mergeSent,
+    mergeTouched,
     newIntents,
     oldestBoundary,
+    patchReactions,
     retireIntents,
     watermark,
 } from './stream-state';
-import type { ChatPage, ChatStreamRow } from './types';
+import type { ReactionOp } from './reaction-overlay';
+import type { ChatPage, ChatReactionChip, ChatStreamRow } from './types';
 
 /** How often a visible tab asks what has arrived. */
 const POLL_MS = 8_000;
@@ -33,6 +36,18 @@ export interface ChatStreamEndpoints {
     messages: (query: string) => string;
     send?: string;
     delete?: (id: number) => string;
+}
+
+/**
+ * Reactions, for a conversation that has them. Optional in every sense: without it the poll asks
+ * what it always asked and `react` refuses, which is how the direct-message conversation sharing
+ * this hook stays exactly as it was.
+ */
+export interface ChatReactions {
+    /** The conversation's reaction version at render — where the poll starts reading changes from. */
+    initialVersion: number;
+    add: (messageId: number) => string;
+    remove: (messageId: number) => string;
 }
 
 /** Thrown for a rejected send, carrying whatever the server said about each field. */
@@ -54,8 +69,8 @@ export class SendFailed extends Error {
  * window is why the poll is conditional — reading back from the unread boundary opens a stretch that
  * does not end at the newest message, and the reader steps forward through it instead.
  */
-export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndpoints, page: ChatPage<M>) {
-    const [state, setState] = useState<ChatStreamState<M>>(() => initial(page));
+export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndpoints, page: ChatPage<M>, reactions?: ChatReactions) {
+    const [state, setState] = useState<ChatStreamState<M>>(() => initial(page, reactions?.initialVersion));
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [loadingNewer, setLoadingNewer] = useState(false);
 
@@ -121,17 +136,33 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
             const since = watermark(stateRef.current);
             // Nothing on screen means there is no position to ask after — the conversation was empty
             // when the page loaded, so ask for the newest page instead.
-            const query = since === undefined ? '' : `?after=${encodeURIComponent(since)}`;
+            const asked: string[] = [];
+            if (since !== undefined) {
+                asked.push(`after=${encodeURIComponent(since)}`);
+            }
+            // The second position, and the one a message already on screen moves by: reading forward
+            // from a cursor cannot see a reaction, which moves neither half of the ordering tuple.
+            // Absent for a conversation with no reactions, whose poll is then the one it always was.
+            const sinceReactions = stateRef.current.reactionsVersion;
+            if (sinceReactions !== undefined) {
+                asked.push(`reactionsAfter=${sinceReactions}`);
+            }
+            const query = asked.length === 0 ? '' : `?${asked.join('&')}`;
 
             void fetchPage(query, controller.signal)
                 .then((arrived) => {
                     if (arrived === null) {
                         return;
                     }
-                    // Which merge is decided by which question was asked, not by what came back.
-                    fold(at, (current) =>
-                        since === undefined ? mergeLatest(current, arrived) : mergeAfter(current, arrived),
-                    );
+                    // Which merge is decided by which question was asked, not by what came back. The
+                    // touched rows and the watermark ride the same fold, so the generation that
+                    // discards a response the reader has moved on from discards both — moving the
+                    // watermark alone would mark changes as read into a list that never saw them.
+                    fold(at, (current) => {
+                        const merged = since === undefined ? mergeLatest(current, arrived) : mergeAfter(current, arrived);
+
+                        return mergeTouched(merged, arrived.touched ?? [], arrived.reactionsVersion);
+                    });
                 })
                 .catch(() => {
                     // Keep what is on screen: a dropped refresh is not news to the reader, and the
@@ -309,6 +340,47 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
         [endpoints],
     );
 
+    /**
+     * Add or take back one emoji, and stand the message's chips on what the write answered — the
+     * whole row, so a reaction someone else added meanwhile arrives with it. Whether it landed is
+     * the caller's answer: the optimistic guess it is holding is settled either way.
+     *
+     * Not held to a generation, for the reason a deletion is not: a chip row is a fact about the
+     * message rather than about the page it is on, and patching a row the list no longer holds is
+     * already nothing.
+     */
+    const react = useCallback(
+        async (id: number, emoji: string, op: ReactionOp): Promise<boolean> => {
+            if (reactions === undefined) {
+                throw new Error('this conversation has no reactions: no endpoints were declared');
+            }
+
+            const response = await fetch(op === 'add' ? reactions.add(id) : reactions.remove(id), {
+                method: 'POST',
+                headers: { ...xsrfHeader(), Accept: 'application/json', 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ emoji }),
+            }).catch(() => null);
+
+            if (response === null || !response.ok) {
+                // A refusal says nothing to the reader: the vocabulary narrowing under a tab left
+                // open (422) and a message deleted from under the tap (404) are both answered by
+                // the guess going away, which is the truth of the row either way.
+                return false;
+            }
+
+            const payload = (await response.json().catch(() => null)) as { reactions?: ChatReactionChip[] } | null;
+            if (payload === null) {
+                return false;
+            }
+
+            setState((current) => patchReactions(current, id, payload.reactions ?? []));
+
+            return true;
+        },
+        [reactions],
+    );
+
     return {
         messages: state.messages,
         hasOlder: state.hasOlder,
@@ -324,6 +396,7 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
         returnToLatest,
         send,
         remove,
+        react,
     };
 }
 

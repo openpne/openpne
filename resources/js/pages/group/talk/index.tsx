@@ -1,9 +1,10 @@
 import { Head, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
+import { chipsWithPending, isPending, noPending, withoutPending, withPending, type PendingReactions, type ReactionOp } from '@/lib/chat/reaction-overlay';
 import { dividerBeforeId, readThroughBoundary } from '@/lib/chat/unread';
 import { useChatStream } from '@/lib/chat/use-chat-stream';
 import { useMarkRead } from '@/lib/chat/use-mark-read';
@@ -14,6 +15,7 @@ import type { PageProps } from '@/types';
 import { TalkComposer } from './composer';
 import { TalkMessageRow } from './message-row';
 import { TalkMuteToggle } from './mute-toggle';
+import { TalkReactorsDialog } from './reactors-dialog';
 import type { TalkPage, TalkUnreadSnapshot } from './types';
 
 interface TalkProps extends PageProps {
@@ -25,6 +27,10 @@ interface TalkProps extends PageProps {
     isMember: boolean;
     isMuted: boolean;
     talkUnreadSnapshot: TalkUnreadSnapshot | null;
+    /** Where the poll starts reading reaction changes from — see the second watermark in use-chat-stream.ts. */
+    reactionsVersion: number;
+    /** What this site offers, shipped by the page so nothing in the bundle holds a second copy. */
+    reactionVocabulary: string[];
 }
 
 /** How close to the foot still counts as reading the newest message. */
@@ -53,7 +59,8 @@ const appendMentions =
 export default function GroupTalkIndex() {
     const t = useT();
     const confirm = useConfirm();
-    const { group, page, anchor, canPost, isMember, isMuted, talkUnreadSnapshot } = usePage<TalkProps>().props;
+    const { group, page, anchor, canPost, isMember, isMuted, talkUnreadSnapshot, reactionsVersion, reactionVocabulary } =
+        usePage<TalkProps>().props;
     // Memoized because the stream's poll and reads hang off their identity: rebuilt every render, the
     // interval would be torn down and started again each time the page re-rendered.
     const endpoints = useMemo(
@@ -64,7 +71,15 @@ export default function GroupTalkIndex() {
         }),
         [group.id],
     );
-    const stream = useChatStream(endpoints, page);
+    const reactionEndpoints = useMemo(
+        () => ({
+            initialVersion: reactionsVersion,
+            add: (id: number) => `/groups/${group.id}/talk/messages/${id}/reactions`,
+            remove: (id: number) => `/groups/${group.id}/talk/messages/${id}/reactions/delete`,
+        }),
+        [group.id, reactionsVersion],
+    );
+    const stream = useChatStream(endpoints, page, reactionEndpoints);
     const messages = stream.messages;
     const streamSend = stream.send;
     const atLatest = stream.window.kind === 'latest';
@@ -247,6 +262,29 @@ export default function GroupTalkIndex() {
         }
     };
 
+    // The taps still on the wire, the row whose picker is open (one at a time, so opening another
+    // closes this one by construction), and the message whose reactor list is being read.
+    const [pendingReactions, setPendingReactions] = useState<PendingReactions>(noPending);
+    const [pickerFor, setPickerFor] = useState<number | null>(null);
+    const [reactorsFor, setReactorsFor] = useState<number | null>(null);
+    // Stable, because the dialog reads its list once per URL: a fresh closure every render would be
+    // a fresh read every poll tick.
+    const closeReactors = useCallback(() => setReactorsFor(null), []);
+
+    const toggleReaction = (messageId: number, emoji: string, mine: boolean) => {
+        setPickerFor(null);
+        if (isPending(pendingReactions, messageId, emoji)) {
+            return;
+        }
+
+        const op: ReactionOp = mine ? 'remove' : 'add';
+        setPendingReactions((current) => withPending(current, messageId, emoji, op));
+        // Settled the same way whichever it was: what the server said is already in the list, and a
+        // refusal leaves the row as it stands rather than as it stood when the tap was made.
+        const settle = () => setPendingReactions((current) => withoutPending(current, messageId, emoji));
+        void stream.react(messageId, emoji, op).then(settle, settle);
+    };
+
     return (
         <>
             <Head title={t('Talk')} />
@@ -295,7 +333,20 @@ export default function GroupTalkIndex() {
                                         </div>
                                     </li>
                                 )}
-                                <TalkMessageRow message={message} onDelete={remove} highlighted={message.id === highlightId} />
+                                <TalkMessageRow
+                                    message={message}
+                                    onDelete={remove}
+                                    highlighted={message.id === highlightId}
+                                    reactions={{
+                                        chips: chipsWithPending(message.reactions ?? [], pendingReactions, message.id),
+                                        vocabulary: reactionVocabulary,
+                                        canReact: canPost,
+                                        pickerOpen: pickerFor === message.id,
+                                        onPickerOpenChange: (open) => setPickerFor(open ? message.id : null),
+                                        onToggle: (emoji, mine) => toggleReaction(message.id, emoji, mine),
+                                        onShowReactors: () => setReactorsFor(message.id),
+                                    }}
+                                />
                             </Fragment>
                         ))}
                     </List>
@@ -320,6 +371,10 @@ export default function GroupTalkIndex() {
                         {t('Jump to latest')}
                     </Button>
                 </div>
+            )}
+
+            {reactorsFor !== null && (
+                <TalkReactorsDialog url={`/groups/${group.id}/talk/messages/${reactorsFor}/reactions`} onClose={closeReactors} />
             )}
 
             {canPost ? (

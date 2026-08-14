@@ -12,8 +12,10 @@ import {
     mergeLatest,
     mergeNewer,
     mergeSent,
+    mergeTouched,
     newIntents,
     oldestBoundary,
+    patchReactions,
     retireIntents,
     isCurrentIntent,
     watermark,
@@ -435,4 +437,83 @@ test('the later of two moves is the one waited for', () => {
 
     assert.equal(isCurrentIntent(intents, first), false);
     assert.equal(isCurrentIntent(intents, second), true);
+});
+
+/** A chip row, as the serializer sends one. */
+const chip = (emoji: string, count: number, mine = false) => ({ emoji, count, mine });
+
+const chipsOf = (state: { messages: TestMessage[] }, id: number) => state.messages.find((m) => m.id === id)?.reactions;
+
+test('a touched row replaces the copy held, chips and all', () => {
+    const state = initial(page([message(1, '2026-08-14T09:00:00+00:00'), message(2, '2026-08-14T09:01:00+00:00')]));
+    const touched = { ...message(2, '2026-08-14T09:01:00+00:00'), reactions: [chip('\u{1F44D}', 1, true)] };
+
+    const merged = mergeTouched(state, [touched], 7);
+
+    assert.deepEqual(bodies(merged), ['m1', 'm2'], 'reacting moves nothing in the keyset order');
+    assert.deepEqual(chipsOf(merged, 2), [chip('\u{1F44D}', 1, true)]);
+    assert.equal(merged.reactionsVersion, 7);
+});
+
+/**
+ * The contract the whole merge exists for: a reaction on a message outside the stretch on screen
+ * must not put that message on screen, or the list would be a conversation with a hole in it.
+ */
+test('a touched row the list does not hold is not inserted', () => {
+    const state = initial(page([message(2, '2026-08-14T09:01:00+00:00')], true));
+
+    const merged = mergeTouched(state, [{ ...message(1, '2026-08-14T09:00:00+00:00'), reactions: [chip('\u{1F44D}', 1)] }], 7);
+
+    assert.deepEqual(bodies(merged), ['m2']);
+    assert.equal(merged.reactionsVersion, 7, 'and the watermark still moves past it');
+});
+
+test('a touched row for a message deleted in this session stays gone', () => {
+    const state = markDeleted(initial(page([message(1, '2026-08-14T09:00:00+00:00'), message(2, '2026-08-14T09:01:00+00:00')])), 2);
+
+    const merged = mergeTouched(state, [{ ...message(2, '2026-08-14T09:01:00+00:00'), reactions: [chip('\u{1F44D}', 1)] }], 7);
+
+    assert.deepEqual(bodies(merged), ['m1']);
+});
+
+test('a poll that touched nothing and moved no watermark returns the very state it was given', () => {
+    const state = { ...initial(page([message(1, '2026-08-14T09:00:00+00:00')])), reactionsVersion: 7 };
+
+    assert.equal(mergeTouched(state, [], 7), state);
+    assert.equal(mergeTouched(state, [], undefined), state, 'a conversation with no reactions is answered without one');
+});
+
+/**
+ * The watermark rides the same fold as the rows, so the generation that throws a response away
+ * throws the watermark with it — advancing it alone would mark changes as read into a list that
+ * never saw them, and nothing would ask for them again.
+ */
+test('a poll answered after the window moved moves neither the rows nor the watermark', () => {
+    const state = { ...initial(page([message(1, '2026-08-14T09:00:00+00:00')])), reactionsVersion: 7 };
+    const at = state.generation;
+    const moved = enterHistory(state, page([message(10, '2026-08-13T09:10:00+00:00')], true, true));
+
+    const after = applied(moved, at, (current) =>
+        mergeTouched(current, [{ ...message(1, '2026-08-14T09:00:00+00:00'), reactions: [chip('\u{1F44D}', 1)] }], 9),
+    );
+
+    assert.equal(after, moved);
+    assert.equal(after.reactionsVersion, 7, 'so the next poll asks again from where the list actually stands');
+});
+
+test('a window change carries the watermark across', () => {
+    const state = { ...initial(page([message(1, '2026-08-14T09:00:00+00:00')])), reactionsVersion: 7 };
+
+    assert.equal(enterHistory(state, page([message(10, '2026-08-13T09:10:00+00:00')], true, true)).reactionsVersion, 7);
+    assert.equal(enterLatest(state, page([message(1, '2026-08-14T09:00:00+00:00')])).reactionsVersion, 7);
+});
+
+test('a write patches one row and leaves a row it does not name alone', () => {
+    const state = initial(page([message(1, '2026-08-14T09:00:00+00:00'), message(2, '2026-08-14T09:01:00+00:00')]));
+
+    const patched = patchReactions(state, 2, [chip('\u{1F44D}', 2, true)]);
+
+    assert.deepEqual(chipsOf(patched, 2), [chip('\u{1F44D}', 2, true)]);
+    assert.equal(chipsOf(patched, 1), undefined);
+    assert.equal(patchReactions(state, 404, [chip('\u{1F44D}', 1, true)]), state, 'a row the list no longer holds is nothing to patch');
 });
