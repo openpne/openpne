@@ -31,6 +31,33 @@ class ImageTransformTest extends TestCase
         $this->assertNotNull(ImageTransform::fromGeometry('w240_h320'));
     }
 
+    public function test_parses_every_rung_of_the_fit_ladder(): void
+    {
+        foreach ([320, 640, 1200] as $box) {
+            $t = ImageTransform::fromGeometry("w{$box}_h{$box}");
+
+            $this->assertNotNull($t, "fit box {$box}");
+            $this->assertSame($box, $t->width);
+            $this->assertFalse($t->square);
+        }
+    }
+
+    public function test_parses_a_crop_at_a_cell_ratio(): void
+    {
+        // Modern crops server-side at the cell's own ratio, so `_sq` has to carry a rectangle and
+        // not just a square (docs/internals/images.md).
+        $ladder = ['w300_h400_sq' => [300, 400], 'w600_h800_sq' => [600, 800], 'w300_h200_sq' => [300, 200], 'w600_h400_sq' => [600, 400]];
+
+        foreach ($ladder as $geometry => [$width, $height]) {
+            $t = ImageTransform::fromGeometry($geometry);
+
+            $this->assertNotNull($t, $geometry);
+            $this->assertSame($width, $t->width, $geometry);
+            $this->assertSame($height, $t->height, $geometry);
+            $this->assertTrue($t->square, $geometry);
+        }
+    }
+
     public function test_parses_the_original_size(): void
     {
         $t = ImageTransform::fromGeometry('w_h');

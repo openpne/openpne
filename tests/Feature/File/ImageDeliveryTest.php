@@ -43,6 +43,19 @@ class ImageDeliveryTest extends TestCase
         $this->assertSame([120, 120], $this->dimensions($response->getContent()));
     }
 
+    public function test_a_crop_at_a_cell_ratio_fills_that_box_exactly(): void
+    {
+        // Modern asks for the grid cell's own ratio, so `_sq` has to cover a rectangle: the client
+        // then scales that source with CSS cover instead of re-cropping it.
+        $owner = Member::factory()->create();
+        $file = $this->avatar($owner, 240, 120);
+
+        $response = $this->actingAs($owner)->get($file->thumbnailUrl(300, 400, square: true));
+
+        $response->assertOk();
+        $this->assertSame([300, 400], $this->dimensions($response->getContent()));
+    }
+
     public function test_a_fit_thumbnail_preserves_aspect_ratio_without_upscaling(): void
     {
         $owner = Member::factory()->create();

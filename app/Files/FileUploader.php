@@ -41,6 +41,8 @@ class FileUploader
             ? $this->stripper->strip((string) file_get_contents($upload->getRealPath()), $type)
             : null;
 
+        [$width, $height] = $this->dimensions($upload, $type, $stripped);
+
         $file = new File([
             // Opaque, backend-agnostic storage key and URL token (collision is
             // caught by the files.name unique index).
@@ -53,6 +55,8 @@ class FileUploader
             // FilePolicy serves it (an ownerless file is otherwise fail-closed denied).
             'explicit_visibility' => $explicitVisibility,
             'byte_size' => $stripped !== null ? strlen($stripped) : (int) $upload->getSize(),
+            'width' => $width,
+            'height' => $height,
         ]);
 
         $stream = $stripped !== null ? $this->memoryStream($stripped) : fopen($upload->getRealPath(), 'rb');
@@ -90,6 +94,24 @@ class FileUploader
         }
 
         return $file;
+    }
+
+    /**
+     * The image's rendered pixel size, or [null, null] for anything else. Measured from the bytes
+     * that will actually be stored, since stripping rewrites the container. Only an image is read
+     * into memory — a video or archive would be a pointless multi-megabyte allocation. Bytes that
+     * do not decode still upload (the size stays unknown); it is metadata, not a validation gate.
+     *
+     * @return array{0: int|null, 1: int|null}
+     */
+    private function dimensions(UploadedFile $upload, string $type, ?string $stripped): array
+    {
+        if (! str_starts_with($type, 'image/')) {
+            return [null, null];
+        }
+
+        return ImageDimensions::fromBytes($stripped ?? (string) file_get_contents($upload->getRealPath()))
+            ?? [null, null];
     }
 
     private function shouldStrip(string $mime): bool

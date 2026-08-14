@@ -52,7 +52,9 @@ class FileUpgrade extends UpgradeStep
     public function targetDefaults(): array
     {
         // No per-file visibility override on migration; null = inherit from the owning entity.
-        return ['explicit_visibility'];
+        // OpenPNE 3 does not record image dimensions, so width/height arrive null and are filled
+        // afterwards by `openpne:backfill-image-dimensions` (which reads the bytes).
+        return ['explicit_visibility', 'width', 'height'];
     }
 
     /**
