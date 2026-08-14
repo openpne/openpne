@@ -1,9 +1,10 @@
 # Link cards
 
 A URL pasted into a body renders as a card — the linked page's title, description, image and site —
-so a reader can tell what a link is without opening it. The metadata comes from the standards
-publishers already maintain: **Open Graph** first, then **Twitter Cards**, then plain HTML, with
-**oEmbed** filling in only what those left out.
+so a reader can tell what a link is without opening it. The metadata comes from the structured tags
+in the fetched page: **Open Graph** first as the general-purpose namespace, then the provider-scoped
+**Twitter Cards** as its fallback, then plain HTML, with **oEmbed** filling in only what those left
+out.
 
 Open Graph is read before oEmbed is called, because it costs nothing beyond the response already in
 hand, so the common case is one request per link instead of two.

@@ -16,10 +16,11 @@ use Throwable;
  * endpoint it discovers, not the image it names — so every test of it is a test of parsing rather
  * than of a mock's behaviour, and no network policy can be accidentally bypassed by living in here.
  *
- * Field precedence is Open Graph, then Twitter Cards, then plain HTML. Open Graph is what publishers
- * actually maintain, and reading it costs nothing beyond the one response already in hand — unlike
- * oEmbed, which is a second request. The oEmbed endpoint is only *discovered* here; whether it is
- * worth calling is decided by the caller, from what came back missing.
+ * Field precedence is Open Graph, then Twitter Cards, then plain HTML: the general-purpose namespace
+ * is canonical and the provider-scoped one is its fallback. All three are read from the response
+ * already in hand, unlike oEmbed, which costs a second request. The oEmbed endpoint is only
+ * *discovered* here; whether it is worth calling is decided by the caller, from what came back
+ * missing.
  */
 final class MetadataExtractor
 {
