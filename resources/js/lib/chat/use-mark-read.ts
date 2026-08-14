@@ -36,7 +36,7 @@ const RETRY_MS = 5_000;
  * a stale count look authoritative. An accepted report only asks the shell to re-read them now
  * rather than on its own minute clock (lib/unread-refresh.ts).
  */
-export function useMarkRead(groupId: number, newestRenderedId: number | undefined, active: boolean) {
+export function useMarkRead(readUrl: string, newestRenderedId: number | undefined, active: boolean) {
     const acked = useRef(0);
     const pending = useRef<number | null>(null);
     const inFlight = useRef(false);
@@ -72,7 +72,7 @@ export function useMarkRead(groupId: number, newestRenderedId: number | undefine
             inFlight.current = true;
             let outcome: ReportOutcome;
             try {
-                const response = await fetch(`/groups/${groupId}/talk/read`, {
+                const response = await fetch(readUrl, {
                     method: 'POST',
                     headers: { ...xsrfHeader(), 'Content-Type': 'application/json', Accept: 'application/json' },
                     credentials: 'same-origin',
@@ -111,5 +111,5 @@ export function useMarkRead(groupId: number, newestRenderedId: number | undefine
             }
             document.removeEventListener('visibilitychange', flush);
         };
-    }, [active, groupId, newestRenderedId]);
+    }, [active, readUrl, newestRenderedId]);
 }

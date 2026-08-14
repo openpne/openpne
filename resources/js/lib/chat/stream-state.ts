@@ -1,7 +1,7 @@
-import type { TalkMessage, TalkPage } from './types';
+import type { ChatPage, ChatStreamRow } from './types';
 
 /**
- * What a talk page is showing, as a value. Every way a message can arrive — the initial page, either
+ * What a chat page is showing, as a value. Every way a message can arrive — the initial page, either
  * direction of the poll, "load older", the composer's own send — goes through one of the merges
  * below, so the list obeys the same three rules however it was assembled.
  *
@@ -28,15 +28,15 @@ import type { TalkMessage, TalkPage } from './types';
  * what is already held is ever merged in. A list assembled from both would show a hole as if it were
  * a conversation.
  */
-export type TalkWindow = { kind: 'latest' } | { kind: 'history'; hasNewer: boolean };
+export type ChatWindow = { kind: 'latest' } | { kind: 'history'; hasNewer: boolean };
 
-export interface TalkStreamState {
+export interface ChatStreamState<M extends ChatStreamRow> {
     /** Ascending by (createdAt, id). */
-    messages: TalkMessage[];
+    messages: M[];
     hasOlder: boolean;
     /** Ids deleted in this session. Never re-admitted, whatever a later response carries. */
     deleted: ReadonlySet<number>;
-    window: TalkWindow;
+    window: ChatWindow;
     /** Which list a response was asked of — see {@link applied}. Moves on every window change. */
     generation: number;
 }
@@ -54,11 +54,11 @@ export interface TalkStreamState {
  * that generation on. A response whose generation has passed describes a page the reader is no
  * longer on, and the only safe thing to do with it is nothing.
  */
-export function applied(
-    state: TalkStreamState,
+export function applied<M extends ChatStreamRow>(
+    state: ChatStreamState<M>,
     at: number,
-    fold: (current: TalkStreamState) => TalkStreamState,
-): TalkStreamState {
+    fold: (current: ChatStreamState<M>) => ChatStreamState<M>,
+): ChatStreamState<M> {
     return at === state.generation ? fold(state) : state;
 }
 
@@ -72,28 +72,28 @@ export function applied(
  * has since thought better of: writing always puts them back at the live end, so a page fetched for
  * a move they have moved on from must not replace the list under the message they just wrote.
  */
-export interface TalkIntents {
+export interface ChatIntents {
     claimed: number;
 }
 
-export function newIntents(): TalkIntents {
+export function newIntents(): ChatIntents {
     return { claimed: 0 };
 }
 
 /** Claim the newest intent, retiring every one still out. Returns the epoch to check back against. */
-export function claimIntent(intents: TalkIntents): number {
+export function claimIntent(intents: ChatIntents): number {
     intents.claimed += 1;
 
     return intents.claimed;
 }
 
 /** Retire what is out without claiming a move of your own — what writing does. */
-export function retireIntents(intents: TalkIntents): void {
+export function retireIntents(intents: ChatIntents): void {
     claimIntent(intents);
 }
 
 /** Whether this navigation's answer is still the one the reader is waiting for. */
-export function isCurrentIntent(intents: TalkIntents, epoch: number): boolean {
+export function isCurrentIntent(intents: ChatIntents, epoch: number): boolean {
     return intents.claimed === epoch;
 }
 
@@ -109,18 +109,18 @@ export function instantOf(createdAt: string): number {
 }
 
 /** Sort key: the instant, with the id breaking a tie inside the same second. */
-function orderOf(message: TalkMessage): [number, number] {
+function orderOf(message: ChatStreamRow): [number, number] {
     return [instantOf(message.createdAt), message.id];
 }
 
-function byTuple(a: TalkMessage, b: TalkMessage): number {
+function byTuple(a: ChatStreamRow, b: ChatStreamRow): number {
     const [aAt, aId] = orderOf(a);
     const [bAt, bId] = orderOf(b);
 
     return aAt === bAt ? aId - bId : aAt - bAt;
 }
 
-function sameWindow(a: TalkWindow, b: TalkWindow): boolean {
+function sameWindow(a: ChatWindow, b: ChatWindow): boolean {
     if (a.kind === 'latest' || b.kind === 'latest') {
         return a.kind === b.kind;
     }
@@ -129,7 +129,7 @@ function sameWindow(a: TalkWindow, b: TalkWindow): boolean {
 }
 
 /** The window a forward read leaves behind: still short of the newest, or caught up with it. */
-function windowAfter(page: TalkPage): TalkWindow {
+function windowAfter<M extends ChatStreamRow>(page: ChatPage<M>): ChatWindow {
     return page.hasNewer ? { kind: 'history', hasNewer: true } : { kind: 'latest' };
 }
 
@@ -137,16 +137,16 @@ function windowAfter(page: TalkPage): TalkWindow {
  * Fold messages into the list: later copies of an id win, tombstoned ids are dropped, and the result
  * is sorted. `hasOlder` is decided by the caller, since only it knows which end it read from.
  */
-function merge(
-    state: TalkStreamState,
-    arriving: readonly TalkMessage[],
+function merge<M extends ChatStreamRow>(
+    state: ChatStreamState<M>,
+    arriving: readonly M[],
     hasOlder: boolean,
     window = state.window,
     generation = state.generation,
-): TalkStreamState {
+): ChatStreamState<M> {
     // An idle poll answers with nothing; the state it would rebuild is the state it was given.
     // Returning the same value matters: every new `messages` reference re-runs the page's pin
-    // effect, and a scroll re-issued every tick fights iOS's keyboard pan (see index.tsx).
+    // effect, and a scroll re-issued every tick fights iOS's keyboard pan.
     if (arriving.length === 0 && hasOlder === state.hasOlder && sameWindow(window, state.window) && generation === state.generation) {
         return state;
     }
@@ -165,7 +165,7 @@ function merge(
  * moves with it, which is what retires the reads the old list had out. The tombstones are the one
  * thing carried over: a session's deletions outlive the stretch of conversation they were made in.
  */
-function replace(state: TalkStreamState, page: TalkPage, window: TalkWindow): TalkStreamState {
+function replace<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>, window: ChatWindow): ChatStreamState<M> {
     const messages = page.messages.filter((message) => !state.deleted.has(message.id)).sort(byTuple);
 
     return { messages, hasOlder: page.hasOlder, deleted: state.deleted, window, generation: state.generation + 1 };
@@ -177,8 +177,8 @@ function replace(state: TalkStreamState, page: TalkPage, window: TalkWindow): Ta
  * forward read's is, rather than assumed live. Standing in a history window from the first render is
  * what stops the poll appending rows that do not follow the last one on screen.
  */
-export function initial(page: TalkPage): TalkStreamState {
-    const empty: TalkStreamState = { messages: [], hasOlder: false, deleted: new Set(), window: { kind: 'latest' }, generation: 0 };
+export function initial<M extends ChatStreamRow>(page: ChatPage<M>): ChatStreamState<M> {
+    const empty: ChatStreamState<M> = { messages: [], hasOlder: false, deleted: new Set(), window: { kind: 'latest' }, generation: 0 };
 
     return merge(empty, page.messages, page.hasOlder, windowAfter(page));
 }
@@ -187,22 +187,22 @@ export function initial(page: TalkPage): TalkStreamState {
  * The poll's answer to "what has arrived since my newest message". It reads forward only, so it
  * learns nothing about the far end of the history and leaves `hasOlder` alone.
  */
-export function mergeAfter(state: TalkStreamState, page: TalkPage): TalkStreamState {
+export function mergeAfter<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     return merge(state, page.messages, state.hasOlder);
 }
 
 /**
  * The poll's answer when there was no watermark to ask after — the conversation was empty when the
  * page loaded, so it asked for the newest page instead. That page knows what lies behind it, and
- * adopting its answer is what keeps a busy group's history reachable without a reload. Once the list
+ * adopting its answer is what keeps a busy room's history reachable without a reload. Once the list
  * is non-empty the current answer is the better one: this response only covers the newest page.
  */
-export function mergeLatest(state: TalkStreamState, page: TalkPage): TalkStreamState {
+export function mergeLatest<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     return merge(state, page.messages, state.messages.length === 0 ? page.hasOlder : state.hasOlder);
 }
 
 /** "Load older": the response is the authority on whether anything remains behind it. */
-export function mergeBefore(state: TalkStreamState, page: TalkPage): TalkStreamState {
+export function mergeBefore<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     return merge(state, page.messages, page.hasOlder);
 }
 
@@ -213,7 +213,7 @@ export function mergeBefore(state: TalkStreamState, page: TalkPage): TalkStreamS
  * that ends at the newest one, including the one the caller re-read to get back there, but under a
  * stretch of history it would sit beneath a message it does not answer.
  */
-export function mergeSent(state: TalkStreamState, message: TalkMessage): TalkStreamState {
+export function mergeSent<M extends ChatStreamRow>(state: ChatStreamState<M>, message: M): ChatStreamState<M> {
     if (state.window.kind !== 'latest') {
         return state;
     }
@@ -226,7 +226,7 @@ export function mergeSent(state: TalkStreamState, message: TalkMessage): TalkStr
  * with it and so may be merged. When the server reports nothing beyond it, the list now runs to the
  * newest message and the window is the latest one again — poll and all.
  */
-export function mergeNewer(state: TalkStreamState, page: TalkPage): TalkStreamState {
+export function mergeNewer<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     const window = windowAfter(page);
     // Catching up with the newest message is a window change like any other, so it retires the reads
     // the history window had out and lets the poll start from a list it can trust.
@@ -236,12 +236,12 @@ export function mergeNewer(state: TalkStreamState, page: TalkPage): TalkStreamSt
 }
 
 /** The unread jump: stand on the boundary page. Contiguous through to the newest ends up as latest. */
-export function enterHistory(state: TalkStreamState, page: TalkPage): TalkStreamState {
+export function enterHistory<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     return replace(state, page, windowAfter(page));
 }
 
 /** Back to the live end of the conversation, on the newest page rather than on what was held. */
-export function enterLatest(state: TalkStreamState, page: TalkPage): TalkStreamState {
+export function enterLatest<M extends ChatStreamRow>(state: ChatStreamState<M>, page: ChatPage<M>): ChatStreamState<M> {
     return replace(state, page, { kind: 'latest' });
 }
 
@@ -249,7 +249,7 @@ export function enterLatest(state: TalkStreamState, page: TalkPage): TalkStreamS
  * Drop a message and remember that it is gone. Not tied to a generation either: a deletion is a fact
  * about the conversation rather than a page of it, and holds wherever the reader is standing.
  */
-export function markDeleted(state: TalkStreamState, id: number): TalkStreamState {
+export function markDeleted<M extends ChatStreamRow>(state: ChatStreamState<M>, id: number): ChatStreamState<M> {
     const deleted = new Set(state.deleted);
     deleted.add(id);
 
@@ -263,11 +263,11 @@ export function markDeleted(state: TalkStreamState, id: number): TalkStreamState
 }
 
 /** The newest message's cursor — what the poll asks after. Undefined while the list is empty. */
-export function watermark(state: TalkStreamState): string | undefined {
+export function watermark<M extends ChatStreamRow>(state: ChatStreamState<M>): string | undefined {
     return state.messages[state.messages.length - 1]?.cursor;
 }
 
 /** The oldest message's cursor — what "load older" asks before. Undefined while the list is empty. */
-export function oldestBoundary(state: TalkStreamState): string | undefined {
+export function oldestBoundary<M extends ChatStreamRow>(state: ChatStreamState<M>): string | undefined {
     return state.messages[0]?.cursor;
 }

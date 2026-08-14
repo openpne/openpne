@@ -1,5 +1,5 @@
-import { instantOf } from './talk-stream-state.ts';
-import type { TalkMessage, TalkUnreadSnapshot } from './types';
+import { instantOf } from './stream-state.ts';
+import type { ChatStreamRow, ChatUnreadSnapshot } from './types';
 
 /**
  * Where the "unread from here" divider goes: above the first message past the boundary the page was
@@ -11,9 +11,9 @@ import type { TalkMessage, TalkUnreadSnapshot } from './types';
  * loaded page reaches (the banner, which jumps to it). The caller tells them apart by the snapshot's
  * count — a boundary with messages behind it that is not here has to be off-page.
  */
-export function dividerBeforeId(
-    messages: readonly TalkMessage[],
-    snapshot: TalkUnreadSnapshot | null,
+export function dividerBeforeId<M extends ChatStreamRow>(
+    messages: readonly M[],
+    snapshot: ChatUnreadSnapshot | null,
     hasOlder: boolean,
 ): number | null {
     // A visit that opened with nothing unread has no boundary at all, and messages arriving while

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
-import type { MentionPayloadRow } from '@/lib/mention-draft';
 import {
     applied,
+    type ChatStreamState,
     claimIntent,
     enterHistory,
     enterLatest,
@@ -17,13 +17,19 @@ import {
     newIntents,
     oldestBoundary,
     retireIntents,
-    type TalkStreamState,
     watermark,
-} from './talk-stream-state';
-import type { TalkMessage, TalkPage } from './types';
+} from './stream-state';
+import type { ChatPage, ChatStreamRow } from './types';
 
 /** How often a visible tab asks what has arrived. */
 const POLL_MS = 8_000;
+
+/** Where one conversation lives. `messages` is handed the keyset query, empty for the newest page. */
+export interface ChatStreamEndpoints {
+    messages: (query: string) => string;
+    send: string;
+    delete: (id: number) => string;
+}
 
 /** Thrown for a rejected send, carrying whatever the server said about each field. */
 export class SendFailed extends Error {
@@ -34,18 +40,18 @@ export class SendFailed extends Error {
 }
 
 /**
- * Holds the conversation a talk page is showing and keeps it current: a visibility-aware poll for
+ * Holds the conversation a chat page is showing and keeps it current: a visibility-aware poll for
  * what has arrived (the pattern the unread badges already use — Inertia's usePoll keeps firing on a
  * hidden tab and does not refresh on return, which is the moment a stale chat is seen), plus "load
  * older" walking back by keyset and the composer's send appending in place.
  *
  * This hook owns the network and nothing else: what arrives is folded in by the pure merges in
- * talk-stream-state.ts, which is where the ordering, dedupe, tombstone and window rules live. The
+ * stream-state.ts, which is where the ordering, dedupe, tombstone and window rules live. The
  * window is why the poll is conditional — reading back from the unread boundary opens a stretch that
  * does not end at the newest message, and the reader steps forward through it instead.
  */
-export function useTalkStream(groupId: number, page: TalkPage) {
-    const [state, setState] = useState<TalkStreamState>(() => initial(page));
+export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndpoints, page: ChatPage<M>) {
+    const [state, setState] = useState<ChatStreamState<M>>(() => initial(page));
     const [loadingOlder, setLoadingOlder] = useState(false);
     const [loadingNewer, setLoadingNewer] = useState(false);
 
@@ -59,7 +65,7 @@ export function useTalkStream(groupId: number, page: TalkPage) {
     // the answer already on the wire worthless, and there is no reason to wait for it.
     const polling = useRef<AbortController | null>(null);
     // Which move to another stretch of the conversation the reader is waiting for, and the read
-    // fetching it. The last intent wins — see TalkIntents.
+    // fetching it. The last intent wins — see ChatIntents.
     const intents = useRef(newIntents());
     const navigating = useRef<AbortController | null>(null);
 
@@ -77,21 +83,21 @@ export function useTalkStream(groupId: number, page: TalkPage) {
      * `applied` drops it when the list has since moved somewhere else, which is what keeps a poll
      * that outlived the live window from being spliced into a slice of history.
      */
-    const fold = useCallback((at: number, update: (current: TalkStreamState) => TalkStreamState) => {
+    const fold = useCallback((at: number, update: (current: ChatStreamState<M>) => ChatStreamState<M>) => {
         setState((current) => applied(current, at, update));
     }, []);
 
     const fetchPage = useCallback(
-        async (query: string, signal?: AbortSignal): Promise<TalkPage | null> => {
-            const response = await fetch(`/groups/${groupId}/talk/messages${query}`, {
+        async (query: string, signal?: AbortSignal): Promise<ChatPage<M> | null> => {
+            const response = await fetch(endpoints.messages(query), {
                 headers: { Accept: 'application/json' },
                 credentials: 'same-origin',
                 signal,
             });
 
-            return response.ok ? ((await response.json()) as TalkPage) : null;
+            return response.ok ? ((await response.json()) as ChatPage<M>) : null;
         },
-        [groupId],
+        [endpoints],
     );
 
     useEffect(() => {
@@ -220,23 +226,20 @@ export function useTalkStream(groupId: number, page: TalkPage) {
     }, [claimMove, fetchPage, fold]);
 
     const send = useCallback(
-        async (body: string, mentions: MentionPayloadRow[] = [], images: File[] = []) => {
+        async (body: string, images: File[] = [], appendFields?: (form: FormData) => void) => {
             // Multipart throughout, not only when a file rides along: one transport is one set of
             // encoding rules to reason about. It costs the body its LF newlines — FormData encodes
-            // them as CRLF — which is exactly why StoreGroupMessageRequest re-normalizes before it
-            // measures anything, so the mention offsets computed over the textarea's LF value still
-            // describe the body that is stored.
+            // them as CRLF — which is exactly why the server re-normalizes before it measures
+            // anything, so the mention offsets computed over the textarea's LF value still describe
+            // the body that is stored.
             const form = new FormData();
             form.append('body', body);
-            mentions.forEach((mention, index) => {
-                form.append(`mentions[${index}][member_id]`, String(mention.member_id));
-                form.append(`mentions[${index}][offset]`, String(mention.offset));
-                form.append(`mentions[${index}][length]`, String(mention.length));
-            });
+            // Whatever else this conversation sends with a message — talk's mention ranges, say.
+            appendFields?.(form);
             // Appended in pick order: the slot numbers the server writes are that order.
             images.forEach((image) => form.append('images[]', image));
 
-            const response = await fetch(`/groups/${groupId}/talk`, {
+            const response = await fetch(endpoints.send, {
                 method: 'POST',
                 // No Content-Type: the browser sets it with the multipart boundary.
                 headers: { ...xsrfHeader(), Accept: 'application/json' },
@@ -248,7 +251,7 @@ export function useTalkStream(groupId: number, page: TalkPage) {
                 throw new SendFailed(await errorsOf(response));
             }
 
-            const message = (await response.json()) as TalkMessage;
+            const message = (await response.json()) as M;
 
             // Writing is the newest intent, so a jump the reader asked for and then wrote instead of
             // waiting for is retired here — its page would otherwise arrive and replace the list out
@@ -274,12 +277,12 @@ export function useTalkStream(groupId: number, page: TalkPage) {
 
             setState((current) => mergeSent(current, message));
         },
-        [fold, groupId, returnToLatest],
+        [endpoints, fold, returnToLatest],
     );
 
     const remove = useCallback(
         async (id: number) => {
-            const response = await fetch(`/groups/${groupId}/talk/messages/${id}/delete`, {
+            const response = await fetch(endpoints.delete(id), {
                 method: 'POST',
                 headers: { ...xsrfHeader(), Accept: 'application/json' },
                 credentials: 'same-origin',
@@ -291,7 +294,7 @@ export function useTalkStream(groupId: number, page: TalkPage) {
 
             setState((current) => markDeleted(current, id));
         },
-        [groupId],
+        [endpoints],
     );
 
     return {
@@ -299,7 +302,7 @@ export function useTalkStream(groupId: number, page: TalkPage) {
         hasOlder: state.hasOlder,
         window: state.window,
         // Which list the page is standing on. It moves only when a window change lands, so a caller
-        // can tell its own jump's render from the polls and merges around it (see index.tsx).
+        // can tell its own jump's render from the polls and merges around it.
         generation: state.generation,
         loadingOlder,
         loadingNewer,

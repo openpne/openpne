@@ -1,9 +1,12 @@
 import { Head, usePage } from '@inertiajs/react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { List, Panel } from '@/components/ui/surface';
+import { dividerBeforeId } from '@/lib/chat/unread';
+import { useChatStream } from '@/lib/chat/use-chat-stream';
+import { useMarkRead } from '@/lib/chat/use-mark-read';
 import { useT } from '@/lib/i18n';
 import type { CommunitySummary } from '@/pages/community/types';
 import type { MentionPayloadRow } from '@/lib/mention-draft';
@@ -11,10 +14,7 @@ import type { PageProps } from '@/types';
 import { TalkComposer } from './composer';
 import { TalkMessageRow } from './message-row';
 import { TalkMuteToggle } from './mute-toggle';
-import { dividerBeforeId } from './talk-unread';
 import type { TalkPage, TalkUnreadSnapshot } from './types';
-import { useMarkRead } from './use-mark-read';
-import { useTalkStream } from './use-talk-stream';
 
 interface TalkProps extends PageProps {
     group: CommunitySummary;
@@ -39,11 +39,32 @@ const messageElement = (id: number): Element | null => document.querySelector(`[
 /** Whether the reader is standing at the foot of what is loaded. */
 const atFoot = (): boolean => window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - NEAR_BOTTOM_PX;
 
+/** Talk's own multipart fields: the mention ranges the composer resolved over the body being sent. */
+const appendMentions =
+    (mentions: MentionPayloadRow[]) =>
+    (form: FormData): void => {
+        mentions.forEach((mention, index) => {
+            form.append(`mentions[${index}][member_id]`, String(mention.member_id));
+            form.append(`mentions[${index}][offset]`, String(mention.offset));
+            form.append(`mentions[${index}][length]`, String(mention.length));
+        });
+    };
+
 export default function GroupTalkIndex() {
     const t = useT();
     const confirm = useConfirm();
     const { group, page, anchor, canPost, isMember, isMuted, talkUnreadSnapshot } = usePage<TalkProps>().props;
-    const stream = useTalkStream(group.id, page);
+    // Memoized because the stream's poll and reads hang off their identity: rebuilt every render, the
+    // interval would be torn down and started again each time the page re-rendered.
+    const endpoints = useMemo(
+        () => ({
+            messages: (query: string) => `/groups/${group.id}/talk/messages${query}`,
+            send: `/groups/${group.id}/talk`,
+            delete: (id: number) => `/groups/${group.id}/talk/messages/${id}/delete`,
+        }),
+        [group.id],
+    );
+    const stream = useChatStream(endpoints, page);
     const messages = stream.messages;
     const streamSend = stream.send;
     const atLatest = stream.window.kind === 'latest';
@@ -53,7 +74,7 @@ export default function GroupTalkIndex() {
     // not read what just arrived below them, so their cursor stays where it is — and the foot of a
     // history window is not the foot of the conversation at all.
     const [atBottom, setAtBottom] = useState(true);
-    useMarkRead(group.id, messages[messages.length - 1]?.id, isMember && atBottom && atLatest);
+    useMarkRead(`/groups/${group.id}/talk/read`, messages[messages.length - 1]?.id, isMember && atBottom && atLatest);
 
     // The line the visit opened on. Both this and the banner below come off the render-time snapshot
     // and nothing else — which is what makes them survive the mark-read that fires seconds later.
@@ -216,7 +237,7 @@ export default function GroupTalkIndex() {
     // handler is resumed to say so.
     const send = async (body: string, mentions: MentionPayloadRow[], images: File[]) => {
         pinned.current = true;
-        await streamSend(body, mentions, images);
+        await streamSend(body, images, appendMentions(mentions));
         setAtBottom(true);
     };
 

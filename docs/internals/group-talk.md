@@ -81,7 +81,7 @@ have.
 
 The client keeps the same order. A send and a poll are in flight together by design and complete in
 whatever order the network gives them, so
-[`talk-stream-state.ts`](../../resources/js/pages/group/talk/talk-stream-state.ts) re-sorts by the
+[`lib/chat/stream-state.ts`](../../resources/js/lib/chat/stream-state.ts) re-sorts by the
 tuple on **every** merge rather than trusting arrival order — appending as responses land would put
 the list out of order permanently, and the poll's next watermark would then be read off a row that
 is not the newest. A locally deleted id is a **session-lifetime tombstone** for the same reason: a
@@ -90,7 +90,7 @@ would remove it again.
 
 ### Two windows, never mixed
 
-The list on screen is either of two stretches, and `talk-stream-state.ts` names which:
+The list on screen is either of two stretches, and `stream-state.ts` names which:
 
 | window | what it is | poll |
 |---|---|---|

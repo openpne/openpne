@@ -4,10 +4,10 @@ import { MentionTextarea } from '@/components/compose/mention-textarea';
 import { ACCEPT, shrink } from '@/components/images-field';
 import { Spinner } from '@/components/spinner';
 import { Button } from '@/components/ui/button';
+import { SendFailed } from '@/lib/chat/use-chat-stream';
 import { useT } from '@/lib/i18n';
 import { acceptPicks, MAX_POST_IMAGES } from '@/lib/image-picks';
 import { type DraftMention, toPayload, type MentionPayloadRow } from '@/lib/mention-draft';
-import { SendFailed } from './use-talk-stream';
 
 /** The bag's verdict on the attachments: per-file rules come back keyed `images.N`, not `images`. */
 function imageErrorIn(errors: Record<string, string>): string {

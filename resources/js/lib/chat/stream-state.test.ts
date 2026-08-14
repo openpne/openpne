@@ -17,24 +17,26 @@ import {
     retireIntents,
     isCurrentIntent,
     watermark,
-} from './talk-stream-state.ts';
-import type { TalkMessage, TalkPage } from './types.ts';
+} from './stream-state.ts';
+import type { ChatPage, ChatStreamRow } from './types.ts';
 
-const message = (id: number, createdAt: string, body = `m${id}`): TalkMessage => ({
+/** A row of the shape the merges read, plus the two fields the assertions below look at. */
+interface TestMessage extends ChatStreamRow {
+    body: string;
+    canDelete: boolean;
+}
+
+const message = (id: number, createdAt: string, body = `m${id}`): TestMessage => ({
     id,
     body,
     createdAt,
     cursor: `${createdAt}|${id}`,
-    author: null,
-    mentions: [],
-    images: [],
-    isOwn: false,
     canDelete: false,
 });
 
-const page = (messages: TalkMessage[], hasOlder = false, hasNewer = false): TalkPage => ({ messages, hasOlder, hasNewer });
+const page = (messages: TestMessage[], hasOlder = false, hasNewer = false): ChatPage<TestMessage> => ({ messages, hasOlder, hasNewer });
 
-const bodies = (state: { messages: TalkMessage[] }) => state.messages.map((m) => m.body);
+const bodies = (state: { messages: TestMessage[] }) => state.messages.map((m) => m.body);
 
 test('the initial page is held in tuple order', () => {
     const state = initial(page([message(1, '2026-08-13T09:00:00+00:00'), message(2, '2026-08-13T09:01:00+00:00')]));
