@@ -220,6 +220,9 @@ class WebPushNudgeTest extends TestCase
     private function notifyOfMessage(Member $recipient, Member $sender): void
     {
         $message = DirectMessage::factory()->create(['sender_id' => $sender->getKey()]);
+        // The receipt a send materializes: without it the notification's delivery-time check reads
+        // this as a message that is not the recipient's, and nothing is delivered to push at all.
+        $message->recipients()->create(['recipient_id' => $recipient->getKey()]);
 
         $recipient->notify(
             (new DirectMessageReceivedNotification($sender, $message))

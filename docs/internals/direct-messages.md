@@ -6,9 +6,9 @@ columns. The mailbox screens (`/message/*`) read it as four boxes.
 
 The chat screen is a **second reading of the same rows** — no new table, no new column. A conversation
 is the pair *viewer ⟷ counterpart*, and both directions of it are composed back out of the storage on
-every read: `/messages/{member}` renders it, `/messages/{member}/messages` serves the pages after the
-first, and both are read-only. Writing, marking read and restoring from the trash are the mailbox's,
-and a message written there appears here on the next read because there is only one store.
+every read: `/messages/{member}` renders it and `/messages/{member}/messages` serves the pages after
+the first. Restoring from the trash and the reply flow stay the mailbox's, and a message written on
+either screen appears on the other because there is only one store.
 
 ## A conversation is two arms over one table
 
@@ -61,13 +61,40 @@ has needs an answer here.
 | draft | never in a conversation: a draft has no receipt, so neither arm reaches it — and the scope still states `is_draft = false` as a belt against a stray receipt. It stays the drafts box's. |
 | `sender_deleted_at` / `recipient_deleted_at` (trash) | hidden from that side's conversation only. Restoring is the mailbox's trash screen. |
 | `sender_purged_at` / `recipient_purged_at` | the same, permanently — the row survives for the other side. |
-| `parent_id` / `thread_id` | lineage the reply flow writes; a conversation is linear and reads neither. |
+| `parent_id` / `thread_id` | lineage the reply flow writes; a conversation is linear and neither reads nor writes it. |
 | withdrawn member | the bucket above, with `author` serialized as null and drawn as "Withdrawn member". |
 | several recipients (upgraded OpenPNE 3 sends) | the row appears in each recipient's conversation, and `read` is **that** conversation's receipt. |
 
 `read` is the sender's own view of delivery: true once the counterpart's receipt carries a `read_at`.
 A received message reports null — reading it is what the reader is doing — and so does anything in the
 withdrawn bucket, where no receipt names a member.
+
+## Writing
+
+`POST /messages/{member}` writes through
+[`SendDirectMessage`](../../app/Features/DirectMessage/Actions/SendDirectMessage.php) — the mailbox's
+own send, not a second write path: one authored row, one receipt, the attachments inside
+`PostImages::attach()`'s transaction, and the recipient notified after it commits. What a chat send
+fixes are the fields a conversation has no place for — **no subject, no `parent_id`/`thread_id`** — so
+the row it writes is exactly the one the table above reads back.
+
+Who may write is [`DirectMessageAccess::canSend`](../../app/Features/DirectMessage/DirectMessageAccess.php),
+which `show` ships as `canSend`: a refused pair gets **no composer** rather than a disabled one, and
+the withdrawn bucket has no store route at all, naming no member to deliver to. A refusal that lands
+anyway — the block arrived while the screen was open — is a 422 on `body`, so the composer keeps the
+whole draft, body and picked files alike.
+
+[`StoreChatMessageRequest`](../../app/Http/Requests/DirectMessage/StoreChatMessageRequest.php) caps the
+body at 5,000 code points and normalizes CRLF to LF before measuring it, exactly as talk's bar does.
+**The cap is this screen's alone**: the mailbox's compose and draft forms are OpenPNE 3 screens with
+no length limit and keep it. The reply is the message in the paging endpoint's own shape, so the
+composer appends what it wrote instead of re-reading the page.
+
+The notification the send raises re-runs its eligibility immediately before each channel delivers
+([notifications.md](notifications.md#delivery-time-re-checks)): its mail carries the body, and a queued
+job can outlive a ban, a block, or the recipient purging their receipt (trash does not revoke reading,
+so a trashed message still arrives). Where that mail *lands* is unchanged — the mailbox's
+`/message/read/{id}` — because the URL is durable and already in members' mail.
 
 ## Unread
 
@@ -150,3 +177,5 @@ published content, and a private message is not that.
    and only a live receipt has any at all.
 8. Marking read moves `read_at` from null to a time and never the other way, so every report is
    idempotent and order between reports does not matter.
+9. A message written as chat carries no subject and no lineage, and every send — from either screen —
+   goes through `SendDirectMessage`.
