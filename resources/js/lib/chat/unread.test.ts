@@ -1,21 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { dividerBeforeId } from './talk-unread.ts';
-import type { TalkMessage, TalkUnreadSnapshot } from './types.ts';
+import { dividerBeforeId } from './unread.ts';
+import type { ChatStreamRow, ChatUnreadSnapshot } from './types.ts';
 
-const message = (id: number, createdAt: string): TalkMessage => ({
+const message = (id: number, createdAt: string): ChatStreamRow => ({
     id,
-    body: `m${id}`,
     createdAt,
     cursor: `${createdAt}|${id}`,
-    author: null,
-    mentions: [],
-    images: [],
-    isOwn: false,
-    canDelete: false,
 });
 
-const snapshot = (count: number, at: string, id: number): TalkUnreadSnapshot => ({
+const snapshot = (count: number, at: string, id: number): ChatUnreadSnapshot => ({
     count,
     readThrough: { at, id },
     cursor: `${at}|${id}`,
