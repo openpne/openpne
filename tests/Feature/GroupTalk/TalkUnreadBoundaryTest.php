@@ -6,6 +6,7 @@ use App\Features\GroupTalk\GroupTalkCursor;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\Member;
 use App\Support\SnsSettingKey;
@@ -32,6 +33,14 @@ class TalkUnreadBoundaryTest extends TalkTestCase
                 'updated_at' => $at,
             ]);
         }
+
+        // Factory memberships take talk_read_at from its DB default — the wall clock, which no PHP
+        // time mock reaches. Against these literal instants that made every test here depend on the
+        // time of day it ran (green only before 09:00 UTC). Pin every member of the room to a cursor
+        // before the conversation instead: none of it has been read, deterministically.
+        GroupMember::query()
+            ->where('group_id', $group->getKey())
+            ->update(['talk_read_at' => Carbon::parse('2026-08-14 08:00:00'), 'talk_read_message_id' => 0]);
 
         return $messages;
     }

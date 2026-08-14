@@ -5,6 +5,7 @@ namespace Tests\Feature\GroupTalk;
 use App\Features\GroupTalk\Queries\GroupTalkMessages;
 use App\Features\GroupTopic\TopicReadAccess;
 use App\Models\Group;
+use App\Models\GroupMember;
 use App\Models\GroupMessage;
 use App\Models\Member;
 use Illuminate\Support\Carbon;
@@ -30,6 +31,13 @@ class TalkAnchorTest extends TalkTestCase
                 'updated_at' => $at,
             ]);
         }
+
+        // Factory memberships take talk_read_at from its DB default — the wall clock, which no PHP
+        // time mock reaches. Pin every member of the room behind these literal instants, or unread
+        // math depends on the time of day the suite runs (see TalkUnreadBoundaryTest).
+        GroupMember::query()
+            ->where('group_id', $group->getKey())
+            ->update(['talk_read_at' => Carbon::parse('2026-08-14 08:00:00'), 'talk_read_message_id' => 0]);
 
         return $messages;
     }
