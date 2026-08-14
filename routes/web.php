@@ -15,6 +15,7 @@ use App\Features\Group\GroupMemberManageController;
 use App\Features\GroupEvent\GroupEventCommentController;
 use App\Features\GroupEvent\GroupEventController;
 use App\Features\GroupTalk\GroupTalkController;
+use App\Features\GroupTalk\GroupTalkReactionController;
 use App\Features\GroupTopic\GroupTopicCommentController;
 use App\Features\GroupTopic\GroupTopicController;
 use App\Features\Home\HomeController;
@@ -772,6 +773,18 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         // message so the two can be checked against each other.
         Route::post('/groups/{group}/talk/messages/{message}/delete', 'delete')
             ->whereNumber(['group', 'message'])->name('group.talk.delete');
+    });
+
+    // Reactions hang off the message they are on, under the same unit gate. Add and remove are two
+    // URLs rather than one toggle, so a retry or a double tap settles at the state that was asked
+    // for; the reactor list is a separate GET because only an opened dialog needs the names.
+    Route::middleware(EnsureFeatureEnabled::class.':groupTalk')->controller(GroupTalkReactionController::class)->group(function () {
+        Route::post('/groups/{group}/talk/messages/{message}/reactions', 'store')
+            ->whereNumber(['group', 'message'])->middleware('throttle:reaction')->name('group.talk.reactions.store');
+        Route::post('/groups/{group}/talk/messages/{message}/reactions/delete', 'delete')
+            ->whereNumber(['group', 'message'])->middleware('throttle:reaction')->name('group.talk.reactions.delete');
+        Route::get('/groups/{group}/talk/messages/{message}/reactions', 'index')
+            ->whereNumber(['group', 'message'])->name('group.talk.reactions.index');
     });
 
     // Group events (Classic only; Modern is none). Shaped like the topic board: the board is nested

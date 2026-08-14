@@ -26,6 +26,16 @@ class GroupTalkMessages
     public const PER_PAGE = 50;
 
     /**
+     * The relations the serializer reads per row, in a fixed number of further queries whatever the
+     * page size. Shared with {@see TouchedGroupMessages}, which serializes the same shape. Reactions
+     * are not among them: they are counted in SQL rather than hydrated ({@see
+     * MessageReactionAggregates}).
+     *
+     * @var list<string>
+     */
+    public const WITH = ['author.avatar.file', 'mentions', 'images.file'];
+
+    /**
      * How much of the conversation rides above the position an around() page opens on. A landing
      * drawn at the very top of a page reads as an accident of pagination; a few lines of what came
      * before make it read as a place in the conversation.
@@ -142,10 +152,8 @@ class GroupTalkMessages
     /** @return Builder<GroupMessage> */
     private function query(Group $group): Builder
     {
-        // The author, their avatar, the mention ranges and any attached image in a fixed number of
-        // further queries, whatever the page size — the serializer reads them all per row.
         return GroupMessage::query()
             ->where('group_id', $group->getKey())
-            ->with('author.avatar.file', 'mentions', 'images.file');
+            ->with(self::WITH);
     }
 }

@@ -185,6 +185,10 @@ return [
         'friend_ip' => (int) env('OPENPNE_THROTTLE_FRIEND_IP', 40),
         'group' => (int) env('OPENPNE_THROTTLE_GROUP', 15),
         'group_ip' => (int) env('OPENPNE_THROTTLE_GROUP_IP', 40),
+        // A reaction is a tap, and catching up on a room is a run of them, so it is capped looser
+        // than a post — it writes one small row and notifies nobody.
+        'reaction' => (int) env('OPENPNE_THROTTLE_REACTION', 60),
+        'reaction_ip' => (int) env('OPENPNE_THROTTLE_REACTION_IP', 120),
     ],
 
     /*

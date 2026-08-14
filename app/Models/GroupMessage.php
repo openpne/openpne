@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * One utterance in a group's talk. Ordering is the (created_at, id) tuple everywhere — see
@@ -44,5 +45,15 @@ class GroupMessage extends Model
     public function images(): HasMany
     {
         return $this->hasMany(GroupMessageImage::class)->orderBy('number');
+    }
+
+    /**
+     * @return MorphMany<Reaction, $this> The emoji on this message, oldest first — the order the
+     *                                    chips are drawn in, so a new emoji joins the end of the row
+     *                                    rather than shuffling the ones already there.
+     */
+    public function reactions(): MorphMany
+    {
+        return $this->morphMany(Reaction::class, 'reactable')->orderBy('created_at')->orderBy('id');
     }
 }

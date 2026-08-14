@@ -193,6 +193,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('direct-message-send', $this->writeLimiter('direct-message', 'direct_message', 'direct_message_ip'));
         RateLimiter::for('friend-request', $this->writeLimiter('friend', 'friend', 'friend_ip'));
         RateLimiter::for('group-join', $this->writeLimiter('group', 'group', 'group_ip'));
+        RateLimiter::for('reaction', $this->writeLimiter('reaction', 'reaction', 'reaction_ip'));
     }
 
     /**

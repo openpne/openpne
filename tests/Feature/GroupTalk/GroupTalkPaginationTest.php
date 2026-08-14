@@ -166,12 +166,7 @@ class GroupTalkPaginationTest extends TalkTestCase
     {
         $group = $this->group();
         $viewer = $this->memberOf($group);
-        foreach (range(1, 20) as $i) {
-            GroupMessage::factory()->create([
-                'group_id' => $group->getKey(),
-                'member_id' => $this->memberOf($group)->getKey(),
-            ]);
-        }
+        $this->reactedConversation($group, $viewer);
 
         $this->actingAs($viewer);
         $queries = 0;
@@ -181,9 +176,49 @@ class GroupTalkPaginationTest extends TalkTestCase
 
         $this->getJson("/groups/{$group->getKey()}/talk/messages")->assertOk();
 
-        // Session, access gate, permissions, the page read and its eager loads — a constant, and far
-        // below the 20 rows it just serialized.
+        // Session, access gate, permissions, the page read, its eager loads and the one grouped
+        // count behind the chips — a constant, and far below the 20 rows it just serialized.
         $this->assertLessThan(15, $queries, "reading 20 messages took {$queries} queries");
+    }
+
+    /**
+     * And no row per *reactor*: a chip row is a handful of numbers, but the rows behind it grow with
+     * the room, so the page counts them in SQL rather than hydrating them. A page that eager-loaded
+     * the relation would cost the same query count and read every reaction in the conversation.
+     */
+    public function test_reading_a_page_never_reads_a_reaction_row(): void
+    {
+        $group = $this->group();
+        $viewer = $this->memberOf($group);
+        $this->reactedConversation($group, $viewer);
+
+        $this->actingAs($viewer);
+        $reads = [];
+        DB::listen(function ($query) use (&$reads) {
+            if (preg_match('/from\s+[`"]?reactions[`"]?/i', $query->sql) === 1) {
+                $reads[] = $query->sql;
+            }
+        });
+
+        $this->getJson("/groups/{$group->getKey()}/talk/messages")->assertOk();
+
+        $this->assertNotSame([], $reads, 'the page read no reactions at all');
+        foreach ($reads as $sql) {
+            $this->assertMatchesRegularExpression('/group by/i', $sql, "a page hydrated reaction rows: {$sql}");
+        }
+    }
+
+    /** Twenty messages, each carrying reactions from two different members. */
+    private function reactedConversation(Group $group, Member $viewer): void
+    {
+        foreach (range(1, 20) as $ignored) {
+            $message = GroupMessage::factory()->create([
+                'group_id' => $group->getKey(),
+                'member_id' => $this->memberOf($group)->getKey(),
+            ]);
+            $message->reactions()->create(['member_id' => $viewer->getKey(), 'emoji' => "\u{1F44D}"]);
+            $message->reactions()->create(['member_id' => $this->memberOf($group)->getKey(), 'emoji' => "\u{1F389}"]);
+        }
     }
 
     public function test_a_malformed_cursor_is_read_as_no_cursor(): void

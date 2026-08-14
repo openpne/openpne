@@ -28,6 +28,7 @@ class WriteThrottleBehaviorTest extends TestCase
             'direct-message-send' => ['direct_message', 'direct_message_ip', '/message/sendToFriend'],
             'friend-request' => ['friend', 'friend_ip', '/friend/link'],
             'group-join' => ['group', 'group_ip', '/groups/1/join'],
+            'reaction' => ['reaction', 'reaction_ip', '/groups/1/talk/messages/1/reactions'],
         ];
     }
 

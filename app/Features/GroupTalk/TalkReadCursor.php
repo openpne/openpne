@@ -23,8 +23,8 @@ final class TalkReadCursor
 {
     /**
      * The cursor a membership created *now* should start from: the group's newest live message.
-     * Everything already said is read; only what arrives afterwards is new (LINE's rule, and the one
-     * that keeps joining a busy group from opening with hundreds of unread).
+     * Everything already said is read; only what arrives afterwards is new — the rule that keeps
+     * joining a busy group from opening with hundreds of unread.
      *
      * The columns carry DB defaults (`useCurrent()` and 0) for the paths this helper cannot reach —
      * the history transfer's bulk insert, a hand-written row — but those are a **backstop, not the

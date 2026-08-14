@@ -40,6 +40,8 @@ class WriteThrottleRoutesTest extends TestCase
             'group.join' => ['group.join', 'throttle:group-join'],
             'group.members.approve' => ['group.members.approve', 'throttle:group-join'],
             'group.members.decline' => ['group.members.decline', 'throttle:group-join'],
+            'group.talk.reactions.store' => ['group.talk.reactions.store', 'throttle:reaction'],
+            'group.talk.reactions.delete' => ['group.talk.reactions.delete', 'throttle:reaction'],
         ];
     }
 

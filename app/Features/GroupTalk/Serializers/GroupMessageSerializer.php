@@ -25,9 +25,12 @@ use DateTimeInterface;
 class GroupMessageSerializer
 {
     /**
-     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, isOwn: bool, canDelete: bool}
+     * @param  list<array{emoji: string, count: int, mine: bool}>  $reactions  the message's chip row, as
+     *                                                                         MessageReactionAggregates counts it. Passed in rather than read off the model: the rows
+     *                                                                         behind a chip are one per reactor, and no page hydrates them.
+     * @return array{id: int, body: string, createdAt: string, cursor: string, author: array{id: int, name: string, imageUrl: string|null, avatarColor: string|null}|null, mentions: list<array{memberId: int, offset: int, length: int}>, images: list<array{id: int, url: string, thumbnailUrl: string, fitSources: list<array{url: string, box: int}>, cropSources: array{tall?: list<array{url: string, width: int}>, wide?: list<array{url: string, width: int}>}, width: int|null, height: int|null}>, reactions: list<array{emoji: string, count: int, mine: bool}>, isOwn: bool, canDelete: bool}
      */
-    public static function message(GroupMessage $message, GroupTalkPermissions $permissions): array
+    public static function message(GroupMessage $message, GroupTalkPermissions $permissions, array $reactions): array
     {
         return [
             'id' => $message->getKey(),
@@ -37,6 +40,7 @@ class GroupMessageSerializer
             'author' => self::author($message->author),
             'mentions' => self::mentions($message),
             'images' => $message->images->map([self::class, 'image'])->values()->all(),
+            'reactions' => $reactions,
             'isOwn' => $permissions->owns($message),
             'canDelete' => $permissions->canDelete($message),
         ];
@@ -68,13 +72,15 @@ class GroupMessageSerializer
     /**
      * A page of the conversation, oldest first, and what lies either side of it.
      *
+     * @param  array<int, list<array{emoji: string, count: int, mine: bool}>>  $reactions  chip rows by message id;
+     *                                                                                     a message nobody reacted to has no key
      * @return array{messages: list<array>, hasOlder: bool, hasNewer: bool}
      */
-    public static function page(GroupTalkPage $page, GroupTalkPermissions $permissions): array
+    public static function page(GroupTalkPage $page, GroupTalkPermissions $permissions, array $reactions): array
     {
         return [
             'messages' => $page->messages
-                ->map(fn (GroupMessage $message): array => self::message($message, $permissions))
+                ->map(fn (GroupMessage $message): array => self::message($message, $permissions, $reactions[$message->getKey()] ?? []))
                 ->values()
                 ->all(),
             'hasOlder' => $page->hasOlder,

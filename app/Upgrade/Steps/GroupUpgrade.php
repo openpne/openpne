@@ -60,6 +60,15 @@ class GroupUpgrade extends UpgradeStep
         ];
     }
 
+    /**
+     * The talk's reaction counter is issued at run time and OpenPNE 3 has nothing to carry into it,
+     * so an upgraded group starts at the schema default (see docs/internals/group-talk.md).
+     */
+    public function targetDefaults(): array
+    {
+        return ['talk_reaction_seq'];
+    }
+
     /** The latest `community_config` value for a name (the KV table has no uniqueness), else NULL. */
     private function configValueLatest(string $name): string
     {
