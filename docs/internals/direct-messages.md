@@ -69,10 +69,64 @@ has needs an answer here.
 A received message reports null — reading it is what the reader is doing — and so does anything in the
 withdrawn bucket, where no receipt names a member.
 
+## Unread
+
+There is no read cursor. A conversation is composed at read time out of rows the mailbox owns, and
+the only read state in the store is `read_at` on each receipt — which the mailbox sets one message at
+a time, from any box, in any order. So the boundary is **the first unread message**, not a
+read-through position: an older message left unread under newer read ones is an ordinary state here,
+and a "you have read up to here" line would be a lie the moment it met one of those holes.
+
+Unread means the **received** arm and nothing else: a message written by the counterpart, visible in
+this conversation, whose receipt the viewer has not opened. The viewer's own messages carry no unread
+state — `read` on them is the counterpart's delivery, not the viewer's reading — and a receipt the
+viewer has trashed is not on the screen to be read either.
+
+[`ConversationUnreadSnapshot`](../../app/Features/DirectMessage/Queries/ConversationUnreadSnapshot.php)
+answers the count and that first message, or null when nothing is waiting, and `show` ships it as
+`unreadSnapshot`. It is **fixed for the visit**, for the reason
+[group-talk.md](group-talk.md#the-divider-is-a-snapshot-and-the-banner-is-what-it-cannot-draw)
+sets out, and the page draws the same two things from it: the divider, and the "N unread" banner for
+when the boundary lies further back than the loaded page reaches. `?m=` is independent — a link names
+a message, the boundary names what has not been read — so a deep link changes the slice and not the
+line.
+
+| field | what reads it |
+|---|---|
+| `firstUnread` (`{at, id}`) | the divider, which goes above **this** row rather than the one after it (talk's `readThrough` is the other way round — [`lib/chat/unread.ts`](../../resources/js/lib/chat/unread.ts) takes the two as one discriminated boundary) |
+| `cursor` (opaque) | the jump — handed straight back as `?context=`, which opens the position with its context above it |
+
+`firstUnread.at` goes out through `ConversationMessageSerializer::instant()`, the same conversion a
+message's `createdAt` takes, because the client compares them directly.
+
+### Mark-read
+
+`POST /messages/{member}/read` (and `/messages/withdrawn/read`) takes the id of the last message the
+client **rendered**, and the client reports only while it is visible and at the foot of the live
+window. Three rules:
+
+- the named row is resolved through `ConversationScope`, so it may sit in **either** arm — the foot
+  of a conversation is often the reader's own message — and anything this conversation cannot see
+  (another conversation's, a draft, one the viewer has trashed) resolves to no position at all: 404.
+- what moves is a set: every **live** receipt of the viewer's, on a received row of this
+  conversation, at or before that position. One statement, so a page's worth of backlog is one write.
+- monotonic by construction rather than by a guard, since `read_at` only ever goes from null to a
+  time: replaying an older report marks nothing, and two tabs reporting out of order cannot walk the
+  boundary backwards.
+
+A trashed receipt is deliberately left alone. It is not on the chat screen, so nobody has read it,
+and restoring it from the mailbox's trash has to hand back a message that has never been opened.
+
+An accepted report asks the shell to re-read its badge counts
+([`lib/unread-refresh.ts`](../../resources/js/lib/unread-refresh.ts)); the badge itself stays
+[`CountUnreadDirectMessages`](../../app/Features/DirectMessage/Queries/CountUnreadDirectMessages.php),
+the inbox's own count, which falls as the receipts are opened.
+
 ## Separate from group talk
 
 The two conversation surfaces share their **frontend stream** ([`lib/chat/`](../../resources/js/lib/chat/):
-the window state machine, the merge rules, the poll) and nothing else. Tables, queries and serializers
+the window state machine, the merge rules, the poll, and the divider and mark-read reporting drawn
+over them) and nothing else. Tables, queries and serializers
 are each feature's own, and that separation is a contract rather than an accident: a private message
 between two people and a message in a room are the same shape on screen and different things in the
 system. Concretely, a direct message parses no `@mentions` and no `#hashtags` — so it creates no rows
@@ -91,4 +145,8 @@ published content, and a private message is not that.
 5. `read` is answered by the receipt of the conversation being read, never by whichever receipt the
    relation holds first.
 6. The chat screens add no column and no table: everything they show is the mailbox's own rows, and
-   both readings stay correct at once.
+   both readings stay correct at once — unread included, which is `read_at` and nothing besides.
+7. The unread boundary is the first unread received message. Only the received arm has unread state,
+   and only a live receipt has any at all.
+8. Marking read moves `read_at` from null to a time and never the other way, so every report is
+   idempotent and order between reports does not matter.
