@@ -30,8 +30,7 @@ class SyncLinkCardTest extends TestCase
 
     public function test_it_attaches_a_card_for_the_first_url(): void
     {
-        // One card per body, as Twitter, Slack and Mastodon all do: a body full of links reads better
-        // as links than as a stack of cards.
+        // One card per body: a body full of links reads better as links than as a stack of cards.
         Queue::fake();
         $diary = $this->diary('First https://example.com/one then https://example.com/two');
 

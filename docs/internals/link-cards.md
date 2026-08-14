@@ -5,9 +5,8 @@ so a reader can tell what a link is without opening it. The metadata comes from 
 publishers already maintain: **Open Graph** first, then **Twitter Cards**, then plain HTML, with
 **oEmbed** filling in only what those left out.
 
-Open Graph before oEmbed is a deliberate divergence from Mastodon, which prefers oEmbed. Reading
-Open Graph costs nothing beyond the response already in hand, so the common case is one request per
-link instead of two.
+Open Graph is read before oEmbed is called, because it costs nothing beyond the response already in
+hand, so the common case is one request per link instead of two.
 
 This document covers acquisition and storage. The outbound safety rules every fetch here obeys are
 in [outbound-http.md](outbound-http.md).
@@ -21,9 +20,8 @@ assembled from anything a client supplied, and that the sanitizer allowlist has 
 ([body-text.md](body-text.md)). Putting a card into the body would break all three.
 
 So **oEmbed's `html` field is never read** — it is provider-authored markup, usually an iframe, and
-there is nothing it could contribute that text and an image do not already give. Mastodon refuses
-oEmbed's `rich` type for the same reason. `OembedClientTest` pins that no field of the extracted
-metadata ever carries markup.
+there is nothing it could contribute that text and an image do not already give. `OembedClientTest`
+pins that no field of the extracted metadata ever carries markup.
 
 ## When a card is fetched
 
@@ -269,9 +267,9 @@ from are decided once, in there.
 can claim to be anyone; the host is the one part of a card that cannot misstate where the link goes.
 `www.` is dropped because it distinguishes nothing a reader acts on.
 
-The body keeps its URL. Twitter and Slack remove the link text once a card replaces it; here the body
-is the author's text and is not rewritten to suit a preview that may not render — for a viewer whose
-card failed to fetch, or who is on a build where the feature is off, the link has to still be there.
+**The body keeps its URL.** It is the author's text and is not rewritten to suit a preview that may
+not render — for a viewer whose card failed to fetch, or who is on a build where the feature is off,
+the link has to still be there.
 
 Whether a record may carry a card at all is `CardContext::carriesCard`, shared between the metadata
 and the picture. Enforced in one and not the other, a reply row from broken or migrated data would

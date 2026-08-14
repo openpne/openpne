@@ -18,9 +18,8 @@ use Throwable;
  *
  * Field precedence is Open Graph, then Twitter Cards, then plain HTML. Open Graph is what publishers
  * actually maintain, and reading it costs nothing beyond the one response already in hand — unlike
- * oEmbed, which is a second request. (Mastodon prefers oEmbed; this is a deliberate divergence for
- * the common case of one request per link.) The oEmbed endpoint is only *discovered* here; whether
- * it is worth calling is decided by the caller, from what came back missing.
+ * oEmbed, which is a second request. The oEmbed endpoint is only *discovered* here; whether it is
+ * worth calling is decided by the caller, from what came back missing.
  */
 final class MetadataExtractor
 {

@@ -57,7 +57,7 @@ type Props = Omit<ComponentProps<'textarea'>, 'value' | 'onChange'> & {
     /**
      * Which side the candidate list opens on. The call site owns it the way it owns candidatesUrl:
      * a bar sitting at the viewport's foot has room above and none below, and the field cannot
-     * know where the page put it. Chat apps uniformly open theirs upward.
+     * know where the page put it.
      */
     popup?: 'below' | 'above';
 };
