@@ -28,17 +28,21 @@ class ConversationUnreadSnapshot
     /** @return array{count: int, at: CarbonImmutable, id: int}|null */
     public function __invoke(Member $viewer, ?Member $counterpart): ?array
     {
+        // One statement, so the count and the boundary describe the same instant: read separately, a
+        // mark-read landing in between could report a boundary the count says is not there. The
+        // window counts the full unread set before LIMIT applies (MySQL 8 and SQLite alike).
         $first = $this->unread($viewer, $counterpart)
             ->orderBy('created_at')
             ->orderBy('id')
-            ->first(['id', 'created_at']);
+            ->selectRaw('id, created_at, count(*) over () as waiting')
+            ->first();
 
         if ($first === null) {
             return null;
         }
 
         return [
-            'count' => $this->unread($viewer, $counterpart)->count(),
+            'count' => (int) $first->waiting,
             'at' => CarbonImmutable::instance($first->created_at),
             'id' => (int) $first->getKey(),
         ];
