@@ -576,6 +576,20 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         const only = message.counterparties.length === 1 ? message.counterparties[0] : undefined;
         return { context: [MESSAGE_BOX_PARENT[message.box]], scope: only ? memberScope(only) : undefined };
     },
+    // The conversation is the page, so no action button. Its counterpart is the room's identity: the
+    // bar's scope while they still exist, and the heading otherwise — a withdrawn bucket has no
+    // member page for a scope to link to, and no name for the bar to carry.
+    'message/conversation/index': (props) => {
+        const { counterpart } = props as unknown as { counterpart: MemberRef | null };
+
+        return {
+            mode: 'contextual',
+            title: counterpart ? MESSAGES : t('Withdrawn member'),
+            context: counterpart ? memberContext(counterpart) : [{ href: '/message', label: MESSAGES }],
+            scope: counterpart ? memberScope(counterpart) : undefined,
+            conversation: true,
+        };
+    },
     // Reply crumbs back to the original message (its box, then the message itself); a fresh compose
     // crumbs to the Messages hub. parentSubject is null except when replying.
     'message/compose': (props) => {

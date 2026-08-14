@@ -54,6 +54,7 @@ class ModernOnlyCoverageTest extends TestCase
         'unread.counts',
         'timeline.mention_candidates',
         'group.talk.mention_candidates',
+        'message.chat.withdrawn.messages',
     ];
 
     /**
@@ -86,6 +87,7 @@ class ModernOnlyCoverageTest extends TestCase
         'group.search', 'group.list_mine', 'group.edit', 'group.members', 'group.members.pending',
         'group.recent',
         'message.index', 'message.index_compat', 'message.receive', 'message.send', 'message.draft', 'message.trash', 'message.compose',
+        'message.chat.withdrawn',
         'member.invite',
         'notifications.index',
     ];
@@ -142,6 +144,7 @@ class ModernOnlyCoverageTest extends TestCase
             'message sent' => ['/message/sendList'],
             'message drafts' => ['/message/draftList'],
             'message trash' => ['/message/dustList'],
+            'withdrawn conversation' => ['/messages/withdrawn'],
         ];
     }
 

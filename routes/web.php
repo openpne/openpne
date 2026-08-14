@@ -7,6 +7,7 @@ use App\Features\Compose\EditorPreferenceController;
 use App\Features\Compose\PreviewController;
 use App\Features\Diary\DiaryCommentController;
 use App\Features\Diary\DiaryController;
+use App\Features\DirectMessage\ConversationController;
 use App\Features\DirectMessage\DirectMessageController;
 use App\Features\Friend\FriendController;
 use App\Features\Group\GroupController;
@@ -852,6 +853,19 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/deleteConfirm/{message}', 'purgeConfirm')->whereNumber('message')->name('message.trash.purge.confirm');
         Route::post('/deleteComplete/{message}', 'purge')->whereNumber('message')->name('message.trash.purge');
         Route::post('/bulk', 'bulk')->name('message.bulk');
+    });
+
+    // The same messages read as chat: one conversation per member, keyed by that member rather than
+    // by a stored thread. Modern-only (chat has no OpenPNE 3 counterpart), so it renders Inertia
+    // directly like a group's talk, and it lives beside /message/* rather than inside it — the
+    // mailbox URLs are OpenPNE 3's and stay exactly as they are.
+    Route::prefix('messages')->middleware(EnsureFeatureEnabled::class.':directMessage')->controller(ConversationController::class)->group(function () {
+        // Declared before {member} so the literal is never read as a member id. Everyone whose
+        // account is gone shares one conversation: a withdrawn member leaves no id to key one by.
+        Route::get('/withdrawn', 'showWithdrawn')->name('message.chat.withdrawn');
+        Route::get('/withdrawn/messages', 'withdrawnMessages')->name('message.chat.withdrawn.messages');
+        Route::get('/{member}', 'show')->whereNumber('member')->name('message.chat.show');
+        Route::get('/{member}/messages', 'messages')->whereNumber('member')->name('message.chat.messages');
     });
 });
 
