@@ -31,7 +31,7 @@ test('every section shows while every unit is on', () => {
 
 test('a section goes with its unit', () => {
     assert.equal(hrefs({ ...allOn, diary: false }).includes('/diary/list'), false);
-    assert.equal(hrefs({ ...allOn, directMessage: false }).includes('/message'), false);
+    assert.equal(hrefs({ ...allOn, directMessage: false }).includes('/messages'), false);
     assert.equal(hrefs({ ...allOn, friend: false }).includes('/friend/list'), false);
     assert.equal(hrefs({ ...allOn, timeline: false }).includes('/timeline'), false);
     assert.equal(hrefs({ ...allOn, group: false }).includes('/groups/mine'), false);
@@ -63,7 +63,7 @@ test('the groups section stays while only a board is off', () => {
 const bottomHrefs = (enabled: Record<FeatureKey, boolean>) => bottomNavSections(enabled).map((section) => section.href);
 
 test('the bottom bar carries Home and its four sections in bar order', () => {
-    assert.deepEqual(bottomHrefs(allOn), ['/dashboard', '/groups/mine', '/diary/list', '/notifications', '/message']);
+    assert.deepEqual(bottomHrefs(allOn), ['/dashboard', '/groups/mine', '/diary/list', '/notifications', '/messages']);
 });
 
 test('a bottom tab goes with its unit', () => {
@@ -71,13 +71,13 @@ test('a bottom tab goes with its unit', () => {
         '/dashboard',
         '/diary/list',
         '/notifications',
-        '/message',
+        '/messages',
     ]);
     assert.deepEqual(bottomHrefs({ ...allOn, diary: false }), [
         '/dashboard',
         '/groups/mine',
         '/notifications',
-        '/message',
+        '/messages',
     ]);
     assert.deepEqual(bottomHrefs({ ...allOn, directMessage: false }), [
         '/dashboard',
@@ -211,7 +211,6 @@ const FORM_SCREENS: Record<string, Record<string, unknown>> = {
     'community/edit': { group: cyclists },
     'group/topic/edit': { group: cyclists, topic: null },
     'group/event/edit': { group: cyclists, event: null },
-    'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},
     'member/avatar': {},
     'member/edit-profile': {},
@@ -240,7 +239,6 @@ const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
     'timeline/new': {},
     'group/topic/edit': { group: cyclists, topic: null },
     'group/event/edit': { group: cyclists, event: null },
-    'message/compose': { parentId: null, parentSubject: null },
     'message/edit': {},
 };
 
@@ -327,14 +325,41 @@ test('a form keeps its context but takes no scope', () => {
     }
 });
 
-const counterparties = (count: number) =>
-    Array.from({ length: count }, (_, i) => ({ id: i + 1, name: `Member ${i + 1}`, imageUrl: null, avatarColor: null }));
+const MESSAGES_LABEL = { key: 'Messages', replacements: undefined };
 
-test('a message is scoped to its counterparty only when there is exactly one', () => {
-    const show = (count: number) => chrome('message/show', { message: { box: 'receive', counterparties: counterparties(count) } });
+test('the messages entry counts conversations and lands where they are listed', () => {
+    // The badge is the room-list reading: how many people are waiting, not how many rows.
+    const messages = NAV_SECTIONS.find((section) => section.badge?.count === 'unreadMessages');
 
-    // Withdrawn-only (0) and a multi-recipient sent message (2+) have no single member to name.
-    assert.equal(show(0).scope, undefined);
-    assert.equal(show(1).scope?.name, 'Member 1');
-    assert.equal(show(2).scope, undefined);
+    assert.equal(messages?.href, '/messages');
+    assert.equal(messages?.badge?.label.key, ':count conversations with new messages');
+    // The mailbox URLs stay OpenPNE 3's and redirect here, so the bare prefix lights the entry for
+    // both.
+    assert.deepEqual(messages?.match, ['/message']);
+});
+
+test('a message-scoped screen crumbs back to the conversation list', () => {
+    // The four boxes are gone from Modern, leaving one parent for the draft form and the withdrawn
+    // bucket to return to.
+    assert.deepEqual(chrome('message/edit', {}).context, [{ href: '/messages', label: MESSAGES_LABEL }]);
+    assert.deepEqual(chrome('message/conversation/index', { counterpart: null }).context, [
+        { href: '/messages', label: MESSAGES_LABEL },
+    ]);
+});
+
+test('the Messages hub is a section with no action', () => {
+    const hub = chrome('message/conversations/index', {});
+
+    assert.equal(hub.mode, 'section');
+    assert.deepEqual(hub.title, MESSAGES_LABEL);
+    assert.equal(hub.action, undefined);
+    assert.equal(hub.tabs, undefined);
+});
+
+test('the retired mailbox screens are gone from the registry', () => {
+    // Their routes redirect into chat now; a registry entry left behind would be chrome for a page
+    // that no longer renders.
+    for (const component of ['message/index', 'message/show', 'message/compose']) {
+        assert.deepEqual(chrome(component, {}), { mode: 'embedded', width: 'standard', gap: '4' }, component);
+    }
 });

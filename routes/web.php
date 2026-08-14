@@ -855,11 +855,13 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/bulk', 'bulk')->name('message.bulk');
     });
 
-    // The same messages read as chat: one conversation per member, keyed by that member rather than
-    // by a stored thread. Modern-only (chat has no OpenPNE 3 counterpart), so it renders Inertia
-    // directly like a group's talk, and it lives beside /message/* rather than inside it — the
-    // mailbox URLs are OpenPNE 3's and stay exactly as they are.
+    // The same messages read as chat: the conversation list, and one conversation per member keyed
+    // by that member rather than by a stored thread. Modern-only (chat has no OpenPNE 3
+    // counterpart), so it renders Inertia directly like a group's talk, and it lives beside
+    // /message/* rather than inside it — the mailbox URLs are OpenPNE 3's and stay exactly as they
+    // are, redirecting here for a Modern viewer.
     Route::prefix('messages')->middleware(EnsureFeatureEnabled::class.':directMessage')->controller(ConversationController::class)->group(function () {
+        Route::get('/', 'index')->name('message.chat.index');
         // Declared before {member} so the literal is never read as a member id. Everyone whose
         // account is gone shares one conversation: a withdrawn member leaves no id to key one by.
         Route::get('/withdrawn', 'showWithdrawn')->name('message.chat.withdrawn');

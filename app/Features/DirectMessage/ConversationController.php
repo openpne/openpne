@@ -5,8 +5,11 @@ namespace App\Features\DirectMessage;
 use App\Features\DirectMessage\Actions\MarkConversationRead;
 use App\Features\DirectMessage\Actions\SendDirectMessage;
 use App\Features\DirectMessage\Exceptions\DirectMessageActionException;
+use App\Features\DirectMessage\Queries\ConversationList;
 use App\Features\DirectMessage\Queries\ConversationMessages;
 use App\Features\DirectMessage\Queries\ConversationUnreadSnapshot;
+use App\Features\DirectMessage\Queries\ListDirectMessages;
+use App\Features\DirectMessage\Serializers\ConversationListSerializer;
 use App\Features\DirectMessage\Serializers\ConversationMessageSerializer;
 use App\Features\DirectMessage\Serializers\DirectMessageSerializer;
 use App\Http\Controllers\Controller;
@@ -22,9 +25,9 @@ use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 /**
- * One conversation with one member, read and written as chat: the stored mailbox rows composed back
- * into the two directions of a single thread (ConversationScope). The conversation list, the trash
- * and the reply flow are the mailbox's still.
+ * The message store read as chat: the list of conversations, and each one with one member — the
+ * stored mailbox rows composed back into the two directions of a single thread (ConversationScope).
+ * The trash and the draft form are the mailbox's still.
  *
  * Renders Inertia directly rather than through SurfaceResolver: chat has no OpenPNE 3 counterpart, so
  * there is no Classic screen to be compatible with, as a group's talk takes the same shape.
@@ -35,6 +38,26 @@ use Inertia\Response as InertiaResponse;
  */
 class ConversationController extends Controller
 {
+    /** The drafts pager's own page parameter, so paging one list never moves the other. */
+    private const DRAFT_PAGE = 'draft_page';
+
+    /**
+     * Every conversation the viewer is in, most recently written in first, with the mailbox's drafts
+     * under them: a draft has no receipt, so it is in neither arm of any conversation and has
+     * nowhere else to be found.
+     */
+    public function index(ConversationList $conversations, ListDirectMessages $drafts): InertiaResponse
+    {
+        $viewer = $this->viewer();
+
+        return Inertia::render('message/conversations/index', [
+            'conversations' => ConversationListSerializer::paginator($conversations($viewer)),
+            'drafts' => DirectMessageSerializer::paginator(
+                $drafts($viewer, DirectMessageBox::Draft, pageName: self::DRAFT_PAGE),
+            ),
+        ]);
+    }
+
     public function show(Request $request, Member $member, ConversationMessages $query, ConversationUnreadSnapshot $unread): InertiaResponse
     {
         return $this->conversation($request, $this->counterpart($member), $query, $unread);

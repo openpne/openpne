@@ -8,6 +8,11 @@ use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * The mailbox URLs under chat. Every OpenPNE 3 reading page has a chat equivalent, so a Modern
+ * viewer is sent there rather than shown a second reading of the same rows — the URLs themselves are
+ * durable and stay exactly as they are, which is what Classic still renders them as.
+ */
 class DirectMessageRoutesTest extends TestCase
 {
     use RefreshDatabase;
@@ -18,10 +23,10 @@ class DirectMessageRoutesTest extends TestCase
         config(['openpne.surface_mode' => 'modern_default']);
     }
 
-    private function deliver(Member $sender, Member $recipient, array $message = [], array $receipt = []): DirectMessage
+    private function deliver(?Member $sender, ?Member $recipient, array $message = [], array $receipt = []): DirectMessage
     {
-        $m = DirectMessage::factory()->create([...['sender_id' => $sender->getKey()], ...$message]);
-        DirectMessageRecipient::factory()->create([...['direct_message_id' => $m->getKey(), 'recipient_id' => $recipient->getKey()], ...$receipt]);
+        $m = DirectMessage::factory()->create([...['sender_id' => $sender?->getKey()], ...$message]);
+        DirectMessageRecipient::factory()->create([...['direct_message_id' => $m->getKey(), 'recipient_id' => $recipient?->getKey()], ...$receipt]);
 
         return $m;
     }
@@ -30,6 +35,7 @@ class DirectMessageRoutesTest extends TestCase
     {
         $message = $this->deliver(...Member::factory()->count(2)->create()->all());
 
+        $this->get('/messages')->assertRedirect('/login');
         $this->get('/message')->assertRedirect('/login');
         $this->get('/message/receiveList')->assertRedirect('/login');
         $this->get('/message/sendList')->assertRedirect('/login');
@@ -38,184 +44,189 @@ class DirectMessageRoutesTest extends TestCase
         $this->get(route('message.receive.show', $message))->assertRedirect('/login');
     }
 
-    public function test_modern_index_redirects_to_the_inbox(): void
+    /** The four boxes and both index aliases: the conversation list answers for all of them. */
+    public function test_every_box_url_lands_on_the_conversation_list(): void
+    {
+        $member = Member::factory()->create();
+        $list = route('message.chat.index');
+
+        foreach (['message.index', 'message.index_compat', 'message.receive', 'message.send', 'message.draft', 'message.trash'] as $name) {
+            $this->actingAs($member)->get(route($name))->assertRedirect($list);
+        }
+    }
+
+    /** The boxes stay whole on Classic: the redirect is the Modern arm's alone. */
+    public function test_classic_still_renders_the_boxes(): void
+    {
+        config(['openpne.surface_mode' => 'classic_default']);
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $message = $this->deliver($sender, $recipient, ['subject' => 'A friendly note']);
+
+        $this->actingAs($recipient)->get(route('message.receive'))
+            ->assertOk()->assertSee('id="page_message_list"', false)->assertSee('A friendly note');
+        $this->actingAs($recipient)->get(route('message.receive.show', $message))
+            ->assertOk()->assertSee('id="page_message_show"', false);
+        $this->actingAs($sender)->get(route('message.compose', ['id' => $recipient->getKey()]))
+            ->assertOk()->assertSee('id="page_message_sendToFriend"', false);
+    }
+
+    /**
+     * A message URL names a message; the conversation it belongs to is where that message is read.
+     * The counterpart is seen from the viewer's side, so the same row sends the two of them to each
+     * other rather than both to the sender.
+     */
+    public function test_a_message_url_lands_on_its_conversation_from_each_sides_view(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $message = $this->deliver($sender, $recipient);
+        $id = $message->getKey();
+
+        $this->actingAs($recipient)->get(route('message.receive.show', $message))
+            ->assertRedirect(route('message.chat.show', ['member' => $sender->getKey()]).'?m='.$id);
+        $this->actingAs($sender)->get(route('message.send.show', $message))
+            ->assertRedirect(route('message.chat.show', ['member' => $recipient->getKey()]).'?m='.$id);
+        $this->actingAs($recipient)->get(route('message.trash.show', $message))
+            ->assertRedirect(route('message.chat.show', ['member' => $sender->getKey()]).'?m='.$id);
+    }
+
+    /** A departed counterpart leaves no id to key a conversation by: all of them share one address. */
+    public function test_a_withdrawn_counterpart_lands_on_the_withdrawn_bucket(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $message = $this->deliver($sender, $recipient);
+        $sender->delete(); // nullOnDelete leaves the message with a null sender
+
+        $this->actingAs($recipient)->get(route('message.receive.show', $message))
+            ->assertRedirect(route('message.chat.withdrawn').'?m='.$message->getKey());
+    }
+
+    /** Reading marks read; being sent past a message must not, or the divider is gone on arrival. */
+    public function test_the_redirect_does_not_mark_the_message_read(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $message = $this->deliver($sender, $recipient);
+
+        $this->actingAs($recipient)->get(route('message.receive.show', $message))->assertRedirect();
+
+        $this->assertNull($message->recipients()->first()->fresh()->read_at);
+    }
+
+    /**
+     * An upgraded multi-recipient send sits in several conversations and a URL can land in one:
+     * the first delivery written — the lowest receipt id — names it, not the relation's load order.
+     */
+    public function test_a_senders_multi_recipient_url_lands_deterministically(): void
+    {
+        [$sender, $second, $third] = Member::factory()->count(3)->create();
+        $message = $this->deliver($sender, $second);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $third->getKey()]);
+
+        $this->actingAs($sender)->get(route('message.send.show', $message))
+            ->assertRedirect(route('message.chat.show', ['member' => $second->getKey()]).'?m='.$message->getKey());
+    }
+
+    /** The rule holds when the first delivery's member has withdrawn: the bucket is the landing. */
+    public function test_the_first_delivery_names_the_landing_even_when_it_is_withdrawn(): void
+    {
+        [$sender, $active] = Member::factory()->count(2)->create();
+        $message = $this->deliver($sender, null);
+        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $active->getKey()]);
+
+        $this->actingAs($sender)->get(route('message.send.show', $message))
+            ->assertRedirect(route('message.chat.withdrawn').'?m='.$message->getKey());
+    }
+
+    /** Replying is writing in the conversation, so it opens it with no anchor. */
+    public function test_reply_lands_on_the_conversation(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $message = $this->deliver($sender, $recipient);
+
+        $this->actingAs($recipient)->get(route('message.reply', $message))
+            ->assertRedirect(route('message.chat.show', ['member' => $sender->getKey()]));
+    }
+
+    /** Modern has no trash screen; the OpenPNE 3 purge confirm lands in the conversation. */
+    public function test_the_purge_confirm_lands_on_the_conversation(): void
+    {
+        [$sender, $recipient] = Member::factory()->count(2)->create();
+        $message = $this->deliver($sender, $recipient, [], ['recipient_deleted_at' => now()]);
+
+        $this->actingAs($recipient)->get(route('message.trash.purge.confirm', $message))
+            ->assertRedirect(route('message.chat.show', ['member' => $sender->getKey()]));
+    }
+
+    /** A compose URL is a way into a conversation; without one to name, it is the list. */
+    public function test_compose_lands_on_the_conversation_or_the_list(): void
+    {
+        [$viewer, $recipient] = Member::factory()->count(2)->create();
+
+        $this->actingAs($viewer)->get(route('message.compose', ['id' => $recipient->getKey()]))
+            ->assertRedirect(route('message.chat.show', ['member' => $recipient->getKey()]));
+        $this->actingAs($viewer)->get(route('message.compose', ['id' => $viewer->getKey()]))
+            ->assertRedirect(route('message.chat.index'));
+        $this->actingAs($viewer)->get(route('message.compose', ['id' => 999999]))
+            ->assertRedirect(route('message.chat.index'));
+        $this->actingAs($viewer)->get(route('message.compose'))
+            ->assertRedirect(route('message.chat.index'));
+    }
+
+    /**
+     * The message ids are sequential and the URLs are public, so a redirect naming the other side
+     * would answer "who is member N corresponding with" for any id. Only a party gets one.
+     */
+    public function test_a_stranger_gets_no_redirect_naming_the_parties(): void
+    {
+        [$sender, $recipient, $stranger] = Member::factory()->count(3)->create();
+        $message = $this->deliver($sender, $recipient);
+
+        foreach (['message.receive.show', 'message.send.show', 'message.trash.show', 'message.reply', 'message.trash.purge.confirm'] as $name) {
+            $this->actingAs($stranger)->get(route($name, ['message' => $message->getKey()]))->assertNotFound();
+        }
+    }
+
+    public function test_a_missing_message_is_still_a_404(): void
     {
         $member = Member::factory()->create();
 
-        $this->actingAs($member)->get('/message')->assertRedirect(route('message.receive'));
+        $this->actingAs($member)->get(route('message.receive.show', ['message' => 999999]))->assertNotFound();
+        $this->actingAs($member)->get(route('message.reply', ['message' => 999999]))->assertNotFound();
     }
 
-    public function test_modern_inbox_lists_the_sender_subject_and_unread_state(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $this->deliver($sender, $recipient, ['subject' => 'A friendly note']);
-
-        $this->actingAs($recipient)
-            ->get(route('message.receive'))
-            ->assertInertia(fn ($page) => $page
-                ->component('message/index')
-                ->where('box', 'receive')
-                ->has('messages.data', 1)
-                ->where('messages.data.0.subject', 'A friendly note')
-                ->where('messages.data.0.counterparty.id', $sender->getKey())
-                ->where('messages.data.0.unread', true)
-            );
-    }
-
-    public function test_modern_inbox_shows_a_null_counterparty_for_a_withdrawn_sender(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $this->deliver($sender, $recipient);
-        $sender->delete(); // nullOnDelete leaves the message with a null sender
-
-        $this->actingAs($recipient)
-            ->get(route('message.receive'))
-            ->assertInertia(fn ($page) => $page
-                ->has('messages.data', 1)
-                ->where('messages.data.0.counterparty', null)
-            );
-    }
-
-    public function test_modern_sent_box_lists_authored_messages(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $this->deliver($sender, $recipient, ['subject' => 'Sent one']);
-
-        $this->actingAs($sender)
-            ->get(route('message.send'))
-            ->assertInertia(fn ($page) => $page
-                ->component('message/index')
-                ->where('box', 'sent')
-                ->where('messages.data.0.subject', 'Sent one')
-                ->where('messages.data.0.counterparty.id', $recipient->getKey())
-                ->where('messages.data.0.unread', false)
-            );
-    }
-
-    public function test_modern_draft_box_lists_drafts(): void
+    /** A draft has no receipt, so it is in no conversation — only in the form still writing it. */
+    public function test_a_draft_named_as_a_message_is_a_404(): void
     {
         [$author, $recipient] = Member::factory()->count(2)->create();
-        DirectMessage::factory()->draft()->create([
+        $draft = DirectMessage::factory()->draft()->create([
+            'sender_id' => $author->getKey(),
+            'draft_recipient_id' => $recipient->getKey(),
+        ]);
+
+        $this->actingAs($author)->get(route('message.receive.show', $draft))->assertNotFound();
+    }
+
+    /** The draft form is the one mailbox screen Modern still renders: no conversation holds a draft. */
+    public function test_the_draft_form_still_renders(): void
+    {
+        [$author, $recipient] = Member::factory()->count(2)->create();
+        $draft = DirectMessage::factory()->draft()->create([
             'sender_id' => $author->getKey(),
             'draft_recipient_id' => $recipient->getKey(),
             'subject' => 'Unsent',
         ]);
 
         $this->actingAs($author)
-            ->get(route('message.draft'))
-            ->assertInertia(fn ($page) => $page
-                ->component('message/index')
-                ->where('box', 'draft')
-                ->where('messages.data.0.subject', 'Unsent')
-                ->where('messages.data.0.counterparty.id', $recipient->getKey())
-            );
+            ->get(route('message.draft.edit', $draft))
+            ->assertInertia(fn ($page) => $page->component('message/edit')->where('draft.subject', 'Unsent'));
     }
 
-    public function test_modern_trash_box_lists_trashed_messages(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $this->deliver($sender, $recipient, ['subject' => 'Tossed'], ['recipient_deleted_at' => now()]);
-
-        $this->actingAs($recipient)
-            ->get(route('message.trash'))
-            ->assertInertia(fn ($page) => $page
-                ->component('message/index')
-                ->where('box', 'trash')
-                ->where('messages.data.0.subject', 'Tossed')
-            );
-    }
-
-    public function test_modern_received_show_renders_and_marks_read(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $message = $this->deliver($sender, $recipient, ['subject' => 'Read me', 'body' => 'Body text here']);
-
-        $this->actingAs($recipient)
-            ->get(route('message.receive.show', $message))
-            ->assertInertia(fn ($page) => $page
-                ->component('message/show')
-                ->where('message.id', $message->getKey())
-                ->where('message.subject', 'Read me')
-                ->where('message.body', 'Body text here')
-                ->where('message.viewerIsSender', false)
-                ->where('message.box', 'receive')
-                ->where('message.counterparties.0.id', $sender->getKey())
-            );
-
-        $this->assertNotNull($message->recipients()->first()->fresh()->read_at);
-    }
-
-    public function test_modern_sent_show_lists_the_recipient_as_counterparty(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $message = $this->deliver($sender, $recipient);
-
-        $this->actingAs($sender)
-            ->get(route('message.send.show', $message))
-            ->assertInertia(fn ($page) => $page
-                ->component('message/show')
-                ->where('message.viewerIsSender', true)
-                ->where('message.counterparties.0.id', $recipient->getKey())
-            );
-    }
-
-    public function test_modern_sent_show_lists_every_recipient_as_a_counterparty(): void
-    {
-        // More than one counterparty is what keeps the chrome from naming a single member as the
-        // page's scope, so the array shape is the server-side half of that rule.
-        [$sender, $first, $second] = Member::factory()->count(3)->create();
-        $message = $this->deliver($sender, $first);
-        DirectMessageRecipient::factory()->create(['direct_message_id' => $message->getKey(), 'recipient_id' => $second->getKey()]);
-
-        $this->actingAs($sender)
-            ->get(route('message.send.show', $message))
-            ->assertInertia(fn ($page) => $page
-                ->component('message/show')
-                ->has('message.counterparties', 2)
-                ->where('message.counterparties.0.id', $first->getKey())
-                ->where('message.counterparties.1.id', $second->getKey())
-            );
-    }
-
-    public function test_modern_show_serializes_the_prev_next_pager(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $first = $this->deliver($sender, $recipient);
-        $middle = $this->deliver($sender, $recipient);
-        $last = $this->deliver($sender, $recipient);
-
-        $this->actingAs($recipient)
-            ->get(route('message.receive.show', $middle))
-            ->assertInertia(fn ($page) => $page
-                ->where('message.previousId', $first->getKey())
-                ->where('message.nextId', $last->getKey())
-            );
-    }
-
-    public function test_modern_received_show_404s_for_a_non_recipient(): void
-    {
-        [$sender, $recipient, $stranger] = Member::factory()->count(3)->create();
-        $message = $this->deliver($sender, $recipient);
-
-        $this->actingAs($stranger)->get(route('message.receive.show', $message))->assertNotFound();
-    }
-
-    public function test_modern_sent_show_404s_for_the_wrong_box(): void
-    {
-        [$sender, $recipient] = Member::factory()->count(2)->create();
-        $message = $this->deliver($sender, $recipient);
-
-        // The recipient is not the sender, so the message is not in their sent box.
-        $this->actingAs($recipient)->get(route('message.send.show', $message))->assertNotFound();
-    }
-
-    public function test_modern_only_serves_the_canonical_message_boxes_as_inertia(): void
+    public function test_modern_only_serves_the_conversation_list_as_inertia(): void
     {
         config()->set('openpne.surface_mode', 'modern_only');
         $member = Member::factory()->create();
 
         $this->actingAs($member)
-            ->get(route('message.receive'))
-            ->assertInertia(fn ($page) => $page->component('message/index'));
+            ->get(route('message.chat.index'))
+            ->assertInertia(fn ($page) => $page->component('message/conversations/index'));
     }
 }
