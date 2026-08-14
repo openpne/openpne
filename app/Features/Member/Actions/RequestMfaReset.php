@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  * lets the locked-out member (a guest — they cannot present a second-factor proof) clear their factor by
  * entering their account password (App\Features\Member\MfaResetLinkController, ConsumeMfaReset). The admin
  * never gains a takeover ability: the link goes only to the member's mailbox and needs the member's
- * password to act — both outside the admin's reach (TASK-122, docs/internals/security.md).
+ * password to act — both outside the admin's reach (docs/internals/security.md).
  *
  * The live-factor + registered-address preconditions are re-checked under a row lock, not trusted from the
  * Filament action's visibility snapshot: a factor disabled or an address cleared between render and click
