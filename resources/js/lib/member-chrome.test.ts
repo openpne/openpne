@@ -212,6 +212,7 @@ const FORM_SCREENS: Record<string, Record<string, unknown>> = {
     'group/topic/edit': { group: cyclists, topic: null },
     'group/event/edit': { group: cyclists, event: null },
     'message/edit': {},
+    'message/new': {},
     'member/avatar': {},
     'member/edit-profile': {},
     'member/config/email': {},
@@ -240,6 +241,8 @@ const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
     'group/topic/edit': { group: cyclists, topic: null },
     'group/event/edit': { group: cyclists, event: null },
     'message/edit': {},
+    // The one that submits nothing: picking a recipient is a navigation into their conversation.
+    'message/new': {},
 };
 
 /**
@@ -342,17 +345,18 @@ test('a message-scoped screen crumbs back to the conversation list', () => {
     // The four boxes are gone from Modern, leaving one parent for the draft form and the withdrawn
     // bucket to return to.
     assert.deepEqual(chrome('message/edit', {}).context, [{ href: '/messages', label: MESSAGES_LABEL }]);
+    assert.deepEqual(chrome('message/new', {}).context, [{ href: '/messages', label: MESSAGES_LABEL }]);
     assert.deepEqual(chrome('message/conversation/index', { counterpart: null }).context, [
         { href: '/messages', label: MESSAGES_LABEL },
     ]);
 });
 
-test('the Messages hub is a section with no action', () => {
+test('the Messages hub starts a message the way every other hub starts its own thing', () => {
     const hub = chrome('message/conversations/index', {});
 
     assert.equal(hub.mode, 'section');
     assert.deepEqual(hub.title, MESSAGES_LABEL);
-    assert.equal(hub.action, undefined);
+    assert.equal(hub.action?.href, '/messages/new');
     assert.equal(hub.tabs, undefined);
 });
 

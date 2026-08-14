@@ -236,6 +236,7 @@ export function bottomNavSections(enabled: Record<FeatureKey, boolean>): NavSect
 const WRITE_DIARY: ChromeAction = { href: '/diary/new', label: t('Write a %diary%'), icon: Pencil };
 const POST_ACTIVITY: ChromeAction = { href: '/timeline/new', label: t('%Post_activity%'), icon: Pencil };
 const CREATE_COMMUNITY: ChromeAction = { href: '/groups/edit', label: t('Create a %community%'), icon: Plus };
+const NEW_MESSAGE: ChromeAction = { href: '/messages/new', label: t('New message'), icon: Pencil };
 
 // The friend tab is a lens the friend unit owns, so it goes with the unit while the diary hub stays.
 const diaryTabs = (active: 'all' | 'friends' | 'mine', friend: boolean): ChromeTab[] => [
@@ -548,9 +549,9 @@ const HUB_CHROME: Record<string, (props: Record<string, unknown>) => Partial<Chr
         tabsLabel: FRIENDS,
         tabs: friendTabs('requests'),
     }),
-    // The Messages hub: the conversations, with the drafts box under them. No action button —
-    // writing starts from a conversation or from the person's profile, not from a blank form.
-    'message/conversations/index': () => ({ mode: 'section', title: MESSAGES }),
+    // The Messages hub: the conversations, with the drafts box under them. Its action opens the
+    // recipient picker, the way every other hub's opens the thing that hub is a list of.
+    'message/conversations/index': () => ({ mode: 'section', title: MESSAGES, action: NEW_MESSAGE }),
     // The conversation is the page, so no action button. Its counterpart is the room's identity: the
     // bar's scope while they still exist, and the heading otherwise — a withdrawn bucket has no
     // member page for a scope to link to, and no name for the bar to carry.
@@ -581,6 +582,9 @@ const STATIC_CHROME: Record<string, Partial<Chrome>> = {
     'member/edit-profile': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/show': { gap: '6' },
     'message/edit': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
+    // A sheet like the draft form, though it submits nothing: choosing who to write to is one screen
+    // with one job, and it is left by picking a name or by closing it.
+    'message/new': { gap: '6', form: true, compose: true, context: MESSAGES_HUB },
     'member/config/email': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/password': { gap: '6', form: true, context: CONFIG_CONTEXT },
     'member/config/mfa': { gap: '6', form: true, context: CONFIG_CONTEXT },

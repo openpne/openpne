@@ -14,7 +14,7 @@ class ComposeSheetActionGuardTest extends TestCase
     /**
      * Compose pages whose header action is a native external submitter
      * (`type="submit" form={COMPOSE_FORM_ID}`), so constraint validation still runs.
-     * With the click-path pages below, the sibling of COMPOSE_SCREENS in
+     * With the click-path and no-submit pages below, the sibling of COMPOSE_SCREENS in
      * resources/js/lib/member-chrome.test.ts.
      */
     private const NATIVE_SUBMIT_PAGES = [
@@ -30,6 +30,16 @@ class ComposeSheetActionGuardTest extends TestCase
         'pages/message/edit.tsx',
     ];
 
+    /**
+     * Compose pages that submit nothing: the recipient picker is left by opening someone's
+     * conversation, so its rows are links and the sheet header carries only its close control. A
+     * submit added here has to move the page into one of the two lists above to stay reachable from
+     * a phone.
+     */
+    private const NO_SUBMIT_PAGES = [
+        'pages/message/new.tsx',
+    ];
+
     public function test_every_compose_page_renders_its_actions_in_the_sheet_header(): void
     {
         $offenders = [];
@@ -41,6 +51,18 @@ class ComposeSheetActionGuardTest extends TestCase
         }
 
         $this->assertSame([], $offenders, 'Compose page(s) with no <ComposeSheetAction> — their actions never reach the sheet header.');
+    }
+
+    public function test_a_page_that_submits_nothing_carries_no_sheet_action(): void
+    {
+        $offenders = [];
+        foreach (self::NO_SUBMIT_PAGES as $page) {
+            if (str_contains($this->source($page), '<ComposeSheetAction')) {
+                $offenders[] = $page;
+            }
+        }
+
+        $this->assertSame([], $offenders, 'Page(s) listed as submitting nothing now render a sheet action — move them to the list that describes how they submit.');
     }
 
     public function test_every_native_submit_page_pairs_the_form_id_with_an_external_submitter(): void

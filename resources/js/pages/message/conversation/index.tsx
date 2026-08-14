@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import type { PageProps } from '@/types';
 import type { MessageMember } from '../types';
 import { ConversationComposer } from './composer';
+import { DeleteConversation } from './delete-conversation';
 import { ConversationMessageRow } from './message-row';
 import type { ConversationPage, ConversationUnreadSnapshot } from './types';
 
@@ -233,6 +234,10 @@ export default function MessageConversation() {
     return (
         <>
             <Head title={counterpart?.name ?? t('Withdrawn member')} />
+
+            {/* The withdrawn bucket keeps it: nobody can write there again, so it is the one
+                conversation whose only remaining action is clearing it out. */}
+            <DeleteConversation path={path} />
 
             {backlog !== null && (
                 // Sticky, because the reader opens at the foot of the conversation and the boundary

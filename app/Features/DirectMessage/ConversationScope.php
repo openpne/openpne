@@ -56,14 +56,27 @@ class ConversationScope
         self::isCounterpart($query, 'sender_id', $counterpart);
     }
 
+    /**
+     * The message half of the sent arm: written by the viewer, and delivered to the counterpart.
+     * Public for the reason inbound is — deleting a conversation moves the viewer's own side of
+     * exactly these rows, and the two readings must not drift apart.
+     *
+     * @param  Builder<DirectMessage>  $query
+     */
+    public static function outbound(Builder $query, Member $viewer, ?Member $counterpart): void
+    {
+        $query
+            ->where('is_draft', false)
+            ->where('sender_id', $viewer->getKey())
+            ->whereHas('recipients', fn (Builder $receipt) => self::isCounterpart($receipt, 'recipient_id', $counterpart));
+    }
+
     /** What the viewer sent to the counterpart, minus what the viewer has trashed or purged. */
     private static function sent(Builder $query, Member $viewer, ?Member $counterpart): void
     {
-        $query
-            ->where('sender_id', $viewer->getKey())
-            ->whereNull('sender_deleted_at')
-            ->whereNull('sender_purged_at')
-            ->whereHas('recipients', fn (Builder $receipt) => self::isCounterpart($receipt, 'recipient_id', $counterpart));
+        self::outbound($query, $viewer, $counterpart);
+
+        $query->whereNull('sender_deleted_at')->whereNull('sender_purged_at');
     }
 
     /** What the counterpart sent the viewer, minus what the viewer has trashed or purged. */
