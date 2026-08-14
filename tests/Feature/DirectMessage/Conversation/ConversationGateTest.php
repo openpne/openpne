@@ -14,8 +14,10 @@ class ConversationGateTest extends ConversationTestCase
 
         $this->get("/messages/{$other->getKey()}")->assertRedirect('/login');
         $this->get("/messages/{$other->getKey()}/messages")->assertRedirect('/login');
+        $this->post("/messages/{$other->getKey()}/read", ['messageId' => 1])->assertRedirect('/login');
         $this->get('/messages/withdrawn')->assertRedirect('/login');
         $this->get('/messages/withdrawn/messages')->assertRedirect('/login');
+        $this->post('/messages/withdrawn/read', ['messageId' => 1])->assertRedirect('/login');
     }
 
     public function test_the_unit_switched_off_takes_every_conversation_route(): void
@@ -25,8 +27,10 @@ class ConversationGateTest extends ConversationTestCase
 
         $this->actingAs($viewer)->get("/messages/{$other->getKey()}")->assertNotFound();
         $this->actingAs($viewer)->getJson("/messages/{$other->getKey()}/messages")->assertNotFound();
+        $this->actingAs($viewer)->postJson("/messages/{$other->getKey()}/read", ['messageId' => 1])->assertNotFound();
         $this->actingAs($viewer)->get('/messages/withdrawn')->assertNotFound();
         $this->actingAs($viewer)->getJson('/messages/withdrawn/messages')->assertNotFound();
+        $this->actingAs($viewer)->postJson('/messages/withdrawn/read', ['messageId' => 1])->assertNotFound();
     }
 
     /** There is no room to be in with yourself (OpenPNE 3 404s a self-addressed message). */
@@ -36,6 +40,7 @@ class ConversationGateTest extends ConversationTestCase
 
         $this->actingAs($viewer)->get("/messages/{$viewer->getKey()}")->assertNotFound();
         $this->actingAs($viewer)->getJson("/messages/{$viewer->getKey()}/messages")->assertNotFound();
+        $this->actingAs($viewer)->postJson("/messages/{$viewer->getKey()}/read", ['messageId' => 1])->assertNotFound();
     }
 
     public function test_a_member_who_does_not_exist_is_refused(): void

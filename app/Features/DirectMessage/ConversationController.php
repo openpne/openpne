@@ -2,14 +2,19 @@
 
 namespace App\Features\DirectMessage;
 
+use App\Features\DirectMessage\Actions\MarkConversationRead;
+use App\Features\DirectMessage\Exceptions\DirectMessageActionException;
 use App\Features\DirectMessage\Queries\ConversationMessages;
+use App\Features\DirectMessage\Queries\ConversationUnreadSnapshot;
 use App\Features\DirectMessage\Serializers\ConversationMessageSerializer;
 use App\Features\DirectMessage\Serializers\DirectMessageSerializer;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DirectMessage\MarkConversationReadRequest;
 use App\Models\DirectMessage;
 use App\Models\Member;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -22,22 +27,37 @@ use Inertia\Response as InertiaResponse;
  * there is no Classic screen to be compatible with, as a group's talk takes the same shape.
  *
  * The page ships the newest slice, or the one a `?m=` deep link lands in; everything after it moves
- * over JSON — "load older" walks back by keyset and a poll asks what has arrived since.
+ * over JSON — "load older" walks back by keyset and a poll asks what has arrived since. Composing is
+ * the mailbox's still; marking read is the reader's own act and belongs to the screen doing it.
  */
 class ConversationController extends Controller
 {
-    public function show(Request $request, Member $member, ConversationMessages $query): InertiaResponse
+    public function show(Request $request, Member $member, ConversationMessages $query, ConversationUnreadSnapshot $unread): InertiaResponse
     {
-        return $this->conversation($request, $this->counterpart($member), $query);
+        return $this->conversation($request, $this->counterpart($member), $query, $unread);
     }
 
     /**
      * Everyone whose account is gone, as one conversation. The FKs are nullOnDelete, so a withdrawn
      * member leaves no id to key a conversation by, and a per-person room could not be addressed.
      */
-    public function showWithdrawn(Request $request, ConversationMessages $query): InertiaResponse
+    public function showWithdrawn(Request $request, ConversationMessages $query, ConversationUnreadSnapshot $unread): InertiaResponse
     {
-        return $this->conversation($request, null, $query);
+        return $this->conversation($request, null, $query, $unread);
+    }
+
+    /**
+     * "I have read this conversation as far as this message." Fire-and-forget from the reader's
+     * side: it carries no body back, and the shell's own refresh is what moves the badge.
+     */
+    public function read(MarkConversationReadRequest $request, Member $member, MarkConversationRead $action): Response
+    {
+        return $this->markRead($request, $this->counterpart($member), $action);
+    }
+
+    public function readWithdrawn(MarkConversationReadRequest $request, MarkConversationRead $action): Response
+    {
+        return $this->markRead($request, null, $action);
     }
 
     /**
@@ -64,7 +84,7 @@ class ConversationController extends Controller
         return $member;
     }
 
-    private function conversation(Request $request, ?Member $counterpart, ConversationMessages $query): InertiaResponse
+    private function conversation(Request $request, ?Member $counterpart, ConversationMessages $query, ConversationUnreadSnapshot $unread): InertiaResponse
     {
         $viewer = $this->viewer();
         $anchor = $this->anchor($viewer, $counterpart, $request->query('m'));
@@ -81,7 +101,23 @@ class ConversationController extends Controller
                 $counterpart,
             ),
             'anchor' => $anchor === null ? null : (int) $anchor->getKey(),
+            // Where the reader stands in this conversation, independent of the slice `?m=` opened:
+            // a link names a message, the boundary names what has not been read.
+            'unreadSnapshot' => ConversationMessageSerializer::unreadSnapshot($unread($viewer, $counterpart)),
         ]);
+    }
+
+    private function markRead(MarkConversationReadRequest $request, ?Member $counterpart, MarkConversationRead $action): Response
+    {
+        try {
+            $action($this->viewer(), $counterpart, (int) $request->validated('messageId'));
+        } catch (DirectMessageActionException) {
+            // A message trashed from the mailbox between rendering and this call is an ordinary
+            // race, and so is a stale id from another conversation; neither is worth its own answer.
+            abort(404);
+        }
+
+        return response()->noContent();
     }
 
     private function page(Request $request, ?Member $counterpart, ConversationMessages $query): JsonResponse
