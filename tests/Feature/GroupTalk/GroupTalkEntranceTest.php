@@ -123,6 +123,17 @@ class GroupTalkEntranceTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('talkPreview.body', __('Image')));
     }
 
+    /** "0" is a message. The fallback to the stand-in tests emptiness strictly, not PHP's truthiness. */
+    public function test_a_body_of_zero_is_previewed_as_itself(): void
+    {
+        $group = $this->group(TopicReadAccess::Everyone);
+        $author = $this->memberOf($group);
+        GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $author->getKey(), 'body' => '0']);
+
+        $this->actingAs($author)->get("/groups/{$group->getKey()}")
+            ->assertInertia(fn ($page) => $page->where('talkPreview.body', '0'));
+    }
+
     public function test_an_empty_conversation_previews_nothing(): void
     {
         $group = $this->group();

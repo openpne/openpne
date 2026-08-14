@@ -76,6 +76,17 @@ class TalkRoomListTest extends TalkTestCase
             ->assertInertia(fn ($page) => $page->where('rooms.data.0.latest.body', __('Image')));
     }
 
+    /** "0" is a message. The fallback to the stand-in tests emptiness strictly, not PHP's truthiness. */
+    public function test_a_body_of_zero_is_previewed_as_itself(): void
+    {
+        $viewer = Member::factory()->create();
+        $group = $this->joined($viewer);
+        GroupMessage::factory()->create(['group_id' => $group->getKey(), 'member_id' => $viewer->getKey(), 'body' => '0']);
+
+        $this->actingAs($viewer)->get('/groups/mine')
+            ->assertInertia(fn ($page) => $page->where('rooms.data.0.latest.body', '0'));
+    }
+
     public function test_the_rooms_arrive_in_last_spoken_order(): void
     {
         $viewer = Member::factory()->create();

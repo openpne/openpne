@@ -148,8 +148,7 @@ class GroupController extends Controller
                 'talkPreview' => $talkPreview === null ? null : [
                     // The room list's own line, so the card and the list read the same — including
                     // the stand-in a message with nothing but pictures leads with.
-                    'body' => ChatPreview::line($talkPreview->body)
-                        ?: ChatPreview::imagesLine((bool) $talkPreview->images_exists),
+                    'body' => ChatPreview::lineOrImages([$talkPreview->body], (bool) $talkPreview->images_exists),
                     'authorName' => $talkPreview->author?->name,
                     'createdAt' => $talkPreview->created_at->toIso8601String(),
                 ],

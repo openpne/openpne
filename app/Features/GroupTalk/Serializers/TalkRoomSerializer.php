@@ -29,7 +29,7 @@ class TalkRoomSerializer
             'latest' => $latest === null ? null : [
                 // A message with nothing but pictures says so, rather than leaving the row's
                 // "author: " trailing into nothing. JoinedTalkRooms supplies `images_exists`.
-                'body' => ChatPreview::line($latest->body) ?: ChatPreview::imagesLine((bool) $latest->images_exists),
+                'body' => ChatPreview::lineOrImages([$latest->body], (bool) $latest->images_exists),
                 'authorName' => $latest->author?->name,
                 'createdAt' => $latest->created_at->toIso8601String(),
             ],

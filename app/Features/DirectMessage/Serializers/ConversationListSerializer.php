@@ -58,8 +58,9 @@ class ConversationListSerializer
      */
     private static function preview(DirectMessage $latest): string
     {
-        return ChatPreview::line((string) $latest->body)
-            ?: ChatPreview::line((string) $latest->subject)
-            ?: ChatPreview::imagesLine((bool) $latest->files_exists);
+        return ChatPreview::lineOrImages(
+            [(string) $latest->body, (string) $latest->subject],
+            (bool) $latest->files_exists,
+        );
     }
 }

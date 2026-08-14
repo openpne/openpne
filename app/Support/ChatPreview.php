@@ -17,10 +17,25 @@ final class ChatPreview
      */
     private const LIMIT = 140;
 
-    /** One line: every run of whitespace becomes a single space, so a multi-line body cannot grow the row. */
-    public static function line(string $text): string
+    /**
+     * The line to lead with: the first of $texts that has anything in it — a body, then a mailbox
+     * message's subject — and failing all of them the stand-in for a message that is pictures alone.
+     *
+     * The emptiness test is strict against `''` and lives here rather than at the three call sites,
+     * because PHP's `?:` would read a body of "0" as nothing and drop a message a member did write.
+     *
+     * @param  list<string>  $texts  in the order they should be tried
+     */
+    public static function lineOrImages(array $texts, bool $hasImages): string
     {
-        return Str::limit(trim(preg_replace('/\s+/u', ' ', $text) ?? $text), self::LIMIT, '');
+        foreach ($texts as $text) {
+            $line = self::line($text);
+            if ($line !== '') {
+                return $line;
+            }
+        }
+
+        return self::imagesLine($hasImages);
     }
 
     /**
@@ -31,5 +46,11 @@ final class ChatPreview
     public static function imagesLine(bool $hasImages): string
     {
         return $hasImages ? __('Image') : '';
+    }
+
+    /** One line: every run of whitespace becomes a single space, so a multi-line body cannot grow the row. */
+    private static function line(string $text): string
+    {
+        return Str::limit(trim(preg_replace('/\s+/u', ' ', $text) ?? $text), self::LIMIT, '');
     }
 }

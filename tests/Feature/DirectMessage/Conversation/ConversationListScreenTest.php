@@ -100,6 +100,24 @@ class ConversationListScreenTest extends ConversationTestCase
             ->assertInertia(fn ($page) => $page->where('conversations.data.0.latest.body', 'Holiday photos'));
     }
 
+    /**
+     * "0" is a message, and so is a subject of "0". Each step down the body → subject → picture order
+     * tests emptiness strictly, not PHP's truthiness, or a member's own words would read as a picture.
+     */
+    public function test_a_body_or_subject_of_zero_is_previewed_as_itself(): void
+    {
+        [$viewer, $other, $third] = Member::factory()->count(3)->create();
+        $body = $this->at($other, $viewer, '2026-08-14 09:00:00', ['body' => '0']);
+        DirectMessageFile::factory()->create(['direct_message_id' => $body->getKey()]);
+        $subject = $this->at($third, $viewer, '2026-08-14 08:00:00', ['subject' => '0', 'body' => '']);
+        DirectMessageFile::factory()->create(['direct_message_id' => $subject->getKey()]);
+
+        $this->actingAs($viewer)->get('/messages')
+            ->assertInertia(fn ($page) => $page
+                ->where('conversations.data.0.latest.body', '0')
+                ->where('conversations.data.1.latest.body', '0'));
+    }
+
     public function test_drafts_ride_under_the_list(): void
     {
         [$viewer, $other] = Member::factory()->count(2)->create();
