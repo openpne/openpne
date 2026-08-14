@@ -46,6 +46,11 @@ export function MemberFrame({ chrome, children }: { chrome: Chrome; children: Re
                 // does not read as part of it (20px), and a tighter gap to the form it heads (8px)
                 // than a reading page's rhythm — proximity groups it with what it names.
                 chrome.compose && 'max-lg:space-y-2 max-lg:pt-5',
+                // A conversation ends in its composer rather than in the page's reading rhythm: below
+                // lg the composer is stuck to the foot of the screen, and padding under it is the band
+                // it would come to rest on — 32px of nothing between the chat bar and the screen edge
+                // at exactly the scroll position the room opens at.
+                chrome.conversation && 'max-lg:pb-0',
                 chrome.foreground && 'text-foreground',
                 // Clearance for the FAB the shell floats over this content: 56px of circle, 20px off
                 // the bottom bar, so the last row stays readable under it.
