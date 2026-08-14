@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { chipsWithPending, isPending, noPending, withoutPending, withPending } from './reaction-overlay.ts';
+import { applyReactionOutcome, chipsWithPending, isPending, noPending, withoutPending, withPending } from './reaction-overlay.ts';
 import type { ChatReactionChip } from './types.ts';
 
 const THUMBS = '\u{1F44D}';
@@ -91,4 +91,38 @@ test('nothing out is the chips the stream holds', () => {
     const chips = [chip(THUMBS, 2)];
 
     assert.equal(drawn(chips, noPending()), chips);
+});
+
+/**
+ * The same move applied to a settled row — what a write that landed folds in. It reads the row
+ * rather than counting from the answer, which is what makes it idempotent, and idempotence is what
+ * lets a late answer be applied to a row the poll has already moved on.
+ */
+test('each op moves the viewer’s own line once and then not again', () => {
+    const held = [chip(THUMBS, 2, true)];
+    const theirs = [chip(THUMBS, 2)];
+
+    assert.deepEqual(applyReactionOutcome(theirs, THUMBS, 'add'), [chip(THUMBS, 3, true)]);
+    assert.equal(applyReactionOutcome(held, THUMBS, 'add'), held, 'a row that already holds it is the row it was');
+    assert.deepEqual(applyReactionOutcome(held, THUMBS, 'remove'), [chip(THUMBS, 1)]);
+    assert.equal(applyReactionOutcome(theirs, THUMBS, 'remove'), theirs, 'a row that does not hold it is the row it was');
+});
+
+test('an emoji nobody holds arrives as a chip of one, and the last one taken back takes the chip', () => {
+    assert.deepEqual(applyReactionOutcome([chip(HEART, 1)], THUMBS, 'add'), [chip(HEART, 1), chip(THUMBS, 1, true)]);
+    assert.deepEqual(applyReactionOutcome([chip(HEART, 1), chip(THUMBS, 1, true)], THUMBS, 'remove'), [chip(HEART, 1)]);
+
+    const chips = [chip(HEART, 1)];
+    assert.equal(applyReactionOutcome(chips, THUMBS, 'remove'), chips, 'an emoji with no chip has nothing to take back');
+});
+
+/**
+ * The ordering the write path turns on: the viewer's add, then someone else's, delivered by the
+ * poll — and only then the answer to the first. Applied as this move it changes nothing, where
+ * standing the row on what the answer counted would drop it back to one.
+ */
+test('a move already delivered by the poll is not made twice', () => {
+    const polled = [chip(THUMBS, 2, true)];
+
+    assert.deepEqual(applyReactionOutcome(polled, THUMBS, 'add'), [chip(THUMBS, 2, true)]);
 });

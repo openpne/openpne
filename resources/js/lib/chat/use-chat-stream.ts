@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { xsrfHeader } from '@/lib/csrf';
 import {
     applied,
+    applyReaction,
     type ChatStreamState,
     claimIntent,
     enterHistory,
@@ -17,12 +18,11 @@ import {
     mergeTouched,
     newIntents,
     oldestBoundary,
-    patchReactions,
     retireIntents,
     watermark,
 } from './stream-state';
 import type { ReactionOp } from './reaction-overlay';
-import type { ChatPage, ChatReactionChip, ChatStreamRow } from './types';
+import type { ChatPage, ChatStreamRow } from './types';
 
 /** How often a visible tab asks what has arrived. */
 const POLL_MS = 8_000;
@@ -341,12 +341,14 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
     );
 
     /**
-     * Add or take back one emoji, and stand the message's chips on what the write answered — the
-     * whole row, so a reaction someone else added meanwhile arrives with it. Whether it landed is
-     * the caller's answer: the optimistic guess it is holding is settled either way.
+     * Add or take back one emoji, and move the message's chips by that one step once the write says
+     * it landed. The row it answers with is read for nothing else: what it counted was true when the
+     * server wrote, and a slow answer landing after the poll has delivered someone else's change —
+     * and moved the watermark past it — would put back a count no later poll will correct. Whether
+     * it landed is the caller's answer: the optimistic guess it is holding is settled either way.
      *
      * Not held to a generation, for the reason a deletion is not: a chip row is a fact about the
-     * message rather than about the page it is on, and patching a row the list no longer holds is
+     * message rather than about the page it is on, and moving a row the list no longer holds is
      * already nothing.
      */
     const react = useCallback(
@@ -369,12 +371,7 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
                 return false;
             }
 
-            const payload = (await response.json().catch(() => null)) as { reactions?: ChatReactionChip[] } | null;
-            if (payload === null) {
-                return false;
-            }
-
-            setState((current) => patchReactions(current, id, payload.reactions ?? []));
+            setState((current) => applyReaction(current, id, emoji, op));
 
             return true;
         },

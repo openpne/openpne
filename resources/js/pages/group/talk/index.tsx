@@ -262,17 +262,15 @@ export default function GroupTalkIndex() {
         }
     };
 
-    // The taps still on the wire, the row whose picker is open (one at a time, so opening another
-    // closes this one by construction), and the message whose reactor list is being read.
+    // The taps still on the wire, and the message whose reactor list is being read. Which row has its
+    // picker open is the row's own business — see the picker.
     const [pendingReactions, setPendingReactions] = useState<PendingReactions>(noPending);
-    const [pickerFor, setPickerFor] = useState<number | null>(null);
     const [reactorsFor, setReactorsFor] = useState<number | null>(null);
     // Stable, because the dialog reads its list once per URL: a fresh closure every render would be
     // a fresh read every poll tick.
     const closeReactors = useCallback(() => setReactorsFor(null), []);
 
     const toggleReaction = (messageId: number, emoji: string, mine: boolean) => {
-        setPickerFor(null);
         if (isPending(pendingReactions, messageId, emoji)) {
             return;
         }
@@ -341,8 +339,6 @@ export default function GroupTalkIndex() {
                                         chips: chipsWithPending(message.reactions ?? [], pendingReactions, message.id),
                                         vocabulary: reactionVocabulary,
                                         canReact: canPost,
-                                        pickerOpen: pickerFor === message.id,
-                                        onPickerOpenChange: (open) => setPickerFor(open ? message.id : null),
                                         onToggle: (emoji, mine) => toggleReaction(message.id, emoji, mine),
                                         onShowReactors: () => setReactorsFor(message.id),
                                     }}

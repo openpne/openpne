@@ -13,15 +13,13 @@ import type { TalkMessage } from './types';
 /**
  * The row's half of the reactions: what to draw, and what a tap means. The chips are the message's
  * own as the stream holds them, with whatever tap is still on the wire drawn over them — the page
- * owns both, since a picker is open for one row at a time and a tap outlives the row it was made on.
+ * owns both, since a tap outlives the row it was made on.
  */
 export interface TalkRowReactions {
     chips: ChatReactionChip[];
     vocabulary: string[];
     /** Reacting is speaking in the room: a reader who may not post sees the chips and cannot move them. */
     canReact: boolean;
-    pickerOpen: boolean;
-    onPickerOpenChange: (open: boolean) => void;
     onToggle: (emoji: string, mine: boolean) => void;
     onShowReactors: () => void;
 }
@@ -84,13 +82,7 @@ export function TalkMessageRow({
                 {/* Standing on the meta row rather than appearing on hover: a phone has no hover, and
                     a row with no chips yet has nowhere else to offer the first one. */}
                 {reactions.canReact && (
-                    <TalkReactionAdd
-                        chips={reactions.chips}
-                        vocabulary={reactions.vocabulary}
-                        open={reactions.pickerOpen}
-                        onOpenChange={reactions.onPickerOpenChange}
-                        onPick={reactions.onToggle}
-                    />
+                    <TalkReactionAdd chips={reactions.chips} vocabulary={reactions.vocabulary} onPick={reactions.onToggle} />
                 )}
                 {message.canDelete && (
                     <button type="button" onClick={() => onDelete(message.id)} className={`${dangerActionClass} shrink-0`}>

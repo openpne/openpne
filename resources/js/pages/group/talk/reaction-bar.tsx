@@ -1,5 +1,6 @@
 import { SmilePlus, Users } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useState } from 'react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { ChatReactionChip } from '@/lib/chat/types';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -71,94 +72,57 @@ export function TalkReactionChips({
 export function TalkReactionAdd({
     chips,
     vocabulary,
-    open,
-    onOpenChange,
     onPick,
 }: {
     chips: ChatReactionChip[];
     /** What this site offers, as the page was rendered with it — never a copy held in the bundle. */
     vocabulary: string[];
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
     onPick: (emoji: string, mine: boolean) => void;
 }) {
     const t = useT();
-    const anchor = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!open) {
-            return;
-        }
-
-        const dismiss = (event: Event) => {
-            // The trigger is inside the anchor, so its own press is not an outside one — it toggles
-            // the picker shut on the click that follows instead of reopening what this just closed.
-            if (!(event.target instanceof Node) || anchor.current?.contains(event.target) !== true) {
-                onOpenChange(false);
-            }
-        };
-        const escape = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                onOpenChange(false);
-            }
-        };
-
-        document.addEventListener('mousedown', dismiss);
-        document.addEventListener('touchstart', dismiss);
-        document.addEventListener('keydown', escape);
-
-        return () => {
-            document.removeEventListener('mousedown', dismiss);
-            document.removeEventListener('touchstart', dismiss);
-            document.removeEventListener('keydown', escape);
-        };
-    }, [open, onOpenChange]);
+    // Each row's picker holds its own. Pressing another row's button is an outside press to this one,
+    // so it gives itself up — one open at a time, without the page closing it from outside and the
+    // focus it hands back landing in the picker that just opened.
+    const [open, setOpen] = useState(false);
 
     return (
-        <div ref={anchor} className="relative shrink-0">
-            <button
-                type="button"
-                aria-label={t('Add a reaction')}
-                aria-expanded={open}
-                aria-haspopup="true"
-                onClick={() => onOpenChange(!open)}
-                className={ICON_BUTTON}
-            >
-                <SmilePlus className="size-4" aria-hidden />
-            </button>
-            {open && (
-                // Upward and right-aligned: the button sits at the end of a row inside a list that
-                // usually ends at the foot of the screen, so below is where there is no room. A plain
-                // absolute child rather than a portal — the message list carries no transform, and
-                // the picker belongs to the row it opened from.
-                //
-                // Four columns' worth of width, wrapping past that. Sizing it to the vocabulary
-                // instead would run off the left edge of a phone from an anchor already at the right
-                // one, and a set this list does not choose could be any length.
-                <div
-                    className="absolute bottom-full right-0 z-20 mb-1 flex w-max max-w-[13.5rem] flex-wrap gap-1 rounded-xl border border-border bg-card p-2 shadow-lg"
-                    aria-label={t('Reactions')}
-                >
-                    {vocabulary.map((emoji) => {
-                        const mine = chips.some((chip) => chip.emoji === emoji && chip.mine);
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button type="button" aria-label={t('Add a reaction')} className={ICON_BUTTON}>
+                    <SmilePlus className="size-4" aria-hidden />
+                </button>
+            </PopoverTrigger>
+            {/* Upward and right-aligned: the button sits at the end of a row inside a list that
+                usually ends at the foot of the screen, so below is where there is no room. The card
+                the list stands in clips its overflow, which is why this is portalled rather than a
+                child of the row.
 
-                        return (
-                            <button
-                                key={emoji}
-                                type="button"
-                                aria-pressed={mine}
-                                onClick={() => onPick(emoji, mine)}
-                                className={cn(
-                                    'inline-flex size-10 items-center justify-center rounded-full text-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                    mine && 'bg-selected/10 ring-1 ring-selected',
-                                )}
-                            >
-                                {emoji}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
+                Four columns' worth of width, wrapping past that. Sizing it to the vocabulary
+                instead would run off the left edge of a phone from an anchor already at the right
+                one, and a set this list does not choose could be any length. */}
+            <PopoverContent side="top" align="end" aria-label={t('Reactions')} className="flex w-max max-w-[13.5rem] flex-wrap gap-1">
+                {vocabulary.map((emoji) => {
+                    const mine = chips.some((chip) => chip.emoji === emoji && chip.mine);
+
+                    return (
+                        <button
+                            key={emoji}
+                            type="button"
+                            aria-pressed={mine}
+                            onClick={() => {
+                                setOpen(false);
+                                onPick(emoji, mine);
+                            }}
+                            className={cn(
+                                'inline-flex size-10 items-center justify-center rounded-full text-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                mine && 'bg-selected/10 ring-1 ring-selected',
+                            )}
+                        >
+                            {emoji}
+                        </button>
+                    );
+                })}
+            </PopoverContent>
+        </Popover>
     );
 }

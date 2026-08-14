@@ -68,15 +68,25 @@ export function chipsWithPending(chips: ChatReactionChip[], pending: PendingReac
     let drawn = chips;
     for (const tap of pending.values()) {
         if (tap.messageId === messageId) {
-            drawn = applied(drawn, tap);
+            drawn = applyReactionOutcome(drawn, tap.emoji, tap.op);
         }
     }
 
     return drawn;
 }
 
-/** The guess itself: what the member would see if the server agrees. */
-function applied(chips: ChatReactionChip[], { emoji, op }: PendingReaction): ChatReactionChip[] {
+/**
+ * One tap applied to a chip row: the guess while it is out, and the same move again when the write
+ * comes back saying it landed. Both, because it is idempotent — it asks what the row says about the
+ * viewer's own emoji and only moves it when it disagrees, so applying it twice is applying it once.
+ *
+ * That is what lets a write be folded in as this delta rather than as the aggregate it answered
+ * with. The answer describes the moment the server wrote, which may be several changes behind the
+ * row on screen by the time it arrives: the poll delivers everyone's changes and moves the watermark
+ * past them, so standing the row on a late answer's snapshot would put back counts nothing will ask
+ * for again. A delta moves only the viewer's own line and leaves what arrived meanwhile alone.
+ */
+export function applyReactionOutcome(chips: ChatReactionChip[], emoji: string, op: ReactionOp): ChatReactionChip[] {
     const held = chips.find((chip) => chip.emoji === emoji);
 
     if (op === 'add') {

@@ -1,4 +1,5 @@
-import type { ChatPage, ChatReactionChip, ChatStreamRow } from './types';
+import { applyReactionOutcome, type ReactionOp } from './reaction-overlay.ts';
+import type { ChatPage, ChatStreamRow } from './types';
 
 /**
  * What a chat page is showing, as a value. Every way a message can arrive — the initial page, either
@@ -315,13 +316,16 @@ export function mergeTouched<M extends ChatStreamRow>(
 }
 
 /**
- * One message's chip row, replaced with what the write answered. Update-only for the reason above,
- * and unsorted because reacting moves nothing in the keyset order.
+ * One's own tap, once the write said it landed: the move applied to the row as it stands now, not
+ * the aggregate the write answered with. See {@link applyReactionOutcome} for why the answer's own
+ * counts are dropped. Update-only for the reason above, and unsorted because reacting moves nothing
+ * in the keyset order.
  */
-export function patchReactions<M extends ChatStreamRow>(
+export function applyReaction<M extends ChatStreamRow>(
     state: ChatStreamState<M>,
     id: number,
-    reactions: ChatReactionChip[],
+    emoji: string,
+    op: ReactionOp,
 ): ChatStreamState<M> {
     if (!state.messages.some((message) => message.id === id)) {
         return state;
@@ -329,7 +333,9 @@ export function patchReactions<M extends ChatStreamRow>(
 
     return {
         ...state,
-        messages: state.messages.map((message) => (message.id === id ? { ...message, reactions } : message)),
+        messages: state.messages.map((message) =>
+            message.id === id ? { ...message, reactions: applyReactionOutcome(message.reactions ?? [], emoji, op) } : message,
+        ),
     };
 }
 

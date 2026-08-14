@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
     applied,
+    applyReaction,
     claimIntent,
     enterHistory,
     enterLatest,
@@ -15,7 +16,6 @@ import {
     mergeTouched,
     newIntents,
     oldestBoundary,
-    patchReactions,
     retireIntents,
     isCurrentIntent,
     watermark,
@@ -508,12 +508,31 @@ test('a window change carries the watermark across', () => {
     assert.equal(enterLatest(state, page([message(1, '2026-08-14T09:00:00+00:00')])).reactionsVersion, 7);
 });
 
-test('a write patches one row and leaves a row it does not name alone', () => {
+test('a write moves one row and leaves a row it does not name alone', () => {
     const state = initial(page([message(1, '2026-08-14T09:00:00+00:00'), message(2, '2026-08-14T09:01:00+00:00')]));
 
-    const patched = patchReactions(state, 2, [chip('\u{1F44D}', 2, true)]);
+    const moved = applyReaction(state, 2, '\u{1F44D}', 'add');
 
-    assert.deepEqual(chipsOf(patched, 2), [chip('\u{1F44D}', 2, true)]);
-    assert.equal(chipsOf(patched, 1), undefined);
-    assert.equal(patchReactions(state, 404, [chip('\u{1F44D}', 1, true)]), state, 'a row the list no longer holds is nothing to patch');
+    assert.deepEqual(chipsOf(moved, 2), [chip('\u{1F44D}', 1, true)]);
+    assert.equal(chipsOf(moved, 1), undefined);
+    assert.equal(applyReaction(state, 404, '\u{1F44D}', 'add'), state, 'a row the list no longer holds is nothing to move');
+});
+
+/**
+ * Why the write is folded in as the move it made rather than as the row it answered with. The
+ * answer describes the moment the server wrote; by the time a slow one lands the poll may have
+ * delivered someone else's change and moved the watermark past it, so the answer's counts are
+ * behind and nothing will ask for them again.
+ */
+test('a write answered after the poll has moved the row on cannot take the row back', () => {
+    const state = { ...initial(page([message(1, '2026-08-14T09:00:00+00:00')])), reactionsVersion: 7 };
+
+    // The poll gets there first, carrying both the viewer's own add and the one made after it.
+    const polled = mergeTouched(state, [{ ...message(1, '2026-08-14T09:00:00+00:00'), reactions: [chip('\u{1F44D}', 2, true)] }], 9);
+
+    // …and the answer to the viewer's own tap arrives late, saying what was true at version 8.
+    const settled = applyReaction(polled, 1, '\u{1F44D}', 'add');
+
+    assert.deepEqual(chipsOf(settled, 1), [chip('\u{1F44D}', 2, true)]);
+    assert.equal(settled.reactionsVersion, 9, 'and the watermark stays where the poll left it');
 });
