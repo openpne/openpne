@@ -6,7 +6,7 @@
 @php
     $adminTransferGroups = $adminTransferGroups ?? [];
     $friendRequests = $unread['friendRequests'] ?? 0;
-    $unreadMessages = $unread['unreadMessages'] ?? 0;
+    $unreadMessages = $unreadMessages ?? 0;
 @endphp
 @if (count($adminTransferGroups) || $friendRequests || $unreadMessages)
     <x-classic.parts name="informationBox">
