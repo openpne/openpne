@@ -24,11 +24,15 @@ import type { ChatPage, ChatStreamRow } from './types';
 /** How often a visible tab asks what has arrived. */
 const POLL_MS = 8_000;
 
-/** Where one conversation lives. `messages` is handed the keyset query, empty for the newest page. */
+/**
+ * Where one conversation lives. `messages` is handed the keyset query, empty for the newest page.
+ * The write endpoints are optional because a conversation may be read-only — `send` and `remove`
+ * throw rather than post to a URL the page never declared.
+ */
 export interface ChatStreamEndpoints {
     messages: (query: string) => string;
-    send: string;
-    delete: (id: number) => string;
+    send?: string;
+    delete?: (id: number) => string;
 }
 
 /** Thrown for a rejected send, carrying whatever the server said about each field. */
@@ -227,6 +231,10 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
 
     const send = useCallback(
         async (body: string, images: File[] = [], appendFields?: (form: FormData) => void) => {
+            if (endpoints.send === undefined) {
+                throw new Error('this conversation is read-only: no send endpoint was declared');
+            }
+
             // Multipart throughout, not only when a file rides along: one transport is one set of
             // encoding rules to reason about. It costs the body its LF newlines — FormData encodes
             // them as CRLF — which is exactly why the server re-normalizes before it measures
@@ -282,6 +290,10 @@ export function useChatStream<M extends ChatStreamRow>(endpoints: ChatStreamEndp
 
     const remove = useCallback(
         async (id: number) => {
+            if (endpoints.delete === undefined) {
+                throw new Error('this conversation is read-only: no delete endpoint was declared');
+            }
+
             const response = await fetch(endpoints.delete(id), {
                 method: 'POST',
                 headers: { ...xsrfHeader(), Accept: 'application/json' },

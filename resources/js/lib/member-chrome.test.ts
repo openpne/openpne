@@ -247,11 +247,11 @@ const COMPOSE_SCREENS: Record<string, Record<string, unknown>> = {
 /**
  * Every screen the registry classifies as a conversation — a room someone stays in, reading and
  * writing in the same place. Enumerated for the same reason the two sets above are: below lg these
- * lose the bottom bar and stop receding, so joining or leaving the set is a UX decision. The direct
- * message re-skin is the next entry.
+ * lose the bottom bar and stop receding, so joining or leaving the set is a UX decision.
  */
 const CONVERSATION_SCREENS: Record<string, Record<string, unknown>> = {
     'group/talk/index': { group: cyclists },
+    'message/conversation/index': { counterpart: owner },
 };
 
 test('a conversation drops the bottom bar and keeps its chrome still', () => {
@@ -268,6 +268,17 @@ test('a conversation drops the bottom bar and keeps its chrome still', () => {
         assert.notEqual(room.scope, undefined, component);
         assert.equal(room.action, undefined, component);
     }
+});
+
+test('the withdrawn bucket names itself, since it has no member to be scoped to', () => {
+    // Every departed member's messages collapse into one conversation, so there is no profile for the
+    // bar's identity block to link to — the heading carries who it is with instead.
+    const bucket = chrome('message/conversation/index', { counterpart: null });
+
+    assert.equal(bucket.conversation, true);
+    assert.equal(bucket.scope, undefined);
+    assert.deepEqual(bucket.title, { key: 'Withdrawn member', replacements: undefined });
+    assert.notEqual(bucket.context, undefined);
 });
 
 test('an ordinary page keeps the bottom bar and lets its chrome recede', () => {
